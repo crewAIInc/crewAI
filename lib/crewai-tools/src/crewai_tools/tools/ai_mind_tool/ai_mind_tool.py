@@ -52,7 +52,6 @@ class AIMindTool(BaseTool):
 
         try:
             from minds.client import Client  # type: ignore
-            from minds.datasources import DatabaseConfig  # type: ignore
         except ImportError as e:
             raise ImportError(
                 "`minds_sdk` package not found, please run `pip install minds-sdk`"
@@ -63,14 +62,18 @@ class AIMindTool(BaseTool):
         # Convert the datasources to DatabaseConfig objects.
         datasources = []
         for datasource in self.datasources:
-            config = DatabaseConfig(
-                name=f"{AIMindToolConstants.DATASOURCE_NAME_PREFIX}_{secrets.token_hex(5)}",
+            db_name = f"{AIMindToolConstants.DATASOURCE_NAME_PREFIX}_{secrets.token_hex(5)}"
+
+            minds_client.datasources.create(
+                name=db_name,
                 engine=datasource["engine"],
                 description=datasource["description"],
-                connection_data=datasource["connection_data"],
-                tables=datasource["tables"],
+                connection_data=datasource["connection_data"]
             )
-            datasources.append(config)
+            datasources.append({
+                'name': db_name,
+                'tables': datasource["tables"]
+            })
 
         # Generate a random name for the Mind.
         name = f"{AIMindToolConstants.MIND_NAME_PREFIX}_{secrets.token_hex(5)}"
