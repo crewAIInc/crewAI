@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from typing import TYPE_CHECKING, Any, cast
 
+import httpx
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
@@ -29,7 +29,6 @@ try:
     from anthropic import Anthropic
     from anthropic.types import Message
     from anthropic.types.tool_use_block import ToolUseBlock
-    import httpx
 except ImportError:
     raise ImportError(
         'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
@@ -100,9 +99,7 @@ class AnthropicCompletion(BaseLLM):
         """Get client parameters."""
 
         if self.api_key is None:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            if self.api_key is None:
-                raise ValueError("ANTHROPIC_API_KEY is required")
+            raise ValueError("ANTHROPIC_API_KEY is required")
 
         client_params = {
             "api_key": self.api_key,

@@ -81,8 +81,6 @@ class OpenAICompletion(BaseLLM):
     @model_validator(mode="after")
     def setup_client(self) -> Self:
         """Initialize OpenAI client after model validation."""
-        if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
 
         client_config = self._get_client_params()
         if self.interceptor:
@@ -101,9 +99,7 @@ class OpenAICompletion(BaseLLM):
         """Get OpenAI client parameters."""
 
         if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
-            if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
+            raise ValueError("OPENAI_API_KEY is required")
 
         base_params = {
             "api_key": self.api_key,

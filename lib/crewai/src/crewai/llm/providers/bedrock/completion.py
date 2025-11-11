@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, cast
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Required, Self
 
 from crewai.events.types.llm_events import LLMCallType
@@ -160,10 +160,6 @@ class BedrockCompletion(BaseLLM):
         additional_model_response_field_paths: Custom response field paths
         interceptor: HTTP interceptor (not yet supported for Bedrock)
     """
-
-    model_config: ClassVar[ConfigDict] = ConfigDict(
-        ignored_types=(property,), arbitrary_types_allowed=True
-    )
 
     aws_access_key_id: str | None = Field(
         default=None, description="AWS access key (defaults to environment variable)"

@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import json
 import logging
+import os
 import re
 from typing import TYPE_CHECKING, Any, ClassVar, Final
 
@@ -98,6 +99,24 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
     }
+
+    @field_validator("api_key", mode="before")
+    @classmethod
+    def _validate_api_key(cls, value: str | None) -> str | None:
+        """Validate API key for authentication.
+
+        Args:
+            value: API key value or None
+
+        Returns:
+            API key from environment if not provided, or the original value
+        """
+        if value is None:
+            cls_name = cls.__name__
+            provider_prefix = cls_name.replace("Completion", "").upper()
+            env_var = f"{provider_prefix}_API_KEY"
+            value = os.getenv(env_var)
+        return value
 
     @field_validator("stop", mode="before")
     @classmethod

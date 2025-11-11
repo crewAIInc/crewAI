@@ -107,9 +107,6 @@ class AzureCompletion(BaseLLM):
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        if self.api_key is None:
-            self.api_key = os.getenv("AZURE_API_KEY")
-
         if self.endpoint is None:
             self.endpoint = (
                 os.getenv("AZURE_ENDPOINT")
