@@ -53,7 +53,7 @@ def test_single_short_string(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-# @pytest.mark.vcr(filter_headers=["authorization"])
+# @pytest.mark.vcr()
 def test_single_2k_character_string(mock_vector_db):
     # Create a 2k character string with various facts about Brandon
     content = (
@@ -374,7 +374,7 @@ def test_multiple_2k_character_files(mock_vector_db, tmpdir):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_hybrid_string_and_files(mock_vector_db, tmpdir):
     # Create string sources
     string_contents = [
@@ -443,7 +443,7 @@ def test_pdf_knowledge_source(mock_vector_db):
     mock_vector_db.query.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_csv_knowledge_source(mock_vector_db, tmpdir):
     """Test CSVKnowledgeSource with a simple CSV file."""
 

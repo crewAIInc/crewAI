@@ -16,8 +16,8 @@ def setup_provider_api_keys(monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-test-key-dummy")
     if "ANTHROPIC_API_KEY" not in os.environ:
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test-key-dummy")
-    if "GOOGLE_API_KEY" not in os.environ:
-        monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key-dummy")
+    if "GEMINI_API_KEY" not in os.environ:
+        monkeypatch.setenv("GEMINI_API_KEY", "test-google-key-dummy")
 
 
 class DummyInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):

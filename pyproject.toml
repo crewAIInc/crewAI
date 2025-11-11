@@ -12,15 +12,6 @@ dev = [
     "mypy>=1.18.2",
     "pre-commit>=4.3.0",
     "bandit>=1.8.6",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-subprocess>=1.5.3",
-    "vcrpy==7.0.0", # pinned, less versions break pytest-recording
-    "pytest-recording>=0.13.4",
-    "pytest-randomly>=4.0.1",
-    "pytest-timeout>=2.4.0",
-    "pytest-xdist>=3.8.0",
-    "pytest-split>=0.10.0",
     "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
@@ -28,16 +19,26 @@ dev = [
     "boto3-stubs[bedrock-runtime]>=1.40.54",
     "types-psycopg2>=2.9.21.20251012",
     "types-pymysql>=1.1.0.20250916",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-subprocess>=1.5.3",
+    "vcrpy==7.0.0", # pinned, lesser versions break pytest-recording
+    "pytest-recording>=0.13.4",
+    "pytest-randomly>=4.0.1",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
+    "pytest-split>=0.10.0",
+    "pytest-env>=1.2.0",
 ]
 
 
 [tool.ruff]
 src = ["lib/*"]
 extend-exclude = [
-    "lib/crewai/src/crewai/experimental/a2a",
     "lib/crewai/src/crewai/cli/templates",
     "lib/crewai/tests/",
     "lib/crewai-tools/tests/",
+    "conftest.py",
 ]
 respect-gitignore = true
 force-exclude = true
@@ -126,16 +127,13 @@ exclude_dirs = ["lib/crewai/src/crewai/cli/templates"]
 
 
 [tool.pytest.ini_options]
-markers = [
-    "telemetry: mark test as a telemetry test (don't mock telemetry)",
-]
 testpaths = [
     "lib/crewai/tests",
     "lib/crewai-tools/tests",
 ]
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
-addopts = "--tb=short"
+addopts = "--tb=short -n auto --timeout=60 --dist=loadfile --max-worker-restart=2 --block-network --import-mode=importlib"
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"

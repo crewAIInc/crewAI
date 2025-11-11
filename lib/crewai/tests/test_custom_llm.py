@@ -78,7 +78,7 @@ class CustomLLM(BaseLLM):
         return 4096
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_custom_llm_implementation():
     """Test that a custom LLM implementation works with create_llm."""
     custom_llm = CustomLLM(response="The answer is 42")
@@ -97,7 +97,7 @@ def test_custom_llm_implementation():
     assert "42" in response
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_custom_llm_within_crew():
     """Test that a custom LLM implementation works with create_llm."""
     custom_llm = CustomLLM(response="Hello! Nice to meet you!", model="test-model")

@@ -98,7 +98,7 @@ def reset_event_listener_singleton():
         EventListener._instance._initialized = original_initialized
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_start_kickoff_event(
     base_agent, base_task, reset_event_listener_singleton
 ):
@@ -132,7 +132,7 @@ def test_crew_emits_start_kickoff_event(
     assert received_events[0].type == "crew_kickoff_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_end_kickoff_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -155,7 +155,7 @@ def test_crew_emits_end_kickoff_event(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     received_events = []
 
@@ -188,7 +188,7 @@ def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     assert received_events[2].type == "crew_test_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_kickoff_failed_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -214,7 +214,7 @@ def test_crew_emits_kickoff_failed_event(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_failed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_start_task_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -234,7 +234,7 @@ def test_crew_emits_start_task_event(base_agent, base_task):
     assert received_events[0].type == "task_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_end_task_event(
     base_agent, base_task, reset_event_listener_singleton
 ):
@@ -268,7 +268,7 @@ def test_crew_emits_end_task_event(
     assert received_events[0].type == "task_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
     received_events = []
     received_sources = []
@@ -310,7 +310,7 @@ def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
             assert received_events[0].type == "task_failed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_emits_execution_started_and_completed_events(base_agent, base_task):
     received_events = []
     lock = threading.Lock()
@@ -349,7 +349,7 @@ def test_agent_emits_execution_started_and_completed_events(base_agent, base_tas
     assert received_events[1].type == "agent_execution_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_emits_execution_error_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -392,7 +392,7 @@ class SayHiTool(BaseTool):
         return "hi"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_tools_emits_finished_events():
     received_events = []
     event_received = threading.Event()
@@ -429,7 +429,7 @@ def test_tools_emits_finished_events():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_tools_emits_error_events():
     received_events = []
     lock = threading.Lock()
@@ -605,7 +605,7 @@ def test_flow_emits_method_execution_started_event():
         assert event.type == "method_execution_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_register_handler_adds_new_handler(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -625,7 +625,7 @@ def test_register_handler_adds_new_handler(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multiple_handlers_for_same_event(base_agent, base_task):
     received_events_1 = []
     received_events_2 = []
@@ -703,7 +703,7 @@ def test_flow_emits_method_execution_failed_event():
     assert received_events[0].error == error
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_call_started_event():
     received_events = []
 
@@ -729,8 +729,7 @@ def test_llm_emits_call_started_event():
     assert received_events[0].task_id is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.isolated
+@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
@@ -762,7 +761,7 @@ def test_llm_emits_call_failed_event():
         assert received_events[0].task_id is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_stream_chunk_events():
     """Test that LLM emits stream chunk events when streaming is enabled."""
     received_chunks = []
@@ -790,7 +789,7 @@ def test_llm_emits_stream_chunk_events():
     assert "".join(received_chunks) == response
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_no_stream_chunks_when_streaming_disabled():
     """Test that LLM doesn't emit stream chunk events when streaming is disabled."""
     received_chunks = []
@@ -812,7 +811,7 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
     assert response and isinstance(response, str)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_streaming_fallback_to_non_streaming():
     """Test that streaming falls back to non-streaming when there's an error."""
     received_chunks = []
@@ -870,7 +869,7 @@ def test_streaming_fallback_to_non_streaming():
         llm.call = original_call
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_streaming_empty_response_handling():
     """Test that streaming handles empty responses correctly."""
     received_chunks = []
@@ -918,7 +917,7 @@ def test_streaming_empty_response_handling():
         llm.call = original_call
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_stream_llm_emits_event_with_task_and_agent_info():
     completed_event = []
     failed_event = []
@@ -990,7 +989,7 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     assert set(all_task_name) == {task.name or task.description}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     completed_event = []
     failed_event = []
@@ -1043,7 +1042,7 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert set(all_task_name) == {base_task.name or base_task.description}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_event_with_lite_agent():
     completed_event = []
     failed_event = []

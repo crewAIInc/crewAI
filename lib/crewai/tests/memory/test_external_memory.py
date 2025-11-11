@@ -194,7 +194,7 @@ def test_crew_external_memory_reset(mem_type, crew_with_external_memory):
 
 
 @pytest.mark.parametrize("mem_method", ["search", "save"])
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_external_memory_save_with_memory_flag(
     mem_method, crew_with_external_memory
 ):
@@ -206,7 +206,7 @@ def test_crew_external_memory_save_with_memory_flag(
 
 
 @pytest.mark.parametrize("mem_method", ["search", "save"])
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_external_memory_save_using_crew_without_memory_flag(
     mem_method, crew_with_external_memory_without_memory_flag
 ):

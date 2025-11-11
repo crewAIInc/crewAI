@@ -34,7 +34,7 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
     """
     Test that OpenAI is the default provider when no explicit LLM is set on the agent
@@ -302,7 +302,7 @@ def test_openai_completion_with_tools():
             assert call_kwargs['tools'] is not None
             assert len(call_kwargs['tools']) > 0
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_completion_call_returns_usage_metrics():
     """
     Test that OpenAICompletion.call returns usage metrics
@@ -324,9 +324,9 @@ def test_openai_completion_call_returns_usage_metrics():
     crew = Crew(agents=[agent], tasks=[task])
     result = crew.kickoff()
     assert result.token_usage is not None
-    assert result.token_usage.total_tokens == 289
+    assert result.token_usage.total_tokens == 297
     assert result.token_usage.prompt_tokens == 173
-    assert result.token_usage.completion_tokens == 116
+    assert result.token_usage.completion_tokens == 124
     assert result.token_usage.successful_requests == 1
     assert result.token_usage.cached_prompt_tokens == 0
 

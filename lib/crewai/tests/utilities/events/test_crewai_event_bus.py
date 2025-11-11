@@ -5,18 +5,18 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
 
 
-class TestEvent(BaseEvent):
+class Event(BaseEvent):
     pass
 
 
 def test_specific_event_handler():
     mock_handler = Mock()
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(Event)
     def handler(source, event):
         mock_handler(source, event)
 
-    event = TestEvent(type="test_event")
+    event = Event(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     mock_handler.assert_called_once_with("source_object", event)
@@ -27,15 +27,15 @@ def test_multiple_handlers_same_event():
     mock_handler1 = Mock()
     mock_handler2 = Mock()
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(Event)
     def handler1(source, event):
         mock_handler1(source, event)
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(Event)
     def handler2(source, event):
         mock_handler2(source, event)
 
-    event = TestEvent(type="test_event")
+    event = Event(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     mock_handler1.assert_called_once_with("source_object", event)
@@ -47,16 +47,16 @@ def test_event_bus_error_handling():
     called = threading.Event()
     error_caught = threading.Event()
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(Event)
     def broken_handler(source, event):
         called.set()
         raise ValueError("Simulated handler failure")
 
-    @crewai_event_bus.on(TestEvent)
+    @crewai_event_bus.on(Event)
     def working_handler(source, event):
         error_caught.set()
 
-    event = TestEvent(type="test_event")
+    event = Event(type="test_event")
     crewai_event_bus.emit("source_object", event)
 
     assert called.wait(timeout=2), "Broken handler was never called"

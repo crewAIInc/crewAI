@@ -19,7 +19,6 @@ def cleanup_telemetry():
         Telemetry._lock = threading.Lock()
 
 
-@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -38,8 +37,6 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
             telemetry = Telemetry()
             assert telemetry.ready is expected_ready
 
-
-@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -48,13 +45,12 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-@pytest.mark.telemetry
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
     side_effect=Exception("Test exception"),
 )
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
     error = Exception("Test exception")
     export_mock.side_effect = error
@@ -83,7 +79,6 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         assert call[0][0] == error
 
 
-@pytest.mark.telemetry
 def test_telemetry_singleton_pattern():
     """Test that Telemetry uses the singleton pattern correctly."""
     Telemetry._instance = None
