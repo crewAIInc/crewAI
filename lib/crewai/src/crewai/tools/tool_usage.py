@@ -526,6 +526,29 @@ class ToolUsage:
                 )
             return self._tool_calling(tool_string)
 
+    def _coerce_args_dict(self, val: Any) -> dict[str, Any] | None:
+        """Coerce parsed arguments to a dictionary format.
+
+        Handles both GPT-4 format (flat dict) and GPT-5 format (array-wrapped dict).
+        GPT-5 wraps arguments in an array like: [{"arg": "value"}, []]
+        while GPT-4 uses a flat dict: {"arg": "value"}
+
+        Args:
+            val: The parsed value to coerce
+
+        Returns:
+            Dictionary if coercion is successful, None otherwise
+        """
+        if isinstance(val, dict):
+            return val
+
+        if isinstance(val, list) and val and isinstance(val[0], dict):
+            trailing_elements = val[1:]
+            if all(not x for x in trailing_elements):
+                return val[0]
+
+        return None
+
     def _validate_tool_input(self, tool_input: str | None) -> dict[str, Any]:
         if tool_input is None:
             return {}
@@ -538,16 +561,18 @@ class ToolUsage:
         # Attempt 1: Parse as JSON
         try:
             arguments = json.loads(tool_input)
-            if isinstance(arguments, dict):
-                return arguments
+            coerced = self._coerce_args_dict(arguments)
+            if coerced is not None:
+                return coerced
         except (JSONDecodeError, TypeError):
             pass  # Continue to the next parsing attempt
 
         # Attempt 2: Parse as Python literal
         try:
             arguments = ast.literal_eval(tool_input)
-            if isinstance(arguments, dict):
-                return arguments
+            coerced = self._coerce_args_dict(arguments)
+            if coerced is not None:
+                return coerced
         except (ValueError, SyntaxError):
             repaired_input = repair_json(tool_input)
             # Continue to the next parsing attempt
@@ -555,8 +580,9 @@ class ToolUsage:
         # Attempt 3: Parse as JSON5
         try:
             arguments = json5.loads(tool_input)
-            if isinstance(arguments, dict):
-                return arguments
+            coerced = self._coerce_args_dict(arguments)
+            if coerced is not None:
+                return coerced
         except (JSONDecodeError, ValueError, TypeError):
             pass  # Continue to the next parsing attempt
 
@@ -567,8 +593,9 @@ class ToolUsage:
                 content=f"Repaired JSON: {repaired_input}", color="blue"
             )
             arguments = json.loads(repaired_input)
-            if isinstance(arguments, dict):
-                return arguments
+            coerced = self._coerce_args_dict(arguments)
+            if coerced is not None:
+                return coerced
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
             self._printer.print(content=error, color="red")
