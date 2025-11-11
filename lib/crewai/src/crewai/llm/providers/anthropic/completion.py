@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
@@ -18,6 +18,11 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent.core import Agent
+    from crewai.task import Task
 
 
 try:
@@ -48,6 +53,7 @@ class AnthropicCompletion(BaseLLM):
         client_params: Additional parameters for the Anthropic client
         interceptor: HTTP interceptor for modifying requests/responses at transport level
     """
+
     base_url: str | None = Field(
         default=None, description="Custom base URL for Anthropic API"
     )
@@ -121,8 +127,8 @@ class AnthropicCompletion(BaseLLM):
         tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Anthropic messages API.
@@ -311,8 +317,8 @@ class AnthropicCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming message completion."""
@@ -399,8 +405,8 @@ class AnthropicCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming message completion."""
@@ -495,8 +501,8 @@ class AnthropicCompletion(BaseLLM):
         tool_uses: list[ToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> str:
         """Handle the complete tool use conversation flow.
 

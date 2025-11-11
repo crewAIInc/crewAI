@@ -11,7 +11,7 @@ from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
@@ -74,9 +74,7 @@ class OpenAICompletion(BaseLLM):
     )
     reasoning_effort: str | None = Field(None, description="Reasoning effort level")
 
-    client: OpenAI = Field(
-        default_factory=OpenAI, exclude=True, description="OpenAI client instance"
-    )
+    _client: OpenAI = PrivateAttr(default_factory=OpenAI)
     is_o1_model: bool = Field(False, description="Whether this is an O1 model")
     is_gpt4_model: bool = Field(False, description="Whether this is a GPT-4 model")
 
@@ -92,7 +90,7 @@ class OpenAICompletion(BaseLLM):
             http_client = httpx.Client(transport=transport)
             client_config["http_client"] = http_client
 
-        self.client = OpenAI(**client_config)
+        self._client = OpenAI(**client_config)
 
         self.is_o1_model = "o1" in self.model.lower()
         self.is_gpt4_model = "gpt-4" in self.model.lower()
@@ -279,14 +277,14 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
             if response_model:
-                parsed_response = self.client.beta.chat.completions.parse(
+                parsed_response = self._client.beta.chat.completions.parse(
                     **params,
                     response_format=response_model,
                 )
@@ -310,7 +308,7 @@ class OpenAICompletion(BaseLLM):
                     )
                     return structured_json
 
-            response: ChatCompletion = self.client.chat.completions.create(**params)
+            response: ChatCompletion = self._client.chat.completions.create(**params)
 
             usage = self._extract_openai_token_usage(response)
 
@@ -402,8 +400,8 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming chat completion."""
@@ -412,7 +410,7 @@ class OpenAICompletion(BaseLLM):
 
         if response_model:
             completion_stream: Iterator[ChatCompletionChunk] = (
-                self.client.chat.completions.create(**params)
+                self._client.chat.completions.create(**params)
             )
 
             accumulated_content = ""
@@ -455,7 +453,7 @@ class OpenAICompletion(BaseLLM):
                 )
                 return accumulated_content
 
-        stream: Iterator[ChatCompletionChunk] = self.client.chat.completions.create(
+        stream: Iterator[ChatCompletionChunk] = self._client.chat.completions.create(
             **params
         )
 

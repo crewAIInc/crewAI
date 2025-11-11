@@ -32,6 +32,9 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
+    from crewai.agent.core import Agent
+    from crewai.task import Task
+
 
 try:
     from boto3.session import Session
@@ -261,8 +264,8 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[Any, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call AWS Bedrock Converse API."""
@@ -347,8 +350,8 @@ class BedrockCompletion(BaseLLM):
         messages: list[dict[str, Any]],
         body: BedrockConverseRequestBody,
         available_functions: Mapping[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> str:
         """Handle non-streaming converse API call following AWS best practices."""
         try:
@@ -528,8 +531,8 @@ class BedrockCompletion(BaseLLM):
         messages: list[dict[str, Any]],
         body: BedrockConverseRequestBody,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> str:
         """Handle streaming converse API call with comprehensive event handling."""
         full_response = ""

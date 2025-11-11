@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
@@ -18,6 +18,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.agent.core import Agent
+    from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
 
@@ -66,8 +68,6 @@ class AzureCompletion(BaseLLM):
         interceptor: HTTP interceptor (not yet supported for Azure)
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(arbitrary_types_allowed=True)
-
     endpoint: str | None = Field(
         default=None,
         description="Azure endpoint URL (defaults to AZURE_ENDPOINT env var)",
@@ -91,7 +91,9 @@ class AzureCompletion(BaseLLM):
         default=None, description="Maximum tokens in response"
     )
     stream: bool = Field(default=False, description="Enable streaming responses")
-    client: Any = Field(default=None, exclude=True, description="Azure client instance")
+    _client: ChatCompletionsClient = PrivateAttr(
+        default_factory=ChatCompletionsClient,  # type: ignore[arg-type]
+    )
 
     _is_openai_model: bool = PrivateAttr(default=False)
     _is_azure_openai_endpoint: bool = PrivateAttr(default=False)
@@ -190,8 +192,8 @@ class AzureCompletion(BaseLLM):
         tools: list[dict[str, BaseTool]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Azure AI Inference chat completions API.
@@ -382,8 +384,8 @@ class AzureCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
@@ -478,8 +480,8 @@ class AzureCompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming chat completion."""
