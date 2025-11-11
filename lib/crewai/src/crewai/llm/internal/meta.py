@@ -99,7 +99,9 @@ class LLMMeta(ModelMetaclass):
         native_class = cls._get_native_provider(provider) if use_native else None
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
-                kwargs_copy = {k: v for k, v in kwargs.items() if k not in ("provider", "model")}
+                kwargs_copy = {
+                    k: v for k, v in kwargs.items() if k not in ("provider", "model")
+                }
                 return native_class(
                     model=model_string, provider=provider, **kwargs_copy
                 )
@@ -114,7 +116,9 @@ class LLMMeta(ModelMetaclass):
             logging.error("LiteLLM is not available, falling back to LiteLLM")
             raise ImportError("Fallback to LiteLLM is not available") from None
 
-        kwargs_copy = {k: v for k, v in kwargs.items() if k not in ("model", "is_litellm")}
+        kwargs_copy = {
+            k: v for k, v in kwargs.items() if k not in ("model", "is_litellm")
+        }
         return super().__call__(model=model, is_litellm=True, **kwargs_copy)
 
     @staticmethod

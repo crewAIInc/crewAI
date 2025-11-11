@@ -1,0 +1,423 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re an
+      expert researcher, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and is now working on doing research and analysis for
+      a new customer.\nYour personal goal is: Make the best research and analysis
+      on content about AI and AI agents\nTo give my best complete final answer to
+      the task respond using the exact following format:\n\nThought: I now can give
+      a great answer\nFinal Answer: Your final answer must be the great and the most
+      complete as possible, it must be outcome described.\n\nI MUST use these formats,
+      my job depends on it!"},{"role":"user","content":"\nCurrent Task: Give me a
+      list of 3 interesting ideas about AI.\n\nThis is the expected criteria for your
+      final answer: Bullet point list of 3 ideas.\nyou MUST return the actual complete
+      content as the final answer, not a summary.\n\nYou MUST follow these instructions:
+      \n - Include specific examples and real-world case studies to enhance the credibility
+      and depth of the article ideas.\n - Incorporate mentions of notable companies,
+      projects, or tools relevant to each topic to provide concrete context.\n - Add
+      diverse viewpoints such as interviews with experts, users, or thought leaders
+      to enrich the narrative and lend authority.\n - Address ethical, social, and
+      emotional considerations explicitly to reflect a balanced and comprehensive
+      analysis.\n - Enhance the descriptions by including implications for future
+      developments and the potential impact on society.\n - Use more engaging and
+      vivid language that draws the reader into each topic''s nuances and importance.\n
+      - Include notes or summaries that contextualize each set of ideas in terms of
+      relevance and potential reader engagement.\n - In future tasks, focus on elaborating
+      initial outlines into more detailed and nuanced article proposals with richer
+      content and insights.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2076'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        DKfz96M6/zh1h8vhEwAA//8DAJPMJFq9FAAA
+    headers:
+      CF-RAY:
+      - 99c98602dfefcf4d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 11 Nov 2025 00:03:08 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ObqPLq12_9tJ06.V1RkHCM6FH_YGcLoC2ykIFBEawa8-1762819388-1.0.1.1-l7PJTVbZ1vCcKdeOe8GQVuFL59SCk0xhO_dMFY2wuH5Ybd1hhM_Xcv_QivXVhZlBGlRgRAgG631P99JOs_IYAYcNFJReE.3NpPl34VfPVeQ;
+        path=/; expires=Tue, 11-Nov-25 00:33:08 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=kdn.HizdlSPG7cBu_zv1ZPcu0jMwDQIA4H9YvMXu6a0-1762819388587-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '13504'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '13638'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999507'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999507'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2de40e1beb5f42ea896664df36e8ce8f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Researcher. You're
+      an expert researcher, specialized in technology, software engineering, AI and
+      startups. You work as a freelancer and is now working on doing research and
+      analysis for a new customer.\\nYour personal goal is: Make the best research
+      and analysis on content about AI and AI agents\\nTo give my best complete final
+      answer to the task respond using the exact following format:\\n\\nThought: I
+      now can give a great answer\\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\\n\\nI MUST
+      use these formats, my job depends on it!\"},{\"role\":\"user\",\"content\":\"\\nCurrent
+      Task: Summarize the ideas from the previous task.\\n\\nThis is the expected
+      criteria for your final answer: A summary of the ideas.\\nyou MUST return the
+      actual complete content as the final answer, not a summary.\\n\\nThis is the
+      context you're working with:\\n- **AI-Driven Personalized Healthcare: Revolutionizing
+      Patient Outcomes Through Predictive Analytics**\\n  This idea explores how AI
+      is transforming healthcare by enabling highly individualized treatment plans
+      based on patient data and predictive models. For instance, companies like IBM
+      Watson Health have leveraged AI to analyze medical records, genomics, and clinical
+      trials to tailor cancer therapies uniquely suited to each patient. DeepMind\u2019s
+      AI system has shown promise in predicting kidney injury early, saving lives
+      through proactive intervention. Interviews with healthcare professionals and
+      patients reveal both enthusiasm for AI\u2019s potential and concerns about privacy
+      and data security, highlighting ethical dilemmas in handling sensitive information.
+      Socially, this shift could reduce disparities in healthcare access but also
+      risks exacerbating inequality if AI tools are unevenly distributed. Emotionally,
+      patients benefit from hope and improved prognosis but might also experience
+      anxiety over automated decision-making. Future implications include AI-powered
+      virtual health assistants and real-time monitoring with wearable biosensors,
+      promising a smarter, more responsive healthcare ecosystem that could extend
+      life expectancy and quality of life globally. This topic is relevant and engaging
+      as it touches human well-being at a fundamental level and invites readers to
+      consider the intricate balance between technology and ethics in medicine.\\n\\n-
+      **Autonomous AI Agents in Creative Industries: Expanding Boundaries of Art,
+      Music, and Storytelling**\\n  This idea delves into AI agents like OpenAI\u2019s
+      DALL\xB7E for visual art, Jukedeck and OpenAI\u2019s Jukebox for music composition,
+      and narrative generators such as AI Dungeon, transforming creative processes.
+      These AI tools challenge traditional notions of authorship and creativity by
+      collaborating with human artists or independently generating content. Real-world
+      case studies include Warner Music experimenting with AI-driven music production
+      and the Guardian publishing AI-generated poetry, sparking public debate. Thought
+      leaders like AI artist Refik Anadol discuss how AI enhances creative horizons,
+      while skeptics worry about the dilution of human emotional expression and potential
+      job displacement for artists. Ethical discussions focus on copyright, ownership,
+      and the authenticity of AI-produced works. Socially, AI agents democratize access
+      to creative tools but may also commodify art. The emotional dimension involves
+      audiences' reception\u2014wonder and fascination versus skepticism and emotional
+      disconnect. Future trends anticipate sophisticated AI collaborators that understand
+      cultural context and emotions, potentially redefining art itself. This idea
+      captivates readers interested in the fusion of technology and the human spirit,
+      offering a rich narrative on innovation and identity.\\n\\n- **Ethical AI Governance:
+      Building Transparent, Accountable Systems for a Trustworthy Future**\\n  This
+      topic addresses the urgent need for frameworks ensuring AI development aligns
+      with human values, emphasizing transparency, accountability, and fairness. Companies
+      like Google DeepMind and Microsoft have established AI ethics boards, while
+      initiatives such as OpenAI commit to responsible AI deployment. Real-world scenarios
+      include controversies over biased facial recognition systems used by law enforcement,
+      exemplified by cases involving companies like Clearview AI, raising societal
+      alarm about surveillance and discrimination. Experts like Timnit Gebru and Kate
+      Crawford provide critical perspectives on bias and structural injustice embedded
+      in AI systems, advocating for inclusive design and regulation. Ethically, this
+      topic probes the moral responsibility of creators versus users and the consequences
+      of autonomous AI decisions. Socially, there's a call for inclusive governance
+      involving diverse stakeholders to prevent marginalization. Emotionally, public
+      trust hinges on transparent communication and mitigation of fears related to
+      AI misuse or job displacement. Looking ahead, the establishment of international
+      AI regulatory standards and ethical certifications may become pivotal, ensuring
+      AI benefits are shared broadly and risks minimized. This topic strongly resonates
+      with readers concerned about the socio-political impact of AI and invites active
+      discourse on shaping a future where technology empowers rather than undermines
+      humanity.\\n\\nYou MUST follow these instructions: \\n - Include specific examples
+      and real-world case studies to enhance the credibility and depth of the article
+      ideas.\\n - Incorporate mentions of notable companies, projects, or tools relevant
+      to each topic to provide concrete context.\\n - Add diverse viewpoints such
+      as interviews with experts, users, or thought leaders to enrich the narrative
+      and lend authority.\\n - Address ethical, social, and emotional considerations
+      explicitly to reflect a balanced and comprehensive analysis.\\n - Enhance the
+      descriptions by including implications for future developments and the potential
+      impact on society.\\n - Use more engaging and vivid language that draws the
+      reader into each topic's nuances and importance.\\n - Include notes or summaries
+      that contextualize each set of ideas in terms of relevance and potential reader
+      engagement.\\n - In future tasks, focus on elaborating initial outlines into
+      more detailed and nuanced article proposals with richer content and insights.\\n\\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\\n\\nThought:\"}],\"model\":\"gpt-4.1-mini\"}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '6552'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=ObqPLq12_9tJ06.V1RkHCM6FH_YGcLoC2ykIFBEawa8-1762819388-1.0.1.1-l7PJTVbZ1vCcKdeOe8GQVuFL59SCk0xhO_dMFY2wuH5Ybd1hhM_Xcv_QivXVhZlBGlRgRAgG631P99JOs_IYAYcNFJReE.3NpPl34VfPVeQ;
+        _cfuvid=kdn.HizdlSPG7cBu_zv1ZPcu0jMwDQIA4H9YvMXu6a0-1762819388587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+        BQAA//8DAPcawNa2GwAA
+    headers:
+      CF-RAY:
+      - 99c9865b6af3cf4d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 11 Nov 2025 00:03:32 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '22788'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '22942'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149998392'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998392'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_48c359c72cdc47aeb89c6d6eeffdce7d
+    status:
+      code: 200
+      message: OK
+version: 1
