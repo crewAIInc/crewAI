@@ -5,6 +5,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
@@ -48,6 +49,9 @@ except ImportError:
     ) from None
 
 
+load_dotenv()
+
+
 class AzureCompletion(BaseLLM):
     """Azure AI Inference native completion implementation.
 
@@ -68,12 +72,14 @@ class AzureCompletion(BaseLLM):
         interceptor: HTTP interceptor (not yet supported for Azure)
     """
 
-    endpoint: str | None = Field(
-        default=None,
+    endpoint: str = Field(  # type: ignore[assignment]
+        default_factory=lambda: os.getenv("AZURE_ENDPOINT")
+        or os.getenv("AZURE_OPENAI_ENDPOINT")
+        or os.getenv("AZURE_API_BASE"),
         description="Azure endpoint URL (defaults to AZURE_ENDPOINT env var)",
     )
     api_version: str = Field(
-        default="2024-06-01",
+        default_factory=lambda: os.getenv("AZURE_API_VERSION", "2024-06-01"),
         description="Azure API version (defaults to AZURE_API_VERSION env var or 2024-06-01)",
     )
     timeout: float | None = Field(
@@ -82,18 +88,16 @@ class AzureCompletion(BaseLLM):
     max_retries: int = Field(default=2, description="Maximum number of retries")
     top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
     frequency_penalty: float | None = Field(
-        default=None, description="Frequency penalty (-2 to 2)"
+        default=None, le=2.0, ge=-2.0, description="Frequency penalty (-2 to 2)"
     )
     presence_penalty: float | None = Field(
-        default=None, description="Presence penalty (-2 to 2)"
+        default=None, le=2.0, ge=-2.0, description="Presence penalty (-2 to 2)"
     )
     max_tokens: int | None = Field(
         default=None, description="Maximum tokens in response"
     )
     stream: bool = Field(default=False, description="Enable streaming responses")
-    _client: ChatCompletionsClient = PrivateAttr(
-        default_factory=ChatCompletionsClient,  # type: ignore[arg-type]
-    )
+    _client: ChatCompletionsClient = PrivateAttr(default=None)  # type: ignore[assignment]
 
     _is_openai_model: bool = PrivateAttr(default=False)
     _is_azure_openai_endpoint: bool = PrivateAttr(default=False)
@@ -107,25 +111,12 @@ class AzureCompletion(BaseLLM):
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        if self.endpoint is None:
-            self.endpoint = (
-                os.getenv("AZURE_ENDPOINT")
-                or os.getenv("AZURE_OPENAI_ENDPOINT")
-                or os.getenv("AZURE_API_BASE")
-            )
-
-        if self.api_version == "2024-06-01":
-            env_version = os.getenv("AZURE_API_VERSION")
-            if env_version:
-                self.api_version = env_version
+        if not self.api_key:
+            self.api_key = os.getenv("AZURE_API_KEY")
 
         if not self.api_key:
             raise ValueError(
                 "Azure API key is required. Set AZURE_API_KEY environment variable or pass api_key parameter."
-            )
-        if not self.endpoint:
-            raise ValueError(
-                "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
 
         self.endpoint = self._validate_and_fix_endpoint(self.endpoint, self.model)
@@ -138,7 +129,7 @@ class AzureCompletion(BaseLLM):
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)
+        self._client = ChatCompletionsClient(**client_kwargs)
 
         self._is_openai_model = any(
             prefix in self.model.lower() for prefix in ["gpt-", "o1-", "text-"]
@@ -160,7 +151,7 @@ class AzureCompletion(BaseLLM):
         """Check if endpoint is an Azure OpenAI endpoint."""
         return self._is_azure_openai_endpoint
 
-    def _validate_and_fix_endpoint(self, endpoint: str, model: str) -> str:
+    def _validate_and_fix_endpoint(self, endpoint: str | None, model: str) -> str:
         """Validate and fix Azure endpoint URL format.
 
         Azure OpenAI endpoints should be in the format:
@@ -172,7 +163,15 @@ class AzureCompletion(BaseLLM):
 
         Returns:
             Validated and potentially corrected endpoint URL
+
+        Raises:
+            ValueError: If endpoint is None or empty
         """
+        if not endpoint:
+            raise ValueError(
+                "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
+            )
+
         if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 
@@ -388,7 +387,7 @@ class AzureCompletion(BaseLLM):
         """Handle non-streaming chat completion."""
         # Make API call
         try:
-            response: ChatCompletions = self.client.complete(**params)
+            response: ChatCompletions = self._client.complete(**params)
 
             if not response.choices:
                 raise ValueError("No choices returned from Azure API")
@@ -486,7 +485,7 @@ class AzureCompletion(BaseLLM):
         tool_calls = {}
 
         # Make streaming API call
-        for update in self.client.complete(**params):
+        for update in self._client.complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
                 if update.choices:
                     choice = update.choices[0]

@@ -4,6 +4,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
+from dotenv import load_dotenv
 import httpx
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
@@ -21,18 +22,22 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from anthropic.types import Message
+
     from crewai.agent.core import Agent
     from crewai.task import Task
 
 
 try:
     from anthropic import Anthropic
-    from anthropic.types import Message
     from anthropic.types.tool_use_block import ToolUseBlock
 except ImportError:
     raise ImportError(
         'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
     ) from None
+
+
+load_dotenv()
 
 
 class AnthropicCompletion(BaseLLM):
@@ -66,11 +71,9 @@ class AnthropicCompletion(BaseLLM):
     top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
     stream: bool = Field(default=False, description="Enable streaming responses")
     client_params: dict[str, Any] | None = Field(
-        default=None, description="Additional Anthropic client parameters"
+        default_factory=dict, description="Additional Anthropic client parameters"
     )
-    client: Anthropic = Field(
-        default_factory=Anthropic, exclude=True, description="Anthropic client instance"
-    )
+    _client: Anthropic = PrivateAttr(default=None)  # type: ignore[assignment]
 
     _is_claude_3: bool = PrivateAttr(default=False)
     _supports_tools: bool = PrivateAttr(default=False)
@@ -78,7 +81,7 @@ class AnthropicCompletion(BaseLLM):
     @model_validator(mode="after")
     def setup_client(self) -> Self:
         """Initialize the Anthropic client and model-specific settings."""
-        self.client = Anthropic(**self._get_client_params())
+        self._client = Anthropic(**self._get_client_params())
 
         self._is_claude_3 = "claude-3" in self.model.lower()
         self._supports_tools = self._is_claude_3
@@ -97,9 +100,6 @@ class AnthropicCompletion(BaseLLM):
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get client parameters."""
-
-        if self.api_key is None:
-            raise ValueError("ANTHROPIC_API_KEY is required")
 
         client_params = {
             "api_key": self.api_key,
@@ -330,7 +330,7 @@ class AnthropicCompletion(BaseLLM):
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
         try:
-            response: Message = self.client.messages.create(**params)
+            response: Message = self._client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -424,7 +424,7 @@ class AnthropicCompletion(BaseLLM):
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
         # Make streaming API call
-        with self.client.messages.stream(**stream_params) as stream:
+        with self._client.messages.stream(**stream_params) as stream:
             for event in stream:
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
@@ -552,7 +552,7 @@ class AnthropicCompletion(BaseLLM):
 
         try:
             # Send tool results back to Claude for final response
-            final_response: Message = self.client.messages.create(**follow_up_params)
+            final_response: Message = self._client.messages.create(**follow_up_params)
 
             # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)

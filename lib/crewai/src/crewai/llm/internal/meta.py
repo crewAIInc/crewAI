@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+from pydantic import ConfigDict
 from pydantic._internal._model_construction import ModelMetaclass
 
 from crewai.llm.constants import (
@@ -21,6 +22,7 @@ from crewai.llm.constants import (
     SupportedModels,
     SupportedNativeProviders,
 )
+from crewai.llm.internal.constants import PROVIDER_MAPPING
 
 
 class LLMMeta(ModelMetaclass):
@@ -29,6 +31,41 @@ class LLMMeta(ModelMetaclass):
     This metaclass intercepts LLM instantiation and routes to the appropriate
     native provider implementation based on the model parameter.
     """
+
+    def __new__(
+        mcs,
+        name: str,
+        bases: tuple[type, ...],
+        namespace: dict[str, Any],
+        **kwargs: Any,
+    ) -> type:
+        """Create new LLM class with proper model_config for custom LLMs.
+
+        Args:
+            name: Class name
+            bases: Base classes
+            namespace: Class namespace
+            **kwargs: Additional arguments
+
+        Returns:
+            New class
+        """
+        if name != "BaseLLM" and any(
+            base.__name__ in ("BaseLLM", "LLM") for base in bases
+        ):
+            if "model_config" not in namespace:
+                namespace["model_config"] = ConfigDict(
+                    extra="allow", populate_by_name=True
+                )
+            elif isinstance(namespace["model_config"], dict):
+                config_dict = cast(
+                    ConfigDict, cast(object, dict(namespace["model_config"]))
+                )
+                config_dict.setdefault("extra", "allow")
+                config_dict.setdefault("populate_by_name", True)
+                namespace["model_config"] = ConfigDict(**config_dict)
+
+        return super().__new__(mcs, name, bases, namespace)
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:  # noqa: N805
         """Route to appropriate provider implementation at instantiation time.
@@ -57,7 +94,7 @@ class LLMMeta(ModelMetaclass):
 
         if args and not kwargs.get("model"):
             kwargs["model"] = cast(SupportedModels, args[0])
-            args = args[1:]
+            _ = args[1:]
         explicit_provider = cast(SupportedNativeProviders, kwargs.get("provider"))
 
         if explicit_provider:
@@ -70,19 +107,7 @@ class LLMMeta(ModelMetaclass):
                 model.partition("/"),
             )
 
-            provider_mapping: dict[str, SupportedNativeProviders] = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
+            canonical_provider = PROVIDER_MAPPING.get(prefix.lower())
 
             if canonical_provider and cls._validate_model_in_constants(
                 model_part, canonical_provider

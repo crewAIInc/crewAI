@@ -12,10 +12,11 @@ import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any, ClassVar, Final
+from typing import TYPE_CHECKING, Any, Final
 
+from dotenv import load_dotenv
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -42,6 +43,8 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
+load_dotenv()
+
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
@@ -64,10 +67,6 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         temperature: Optional temperature setting for response generation.
         stop: A list of stop sequences that the LLM should use to stop generation.
     """
-
-    model_config: ClassVar[ConfigDict] = ConfigDict(
-        extra="allow", populate_by_name=True
-    )
 
     # Core fields
     model: str = Field(..., description="The model identifier/name")
@@ -100,7 +99,7 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         "cached_prompt_tokens": 0,
     }
 
-    @field_validator("api_key", mode="before")
+    @field_validator("api_key", mode="after")
     @classmethod
     def _validate_api_key(cls, value: str | None) -> str | None:
         """Validate API key for authentication.
@@ -137,37 +136,6 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
             return value
         return []
 
-    @model_validator(mode="before")
-    @classmethod
-    def _extract_stop_and_validate(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Extract and normalize stop sequences before model initialization.
-
-        Args:
-            values: Input values dictionary
-
-        Returns:
-            Processed values dictionary
-        """
-        if not values.get("model"):
-            raise ValueError("Model name is required and cannot be empty")
-
-        stop = values.get("stop") or values.get("stop_sequences")
-        if stop is None:
-            values["stop"] = []
-        elif isinstance(stop, str):
-            values["stop"] = [stop]
-        elif isinstance(stop, list):
-            values["stop"] = stop
-        else:
-            values["stop"] = []
-
-        values.pop("stop_sequences", None)
-
-        if "provider" not in values or values["provider"] is None:
-            values["provider"] = "openai"
-
-        return values
-
     @property
     def additional_params(self) -> dict[str, Any]:
         """Get additional parameters stored as extra fields.
@@ -189,20 +157,6 @@ class BaseLLM(BaseModel, ABC, metaclass=LLMMeta):
         if self.__pydantic_extra__ is None:
             self.__pydantic_extra__ = {}
         self.__pydantic_extra__.update(value)
-
-    def model_post_init(self, __context: Any) -> None:
-        """Initialize token usage tracking after model initialization.
-
-        Args:
-            __context: Pydantic context (unused)
-        """
-        self._token_usage = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-            "cached_prompt_tokens": 0,
-        }
 
     @abstractmethod
     def call(

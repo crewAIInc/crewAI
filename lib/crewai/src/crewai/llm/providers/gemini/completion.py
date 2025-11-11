@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
@@ -31,6 +34,9 @@ except ImportError:
     ) from None
 
 
+load_dotenv()
+
+
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
 
@@ -50,15 +56,12 @@ class GeminiCompletion(BaseLLM):
         interceptor: HTTP interceptor (not yet supported for Gemini)
     """
 
-    model_config: ClassVar[ConfigDict] = ConfigDict(
-        ignored_types=(property,), arbitrary_types_allowed=True
-    )
-
     project: str | None = Field(
-        default=None, description="Google Cloud project ID (for Vertex AI)"
+        default_factory=lambda: os.getenv("GOOGLE_CLOUD_PROJECT"),
+        description="Google Cloud project ID (for Vertex AI)",
     )
     location: str = Field(
-        default="us-central1",
+        default_factory=lambda: os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
         description="Google Cloud location (for Vertex AI, defaults to 'us-central1')",
     )
     top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
@@ -74,9 +77,7 @@ class GeminiCompletion(BaseLLM):
         default_factory=dict,
         description="Additional parameters for Google Gen AI Client constructor",
     )
-    client: Any = Field(
-        default=None, exclude=True, description="Gemini client instance"
-    )
+    _client: Any = PrivateAttr(default=None)
 
     _is_gemini_2: bool = PrivateAttr(default=False)
     _is_gemini_1_5: bool = PrivateAttr(default=False)
@@ -94,17 +95,9 @@ class GeminiCompletion(BaseLLM):
         if self.api_key is None:
             self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
-        if self.project is None:
-            self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
-
-        if self.location == "us-central1":
-            env_location = os.getenv("GOOGLE_CLOUD_LOCATION")
-            if env_location:
-                self.location = env_location
-
         use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
 
-        self.client = self._initialize_client(use_vertexai)
+        self._client = self._initialize_client(use_vertexai)
 
         self._is_gemini_2 = "gemini-2" in self.model.lower()
         self._is_gemini_1_5 = "gemini-1.5" in self.model.lower()
@@ -176,9 +169,9 @@ class GeminiCompletion(BaseLLM):
         params = {}
 
         if (
-            hasattr(self, "client")
-            and hasattr(self.client, "vertexai")
-            and self.client.vertexai
+            hasattr(self, "_client")
+            and hasattr(self._client, "vertexai")
+            and self._client.vertexai
         ):
             params.update(
                 {
@@ -400,7 +393,7 @@ class GeminiCompletion(BaseLLM):
         }
 
         try:
-            response = self.client.models.generate_content(**api_params)
+            response = self._client.models.generate_content(**api_params)
 
             usage = self._extract_token_usage(response)
         except Exception as e:
@@ -468,7 +461,7 @@ class GeminiCompletion(BaseLLM):
             "config": config,
         }
 
-        for chunk in self.client.models.generate_content_stream(**api_params):
+        for chunk in self._client.models.generate_content_stream(**api_params):
             if hasattr(chunk, "text") and chunk.text:
                 full_response += chunk.text
                 self._emit_stream_chunk_event(

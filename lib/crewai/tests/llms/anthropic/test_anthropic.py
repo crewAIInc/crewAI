@@ -60,7 +60,7 @@ def test_anthropic_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Anthropic client responses
-    with patch.object(completion.client.messages, 'create') as mock_create:
+    with patch.object(completion._client.messages, 'create') as mock_create:
         # Mock initial response with tool use - need to properly mock ToolUseBlock
         mock_tool_use = Mock(spec=ToolUseBlock)
         mock_tool_use.id = "tool_123"
@@ -199,8 +199,8 @@ def test_anthropic_specific_parameters():
     assert isinstance(llm, AnthropicCompletion)
     assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
-    assert llm.client.max_retries == 5
-    assert llm.client.timeout == 60
+    assert llm._client.max_retries == 5
+    assert llm._client.timeout == 60
 
 
 def test_anthropic_completion_call():
@@ -637,8 +637,8 @@ def test_anthropic_environment_variable_api_key():
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"}):
         llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-        assert llm.client is not None
-        assert hasattr(llm.client, 'messages')
+        assert llm._client is not None
+        assert hasattr(llm._client, 'messages')
 
 
 def test_anthropic_token_usage_tracking():
@@ -648,7 +648,7 @@ def test_anthropic_token_usage_tracking():
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
     # Mock the Anthropic response with usage information
-    with patch.object(llm.client.messages, 'create') as mock_create:
+    with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
         mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)

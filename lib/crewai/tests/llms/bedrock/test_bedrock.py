@@ -579,7 +579,7 @@ def test_bedrock_token_usage_tracking():
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Mock the Bedrock response with usage information
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         mock_response = {
             'output': {
                 'message': {
@@ -624,7 +624,7 @@ def test_bedrock_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Bedrock client responses
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         # First response: tool use request
         tool_use_response = {
             'output': {
@@ -710,7 +710,7 @@ def test_bedrock_client_error_handling():
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Test ValidationException
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
                 'Code': 'ValidationException',
@@ -724,7 +724,7 @@ def test_bedrock_client_error_handling():
         assert "validation" in str(exc_info.value).lower()
 
     # Test ThrottlingException
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
                 'Code': 'ThrottlingException',
@@ -762,7 +762,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     llm.stop = ["\nObservation:", "\nThought:"]
 
     # Patch the API call to capture parameters without making real call
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         mock_response = {
             'output': {
                 'message': {

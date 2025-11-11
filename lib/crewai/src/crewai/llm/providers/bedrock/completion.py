@@ -5,6 +5,8 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
+from dotenv import load_dotenv
+from mypy_boto3_bedrock_runtime.client import BedrockRuntimeClient
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Required, Self
 
@@ -73,6 +75,9 @@ else:
         topP: float
         stopSequences: list[str]
         topK: int
+
+
+load_dotenv()
 
 
 class ToolInputSchema(TypedDict):
@@ -161,16 +166,22 @@ class BedrockCompletion(BaseLLM):
         interceptor: HTTP interceptor (not yet supported for Bedrock)
     """
 
-    aws_access_key_id: str | None = Field(
-        default=None, description="AWS access key (defaults to environment variable)"
+    aws_access_key_id: str = Field(  # type: ignore[assignment]
+        default_factory=lambda: os.getenv("AWS_ACCESS_KEY_ID"),
+        description="AWS access key (defaults to environment variable)",
     )
-    aws_secret_access_key: str | None = Field(
-        default=None, description="AWS secret key (defaults to environment variable)"
+    aws_secret_access_key: str = Field(  # type: ignore[assignment]
+        default_factory=lambda: os.getenv("AWS_SECRET_ACCESS_KEY"),
+        description="AWS secret key (defaults to environment variable)",
     )
-    aws_session_token: str | None = Field(
-        default=None, description="AWS session token for temporary credentials"
+    aws_session_token: str = Field(  # type: ignore[assignment]
+        default_factory=lambda: os.getenv("AWS_SESSION_TOKEN"),
+        description="AWS session token for temporary credentials",
     )
-    region_name: str = Field(default="us-east-1", description="AWS region name")
+    region_name: str = Field(
+        default_factory=lambda: os.getenv("AWS_REGION", "us-east-1"),
+        description="AWS region name",
+    )
     max_tokens: int | None = Field(
         default=None, description="Maximum tokens to generate"
     )
@@ -181,17 +192,18 @@ class BedrockCompletion(BaseLLM):
     stream: bool = Field(
         default=False, description="Whether to use streaming responses"
     )
-    guardrail_config: dict[str, Any] | None = Field(
-        default=None, description="Guardrail configuration for content filtering"
+    guardrail_config: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Guardrail configuration for content filtering",
     )
-    additional_model_request_fields: dict[str, Any] | None = Field(
-        default=None, description="Model-specific request parameters"
+    additional_model_request_fields: dict[str, Any] = Field(
+        default_factory=dict, description="Model-specific request parameters"
     )
-    additional_model_response_field_paths: list[str] | None = Field(
-        default=None, description="Custom response field paths"
+    additional_model_response_field_paths: list[str] = Field(
+        default_factory=list, description="Custom response field paths"
     )
-    client: Any = Field(
-        default=None, exclude=True, description="Bedrock client instance"
+    _client: BedrockRuntimeClient = PrivateAttr(  # type: ignore[assignment]
+        default_factory=lambda: Session().client,
     )
 
     _is_claude_model: bool = PrivateAttr(default=False)
@@ -209,10 +221,9 @@ class BedrockCompletion(BaseLLM):
             )
 
         session = Session(
-            aws_access_key_id=self.aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=self.aws_secret_access_key
-            or os.getenv("AWS_SECRET_ACCESS_KEY"),
-            aws_session_token=self.aws_session_token or os.getenv("AWS_SESSION_TOKEN"),
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key,
+            aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
 
@@ -225,7 +236,7 @@ class BedrockCompletion(BaseLLM):
             tcp_keepalive=True,
         )
 
-        self.client = session.client("bedrock-runtime", config=config)
+        self._client = session.client("bedrock-runtime", config=config)
 
         self._is_claude_model = "claude" in self.model.lower()
         self._supports_tools = True
@@ -365,7 +376,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self.client.converse(
+            response = self._client.converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -536,13 +547,13 @@ class BedrockCompletion(BaseLLM):
         tool_use_id = None
 
         try:
-            response = self.client.converse_stream(
+            response = self._client.converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
                     cast(object, messages),
                 ),
-                **body,
+                **body,  # type: ignore[arg-type]
             )
 
             stream = response.get("stream")

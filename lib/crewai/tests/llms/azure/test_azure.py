@@ -64,7 +64,7 @@ def test_azure_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Azure client responses
-    with patch.object(completion.client, 'complete') as mock_complete:
+    with patch.object(completion._client, 'complete') as mock_complete:
         # Mock tool call in response with proper type
         mock_tool_call = MagicMock(spec=ChatCompletionsToolCall)
         mock_tool_call.function.name = "get_weather"
@@ -602,7 +602,7 @@ def test_azure_environment_variable_endpoint():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        assert llm.client is not None
+        assert llm._client is not None
         assert llm.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
 
 
@@ -613,7 +613,7 @@ def test_azure_token_usage_tracking():
     llm = LLM(model="azure/gpt-4")
 
     # Mock the Azure response with usage information
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = "test response"
         mock_message.tool_calls = None
@@ -651,7 +651,7 @@ def test_azure_http_error_handling():
     llm = LLM(model="azure/gpt-4")
 
     # Mock an HTTP error
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_complete.side_effect = HttpResponseError(message="Rate limit exceeded", response=MagicMock(status_code=429))
 
         with pytest.raises(HttpResponseError):
@@ -668,7 +668,7 @@ def test_azure_streaming_completion():
     llm = LLM(model="azure/gpt-4", stream=True)
 
     # Mock streaming response
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         # Create mock streaming updates with proper type
         mock_updates = []
         for chunk in ["Hello", " ", "world", "!"]:
@@ -891,7 +891,7 @@ def test_azure_improved_error_messages():
 
     llm = LLM(model="azure/gpt-4")
 
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         error_401 = HttpResponseError(message="Unauthorized")
         error_401.status_code = 401
         mock_complete.side_effect = error_401

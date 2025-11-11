@@ -59,7 +59,7 @@ def test_gemini_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Google Gemini client responses
-    with patch.object(completion.client.models, 'generate_content') as mock_generate:
+    with patch.object(completion._client.models, 'generate_content') as mock_generate:
         # Mock function call in response
         mock_function_call = Mock()
         mock_function_call.name = "get_weather"
@@ -614,8 +614,8 @@ def test_gemini_environment_variable_api_key():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
-        assert llm.client is not None
-        assert hasattr(llm.client, 'models')
+        assert llm._client is not None
+        assert hasattr(llm._client, 'models')
         assert llm.api_key == "test-google-key"
 
 
@@ -626,7 +626,7 @@ def test_gemini_token_usage_tracking():
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     # Mock the Gemini response with usage information
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+    with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "test response"
         mock_response.candidates = []
@@ -675,7 +675,7 @@ def test_gemini_stop_sequences_sent_to_api():
     llm.stop = ["\nObservation:", "\nThought:"]
 
     # Patch the API call to capture parameters without making real call
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+    with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "Hello"
         mock_response.candidates = []

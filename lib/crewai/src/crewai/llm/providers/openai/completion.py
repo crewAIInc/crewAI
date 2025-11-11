@@ -6,6 +6,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 import httpx
 from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
@@ -32,6 +33,9 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
+load_dotenv()
+
+
 class OpenAICompletion(BaseLLM):
     """OpenAI native completion implementation.
 
@@ -40,43 +44,51 @@ class OpenAICompletion(BaseLLM):
     """
 
     # Client configuration fields
-    organization: str | None = Field(None, description="OpenAI organization ID")
-    project: str | None = Field(None, description="OpenAI project ID")
-    max_retries: int = Field(2, description="Maximum number of retries")
-    default_headers: dict[str, str] | None = Field(
-        None, description="Default headers for requests"
+    organization: str | None = Field(default=None, description="OpenAI organization ID")
+    project: str | None = Field(default=None, description="OpenAI project ID")
+    max_retries: int = Field(default=2, description="Maximum number of retries")
+    default_headers: dict[str, str] = Field(
+        default_factory=dict, description="Default headers for requests"
     )
-    default_query: dict[str, Any] | None = Field(
-        None, description="Default query parameters"
+    default_query: dict[str, Any] = Field(
+        default_factory=dict, description="Default query parameters"
     )
-    client_params: dict[str, Any] | None = Field(
-        None, description="Additional client parameters"
+    client_params: dict[str, Any] = Field(
+        default_factory=dict, description="Additional client parameters"
     )
-    timeout: float | None = Field(None, description="Request timeout")
-    api_base: str | None = Field(None, description="API base URL (deprecated)")
+    timeout: float | None = Field(default=None, description="Request timeout")
+    api_base: str | None = Field(
+        default=None, description="API base URL", deprecated=True
+    )
 
     # Completion parameters
-    top_p: float | None = Field(None, description="Top-p sampling parameter")
-    frequency_penalty: float | None = Field(None, description="Frequency penalty")
-    presence_penalty: float | None = Field(None, description="Presence penalty")
-    max_tokens: int | None = Field(None, description="Maximum tokens")
+    top_p: float | None = Field(default=None, description="Top-p sampling parameter")
+    frequency_penalty: float | None = Field(
+        default=None, description="Frequency penalty"
+    )
+    presence_penalty: float | None = Field(default=None, description="Presence penalty")
+    max_tokens: int | None = Field(default=None, description="Maximum tokens")
     max_completion_tokens: int | None = Field(
         None, description="Maximum completion tokens"
     )
-    seed: int | None = Field(None, description="Random seed")
-    stream: bool = Field(False, description="Enable streaming")
+    seed: int | None = Field(default=None, description="Random seed")
+    stream: bool = Field(default=False, description="Enable streaming")
     response_format: dict[str, Any] | type[BaseModel] | None = Field(
-        None, description="Response format"
+        default=None, description="Response format"
     )
-    logprobs: bool | None = Field(None, description="Return log probabilities")
+    logprobs: bool | None = Field(default=None, description="Return log probabilities")
     top_logprobs: int | None = Field(
-        None, description="Number of top log probabilities"
+        default=None, description="Number of top log probabilities"
     )
-    reasoning_effort: str | None = Field(None, description="Reasoning effort level")
+    reasoning_effort: str | None = Field(
+        default=None, description="Reasoning effort level"
+    )
 
-    _client: OpenAI = PrivateAttr(default_factory=OpenAI)
-    is_o1_model: bool = Field(False, description="Whether this is an O1 model")
-    is_gpt4_model: bool = Field(False, description="Whether this is a GPT-4 model")
+    _client: OpenAI = PrivateAttr(default=None)  # type: ignore[assignment]
+    is_o1_model: bool = Field(default=False, description="Whether this is an O1 model")
+    is_gpt4_model: bool = Field(
+        default=False, description="Whether this is a GPT-4 model"
+    )
 
     @model_validator(mode="after")
     def setup_client(self) -> Self:
@@ -97,10 +109,6 @@ class OpenAICompletion(BaseLLM):
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
-
-        if self.api_key is None:
-            raise ValueError("OPENAI_API_KEY is required")
-
         base_params = {
             "api_key": self.api_key,
             "organization": self.organization,
