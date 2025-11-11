@@ -809,6 +809,7 @@ class Crew(FlowTrackable, BaseModel):
                 "json_dict": output.json_dict,
                 "output_format": output.output_format,
                 "agent": output.agent,
+                "messages": output.messages,
             },
             "task_index": task_index,
             "inputs": inputs,
@@ -1236,6 +1237,7 @@ class Crew(FlowTrackable, BaseModel):
                 pydantic=stored_output["pydantic"],
                 json_dict=stored_output["json_dict"],
                 output_format=stored_output["output_format"],
+                messages=stored_output.get("messages", []),
             )
             self.tasks[i].output = task_output
 
