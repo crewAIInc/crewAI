@@ -3176,6 +3176,70 @@ def test_replay_task_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_preserves_messages():
+    """Test that replay preserves messages from stored task outputs."""
+    from crewai.utilities.types import LLMMessage
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Say hello",
+        expected_output="A greeting",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+    mock_messages: list[LLMMessage] = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Say hello"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    mock_task_output = TaskOutput(
+        description="Say hello",
+        raw="Hello!",
+        agent="Test Agent",
+        messages=mock_messages,
+    )
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
+
+    # Verify the task output was stored with messages
+    db_handler = TaskOutputStorageHandler()
+    stored_outputs = db_handler.load()
+    assert stored_outputs is not None
+    assert len(stored_outputs) > 0
+
+    # Verify messages are in the stored output
+    stored_output = stored_outputs[0]["output"]
+    assert "messages" in stored_output
+    assert len(stored_output["messages"]) == 3
+    assert stored_output["messages"][0]["role"] == "system"
+    assert stored_output["messages"][1]["role"] == "user"
+    assert stored_output["messages"][2]["role"] == "assistant"
+
+    # Replay the task and verify messages are preserved
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        replayed_output = crew.replay(str(task.id))
+
+    # Verify the replayed task output has messages
+    assert len(replayed_output.tasks_output) > 0
+    replayed_task_output = replayed_output.tasks_output[0]
+    assert hasattr(replayed_task_output, "messages")
+    assert isinstance(replayed_task_output.messages, list)
+    assert len(replayed_task_output.messages) == 3
+
+    db_handler.reset()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_replay_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
