@@ -119,6 +119,7 @@ class Agent(BaseAgent):
 
     _times_executed: int = PrivateAttr(default=0)
     _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
+    _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -536,6 +537,12 @@ class Agent(BaseAgent):
         crewai_event_bus.emit(
             self,
             event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+        )
+
+        self._last_messages = (
+            self.agent_executor.messages.copy()
+            if self.agent_executor and hasattr(self.agent_executor, "messages")
+            else []
         )
 
         self._cleanup_mcp_clients()
@@ -1340,6 +1347,15 @@ class Agent(BaseAgent):
 
     def set_fingerprint(self, fingerprint: Fingerprint) -> None:
         self.security_config.fingerprint = fingerprint
+
+    @property
+    def last_messages(self) -> list[LLMMessage]:
+        """Get messages from the last task execution.
+
+        Returns:
+            List of LLM messages from the most recent task execution.
+        """
+        return self._last_messages
 
     def _get_knowledge_search_query(self, task_prompt: str, task: Task) -> str | None:
         """Generate a search query for the knowledge base based on the task description."""

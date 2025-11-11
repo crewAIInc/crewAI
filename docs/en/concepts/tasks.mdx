@@ -224,6 +224,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 | **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
 | **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
 | **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
+| **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                           |
 
 ### Task Methods and Properties
 
