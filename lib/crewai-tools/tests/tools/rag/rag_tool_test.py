@@ -1,5 +1,3 @@
-"""Tests for RAG tool with mocked embeddings and vector database."""
-
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import cast
@@ -176,3 +174,126 @@ def test_rag_tool_no_results(
     result = tool._run(query="Non-existent content")
     assert "Relevant Content:" in result
     assert "No relevant content found" in result
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_with_azure_config_without_env_vars(
+    mock_create_client: Mock,
+) -> None:
+    """Test that RagTool accepts Azure config without requiring env vars.
+
+    This test verifies the fix for the issue where RAG tools were ignoring
+    the embedding configuration passed via the config parameter and instead
+    requiring environment variables like EMBEDDINGS_OPENAI_API_KEY.
+    """
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_client.add_documents = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    # Patch the embedding function builder to avoid actual API calls
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        # Configuration with explicit Azure credentials - should work without env vars
+        config = {
+            "embedding_model": {
+                "provider": "azure",
+                "config": {
+                    "model": "text-embedding-3-small",
+                    "api_key": "test-api-key",
+                    "api_base": "https://test.openai.azure.com/",
+                    "api_version": "2024-02-01",
+                    "api_type": "azure",
+                },
+            }
+        }
+
+        # This should not raise a validation error about missing env vars
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_with_openai_config_without_env_vars(
+    mock_create_client: Mock,
+) -> None:
+    """Test that RagTool accepts OpenAI config without requiring env vars."""
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        config = {
+            "embedding_model": {
+                "provider": "openai",
+                "config": {
+                    "model": "text-embedding-3-small",
+                    "api_key": "sk-test123",
+                },
+            }
+        }
+
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_config_with_qdrant_and_azure_embeddings(
+    mock_create_client: Mock,
+) -> None:
+    """Test RagTool with Qdrant vector DB and Azure embeddings config."""
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        config = {
+            "vectordb": {"provider": "qdrant", "config": {}},
+            "embedding_model": {
+                "provider": "azure",
+                "config": {
+                    "model": "text-embedding-3-large",
+                    "api_key": "test-key",
+                    "api_base": "https://test.openai.azure.com/",
+                    "api_version": "2024-02-01",
+                },
+            },
+        }
+
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)

@@ -5,6 +5,7 @@ from typing import Any, cast
 from crewai.rag.embeddings.factory import get_embedding_function
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from typing_extensions import Self
 
 
 class Adapter(BaseModel, ABC):
@@ -50,7 +51,7 @@ class RagTool(BaseTool):
     config: Any | None = None
 
     @model_validator(mode="after")
-    def _set_default_adapter(self):
+    def _set_default_adapter(self) -> Self:
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
             from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 
@@ -114,7 +115,9 @@ class RagTool(BaseTool):
         return config
 
     @staticmethod
-    def _create_embedding_function(embedding_config: dict, provider: str) -> Any:
+    def _create_embedding_function(
+        embedding_config: dict[str, Any], provider: str
+    ) -> Any:
         """Create embedding function for the specified vector database provider."""
         embedding_provider = embedding_config.get("provider")
         embedding_model_config = embedding_config.get("config", {}).copy()
@@ -122,12 +125,15 @@ class RagTool(BaseTool):
         if "model" in embedding_model_config:
             embedding_model_config["model_name"] = embedding_model_config.pop("model")
 
-        factory_config = {"provider": embedding_provider, **embedding_model_config}
-
-        if embedding_provider == "openai" and "api_key" not in factory_config:
+        if embedding_provider == "openai" and "api_key" not in embedding_model_config:
             api_key = os.getenv("OPENAI_API_KEY")
             if api_key:
-                factory_config["api_key"] = api_key
+                embedding_model_config["api_key"] = api_key
+
+        factory_config = {
+            "provider": embedding_provider,
+            "config": embedding_model_config,
+        }
 
         if provider == "chromadb":
             return get_embedding_function(factory_config)  # type: ignore[call-overload]
@@ -153,7 +159,7 @@ class RagTool(BaseTool):
 
     @staticmethod
     def _create_provider_config(
-        provider: str, provider_config: dict, embedding_function: Any
+        provider: str, provider_config: dict[str, Any], embedding_function: Any
     ) -> Any:
         """Create proper provider config object."""
         if provider == "chromadb":
