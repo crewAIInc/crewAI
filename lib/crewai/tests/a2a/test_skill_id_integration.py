@@ -182,3 +182,106 @@ def test_multiple_agents_with_unique_skill_ids():
     
     endpoint2 = resolve_agent_identifier("Writing", a2a_agents, agent_cards)
     assert endpoint2 == "http://localhost:10002/.well-known/agent-card.json"
+
+
+def test_multi_turn_skill_id_resolution():
+    """Test that skill IDs work in multi-turn A2A conversations.
+    
+    This test verifies the fix in _handle_agent_response_and_continue()
+    that rebuilds the AgentResponse model with both endpoints and skill IDs
+    for subsequent turns in multi-turn conversations.
+    
+    Scenario:
+    1. First turn: LLM returns skill ID "Research"
+    2. A2A agent responds
+    3. Second turn: LLM returns skill ID "Writing" (different agent)
+    4. Both turns should accept skill IDs without validation errors
+    """
+    a2a_agents = [
+        A2AConfig(endpoint="http://localhost:10001/.well-known/agent-card.json"),
+        A2AConfig(endpoint="http://localhost:10002/.well-known/agent-card.json"),
+    ]
+    
+    card1 = AgentCard(
+        name="Research Agent",
+        description="Research agent",
+        url="http://localhost:10001",
+        version="1.0.0",
+        capabilities=AgentCapabilities(),
+        default_input_modes=["text/plain"],
+        default_output_modes=["text/plain"],
+        skills=[
+            AgentSkill(
+                id="Research",
+                name="Research",
+                description="Conduct research",
+                tags=["research"],
+            )
+        ],
+    )
+    
+    card2 = AgentCard(
+        name="Writing Agent",
+        description="Writing agent",
+        url="http://localhost:10002",
+        version="1.0.0",
+        capabilities=AgentCapabilities(),
+        default_input_modes=["text/plain"],
+        default_output_modes=["text/plain"],
+        skills=[
+            AgentSkill(
+                id="Writing",
+                name="Writing",
+                description="Write content",
+                tags=["writing"],
+            )
+        ],
+    )
+    
+    agent_cards_turn1 = {
+        "http://localhost:10001/.well-known/agent-card.json": card1,
+    }
+    
+    identifiers_turn1 = extract_agent_identifiers_from_cards(a2a_agents, agent_cards_turn1)
+    model_turn1 = create_agent_response_model(identifiers_turn1)
+    
+    response_turn1 = model_turn1.model_validate({
+        "a2a_ids": ["Research"],
+        "message": "Please research quantum computing",
+        "is_a2a": True,
+    })
+    assert response_turn1.a2a_ids == ("Research",)
+    
+    endpoint_turn1 = resolve_agent_identifier("Research", a2a_agents, agent_cards_turn1)
+    assert endpoint_turn1 == "http://localhost:10001/.well-known/agent-card.json"
+    
+    agent_cards_turn2 = {
+        "http://localhost:10001/.well-known/agent-card.json": card1,
+        "http://localhost:10002/.well-known/agent-card.json": card2,
+    }
+    
+    identifiers_turn2 = extract_agent_identifiers_from_cards(a2a_agents, agent_cards_turn2)
+    model_turn2 = create_agent_response_model(identifiers_turn2)
+    
+    assert "Research" in identifiers_turn2
+    assert "Writing" in identifiers_turn2
+    
+    response_turn2 = model_turn2.model_validate({
+        "a2a_ids": ["Writing"],
+        "message": "Now write a report based on the research",
+        "is_a2a": True,
+    })
+    assert response_turn2.a2a_ids == ("Writing",)
+    
+    endpoint_turn2 = resolve_agent_identifier("Writing", a2a_agents, agent_cards_turn2)
+    assert endpoint_turn2 == "http://localhost:10002/.well-known/agent-card.json"
+    
+    response_turn3 = model_turn2.model_validate({
+        "a2a_ids": ["Research"],
+        "message": "Research more details",
+        "is_a2a": True,
+    })
+    assert response_turn3.a2a_ids == ("Research",)
+    
+    endpoint_turn3 = resolve_agent_identifier("Research", a2a_agents, agent_cards_turn2)
+    assert endpoint_turn3 == "http://localhost:10001/.well-known/agent-card.json"
