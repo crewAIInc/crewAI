@@ -386,6 +386,9 @@ def _handle_agent_response_and_continue(
     if "agent_card" in a2a_result and agent_id not in agent_cards_dict:
         agent_cards_dict[agent_id] = a2a_result["agent_card"]
 
+    agent_identifiers = extract_agent_identifiers_from_cards(a2a_agents, agent_cards_dict)
+    agent_response_model = create_agent_response_model(agent_identifiers)
+
     task.description = _augment_prompt_with_a2a(
         a2a_agents=a2a_agents,
         task_description=original_task_description,
