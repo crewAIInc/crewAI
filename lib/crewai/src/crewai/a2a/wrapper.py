@@ -497,7 +497,37 @@ def _delegate_to_a2a(
 
             conversation_history = a2a_result.get("history", [])
 
-            if a2a_result["status"] in ["completed", "input_required"]:
+            if a2a_result["status"] == "completed":
+                # Do NOT call _handle_agent_response_and_continue as it may trigger another delegation
+                final_message = a2a_result.get("result", "")
+
+                # If result is empty, try to extract from conversation history
+                if not final_message and conversation_history:
+                    for msg in reversed(conversation_history):
+                        if msg.role == Role.agent:
+                            text_parts = [
+                                part.root.text for part in msg.parts if part.root.kind == "text"
+                            ]
+                            final_message = (
+                                " ".join(text_parts) if text_parts else "Conversation completed"
+                            )
+                            break
+
+                if not final_message:
+                    final_message = "Conversation completed"
+
+                crewai_event_bus.emit(
+                    None,
+                    A2AConversationCompletedEvent(
+                        status="completed",
+                        final_result=final_message,
+                        error=None,
+                        total_turns=turn_num + 1,
+                    ),
+                )
+                return final_message
+
+            if a2a_result["status"] == "input_required":
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
                     a2a_result=a2a_result,
