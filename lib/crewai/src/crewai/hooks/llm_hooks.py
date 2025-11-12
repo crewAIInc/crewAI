@@ -54,7 +54,6 @@ class LLMCallHookContext:
         self.response = response
 
 
-# Global hook registries (optional convenience feature)
 _before_llm_call_hooks: list[Callable[[LLMCallHookContext], None]] = []
 _after_llm_call_hooks: list[Callable[[LLMCallHookContext], str | None]] = []
 
@@ -73,6 +72,13 @@ def register_before_llm_call_hook(
             context.messages directly. Should return None.
             IMPORTANT: Modify messages in-place (append, extend, remove items).
             Do NOT replace the list (context.messages = []), as this will break execution.
+
+    Example:
+        >>> def log_llm_calls(context: LLMCallHookContext) -> None:
+        ...     print(f"LLM call by {context.agent.role}")
+        ...     print(f"Messages: {len(context.messages)}")
+        >>>
+        >>> register_before_llm_call_hook(log_llm_calls)
     """
     _before_llm_call_hooks.append(hook)
 
@@ -93,6 +99,14 @@ def register_after_llm_call_hook(
             Both modifications are supported and can be used together.
             IMPORTANT: Modify messages in-place (append, extend, remove items).
             Do NOT replace the list (context.messages = []), as this will break execution.
+
+    Example:
+        >>> def sanitize_response(context: LLMCallHookContext) -> str | None:
+        ...     if context.response and "SECRET" in context.response:
+        ...         return context.response.replace("SECRET", "[REDACTED]")
+        ...     return None
+        >>>
+        >>> register_after_llm_call_hook(sanitize_response)
     """
     _after_llm_call_hooks.append(hook)
 
