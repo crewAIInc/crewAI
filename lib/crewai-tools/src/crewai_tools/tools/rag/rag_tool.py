@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-import os
-from typing import Any, cast
+from typing import Any, Literal, cast
 
-from crewai.rag.embeddings.factory import get_embedding_function
+from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+from crewai.rag.embeddings.factory import build_embedder
+from crewai.rag.embeddings.types import ProviderSpec
 from crewai.tools import BaseTool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import Self
+
+from crewai_tools.tools.rag.types import RagToolConfig, VectorDbConfig
 
 
 class Adapter(BaseModel, ABC):
@@ -48,143 +51,77 @@ class RagTool(BaseTool):
     similarity_threshold: float = 0.6
     limit: int = 5
     adapter: Adapter = Field(default_factory=_AdapterPlaceholder)
-    config: Any | None = None
+    config: RagToolConfig = Field(
+        default_factory=RagToolConfig,
+        description="Configuration format accepted by RagTool.",
+    )
 
     @model_validator(mode="after")
-    def _set_default_adapter(self) -> Self:
+    def _ensure_adapter(self) -> Self:
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
             from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 
-            parsed_config = self._parse_config(self.config)
-
+            provider_cfg = self._parse_config(self.config)
             self.adapter = CrewAIRagAdapter(
                 collection_name="rag_tool_collection",
                 summarize=self.summarize,
                 similarity_threshold=self.similarity_threshold,
                 limit=self.limit,
-                config=parsed_config,
+                config=provider_cfg,
             )
-
         return self
 
-    def _parse_config(self, config: Any) -> Any:
-        """Parse complex config format to extract provider-specific config.
-
-        Raises:
-            ValueError: If the config format is invalid or uses unsupported providers.
+    def _parse_config(self, config: RagToolConfig) -> Any:
         """
-        if config is None:
-            return None
+        Normalize the RagToolConfig into a provider-specific config object.
+        Defaults to 'chromadb' with no extra provider config if none is supplied.
+        """
+        if not config:
+            return self._create_provider_config("chromadb", {}, None)
 
-        if isinstance(config, dict) and "provider" in config:
-            return config
+        vectordb_cfg = cast(VectorDbConfig, config.get("vectordb", {}))
+        provider: Literal["chromadb", "qdrant"] = vectordb_cfg.get(
+            "provider", "chromadb"
+        )
+        provider_config: dict[str, Any] = vectordb_cfg.get("config", {})
 
-        if isinstance(config, dict):
-            if "vectordb" in config:
-                vectordb_config = config["vectordb"]
-                if isinstance(vectordb_config, dict) and "provider" in vectordb_config:
-                    provider = vectordb_config["provider"]
-                    provider_config = vectordb_config.get("config", {})
+        supported = ("chromadb", "qdrant")
+        if provider not in supported:
+            raise ValueError(
+                f"Unsupported vector database provider: '{provider}'. "
+                f"CrewAI RAG currently supports: {', '.join(supported)}."
+            )
 
-                    supported_providers = ["chromadb", "qdrant"]
-                    if provider not in supported_providers:
-                        raise ValueError(
-                            f"Unsupported vector database provider: '{provider}'. "
-                            f"CrewAI RAG currently supports: {', '.join(supported_providers)}."
-                        )
-
-                    embedding_config = config.get("embedding_model")
-                    embedding_function = None
-                    if embedding_config and isinstance(embedding_config, dict):
-                        embedding_function = self._create_embedding_function(
-                            embedding_config, provider
-                        )
-
-                    return self._create_provider_config(
-                        provider, provider_config, embedding_function
-                    )
-                return None
-            embedding_config = config.get("embedding_model")
-            embedding_function = None
-            if embedding_config and isinstance(embedding_config, dict):
-                embedding_function = self._create_embedding_function(
-                    embedding_config, "chromadb"
-                )
-
-            return self._create_provider_config("chromadb", {}, embedding_function)
-        return config
-
-    @staticmethod
-    def _create_embedding_function(
-        embedding_config: dict[str, Any], provider: str
-    ) -> Any:
-        """Create embedding function for the specified vector database provider."""
-        embedding_provider = embedding_config.get("provider")
-        embedding_model_config = embedding_config.get("config", {}).copy()
-
-        if "model" in embedding_model_config:
-            embedding_model_config["model_name"] = embedding_model_config.pop("model")
-
-        if embedding_provider == "openai" and "api_key" not in embedding_model_config:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                embedding_model_config["api_key"] = api_key
-
-        factory_config = {
-            "provider": embedding_provider,
-            "config": embedding_model_config,
-        }
-
-        if provider == "chromadb":
-            return get_embedding_function(factory_config)  # type: ignore[call-overload]
-
-        if provider == "qdrant":
-            chromadb_func = get_embedding_function(factory_config)  # type: ignore[call-overload]
-
-            def qdrant_embed_fn(text: str) -> list[float]:
-                """Embed text using ChromaDB function and convert to list of floats for Qdrant.
-
-                Args:
-                    text: The input text to embed.
-
-                Returns:
-                    A list of floats representing the embedding.
-                """
-                embeddings = chromadb_func([text])
-                return embeddings[0] if embeddings and len(embeddings) > 0 else []
-
-            return cast(Any, qdrant_embed_fn)
-
-        return None
+        embedding_spec: ProviderSpec | None = config.get("embedding_model")
+        embedding_function = build_embedder(embedding_spec) if embedding_spec else None
+        return self._create_provider_config(
+            provider, provider_config, embedding_function
+        )
 
     @staticmethod
     def _create_provider_config(
-        provider: str, provider_config: dict[str, Any], embedding_function: Any
+        provider: Literal["chromadb", "qdrant"],
+        provider_config: dict[str, Any],
+        embedding_function: EmbeddingFunction[Any] | None,
     ) -> Any:
-        """Create proper provider config object."""
+        """Instantiate provider config with optional embedding_function injected."""
         if provider == "chromadb":
             from crewai.rag.chromadb.config import ChromaDBConfig
 
-            config_kwargs = {}
-            if embedding_function:
-                config_kwargs["embedding_function"] = embedding_function
-
-            config_kwargs.update(provider_config)
-
-            return ChromaDBConfig(**config_kwargs)
+            kwargs = dict(provider_config)
+            if embedding_function is not None:
+                kwargs["embedding_function"] = embedding_function
+            return ChromaDBConfig(**kwargs)
 
         if provider == "qdrant":
             from crewai.rag.qdrant.config import QdrantConfig
 
-            config_kwargs = {}
-            if embedding_function:
-                config_kwargs["embedding_function"] = embedding_function
+            kwargs = dict(provider_config)
+            if embedding_function is not None:
+                kwargs["embedding_function"] = embedding_function
+            return QdrantConfig(**kwargs)
 
-            config_kwargs.update(provider_config)
-
-            return QdrantConfig(**config_kwargs)
-
-        return None
+        raise ValueError(f"Unhandled provider: {provider}")
 
     def add(
         self,
