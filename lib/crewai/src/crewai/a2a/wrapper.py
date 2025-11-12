@@ -23,9 +23,12 @@ from crewai.a2a.templates import (
 )
 from crewai.a2a.types import AgentResponseProtocol
 from crewai.a2a.utils import (
+    create_agent_response_model,
     execute_a2a_delegation,
+    extract_agent_identifiers_from_cards,
     fetch_agent_card,
     get_a2a_agents_and_response_model,
+    resolve_agent_identifier,
 )
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
@@ -190,6 +193,9 @@ def _execute_task_with_a2a(
         finally:
             task.description = original_description
 
+    agent_identifiers = extract_agent_identifiers_from_cards(a2a_agents, agent_cards)
+    agent_response_model = create_agent_response_model(agent_identifiers)
+
     task.description = _augment_prompt_with_a2a(
         a2a_agents=a2a_agents,
         task_description=original_description,
@@ -301,6 +307,13 @@ def _augment_prompt_with_a2a(
 IMPORTANT: You have the ability to delegate this task to remote A2A agents.
 
 {agents_text}
+
+AGENT IDENTIFICATION: When setting a2a_ids, you may use either:
+1. The agent's endpoint URL (e.g., "http://localhost:10001/.well-known/agent-card.json")
+2. The exact skill.id from the agent's skills list (e.g., "Research")
+
+Prefer using endpoint URLs when possible to avoid ambiguity. If a skill.id appears on multiple agents, you MUST use the endpoint URL to specify which agent you want.
+
 {history_text}{turn_info}
 
 
@@ -445,16 +458,20 @@ def _delegate_to_a2a(
         ImportError: If a2a-sdk is not installed
     """
     a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
-    agent_ids = tuple(config.endpoint for config in a2a_agents)
     current_request = str(agent_response.message)
-    agent_id = agent_response.a2a_ids[0]
+    agent_identifier = agent_response.a2a_ids[0]
 
-    if agent_id not in agent_ids:
-        raise ValueError(
-            f"Unknown A2A agent ID(s): {agent_response.a2a_ids} not in {agent_ids}"
+    agent_cards_dict = agent_cards or {}
+    try:
+        agent_endpoint = resolve_agent_identifier(
+            agent_identifier, a2a_agents, agent_cards_dict
         )
+    except ValueError as e:
+        raise ValueError(
+            f"Failed to resolve A2A agent identifier '{agent_identifier}': {e}"
+        ) from e
 
-    agent_config = next(filter(lambda x: x.endpoint == agent_id, a2a_agents))
+    agent_config = next(filter(lambda x: x.endpoint == agent_endpoint, a2a_agents))
     task_config = task.config or {}
     context_id = task_config.get("context_id")
     task_id_config = task_config.get("task_id")
@@ -488,7 +505,7 @@ def _delegate_to_a2a(
                 metadata=metadata,
                 extensions=extensions,
                 conversation_history=conversation_history,
-                agent_id=agent_id,
+                agent_id=agent_endpoint,
                 agent_role=Role.user,
                 agent_branch=agent_branch,
                 response_model=agent_config.response_model,
@@ -501,7 +518,7 @@ def _delegate_to_a2a(
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
                     a2a_result=a2a_result,
-                    agent_id=agent_id,
+                    agent_id=agent_endpoint,
                     agent_cards=agent_cards,
                     a2a_agents=a2a_agents,
                     original_task_description=original_task_description,

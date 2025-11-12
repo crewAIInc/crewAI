@@ -753,3 +753,99 @@ def get_a2a_agents_and_response_model(
     """
     a2a_agents, agent_ids = extract_a2a_agent_ids_from_config(a2a_config=a2a_config)
     return a2a_agents, create_agent_response_model(agent_ids)
+
+
+def extract_agent_identifiers_from_cards(
+    a2a_agents: list[A2AConfig],
+    agent_cards: dict[str, AgentCard],
+) -> tuple[str, ...]:
+    """Extract all valid agent identifiers (endpoints and skill IDs) from agent cards.
+
+    Args:
+        a2a_agents: List of A2A agent configurations
+        agent_cards: Dictionary mapping endpoints to AgentCards
+
+    Returns:
+        Tuple of all valid identifiers (endpoints + skill IDs)
+    """
+    identifiers = set()
+
+    for config in a2a_agents:
+        identifiers.add(config.endpoint)
+
+    for card in agent_cards.values():
+        if card.skills:
+            for skill in card.skills:
+                identifiers.add(skill.id)
+
+    return tuple(sorted(identifiers))
+
+
+def resolve_agent_identifier(
+    identifier: str,
+    a2a_agents: list[A2AConfig],
+    agent_cards: dict[str, AgentCard],
+) -> str:
+    """Resolve an agent identifier (endpoint or skill ID) to a canonical endpoint.
+
+    This function allows both endpoint URLs and skill IDs to be used as agent identifiers.
+    If the identifier is already an endpoint, it's returned as-is. If it's a skill ID,
+    it's resolved to the endpoint of the agent card that contains that skill.
+
+    Args:
+        identifier: Either an endpoint URL or a skill ID
+        a2a_agents: List of A2A agent configurations
+        agent_cards: Dictionary mapping endpoints to AgentCards
+
+    Returns:
+        The canonical endpoint URL
+
+    Raises:
+        ValueError: If the identifier is unknown or ambiguous (matches multiple agents)
+
+    Examples:
+        >>> # Endpoint passthrough
+        >>> resolve_agent_identifier(
+        ...     "http://localhost:10001/.well-known/agent-card.json",
+        ...     a2a_agents,
+        ...     agent_cards
+        ... )
+        'http://localhost:10001/.well-known/agent-card.json'
+
+        >>> # Skill ID resolution
+        >>> resolve_agent_identifier("Research", a2a_agents, agent_cards)
+        'http://localhost:10001/.well-known/agent-card.json'
+    """
+    endpoints = {config.endpoint for config in a2a_agents}
+    if identifier in endpoints:
+        return identifier
+
+    matching_endpoints: list[str] = []
+    for endpoint, card in agent_cards.items():
+        if card.skills:
+            for skill in card.skills:
+                if skill.id == identifier:
+                    matching_endpoints.append(endpoint)
+                    break
+
+    if len(matching_endpoints) == 0:
+        available_endpoints = ", ".join(sorted(endpoints))
+        available_skill_ids = []
+        for card in agent_cards.values():
+            if card.skills:
+                available_skill_ids.extend([skill.id for skill in card.skills])
+        available_skills = ", ".join(sorted(set(available_skill_ids))) if available_skill_ids else "none"
+        raise ValueError(
+            f"Unknown A2A agent identifier '{identifier}'. "
+            f"Available endpoints: {available_endpoints}. "
+            f"Available skill IDs: {available_skills}."
+        )
+
+    if len(matching_endpoints) > 1:
+        endpoints_list = ", ".join(sorted(matching_endpoints))
+        raise ValueError(
+            f"Ambiguous skill ID '{identifier}' found in multiple agents: {endpoints_list}. "
+            f"Please use the specific endpoint URL to disambiguate."
+        )
+
+    return matching_endpoints[0]
