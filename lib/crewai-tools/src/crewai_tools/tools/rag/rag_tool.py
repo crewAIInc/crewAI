@@ -5,10 +5,71 @@ from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.types import ProviderSpec
 from crewai.tools import BaseTool
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 
 from crewai_tools.tools.rag.types import RagToolConfig, VectorDbConfig
+
+
+def _validate_embedding_config(
+    value: dict[str, Any] | ProviderSpec,
+) -> dict[str, Any] | ProviderSpec:
+    """Validate embedding config and provide clearer error messages for union validation.
+
+    This pre-validator catches Pydantic ValidationErrors from the ProviderSpec union
+    and provides a cleaner, more focused error message that only shows the relevant
+    provider's validation errors instead of all 18 union members.
+
+    Args:
+        value: The embedding configuration dictionary or validated ProviderSpec.
+
+    Returns:
+        A validated ProviderSpec instance, or the original value if already validated
+        or missing required fields.
+
+    Raises:
+        ValueError: If the configuration is invalid for the specified provider.
+    """
+    if not isinstance(value, dict):
+        return value
+
+    provider = value.get("provider")
+    if not provider:
+        return value
+
+    try:
+        from pydantic import TypeAdapter
+
+        type_adapter: TypeAdapter[ProviderSpec] = TypeAdapter(ProviderSpec)
+        return type_adapter.validate_python(value)
+    except ValidationError as e:
+        provider_key = f"{provider.lower()}providerspec"
+        provider_errors = [
+            err for err in e.errors() if provider_key in str(err.get("loc", "")).lower()
+        ]
+
+        if provider_errors:
+            error_msgs = []
+            for err in provider_errors:
+                loc_parts = err["loc"]
+                if str(loc_parts[0]).lower() == provider_key:
+                    loc_parts = loc_parts[1:]
+                loc = ".".join(str(x) for x in loc_parts)
+                error_msgs.append(f"  - {loc}: {err['msg']}")
+
+            raise ValueError(
+                f"Invalid configuration for embedding provider '{provider}':\n"
+                + "\n".join(error_msgs)
+            ) from e
+
+        raise
 
 
 class Adapter(BaseModel, ABC):
@@ -56,6 +117,22 @@ class RagTool(BaseTool):
         description="Configuration format accepted by RagTool.",
     )
 
+    @field_validator("config", mode="before")
+    @classmethod
+    def _validate_config(cls, value: Any) -> Any:
+        """Validate config with improved error messages for embedding providers."""
+        if not isinstance(value, dict):
+            return value
+
+        embedding_model = value.get("embedding_model")
+        if embedding_model:
+            try:
+                value["embedding_model"] = _validate_embedding_config(embedding_model)
+            except ValueError:
+                raise
+
+        return value
+
     @model_validator(mode="after")
     def _ensure_adapter(self) -> Self:
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
@@ -72,8 +149,8 @@ class RagTool(BaseTool):
         return self
 
     def _parse_config(self, config: RagToolConfig) -> Any:
-        """
-        Normalize the RagToolConfig into a provider-specific config object.
+        """Normalize the RagToolConfig into a provider-specific config object.
+
         Defaults to 'chromadb' with no extra provider config if none is supplied.
         """
         if not config:
@@ -93,6 +170,11 @@ class RagTool(BaseTool):
             )
 
         embedding_spec: ProviderSpec | None = config.get("embedding_model")
+        if embedding_spec:
+            embedding_spec = cast(
+                ProviderSpec, _validate_embedding_config(embedding_spec)
+            )
+
         embedding_function = build_embedder(embedding_spec) if embedding_spec else None
         return self._create_provider_config(
             provider, provider_config, embedding_function
