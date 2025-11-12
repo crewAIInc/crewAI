@@ -2719,7 +2719,11 @@ def test_agent_without_apps_no_platform_tools():
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_before_llm_call_hook_modifies_messages():
     """Test that before_llm_call hooks can modify messages."""
-    from crewai.utilities.llm_call_hooks import LLMCallHookContext, register_before_llm_call_hook
+    from crewai.utilities.llm_call_hooks import (
+        LLMCallHookContext,
+        clear_all_llm_call_hooks,
+        register_before_llm_call_hook,
+    )
 
     hook_called = False
     original_message_count = 0
@@ -2755,13 +2759,17 @@ def test_before_llm_call_hook_modifies_messages():
         assert len(agent.agent_executor.messages) > original_message_count
         assert result is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_after_llm_call_hook_modifies_messages_for_next_iteration():
     """Test that after_llm_call hooks can modify messages for the next iteration."""
-    from crewai.utilities.llm_call_hooks import LLMCallHookContext, register_after_llm_call_hook
+    from crewai.utilities.llm_call_hooks import (
+        LLMCallHookContext,
+        clear_all_llm_call_hooks,
+        register_after_llm_call_hook,
+    )
 
     hook_call_count = 0
     hook_iterations = []
@@ -2817,13 +2825,17 @@ def test_after_llm_call_hook_modifies_messages_for_next_iteration():
         assert len(executor_messages) > 2, "Executor should have more than initial messages"
         assert result is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_after_llm_call_hook_modifies_messages():
     """Test that after_llm_call hooks can modify messages for next iteration."""
-    from crewai.utilities.llm_call_hooks import LLMCallHookContext, register_after_llm_call_hook
+    from crewai.utilities.llm_call_hooks import (
+        LLMCallHookContext,
+        clear_all_llm_call_hooks,
+        register_after_llm_call_hook,
+    )
 
     hook_called = False
     messages_before_hook = 0
@@ -2861,7 +2873,7 @@ def test_after_llm_call_hook_modifies_messages():
         assert len(agent.agent_executor.messages) > messages_before_hook
         assert result is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -2869,6 +2881,7 @@ def test_llm_call_hooks_with_crew():
     """Test that LLM call hooks work with crew execution."""
     from crewai.utilities.llm_call_hooks import (
         LLMCallHookContext,
+        clear_all_llm_call_hooks,
         register_after_llm_call_hook,
         register_before_llm_call_hook,
     )
@@ -2919,13 +2932,17 @@ def test_llm_call_hooks_with_crew():
         assert result is not None
         assert result.raw is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_call_hooks_can_modify_executor_attributes():
     """Test that hooks can access and modify executor attributes like tools."""
-    from crewai.utilities.llm_call_hooks import LLMCallHookContext, register_before_llm_call_hook
+    from crewai.utilities.llm_call_hooks import (
+        LLMCallHookContext,
+        clear_all_llm_call_hooks,
+        register_before_llm_call_hook,
+    )
     from crewai.tools import tool
 
     @tool
@@ -2967,13 +2984,17 @@ def test_llm_call_hooks_can_modify_executor_attributes():
         assert original_tools_count >= 0
         assert result is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_llm_call_hooks_error_handling():
     """Test that hook errors don't break execution."""
-    from crewai.utilities.llm_call_hooks import LLMCallHookContext, register_before_llm_call_hook
+    from crewai.utilities.llm_call_hooks import (
+        LLMCallHookContext,
+        clear_all_llm_call_hooks,
+        register_before_llm_call_hook,
+    )
 
     hook_called = False
 
@@ -3003,4 +3024,4 @@ def test_llm_call_hooks_error_handling():
         assert hook_called, "before_llm_call hook should have been called"
         assert result is not None
     finally:
-        pass
+        clear_all_llm_call_hooks()

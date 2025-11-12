@@ -113,3 +113,9 @@ def get_after_llm_call_hooks() -> list[Callable[[LLMCallHookContext], str | None
         List of registered after hooks
     """
     return _after_llm_call_hooks.copy()
+
+
+def clear_all_llm_call_hooks() -> None:
+    """Clear all registered global hooks."""
+    _before_llm_call_hooks.clear()
+    _after_llm_call_hooks.clear()
