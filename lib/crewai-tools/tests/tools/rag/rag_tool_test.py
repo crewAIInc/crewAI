@@ -115,15 +115,15 @@ def test_rag_tool_with_file(
         assert "Python is a programming language" in result
 
 
-@patch("crewai_tools.tools.rag.rag_tool.RagTool._create_embedding_function")
+@patch("crewai_tools.tools.rag.rag_tool.build_embedder")
 @patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
 def test_rag_tool_with_custom_embeddings(
-    mock_create_client: Mock, mock_create_embedding: Mock
+    mock_create_client: Mock, mock_build_embedder: Mock
 ) -> None:
     """Test RagTool with custom embeddings configuration to ensure no API calls."""
     mock_embedding_func = MagicMock()
     mock_embedding_func.return_value = [[0.2] * 1536]
-    mock_create_embedding.return_value = mock_embedding_func
+    mock_build_embedder.return_value = mock_embedding_func
 
     mock_client = MagicMock()
     mock_client.get_or_create_collection = MagicMock(return_value=None)
@@ -151,7 +151,7 @@ def test_rag_tool_with_custom_embeddings(
     assert "Relevant Content:" in result
     assert "Test content" in result
 
-    mock_create_embedding.assert_called()
+    mock_build_embedder.assert_called()
 
 
 @patch("crewai_tools.adapters.crewai_rag_adapter.get_rag_client")
@@ -196,7 +196,7 @@ def test_rag_tool_with_azure_config_without_env_vars(
 
     # Patch the embedding function builder to avoid actual API calls
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
 
@@ -213,6 +213,7 @@ def test_rag_tool_with_azure_config_without_env_vars(
                     "api_base": "https://test.openai.azure.com/",
                     "api_version": "2024-02-01",
                     "api_type": "azure",
+                    "deployment_id": "test-deployment",
                 },
             }
         }
@@ -237,7 +238,7 @@ def test_rag_tool_with_openai_config_without_env_vars(
     mock_create_client.return_value = mock_client
 
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
 
@@ -273,7 +274,7 @@ def test_rag_tool_config_with_qdrant_and_azure_embeddings(
     mock_create_client.return_value = mock_client
 
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
 
@@ -289,6 +290,7 @@ def test_rag_tool_config_with_qdrant_and_azure_embeddings(
                     "api_key": "test-key",
                     "api_base": "https://test.openai.azure.com/",
                     "api_version": "2024-02-01",
+                    "deployment_id": "test-deployment",
                 },
             },
         }

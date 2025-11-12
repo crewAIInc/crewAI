@@ -1,8 +1,9 @@
 """Type definitions for RAG tool configuration."""
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal
 
 from crewai.rag.embeddings.types import ProviderSpec
+from typing_extensions import TypedDict
 
 
 class VectorDbConfig(TypedDict):

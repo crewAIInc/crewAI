@@ -77,7 +77,7 @@ The `RagTool` accepts the following parameters:
 
 - **summarize**: Optional. Whether to summarize the retrieved content. Default is `False`.
 - **adapter**: Optional. A custom adapter for the knowledge base. If not provided, a CrewAIRagAdapter will be used.
-- **config**: Optional. Configuration for the underlying CrewAI RAG system.
+- **config**: Optional. Configuration for the underlying CrewAI RAG system. Accepts a `RagToolConfig` TypedDict with optional `embedding_model` (ProviderSpec) and `vectordb` (VectorDbConfig) keys. All configuration values provided programmatically take precedence over environment variables.
 
 ## Adding Content
 
@@ -127,21 +127,27 @@ You can customize the behavior of the `RagTool` by providing a configuration dic
 
 ```python Code
 from crewai_tools import RagTool
+from crewai_tools.tools.rag import RagToolConfig, VectorDbConfig, ProviderSpec
 
 # Create a RAG tool with custom configuration
-config = {
-    "vectordb": {
-        "provider": "qdrant",
-        "config": {
-            "collection_name": "my-collection"
-        }
-    },
-    "embedding_model": {
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-3-small"
-        }
+
+vectordb: VectorDbConfig = {
+    "provider": "qdrant",
+    "config": {
+        "collection_name": "my-collection"
     }
+}
+
+embedding_model: ProviderSpec = {
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small"
+    }
+}
+
+config: RagToolConfig = {
+    "vectordb": vectordb,
+    "embedding_model": embedding_model
 }
 
 rag_tool = RagTool(config=config, summarize=True)

@@ -25,7 +25,7 @@ def test_pdf_search_tool_with_azure_config_without_env_vars(
 
     # Patch the embedding function builder to avoid actual API calls
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
         # This is the exact config format from the bug report
@@ -38,6 +38,7 @@ def test_pdf_search_tool_with_azure_config_without_env_vars(
                     "api_base": "https://test.litellm.proxy/",
                     "api_version": "2024-02-01",
                     "api_type": "azure",
+                    "deployment_id": "test-deployment",
                 },
             }
         }
@@ -63,7 +64,7 @@ def test_pdf_search_tool_with_openai_config_without_env_vars(
     mock_create_client.return_value = mock_client
 
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
         config = {
@@ -95,7 +96,7 @@ def test_pdf_search_tool_with_vectordb_and_embedding_config(
     mock_create_client.return_value = mock_client
 
     with patch(
-        "crewai_tools.tools.rag.rag_tool.get_embedding_function",
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
         return_value=mock_embedding_func,
     ):
         config = {
