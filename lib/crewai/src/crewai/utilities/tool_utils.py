@@ -60,7 +60,7 @@ def execute_tool_and_check_finality(
     Returns:
         ToolResult containing the execution result and whether it should be treated as a final answer
     """
-    logger = Logger(verbose=crew.verbose)
+    logger = Logger(verbose=crew.verbose if crew else False)
     tool_name_to_tool_map = {tool.name: tool for tool in tools}
 
     if agent_key and agent_role and agent:
