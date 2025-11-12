@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from crewai.events.event_listener import event_listener
+from crewai.utilities.printer import Printer
+
 
 if TYPE_CHECKING:
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
@@ -52,6 +55,50 @@ class LLMCallHookContext:
         self.llm = executor.llm
         self.iterations = executor.iterations
         self.response = response
+
+    def request_human_input(
+        self,
+        prompt: str,
+        default_message: str = "Press Enter to continue, or provide feedback:",
+    ) -> str:
+        """Request human input during LLM hook execution.
+
+        This method pauses live console updates, displays a prompt to the user,
+        waits for their input, and then resumes live updates. This is useful for
+        approval gates, debugging, or getting human feedback during execution.
+
+        Args:
+            prompt: Custom message to display to the user
+            default_message: Message shown after the prompt
+
+        Returns:
+            User's input as a string (empty string if just Enter pressed)
+
+        Example:
+            >>> def approval_hook(context: LLMCallHookContext) -> None:
+            ...     if context.iterations > 5:
+            ...         response = context.request_human_input(
+            ...             prompt="Allow this LLM call?",
+            ...             default_message="Type 'no' to skip, or press Enter:",
+            ...         )
+            ...         if response.lower() == "no":
+            ...             print("LLM call skipped by user")
+        """
+
+        printer = Printer()
+        event_listener.formatter.pause_live_updates()
+
+        try:
+            printer.print(content=f"\n{prompt}", color="bold_yellow")
+            printer.print(content=default_message, color="cyan")
+            response = input().strip()
+
+            if response:
+                printer.print(content="\nProcessing your input...", color="cyan")
+
+            return response
+        finally:
+            event_listener.formatter.resume_live_updates()
 
 
 _before_llm_call_hooks: list[Callable[[LLMCallHookContext], None]] = []

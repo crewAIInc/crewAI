@@ -681,7 +681,7 @@ def _setup_before_llm_call_hooks(
         printer: Printer instance for error logging.
     """
     if executor_context and executor_context.before_llm_call_hooks:
-        from crewai.utilities.llm_call_hooks import LLMCallHookContext
+        from crewai.hooks.llm_hooks import LLMCallHookContext
 
         original_messages = executor_context.messages
 
@@ -726,7 +726,7 @@ def _setup_after_llm_call_hooks(
         The potentially modified response string.
     """
     if executor_context and executor_context.after_llm_call_hooks:
-        from crewai.utilities.llm_call_hooks import LLMCallHookContext
+        from crewai.hooks.llm_hooks import LLMCallHookContext
 
         original_messages = executor_context.messages
 
