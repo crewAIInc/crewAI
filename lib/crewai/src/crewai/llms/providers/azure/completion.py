@@ -280,7 +280,7 @@ class AzureCompletion(BaseLLM):
 
         if response_model and self.is_openai_model:
             params["response_format"] = JsonSchemaFormat(
-                name="Tasks Response",
+                name="Tasks_Response",
                 schema=response_model.model_json_schema(),
                 description="Describes the task expected response",
                 strict=True,
