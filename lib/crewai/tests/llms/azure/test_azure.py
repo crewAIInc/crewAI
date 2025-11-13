@@ -1185,3 +1185,4 @@ def test_azure_structured_output_non_openai_model():
         )
 
         assert "response_format" not in params
+
