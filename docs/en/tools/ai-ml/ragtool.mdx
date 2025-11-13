@@ -357,7 +357,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
         "provider": "google-generativeai",
         "config": {
             "api_key": "your-api-key",
-            "model_name": "models/text-embedding-004",
+            "model_name": "gemini-embedding-001",
             "task_type": "RETRIEVAL_DOCUMENT"
         }
     }
@@ -365,7 +365,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
 
     **Config Options:**
     - `api_key` (str): Google AI API key
-    - `model_name` (str): Model name. Default: `models/embedding-001`. Options: `models/text-embedding-004`, `models/embedding-001`
+    - `model_name` (str): Model name. Default: `gemini-embedding-001`. Options: `gemini-embedding-001`, `text-embedding-005`, `text-multilingual-embedding-002`
     - `task_type` (str): Task type for embeddings. Default: `RETRIEVAL_DOCUMENT`. Options: `RETRIEVAL_DOCUMENT`, `RETRIEVAL_QUERY`
 
     **Environment Variables:**

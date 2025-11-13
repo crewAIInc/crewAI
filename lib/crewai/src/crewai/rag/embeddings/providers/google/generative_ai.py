@@ -1,5 +1,7 @@
 """Google Generative AI embeddings provider."""
 
+from typing import Literal
+
 from chromadb.utils.embedding_functions.google_embedding_function import (
     GoogleGenerativeAiEmbeddingFunction,
 )
@@ -15,8 +17,10 @@ class GenerativeAiProvider(BaseEmbeddingsProvider[GoogleGenerativeAiEmbeddingFun
         default=GoogleGenerativeAiEmbeddingFunction,
         description="Google Generative AI embedding function class",
     )
-    model_name: str = Field(
-        default="models/embedding-001",
+    model_name: Literal[
+        "gemini-embedding-001", "text-embedding-005", "text-multilingual-embedding-002"
+    ] = Field(
+        default="gemini-embedding-001",
         description="Model name to use for embeddings",
         validation_alias="EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME",
     )
