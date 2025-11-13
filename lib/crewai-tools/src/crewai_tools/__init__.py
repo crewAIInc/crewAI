@@ -285,6 +285,52 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
+    "tool",
 ]
 
 __version__ = "1.4.1"
+
+
+def tool(*args, result_as_answer: bool = False, max_usage_count: int | None = None):
+    """
+    Compatibility alias for the tool decorator from crewai.tools.
+
+    This function provides backward compatibility for users who import tool from crewai_tools.
+    The canonical import path is 'from crewai.tools import tool'.
+
+    Args:
+        *args: Positional arguments for the tool decorator.
+        result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
+        max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
+
+    Returns:
+        The tool decorator from crewai.tools.
+
+    Example:
+        >>> from crewai_tools import tool
+        >>> @tool
+        ... def my_tool(question: str) -> str:
+        ...     '''Answer a question'''
+        ...     return f"Answer to: {question}"
+
+    Note:
+        This is a compatibility alias. Please use 'from crewai.tools import tool' instead.
+    """
+    import warnings
+
+    warnings.warn(
+        "Importing 'tool' from 'crewai_tools' is deprecated. "
+        "Please use 'from crewai.tools import tool' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    from crewai.tools import tool as core_tool
+
+    kwargs = {}
+    if result_as_answer:
+        kwargs["result_as_answer"] = result_as_answer
+    if max_usage_count is not None:
+        kwargs["max_usage_count"] = max_usage_count
+
+    return core_tool(*args, **kwargs)
