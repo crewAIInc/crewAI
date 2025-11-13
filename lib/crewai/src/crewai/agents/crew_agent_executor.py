@@ -38,6 +38,10 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.llm_call_hooks import (
+    get_after_llm_call_hooks,
+    get_before_llm_call_hooks,
+)
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -130,6 +134,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
+        self.before_llm_call_hooks: list[Callable] = []
+        self.after_llm_call_hooks: list[Callable] = []
+        self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
+        self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm:
             # This may be mutating the shared llm object and needs further evaluation
             existing_stop = getattr(self.llm, "stop", [])
@@ -226,6 +234,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_task=self.task,
                     from_agent=self.agent,
                     response_model=self.response_model,
+                    executor_context=self,
                 )
                 formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
 
