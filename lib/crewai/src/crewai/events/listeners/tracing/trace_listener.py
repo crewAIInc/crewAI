@@ -10,13 +10,15 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.event_bus import CrewAIEventsBus
-from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
+from crewai.events.listeners.tracing.utils import (
+    is_tracking_disabled,
+    safe_serialize_to_dict,
+)
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -80,6 +82,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -118,6 +121,10 @@ class TraceCollectionListener(BaseEventListener):
         if self._initialized:
             return
 
+        if is_tracking_disabled():
+            self._initialized = True
+            return
+
         super().__init__()
         self.batch_manager = batch_manager or TraceBatchManager()
         self._initialized = True
@@ -152,6 +159,10 @@ class TraceCollectionListener(BaseEventListener):
             crewai_event_bus: The event bus to register listeners on.
         """
         if self._listeners_setup:
+            return
+
+        if is_tracking_disabled():
+            self._listeners_setup = True
             return
 
         self._register_flow_event_handlers(crewai_event_bus)
