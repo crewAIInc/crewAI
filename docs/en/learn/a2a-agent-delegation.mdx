@@ -83,6 +83,10 @@ The `A2AConfig` class accepts the following parameters:
   Whether to raise an error immediately if agent connection fails. When `False`, the agent continues with available agents and informs the LLM about unavailable ones.
 </ParamField>
 
+<ParamField path="trust_remote_completion_status" type="bool" default="False">
+  When `True`, returns the A2A agent's result directly when it signals completion. When `False`, allows the server agent to review the result and potentially continue the conversation.
+</ParamField>
+
 ## Authentication
 
 For A2A agents that require authentication, use one of the provided auth schemes:
