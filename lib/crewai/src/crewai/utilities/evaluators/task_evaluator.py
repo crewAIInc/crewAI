@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, Field
 
+from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import TaskEvaluationEvent
 from crewai.llm import LLM
@@ -13,7 +14,6 @@ from crewai.utilities.training_converter import TrainingConverter
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
     from crewai.task import Task
 
 
@@ -56,7 +56,7 @@ class TaskEvaluator:
         original_agent: The agent to evaluate.
     """
 
-    def __init__(self, original_agent: Agent) -> None:
+    def __init__(self, original_agent: BaseAgent) -> None:
         """Initializes the TaskEvaluator with the given LLM and agent.
 
         Args:
