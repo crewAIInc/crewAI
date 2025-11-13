@@ -16,7 +16,6 @@ from pydantic import (
 )
 from typing_extensions import Self
 
-from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
 from crewai_tools.tools.rag.types import RagToolConfig, VectorDbConfig
 
 
@@ -136,6 +135,8 @@ class RagTool(BaseTool):
     @model_validator(mode="after")
     def _ensure_adapter(self) -> Self:
         if isinstance(self.adapter, RagTool._AdapterPlaceholder):
+            from crewai_tools.adapters.crewai_rag_adapter import CrewAIRagAdapter
+
             provider_cfg = self._parse_config(self.config)
             self.adapter = CrewAIRagAdapter(
                 collection_name="rag_tool_collection",
