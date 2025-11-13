@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Any, cast
@@ -7,6 +6,7 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
+from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -45,7 +45,8 @@ class GeminiCompletion(BaseLLM):
         stream: bool = False,
         safety_settings: dict[str, Any] | None = None,
         client_params: dict[str, Any] | None = None,
-        **kwargs,
+        interceptor: BaseInterceptor[Any, Any] | None = None,
+        **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
 
@@ -63,8 +64,15 @@ class GeminiCompletion(BaseLLM):
             safety_settings: Safety filter settings
             client_params: Additional parameters to pass to the Google Gen AI Client constructor.
                           Supports parameters like http_options, credentials, debug_config, etc.
+            interceptor: HTTP interceptor (not yet supported for Gemini).
             **kwargs: Additional parameters
         """
+        if interceptor is not None:
+            raise NotImplementedError(
+                "HTTP interceptors are not yet supported for Google Gemini provider. "
+                "Interceptors are currently supported for OpenAI and Anthropic providers only."
+            )
+
         super().__init__(
             model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
         )
@@ -96,7 +104,31 @@ class GeminiCompletion(BaseLLM):
         self.is_gemini_1_5 = "gemini-1.5" in model.lower()
         self.supports_tools = self.is_gemini_1_5 or self.is_gemini_2
 
-    def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences sent to the API."""
+        return self.stop_sequences
+
+    @stop.setter
+    def stop(self, value: list[str] | str | None) -> None:
+        """Set stop sequences.
+
+        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+        are properly sent to the Gemini API.
+
+        Args:
+            value: Stop sequences as a list, single string, or None
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, list):
+            self.stop_sequences = value
+        else:
+            self.stop_sequences = []
+
+    def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:  # type: ignore[no-any-unimported]
         """Initialize the Google Gen AI client with proper parameter handling.
 
         Args:
@@ -171,7 +203,7 @@ class GeminiCompletion(BaseLLM):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -193,7 +225,7 @@ class GeminiCompletion(BaseLLM):
         """
         try:
             self._emit_call_started_event(
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -203,7 +235,7 @@ class GeminiCompletion(BaseLLM):
             self.tools = tools
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages  # type: ignore[arg-type]
+                messages
             )
 
             config = self._prepare_generation_config(
@@ -245,10 +277,10 @@ class GeminiCompletion(BaseLLM):
             )
             raise
 
-    def _prepare_generation_config(
+    def _prepare_generation_config(  # type: ignore[no-any-unimported]
         self,
         system_instruction: str | None = None,
-        tools: list[dict] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> types.GenerateContentConfig:
         """Prepare generation config for Google Gemini API.
@@ -297,7 +329,9 @@ class GeminiCompletion(BaseLLM):
 
         return types.GenerateContentConfig(**config_params)
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[types.Tool]:
+    def _convert_tools_for_interference(  # type: ignore[no-any-unimported]
+        self, tools: list[dict[str, Any]]
+    ) -> list[types.Tool]:
         """Convert CrewAI tool format to Gemini function declaration format."""
         gemini_tools = []
 
@@ -320,7 +354,7 @@ class GeminiCompletion(BaseLLM):
 
         return gemini_tools
 
-    def _format_messages_for_gemini(
+    def _format_messages_for_gemini(  # type: ignore[no-any-unimported]
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[types.Content], str | None]:
         """Format messages for Gemini API.
@@ -364,7 +398,7 @@ class GeminiCompletion(BaseLLM):
 
         return contents, system_instruction
 
-    def _handle_completion(
+    def _handle_completion(  # type: ignore[no-any-unimported]
         self,
         contents: list[types.Content],
         system_instruction: str | None,
@@ -431,7 +465,7 @@ class GeminiCompletion(BaseLLM):
 
         return content
 
-    def _handle_streaming_completion(
+    def _handle_streaming_completion(  # type: ignore[no-any-unimported]
         self,
         contents: list[types.Content],
         config: types.GenerateContentConfig,
@@ -560,8 +594,9 @@ class GeminiCompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
-    def _convert_contents_to_dict(
-        self, contents: list[types.Content]
+    def _convert_contents_to_dict(  # type: ignore[no-any-unimported]
+        self,
+        contents: list[types.Content],
     ) -> list[dict[str, str]]:
         """Convert contents to dict format."""
         return [

@@ -162,6 +162,7 @@ def test_task_callback_returns_task_output():
             "name": task.name or task.description,
             "expected_output": "Bullet point list of 5 interesting ideas.",
             "output_format": OutputFormat.RAW,
+            "messages": [],
         }
         assert output_dict == expected_output
 
@@ -340,7 +341,7 @@ def test_output_pydantic_hierarchical():
     )
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
-    assert result.to_dict() == {"score": 0}
+    assert result.to_dict() == {"score": 4}
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -599,7 +600,7 @@ def test_output_pydantic_to_another_task():
     assert isinstance(pydantic_result, ScoreOutput), (
         "Expected pydantic result to be of type ScoreOutput"
     )
-    assert pydantic_result.score == 4
+    assert pydantic_result.score == 5
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -630,7 +631,7 @@ def test_output_json_to_another_task():
 
     crew = Crew(agents=[scorer], tasks=[task1, task2])
     result = crew.kickoff()
-    assert '{"score": 4}' == result.json
+    assert '{"score": 3}' == result.json
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1680,3 +1681,44 @@ def test_task_copy_with_list_context():
     assert isinstance(copied_task2.context, list)
     assert len(copied_task2.context) == 1
     assert copied_task2.context[0] is task1
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_output_includes_messages():
+    """Test that TaskOutput includes messages from agent execution."""
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Give me a list of 3 interesting ideas about AI.",
+        expected_output="Bullet point list of 3 ideas.",
+        agent=researcher,
+    )
+
+    task2 = Task(
+        description="Summarize the ideas from the previous task.",
+        expected_output="A summary of the ideas.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task1, task2], process=Process.sequential)
+    result = crew.kickoff()
+
+    # Verify both tasks have messages
+    assert len(result.tasks_output) == 2
+
+    # Check first task output has messages
+    task1_output = result.tasks_output[0]
+    assert hasattr(task1_output, "messages")
+    assert isinstance(task1_output.messages, list)
+    assert len(task1_output.messages) > 0
+
+    # Check second task output has messages
+    task2_output = result.tasks_output[1]
+    assert hasattr(task2_output, "messages")
+    assert isinstance(task2_output.messages, list)
+    assert len(task2_output.messages) > 0

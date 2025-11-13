@@ -1,0 +1,127 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis
+      is the expected criteria for your final answer: A greeting\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"},{"role":"user","content":"Additional context:
+      This is a test modification."}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '851'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJdi9swEHz3r9jqOT5sk+RSvx2lJW1poXDQ0vYwirS21cpaIclJr0f+
+        +yE7F/s+Cn0xeGdnNLO7dwkAU5KVwETLg+isTt9w+rr/YESx27+93RaHVm4/ff7y8Vpcffv+ly0i
+        g3a/UIQH1oWgzmoMiswIC4c8YFTNL9fF5nWWbfIB6EiijrTGhnR5kaedMiotsmKVZss0X57oLSmB
+        npXwIwEAuBu+0aiR+IeVkC0eKh16zxtk5bkJgDnSscK498oHbgJbTKAgE9AM3q9b6ps2lPAeDB1A
+        cAON2iNwaGIA4MYf0P0075ThGq6GvxK2qDW9mks6rHvPYy7Taz0DuDEUeJzLEObmhBzP9jU11tHO
+        P6GyWhnl28oh92SiVR/IsgE9JgA3w5j6R8mZddTZUAX6jcNz+fpy1GPTembo6gQGClzP6pti8YJe
+        JTFwpf1s0Exw0aKcqNNWeC8VzYBklvq5m5e0x+TKNP8jPwFCoA0oK+tQKvE48dTmMF7vv9rOUx4M
+        M49urwRWQaGLm5BY816PJ8X8rQ/YVbUyDTrr1HhXta2Wotis8nqzLlhyTO4BAAD//wMAuV0QSWYD
+        AAA=
+    headers:
+      CF-RAY:
+      - 99d044428f103c35-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 11 Nov 2025 19:41:22 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=jp.mByP87tLw_KZOIh7lXZ9UMACecreCMNwHwtJmUvQ-1762890082-1.0.1.1-D76UWkvWlN8e0zlQpgSlSHjrhx3Rkh_r8bz4XKx8kljJt8s9Okre9bo7M62ewJNFK9O9iuHkADMKeAEwlsc4Hg0MsF2vt2Hu1J0xikSInv0;
+        path=/; expires=Tue, 11-Nov-25 20:11:22 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=pzTqogdMFPJY2.Yrj49LODdUKbD8UBctCWNyIZVsvK4-1762890082258-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '460'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '478'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999817'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999820'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3bda51e6d3e34f8cadcc12551dc29ab0
+    status:
+      code: 200
+      message: OK
+version: 1

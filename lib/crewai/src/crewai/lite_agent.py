@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import Callable
 import inspect
+import json
 from typing import (
     Any,
     Literal,
@@ -58,10 +59,14 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
     render_text_description_and_args,
 )
-from crewai.utilities.converter import generate_model_description
+from crewai.utilities.converter import (
+    Converter,
+    ConverterError,
+    generate_model_description,
+)
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -90,8 +95,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     """
 
     model_config = {"arbitrary_types_allowed": True}
-
-    # Core Agent Properties
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Goal of the agent")
@@ -102,8 +105,6 @@ class LiteAgent(FlowTrackable, BaseModel):
     tools: list[BaseTool] = Field(
         default_factory=list, description="Tools at agent's disposal"
     )
-
-    # Execution Control Properties
     max_iterations: int = Field(
         default=15, description="Maximum number of iterations for tool usage"
     )
@@ -120,24 +121,17 @@ class LiteAgent(FlowTrackable, BaseModel):
     )
     request_within_rpm_limit: Callable[[], bool] | None = Field(
         default=None,
-        description="Callback to check if the request is within the RPM limit",
+        description="Callback to check if the request is within the RPM8 limit",
     )
     i18n: I18N = Field(
-        default_factory=I18N, description="Internationalization settings."
+        default_factory=get_i18n, description="Internationalization settings."
     )
-
-    # Output and Formatting Properties
     response_format: type[BaseModel] | None = Field(
         default=None, description="Pydantic model for structured output"
     )
     verbose: bool = Field(
         default=False, description="Whether to print execution details"
     )
-    callbacks: list[Callable] = Field(
-        default_factory=list, description="Callbacks to be used for the agent"
-    )
-
-    # Guardrail Properties
     guardrail: GuardrailType | None = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
@@ -145,17 +139,12 @@ class LiteAgent(FlowTrackable, BaseModel):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
-
-    # State and Results
     tools_results: list[dict[str, Any]] = Field(
         default_factory=list, description="Results of the tools used by the agent."
     )
-
-    # Reference of Agent
     original_agent: BaseAgent | None = Field(
         default=None, description="Reference to the agent that created this LiteAgent"
     )
-    # Private Attributes
     _parsed_tools: list[CrewStructuredTool] = PrivateAttr(default_factory=list)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
     _cache_handler: CacheHandler = PrivateAttr(default_factory=CacheHandler)
@@ -165,6 +154,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _printer: Printer = PrivateAttr(default_factory=Printer)
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
+    _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
 
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
@@ -174,15 +164,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             raise ValueError(
                 f"Expected LLM instance of type BaseLLM, got {type(self.llm).__name__}"
             )
-
-        # Initialize callbacks
         token_callback = TokenCalcHandler(token_cost_process=self._token_process)
         self._callbacks = [token_callback]
 
         return self
 
     @model_validator(mode="after")
-    def parse_tools(self):
+    def parse_tools(self) -> Self:
         """Parse the tools and convert them to CrewStructuredTool instances."""
         self._parsed_tools = parse_tools(self.tools)
 
@@ -201,7 +189,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 )
             self._guardrail = cast(
                 GuardrailCallable,
-                LLMGuardrail(description=self.guardrail, llm=self.llm),
+                cast(object, LLMGuardrail(description=self.guardrail, llm=self.llm)),
             )
 
         return self
@@ -209,8 +197,8 @@ class LiteAgent(FlowTrackable, BaseModel):
     @field_validator("guardrail", mode="before")
     @classmethod
     def validate_guardrail_function(
-        cls, v: Callable | str | None
-    ) -> Callable | str | None:
+        cls, v: GuardrailCallable | str | None
+    ) -> GuardrailCallable | str | None:
         """Validate that the guardrail function has the correct signature.
 
         If v is a callable, validate that it has the correct signature.
@@ -258,7 +246,11 @@ class LiteAgent(FlowTrackable, BaseModel):
         """Return the original role for compatibility with tool interfaces."""
         return self.role
 
-    def kickoff(self, messages: str | list[LLMMessage]) -> LiteAgentOutput:
+    def kickoff(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[BaseModel] | None = None,
+    ) -> LiteAgentOutput:
         """
         Execute the agent with the given messages.
 
@@ -266,6 +258,8 @@ class LiteAgent(FlowTrackable, BaseModel):
             messages: Either a string query or a list of message dictionaries.
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
+            response_format: Optional Pydantic model for structured output. If provided,
+                           overrides self.response_format for this execution.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -286,9 +280,13 @@ class LiteAgent(FlowTrackable, BaseModel):
             self.tools_results = []
 
             # Format messages for the LLM
-            self._messages = self._format_messages(messages)
+            self._messages = self._format_messages(
+                messages, response_format=response_format
+            )
 
-            return self._execute_core(agent_info=agent_info)
+            return self._execute_core(
+                agent_info=agent_info, response_format=response_format
+            )
 
         except Exception as e:
             self._printer.print(
@@ -306,7 +304,9 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
             raise e
 
-    def _execute_core(self, agent_info: dict[str, Any]) -> LiteAgentOutput:
+    def _execute_core(
+        self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
+    ) -> LiteAgentOutput:
         # Emit event for agent execution start
         crewai_event_bus.emit(
             self,
@@ -320,15 +320,29 @@ class LiteAgent(FlowTrackable, BaseModel):
         # Execute the agent using invoke loop
         agent_finish = self._invoke_loop()
         formatted_result: BaseModel | None = None
-        if self.response_format:
+
+        active_response_format = response_format or self.response_format
+        if active_response_format:
             try:
-                # Cast to BaseModel to ensure type safety
-                result = self.response_format.model_validate_json(agent_finish.output)
+                model_schema = generate_model_description(active_response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=agent_finish.output,
+                    model=active_response_format,
+                    instructions=instructions,
+                )
+
+                result = converter.to_pydantic()
                 if isinstance(result, BaseModel):
                     formatted_result = result
-            except Exception as e:
+            except ConverterError as e:
                 self._printer.print(
-                    content=f"Failed to parse output into response format: {e!s}",
+                    content=f"Failed to parse output into response format after retries: {e.message}",
                     color="yellow",
                 )
 
@@ -344,6 +358,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=self._messages,
         )
 
         # Process guardrail if set
@@ -417,8 +432,14 @@ class LiteAgent(FlowTrackable, BaseModel):
         """
         return await asyncio.to_thread(self.kickoff, messages)
 
-    def _get_default_system_prompt(self) -> str:
-        """Get the default system prompt for the agent."""
+    def _get_default_system_prompt(
+        self, response_format: type[BaseModel] | None = None
+    ) -> str:
+        """Get the default system prompt for the agent.
+
+        Args:
+            response_format: Optional response format to use instead of self.response_format
+        """
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
@@ -439,21 +460,31 @@ class LiteAgent(FlowTrackable, BaseModel):
                 goal=self.goal,
             )
 
-        # Add response format instructions if specified
-        if self.response_format:
-            schema = generate_model_description(self.response_format)
+        active_response_format = response_format or self.response_format
+        if active_response_format:
+            model_description = generate_model_description(active_response_format)
+            schema_json = json.dumps(model_description, indent=2)
             base_prompt += self.i18n.slice("lite_agent_response_format").format(
-                response_format=schema
+                response_format=schema_json
             )
 
         return base_prompt
 
-    def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
-        """Format messages for the LLM."""
+    def _format_messages(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[BaseModel] | None = None,
+    ) -> list[LLMMessage]:
+        """Format messages for the LLM.
+
+        Args:
+            messages: Input messages to format
+            response_format: Optional response format to use instead of self.response_format
+        """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
-        system_prompt = self._get_default_system_prompt()
+        system_prompt = self._get_default_system_prompt(response_format=response_format)
 
         # Add system message at the beginning
         formatted_messages: list[LLMMessage] = [
@@ -523,6 +554,10 @@ class LiteAgent(FlowTrackable, BaseModel):
 
                 self._append_message(formatted_answer.text, role="assistant")
             except OutputParserError as e:  # noqa: PERF203
+                self._printer.print(
+                    content="Failed to parse LLM output. Retrying...",
+                    color="yellow",
+                )
                 formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self._messages,
@@ -559,7 +594,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self._show_logs(formatted_answer)
         return formatted_answer
 
-    def _show_logs(self, formatted_answer: AgentAction | AgentFinish):
+    def _show_logs(self, formatted_answer: AgentAction | AgentFinish) -> None:
         """Show logs for the agent's execution."""
         crewai_event_bus.emit(
             self,
@@ -574,4 +609,4 @@ class LiteAgent(FlowTrackable, BaseModel):
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
     ) -> None:
         """Append a message to the message list with the given role."""
-        self._messages.append(cast(LLMMessage, format_message_for_llm(text, role=role)))
+        self._messages.append(format_message_for_llm(text, role=role))

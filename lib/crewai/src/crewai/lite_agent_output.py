@@ -6,6 +6,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from crewai.utilities.types import LLMMessage
+
 
 class LiteAgentOutput(BaseModel):
     """Class that represents the result of a LiteAgent execution."""
@@ -20,6 +22,7 @@ class LiteAgentOutput(BaseModel):
     usage_metrics: dict[str, Any] | None = Field(
         description="Token usage metrics for this execution", default=None
     )
+    messages: list[LLMMessage] = Field(description="Messages of the agent", default=[])
 
     def to_dict(self) -> dict[str, Any]:
         """Convert pydantic_output to a dictionary."""

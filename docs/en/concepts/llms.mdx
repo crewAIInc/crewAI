@@ -1035,7 +1035,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     ```
 
     <Tip>
-      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details
+      [Click here](/en/concepts/event-listener#event-listeners) for more details
     </Tip>
   </Tab>
 
@@ -1199,6 +1199,52 @@ Learn how to get the most out of your LLM configuration:
         additional_drop_params=["stop"]
     )
     ```
+  </Accordion>
+
+  <Accordion title="Transport Interceptors">
+    CrewAI provides message interceptors for several providers, allowing you to hook into request/response cycles at the transport layer.
+
+    **Supported Providers:**
+    - ✅ OpenAI
+    - ✅ Anthropic
+
+    **Basic Usage:**
+    ```python
+import httpx
+from crewai import LLM
+from crewai.llms.hooks import BaseInterceptor
+
+class CustomInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):
+    """Custom interceptor to modify requests and responses."""
+
+    def on_outbound(self, request: httpx.Request) -> httpx.Request:
+        """Print request before sending to the LLM provider."""
+        print(request)
+        return request
+
+    def on_inbound(self, response: httpx.Response) -> httpx.Response:
+        """Process response after receiving from the LLM provider."""
+        print(f"Status: {response.status_code}")
+        print(f"Response time: {response.elapsed}")
+        return response
+
+# Use the interceptor with an LLM
+llm = LLM(
+    model="openai/gpt-4o",
+    interceptor=CustomInterceptor()
+)
+    ```
+
+    **Important Notes:**
+    - Both methods must return the received object or type of object.
+    - Modifying received objects may result in unexpected behavior or application crashes.
+    - Not all providers support interceptors - check the supported providers list above
+
+    <Info>
+      Interceptors operate at the transport layer. This is particularly useful for:
+      - Message transformation and filtering
+      - Debugging API interactions
+    </Info>
   </Accordion>
 </AccordionGroup>
 

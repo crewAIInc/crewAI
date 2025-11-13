@@ -1,0 +1,107 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Count from 1 to
+      3"}],"model":"claude-3-5-haiku-20241022","stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '129'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - Anthropic/Python 0.71.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 0.71.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3SQy2rDMBBFf8XcTTcy2E5DQbuuUvrIJt3VRQh7EovYI1calbTB/14cGvqiq4F7
+        zgzDPWLwLfXQaHqbWsoX+TLvrNunvCqqy7KoKii4FhpD3JmiXD2s7++u+HG1kcP77cGuN9tyuIaC
+        vI00WxSj3REUgu/nwMboolgWKDSehVign45nX+gwk9PQuKFAFzFrfGJxvMu2wQ9ZmYnPFrrmmsua
+        q5oXmJ4VovjRBLLRMzSIWyMpMD5BpJdE3BA0p75XSKev9BGOxyRG/J44QpdLhcY2HZkmkBXn2fwU
+        ijMPZNv/2Hl3vk9jRwMF25vl8Nf/omX3m04KPsn3qCoUIoVX15ARRwEac5WtDS2m6QMAAP//AwC8
+        QSj4vAEAAA==
+    headers:
+      CF-RAY:
+      - 9997ac45ea33de93-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Nov 2025 22:50:54 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - 87faf353-e074-4658-b885-bfac7aa5a7b5
+      anthropic-ratelimit-input-tokens-limit:
+      - '400000'
+      anthropic-ratelimit-input-tokens-remaining:
+      - '400000'
+      anthropic-ratelimit-input-tokens-reset:
+      - '2025-11-04T22:50:54Z'
+      anthropic-ratelimit-output-tokens-limit:
+      - '80000'
+      anthropic-ratelimit-output-tokens-remaining:
+      - '80000'
+      anthropic-ratelimit-output-tokens-reset:
+      - '2025-11-04T22:50:54Z'
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2025-11-04T22:50:53Z'
+      anthropic-ratelimit-tokens-limit:
+      - '480000'
+      anthropic-ratelimit-tokens-remaining:
+      - '480000'
+      anthropic-ratelimit-tokens-reset:
+      - '2025-11-04T22:50:54Z'
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - req_011CUofgKLSz1aDmL9qbduuR
+      retry-after:
+      - '6'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '801'
+    status:
+      code: 200
+      message: OK
+version: 1

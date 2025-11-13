@@ -10,9 +10,9 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
+from crewai.utilities.i18n import get_i18n
 from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.printer import Printer
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 
 
 if TYPE_CHECKING:
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_I18N = get_i18n()
 
 
 class ConverterError(Exception):
@@ -87,8 +88,7 @@ class Converter(OutputConverter):
                             result = self.model.model_validate(result)
                         elif isinstance(result, str):
                             try:
-                                parsed = json.loads(result)
-                                result = self.model.model_validate(parsed)
+                                result = self.model.model_validate_json(result)
                             except Exception as parse_err:
                                 raise ConverterError(
                                     f"Failed to convert partial JSON result into Pydantic: {parse_err}"
@@ -172,6 +172,16 @@ def convert_to_model(
     model = output_pydantic or output_json
     if model is None:
         return result
+
+    if converter_cls:
+        return convert_with_instructions(
+            result=result,
+            model=model,
+            is_json_output=bool(output_json),
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+
     try:
         escaped_result = json.dumps(json.loads(result, strict=False))
         return validate_model(
@@ -251,7 +261,7 @@ def handle_partial_json(
         except json.JSONDecodeError:
             pass
         except ValidationError:
-            pass
+            raise
         except Exception as e:
             Printer().print(
                 content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
@@ -335,25 +345,26 @@ def get_conversion_instructions(
     Returns:
 
     """
-    instructions = "Please convert the following text into valid JSON."
+    instructions = ""
     if (
         llm
         and not isinstance(llm, str)
         and hasattr(llm, "supports_function_calling")
         and llm.supports_function_calling()
     ):
-        model_schema = PydanticSchemaParser(model=model).get_schema()
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{model_schema}\n```"
+        schema_dict = generate_model_description(model)
+        schema = json.dumps(schema_dict, indent=2)
+        formatted_task_instructions = _I18N.slice("formatted_task_instructions").format(
+            output_format=schema
         )
+        instructions += formatted_task_instructions
     else:
         model_description = generate_model_description(model)
-        schema_json = json.dumps(model_description["json_schema"]["schema"], indent=2)
-        instructions += (
-            f"\n\nOutput ONLY the valid JSON and nothing else.\n\n"
-            f"Use this format exactly:\n```json\n{schema_json}\n```"
+        schema_json = json.dumps(model_description, indent=2)
+        formatted_task_instructions = _I18N.slice("formatted_task_instructions").format(
+            output_format=schema_json
         )
+        instructions += formatted_task_instructions
     return instructions
 
 
