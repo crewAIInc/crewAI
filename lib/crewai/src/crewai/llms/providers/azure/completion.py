@@ -279,7 +279,7 @@ class AzureCompletion(BaseLLM):
 
         if response_model and self.is_openai_model:
             params["response_format"] = {
-                "type": "json_schema",
+                "type": "json_object",
                 "json_schema": {
                     "name": response_model.__name__,
                     "schema": response_model.model_json_schema(),
