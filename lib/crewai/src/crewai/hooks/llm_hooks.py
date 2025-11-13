@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from crewai.events.event_listener import event_listener
+from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
 from crewai.utilities.printer import Printer
 
 
@@ -101,12 +101,12 @@ class LLMCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_llm_call_hooks: list[Callable[[LLMCallHookContext], None]] = []
-_after_llm_call_hooks: list[Callable[[LLMCallHookContext], str | None]] = []
+_before_llm_call_hooks: list[BeforeLLMCallHookType] = []
+_after_llm_call_hooks: list[AfterLLMCallHookType] = []
 
 
 def register_before_llm_call_hook(
-    hook: Callable[[LLMCallHookContext], None],
+    hook: BeforeLLMCallHookType,
 ) -> None:
     """Register a global before_llm_call hook.
 
@@ -115,8 +115,10 @@ def register_before_llm_call_hook(
     apply to all LLM calls across all executors.
 
     Args:
-        hook: Function that receives LLMCallHookContext and can modify
-            context.messages directly. Should return None.
+        hook: Function that receives LLMCallHookContext and can:
+            - Modify context.messages directly (in-place)
+            - Return False to block LLM execution
+            - Return True or None to allow execution
             IMPORTANT: Modify messages in-place (append, extend, remove items).
             Do NOT replace the list (context.messages = []), as this will break execution.
 
@@ -124,14 +126,23 @@ def register_before_llm_call_hook(
         >>> def log_llm_calls(context: LLMCallHookContext) -> None:
         ...     print(f"LLM call by {context.agent.role}")
         ...     print(f"Messages: {len(context.messages)}")
+        ...     return None  # Allow execution
         >>>
         >>> register_before_llm_call_hook(log_llm_calls)
+        >>>
+        >>> def block_excessive_iterations(context: LLMCallHookContext) -> bool | None:
+        ...     if context.iterations > 10:
+        ...         print("Blocked: Too many iterations")
+        ...         return False  # Block execution
+        ...     return None  # Allow execution
+        >>>
+        >>> register_before_llm_call_hook(block_excessive_iterations)
     """
     _before_llm_call_hooks.append(hook)
 
 
 def register_after_llm_call_hook(
-    hook: Callable[[LLMCallHookContext], str | None],
+    hook: AfterLLMCallHookType,
 ) -> None:
     """Register a global after_llm_call hook.
 
@@ -158,7 +169,7 @@ def register_after_llm_call_hook(
     _after_llm_call_hooks.append(hook)
 
 
-def get_before_llm_call_hooks() -> list[Callable[[LLMCallHookContext], None]]:
+def get_before_llm_call_hooks() -> list[BeforeLLMCallHookType]:
     """Get all registered global before_llm_call hooks.
 
     Returns:
@@ -167,7 +178,7 @@ def get_before_llm_call_hooks() -> list[Callable[[LLMCallHookContext], None]]:
     return _before_llm_call_hooks.copy()
 
 
-def get_after_llm_call_hooks() -> list[Callable[[LLMCallHookContext], str | None]]:
+def get_after_llm_call_hooks() -> list[AfterLLMCallHookType]:
     """Get all registered global after_llm_call hooks.
 
     Returns:
@@ -177,7 +188,7 @@ def get_after_llm_call_hooks() -> list[Callable[[LLMCallHookContext], str | None
 
 
 def unregister_before_llm_call_hook(
-    hook: Callable[[LLMCallHookContext], None],
+    hook: BeforeLLMCallHookType,
 ) -> bool:
     """Unregister a specific global before_llm_call hook.
 
@@ -203,7 +214,7 @@ def unregister_before_llm_call_hook(
 
 
 def unregister_after_llm_call_hook(
-    hook: Callable[[LLMCallHookContext], str | None],
+    hook: AfterLLMCallHookType,
 ) -> bool:
     """Unregister a specific global after_llm_call hook.
 

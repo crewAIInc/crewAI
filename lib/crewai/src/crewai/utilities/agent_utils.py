@@ -260,7 +260,8 @@ def get_llm_response(
     """
 
     if executor_context is not None:
-        _setup_before_llm_call_hooks(executor_context, printer)
+        if not _setup_before_llm_call_hooks(executor_context, printer):
+            raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
     try:
@@ -673,12 +674,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
 def _setup_before_llm_call_hooks(
     executor_context: CrewAgentExecutor | None, printer: Printer
-) -> None:
+) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
         printer: Printer instance for error logging.
+
+    Returns:
+        True if LLM execution should proceed, False if blocked by a hook.
     """
     if executor_context and executor_context.before_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -688,7 +692,13 @@ def _setup_before_llm_call_hooks(
         hook_context = LLMCallHookContext(executor_context)
         try:
             for hook in executor_context.before_llm_call_hooks:
-                hook(hook_context)
+                result = hook(hook_context)
+                if result is False:
+                    printer.print(
+                        content="LLM call blocked by before_llm_call hook",
+                        color="yellow",
+                    )
+                    return False
         except Exception as e:
             printer.print(
                 content=f"Error in before_llm_call hook: {e}",
@@ -708,6 +718,8 @@ def _setup_before_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
+
+    return True
 
 
 def _setup_after_llm_call_hooks(
