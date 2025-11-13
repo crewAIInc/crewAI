@@ -110,6 +110,7 @@ class RagTool(BaseTool):
     summarize: bool = False
     similarity_threshold: float = 0.6
     limit: int = 5
+    collection_name: str = "rag_tool_collection"
     adapter: Adapter = Field(default_factory=_AdapterPlaceholder)
     config: RagToolConfig = Field(
         default_factory=RagToolConfig,
@@ -139,7 +140,7 @@ class RagTool(BaseTool):
 
             provider_cfg = self._parse_config(self.config)
             self.adapter = CrewAIRagAdapter(
-                collection_name="rag_tool_collection",
+                collection_name=self.collection_name,
                 summarize=self.summarize,
                 similarity_threshold=self.similarity_threshold,
                 limit=self.limit,
