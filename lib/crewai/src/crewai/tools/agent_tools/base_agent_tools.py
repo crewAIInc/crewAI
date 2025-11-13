@@ -123,6 +123,10 @@ class BaseAgentTool(BaseTool):
                 expected_output=selected_agent.i18n.slice("manager_request"),
                 i18n=selected_agent.i18n,
             )
+
+            # Mark task as delegated for filtering purposes
+            task_with_assigned_agent._is_delegated = True
+
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
             )
