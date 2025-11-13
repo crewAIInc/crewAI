@@ -23,6 +23,10 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
+from crewai.hooks.llm_hooks import (
+    get_after_llm_call_hooks,
+    get_before_llm_call_hooks,
+)
 from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     format_message_for_llm,
@@ -38,10 +42,6 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.llm_call_hooks import (
-    get_after_llm_call_hooks,
-    get_before_llm_call_hooks,
-)
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -263,6 +263,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         task=self.task,
                         agent=self.agent,
                         function_calling_llm=self.function_calling_llm,
+                        crew=self.crew,
                     )
                     formatted_answer = self._handle_agent_action(
                         formatted_answer, tool_result
