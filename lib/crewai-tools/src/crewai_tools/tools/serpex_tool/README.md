@@ -10,7 +10,6 @@ The SerpexTool is a powerful multi-engine search tool that interfaces with the S
 - **Structured Results**: Clean JSON responses with titles, URLs, snippets, and metadata
 - **Captcha Handling**: Built-in proxy rotation and retry logic
 - **Affordable**: 200 free credits to start, $0.0008 per request
-- **Optional result saving to file**
 
 ## Installation
 ```shell
@@ -23,8 +22,6 @@ from crewai_tools import SerpexTool
 
 # Initialize the tool
 tool = SerpexTool(
-    n_results=10,  # Optional: Number of results to return (default: 10)
-    save_file=False,  # Optional: Save results to file (default: False)
     engine="auto",  # Optional: Search engine - "auto", "google", "bing", "duckduckgo", "brave", "yahoo", "yandex" (default: "auto")
     time_range="all"  # Optional: Time filter - "all", "day", "week", "month", "year" (default: "all")
 )
@@ -47,8 +44,6 @@ results = tool._run(search_query="your search query")
 ## Parameters
 
 ### Tool Initialization
-- `n_results` (int): Number of results to return (default: 10)
-- `save_file` (bool): Whether to save results to a file (default: False)
 - `engine` (str): Search engine to use (default: "auto")
   - Options: "auto", "google", "bing", "duckduckgo", "brave", "yahoo", "yandex"
 - `time_range` (str): Filter results by time (default: "all")
@@ -58,7 +53,6 @@ results = tool._run(search_query="your search query")
 - `search_query` (str): The search query (required)
 - `engine` (str): Override the default search engine (optional)
 - `time_range` (str): Override the default time range (optional)
-- `save_file` (bool): Override the default save behavior (optional)
 
 ## Response Format
 The tool returns structured data including:
@@ -104,8 +98,7 @@ from crewai_tools import SerpexTool
 
 tool = SerpexTool(
     engine="google",
-    time_range="week",
-    n_results=20
+    time_range="week"
 )
 results = tool._run(search_query="quantum computing news")
 ```
@@ -118,15 +111,6 @@ tool = SerpexTool(engine="auto")
 results = tool._run(search_query="machine learning trends")
 ```
 
-### Save Results to File
-```python
-from crewai_tools import SerpexTool
-
-tool = SerpexTool(save_file=True)
-results = tool._run(search_query="AI research papers")
-# Results will be saved to search_results_YYYY-MM-DD_HH-MM-SS.txt
-```
-
 ## Integration with CrewAI Agents
 
 ```python
@@ -136,8 +120,7 @@ from crewai_tools import SerpexTool
 # Initialize the tool
 search_tool = SerpexTool(
     engine="auto",
-    time_range="month",
-    n_results=15
+    time_range="month"
 )
 
 # Create an agent with the tool

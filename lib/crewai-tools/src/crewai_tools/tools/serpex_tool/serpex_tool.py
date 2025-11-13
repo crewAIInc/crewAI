@@ -1,4 +1,3 @@
-import datetime
 import json
 import logging
 import os
@@ -42,18 +41,6 @@ class FormattedResults(TypedDict, total=False):
     suggestions: list[str]
 
 
-def _save_results_to_file(content: str) -> None:
-    """Saves the search results to a file."""
-    try:
-        filename = f"search_results_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-        with open(filename, "w") as file:
-            file.write(content)
-        logger.info(f"Results saved to {filename}")
-    except IOError as e:
-        logger.error(f"Failed to save results to file: {e}")
-        raise
-
-
 class SerpexToolSchema(BaseModel):
     """Input for SerpexTool."""
 
@@ -71,8 +58,6 @@ class SerpexTool(BaseTool):
     )
     args_schema: type[BaseModel] = SerpexToolSchema
     base_url: str = "https://api.serpex.dev"
-    n_results: int = 10
-    save_file: bool = False
     engine: str = "auto"
     time_range: str = "all"
     env_vars: list[EnvVar] = Field(
@@ -116,7 +101,7 @@ class SerpexTool(BaseTool):
     ) -> list[SearchResult]:
         """Process search results."""
         processed_results: list[SearchResult] = []
-        for result in results[: self.n_results]:
+        for result in results:
             try:
                 result_data: SearchResult = {
                     "title": result["title"],
@@ -184,7 +169,6 @@ class SerpexTool(BaseTool):
         search_query: str | None = kwargs.get("search_query") or kwargs.get("query")
         engine: str = kwargs.get("engine", self.engine)
         time_range: str = kwargs.get("time_range", self.time_range)
-        save_file = kwargs.get("save_file", self.save_file)
 
         if not search_query:
             raise ValueError("search_query is required")
@@ -211,8 +195,5 @@ class SerpexTool(BaseTool):
             "results": self._process_search_results(results.get("results", [])),
             "suggestions": results.get("suggestions", []),
         }
-
-        if save_file:
-            _save_results_to_file(json.dumps(formatted_results, indent=2))
 
         return formatted_results  # type: ignore[return-value]

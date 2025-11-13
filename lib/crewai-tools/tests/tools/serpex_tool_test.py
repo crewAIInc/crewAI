@@ -13,33 +13,27 @@ def mock_serpex_api_key():
 
 @pytest.fixture
 def serpex_tool():
-    return SerpexTool(n_results=2)
+    return SerpexTool()
 
 
 def test_serpex_tool_initialization():
     tool = SerpexTool()
-    assert tool.n_results == 10
-    assert tool.save_file is False
     assert tool.engine == "auto"
     assert tool.time_range == "all"
 
 
 def test_serpex_tool_custom_initialization():
     tool = SerpexTool(
-        n_results=5,
-        save_file=True,
         engine="google",
         time_range="week",
     )
-    assert tool.n_results == 5
-    assert tool.save_file is True
     assert tool.engine == "google"
     assert tool.time_range == "week"
 
 
 @patch("requests.get")
 def test_serpex_tool_search(mock_get):
-    tool = SerpexTool(n_results=2)
+    tool = SerpexTool()
     mock_response = {
         "metadata": {
             "number_of_results": 17,
@@ -86,7 +80,7 @@ def test_serpex_tool_search(mock_get):
 
 @patch("requests.get")
 def test_serpex_tool_multi_engine_search(mock_get):
-    tool = SerpexTool(n_results=2, engine="auto")
+    tool = SerpexTool(engine="auto")
     mock_response = {
         "metadata": {
             "number_of_results": 10,
@@ -118,7 +112,7 @@ def test_serpex_tool_multi_engine_search(mock_get):
 
 @patch("requests.get")
 def test_serpex_tool_time_filtered_search(mock_get):
-    tool = SerpexTool(n_results=2, time_range="week")
+    tool = SerpexTool(time_range="week")
     mock_response = {
         "metadata": {
             "number_of_results": 5,
