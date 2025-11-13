@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
+from crewai.hooks import clear_all_llm_call_hooks, unregister_after_llm_call_hook, unregister_before_llm_call_hook
 import pytest
 
 from crewai.hooks.llm_hooks import (
@@ -277,3 +278,34 @@ class TestLLMHooksIntegration:
                 result = modified
 
         assert result == "Original [hook1] [hook2]"
+
+    def test_unregister_before_hook(self):
+        """Test that before hooks can be unregistered."""
+        def test_hook(context):
+            pass
+
+        register_before_llm_call_hook(test_hook)
+        unregister_before_llm_call_hook(test_hook)
+        hooks = get_before_llm_call_hooks()
+        assert len(hooks) == 0
+
+    def test_unregister_after_hook(self):
+        """Test that after hooks can be unregistered."""
+        def test_hook(context):
+            return None
+
+        register_after_llm_call_hook(test_hook)
+        unregister_after_llm_call_hook(test_hook)
+        hooks = get_after_llm_call_hooks()
+        assert len(hooks) == 0
+
+    def test_clear_all_llm_call_hooks(self):
+        """Test that all llm call hooks can be cleared."""
+        def test_hook(context):
+            pass
+
+        register_before_llm_call_hook(test_hook)
+        register_after_llm_call_hook(test_hook)
+        clear_all_llm_call_hooks()
+        hooks = get_before_llm_call_hooks()
+        assert len(hooks) == 0

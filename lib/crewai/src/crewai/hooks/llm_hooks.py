@@ -174,3 +174,106 @@ def get_after_llm_call_hooks() -> list[Callable[[LLMCallHookContext], str | None
         List of registered after hooks
     """
     return _after_llm_call_hooks.copy()
+
+
+def unregister_before_llm_call_hook(
+    hook: Callable[[LLMCallHookContext], None],
+) -> bool:
+    """Unregister a specific global before_llm_call hook.
+
+    Args:
+        hook: The hook function to remove
+
+    Returns:
+        True if the hook was found and removed, False otherwise
+
+    Example:
+        >>> def my_hook(context: LLMCallHookContext) -> None:
+        ...     print("Before LLM call")
+        >>>
+        >>> register_before_llm_call_hook(my_hook)
+        >>> unregister_before_llm_call_hook(my_hook)
+        True
+    """
+    try:
+        _before_llm_call_hooks.remove(hook)
+        return True
+    except ValueError:
+        return False
+
+
+def unregister_after_llm_call_hook(
+    hook: Callable[[LLMCallHookContext], str | None],
+) -> bool:
+    """Unregister a specific global after_llm_call hook.
+
+    Args:
+        hook: The hook function to remove
+
+    Returns:
+        True if the hook was found and removed, False otherwise
+
+    Example:
+        >>> def my_hook(context: LLMCallHookContext) -> str | None:
+        ...     return None
+        >>>
+        >>> register_after_llm_call_hook(my_hook)
+        >>> unregister_after_llm_call_hook(my_hook)
+        True
+    """
+    try:
+        _after_llm_call_hooks.remove(hook)
+        return True
+    except ValueError:
+        return False
+
+
+def clear_before_llm_call_hooks() -> int:
+    """Clear all registered global before_llm_call hooks.
+
+    Returns:
+        Number of hooks that were cleared
+
+    Example:
+        >>> register_before_llm_call_hook(hook1)
+        >>> register_before_llm_call_hook(hook2)
+        >>> clear_before_llm_call_hooks()
+        2
+    """
+    count = len(_before_llm_call_hooks)
+    _before_llm_call_hooks.clear()
+    return count
+
+
+def clear_after_llm_call_hooks() -> int:
+    """Clear all registered global after_llm_call hooks.
+
+    Returns:
+        Number of hooks that were cleared
+
+    Example:
+        >>> register_after_llm_call_hook(hook1)
+        >>> register_after_llm_call_hook(hook2)
+        >>> clear_after_llm_call_hooks()
+        2
+    """
+    count = len(_after_llm_call_hooks)
+    _after_llm_call_hooks.clear()
+    return count
+
+
+def clear_all_llm_call_hooks() -> tuple[int, int]:
+    """Clear all registered global LLM call hooks (both before and after).
+
+    Returns:
+        Tuple of (before_hooks_cleared, after_hooks_cleared)
+
+    Example:
+        >>> register_before_llm_call_hook(before_hook)
+        >>> register_after_llm_call_hook(after_hook)
+        >>> clear_all_llm_call_hooks()
+        (1, 1)
+    """
+    before_count = clear_before_llm_call_hooks()
+    after_count = clear_after_llm_call_hooks()
+    return (before_count, after_count)
