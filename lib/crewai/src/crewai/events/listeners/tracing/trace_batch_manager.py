@@ -12,7 +12,10 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.listeners.tracing.utils import should_auto_collect_first_time_traces
+from crewai.events.listeners.tracing.utils import (
+    is_tracking_disabled,
+    should_auto_collect_first_time_traces,
+)
 from crewai.utilities.constants import CREWAI_BASE_URL
 
 
@@ -106,6 +109,9 @@ class TraceBatchManager:
         use_ephemeral: bool = False,
     ):
         """Send batch initialization to backend"""
+
+        if is_tracking_disabled():
+            return
 
         if not self.plus_api or not self.current_batch:
             return
@@ -204,6 +210,9 @@ class TraceBatchManager:
 
     def _send_events_to_backend(self) -> int:
         """Send buffered events to backend with graceful failure handling"""
+        if is_tracking_disabled():
+            return 200
+
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
             return 500
         try:
@@ -243,6 +252,9 @@ class TraceBatchManager:
 
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
+        if is_tracking_disabled():
+            return None
+
         if not self.current_batch:
             return None
 
@@ -299,6 +311,9 @@ class TraceBatchManager:
         Args:
             events_count: Number of events that were successfully sent
         """
+        if is_tracking_disabled():
+            return
+
         if not self.plus_api or not self.trace_batch_id:
             return
 

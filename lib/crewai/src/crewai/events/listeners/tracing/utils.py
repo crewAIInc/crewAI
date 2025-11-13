@@ -27,6 +27,19 @@ def is_tracing_enabled() -> bool:
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
 
 
+def is_tracking_disabled() -> bool:
+    """Check if tracking/tracing should be disabled.
+
+    This acts as a master kill switch for all outbound telemetry and tracing.
+    Returns True if either CREWAI_DISABLE_TELEMETRY or CREWAI_DISABLE_TRACKING
+    environment variables are set to 'true'.
+    """
+    return (
+        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
+    )
+
+
 def on_first_execution_tracing_confirmation() -> bool:
     if _is_test_environment():
         return False
