@@ -1,0 +1,35 @@
+name: Check Documentation Broken Links
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "docs.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "docs.json"
+  workflow_dispatch:
+
+jobs:
+  check-links:
+    name: Check broken links
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "latest"
+
+      - name: Install Mintlify CLI
+        run: npm i -g mintlify
+
+      - name: Run broken link checker
+        run: |
+          # Auto-answer the prompt with yes command
+          yes "" | mintlify broken-links || test $? -eq 141
+        working-directory: ./docs
