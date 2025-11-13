@@ -37,7 +37,8 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
             'audience': 'test_audience',
             'domain': 'test.domain.com',
             'device_authorization_client_id': 'test_client_id',
-            'provider': 'workos'
+            'provider': 'workos',
+            'extra': {}
         }
         mock_requests_get.return_value = mock_response
 
@@ -60,11 +61,12 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
             ('oauth2_provider', 'workos'),
             ('oauth2_audience', 'test_audience'),
             ('oauth2_client_id', 'test_client_id'),
-            ('oauth2_domain', 'test.domain.com')
+            ('oauth2_domain', 'test.domain.com'),
+            ('oauth2_extra', {})
         ]
 
         actual_calls = self.mock_settings_command.set.call_args_list
-        self.assertEqual(len(actual_calls), 5)
+        self.assertEqual(len(actual_calls), 6)
 
         for i, (key, value) in enumerate(expected_calls):
             call_args = actual_calls[i][0]

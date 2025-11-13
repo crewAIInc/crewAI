@@ -33,6 +33,22 @@ Antes de usar a integração Microsoft Teams, certifique-se de ter:
 uv add crewai-tools
 ```
 
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
 ## Ações Disponíveis
 
 <AccordionGroup>

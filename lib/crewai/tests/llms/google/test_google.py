@@ -24,7 +24,7 @@ def test_gemini_completion_is_used_when_google_provider():
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     assert llm.__class__.__name__ == "GeminiCompletion"
-    assert llm.provider == "google"
+    assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
 
 
@@ -648,3 +648,55 @@ def test_gemini_token_usage_tracking():
         assert usage["candidates_token_count"] == 25
         assert usage["total_token_count"] == 75
         assert usage["total_tokens"] == 75
+
+
+def test_gemini_stop_sequences_sync():
+    """Test that stop and stop_sequences attributes stay synchronized."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    # Test setting stop as a list
+    llm.stop = ["\nObservation:", "\nThought:"]
+    assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
+    assert llm.stop == ["\nObservation:", "\nThought:"]
+
+    # Test setting stop as a string
+    llm.stop = "\nFinal Answer:"
+    assert llm.stop_sequences == ["\nFinal Answer:"]
+    assert llm.stop == ["\nFinal Answer:"]
+
+    # Test setting stop as None
+    llm.stop = None
+    assert llm.stop_sequences == []
+    assert llm.stop == []
+
+
+def test_gemini_stop_sequences_sent_to_api():
+    """Test that stop_sequences are properly sent to the Gemini API."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
+    llm.stop = ["\nObservation:", "\nThought:"]
+
+    # Patch the API call to capture parameters without making real call
+    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+        mock_response = MagicMock()
+        mock_response.text = "Hello"
+        mock_response.candidates = []
+        mock_response.usage_metadata = MagicMock(
+            prompt_token_count=10,
+            candidates_token_count=5,
+            total_token_count=15
+        )
+        mock_generate.return_value = mock_response
+
+        llm.call("Say hello in one word")
+
+        # Verify stop_sequences were passed to the API in the config
+        call_kwargs = mock_generate.call_args[1]
+        assert "config" in call_kwargs
+        # The config object should have stop_sequences set
+        config = call_kwargs["config"]
+        # Check if the config has stop_sequences attribute
+        assert hasattr(config, 'stop_sequences') or 'stop_sequences' in config.__dict__
+        if hasattr(config, 'stop_sequences'):
+            assert config.stop_sequences == ["\nObservation:", "\nThought:"]

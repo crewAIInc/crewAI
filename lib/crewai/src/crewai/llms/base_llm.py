@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final
 
 from pydantic import BaseModel
@@ -31,11 +32,15 @@ from crewai.types.usage_metrics import UsageMetrics
 
 
 if TYPE_CHECKING:
+    from crewai.agent.core import Agent
+    from crewai.task import Task
+    from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
 
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
+_JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
 
 
 class BaseLLM(ABC):
@@ -65,9 +70,8 @@ class BaseLLM(ABC):
         temperature: float | None = None,
         api_key: str | None = None,
         base_url: str | None = None,
-        timeout: float | None = None,
         provider: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
 
@@ -93,8 +97,10 @@ class BaseLLM(ABC):
             self.stop: list[str] = []
         elif isinstance(stop, str):
             self.stop = [stop]
-        else:
+        elif isinstance(stop, list):
             self.stop = stop
+        else:
+            self.stop = []
 
         self._token_usage = {
             "total_tokens": 0,
@@ -118,11 +124,12 @@ class BaseLLM(ABC):
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, BaseTool]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
 
@@ -139,6 +146,7 @@ class BaseLLM(ABC):
                                that can be invoked by the LLM.
             from_task: Optional task caller to be used for the LLM call.
             from_agent: Optional agent caller to be used for the LLM call.
+            response_model: Optional response model to be used for the LLM call.
 
         Returns:
             Either a text response from the LLM (str) or
@@ -150,7 +158,9 @@ class BaseLLM(ABC):
             RuntimeError: If the LLM request fails for other reasons.
         """
 
-    def _convert_tools_for_interference(self, tools: list[dict]) -> list[dict]:
+    def _convert_tools_for_interference(
+        self, tools: list[dict[str, BaseTool]]
+    ) -> list[dict[str, BaseTool]]:
         """Convert tools to a format that can be used for interference.
 
         Args:
@@ -237,11 +247,11 @@ class BaseLLM(ABC):
     def _emit_call_started_event(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict] | None = None,
+        tools: list[dict[str, BaseTool]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call started event."""
         if not hasattr(crewai_event_bus, "emit"):
@@ -264,8 +274,8 @@ class BaseLLM(ABC):
         self,
         response: Any,
         call_type: LLMCallType,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         messages: str | list[dict[str, Any]] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
@@ -284,8 +294,8 @@ class BaseLLM(ABC):
     def _emit_call_failed_event(
         self,
         error: str,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
         if not hasattr(crewai_event_bus, "emit"):
@@ -303,8 +313,8 @@ class BaseLLM(ABC):
     def _emit_stream_chunk_event(
         self,
         chunk: str,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
     ) -> None:
         """Emit stream chunk event."""
@@ -326,8 +336,8 @@ class BaseLLM(ABC):
         function_name: str,
         function_args: dict[str, Any],
         available_functions: dict[str, Any],
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
     ) -> str | None:
         """Handle tool execution with proper event emission.
 
@@ -443,10 +453,10 @@ class BaseLLM(ABC):
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
 
-        return messages  # type: ignore[return-value]
+        return messages
 
+    @staticmethod
     def _validate_structured_output(
-        self,
         response: str,
         response_format: type[BaseModel] | None,
     ) -> str | BaseModel:
@@ -471,10 +481,7 @@ class BaseLLM(ABC):
                 data = json.loads(response)
                 return response_format.model_validate(data)
 
-            # Try to extract JSON from response
-            import re
-
-            json_match = re.search(r"\{.*\}", response, re.DOTALL)
+            json_match = _JSON_EXTRACTION_PATTERN.search(response)
             if json_match:
                 data = json.loads(json_match.group())
                 return response_format.model_validate(data)
@@ -487,7 +494,8 @@ class BaseLLM(ABC):
                 f"Failed to parse response into {response_format.__name__}: {e}"
             ) from e
 
-    def _extract_provider(self, model: str) -> str:
+    @staticmethod
+    def _extract_provider(model: str) -> str:
         """Extract provider from model string.
 
         Args:

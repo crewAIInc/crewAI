@@ -13,14 +13,17 @@ Example
 >>> ancestors = build_ancestor_dict(flow)
 """
 
+from __future__ import annotations
+
 import ast
 from collections import defaultdict, deque
 import inspect
 import textwrap
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from typing_extensions import TypeIs
 
+from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -31,10 +34,29 @@ from crewai.flow.types import FlowMethodCallable, FlowMethodName
 from crewai.utilities.printer import Printer
 
 
+if TYPE_CHECKING:
+    from crewai.flow.flow import Flow
+
 _printer = Printer()
 
 
 def get_possible_return_constants(function: Any) -> list[str] | None:
+    """Extract possible string return values from a function using AST parsing.
+
+    This function analyzes the source code of a router method to identify
+    all possible string values it might return. It handles:
+    - Direct string literals: return "value"
+    - Variable assignments: x = "value"; return x
+    - Dictionary lookups: d = {"k": "v"}; return d[key]
+    - Conditional returns: return "a" if cond else "b"
+    - State attributes: return self.state.attr (infers from class context)
+
+    Args:
+        function: The function to analyze.
+
+    Returns:
+        List of possible string return values, or None if analysis fails.
+    """
     try:
         source = inspect.getsource(function)
     except OSError:
@@ -74,11 +96,34 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         _printer.print(f"Source code:\n{source}", color="yellow")
         return None
 
-    return_values = set()
-    dict_definitions = {}
+    return_values: set[str] = set()
+    dict_definitions: dict[str, list[str]] = {}
+    variable_values: dict[str, list[str]] = {}
+    state_attribute_values: dict[str, list[str]] = {}
 
-    class DictionaryAssignmentVisitor(ast.NodeVisitor):
-        def visit_Assign(self, node):
+    def extract_string_constants(node: ast.expr) -> list[str]:
+        """Recursively extract all string constants from an AST node."""
+        strings: list[str] = []
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            strings.append(node.value)
+        elif isinstance(node, ast.IfExp):
+            strings.extend(extract_string_constants(node.body))
+            strings.extend(extract_string_constants(node.orelse))
+        elif isinstance(node, ast.Call):
+            if (
+                isinstance(node.func, ast.Attribute)
+                and node.func.attr == "get"
+                and len(node.args) >= 2
+            ):
+                default_arg = node.args[1]
+                if isinstance(default_arg, ast.Constant) and isinstance(
+                    default_arg.value, str
+                ):
+                    strings.append(default_arg.value)
+        return strings
+
+    class VariableAssignmentVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node: ast.Assign) -> None:
             # Check if this assignment is assigning a dictionary literal to a variable
             if isinstance(node.value, ast.Dict) and len(node.targets) == 1:
                 target = node.targets[0]
@@ -92,29 +137,142 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
                     ]
                     if dict_values:
                         dict_definitions[var_name] = dict_values
+
+            if len(node.targets) == 1:
+                target = node.targets[0]
+                var_name_alt: str | None = None
+                if isinstance(target, ast.Name):
+                    var_name_alt = target.id
+                elif isinstance(target, ast.Attribute):
+                    var_name_alt = f"{target.value.id if isinstance(target.value, ast.Name) else '_'}.{target.attr}"
+
+                if var_name_alt:
+                    strings = extract_string_constants(node.value)
+                    if strings:
+                        variable_values[var_name_alt] = strings
+
             self.generic_visit(node)
+
+    def get_attribute_chain(node: ast.expr) -> str | None:
+        """Extract the full attribute chain from an AST node.
+
+        Examples:
+            self.state.run_type -> "self.state.run_type"
+            x.y.z -> "x.y.z"
+            simple_var -> "simple_var"
+        """
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute):
+            base = get_attribute_chain(node.value)
+            if base:
+                return f"{base}.{node.attr}"
+        return None
 
     class ReturnVisitor(ast.NodeVisitor):
-        def visit_Return(self, node):
-            # Direct string return
-            if isinstance(node.value, ast.Constant) and isinstance(
-                node.value.value, str
+        def visit_Return(self, node: ast.Return) -> None:
+            if (
+                node.value
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
             ):
                 return_values.add(node.value.value)
-            # Dictionary-based return, like return paths[result]
-            elif isinstance(node.value, ast.Subscript):
-                # Check if we're subscripting a known dictionary variable
+            elif node.value and isinstance(node.value, ast.Subscript):
                 if isinstance(node.value.value, ast.Name):
-                    var_name = node.value.value.id
-                    if var_name in dict_definitions:
-                        # Add all possible dictionary values
-                        for v in dict_definitions[var_name]:
+                    var_name_dict = node.value.value.id
+                    if var_name_dict in dict_definitions:
+                        for v in dict_definitions[var_name_dict]:
                             return_values.add(v)
+            elif node.value:
+                var_name_ret = get_attribute_chain(node.value)
+
+                if var_name_ret and var_name_ret in variable_values:
+                    for v in variable_values[var_name_ret]:
+                        return_values.add(v)
+                elif var_name_ret and var_name_ret in state_attribute_values:
+                    for v in state_attribute_values[var_name_ret]:
+                        return_values.add(v)
+
             self.generic_visit(node)
 
-    # First pass: identify dictionary assignments
-    DictionaryAssignmentVisitor().visit(code_ast)
-    # Second pass: identify returns
+        def visit_If(self, node: ast.If) -> None:
+            self.generic_visit(node)
+
+    # Try to get the class context to infer state attribute values
+    try:
+        if hasattr(function, "__self__"):
+            # Method is bound, get the class
+            class_obj = function.__self__.__class__
+        elif hasattr(function, "__qualname__") and "." in function.__qualname__:
+            # Method is unbound but we can try to get class from module
+            class_name = function.__qualname__.rsplit(".", 1)[0]
+            if hasattr(function, "__globals__"):
+                class_obj = function.__globals__.get(class_name)
+            else:
+                class_obj = None
+        else:
+            class_obj = None
+
+        if class_obj is not None:
+            try:
+                class_source = inspect.getsource(class_obj)
+                class_source = textwrap.dedent(class_source)
+                class_ast = ast.parse(class_source)
+
+                # Look for comparisons and assignments involving state attributes
+                class StateAttributeVisitor(ast.NodeVisitor):
+                    def visit_Compare(self, node: ast.Compare) -> None:
+                        """Find comparisons like: self.state.attr == "value" """
+                        left_attr = get_attribute_chain(node.left)
+
+                        if left_attr:
+                            for comparator in node.comparators:
+                                if isinstance(comparator, ast.Constant) and isinstance(
+                                    comparator.value, str
+                                ):
+                                    if left_attr not in state_attribute_values:
+                                        state_attribute_values[left_attr] = []
+                                    if (
+                                        comparator.value
+                                        not in state_attribute_values[left_attr]
+                                    ):
+                                        state_attribute_values[left_attr].append(
+                                            comparator.value
+                                        )
+
+                        # Also check right side
+                        for comparator in node.comparators:
+                            right_attr = get_attribute_chain(comparator)
+                            if (
+                                right_attr
+                                and isinstance(node.left, ast.Constant)
+                                and isinstance(node.left.value, str)
+                            ):
+                                if right_attr not in state_attribute_values:
+                                    state_attribute_values[right_attr] = []
+                                if (
+                                    node.left.value
+                                    not in state_attribute_values[right_attr]
+                                ):
+                                    state_attribute_values[right_attr].append(
+                                        node.left.value
+                                    )
+
+                        self.generic_visit(node)
+
+                StateAttributeVisitor().visit(class_ast)
+            except Exception as e:
+                _printer.print(
+                    f"Could not analyze class context for {function.__name__}: {e}",
+                    color="yellow",
+                )
+    except Exception as e:
+        _printer.print(
+            f"Could not introspect class for {function.__name__}: {e}",
+            color="yellow",
+        )
+
+    VariableAssignmentVisitor().visit(code_ast)
     ReturnVisitor().visit(code_ast)
 
     return list(return_values) if return_values else None
@@ -158,7 +316,15 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
     # Precompute listener dependencies
     or_listeners = defaultdict(list)
     and_listeners = defaultdict(set)
-    for listener_name, (condition_type, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            condition_type, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+            condition_type = condition_data.get("type", "OR")
+        else:
+            continue
+
         if condition_type == "OR":
             for method in trigger_methods:
                 or_listeners[method].append(listener_name)
@@ -192,8 +358,12 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
                         if listener_name not in visited:
                             queue.append(listener_name)
 
-        # Handle router connections
         process_router_paths(flow, current, current_level, levels, queue)
+
+    max_level = max(levels.values()) if levels else 0
+    for method_name in flow._methods:
+        if method_name not in levels:
+            levels[method_name] = max_level + 1
 
     return levels
 
@@ -215,8 +385,14 @@ def count_outgoing_edges(flow: Any) -> dict[str, int]:
     counts = {}
     for method_name in flow._methods:
         counts[method_name] = 0
-    for method_name in flow._listeners:
-        _, trigger_methods = flow._listeners[method_name]
+    for condition_data in flow._listeners.values():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         for trigger in trigger_methods:
             if trigger in flow._methods:
                 counts[trigger] += 1
@@ -271,21 +447,34 @@ def dfs_ancestors(
         return
     visited.add(node)
 
-    # Handle regular listeners
-    for listener_name, (_, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         if node in trigger_methods:
             ancestors[listener_name].add(node)
             ancestors[listener_name].update(ancestors[node])
             dfs_ancestors(listener_name, ancestors, visited, flow)
 
-    # Handle router methods separately
     if node in flow._routers:
         router_method_name = node
         paths = flow._router_paths.get(router_method_name, [])
         for path in paths:
-            for listener_name, (_, trigger_methods) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
-                    # Only propagate the ancestors of the router method, not the router method itself
                     ancestors[listener_name].update(ancestors[node])
                     dfs_ancestors(listener_name, ancestors, visited, flow)
 
@@ -335,19 +524,32 @@ def build_parent_children_dict(flow: Any) -> dict[str, list[str]]:
     """
     parent_children: dict[str, list[str]] = {}
 
-    # Map listeners to their trigger methods
-    for listener_name, (_, trigger_methods) in flow._listeners.items():
+    for listener_name, condition_data in flow._listeners.items():
+        if isinstance(condition_data, tuple):
+            _, trigger_methods = condition_data
+        elif isinstance(condition_data, dict):
+            trigger_methods = _extract_all_methods_recursive(condition_data, flow)
+        else:
+            continue
+
         for trigger in trigger_methods:
             if trigger not in parent_children:
                 parent_children[trigger] = []
             if listener_name not in parent_children[trigger]:
                 parent_children[trigger].append(listener_name)
 
-    # Map router methods to their paths and to listeners
     for router_method_name, paths in flow._router_paths.items():
         for path in paths:
-            # Map router method to listeners of each path
-            for listener_name, (_, trigger_methods) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if router_method_name not in parent_children:
                         parent_children[router_method_name] = []
@@ -382,17 +584,27 @@ def get_child_index(
     return children.index(child)
 
 
-def process_router_paths(flow, current, current_level, levels, queue):
-    """
-    Handle the router connections for the current node.
-    """
+def process_router_paths(
+    flow: Any,
+    current: str,
+    current_level: int,
+    levels: dict[str, int],
+    queue: deque[str],
+) -> None:
+    """Handle the router connections for the current node."""
     if current in flow._routers:
         paths = flow._router_paths.get(current, [])
         for path in paths:
-            for listener_name, (
-                _condition_type,
-                trigger_methods,
-            ) in flow._listeners.items():
+            for listener_name, condition_data in flow._listeners.items():
+                if isinstance(condition_data, tuple):
+                    _condition_type, trigger_methods = condition_data
+                elif isinstance(condition_data, dict):
+                    trigger_methods = _extract_all_methods_recursive(
+                        condition_data, flow
+                    )
+                else:
+                    continue
+
                 if path in trigger_methods:
                     if (
                         listener_name not in levels
@@ -413,7 +625,7 @@ def is_flow_method_name(obj: Any) -> TypeIs[FlowMethodName]:
     return isinstance(obj, str)
 
 
-def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable]:
+def is_flow_method_callable(obj: Any) -> TypeIs[FlowMethodCallable[..., Any]]:
     """Check if the object is a callable flow method.
 
     Args:
@@ -517,3 +729,107 @@ def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
         return False
 
     return True
+
+
+def _extract_all_methods_recursive(
+    condition: str | FlowCondition | dict[str, Any] | list[Any],
+    flow: Flow[Any] | None = None,
+) -> list[FlowMethodName]:
+    """Extract ALL method names from a condition tree recursively.
+
+    This function recursively extracts every method name from the entire
+    condition tree, regardless of nesting. Used for visualization and debugging.
+
+    Note: Only extracts actual method names, not router output strings.
+    If flow is provided, it will filter out strings that are not in flow._methods.
+
+    Args:
+        condition: Can be a string, dict, or list
+        flow: Optional flow instance to filter out non-method strings
+
+    Returns:
+        List of all method names found in the condition tree
+    """
+    if is_flow_method_name(condition):
+        if flow is not None:
+            if condition in flow._methods:
+                return [condition]
+            return []
+        return [condition]
+    if is_flow_condition_dict(condition):
+        normalized = _normalize_condition(condition)
+        methods = []
+        for sub_cond in normalized.get("conditions", []):
+            methods.extend(_extract_all_methods_recursive(sub_cond, flow))
+        return methods
+    if isinstance(condition, list):
+        methods = []
+        for item in condition:
+            methods.extend(_extract_all_methods_recursive(item, flow))
+        return methods
+    return []
+
+
+def _normalize_condition(
+    condition: FlowConditions | FlowCondition | FlowMethodName,
+) -> FlowCondition:
+    """Normalize a condition to standard format with 'conditions' key.
+
+    Args:
+        condition: Can be a string (method name), dict (condition), or list
+
+    Returns:
+        Normalized dict with 'type' and 'conditions' keys
+    """
+    if is_flow_method_name(condition):
+        return {"type": OR_CONDITION, "conditions": [condition]}
+    if is_flow_condition_dict(condition):
+        if "conditions" in condition:
+            return condition
+        if "methods" in condition:
+            return {"type": condition["type"], "conditions": condition["methods"]}
+        return condition
+    if is_flow_condition_list(condition):
+        return {"type": OR_CONDITION, "conditions": condition}
+
+    raise ValueError(f"Cannot normalize condition: {condition}")
+
+
+def _extract_all_methods(
+    condition: str | FlowCondition | dict[str, Any] | list[Any],
+) -> list[FlowMethodName]:
+    """Extract all method names from a condition (including nested).
+
+    For AND conditions, this extracts methods that must ALL complete.
+    For OR conditions nested inside AND, we don't extract their methods
+    since only one branch of the OR needs to trigger, not all methods.
+
+    This function is used for runtime execution logic, where we need to know
+    which methods must complete for AND conditions. For visualization purposes,
+    use _extract_all_methods_recursive() instead.
+
+    Args:
+        condition: Can be a string, dict, or list
+
+    Returns:
+        List of all method names in the condition tree that must complete
+    """
+    if is_flow_method_name(condition):
+        return [condition]
+    if is_flow_condition_dict(condition):
+        normalized = _normalize_condition(condition)
+        cond_type = normalized.get("type", OR_CONDITION)
+
+        if cond_type == AND_CONDITION:
+            return [
+                sub_cond
+                for sub_cond in normalized.get("conditions", [])
+                if is_flow_method_name(sub_cond)
+            ]
+        return []
+    if isinstance(condition, list):
+        methods = []
+        for item in condition:
+            methods.extend(_extract_all_methods(item))
+        return methods
+    return []

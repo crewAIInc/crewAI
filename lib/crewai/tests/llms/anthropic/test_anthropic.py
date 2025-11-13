@@ -36,7 +36,7 @@ def test_anthropic_completion_is_used_when_claude_provider():
 
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
     assert isinstance(llm, AnthropicCompletion)
-    assert llm.provider == "claude"
+    assert llm.provider == "anthropic"
     assert llm.model == "claude-3-5-sonnet-20241022"
 
 
@@ -664,3 +664,37 @@ def test_anthropic_token_usage_tracking():
         assert usage["input_tokens"] == 50
         assert usage["output_tokens"] == 25
         assert usage["total_tokens"] == 75
+
+
+def test_anthropic_stop_sequences_sync():
+    """Test that stop and stop_sequences attributes stay synchronized."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    # Test setting stop as a list
+    llm.stop = ["\nObservation:", "\nThought:"]
+    assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
+    assert llm.stop == ["\nObservation:", "\nThought:"]
+
+    # Test setting stop as a string
+    llm.stop = "\nFinal Answer:"
+    assert llm.stop_sequences == ["\nFinal Answer:"]
+    assert llm.stop == ["\nFinal Answer:"]
+
+    # Test setting stop as None
+    llm.stop = None
+    assert llm.stop_sequences == []
+    assert llm.stop == []
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_stop_sequences_sent_to_api():
+    """Test that stop_sequences are properly sent to the Anthropic API."""
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+    llm.stop = ["\nObservation:", "\nThought:"]
+
+    result = llm.call("Say hello in one word")
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0

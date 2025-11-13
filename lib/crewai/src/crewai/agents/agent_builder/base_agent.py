@@ -18,17 +18,19 @@ from pydantic import (
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
+from crewai.agent.internal.meta import AgentMeta
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.utilities.config import process_config
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -56,7 +58,7 @@ PlatformApp = Literal[
 PlatformAppOrAction = PlatformApp | str
 
 
-class BaseAgent(BaseModel, ABC):
+class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     """Abstract Base Class for all third party agents compatible with CrewAI.
 
     Attributes:
@@ -106,7 +108,7 @@ class BaseAgent(BaseModel, ABC):
             Set private attributes.
     """
 
-    __hash__ = object.__hash__  # type: ignore
+    __hash__ = object.__hash__
     _logger: Logger = PrivateAttr(default_factory=lambda: Logger(verbose=False))
     _rpm_controller: RPMController | None = PrivateAttr(default=None)
     _request_within_rpm_limit: Any = PrivateAttr(default=None)
@@ -149,7 +151,7 @@ class BaseAgent(BaseModel, ABC):
     )
     crew: Any = Field(default=None, description="Crew to which the agent belongs.")
     i18n: I18N = Field(
-        default_factory=I18N, description="Internationalization settings."
+        default_factory=get_i18n, description="Internationalization settings."
     )
     cache_handler: CacheHandler | None = Field(
         default=None, description="An instance of the CacheHandler class."
@@ -179,8 +181,8 @@ class BaseAgent(BaseModel, ABC):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    callbacks: list[Callable] = Field(
-        default=[], description="Callbacks to be used for the agent"
+    callbacks: list[Callable[[Any], Any]] = Field(
+        default_factory=list, description="Callbacks to be used for the agent"
     )
     adapted_agent: bool = Field(
         default=False, description="Whether the agent is adapted"
@@ -193,14 +195,14 @@ class BaseAgent(BaseModel, ABC):
         default=None,
         description="List of applications or application/action combinations that the agent can access through CrewAI Platform. Can contain app names (e.g., 'gmail') or specific actions (e.g., 'gmail/send_email')",
     )
-    mcps: list[str] | None = Field(
+    mcps: list[str | MCPServerConfig] | None = Field(
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
     )
 
     @model_validator(mode="before")
     @classmethod
-    def process_model_config(cls, values):
+    def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
 
     @field_validator("tools")
@@ -252,23 +254,39 @@ class BaseAgent(BaseModel, ABC):
 
     @field_validator("mcps")
     @classmethod
-    def validate_mcps(cls, mcps: list[str] | None) -> list[str] | None:
+    def validate_mcps(
+        cls, mcps: list[str | MCPServerConfig] | None
+    ) -> list[str | MCPServerConfig] | None:
+        """Validate MCP server references and configurations.
+
+        Supports both string references (for backwards compatibility) and
+        structured configuration objects (MCPServerStdio, MCPServerHTTP, MCPServerSSE).
+        """
         if not mcps:
             return mcps
 
         validated_mcps = []
         for mcp in mcps:
-            if mcp.startswith(("https://", "crewai-amp:")):
+            if isinstance(mcp, str):
+                if mcp.startswith(("https://", "crewai-amp:")):
+                    validated_mcps.append(mcp)
+                else:
+                    raise ValueError(
+                        f"Invalid MCP reference: {mcp}. "
+                        "String references must start with 'https://' or 'crewai-amp:'"
+                    )
+
+            elif isinstance(mcp, (MCPServerConfig)):
                 validated_mcps.append(mcp)
             else:
                 raise ValueError(
-                    f"Invalid MCP reference: {mcp}. Must start with 'https://' or 'crewai-amp:'"
+                    f"Invalid MCP configuration: {type(mcp)}. "
+                    "Must be a string reference or MCPServerConfig instance."
                 )
-
-        return list(set(validated_mcps))
+        return validated_mcps
 
     @model_validator(mode="after")
-    def validate_and_set_attributes(self):
+    def validate_and_set_attributes(self) -> Self:
         # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
@@ -300,7 +318,7 @@ class BaseAgent(BaseModel, ABC):
             )
 
     @model_validator(mode="after")
-    def set_private_attrs(self):
+    def set_private_attrs(self) -> Self:
         """Set private attributes."""
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
@@ -312,7 +330,7 @@ class BaseAgent(BaseModel, ABC):
         return self
 
     @property
-    def key(self):
+    def key(self) -> str:
         source = [
             self._original_role or self.role,
             self._original_goal or self.goal,
@@ -330,7 +348,7 @@ class BaseAgent(BaseModel, ABC):
         pass
 
     @abstractmethod
-    def create_agent_executor(self, tools=None) -> None:
+    def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:
         pass
 
     @abstractmethod
@@ -342,7 +360,7 @@ class BaseAgent(BaseModel, ABC):
         """Get platform tools for the specified list of applications and/or application/action combinations."""
 
     @abstractmethod
-    def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
+    def get_mcp_tools(self, mcps: list[str | MCPServerConfig]) -> list[BaseTool]:
         """Get MCP tools for the specified list of MCP server references."""
 
     def copy(self) -> Self:  # type: ignore # Signature of "copy" incompatible with supertype "BaseModel"
@@ -442,5 +460,5 @@ class BaseAgent(BaseModel, ABC):
             self._rpm_controller = rpm_controller
             self.create_agent_executor()
 
-    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None):
+    def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass

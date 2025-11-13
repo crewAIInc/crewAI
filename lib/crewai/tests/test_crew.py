@@ -1,11 +1,13 @@
 """Test Agent creation and execution basic functionality."""
 
+from io import StringIO
 import json
 import threading
 from collections import defaultdict
 from concurrent.futures import Future
 from hashlib import md5
 import re
+import sys
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
@@ -338,7 +340,7 @@ def test_sync_task_execution(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -410,7 +412,7 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -511,7 +513,7 @@ def test_manager_agent_delegates_with_varied_role_cases():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
     task.output = mock_task_output
 
@@ -609,7 +611,7 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -667,7 +669,7 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -786,7 +788,7 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # We mock execute_sync to verify which tools get used at runtime
@@ -1223,7 +1225,7 @@ async def test_async_task_execution_call_count(researcher, writer):
 
     # Create a valid TaskOutput instance to mock the return value
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Create a MagicMock Future instance
@@ -1782,7 +1784,7 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         Task,
         "execute_sync",
         return_value=TaskOutput(
-            description="dummy", raw="Hello", agent=researcher.role
+            description="dummy", raw="Hello", agent=researcher.role, messages=[]
         ),
     ):
         crew.kickoff()
@@ -1826,7 +1828,7 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -1879,7 +1881,7 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Create a mock Future that returns our TaskOutput
@@ -2244,11 +2246,13 @@ def test_conditional_task_uses_last_output(researcher, writer):
         description="First task output",
         raw="First success output",  # Will be used by third task's condition
         agent=researcher.role,
+        messages=[],
     )
     mock_third = TaskOutput(
         description="Third task output",
         raw="Third task executed",  # Output when condition succeeds using first task output
         agent=writer.role,
+        messages=[],
     )
 
     # Set up mocks for task execution and conditional logic
@@ -2316,11 +2320,13 @@ def test_conditional_tasks_result_collection(researcher, writer):
         description="Success output",
         raw="Success output",  # Triggers third task's condition
         agent=researcher.role,
+        messages=[],
     )
     mock_conditional = TaskOutput(
         description="Conditional output",
         raw="Conditional task executed",
         agent=writer.role,
+        messages=[],
     )
 
     # Set up mocks for task execution and conditional logic
@@ -2397,6 +2403,7 @@ def test_multiple_conditional_tasks(researcher, writer):
         description="Mock success",
         raw="Success and proceed output",
         agent=researcher.role,
+        messages=[],
     )
 
     # Set up mocks for task execution
@@ -2442,37 +2449,51 @@ def test_memory_events_are_emitted():
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def handle_memory_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def handle_memory_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemorySaveFailedEvent)
     def handle_memory_save_failed(source, event):
-        events["MemorySaveFailedEvent"].append(event)
+        with condition:
+            events["MemorySaveFailedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryStartedEvent)
     def handle_memory_query_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
+        with condition:
+            events["MemoryQueryStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryCompletedEvent)
     def handle_memory_query_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
+        with condition:
+            events["MemoryQueryCompletedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryQueryFailedEvent)
     def handle_memory_query_failed(source, event):
-        events["MemoryQueryFailedEvent"].append(event)
+        with condition:
+            events["MemoryQueryFailedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryRetrievalStartedEvent)
     def handle_memory_retrieval_started(source, event):
-        events["MemoryRetrievalStartedEvent"].append(event)
+        with condition:
+            events["MemoryRetrievalStartedEvent"].append(event)
+            condition.notify_all()
 
     @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
     def handle_memory_retrieval_completed(source, event):
         with condition:
             events["MemoryRetrievalCompletedEvent"].append(event)
-            condition.notify()
+            condition.notify_all()
 
     math_researcher = Agent(
         role="Researcher",
@@ -2497,10 +2518,17 @@ def test_memory_events_are_emitted():
 
     with condition:
         success = condition.wait_for(
-            lambda: len(events["MemoryRetrievalCompletedEvent"]) >= 1, timeout=5
+            lambda: (
+                len(events["MemorySaveStartedEvent"]) >= 3
+                and len(events["MemorySaveCompletedEvent"]) >= 3
+                and len(events["MemoryQueryStartedEvent"]) >= 3
+                and len(events["MemoryQueryCompletedEvent"]) >= 3
+                and len(events["MemoryRetrievalCompletedEvent"]) >= 1
+            ),
+            timeout=10,
         )
 
-    assert success, "Timeout waiting for memory events"
+    assert success, f"Timeout waiting for memory events. Got: {dict(events)}"
     assert len(events["MemorySaveStartedEvent"]) == 3
     assert len(events["MemorySaveCompletedEvent"]) == 3
     assert len(events["MemorySaveFailedEvent"]) == 0
@@ -2590,19 +2618,16 @@ def test_long_term_memory_with_memory_flag():
         agent=math_researcher,
     )
 
-    crew = Crew(
-        agents=[math_researcher],
-        tasks=[task1],
-        memory=True,
-        long_term_memory=LongTermMemory(),
-    )
-
     with (
         patch("crewai.utilities.printer.Printer.print") as mock_print,
-        patch(
-            "crewai.memory.long_term.long_term_memory.LongTermMemory.save"
-        ) as save_memory,
+        patch("crewai.memory.long_term.long_term_memory.LongTermMemory.save") as save_memory,
     ):
+        crew = Crew(
+            agents=[math_researcher],
+            tasks=[task1],
+            memory=True,
+            long_term_memory=LongTermMemory(),
+        )
         crew.kickoff()
         mock_print.assert_not_called()
         save_memory.assert_called_once()
@@ -2786,7 +2811,7 @@ def test_manager_agent(researcher, writer):
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Because we are mocking execute_sync, we never hit the underlying _execute_core
@@ -2855,7 +2880,7 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_train_success(researcher, writer):
+def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -2885,10 +2910,13 @@ def test_crew_train_success(researcher, writer):
                 condition.notify()
 
     # Mock human input to avoid blocking during training
-    with patch("builtins.input", return_value="Great work!"):
-        crew.train(
-            n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
-        )
+    # Use StringIO to simulate user input for multiple calls to input()
+    mock_inputs = StringIO("Great work!\n" * 10)  # Provide enough inputs for all iterations
+    monkeypatch.setattr("sys.stdin", mock_inputs)
+
+    crew.train(
+        n_iterations=2, inputs={"topic": "AI"}, filename="trained_agents_data.pkl"
+    )
 
     with condition:
         success = condition.wait_for(lambda: len(received_events) == 2, timeout=5)
@@ -2978,6 +3006,7 @@ def test_replay_feature(researcher, writer):
             output_format=OutputFormat.RAW,
             pydantic=None,
             summary="Mocked output for list of ideas",
+            messages=[],
         )
 
         crew.kickoff()
@@ -3029,6 +3058,7 @@ def test_crew_task_db_init():
             output_format=OutputFormat.RAW,
             pydantic=None,
             summary="Write about AI in healthcare...",
+            messages=[],
         )
 
         crew.kickoff()
@@ -3091,6 +3121,7 @@ def test_replay_task_with_context():
         output_format=OutputFormat.RAW,
         pydantic=None,
         summary="Detailed report on AI advancements...",
+        messages=[],
     )
     mock_task_output2 = TaskOutput(
         description="Summarize the AI advancements report.",
@@ -3100,6 +3131,7 @@ def test_replay_task_with_context():
         output_format=OutputFormat.RAW,
         pydantic=None,
         summary="Summary of the AI advancements report...",
+        messages=[],
     )
     mock_task_output3 = TaskOutput(
         description="Write an article based on the AI advancements summary.",
@@ -3109,6 +3141,7 @@ def test_replay_task_with_context():
         output_format=OutputFormat.RAW,
         pydantic=None,
         summary="Article on AI advancements...",
+        messages=[],
     )
     mock_task_output4 = TaskOutput(
         description="Create a presentation based on the AI advancements article.",
@@ -3118,6 +3151,7 @@ def test_replay_task_with_context():
         output_format=OutputFormat.RAW,
         pydantic=None,
         summary="Presentation on AI advancements...",
+        messages=[],
     )
 
     with patch.object(Task, "execute_sync") as mock_execute_task:
@@ -3142,6 +3176,70 @@ def test_replay_task_with_context():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_replay_preserves_messages():
+    """Test that replay preserves messages from stored task outputs."""
+    from crewai.utilities.types import LLMMessage
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test goal",
+        backstory="Test backstory",
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Say hello",
+        expected_output="A greeting",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], process=Process.sequential)
+
+    mock_messages: list[LLMMessage] = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Say hello"},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    mock_task_output = TaskOutput(
+        description="Say hello",
+        raw="Hello!",
+        agent="Test Agent",
+        messages=mock_messages,
+    )
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
+
+    # Verify the task output was stored with messages
+    db_handler = TaskOutputStorageHandler()
+    stored_outputs = db_handler.load()
+    assert stored_outputs is not None
+    assert len(stored_outputs) > 0
+
+    # Verify messages are in the stored output
+    stored_output = stored_outputs[0]["output"]
+    assert "messages" in stored_output
+    assert len(stored_output["messages"]) == 3
+    assert stored_output["messages"][0]["role"] == "system"
+    assert stored_output["messages"][1]["role"] == "user"
+    assert stored_output["messages"][2]["role"] == "assistant"
+
+    # Replay the task and verify messages are preserved
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        replayed_output = crew.replay(str(task.id))
+
+    # Verify the replayed task output has messages
+    assert len(replayed_output.tasks_output) > 0
+    replayed_task_output = replayed_output.tasks_output[0]
+    assert hasattr(replayed_task_output, "messages")
+    assert isinstance(replayed_task_output.messages, list)
+    assert len(replayed_task_output.messages) == 3
+
+    db_handler.reset()
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_replay_with_context():
     agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
     task1 = Task(
@@ -3158,6 +3256,7 @@ def test_replay_with_context():
         pydantic=None,
         json_dict={},
         output_format=OutputFormat.RAW,
+        messages=[],
     )
     task1.output = context_output
 
@@ -3218,6 +3317,7 @@ def test_replay_with_context_set_to_nullable():
             description="Test Task Output",
             raw="test raw output",
             agent="test_agent",
+            messages=[],
         )
         crew.kickoff()
 
@@ -3241,6 +3341,7 @@ def test_replay_with_invalid_task_id():
         pydantic=None,
         json_dict={},
         output_format=OutputFormat.RAW,
+        messages=[],
     )
     task1.output = context_output
 
@@ -3305,6 +3406,7 @@ def test_replay_interpolates_inputs_properly(mock_interpolate_inputs):
         pydantic=None,
         json_dict={},
         output_format=OutputFormat.RAW,
+        messages=[],
     )
     task1.output = context_output
 
@@ -3363,6 +3465,7 @@ def test_replay_setup_context():
         pydantic=None,
         json_dict={},
         output_format=OutputFormat.RAW,
+        messages=[],
     )
     task1.output = context_output
     crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
@@ -3596,6 +3699,7 @@ def test_conditional_should_skip(researcher, writer):
             description="Task 1 description",
             raw="Task 1 output",
             agent="Researcher",
+            messages=[],
         )
 
         result = crew_met.kickoff()
@@ -3630,6 +3734,7 @@ def test_conditional_should_execute(researcher, writer):
             description="Task 1 description",
             raw="Task 1 output",
             agent="Researcher",
+            messages=[],
         )
 
         crew_met.kickoff()
@@ -3801,7 +3906,7 @@ def test_task_tools_preserve_code_execution_tools():
     )
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     with patch.object(
@@ -3855,7 +3960,7 @@ def test_multimodal_flag_adds_multimodal_tools():
     crew = Crew(agents=[multimodal_agent], tasks=[task], process=Process.sequential)
 
     mock_task_output = TaskOutput(
-        description="Mock description", raw="mocked output", agent="mocked agent"
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
     # Mock execute_sync to verify the tools passed at runtime
@@ -3919,6 +4024,7 @@ def test_multimodal_agent_image_tool_handling():
         description="Mock description",
         raw="A detailed analysis of the image",
         agent="Image Analyst",
+        messages=[],
     )
 
     with patch.object(Task, "execute_sync") as mock_execute_sync:

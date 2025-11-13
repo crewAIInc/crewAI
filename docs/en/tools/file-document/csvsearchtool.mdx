@@ -54,25 +54,25 @@ The following parameters can be used to customize the `CSVSearchTool`'s behavior
 By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
 
 ```python Code
+from chromadb.config import Settings
+
 tool = CSVSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
 )
 ```

@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from pydantic import GetCoreSchemaHandler
+from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -37,7 +37,11 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N
+from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.llm_call_hooks import (
+    get_after_llm_call_hooks,
+    get_before_llm_call_hooks,
+)
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -65,7 +69,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def __init__(
         self,
-        llm: BaseLLM | Any,
+        llm: BaseLLM,
         task: Task,
         crew: Crew,
         agent: Agent,
@@ -82,6 +86,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         respect_context_window: bool = False,
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -103,8 +108,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             respect_context_window: Respect context limits.
             request_within_rpm_limit: RPM limit check function.
             callbacks: Optional callbacks list.
+            response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = I18N()
+        self._i18n: I18N = get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
@@ -119,23 +125,38 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.tools_handler = tools_handler
         self.original_tools = original_tools or []
         self.step_callback = step_callback
-        self.use_stop_words = self.llm.supports_stop_words()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
         self.request_within_rpm_limit = request_within_rpm_limit
+        self.response_model = response_model
         self.ask_for_human_input = False
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
-        existing_stop = getattr(self.llm, "stop", [])
-        self.llm.stop = list(
-            set(
-                existing_stop + self.stop
-                if isinstance(existing_stop, list)
-                else self.stop
+        self.before_llm_call_hooks: list[Callable] = []
+        self.after_llm_call_hooks: list[Callable] = []
+        self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
+        self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
+        if self.llm:
+            # This may be mutating the shared llm object and needs further evaluation
+            existing_stop = getattr(self.llm, "stop", [])
+            self.llm.stop = list(
+                set(
+                    existing_stop + self.stop
+                    if isinstance(existing_stop, list)
+                    else self.stop
+                )
             )
-        )
+
+    @property
+    def use_stop_words(self) -> bool:
+        """Check to determine if stop words are being used.
+
+        Returns:
+            bool: True if tool should be used or not.
+        """
+        return self.llm.supports_stop_words() if self.llm else False
 
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
@@ -201,6 +222,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                     )
+                    break
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
@@ -211,8 +233,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     printer=self._printer,
                     from_task=self.task,
                     from_agent=self.agent,
+                    response_model=self.response_model,
+                    executor_context=self,
                 )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)
+                formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -244,11 +268,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         formatted_answer, tool_result
                     )
 
-                self._invoke_step_callback(formatted_answer)
-                self._append_message(formatted_answer.text)
+                self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
+                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
 
-            except OutputParserError as e:  # noqa: PERF203
-                formatted_answer = handle_output_parser_exception(
+            except OutputParserError as e:
+                formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
                     e=e,
                     messages=self.messages,
                     iterations=self.iterations,

@@ -23,13 +23,15 @@ Here's a minimal example of how to use the tool:
 
 ```python
 from crewai import Agent
-from crewai_tools import QdrantVectorSearchTool
+from crewai_tools import QdrantVectorSearchTool, QdrantConfig
 
-# Initialize the tool
+# Initialize the tool with QdrantConfig
 qdrant_tool = QdrantVectorSearchTool(
-    qdrant_url="your_qdrant_url",
-    qdrant_api_key="your_qdrant_api_key",
-    collection_name="your_collection"
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_qdrant_url",
+        qdrant_api_key="your_qdrant_api_key",
+        collection_name="your_collection"
+    )
 )
 
 # Create an agent that uses the tool
@@ -82,7 +84,7 @@ def extract_text_from_pdf(pdf_path):
 def get_openai_embedding(text):
     response = client.embeddings.create(
         input=text,
-        model="text-embedding-3-small"
+        model="text-embedding-3-large"
     )
     return response.data[0].embedding
 
@@ -90,13 +92,13 @@ def get_openai_embedding(text):
 def load_pdf_to_qdrant(pdf_path, qdrant, collection_name):
     # Extract text from PDF
     text_chunks = extract_text_from_pdf(pdf_path)
-    
+
     # Create Qdrant collection
     if qdrant.collection_exists(collection_name):
         qdrant.delete_collection(collection_name)
     qdrant.create_collection(
         collection_name=collection_name,
-        vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+        vectors_config=VectorParams(size=3072, distance=Distance.COSINE)
     )
 
     # Store embeddings
@@ -120,19 +122,23 @@ pdf_path = "path/to/your/document.pdf"
 load_pdf_to_qdrant(pdf_path, qdrant, collection_name)
 
 # Initialize Qdrant search tool
+from crewai_tools import QdrantConfig
+
 qdrant_tool = QdrantVectorSearchTool(
-    qdrant_url=os.getenv("QDRANT_URL"),
-    qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-    collection_name=collection_name,
-    limit=3,
-    score_threshold=0.35
+    qdrant_config=QdrantConfig(
+        qdrant_url=os.getenv("QDRANT_URL"),
+        qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+        collection_name=collection_name,
+        limit=3,
+        score_threshold=0.35
+    )
 )
 
 # Create CrewAI agents
 search_agent = Agent(
     role="Senior Semantic Search Agent",
     goal="Find and analyze documents based on semantic search",
-    backstory="""You are an expert research assistant who can find relevant 
+    backstory="""You are an expert research assistant who can find relevant
     information using semantic search in a Qdrant database.""",
     tools=[qdrant_tool],
     verbose=True
@@ -141,7 +147,7 @@ search_agent = Agent(
 answer_agent = Agent(
     role="Senior Answer Assistant",
     goal="Generate answers to questions based on the context provided",
-    backstory="""You are an expert answer assistant who can generate 
+    backstory="""You are an expert answer assistant who can generate
     answers to questions based on the context provided.""",
     tools=[qdrant_tool],
     verbose=True
@@ -180,21 +186,82 @@ print(result)
 ## Tool Parameters
 
 ### Required Parameters
-- `qdrant_url` (str): The URL of your Qdrant server
-- `qdrant_api_key` (str): API key for authentication with Qdrant
-- `collection_name` (str): Name of the Qdrant collection to search
+- `qdrant_config` (QdrantConfig): Configuration object containing all Qdrant settings
 
-### Optional Parameters
+### QdrantConfig Parameters
+- `qdrant_url` (str): The URL of your Qdrant server
+- `qdrant_api_key` (str, optional): API key for authentication with Qdrant
+- `collection_name` (str): Name of the Qdrant collection to search
 - `limit` (int): Maximum number of results to return (default: 3)
 - `score_threshold` (float): Minimum similarity score threshold (default: 0.35)
+- `filter` (Any, optional): Qdrant Filter instance for advanced filtering (default: None)
+
+### Optional Tool Parameters
 - `custom_embedding_fn` (Callable[[str], list[float]]): Custom function for text vectorization
+- `qdrant_package` (str): Base package path for Qdrant (default: "qdrant_client")
+- `client` (Any): Pre-initialized Qdrant client (optional)
+
+## Advanced Filtering
+
+The QdrantVectorSearchTool supports powerful filtering capabilities to refine your search results:
+
+### Dynamic Filtering
+Use `filter_by` and `filter_value` parameters in your search to filter results on-the-fly:
+
+```python
+# Agent will use these parameters when calling the tool
+# The tool schema accepts filter_by and filter_value
+# Example: search with category filter
+# Results will be filtered where category == "technology"
+```
+
+### Preset Filters with QdrantConfig
+For complex filtering, use Qdrant Filter instances in your configuration:
+
+```python
+from qdrant_client.http import models as qmodels
+from crewai_tools import QdrantVectorSearchTool, QdrantConfig
+
+# Create a filter for specific conditions
+preset_filter = qmodels.Filter(
+    must=[
+        qmodels.FieldCondition(
+            key="category",
+            match=qmodels.MatchValue(value="research")
+        ),
+        qmodels.FieldCondition(
+            key="year",
+            match=qmodels.MatchValue(value=2024)
+        )
+    ]
+)
+
+# Initialize tool with preset filter
+qdrant_tool = QdrantVectorSearchTool(
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_url",
+        qdrant_api_key="your_key",
+        collection_name="your_collection",
+        filter=preset_filter  # Preset filter applied to all searches
+    )
+)
+```
+
+### Combining Filters
+The tool automatically combines preset filters from `QdrantConfig` with dynamic filters from `filter_by` and `filter_value`:
+
+```python
+# If QdrantConfig has a preset filter for category="research"
+# And the search uses filter_by="year", filter_value=2024
+# Both filters will be combined (AND logic)
+```
 
 ## Search Parameters
 
 The tool accepts these parameters in its schema:
 - `query` (str): The search query to find similar documents
 - `filter_by` (str, optional): Metadata field to filter on
-- `filter_value` (str, optional): Value to filter by
+- `filter_value` (Any, optional): Value to filter by
 
 ## Return Format
 
@@ -214,7 +281,7 @@ The tool returns results in JSON format:
 
 ## Default Embedding
 
-By default, the tool uses OpenAI's `text-embedding-3-small` model for vectorization. This requires:
+By default, the tool uses OpenAI's `text-embedding-3-large` model for vectorization. This requires:
 - OpenAI API key set in environment: `OPENAI_API_KEY`
 
 ## Custom Embeddings
@@ -240,18 +307,22 @@ def custom_embeddings(text: str) -> list[float]:
     # Tokenize and get model outputs
     inputs = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
     outputs = model(**inputs)
-    
+
     # Use mean pooling to get text embedding
     embeddings = outputs.last_hidden_state.mean(dim=1)
-    
+
     # Convert to list of floats and return
     return embeddings[0].tolist()
 
 # Use custom embeddings with the tool
+from crewai_tools import QdrantConfig
+
 tool = QdrantVectorSearchTool(
-    qdrant_url="your_url",
-    qdrant_api_key="your_key",
-    collection_name="your_collection",
+    qdrant_config=QdrantConfig(
+        qdrant_url="your_url",
+        qdrant_api_key="your_key",
+        collection_name="your_collection"
+    ),
     custom_embedding_fn=custom_embeddings  # Pass your custom function
 )
 ```

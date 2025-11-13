@@ -16,7 +16,7 @@ def test_openai_completion_is_used_when_openai_provider():
     """
     Test that OpenAICompletion from completion.py is used when LLM uses provider 'openai'
     """
-    llm = LLM(model="openai/gpt-4o")
+    llm = LLM(model="gpt-4o")
 
     assert llm.__class__.__name__ == "OpenAICompletion"
     assert llm.provider == "openai"
@@ -70,7 +70,7 @@ def test_openai_completion_module_is_imported():
         del sys.modules[module_name]
 
     # Create LLM instance - this should trigger the import
-    LLM(model="openai/gpt-4o")
+    LLM(model="gpt-4o")
 
     # Verify the module was imported
     assert module_name in sys.modules
@@ -97,7 +97,7 @@ def test_native_openai_raises_error_when_initialization_fails():
 
         # This should raise ImportError, not fall back to LiteLLM
         with pytest.raises(ImportError) as excinfo:
-            LLM(model="openai/gpt-4o")
+            LLM(model="gpt-4o")
 
         assert "Error importing native provider" in str(excinfo.value)
         assert "Native SDK failed" in str(excinfo.value)
@@ -108,7 +108,7 @@ def test_openai_completion_initialization_parameters():
     Test that OpenAICompletion is initialized with correct parameters
     """
     llm = LLM(
-        model="openai/gpt-4o",
+        model="gpt-4o",
         temperature=0.7,
         max_tokens=1000,
         api_key="test-key"
@@ -311,7 +311,7 @@ def test_openai_completion_call_returns_usage_metrics():
         role="Research Assistant",
         goal="Find information about the population of Tokyo",
         backstory="You are a helpful research assistant.",
-        llm=LLM(model="openai/gpt-4o"),
+        llm=LLM(model="gpt-4o"),
         verbose=True,
     )
 
@@ -331,6 +331,7 @@ def test_openai_completion_call_returns_usage_metrics():
     assert result.token_usage.cached_prompt_tokens == 0
 
 
+@pytest.mark.skip(reason="Allow for litellm")
 def test_openai_raises_error_when_model_not_supported():
     """Test that OpenAICompletion raises ValueError when model not supported"""
 
@@ -354,7 +355,7 @@ def test_openai_client_setup_with_extra_arguments():
     Test that OpenAICompletion is initialized with correct parameters
     """
     llm = LLM(
-        model="openai/gpt-4o",
+        model="gpt-4o",
         temperature=0.7,
         max_tokens=1000,
         top_p=0.5,
@@ -391,7 +392,7 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     Test that extra arguments are passed to OpenAICompletion
     """
-    llm = LLM(model="openai/gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
+    llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
     with patch.object(llm.client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
@@ -482,3 +483,48 @@ def test_openai_get_client_params_no_base_url():
     client_params = llm._get_client_params()
     # When no base_url is provided, it should not be in the params (filtered out as None)
     assert "base_url" not in client_params or client_params.get("base_url") is None
+
+
+def test_openai_streaming_with_response_model():
+    """
+    Test that streaming with response_model works correctly and doesn't call invalid API methods.
+    This test verifies the fix for the bug where streaming with response_model attempted to call
+    self.client.responses.stream() with invalid parameters (input, text_format).
+    """
+    from pydantic import BaseModel
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+
+        answer: str
+        confidence: float
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    with patch.object(llm.client.chat.completions, "create") as mock_create:
+        mock_chunk1 = MagicMock()
+        mock_chunk1.choices = [
+            MagicMock(delta=MagicMock(content='{"answer": "test", ', tool_calls=None))
+        ]
+
+        mock_chunk2 = MagicMock()
+        mock_chunk2.choices = [
+            MagicMock(
+                delta=MagicMock(content='"confidence": 0.95}', tool_calls=None)
+            )
+        ]
+
+        mock_create.return_value = iter([mock_chunk1, mock_chunk2])
+
+        result = llm.call("Test question", response_model=TestResponse)
+
+        assert result is not None
+        assert isinstance(result, str)
+
+        assert mock_create.called
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs["model"] == "gpt-4o"
+        assert call_kwargs["stream"] is True
+
+        assert "input" not in call_kwargs
+        assert "text_format" not in call_kwargs

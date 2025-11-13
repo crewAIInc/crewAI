@@ -5,6 +5,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, TypedDict, cast
 
+from pydantic import BaseModel
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
         ToolConfigurationTypeDef,
         ToolTypeDef,
     )
+
+    from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -156,8 +159,9 @@ class BedrockCompletion(BaseLLM):
         guardrail_config: dict[str, Any] | None = None,
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
-        **kwargs,
-    ):
+        interceptor: BaseInterceptor[Any, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         """Initialize AWS Bedrock completion client.
 
         Args:
@@ -175,8 +179,15 @@ class BedrockCompletion(BaseLLM):
             guardrail_config: Guardrail configuration for content filtering
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
+            interceptor: HTTP interceptor (not yet supported for Bedrock).
             **kwargs: Additional parameters
         """
+        if interceptor is not None:
+            raise NotImplementedError(
+                "HTTP interceptors are not yet supported for AWS Bedrock provider. "
+                "Interceptors are currently supported for OpenAI and Anthropic providers only."
+            )
+
         # Extract provider from kwargs to avoid duplicate argument
         kwargs.pop("provider", None)
 
@@ -232,6 +243,30 @@ class BedrockCompletion(BaseLLM):
         # Handle inference profiles for newer models
         self.model_id = model
 
+    @property
+    def stop(self) -> list[str]:
+        """Get stop sequences sent to the API."""
+        return list(self.stop_sequences)
+
+    @stop.setter
+    def stop(self, value: Sequence[str] | str | None) -> None:
+        """Set stop sequences.
+
+        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
+        are properly sent to the Bedrock API.
+
+        Args:
+            value: Stop sequences as a Sequence, single string, or None
+        """
+        if value is None:
+            self.stop_sequences = []
+        elif isinstance(value, str):
+            self.stop_sequences = [value]
+        elif isinstance(value, Sequence):
+            self.stop_sequences = list(value)
+        else:
+            self.stop_sequences = []
+
     def call(
         self,
         messages: str | list[LLMMessage],
@@ -240,12 +275,13 @@ class BedrockCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call AWS Bedrock Converse API."""
         try:
             # Emit call started event
             self._emit_call_started_event(
-                messages=messages,  # type: ignore[arg-type]
+                messages=messages,
                 tools=tools,
                 callbacks=callbacks,
                 available_functions=available_functions,
@@ -738,7 +774,9 @@ class BedrockCompletion(BaseLLM):
         return converse_messages, system_message
 
     @staticmethod
-    def _format_tools_for_converse(tools: list[dict]) -> list[ConverseToolTypeDef]:
+    def _format_tools_for_converse(
+        tools: list[dict[str, Any]],
+    ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
 

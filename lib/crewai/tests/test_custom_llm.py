@@ -31,6 +31,7 @@ class CustomLLM(BaseLLM):
         available_functions=None,
         from_task=None,
         from_agent=None,
+        response_model=None,
     ):
         """
         Mock LLM call that returns a predefined response.
@@ -162,6 +163,9 @@ class JWTAuthLLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
     ) -> Union[str, Any]:
         """Record the call and return a predefined response."""
         self.calls.append(
@@ -241,6 +245,9 @@ class TimeoutHandlingLLM(BaseLLM):
         tools: Optional[List[dict]] = None,
         callbacks: Optional[List[Any]] = None,
         available_functions: Optional[Dict[str, Any]] = None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
     ) -> Union[str, Any]:
         """Simulate API calls with timeout handling and retry logic.
 

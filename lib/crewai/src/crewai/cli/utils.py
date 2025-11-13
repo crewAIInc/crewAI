@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import shutil
 import sys
-from typing import Any, get_type_hints
+from typing import Any, cast, get_type_hints
 
 import click
 from rich.console import Console
@@ -23,7 +23,9 @@ if sys.version_info >= (3, 11):
 console = Console()
 
 
-def copy_template(src, dst, name, class_name, folder_name):
+def copy_template(
+    src: Path, dst: Path, name: str, class_name: str, folder_name: str
+) -> None:
     """Copy a file from src to dst."""
     with open(src, "r") as file:
         content = file.read()
@@ -40,13 +42,13 @@ def copy_template(src, dst, name, class_name, folder_name):
     click.secho(f"  - Created {dst}", fg="green")
 
 
-def read_toml(file_path: str = "pyproject.toml"):
+def read_toml(file_path: str = "pyproject.toml") -> dict[str, Any]:
     """Read the content of a TOML file and return it as a dictionary."""
     with open(file_path, "rb") as f:
         return tomli.load(f)
 
 
-def parse_toml(content):
+def parse_toml(content: str) -> dict[str, Any]:
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
     return tomli.loads(content)
@@ -103,7 +105,7 @@ def _get_project_attribute(
         )
     except Exception as e:
         # Handle TOML decode errors for Python 3.11+
-        if sys.version_info >= (3, 11) and isinstance(e, tomllib.TOMLDecodeError):  # type: ignore
+        if sys.version_info >= (3, 11) and isinstance(e, tomllib.TOMLDecodeError):
             console.print(
                 f"Error: {pyproject_path} is not a valid TOML file.", style="bold red"
             )
@@ -126,7 +128,7 @@ def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:
     return reduce(dict.__getitem__, keys, data)
 
 
-def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
+def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
         # Read the .env file
@@ -150,7 +152,7 @@ def fetch_and_json_env_file(env_file_path: str = ".env") -> dict:
     return {}
 
 
-def tree_copy(source, destination):
+def tree_copy(source: Path, destination: Path) -> None:
     """Copies the entire directory structure from the source to the destination."""
     for item in os.listdir(source):
         source_item = os.path.join(source, item)
@@ -161,7 +163,7 @@ def tree_copy(source, destination):
             shutil.copy2(source_item, destination_item)
 
 
-def tree_find_and_replace(directory, find, replace):
+def tree_find_and_replace(directory: Path, find: str, replace: str) -> None:
     """Recursively searches through a directory, replacing a target string in
     both file contents and filenames with a specified replacement string.
     """
@@ -187,7 +189,7 @@ def tree_find_and_replace(directory, find, replace):
                 os.rename(old_dirpath, new_dirpath)
 
 
-def load_env_vars(folder_path):
+def load_env_vars(folder_path: Path) -> dict[str, Any]:
     """
     Loads environment variables from a .env file in the specified folder path.
 
@@ -208,7 +210,9 @@ def load_env_vars(folder_path):
     return env_vars
 
 
-def update_env_vars(env_vars, provider, model):
+def update_env_vars(
+    env_vars: dict[str, Any], provider: str, model: str
+) -> dict[str, Any] | None:
     """
     Updates environment variables with the API key for the selected provider and model.
 
@@ -220,15 +224,20 @@ def update_env_vars(env_vars, provider, model):
     Returns:
     - None
     """
-    api_key_var = ENV_VARS.get(
-        provider,
-        [
-            click.prompt(
-                f"Enter the environment variable name for your {provider.capitalize()} API key",
-                type=str,
-            )
-        ],
-    )[0]
+    provider_config = cast(
+        list[str],
+        ENV_VARS.get(
+            provider,
+            [
+                click.prompt(
+                    f"Enter the environment variable name for your {provider.capitalize()} API key",
+                    type=str,
+                )
+            ],
+        ),
+    )
+
+    api_key_var = provider_config[0]
 
     if api_key_var not in env_vars:
         try:
@@ -246,7 +255,7 @@ def update_env_vars(env_vars, provider, model):
     return env_vars
 
 
-def write_env_file(folder_path, env_vars):
+def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
     """
     Writes environment variables to a .env file in the specified folder.
 
@@ -342,18 +351,18 @@ def get_crews(crew_path: str = "crew.py", require: bool = False) -> list[Crew]:
     return crew_instances
 
 
-def get_crew_instance(module_attr) -> Crew | None:
+def get_crew_instance(module_attr: Any) -> Crew | None:
     if (
         callable(module_attr)
         and hasattr(module_attr, "is_crew_class")
         and module_attr.is_crew_class
     ):
-        return module_attr().crew()
+        return cast(Crew, module_attr().crew())
     try:
         if (ismethod(module_attr) or isfunction(module_attr)) and get_type_hints(
             module_attr
         ).get("return") is Crew:
-            return module_attr()
+            return cast(Crew, module_attr())
     except Exception:
         return None
 
@@ -362,7 +371,7 @@ def get_crew_instance(module_attr) -> Crew | None:
     return None
 
 
-def fetch_crews(module_attr) -> list[Crew]:
+def fetch_crews(module_attr: Any) -> list[Crew]:
     crew_instances: list[Crew] = []
 
     if crew_instance := get_crew_instance(module_attr):
@@ -377,7 +386,7 @@ def fetch_crews(module_attr) -> list[Crew]:
     return crew_instances
 
 
-def is_valid_tool(obj):
+def is_valid_tool(obj: Any) -> bool:
     from crewai.tools.base_tool import Tool
 
     if isclass(obj):
@@ -389,7 +398,7 @@ def is_valid_tool(obj):
     return isinstance(obj, Tool)
 
 
-def extract_available_exports(dir_path: str = "src"):
+def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
     """
     Extract available tool classes from the project's __init__.py files.
     Only includes classes that inherit from BaseTool or functions decorated with @tool.
@@ -419,7 +428,9 @@ def extract_available_exports(dir_path: str = "src"):
         raise SystemExit(1) from e
 
 
-def build_env_with_tool_repository_credentials(repository_handle: str):
+def build_env_with_tool_repository_credentials(
+    repository_handle: str,
+) -> dict[str, Any]:
     repository_handle = repository_handle.upper().replace("-", "_")
     settings = Settings()
 
@@ -472,7 +483,7 @@ def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
         sys.modules.pop("temp_module", None)
 
 
-def _print_no_tools_warning():
+def _print_no_tools_warning() -> None:
     """
     Display warning and usage instructions if no tools were found.
     """

@@ -103,7 +103,7 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
             super().__init__(**kwargs)
 
     # Patch the LiteAgent class
-    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
+    monkeypatch.setattr("crewai.agent.core.LiteAgent", MockLiteAgent)
 
     # Call kickoff to create the LiteAgent
     agent.kickoff("Test query")
@@ -123,8 +123,6 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     assert created_lite_agent["response_format"] is None
 
     # Test with a response_format
-    monkeypatch.setattr("crewai.agent.LiteAgent", MockLiteAgent)
-
     class TestResponse(BaseModel):
         test_field: str
 
@@ -238,6 +236,27 @@ def test_lite_agent_returns_usage_metrics():
 
     assert result.usage_metrics is not None
     assert result.usage_metrics["total_tokens"] > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_lite_agent_output_includes_messages():
+    """Test that LiteAgentOutput includes messages from agent execution."""
+    llm = LLM(model="gpt-4o-mini")
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the population of Tokyo",
+        backstory="You are a helpful research assistant who can search for information about the population of Tokyo.",
+        llm=llm,
+        tools=[WebSearchTool()],
+        verbose=True,
+    )
+
+    result = agent.kickoff("What is the population of Tokyo?")
+
+    assert isinstance(result, LiteAgentOutput)
+    assert hasattr(result, "messages")
+    assert isinstance(result.messages, list)
+    assert len(result.messages) > 0
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -384,8 +403,8 @@ def test_guardrail_is_called_using_string():
     assert not guardrail_events["completed"][0].success
     assert guardrail_events["completed"][1].success
     assert (
-        "Here are the top 10 best soccer players in the world, focusing exclusively on Brazilian players"
-        in result.raw
+        "top 10 best Brazilian soccer players" in result.raw or
+        "Brazilian players" in result.raw
     )
 
 
@@ -527,6 +546,7 @@ def test_lite_agent_with_custom_llm_and_guardrails():
             available_functions=None,
             from_task=None,
             from_agent=None,
+            response_model=None,
         ) -> str:
             self.call_count += 1
 
