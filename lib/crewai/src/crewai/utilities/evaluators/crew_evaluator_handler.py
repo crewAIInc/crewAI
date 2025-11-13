@@ -11,7 +11,7 @@ from rich.table import Table
 from crewai.agent import Agent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import CrewTestResultEvent
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 

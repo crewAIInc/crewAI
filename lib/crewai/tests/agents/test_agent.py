@@ -14,7 +14,7 @@ from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.process import Process
 from crewai.tools.tool_calling import InstructorToolCalling
 from crewai.tools.tool_usage import ToolUsage

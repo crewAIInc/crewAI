@@ -39,7 +39,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.lite_agent import LiteAgent
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.mcp import (
     MCPClient,
     MCPServerConfig,
@@ -633,7 +633,7 @@ class Agent(BaseAgent):
             )
 
         self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,
+            llm=self.llm,  # type: ignore[arg-type]
             task=task,  # type: ignore[arg-type]
             agent=self,
             crew=self.crew,
@@ -810,6 +810,7 @@ class Agent(BaseAgent):
         from crewai.tools.base_tool import BaseTool
         from crewai.tools.mcp_native_tool import MCPNativeTool
 
+        transport: StdioTransport | HTTPTransport | SSETransport
         if isinstance(mcp_config, MCPServerStdio):
             transport = StdioTransport(
                 command=mcp_config.command,
@@ -903,10 +904,12 @@ class Agent(BaseAgent):
                                 server_name=server_name,
                                 run_context=None,
                             )
-                            if mcp_config.tool_filter(context, tool):
+                            # Try new signature first
+                            if mcp_config.tool_filter(context, tool):  # type: ignore[arg-type,call-arg]
                                 filtered_tools.append(tool)
                         except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):
+                            # Fallback to old signature
+                            if mcp_config.tool_filter(tool):  # type: ignore[arg-type,call-arg]
                                 filtered_tools.append(tool)
                     else:
                         # Not callable - include tool
@@ -981,7 +984,9 @@ class Agent(BaseAgent):
         path = parsed.path.replace("/", "_").strip("_")
         return f"{domain}_{path}" if path else domain
 
-    def _get_mcp_tool_schemas(self, server_params: dict) -> dict[str, dict]:
+    def _get_mcp_tool_schemas(
+        self, server_params: dict[str, Any]
+    ) -> dict[str, dict[str, Any]]:
         """Get tool schemas from MCP server for wrapper creation with caching."""
         server_url = server_params["url"]
 
@@ -995,7 +1000,7 @@ class Agent(BaseAgent):
                 self._logger.log(
                     "debug", f"Using cached MCP tool schemas for {server_url}"
                 )
-                return cached_data
+                return cast(dict[str, dict[str, Any]], cached_data)
 
         try:
             schemas = asyncio.run(self._get_mcp_tool_schemas_async(server_params))
@@ -1013,7 +1018,7 @@ class Agent(BaseAgent):
 
     async def _get_mcp_tool_schemas_async(
         self, server_params: dict[str, Any]
-    ) -> dict[str, dict]:
+    ) -> dict[str, dict[str, Any]]:
         """Async implementation of MCP tool schema retrieval with timeouts and retries."""
         server_url = server_params["url"]
         return await self._retry_mcp_discovery(
@@ -1021,7 +1026,7 @@ class Agent(BaseAgent):
         )
 
     async def _retry_mcp_discovery(
-        self, operation_func, server_url: str
+        self, operation_func: Any, server_url: str
     ) -> dict[str, dict[str, Any]]:
         """Retry MCP discovery operation with exponential backoff, avoiding try-except in loop."""
         last_error = None
@@ -1052,7 +1057,7 @@ class Agent(BaseAgent):
 
     @staticmethod
     async def _attempt_mcp_discovery(
-        operation_func, server_url: str
+        operation_func: Any, server_url: str
     ) -> tuple[dict[str, dict[str, Any]] | None, str, bool]:
         """Attempt single MCP discovery operation and return (result, error_message, should_retry)."""
         try:
@@ -1156,13 +1161,13 @@ class Agent(BaseAgent):
                     Field(..., description=field_description),
                 )
             else:
-                field_definitions[field_name] = (
+                field_definitions[field_name] = (  # type: ignore[assignment]
                     field_type | None,
                     Field(default=None, description=field_description),
                 )
 
         model_name = f"{tool_name.replace('-', '_').replace(' ', '_')}Schema"
-        return create_model(model_name, **field_definitions)
+        return create_model(model_name, **field_definitions)  # type: ignore[no-any-return,call-overload]
 
     def _json_type_to_python(self, field_schema: dict[str, Any]) -> type:
         """Convert JSON Schema type to Python type.
@@ -1182,16 +1187,16 @@ class Agent(BaseAgent):
                 if "const" in option:
                     types.append(str)
                 else:
-                    types.append(self._json_type_to_python(option))
+                    types.append(self._json_type_to_python(option))  # type: ignore[arg-type]
             unique_types = list(set(types))
             if len(unique_types) > 1:
                 result = unique_types[0]
                 for t in unique_types[1:]:
-                    result = result | t
+                    result = result | t  # type: ignore[assignment]
                 return result
             return unique_types[0]
 
-        type_mapping = {
+        type_mapping: dict[str, type] = {
             "string": str,
             "number": float,
             "integer": int,
@@ -1200,10 +1205,10 @@ class Agent(BaseAgent):
             "object": dict,
         }
 
-        return type_mapping.get(json_type, Any)
+        return type_mapping.get(json_type or "", Any)
 
     @staticmethod
-    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict]:
+    def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
         """Fetch MCP server configurations from CrewAI AMP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs

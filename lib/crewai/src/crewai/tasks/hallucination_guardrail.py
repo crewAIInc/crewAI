@@ -8,7 +8,7 @@ Classes:
 
 from typing import Any
 
-from crewai.llm import LLM
+from crewai.llm.core import LLM
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.logger import Logger
 
