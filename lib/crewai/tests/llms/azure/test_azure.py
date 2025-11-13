@@ -1086,3 +1086,102 @@ def test_azure_mistral_and_other_models():
             )
             assert "model" in params
             assert params["model"] == model_name
+
+
+def test_azure_structured_output_uses_json_object():
+    """
+    Test that Azure uses json_object response_format instead of json_schema
+    for structured outputs (fixes issue #3906)
+    """
+    from pydantic import BaseModel
+
+    class Greeting(BaseModel):
+        name: str
+        message: str
+
+    llm = LLM(model="azure/gpt-4")
+
+    # Prepare params with response_model
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Say hello"}],
+        response_model=Greeting
+    )
+
+    assert "response_format" in params
+    assert params["response_format"] == {"type": "json_object"}
+    assert "json_schema" not in params["response_format"]
+
+
+def test_azure_structured_output_with_agent():
+    """
+    Test that structured outputs work correctly with Azure models in agents
+    (replicates the issue from #3906)
+    """
+    from pydantic import BaseModel
+
+    class Greeting(BaseModel):
+        name: str
+        message: str
+
+    llm = LLM(model="azure/gpt-4")
+
+    # Mock the Azure client response
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = '{"name": "Alice", "message": "Hello, Alice!"}'
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=10,
+            completion_tokens=20,
+            total_tokens=30
+        )
+
+        mock_complete.return_value = mock_response
+
+        result = llm.call(
+            messages=[{"role": "user", "content": "My name is Alice"}],
+            response_model=Greeting
+        )
+
+        # Verify the call was made
+        assert mock_complete.called
+
+        # Verify the params passed to complete
+        call_args = mock_complete.call_args
+        params = call_args[1] if call_args[1] else call_args[0][0]
+
+        if isinstance(params, dict) and "response_format" in params:
+            assert params["response_format"] == {"type": "json_object"}
+
+        assert result is not None
+        assert isinstance(result, str)
+
+
+def test_azure_structured_output_non_openai_model():
+    """
+    Test that non-OpenAI models don't get response_format parameter
+    """
+    from pydantic import BaseModel
+
+    class TestModel(BaseModel):
+        field: str
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(model="azure/mistral-large")
+
+        # Prepare params with response_model for non-OpenAI model
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}],
+            response_model=TestModel
+        )
+
+        assert "response_format" not in params

@@ -277,14 +277,10 @@ class AzureCompletion(BaseLLM):
             "stream": self.stream,
         }
 
+        # Azure AI Inference SDK doesn't support json_schema response_format (important-comment)
+        # Use json_object instead and rely on client-side Pydantic validation
         if response_model and self.is_openai_model:
-            params["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": response_model.__name__,
-                    "schema": response_model.model_json_schema(),
-                },
-            }
+            params["response_format"] = {"type": "json_object"}
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
