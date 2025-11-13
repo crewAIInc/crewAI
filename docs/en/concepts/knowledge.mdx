@@ -603,11 +603,124 @@ crew = Crew(
         "provider": "voyageai",  # Recommended for Claude users
         "config": {
             "api_key": "your-voyage-api-key",
-            "model": "voyage-3"  # or "voyage-3-large" for best quality
+            "model": "voyage-3.5"  # Latest general-purpose model
         }
     }
 )
 
+# Advanced VoyageAI configuration with all options
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-3.5",
+            "output_dimension": 1024,  # Optional: Custom embedding dimension (default: model-specific)
+            "input_type": "document",  # Optional: "document" or "query" (default: None)
+            "truncation": True,  # Optional: Truncate long texts (default: True)
+            "max_retries": 3,  # Optional: Max API retry attempts (default: 0)
+            "timeout": 30.0  # Optional: API timeout in seconds (default: None)
+        }
+    }
+)
+
+# Using contextual embeddings for better semantic understanding
+crew = Crew(
+    agents=[agent],
+    tasks=[...],
+    knowledge_sources=[knowledge_source],
+    embedder={
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-context-3",  # Contextual embedding model
+            "output_dimension": 2048
+        }
+    }
+)
+```
+
+<Tip>
+**VoyageAI Models Overview**
+
+VoyageAI offers several embedding models optimized for different use cases:
+
+**General-Purpose Models:**
+- `voyage-3.5` (Recommended): Latest general-purpose model with high performance
+- `voyage-3.5-lite`: Lightweight version with 1M token context
+- `voyage-3`: Previous generation general-purpose model
+- `voyage-3-lite`: Lightweight version of voyage-3
+- `voyage-2`: Earlier general-purpose model
+
+**Specialized Models:**
+- `voyage-context-3`: Contextual embeddings for multi-document understanding (32K tokens)
+- `voyage-3-large`: Larger model for best quality (120K tokens)
+- `voyage-code-3`: Optimized for code embeddings
+- `voyage-large-2-instruct`: Instruction-tuned embeddings
+- `voyage-finance-2`: Finance domain-specific
+- `voyage-law-2`: Legal domain-specific
+- `voyage-multilingual-2`: Multilingual embeddings
+- `voyage-multimodal-3`: Multimodal embeddings
+
+**Installation:**
+```bash
+uv add voyageai
+```
+
+**API Key:**
+Get your API key from [VoyageAI Dashboard](https://dash.voyageai.com/)
+
+**Complete Working Example:**
+```python
+from crewai import Agent, Task, Crew, LLM, Process
+from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+
+# Create knowledge source
+knowledge = StringKnowledgeSource(
+    content="CrewAI is a powerful framework for building multi-agent AI systems. "
+            "It supports various embedding providers including VoyageAI, which offers "
+            "state-of-the-art embedding models optimized for retrieval tasks."
+)
+
+# Create agent (works great with Claude)
+agent = Agent(
+    role="AI Research Assistant",
+    goal="Provide accurate information about AI frameworks",
+    backstory="Expert in AI and machine learning frameworks",
+    llm=LLM(provider="anthropic", model="claude-3-sonnet-20240229")
+)
+
+# Create task
+task = Task(
+    description="Explain what CrewAI is and its key features",
+    agent=agent,
+    expected_output="A concise explanation of CrewAI"
+)
+
+# Create crew with VoyageAI embeddings
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    knowledge_sources=[knowledge],
+    embedder={
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-voyage-api-key",
+            "model": "voyage-3.5"
+        }
+    },
+    process=Process.sequential
+)
+
+# Run the crew
+result = crew.kickoff()
+```
+</Tip>
+
+```python
 # Option 2: Use local embeddings (no external API calls)
 crew = Crew(
     agents=[agent],
