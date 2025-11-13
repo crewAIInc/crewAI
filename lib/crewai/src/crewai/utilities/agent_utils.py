@@ -33,6 +33,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -236,6 +237,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
+    executor_context: CrewAgentExecutor | None = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -247,6 +249,7 @@ def get_llm_response(
         from_task: Optional task context for the LLM call
         from_agent: Optional agent context for the LLM call
         response_model: Optional Pydantic model for structured outputs
+        executor_context: Optional executor context for hook invocation
 
     Returns:
         The response from the LLM as a string
@@ -255,6 +258,11 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
+
+    if executor_context is not None:
+        _setup_before_llm_call_hooks(executor_context, printer)
+        messages = executor_context.messages
+
     try:
         answer = llm.call(
             messages,
@@ -272,7 +280,7 @@ def get_llm_response(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return answer
+    return _setup_after_llm_call_hooks(executor_context, answer, printer)
 
 
 def process_llm_response(
@@ -661,3 +669,92 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             else:
                 attributes[key] = value
     return attributes
+
+
+def _setup_before_llm_call_hooks(
+    executor_context: CrewAgentExecutor | None, printer: Printer
+) -> None:
+    """Setup and invoke before_llm_call hooks for the executor context.
+
+    Args:
+        executor_context: The executor context to setup the hooks for.
+        printer: Printer instance for error logging.
+    """
+    if executor_context and executor_context.before_llm_call_hooks:
+        from crewai.utilities.llm_call_hooks import LLMCallHookContext
+
+        original_messages = executor_context.messages
+
+        hook_context = LLMCallHookContext(executor_context)
+        try:
+            for hook in executor_context.before_llm_call_hooks:
+                hook(hook_context)
+        except Exception as e:
+            printer.print(
+                content=f"Error in before_llm_call hook: {e}",
+                color="yellow",
+            )
+
+        if not isinstance(executor_context.messages, list):
+            printer.print(
+                content=(
+                    "Warning: before_llm_call hook replaced messages with non-list. "
+                    "Restoring original messages list. Hooks should modify messages in-place, "
+                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                ),
+                color="yellow",
+            )
+            if isinstance(original_messages, list):
+                executor_context.messages = original_messages
+            else:
+                executor_context.messages = []
+
+
+def _setup_after_llm_call_hooks(
+    executor_context: CrewAgentExecutor | None,
+    answer: str,
+    printer: Printer,
+) -> str:
+    """Setup and invoke after_llm_call hooks for the executor context.
+
+    Args:
+        executor_context: The executor context to setup the hooks for.
+        answer: The LLM response string.
+        printer: Printer instance for error logging.
+
+    Returns:
+        The potentially modified response string.
+    """
+    if executor_context and executor_context.after_llm_call_hooks:
+        from crewai.utilities.llm_call_hooks import LLMCallHookContext
+
+        original_messages = executor_context.messages
+
+        hook_context = LLMCallHookContext(executor_context, response=answer)
+        try:
+            for hook in executor_context.after_llm_call_hooks:
+                modified_response = hook(hook_context)
+                if modified_response is not None and isinstance(modified_response, str):
+                    answer = modified_response
+
+        except Exception as e:
+            printer.print(
+                content=f"Error in after_llm_call hook: {e}",
+                color="yellow",
+            )
+
+        if not isinstance(executor_context.messages, list):
+            printer.print(
+                content=(
+                    "Warning: after_llm_call hook replaced messages with non-list. "
+                    "Restoring original messages list. Hooks should modify messages in-place, "
+                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                ),
+                color="yellow",
+            )
+            if isinstance(original_messages, list):
+                executor_context.messages = original_messages
+            else:
+                executor_context.messages = []
+
+    return answer

@@ -34,7 +34,7 @@ class SettingsCommand(BaseCommand):
             current_value = getattr(self.settings, field_name)
             description = field_info.description or "No description available"
             display_value = (
-                str(current_value) if current_value is not None else "Not set"
+                str(current_value) if current_value not in [None, {}] else "Not set"
             )
 
             table.add_row(field_name, display_value, description)
