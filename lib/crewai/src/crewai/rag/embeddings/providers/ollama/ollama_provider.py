@@ -3,7 +3,7 @@
 from chromadb.utils.embedding_functions.ollama_embedding_function import (
     OllamaEmbeddingFunction,
 )
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
@@ -17,9 +17,11 @@ class OllamaProvider(BaseEmbeddingsProvider[OllamaEmbeddingFunction]):
     url: str = Field(
         default="http://localhost:11434/api/embeddings",
         description="Ollama API endpoint URL",
-        validation_alias="EMBEDDINGS_OLLAMA_URL",
+        validation_alias=AliasChoices("EMBEDDINGS_OLLAMA_URL", "OLLAMA_URL"),
     )
     model_name: str = Field(
         description="Model name to use for embeddings",
-        validation_alias="EMBEDDINGS_OLLAMA_MODEL_NAME",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_OLLAMA_MODEL_NAME", "OLLAMA_MODEL_NAME", "OLLAMA_MODEL"
+        ),
     )

@@ -3,7 +3,7 @@
 from chromadb.utils.embedding_functions.text2vec_embedding_function import (
     Text2VecEmbeddingFunction,
 )
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
@@ -18,5 +18,7 @@ class Text2VecProvider(BaseEmbeddingsProvider[Text2VecEmbeddingFunction]):
     model_name: str = Field(
         default="shibing624/text2vec-base-chinese",
         description="Model name to use",
-        validation_alias="EMBEDDINGS_TEXT2VEC_MODEL_NAME",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_TEXT2VEC_MODEL_NAME", "TEXT2VEC_MODEL_NAME"
+        ),
     )

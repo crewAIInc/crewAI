@@ -58,10 +58,10 @@ tool = MySQLSearchTool(
             ),
         ),
         embedder=dict(
-            provider="google",
+            provider="google-generativeai",
             config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
                 # title="Embeddings",
             ),
         ),
