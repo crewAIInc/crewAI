@@ -2,22 +2,24 @@
 
 import hashlib
 from pathlib import Path
-from typing import Any, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict
 import uuid
 
 from crewai.rag.config.types import RagConfigType
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.factory import create_client
-from crewai.rag.qdrant.config import QdrantConfig
 from crewai.rag.types import BaseRecord, SearchResult
 from pydantic import PrivateAttr
-from qdrant_client.models import VectorParams
 from typing_extensions import Unpack
 
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.misc import sanitize_metadata_for_chromadb
 from crewai_tools.tools.rag.rag_tool import Adapter
+
+
+if TYPE_CHECKING:
+    pass
 
 
 ContentItem: TypeAlias = str | Path | dict[str, Any]
@@ -56,9 +58,16 @@ class CrewAIRagAdapter(Adapter):
         else:
             self._client = get_rag_client()
         collection_params: dict[str, Any] = {"collection_name": self.collection_name}
-        if isinstance(self.config, QdrantConfig) and self.config.vectors_config:
-            if isinstance(self.config.vectors_config, VectorParams):
-                collection_params["vectors_config"] = self.config.vectors_config
+
+        if self.config is not None:
+            from crewai.rag.qdrant.config import QdrantConfig
+
+            if isinstance(self.config, QdrantConfig) and self.config.vectors_config:
+                from qdrant_client.models import VectorParams
+
+                if isinstance(self.config.vectors_config, VectorParams):
+                    collection_params["vectors_config"] = self.config.vectors_config
+
         self._client.get_or_create_collection(**collection_params)
 
     def query(

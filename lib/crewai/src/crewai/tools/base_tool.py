@@ -80,20 +80,30 @@ class BaseTool(BaseModel, ABC):
         if v != cls._ArgsSchemaPlaceholder:
             return v
 
-        return cast(
-            type[PydanticBaseModel],
-            type(
-                f"{cls.__name__}Schema",
-                (PydanticBaseModel,),
-                {
-                    "__annotations__": {
-                        k: v
-                        for k, v in cls._run.__annotations__.items()
-                        if k != "return"
-                    },
-                },
-            ),
-        )
+        # Extract both annotations and defaults from the _run method signature
+        sig = signature(cls._run)
+        fields: dict[str, Any] = {}
+
+        for param_name, param in sig.parameters.items():
+            if param_name == "self":
+                continue
+
+            annotation = cls._run.__annotations__.get(param_name, Any)
+
+            if param.default is not param.empty:
+                default = param.default
+            else:
+                default = ...
+
+            fields[param_name] = (annotation, default)
+
+        if not fields:
+            return cast(
+                type[PydanticBaseModel],
+                type(f"{cls.__name__}Schema", (PydanticBaseModel,), {}),
+            )
+
+        return create_model(f"{cls.__name__}Schema", **fields)
 
     @field_validator("max_usage_count", mode="before")
     @classmethod
@@ -196,20 +206,29 @@ class BaseTool(BaseModel, ABC):
     def _set_args_schema(self) -> None:
         if self.args_schema is None:
             class_name = f"{self.__class__.__name__}Schema"
-            self.args_schema = cast(
-                type[PydanticBaseModel],
-                type(
-                    class_name,
-                    (PydanticBaseModel,),
-                    {
-                        "__annotations__": {
-                            k: v
-                            for k, v in self._run.__annotations__.items()
-                            if k != "return"
-                        },
-                    },
-                ),
-            )
+            sig = signature(self._run)
+            fields: dict[str, Any] = {}
+
+            for param_name, param in sig.parameters.items():
+                if param_name == "self":
+                    continue
+
+                annotation = self._run.__annotations__.get(param_name, Any)
+
+                if param.default is not param.empty:
+                    default = param.default
+                else:
+                    default = ...
+
+                fields[param_name] = (annotation, default)
+
+            if not fields:
+                self.args_schema = cast(
+                    type[PydanticBaseModel],
+                    type(class_name, (PydanticBaseModel,), {}),
+                )
+            else:
+                self.args_schema = create_model(class_name, **fields)
 
     def _generate_description(self) -> None:
         args_schema = {
