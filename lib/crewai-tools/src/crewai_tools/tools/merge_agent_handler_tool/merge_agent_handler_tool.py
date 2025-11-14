@@ -2,13 +2,14 @@
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import uuid4
 
-import requests
-import typing_extensions as te
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field, create_model
+import requests
+import typing_extensions as te
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,6 @@ logger = logging.getLogger(__name__)
 class MergeAgentHandlerToolError(Exception):
     """Base exception for Merge Agent Handler tool errors."""
 
-    pass
 
 
 class MergeAgentHandlerTool(BaseTool):
@@ -40,7 +40,7 @@ class MergeAgentHandlerTool(BaseTool):
         default="https://ah-api.merge.dev",
         description="Base URL for Agent Handler API",
     )
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None, description="MCP session ID (generated if not provided)"
     )
     env_vars: list[EnvVar] = Field(
@@ -72,8 +72,8 @@ class MergeAgentHandlerTool(BaseTool):
         return api_key
 
     def _make_mcp_request(
-        self, method: str, params: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, method: str, params: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Make a JSON-RPC 2.0 MCP request to Agent Handler."""
         url = f"{self.base_url}/api/v1/tool-packs/{self.tool_pack_id}/registered-users/{self.registered_user_id}/mcp"
 
@@ -83,7 +83,7 @@ class MergeAgentHandlerTool(BaseTool):
             "Mcp-Session-Id": self.session_id or str(uuid4()),
         }
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "jsonrpc": "2.0",
             "method": method,
             "id": str(uuid4()),
@@ -112,10 +112,10 @@ class MergeAgentHandlerTool(BaseTool):
             return result
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"Failed to call Agent Handler API: {str(e)}")
+            logger.error(f"Failed to call Agent Handler API: {e!s}")
             raise MergeAgentHandlerToolError(
-                f"Failed to communicate with Agent Handler API: {str(e)}"
-            )
+                f"Failed to communicate with Agent Handler API: {e!s}"
+            ) from e
 
     def _run(self, **kwargs: Any) -> Any:
         """Execute the Agent Handler tool with the given arguments."""
@@ -145,8 +145,8 @@ class MergeAgentHandlerTool(BaseTool):
         except MergeAgentHandlerToolError:
             raise
         except Exception as e:
-            logger.error(f"Unexpected error executing tool {self.tool_name}: {str(e)}")
-            raise MergeAgentHandlerToolError(f"Tool execution failed: {str(e)}")
+            logger.error(f"Unexpected error executing tool {self.tool_name}: {e!s}")
+            raise MergeAgentHandlerToolError(f"Tool execution failed: {e!s}") from e
 
     @classmethod
     def from_tool_name(
@@ -178,7 +178,7 @@ class MergeAgentHandlerTool(BaseTool):
             ... )
         """
         # Create an empty args schema model (proper BaseModel subclass)
-        EmptyArgsSchema = create_model(f"{tool_name.replace('__', '_').title()}Args")
+        empty_args_schema = create_model(f"{tool_name.replace('__', '_').title()}Args")
 
         # Initialize session and get tool schema
         instance = cls(
@@ -188,7 +188,7 @@ class MergeAgentHandlerTool(BaseTool):
             registered_user_id=registered_user_id,
             tool_name=tool_name,
             base_url=base_url,
-            args_schema=EmptyArgsSchema,  # Empty schema that properly inherits from BaseModel
+            args_schema=empty_args_schema,  # Empty schema that properly inherits from BaseModel
             **kwargs,
         )
 
@@ -231,13 +231,13 @@ class MergeAgentHandlerTool(BaseTool):
                                     elif json_type == "boolean":
                                         field_type = bool
                                     elif json_type == "array":
-                                        field_type = List[Any]
+                                        field_type = list[Any]
                                     elif json_type == "object":
-                                        field_type = Dict[str, Any]
+                                        field_type = dict[str, Any]
 
                                     # Make field optional if not required
                                     if field_name not in required:
-                                        field_type = Optional[field_type]
+                                        field_type = field_type | None
                                         field_default = None
 
                                     field_description = field_schema.get("description")
@@ -262,12 +262,12 @@ class MergeAgentHandlerTool(BaseTool):
 
                         except Exception as e:
                             logger.warning(
-                                f"Failed to create args schema for {tool_name}: {str(e)}"
+                                f"Failed to create args schema for {tool_name}: {e!s}"
                             )
 
         except Exception as e:
             logger.warning(
-                f"Failed to fetch tool schema for {tool_name}, using defaults: {str(e)}"
+                f"Failed to fetch tool schema for {tool_name}, using defaults: {e!s}"
             )
 
         return instance
@@ -277,10 +277,10 @@ class MergeAgentHandlerTool(BaseTool):
         cls,
         tool_pack_id: str,
         registered_user_id: str,
-        tool_names: Optional[List[str]] = None,
+        tool_names: list[str] | None = None,
         base_url: str = "https://ah-api.merge.dev",
         **kwargs: Any,
-    ) -> List[te.Self]:
+    ) -> list[te.Self]:
         """
         Create multiple MergeAgentHandlerTool instances from a Tool Pack.
 
@@ -358,5 +358,5 @@ class MergeAgentHandlerTool(BaseTool):
         except MergeAgentHandlerToolError:
             raise
         except Exception as e:
-            logger.error(f"Failed to create tools from Tool Pack: {str(e)}")
-            raise MergeAgentHandlerToolError(f"Failed to load Tool Pack: {str(e)}")
+            logger.error(f"Failed to create tools from Tool Pack: {e!s}")
+            raise MergeAgentHandlerToolError(f"Failed to load Tool Pack: {e!s}") from e
