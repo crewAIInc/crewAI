@@ -129,8 +129,20 @@ class Prompts(BaseModel):
             else:
                 prompt = f"{system}\n{prompt}"
 
+        compact_mode = getattr(self.agent, "compact_mode", False)
+        role = self.agent.role
+        goal = self.agent.goal
+        backstory = self.agent.backstory
+
+        if compact_mode:
+            if len(role) > 100:
+                role = role[:97] + "..."
+            if len(goal) > 150:
+                goal = goal[:147] + "..."
+            backstory = ""
+
         return (
-            prompt.replace("{goal}", self.agent.goal)
-            .replace("{role}", self.agent.role)
-            .replace("{backstory}", self.agent.backstory)
+            prompt.replace("{goal}", goal)
+            .replace("{role}", role)
+            .replace("{backstory}", backstory)
         )

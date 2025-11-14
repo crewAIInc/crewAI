@@ -90,12 +90,33 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         Returns:
             The complete system prompt string.
         """
-        base_prompt = f"""
-            You are {self.role}.
+        compact_mode = getattr(self, "compact_mode", False)
+        role = self.role
+        goal = self.goal
+        backstory = self.backstory
 
-            Your goal is: {self.goal}
+        if compact_mode:
+            if len(role) > 100:
+                role = role[:97] + "..."
+            if len(goal) > 150:
+                goal = goal[:147] + "..."
+            backstory = ""
 
-            Your backstory: {self.backstory}
+        if backstory:
+            base_prompt = f"""
+            You are {role}.
+
+            Your goal is: {goal}
+
+            Your backstory: {backstory}
+
+            When working on tasks, think step-by-step and use the available tools when necessary.
+        """
+        else:
+            base_prompt = f"""
+            You are {role}.
+
+            Your goal is: {goal}
 
             When working on tasks, think step-by-step and use the available tools when necessary.
         """
