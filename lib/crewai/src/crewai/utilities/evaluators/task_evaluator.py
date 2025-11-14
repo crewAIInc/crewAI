@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import TaskEvaluationEvent
@@ -25,15 +25,89 @@ class Entity(BaseModel):
 
 
 class TaskEvaluation(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
     suggestions: list[str] = Field(
+        default_factory=list,
         description="Suggestions to improve future similar tasks."
     )
-    quality: float = Field(
+    quality: float | None = Field(
+        default=None,
         description="A score from 0 to 10 evaluating on completion, quality, and overall performance, all taking into account the task description, expected output, and the result of the task."
     )
     entities: list[Entity] = Field(
+        default_factory=list,
         description="Entities extracted from the task output."
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def map_score_to_quality(cls, data: Any) -> Any:
+        """Map 'score' field to 'quality' if quality is missing."""
+        if isinstance(data, dict):
+            if "quality" not in data and "score" in data:
+                data["quality"] = data["score"]
+        return data
+
+    @field_validator("suggestions", mode="before")
+    @classmethod
+    def normalize_suggestions(cls, v: Any) -> list[str]:
+        """Normalize suggestions from various formats to list[str].
+
+        Handles:
+        - None → []
+        - str → [str]
+        - dict with "point" → [point]
+        - dict without "point" → [str(dict)]
+        - list → flatten using same rules per item
+        """
+        if v is None:
+            return []
+
+        if isinstance(v, str):
+            return [v]
+
+        if isinstance(v, dict):
+            if "point" in v:
+                return [str(v["point"])]
+            return [str(v)]
+
+        if isinstance(v, list):
+            result = []
+            for item in v:
+                if isinstance(item, str):
+                    result.append(item)
+                elif isinstance(item, dict):
+                    if "point" in item:
+                        result.append(str(item["point"]))
+                    else:
+                        result.append(str(item))
+                else:
+                    result.append(str(item))
+            return result
+
+        return [str(v)]
+
+    @field_validator("quality", mode="before")
+    @classmethod
+    def coerce_quality(cls, v: Any) -> float | None:
+        """Coerce quality to float, accepting int and numeric strings.
+
+        Returns None if value is None, empty string, or cannot be parsed.
+        """
+        if v is None or v == "":
+            return None
+
+        if isinstance(v, (int, float)):
+            return float(v)
+
+        if isinstance(v, str):
+            try:
+                return float(v)
+            except ValueError:
+                return None
+
+        return None
 
 
 class TrainingTaskEvaluation(BaseModel):
