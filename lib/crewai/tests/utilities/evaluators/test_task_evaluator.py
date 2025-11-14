@@ -3,6 +3,8 @@ from unittest.mock import MagicMock, patch
 
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import (
+    Entity,
+    TaskEvaluation,
     TaskEvaluator,
     TrainingTaskEvaluation,
 )
@@ -103,3 +105,61 @@ def test_training_converter_fallback_mechanism(
     assert result == expected_result
     to_pydantic_mock.assert_called_once()
     convert_field_by_field_mock.assert_called_once()
+
+
+def test_task_evaluation_with_missing_quality_field():
+    """Test that TaskEvaluation defaults quality to 5.0 when not provided."""
+    # Simulate LLM output without quality field
+    evaluation_data = {
+        "suggestions": ["Test suggestion"],
+        "entities": [],
+    }
+
+    # Should not raise validation error and should default quality to 5.0
+    evaluation = TaskEvaluation(**evaluation_data)
+
+    assert evaluation.quality == 5.0
+    assert evaluation.suggestions == ["Test suggestion"]
+    assert evaluation.entities == []
+
+
+def test_task_evaluation_with_provided_quality_field():
+    """Test that TaskEvaluation works correctly when quality is provided."""
+    # Simulate LLM output with quality field
+    evaluation_data = {
+        "suggestions": ["Test suggestion"],
+        "quality": 8.5,
+        "entities": [
+            {
+                "name": "Test Entity",
+                "type": "Person",
+                "description": "A test entity",
+                "relationships": ["related_to_entity"],
+            }
+        ],
+    }
+
+    evaluation = TaskEvaluation(**evaluation_data)
+
+    assert evaluation.quality == 8.5
+    assert evaluation.suggestions == ["Test suggestion"]
+    assert len(evaluation.entities) == 1
+    assert evaluation.entities[0].name == "Test Entity"
+
+
+def test_task_evaluation_validation_with_partial_json():
+    """Test that TaskEvaluation can be created from partial JSON missing quality."""
+    import json
+
+    # Simulate partial JSON response from LLM (missing quality)
+    partial_json = json.dumps({
+        "suggestions": ["Suggestion 1", "Suggestion 2"],
+        "entities": [],
+    })
+
+    # Should parse successfully with default quality
+    evaluation = TaskEvaluation.model_validate_json(partial_json)
+
+    assert evaluation.quality == 5.0
+    assert len(evaluation.suggestions) == 2
+    assert evaluation.entities == []
