@@ -458,6 +458,38 @@ def handle_context_length(
         )
 
 
+def trim_messages_structurally(
+    messages: list[LLMMessage],
+    keep_last_n: int = 3,
+    max_total_chars: int = 50000,
+) -> None:
+    """Trim messages structurally without LLM calls.
+
+    Keeps system message and last N message pairs, drops oldest messages
+    until total character count is under the threshold.
+
+    Args:
+        messages: List of messages to trim in-place
+        keep_last_n: Number of recent message pairs to keep
+        max_total_chars: Maximum total character count for all messages
+    """
+    if not messages:
+        return
+
+    system_messages = [msg for msg in messages if msg.get("role") == "system"]
+    non_system_messages = [msg for msg in messages if msg.get("role") != "system"]
+
+    total_chars = sum(len(str(msg.get("content", ""))) for msg in messages)
+
+    if total_chars <= max_total_chars:
+        return
+
+    messages_to_keep = system_messages + non_system_messages[-keep_last_n * 2:]
+
+    messages.clear()
+    messages.extend(messages_to_keep)
+
+
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,

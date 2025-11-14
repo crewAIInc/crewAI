@@ -224,6 +224,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
                     break
 
+                if self.agent and getattr(self.agent, "proactive_context_trimming", False):
+                    from crewai.utilities.agent_utils import trim_messages_structurally
+                    trim_messages_structurally(self.messages)
+
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
                 answer = get_llm_response(

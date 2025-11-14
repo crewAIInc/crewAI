@@ -213,6 +213,26 @@ class Agent(BaseAgent):
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
     )
+    compact_mode: bool = Field(
+        default=False,
+        description="Enable compact prompt mode to reduce context size by shortening role, goal, and backstory in prompts.",
+    )
+    tools_prompt_strategy: Literal["full", "names_only"] = Field(
+        default="full",
+        description="Strategy for including tools in prompts: 'full' includes complete descriptions, 'names_only' includes only tool names.",
+    )
+    proactive_context_trimming: bool = Field(
+        default=False,
+        description="Enable proactive trimming of conversation history before each LLM call to prevent context overflow.",
+    )
+    memory_max_chars: int | None = Field(
+        default=None,
+        description="Maximum character length for memory context. If set, memory content will be truncated to this length.",
+    )
+    knowledge_max_chars: int | None = Field(
+        default=None,
+        description="Maximum character length for knowledge context. If set, knowledge content will be truncated to this length.",
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
@@ -366,6 +386,8 @@ class Agent(BaseAgent):
             )
             memory = contextual_memory.build_context_for_task(task, context or "")
             if memory.strip() != "":
+                if self.memory_max_chars and len(memory) > self.memory_max_chars:
+                    memory = memory[:self.memory_max_chars] + "..."
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
             crewai_event_bus.emit(
@@ -406,6 +428,8 @@ class Agent(BaseAgent):
                                 agent_knowledge_snippets
                             )
                             if self.agent_knowledge_context:
+                                if self.knowledge_max_chars and len(self.agent_knowledge_context) > self.knowledge_max_chars:
+                                    self.agent_knowledge_context = self.agent_knowledge_context[:self.knowledge_max_chars] + "..."
                                 task_prompt += self.agent_knowledge_context
 
                     # Quering crew specific knowledge
@@ -417,6 +441,8 @@ class Agent(BaseAgent):
                             knowledge_snippets
                         )
                         if self.crew_knowledge_context:
+                            if self.knowledge_max_chars and len(self.crew_knowledge_context) > self.knowledge_max_chars:
+                                self.crew_knowledge_context = self.crew_knowledge_context[:self.knowledge_max_chars] + "..."
                             task_prompt += self.crew_knowledge_context
 
                     crewai_event_bus.emit(
@@ -632,6 +658,11 @@ class Agent(BaseAgent):
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
+        if self.tools_prompt_strategy == "names_only":
+            tools_description = get_tool_names(parsed_tools)
+        else:
+            tools_description = render_text_description_and_args(parsed_tools)
+
         self.agent_executor = CrewAgentExecutor(
             llm=self.llm,
             task=task,  # type: ignore[arg-type]
@@ -644,7 +675,7 @@ class Agent(BaseAgent):
             max_iter=self.max_iter,
             tools_handler=self.tools_handler,
             tools_names=get_tool_names(parsed_tools),
-            tools_description=render_text_description_and_args(parsed_tools),
+            tools_description=tools_description,
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
             respect_context_window=self.respect_context_window,
