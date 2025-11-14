@@ -1,3 +1,4 @@
+from collections.abc import Mapping, Sequence
 import logging
 import traceback
 from typing import Any, cast
@@ -16,6 +17,71 @@ from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
 
 
+def _coerce_to_records(documents: Sequence[Any]) -> list[BaseRecord]:
+    records: list[BaseRecord] = []
+    for d in documents:
+        if isinstance(d, str):
+            records.append({"content": d})
+        elif isinstance(d, Mapping):
+            # Only process dict-like inputs that explicitly provide "content"
+            if "content" not in d:
+                continue
+
+            raw_content = d.get("content", "")
+            # Coerce to str to satisfy BaseRecord; None -> "", others -> str(value)
+            content_str: str = "" if raw_content is None else str(raw_content)
+
+            metadata_raw = d.get("metadata", {})
+
+            # Prepare metadata in one of the two shapes allowed by BaseRecord:
+            # Mapping[str, str|int|float|bool]  OR  list[Mapping[str, str|int|float|bool]]
+            meta_m: Mapping[str, str | int | float | bool] | None = None
+            meta_l: list[Mapping[str, str | int | float | bool]] | None = None
+
+            if isinstance(metadata_raw, Mapping):
+                sanitized = {
+                    str(k): (
+                        v
+                        if isinstance(v, (str, int, float, bool))
+                        else ("" if v is None else str(v))
+                    )
+                    for k, v in metadata_raw.items()
+                }
+                meta_m = cast(Mapping[str, str | int | float | bool], sanitized)
+
+            elif isinstance(metadata_raw, list):
+                sanitized_list: list[Mapping[str, str | int | float | bool]] = []
+                for m in metadata_raw:
+                    if isinstance(m, Mapping):
+                        sanitized_m = {
+                            str(k): (
+                                v
+                                if isinstance(v, (str, int, float, bool))
+                                else ("" if v is None else str(v))
+                            )
+                            for k, v in m.items()
+                        }
+                        sanitized_list.append(
+                            cast(Mapping[str, str | int | float | bool], sanitized_m)
+                        )
+                meta_l = sanitized_list
+
+            rec: BaseRecord = {"content": content_str}
+            if meta_m is not None:
+                rec["metadata"] = meta_m
+            elif meta_l is not None:
+                rec["metadata"] = meta_l
+
+            if "doc_id" in d and isinstance(d["doc_id"], str):
+                rec["doc_id"] = d["doc_id"]
+
+            records.append(rec)
+        else:
+            # Ignore unsupported shapes
+            continue
+    return records
+
+
 class KnowledgeStorage(BaseKnowledgeStorage):
     """
     Extends Storage to handle embeddings for memory entries, improving
@@ -25,8 +91,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def __init__(
         self,
         embedder: ProviderSpec
-        | BaseEmbeddingsProvider
-        | type[BaseEmbeddingsProvider]
+        | BaseEmbeddingsProvider[Any]
+        | type[BaseEmbeddingsProvider[Any]]
         | None = None,
         collection_name: str | None = None,
     ) -> None:
@@ -98,7 +164,7 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
             )
 
-    def save(self, documents: list[str]) -> None:
+    def save(self, documents: list[Any]) -> None:
         try:
             client = self._get_client()
             collection_name = (
@@ -108,8 +174,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
             client.get_or_create_collection(collection_name=collection_name)
 
-            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
-
+            # Accept both old (list[str]) and new (list[dict]) chunk formats
+            rag_documents: list[BaseRecord] = _coerce_to_records(documents)
             client.add_documents(
                 collection_name=collection_name, documents=rag_documents
             )
