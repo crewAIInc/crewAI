@@ -542,6 +542,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             agent_key=self.key,
                             agent_role=self.role,
                             agent=self.original_agent,
+                            crew=None,
                         )
                     except Exception as e:
                         raise e
