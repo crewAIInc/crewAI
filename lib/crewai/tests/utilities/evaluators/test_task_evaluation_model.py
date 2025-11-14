@@ -265,3 +265,4 @@ def test_empty_suggestions_list():
     
     assert result.suggestions == []
     assert result.quality == 5.0
+
