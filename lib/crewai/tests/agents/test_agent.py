@@ -2148,7 +2148,7 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headers=["authorization"])
 def test_agent_with_only_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
