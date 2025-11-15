@@ -163,7 +163,7 @@ To disable tracing later, do any one of these:
         console = Console()
 
         panel_content = """
-ℹ️  Tracing has been disabled.
+Info: Tracing has been disabled.
 
 Your preference has been saved. Future Crew/Flow executions will not collect traces.
 

@@ -35,6 +35,8 @@ from crewai.events.listeners.tracing.trace_listener import (
 )
 from crewai.events.listeners.tracing.utils import (
     has_user_declined_tracing,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -490,6 +492,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
 
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
@@ -1382,14 +1386,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         console = Console()
 
         if has_user_declined_tracing():
-            message = """ℹ️  Tracing is disabled.
+            message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Flow code
 • Set CREWAI_TRACING_ENABLED=true in your project's .env file
 • Run: crewai traces enable"""
         else:
-            message = """ℹ️  Tracing is disabled.
+            message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Flow code
