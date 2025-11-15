@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any
-
+from urllib.parse import urlparse
 from pydantic import BaseModel
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -143,8 +143,10 @@ class AzureCompletion(BaseLLM):
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
 
+        parsed_endpoint = urlparse(self.endpoint)
+        host = parsed_endpoint.hostname or ""
         self.is_azure_openai_endpoint = (
-            "openai.azure.com" in self.endpoint
+            (host == "openai.azure.com" or host.endswith(".openai.azure.com"))
             and "/openai/deployments/" in self.endpoint
         )
 
