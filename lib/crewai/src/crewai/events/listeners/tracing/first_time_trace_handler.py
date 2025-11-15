@@ -105,11 +105,11 @@ class FirstTimeTraceHandler:
                 if self.ephemeral_url:
                     self._display_ephemeral_trace_link()
 
-            mark_first_execution_completed()
+            mark_first_execution_completed(user_consented=user_wants_traces)
 
         except Exception as e:
             self._gracefully_fail(f"Error in trace handling: {e}")
-            mark_first_execution_completed()
+            mark_first_execution_completed(user_consented=False)
 
     def _initialize_backend_and_send_events(self):
         """Initialize backend batch and send collected events."""

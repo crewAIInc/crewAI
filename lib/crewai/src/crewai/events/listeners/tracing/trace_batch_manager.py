@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
+import os
 from threading import Condition, Lock
 from typing import Any
 import uuid
@@ -12,7 +13,10 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.listeners.tracing.utils import should_auto_collect_first_time_traces
+from crewai.events.listeners.tracing.utils import (
+    _load_user_data,
+    should_auto_collect_first_time_traces,
+)
 from crewai.utilities.constants import CREWAI_BASE_URL
 
 
@@ -243,7 +247,12 @@ class TraceBatchManager:
 
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
-        if not self.current_batch:
+        user_data = _load_user_data()
+        if (
+            not self.current_batch
+            or os.getenv("CREWAI_TRACING_ENABLED", "false") in ["false", "False", False]
+            or user_data.get("trace_consent", "false") == "false"
+        ):
             return None
 
         all_handlers_completed = self.wait_for_pending_events()

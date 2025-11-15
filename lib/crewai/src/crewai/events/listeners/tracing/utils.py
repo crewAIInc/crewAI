@@ -23,6 +23,42 @@ from crewai.utilities.serialization import to_serializable
 logger = logging.getLogger(__name__)
 
 
+def _user_data_file() -> Path:
+    base = Path(db_storage_path())
+    base.mkdir(parents=True, exist_ok=True)
+    return base / ".crewai_user.json"
+
+
+def _load_user_data() -> dict[str, Any]:
+    p = _user_data_file()
+    if p.exists():
+        try:
+            return cast(dict[str, Any], json.loads(p.read_text()))
+        except (json.JSONDecodeError, OSError, PermissionError) as e:
+            logger.warning(f"Failed to load user data: {e}")
+    return {}
+
+
+def _save_user_data(data: dict[str, Any]) -> None:
+    try:
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Failed to save user data: {e}")
+
+
+def has_user_declined_tracing() -> bool:
+    """Check if user has explicitly declined trace collection.
+
+    Returns:
+        True if user previously declined tracing, False otherwise.
+    """
+    data = _load_user_data()
+    if data.get("first_execution_done", False):
+        return data.get("trace_consent", False) is False
+    return False
+
+
 def is_tracing_enabled() -> bool:
     """Check if tracing should be enabled.
 
@@ -30,11 +66,8 @@ def is_tracing_enabled() -> bool:
     Returns:
         True if tracing is enabled and not disabled, False otherwise.
     """
-    if (
-        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        or os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-    ):
+    # If user has explicitly declined tracing, never enable it
+    if has_user_declined_tracing():
         return False
 
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
@@ -226,30 +259,6 @@ def _get_generic_system_id() -> str | None:
     return None
 
 
-def _user_data_file() -> Path:
-    base = Path(db_storage_path())
-    base.mkdir(parents=True, exist_ok=True)
-    return base / ".crewai_user.json"
-
-
-def _load_user_data() -> dict[str, Any]:
-    p = _user_data_file()
-    if p.exists():
-        try:
-            return cast(dict[str, Any], json.loads(p.read_text()))
-        except (json.JSONDecodeError, OSError, PermissionError) as e:
-            logger.warning(f"Failed to load user data: {e}")
-    return {}
-
-
-def _save_user_data(data: dict[str, Any]) -> None:
-    try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
-
-
 def get_user_id() -> str:
     """Stable, anonymized user identifier with caching."""
     data = _load_user_data()
@@ -276,8 +285,12 @@ def is_first_execution() -> bool:
     return not data.get("first_execution_done", False)
 
 
-def mark_first_execution_done() -> None:
-    """Mark that the first execution has been completed."""
+def mark_first_execution_done(user_consented: bool = False) -> None:
+    """Mark that the first execution has been completed.
+
+    Args:
+        user_consented: Whether the user consented to trace collection.
+    """
     data = _load_user_data()
     if data.get("first_execution_done", False):
         return
@@ -288,6 +301,7 @@ def mark_first_execution_done() -> None:
             "first_execution_at": datetime.now().timestamp(),
             "user_id": get_user_id(),
             "machine_id": _get_machine_id(),
+            "trace_consent": user_consented,
         }
     )
     _save_user_data(data)
@@ -332,11 +346,8 @@ def should_auto_collect_first_time_traces() -> bool:
     if _is_test_environment():
         return False
 
-    if (
-        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
-        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        or os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
-    ):
+    # If user has previously declined, never auto-collect
+    if has_user_declined_tracing():
         return False
 
     return is_first_execution()
@@ -405,6 +416,10 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return False
 
 
-def mark_first_execution_completed() -> None:
-    """Mark first execution as completed (called after trace prompt)."""
-    mark_first_execution_done()
+def mark_first_execution_completed(user_consented: bool = False) -> None:
+    """Mark first execution as completed (called after trace prompt).
+
+    Args:
+        user_consented: Whether the user consented to trace collection.
+    """
+    mark_first_execution_done(user_consented=user_consented)
