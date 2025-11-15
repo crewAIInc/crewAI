@@ -1,3 +1,4 @@
+import threading
 from typing import Any, ClassVar
 
 from rich.console import Console
@@ -27,6 +28,7 @@ class ConsoleFormatter:
     _pending_a2a_turn_number: int | None = None
     _a2a_turn_branches: ClassVar[dict[int, Tree]] = {}
     _current_a2a_agent_name: str | None = None
+    crew_completion_printed: ClassVar[threading.Event] = threading.Event()
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -46,6 +48,37 @@ class ConsoleFormatter:
             border_style=style,
             padding=(1, 2),
         )
+
+    def _show_tracing_disabled_message_if_needed(self) -> None:
+        """Show tracing disabled message if tracing is not enabled."""
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            is_tracing_enabled_in_context,
+        )
+
+        if not is_tracing_enabled_in_context():
+            if has_user_declined_tracing():
+                message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+            else:
+                message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+            panel = Panel(
+                message,
+                title="Tracing Status",
+                border_style="blue",
+                padding=(1, 2),
+            )
+            self.console.print(panel)
 
     def create_status_content(
         self,
@@ -208,10 +241,19 @@ class ConsoleFormatter:
 
         self.print_panel(content, title, style)
 
+        if status in ["completed", "failed"]:
+            self.crew_completion_printed.set()
+
+            # Show tracing disabled message after crew completion
+            self._show_tracing_disabled_message_if_needed()
+
     def create_crew_tree(self, crew_name: str, source_id: str) -> Tree | None:
         """Create and initialize a new crew tree with initial status."""
         if not self.verbose:
             return None
+
+        # Reset the crew completion event for this new crew execution
+        ConsoleFormatter.crew_completion_printed.clear()
 
         tree = Tree(
             Text("🚀 Crew: ", style="cyan bold") + Text(crew_name, style="cyan")

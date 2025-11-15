@@ -27,6 +27,8 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from rich.console import Console
+from rich.panel import Panel
 from typing_extensions import Self
 
 from crewai.agent import Agent
@@ -39,8 +41,8 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -280,8 +282,8 @@ class Crew(FlowTrackable, BaseModel):
         description="Metrics for the LLM usage during all tasks execution.",
     )
     tracing: bool | None = Field(
-        default=False,
-        description="Whether to enable tracing for the crew.",
+        default=None,
+        description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
     )
 
     @field_validator("id", mode="before")
@@ -311,17 +313,16 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
-
         self._cache_handler = CacheHandler()
         event_listener = EventListener()  # type: ignore[no-untyped-call]
 
-        if (
-            is_tracing_enabled()
-            or self.tracing
-            or should_auto_collect_first_time_traces()
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+        # Determine and set tracing state once for this execution
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
+
+        # Always setup trace listener - actual execution control is via contextvar
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
@@ -1171,6 +1172,10 @@ class Crew(FlowTrackable, BaseModel):
                 total_tokens=self.token_usage.total_tokens,
             ),
         )
+
+        # Finalization is handled by trace listener (always initialized)
+        # The batch manager checks contextvar to determine if tracing is enabled
+
         return CrewOutput(
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
@@ -1651,3 +1656,32 @@ class Crew(FlowTrackable, BaseModel):
             and able_to_inject
         ):
             self.tasks[0].allow_crewai_trigger_context = True
+
+    def _show_tracing_disabled_message(self) -> None:
+        """Show a message when tracing is disabled."""
+        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)

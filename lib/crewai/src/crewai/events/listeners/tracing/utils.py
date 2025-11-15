@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from datetime import datetime
 import getpass
 import hashlib
@@ -21,6 +22,73 @@ from crewai.utilities.serialization import to_serializable
 
 
 logger = logging.getLogger(__name__)
+
+
+_tracing_enabled: ContextVar[bool | None] = ContextVar("_tracing_enabled", default=None)
+
+
+def should_enable_tracing(*, override: bool | None = None) -> bool:
+    """Determine if tracing should be enabled.
+
+    This is the single source of truth for tracing enablement.
+    Priority order:
+    1. Explicit override (e.g., Crew.tracing=True/False)
+    2. Environment variable CREWAI_TRACING_ENABLED
+    3. User consent from user_data
+
+    Args:
+        override: Explicit override for tracing (True=always enable, False=always disable, None=check other settings)
+
+    Returns:
+        True if tracing should be enabled, False otherwise.
+    """
+    if override is True:
+        return True
+    if override is False:
+        return False
+
+    env_value = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
+    if env_value in ("true", "1"):
+        return True
+
+    data = _load_user_data()
+
+    if data.get("trace_consent", False) is not False:
+        return True
+
+    return False
+
+
+def set_tracing_enabled(enabled: bool) -> object:
+    """Set tracing enabled state for current execution context.
+
+    Args:
+        enabled: Whether tracing should be enabled
+
+    Returns:
+        A token that can be used with reset_tracing_enabled to restore previous value.
+    """
+    return _tracing_enabled.set(enabled)
+
+
+def reset_tracing_enabled(token: object) -> None:
+    """Reset tracing enabled state to previous value.
+
+    Args:
+        token: Token returned from set_tracing_enabled
+    """
+    _tracing_enabled.reset(token)
+
+
+def is_tracing_enabled_in_context() -> bool:
+    """Check if tracing is enabled in current execution context.
+
+    Returns:
+        True if tracing is enabled in context, False otherwise.
+        Returns False if context has not been set.
+    """
+    enabled = _tracing_enabled.get()
+    return enabled if enabled is not None else False
 
 
 def _user_data_file() -> Path:

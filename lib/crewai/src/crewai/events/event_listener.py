@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from io import StringIO
-import os
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -9,7 +8,6 @@ from pydantic import Field, PrivateAttr
 
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-from crewai.events.listeners.tracing.utils import _load_user_data
 from crewai.events.types.a2a_events import (
     A2AConversationCompletedEvent,
     A2AConversationStartedEvent,
@@ -131,13 +129,8 @@ class EventListener(BaseEventListener):
             self._crew_tree_lock = threading.Condition()
 
             # Initialize trace listener with formatter for memory event handling
-            user_data = _load_user_data()
-            if (
-                os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
-                and user_data.get("trace_consent", False) is not False
-            ):
-                trace_listener = TraceCollectionListener()
-                trace_listener.formatter = self.formatter
+            trace_listener = TraceCollectionListener()
+            trace_listener.formatter = self.formatter
 
     # ----------- CREW EVENTS -----------
 

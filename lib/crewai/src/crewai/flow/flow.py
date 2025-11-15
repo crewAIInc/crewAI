@@ -26,14 +26,15 @@ from uuid import uuid4
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
 from pydantic import BaseModel, Field, ValidationError
+from rich.console import Console
+from rich.panel import Panel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    has_user_declined_tracing,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -452,7 +453,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
     initial_state: type[T] | T | None = None
     name: str | None = None
-    tracing: bool | None = False
+    tracing: bool | None = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -464,13 +465,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: FlowPersistence | None = None,
-        tracing: bool | None = False,
+        tracing: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
+            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -488,13 +490,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
-        if (
-            is_tracing_enabled()
-            or self.tracing
-            or should_auto_collect_first_time_traces()
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -936,18 +934,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            if (
-                is_tracing_enabled()
-                or self.tracing
-                or should_auto_collect_first_time_traces()
-            ):
-                trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
             return final_output
         finally:
@@ -1381,3 +1374,32 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         structure = build_flow_structure(self)
         return render_interactive(structure, filename=filename, show=show)
+
+    @staticmethod
+    def _show_tracing_disabled_message() -> None:
+        """Show a message when tracing is disabled."""
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """ℹ️  Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)
