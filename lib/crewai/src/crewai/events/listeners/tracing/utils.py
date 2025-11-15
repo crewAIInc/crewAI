@@ -8,7 +8,7 @@ from pathlib import Path
 import platform
 import re
 import subprocess
-from typing import Any
+from typing import Any, cast
 import uuid
 
 import click
@@ -24,6 +24,19 @@ logger = logging.getLogger(__name__)
 
 
 def is_tracing_enabled() -> bool:
+    """Check if tracing should be enabled.
+
+
+    Returns:
+        True if tracing is enabled and not disabled, False otherwise.
+    """
+    if (
+        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
+        or os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
+    ):
+        return False
+
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
 
 
@@ -219,17 +232,17 @@ def _user_data_file() -> Path:
     return base / ".crewai_user.json"
 
 
-def _load_user_data() -> dict:
+def _load_user_data() -> dict[str, Any]:
     p = _user_data_file()
     if p.exists():
         try:
-            return json.loads(p.read_text())
+            return cast(dict[str, Any], json.loads(p.read_text()))
         except (json.JSONDecodeError, OSError, PermissionError) as e:
             logger.warning(f"Failed to load user data: {e}")
     return {}
 
 
-def _save_user_data(data: dict) -> None:
+def _save_user_data(data: dict[str, Any]) -> None:
     try:
         p = _user_data_file()
         p.write_text(json.dumps(data, indent=2))
@@ -242,7 +255,7 @@ def get_user_id() -> str:
     data = _load_user_data()
 
     if "user_id" in data:
-        return data["user_id"]
+        return cast(str, data["user_id"])
 
     try:
         username = getpass.getuser()
@@ -280,7 +293,7 @@ def mark_first_execution_done() -> None:
     _save_user_data(data)
 
 
-def safe_serialize_to_dict(obj, exclude: set[str] | None = None) -> dict[str, Any]:
+def safe_serialize_to_dict(obj: Any, exclude: set[str] | None = None) -> dict[str, Any]:
     """Safely serialize an object to a dictionary for event data."""
     try:
         serialized = to_serializable(obj, exclude)
@@ -291,7 +304,9 @@ def safe_serialize_to_dict(obj, exclude: set[str] | None = None) -> dict[str, An
         return {"serialization_error": str(e), "object_type": type(obj).__name__}
 
 
-def truncate_messages(messages, max_content_length=500, max_messages=5):
+def truncate_messages(
+    messages: list[dict[str, Any]], max_content_length: int = 500, max_messages: int = 5
+) -> list[dict[str, Any]]:
     """Truncate message content and limit number of messages"""
     if not messages or not isinstance(messages, list):
         return messages
@@ -308,9 +323,22 @@ def truncate_messages(messages, max_content_length=500, max_messages=5):
 
 
 def should_auto_collect_first_time_traces() -> bool:
-    """True if we should auto-collect traces for first-time user."""
+    """True if we should auto-collect traces for first-time user.
+
+
+    Returns:
+        True if first-time user AND telemetry not disabled, False otherwise.
+    """
     if _is_test_environment():
         return False
+
+    if (
+        os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
+        or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
+        or os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
+    ):
+        return False
+
     return is_first_execution()
 
 
@@ -355,7 +383,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
 
         result = [False]
 
-        def get_input():
+        def get_input() -> None:
             try:
                 response = input().strip().lower()
                 result[0] = response in ["y", "yes"]

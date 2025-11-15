@@ -1,104 +1,5 @@
 interactions:
 - request:
-    body: '{"trace_id": "9d9d9d14-e5bc-44bc-8cfc-3df9ba4e6055", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-06T15:58:15.778396+00:00"},
-      "ephemeral_trace_id": "9d9d9d14-e5bc-44bc-8cfc-3df9ba4e6055"}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '488'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/1.3.0
-      X-Crewai-Version:
-      - 1.3.0
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
-  response:
-    body:
-      string: '{"id":"f303021e-f1a0-4fd8-9c7d-8ba6779f8ad3","ephemeral_trace_id":"9d9d9d14-e5bc-44bc-8cfc-3df9ba4e6055","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.3.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.3.0","privacy_level":"standard"},"created_at":"2025-11-06T15:58:16.189Z","updated_at":"2025-11-06T15:58:16.189Z","access_code":"TRACE-c2990cd4d4","user_identifier":null}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '515'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Thu, 06 Nov 2025 15:58:16 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
-      etag:
-      - W/"8df0b730688b8bc094b74c66a6293578"
-      expires:
-      - '0'
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      pragma:
-      - no-cache
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      strict-transport-security:
-      - max-age=63072000; includeSubDomains
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 38352441-7508-4e1e-9bff-77d1689dffdf
-      x-runtime:
-      - '0.085540'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 201
-      message: Created
-- request:
     body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user
       query so that it is optimized for retrieval from a vector database. Consider
       how the query will be used to find relevant documents, and aim to make it more
@@ -115,7 +16,7 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
@@ -143,23 +44,23 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJBbtswELzrFQQvvViBLMuy42sObYEWKIoiQFMEAkOu5G0oLkGu0xaB
-        /15QciwlTYFceODsDGeG+5gJIdHInZB6r1j33uZX33+1H78y9tvVt+Lmpv68KrfXX96Xnz7cu61c
-        JAbd/QTNT6wLTb23wEhuhHUAxZBUl5u6rKqqvqwHoCcDNtE6z3lFeY8O87Ioq7zY5MuTuN4Taohy
-        J35kQgjxOJzJpzPwW+5EsXi66SFG1YHcnYeEkIFsupEqRoysHMvFBGpyDG6wfo0G+V0UrXqggAxC
-        k6VwMZ8O0B6iSo7dwdoZoJwjVinx4PP2hBzPzix1PtBdfEGVLTqM+yaAiuSSi8jk5YAeMyFuhwYO
-        z0JJH6j33DDdw/DccrMa9eRU/ISuTxgTKzsnbRevyDUGWKGNswqlVnoPZqJOfauDQZoB2Sz0v2Ze
-        0x6Do+veIj8BWoNnMI0PYFA/DzyNBUhr+b+xc8mDYRkhPKCGhhFC+ggDrTrYcVlk/BMZ+qZF10Hw
-        AceNaX2zrgvV1rBeX8rsmP0FAAD//wMA5SIzeT8DAAA=
+        H4sIAAAAAAAAAwAAAP//jFLBTtwwFLznKyxfetmg3YXspnutCmpVIS70UqHI2C/JK46fZb+sQGj/
+        HTlZNqGA1IsPnjfjmfF7zoSQaOROSN0q1p23+Te9rh8vr67tj+99Wdw8NDc/Xdy32KvbX71cJAbd
+        /wXNr6wzTZ23wEhuhHUAxZBUV9vN+apcb8tiADoyYBOt8ZxfUN6hw3y9XF/ky22+Ko/sllBDlDvx
+        JxNCiOfhTD6dgUe5E8vF600HMaoG5O40JIQMZNONVDFiZOVYLiZQk2Nwg/XfaJC/RFGrPQVkEJos
+        hbP5dIC6jyo5dr21M0A5R6xS4sHn3RE5nJxZanyg+/gPVdboMLZVABXJJReRycsBPWRC3A0N9G9C
+        SR+o81wxPcDw3Gp7PurJqfgJLY4YEys7J5WLD+QqA6zQxlmFUivdgpmoU9+qN0gzIJuFfm/mI+0x
+        OLrmf+QnQGvwDKbyAQzqt4GnsQBpLT8bO5U8GJYRwh41VIwQ0kcYqFVvx2WR8SkydFWNroHgA44b
+        U/uq2CxVvYGi+CqzQ/YCAAD//wMAZMa5Sz8DAAA=
     headers:
       CF-RAY:
-      - 99a5ca96bb1443e7-EWR
+      - 99ec2e536dcc3c7d-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -167,12 +68,12 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 06 Nov 2025 15:58:16 GMT
+      - Sat, 15 Nov 2025 04:59:45 GMT
       Server:
       - cloudflare
       Set-Cookie:
       - __cf_bm=REDACTED;
-        path=/; expires=Thu, 06-Nov-25 16:28:16 GMT; domain=.api.openai.com; HttpOnly;
+        path=/; expires=Sat, 15-Nov-25 05:29:45 GMT; domain=.api.openai.com; HttpOnly;
         Secure; SameSite=None
       - _cfuvid=REDACTED;
         path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
@@ -189,31 +90,37 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-REDACTED
+      - REDACTED_ORG
       openai-processing-ms:
-      - '235'
+      - '418'
       openai-project:
-      - proj_REDACTED
+      - REDACTED_PROJECT
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '420'
+      - '434'
       x-openai-proxy-wasm:
       - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '200000'
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999785'
       x-ratelimit-remaining-requests:
-      - '9999'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '199785'
+      - '149999785'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
-      - 8.64s
+      - 2ms
       x-ratelimit-reset-tokens:
-      - 64ms
+      - 0s
       x-request-id:
-      - req_9810e9721aa9463c930414ab5174ab61
+      - REDACTED_REQUEST_ID
     status:
       code: 200
       message: OK
@@ -233,7 +140,7 @@ interactions:
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - gzip, deflate
       connection:
       - keep-alive
       content-length:
@@ -264,25 +171,26 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBahsxEL37KwZderGN7dqO41vaUghtT4FCacIiS7PrSbQaVZq1swT/
-        e9HayTptCr0ING/e6M2b0dMAQJFVa1Bmq8XUwY0+/tiXXy4/2BDN/p7izdY4/vrp29Wvmxbv1TAz
-        eHOPRp5ZY8N1cCjE/gibiFowV51eLGfz+Xx5ueqAmi26TKuCjOY8qsnTaDaZzUeTi9F0dWJvmQwm
-        tYafAwCAp+7MOr3FR7WGyfA5UmNKukK1fkkCUJFdjiidEiXRXtSwBw17Qd9JvwbPezDaQ0U7BA1V
-        lg3apz1GgFv/mbx2cNXd1/CdLMm7BKXecSRBMOw4AiXwLBCajSPjWrBsmhq9oAWOsCeLroUHz3s/
-        husSWm5gq3cIKaChkgx0ih4lZ1sUTS6B3nAjxweHcA21bmGDoDcOQRhC5B3ZLLjmiJApHNFCxBTY
-        Jxyf9xuxbJLOnvvGuTNAe8+i88w6p+9OyOHFW8dViLxJf1BVSZ7StoioE/vsYxIOqkMPA4C7bobN
-        q7GoELkOUgg/YPfcdLk61lP96vTofHEChUW7Pj6bvh++Ua842Xa2Bcpos0XbU/uV0Y0lPgMGZ13/
-        reat2sfOyVf/U74HjMEgaIsQ0ZJ53XGfFjH/rH+lvbjcCVYJ444MFkIY8yQslrpxx31XqU2CdVGS
-        rzCGSMelL0OxWE50ucTF4lINDoPfAAAA//8DAPFGfbMCBAAA
+        H4sIAAAAAAAAAwAAAP//jFNNbxNBDL3nV1hz4bKp8tGkITdEBVRC4oLgAFXkzHg3prP2aGY2aaj6
+        39Fu0mxaisRlpfXze7bHzw8DAMPOLMHYDWZbBz98byfl/bW9mcrH69GX37Kd8v6z/X63Ubz/aoqW
+        oetfZPMT68JqHTxlVjnANhJmalXHV/PpeDG5Wsw6oFZHvqVVIQ8vdViz8HAymlwOR1fD8eLI3ihb
+        SmYJPwYAAA/dt+1THN2bJYyKp0hNKWFFZnlKAjBRfRsxmBKnjJJN0YNWJZN0rd+A6A4sClS8JUCo
+        2rYBJe0oAvyUDyzo4V33v4Rv7Di/SVDiViNnAqteI3AC0QyhWXu2fg9ObVOTZHKACTh3BbYY97DG
+        RA5UIFBM2kqHSCVFEkvpAj7pjrYUC7Ba1yov6iTAWqUCFsdbdg36BFpmEmCxvnEEa99Q0c5AUgCK
+        g0iugHWTIStYlZJjfRoiBbJcsn1RpQAVgp023oEQuSM1NT4DQiTPuPYESZtoCTSC40g2+z1guoMN
+        1xfnbx2pbBK2+5bG+zMARTRj65duy7dH5PG0V69ViLpOL6imZOG0WUXCpNLuMGUNpkMfBwC3nX+a
+        Z5YwIWod8irrHXXlxvPFQc/0tu3R+fwIZs3o+/hkelm8ordylJF9OnOgsWg35Hpqb1dsHOsZMDib
+        +u9uXtM+TM5S/Y98D1hLIZNbhUiO7fOJ+7RI7VX/K+30yl3DJlHcsqVVZortJhyV2PjDrZm0T5nq
+        VclSUQyRDwdXhtVsPsJyTrPZWzN4HPwBAAD//wMAtb7X3X4EAAA=
     headers:
       CF-RAY:
-      - 99a5ca9c5ef543e7-EWR
+      - 99ec2e59baca3c7d-SJC
       Connection:
       - keep-alive
       Content-Encoding:
@@ -290,7 +198,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 06 Nov 2025 15:58:19 GMT
+      - Sat, 15 Nov 2025 04:59:47 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -306,31 +214,37 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-REDACTED
+      - REDACTED_ORG
       openai-processing-ms:
-      - '1326'
+      - '1471'
       openai-project:
-      - proj_REDACTED
+      - REDACTED_PROJECT
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1754'
+      - '1488'
       x-openai-proxy-wasm:
       - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
       x-ratelimit-limit-requests:
-      - '10000'
+      - '30000'
       x-ratelimit-limit-tokens:
-      - '200000'
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999805'
       x-ratelimit-remaining-requests:
-      - '9998'
+      - '29999'
       x-ratelimit-remaining-tokens:
-      - '199803'
+      - '149999802'
+      x-ratelimit-reset-project-tokens:
+      - 0s
       x-ratelimit-reset-requests:
-      - 15.913s
+      - 2ms
       x-ratelimit-reset-tokens:
-      - 59ms
+      - 0s
       x-request-id:
-      - req_f975e16b666e498b8bcfdfab525f71b3
+      - REDACTED_REQUEST_ID
     status:
       code: 200
       message: OK
