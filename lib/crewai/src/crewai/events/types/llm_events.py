@@ -84,3 +84,4 @@ class LLMStreamChunkEvent(LLMEventBase):
     type: str = "llm_stream_chunk"
     chunk: str
     tool_call: ToolCall | None = None
+    response_id: str | None = None

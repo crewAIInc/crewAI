@@ -316,6 +316,7 @@ class BaseLLM(ABC):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
+        response_id: str | None = None
     ) -> None:
         """Emit stream chunk event."""
         if not hasattr(crewai_event_bus, "emit"):
@@ -328,6 +329,7 @@ class BaseLLM(ABC):
                 tool_call=tool_call,
                 from_task=from_task,
                 from_agent=from_agent,
+                response_id=response_id
             ),
         )
 
