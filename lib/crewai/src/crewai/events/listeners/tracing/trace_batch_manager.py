@@ -247,11 +247,12 @@ class TraceBatchManager:
 
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
-        user_data = _load_user_data()
+        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+
         if (
             not self.current_batch
-            or os.getenv("CREWAI_TRACING_ENABLED", "false") in ["false", "False", False]
-            or user_data.get("trace_consent", "false") == "false"
+            or os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "false"
+            or has_user_declined_tracing()
         ):
             return None
 
