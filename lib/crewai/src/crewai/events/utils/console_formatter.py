@@ -58,14 +58,14 @@ class ConsoleFormatter:
 
         if not is_tracing_enabled_in_context():
             if has_user_declined_tracing():
-                message = """ℹ️  Tracing is disabled.
+                message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Crew/Flow code
 • Set CREWAI_TRACING_ENABLED=true in your project's .env file
 • Run: crewai traces enable"""
             else:
-                message = """ℹ️  Tracing is disabled.
+                message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Crew/Flow code
@@ -86,7 +86,7 @@ To enable tracing, do any one of these:
         name: str,
         status_style: str = "blue",
         tool_args: dict[str, Any] | str = "",
-        **fields,
+        **fields: Any,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
         content = Text()
@@ -125,7 +125,7 @@ To enable tracing, do any one of these:
         """Add a node to the tree with consistent styling."""
         return parent.add(Text(text, style=style))
 
-    def print(self, *args, **kwargs) -> None:
+    def print(self, *args: Any, **kwargs: Any) -> None:
         """Custom print that replaces consecutive Tree renders.
 
         * If the argument is a single ``Tree`` instance, we either start a
@@ -539,7 +539,7 @@ To enable tracing, do any one of these:
 
         return method_branch
 
-    def get_llm_tree(self, tool_name: str):
+    def get_llm_tree(self, tool_name: str) -> Tree:
         text = Text()
         text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
 
@@ -554,7 +554,7 @@ To enable tracing, do any one of these:
         self,
         tool_name: str,
         tool_args: dict[str, Any] | str,
-    ):
+    ) -> None:
         # Create status content for the tool usage
         content = self.create_status_content(
             "Tool Usage Started", tool_name, Status="In Progress", tool_args=tool_args
@@ -570,7 +570,7 @@ To enable tracing, do any one of these:
     def handle_llm_tool_usage_finished(
         self,
         tool_name: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
         self.print(tree)
@@ -580,7 +580,7 @@ To enable tracing, do any one of these:
         self,
         tool_name: str,
         error: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
         self.print(tree)
@@ -1600,7 +1600,7 @@ To enable tracing, do any one of these:
         if branch_to_use is None and tree_to_use is not None:
             branch_to_use = tree_to_use
 
-        def add_panel():
+        def add_panel() -> None:
             memory_text = str(memory_content)
             if len(memory_text) > 500:
                 memory_text = memory_text[:497] + "..."

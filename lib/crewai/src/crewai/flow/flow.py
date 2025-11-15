@@ -1382,14 +1382,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         console = Console()
 
         if has_user_declined_tracing():
-            message = """ℹ️  Tracing is disabled.
+            message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Flow code
 • Set CREWAI_TRACING_ENABLED=true in your project's .env file
 • Run: crewai traces enable"""
         else:
-            message = """ℹ️  Tracing is disabled.
+            message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Flow code
