@@ -1,4 +1,4 @@
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
 import hashlib
@@ -71,7 +71,7 @@ def set_tracing_enabled(enabled: bool) -> object:
     return _tracing_enabled.set(enabled)
 
 
-def reset_tracing_enabled(token: object) -> None:
+def reset_tracing_enabled(token: Token[bool | None]) -> None:
     """Reset tracing enabled state to previous value.
 
     Args:
@@ -409,13 +409,16 @@ def should_auto_collect_first_time_traces() -> bool:
 
 
     Returns:
-        True if first-time user AND telemetry not disabled, False otherwise.
+        True if first-time user AND telemetry not disabled AND tracing not explicitly enabled, False otherwise.
     """
     if _is_test_environment():
         return False
 
     # If user has previously declined, never auto-collect
     if has_user_declined_tracing():
+        return False
+
+    if is_tracing_enabled_in_context():
         return False
 
     return is_first_execution()
