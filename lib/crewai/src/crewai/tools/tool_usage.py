@@ -410,13 +410,13 @@ class ToolUsage:
 
     def _normalize_tool_name(self, name: str) -> str:
         """Normalize tool name for language-agnostic matching.
-        
+
         Converts to lowercase, removes extra whitespace, and replaces
         spaces/hyphens with underscores for consistent matching.
-        
+
         Args:
             name: The tool name to normalize
-            
+
         Returns:
             Normalized tool name
         """
@@ -430,10 +430,10 @@ class ToolUsage:
 
     def _get_tool_aliases(self, tool: Any) -> list[str]:
         """Get all possible aliases for a tool including stable identifiers.
-        
+
         Args:
             tool: The tool object
-            
+
         Returns:
             List of possible tool name aliases
         """
@@ -452,19 +452,19 @@ class ToolUsage:
 
     def _select_tool(self, tool_name: str) -> Any:
         """Select a tool by name with language-agnostic matching support.
-        
+
         Supports matching against:
         1. Exact tool name (case-insensitive)
         2. Normalized/slugified tool name
         3. Stable short identifiers (delegate_work, ask_question)
         4. Fuzzy matching as fallback (0.85 threshold)
-        
+
         Args:
             tool_name: The name of the tool to select
-            
+
         Returns:
             The selected tool object
-            
+
         Raises:
             Exception: If no matching tool is found
         """
