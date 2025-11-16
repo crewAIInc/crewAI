@@ -892,8 +892,11 @@ def test_delegation_counting_with_short_identifiers():
     mock_task = MagicMock()
     mock_task.increment_delegations = MagicMock()
     
+    mock_tools_handler = MagicMock()
+    mock_tools_handler.cache.return_value = None
+    
     tool_usage = ToolUsage(
-        tools_handler=MagicMock(),
+        tools_handler=mock_tools_handler,
         tools=[delegate_tool],
         task=mock_task,
         function_calling_llm=None,
