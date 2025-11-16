@@ -145,6 +145,39 @@ class InternalInstructor(Generic[T]):
         else:
             model_name = self.llm.model
 
-        return self._client.chat.completions.create(  # type: ignore[no-any-return]
-            model=model_name, response_model=self.model, messages=messages
-        )
+        params: dict[str, Any] = {
+            "model": model_name,
+            "response_model": self.model,
+            "messages": messages,
+        }
+
+        if not isinstance(self.llm, str) and hasattr(self.llm, "is_litellm") and self.llm.is_litellm:
+            param_names = [
+                "api_key",
+                "api_base",
+                "base_url",
+                "api_version",
+                "temperature",
+                "top_p",
+                "n",
+                "stop",
+                "max_tokens",
+                "max_completion_tokens",
+                "timeout",
+                "presence_penalty",
+                "frequency_penalty",
+                "logit_bias",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "reasoning_effort",
+            ]
+
+            for param_name in param_names:
+                value = getattr(self.llm, param_name, None)
+                if value is not None:
+                    if param_name == "max_completion_tokens" and "max_tokens" in params:
+                        continue
+                    params[param_name] = value
+
+        return self._client.chat.completions.create(**params)  # type: ignore[no-any-return]
