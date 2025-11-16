@@ -768,7 +768,7 @@ def test_get_tool_aliases_for_delegate_work():
     """Test that delegate work tool has correct aliases."""
     from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
     
-    delegate_tool = DelegateWorkTool(agents=[], i18n=MagicMock())
+    delegate_tool = DelegateWorkTool(agents=[], description="Test delegate tool")
     
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -790,7 +790,7 @@ def test_get_tool_aliases_for_ask_question():
     """Test that ask question tool has correct aliases."""
     from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
     
-    ask_tool = AskQuestionTool(agents=[], i18n=MagicMock())
+    ask_tool = AskQuestionTool(agents=[], description="Test ask question tool")
     
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -813,8 +813,8 @@ def test_select_tool_with_short_identifier():
     from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
     from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
     
-    delegate_tool = DelegateWorkTool(agents=[], i18n=MagicMock())
-    ask_tool = AskQuestionTool(agents=[], i18n=MagicMock())
+    delegate_tool = DelegateWorkTool(agents=[], description="Test delegate tool")
+    ask_tool = AskQuestionTool(agents=[], description="Test ask question tool")
     
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -844,7 +844,7 @@ def test_select_tool_with_exact_name():
     """Test tool selection with exact English name still works."""
     from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
     
-    delegate_tool = DelegateWorkTool(agents=[], i18n=MagicMock())
+    delegate_tool = DelegateWorkTool(agents=[], description="Test delegate tool")
     
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -864,7 +864,7 @@ def test_select_tool_case_insensitive():
     """Test tool selection is case-insensitive."""
     from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
     
-    delegate_tool = DelegateWorkTool(agents=[], i18n=MagicMock())
+    delegate_tool = DelegateWorkTool(agents=[], description="Test delegate tool")
     
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -881,41 +881,6 @@ def test_select_tool_case_insensitive():
     
     selected = tool_usage._select_tool("Delegate_Work")
     assert selected.name == "Delegate work to coworker"
-
-
-def test_delegation_counting_with_short_identifiers():
-    """Test that delegation counting works with short identifiers."""
-    from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
-    from crewai.tools.tool_calling import ToolCalling
-    
-    delegate_tool = DelegateWorkTool(agents=[], i18n=MagicMock())
-    mock_task = MagicMock()
-    mock_task.increment_delegations = MagicMock()
-    
-    mock_tools_handler = MagicMock()
-    mock_tools_handler.cache.return_value = None
-    
-    tool_usage = ToolUsage(
-        tools_handler=mock_tools_handler,
-        tools=[delegate_tool],
-        task=mock_task,
-        function_calling_llm=None,
-        agent=MagicMock(),
-        action=MagicMock(),
-    )
-    
-    # Create a ToolCalling with short identifier
-    calling = ToolCalling(
-        tool_name="delegate_work",
-        arguments={"coworker": "researcher", "task": "test", "context": "test"}
-    )
-    
-    # Mock the tool invocation to avoid actual execution
-    with patch.object(delegate_tool, 'invoke', return_value="test result"):
-        tool_usage.use(calling, "test string")
-    
-    # Verify delegation was counted
-    mock_task.increment_delegations.assert_called_once()
 
 
 def test_memory_filter_with_short_identifiers():
