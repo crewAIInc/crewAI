@@ -35,23 +35,35 @@ class CrewAgentExecutorMixin:
             self.crew
             and self.agent
             and self.task
-            and "Action: Delegate work to coworker" not in output.text
         ):
-            try:
-                if (
-                    hasattr(self.crew, "_short_term_memory")
-                    and self.crew._short_term_memory
-                ):
-                    self.crew._short_term_memory.save(
-                        value=output.text,
-                        metadata={
-                            "observation": self.task.description,
-                        },
+            is_delegation = any(
+                pattern in output.text
+                for pattern in [
+                    "Action: Delegate work to coworker",
+                    "Action: delegate_work",
+                    "Action: delegate_work_to_coworker",
+                    "Action: Ask question to coworker",
+                    "Action: ask_question",
+                    "Action: ask_question_to_coworker",
+                ]
+            )
+            
+            if not is_delegation:
+                try:
+                    if (
+                        hasattr(self.crew, "_short_term_memory")
+                        and self.crew._short_term_memory
+                    ):
+                        self.crew._short_term_memory.save(
+                            value=output.text,
+                            metadata={
+                                "observation": self.task.description,
+                            },
+                        )
+                except Exception as e:
+                    self.agent._logger.log(
+                        "error", f"Failed to add to short term memory: {e}"
                     )
-            except Exception as e:
-                self.agent._logger.log(
-                    "error", f"Failed to add to short term memory: {e}"
-                )
 
     def _create_external_memory(self, output) -> None:
         """Create and save a external-term memory item if conditions are met."""

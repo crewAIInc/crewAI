@@ -240,10 +240,18 @@ class ToolUsage:
 
         if result is None:
             try:
-                if calling.tool_name in [
+                normalized_tool_name = self._normalize_tool_name(calling.tool_name)
+                is_delegation_tool = normalized_tool_name in [
+                    "delegate_work_to_coworker",
+                    "delegate_work",
+                    "ask_question_to_coworker",
+                    "ask_question",
+                ] or calling.tool_name in [
                     "Delegate work to coworker",
                     "Ask question to coworker",
-                ]:
+                ]
+                
+                if is_delegation_tool:
                     coworker = (
                         calling.arguments.get("coworker") if calling.arguments else None
                     )
@@ -400,7 +408,78 @@ class ToolUsage:
             return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
         return None
 
+    def _normalize_tool_name(self, name: str) -> str:
+        """Normalize tool name for language-agnostic matching.
+        
+        Converts to lowercase, removes extra whitespace, and replaces
+        spaces/hyphens with underscores for consistent matching.
+        
+        Args:
+            name: The tool name to normalize
+            
+        Returns:
+            Normalized tool name
+        """
+        if not name:
+            return ""
+        normalized = name.lower().strip()
+        normalized = normalized.replace(" ", "_").replace("-", "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return normalized
+
+    def _get_tool_aliases(self, tool: Any) -> list[str]:
+        """Get all possible aliases for a tool including stable identifiers.
+        
+        Args:
+            tool: The tool object
+            
+        Returns:
+            List of possible tool name aliases
+        """
+        aliases = [tool.name]  # Original name
+        
+        normalized = self._normalize_tool_name(tool.name)
+        if normalized and normalized != tool.name:
+            aliases.append(normalized)
+        
+        if tool.name == "Delegate work to coworker":
+            aliases.extend(["delegate_work", "delegate_work_to_coworker"])
+        elif tool.name == "Ask question to coworker":
+            aliases.extend(["ask_question", "ask_question_to_coworker"])
+        
+        return aliases
+
     def _select_tool(self, tool_name: str) -> Any:
+        """Select a tool by name with language-agnostic matching support.
+        
+        Supports matching against:
+        1. Exact tool name (case-insensitive)
+        2. Normalized/slugified tool name
+        3. Stable short identifiers (delegate_work, ask_question)
+        4. Fuzzy matching as fallback (0.85 threshold)
+        
+        Args:
+            tool_name: The name of the tool to select
+            
+        Returns:
+            The selected tool object
+            
+        Raises:
+            Exception: If no matching tool is found
+        """
+        normalized_input = self._normalize_tool_name(tool_name)
+        
+        for tool in self.tools:
+            aliases = self._get_tool_aliases(tool)
+            
+            if tool.name.lower().strip() == tool_name.lower().strip():
+                return tool
+            
+            for alias in aliases:
+                if self._normalize_tool_name(alias) == normalized_input:
+                    return tool
+        
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
@@ -410,13 +489,13 @@ class ToolUsage:
         )
         for tool in order_tools:
             if (
-                tool.name.lower().strip() == tool_name.lower().strip()
-                or SequenceMatcher(
+                SequenceMatcher(
                     None, tool.name.lower().strip(), tool_name.lower().strip()
                 ).ratio()
                 > 0.85
             ):
                 return tool
+        
         if self.task:
             self.task.increment_tools_errors()
         tool_selection_data: dict[str, Any] = {
