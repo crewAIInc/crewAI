@@ -1082,7 +1082,7 @@ interactions:
       "role": "test role", "goal": "test goal", "backstory": "test backstory", "cache":
       true, "verbose": true, "max_rpm": 10, "allow_delegation": false, "tools": [],
       "max_iter": 4, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x133d41100>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x133d41100>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x133d40500>", "crew": {"parent_flow": null, "name": "crew", "cache":
       true, "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0,
       ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
@@ -1093,7 +1093,7 @@ interactions:
       ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
       True, ''verbose'': True, ''max_rpm'': 10, ''allow_delegation'': False, ''tools'':
       [], ''max_iter'': 4, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x133d41100>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x133d41100>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x133d40500>, ''crew'': Crew(id=4c6d502e-f6ec-446a-8f76-644563c4aa94,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -1117,7 +1117,7 @@ interactions:
       ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
       True, ''verbose'': True, ''max_rpm'': 10, ''allow_delegation'': False, ''tools'':
       [], ''max_iter'': 4, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x133d41100>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x133d41100>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x133d40500>, ''crew'': Crew(id=4c6d502e-f6ec-446a-8f76-644563c4aa94,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -1910,7 +1910,7 @@ interactions:
       "role": "test role", "goal": "test goal", "backstory": "test backstory", "cache":
       true, "verbose": true, "max_rpm": 10, "allow_delegation": false, "tools": [],
       "max_iter": 4, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x10308d610>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x10308d610>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x129201640>", "crew": {"parent_flow": null, "name": "crew", "cache":
       true, "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0,
       ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
@@ -1921,7 +1921,7 @@ interactions:
       ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
       True, ''verbose'': True, ''max_rpm'': 10, ''allow_delegation'': False, ''tools'':
       [], ''max_iter'': 4, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x10308d610>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x10308d610>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x129201640>, ''crew'': Crew(id=1a07d718-fed5-49fa-bee2-de2db91c9f33,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -1945,7 +1945,7 @@ interactions:
       ''test role'', ''goal'': ''test goal'', ''backstory'': ''test backstory'', ''cache'':
       True, ''verbose'': True, ''max_rpm'': 10, ''allow_delegation'': False, ''tools'':
       [], ''max_iter'': 4, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x10308d610>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x10308d610>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x129201640>, ''crew'': Crew(id=1a07d718-fed5-49fa-bee2-de2db91c9f33,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler

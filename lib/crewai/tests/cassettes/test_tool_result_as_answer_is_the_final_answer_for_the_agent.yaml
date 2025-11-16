@@ -468,7 +468,7 @@ interactions:
       "description_updated": "False", "cache_function": "<function BaseTool.<lambda>
       at 0x107ff9440>", "result_as_answer": "True", "max_usage_count": "None", "current_usage_count":
       "0"}], "max_iter": 25, "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x13ab2e030>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e030>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13ab2e5d0>", "crew": {"parent_flow": null, "name": "crew", "cache":
       true, "tasks": ["{''used_tools'': 0, ''tools_errors'': 0, ''delegations'': 0,
       ''i18n'': {''prompt_file'': None}, ''name'': None, ''prompt_context'': '''',
@@ -484,7 +484,7 @@ interactions:
       <class ''abc.MyCustomToolSchema''>, ''description_updated'': False, ''cache_function'':
       <function BaseTool.<lambda> at 0x107ff9440>, ''result_as_answer'': True, ''max_usage_count'':
       None, ''current_usage_count'': 0}], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x13ab2e030>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e030>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13ab2e5d0>, ''crew'': Crew(id=f74956dd-60d0-402a-a703-2cc3d767397f,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler
@@ -512,7 +512,7 @@ interactions:
       ''description_updated'': False, ''cache_function'': <function BaseTool.<lambda>
       at 0x107ff9440>, ''result_as_answer'': True, ''max_usage_count'': None, ''current_usage_count'':
       0}], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x13ab2e030>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x13ab2e030>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x13ab2e5d0>, ''crew'': Crew(id=f74956dd-60d0-402a-a703-2cc3d767397f,
       process=Process.sequential, number_of_agents=1, number_of_tasks=1), ''i18n'':
       {''prompt_file'': None}, ''cache_handler'': {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler

@@ -126,7 +126,7 @@ interactions:
       a freelancer and is now working on doing research and analysis for a new customer.\",
       ''cache'': True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'':
       False, ''tools'': [], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b973fe0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b973fe0>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b910290>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
       {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b9934d0>,
       ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
@@ -149,7 +149,7 @@ interactions:
       writing content for a new customer.\", ''cache'': True, ''verbose'': False,
       ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [], ''max_iter'':
       25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b7bbbf0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b7bbbf0>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b9903b0>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
       {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b631bb0>,
       ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
@@ -169,7 +169,7 @@ interactions:
       a freelancer and is now working on doing research and analysis for a new customer.\"",
       "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
       "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b973fe0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b973fe0>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b910290>", "crew": "None", "i18n": "{''prompt_file'': None}",
       "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
       object at 0x12b9934d0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
@@ -182,7 +182,7 @@ interactions:
       You work as a freelancer and are now working on writing content for a new customer.\"",
       "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
       "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b7bbbf0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b7bbbf0>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b9903b0>", "crew": "None", "i18n": "{''prompt_file'': None}",
       "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
       object at 0x12b631bb0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
@@ -214,7 +214,7 @@ interactions:
       a freelancer and is now working on doing research and analysis for a new customer.\",
       ''cache'': True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'':
       False, ''tools'': [], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b973fe0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b973fe0>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b910290>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
       {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b9934d0>,
       ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
@@ -237,7 +237,7 @@ interactions:
       writing content for a new customer.\", ''cache'': True, ''verbose'': False,
       ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [], ''max_iter'':
       25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b7bbbf0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b7bbbf0>, ''llm'': <crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b9903b0>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
       {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b631bb0>,
       ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
@@ -257,7 +257,7 @@ interactions:
       a freelancer and is now working on doing research and analysis for a new customer.\"",
       "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
       "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b973fe0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b973fe0>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b910290>", "crew": "None", "i18n": "{''prompt_file'': None}",
       "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
       object at 0x12b9934d0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
@@ -270,7 +270,7 @@ interactions:
       You work as a freelancer and are now working on writing content for a new customer.\"",
       "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
       "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
-      object at 0x12b7bbbf0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b7bbbf0>", "llm": "<crewai.llm.providers.openai.completion.OpenAICompletion
       object at 0x12b9903b0>", "crew": "None", "i18n": "{''prompt_file'': None}",
       "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
       object at 0x12b631bb0>", "tools_results": "[]", "max_tokens": "None", "knowledge":

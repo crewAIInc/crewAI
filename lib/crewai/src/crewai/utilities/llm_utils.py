@@ -4,7 +4,7 @@ from typing import Any, Final
 
 from crewai.cli.constants import DEFAULT_LLM_MODEL, ENV_VARS, LITELLM_PARAMS
 from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 
 
 logger = logging.getLogger(__name__)

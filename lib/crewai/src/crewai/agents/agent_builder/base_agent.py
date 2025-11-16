@@ -137,7 +137,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: list[BaseTool] | None = Field(
+    tools: list[BaseTool] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
@@ -161,7 +161,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         description="An instance of the ToolsHandler class.",
     )
     tools_results: list[dict[str, Any]] = Field(
-        default=[], description="Results of the tools used by the agent."
+        default_factory=list, description="Results of the tools used by the agent."
     )
     max_tokens: int | None = Field(
         default=None, description="Maximum number of tokens for the agent's execution."
@@ -265,7 +265,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not mcps:
             return mcps
 
-        validated_mcps = []
+        validated_mcps: list[str | MCPServerConfig] = []
         for mcp in mcps:
             if isinstance(mcp, str):
                 if mcp.startswith(("https://", "crewai-amp:")):

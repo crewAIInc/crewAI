@@ -37,7 +37,7 @@ def test_azure_completion_is_used_when_azure_openai_provider():
     """
     llm = LLM(model="azure_openai/gpt-4")
 
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
     assert llm.provider == "azure"
     assert llm.model == "gpt-4"
@@ -47,7 +47,7 @@ def test_azure_tool_use_conversation_flow():
     """
     Test that the Azure completion properly handles tool use conversation flow
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     from azure.ai.inference.models import ChatCompletionsToolCall
 
     # Create AzureCompletion instance
@@ -64,7 +64,7 @@ def test_azure_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Azure client responses
-    with patch.object(completion.client, 'complete') as mock_complete:
+    with patch.object(completion._client, 'complete') as mock_complete:
         # Mock tool call in response with proper type
         mock_tool_call = MagicMock(spec=ChatCompletionsToolCall)
         mock_tool_call.function.name = "get_weather"
@@ -105,7 +105,7 @@ def test_azure_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Azure provider
     """
-    module_name = "crewai.llms.providers.azure.completion"
+    module_name = "crewai.llm.providers.azure.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -160,7 +160,7 @@ def test_azure_completion_initialization_parameters():
         endpoint="https://test.openai.azure.com"
     )
 
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
     assert llm.model == "gpt-4"
     assert llm.temperature == 0.7
@@ -182,7 +182,7 @@ def test_azure_specific_parameters():
         endpoint="https://test.openai.azure.com"
     )
 
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
     assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
@@ -374,7 +374,7 @@ def test_azure_completion_with_tools():
 
 def test_azure_raises_error_when_endpoint_missing():
     """Test that AzureCompletion raises ValueError when endpoint is missing"""
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
@@ -383,7 +383,7 @@ def test_azure_raises_error_when_endpoint_missing():
 
 def test_azure_raises_error_when_api_key_missing():
     """Test that AzureCompletion raises ValueError when API key is missing"""
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
@@ -400,7 +400,7 @@ def test_azure_endpoint_configuration():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        from crewai.llms.providers.azure.completion import AzureCompletion
+        from crewai.llm.providers.azure.completion import AzureCompletion
         assert isinstance(llm, AzureCompletion)
         assert llm.endpoint == "https://test1.openai.azure.com/openai/deployments/gpt-4"
 
@@ -426,7 +426,7 @@ def test_azure_api_key_configuration():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        from crewai.llms.providers.azure.completion import AzureCompletion
+        from crewai.llm.providers.azure.completion import AzureCompletion
         assert isinstance(llm, AzureCompletion)
         assert llm.api_key == "test-azure-key"
 
@@ -437,7 +437,7 @@ def test_azure_model_capabilities():
     """
     # Test GPT-4 model (supports function calling)
     llm_gpt4 = LLM(model="azure/gpt-4")
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     assert isinstance(llm_gpt4, AzureCompletion)
     assert llm_gpt4.is_openai_model == True
     assert llm_gpt4.supports_function_calling() == True
@@ -466,7 +466,7 @@ def test_azure_completion_params_preparation():
             max_tokens=1000
         )
 
-        from crewai.llms.providers.azure.completion import AzureCompletion
+        from crewai.llm.providers.azure.completion import AzureCompletion
         assert isinstance(llm, AzureCompletion)
 
         messages = [{"role": "user", "content": "Hello"}]
@@ -494,7 +494,7 @@ def test_azure_model_detection():
 
     for model_name in azure_test_cases:
         llm = LLM(model=model_name)
-        from crewai.llms.providers.azure.completion import AzureCompletion
+        from crewai.llm.providers.azure.completion import AzureCompletion
         assert isinstance(llm, AzureCompletion), f"Failed for model: {model_name}"
 
 
@@ -602,7 +602,7 @@ def test_azure_environment_variable_endpoint():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        assert llm.client is not None
+        assert llm._client is not None
         assert llm.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
 
 
@@ -613,7 +613,7 @@ def test_azure_token_usage_tracking():
     llm = LLM(model="azure/gpt-4")
 
     # Mock the Azure response with usage information
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = "test response"
         mock_message.tool_calls = None
@@ -651,7 +651,7 @@ def test_azure_http_error_handling():
     llm = LLM(model="azure/gpt-4")
 
     # Mock an HTTP error
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         mock_complete.side_effect = HttpResponseError(message="Rate limit exceeded", response=MagicMock(status_code=429))
 
         with pytest.raises(HttpResponseError):
@@ -662,13 +662,13 @@ def test_azure_streaming_completion():
     """
     Test that streaming completions work properly
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     from azure.ai.inference.models import StreamingChatCompletionsUpdate
 
     llm = LLM(model="azure/gpt-4", stream=True)
 
     # Mock streaming response
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         # Create mock streaming updates with proper type
         mock_updates = []
         for chunk in ["Hello", " ", "world", "!"]:
@@ -698,7 +698,7 @@ def test_azure_api_version_default():
     """
     llm = LLM(model="azure/gpt-4")
 
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
     # Should use default or environment variable
     assert llm.api_version is not None
@@ -721,7 +721,7 @@ def test_azure_openai_endpoint_url_construction():
     """
     Test that Azure OpenAI endpoint URLs are automatically constructed correctly
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -738,7 +738,7 @@ def test_azure_openai_endpoint_url_with_trailing_slash():
     """
     Test that trailing slashes are handled correctly in endpoint URLs
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -804,7 +804,7 @@ def test_non_azure_openai_model_parameter_included():
     """
     Test that model parameter IS included for non-Azure OpenAI endpoints
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -824,7 +824,7 @@ def test_azure_message_formatting_with_role():
     """
     Test that messages are formatted with both 'role' and 'content' fields
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     llm = LLM(model="azure/gpt-4")
 
@@ -886,12 +886,12 @@ def test_azure_improved_error_messages():
     """
     Test that improved error messages are provided for common HTTP errors
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
     from azure.core.exceptions import HttpResponseError
 
     llm = LLM(model="azure/gpt-4")
 
-    with patch.object(llm.client, 'complete') as mock_complete:
+    with patch.object(llm._client, 'complete') as mock_complete:
         error_401 = HttpResponseError(message="Unauthorized")
         error_401.status_code = 401
         mock_complete.side_effect = error_401
@@ -918,7 +918,7 @@ def test_azure_api_version_properly_passed():
     """
     Test that api_version is properly passed to the client
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -940,7 +940,7 @@ def test_azure_timeout_and_max_retries_stored():
     """
     Test that timeout and max_retries parameters are stored
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -960,7 +960,7 @@ def test_azure_complete_params_include_optional_params():
     """
     Test that optional parameters are included in completion params when set
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -992,7 +992,7 @@ def test_azure_endpoint_validation_with_azure_prefix():
     """
     Test that 'azure/' prefix is properly stripped when constructing endpoint
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
@@ -1009,7 +1009,7 @@ def test_azure_message_formatting_preserves_all_roles():
     """
     Test that all message roles (system, user, assistant) are preserved correctly
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
+    from crewai.llm.providers.azure.completion import AzureCompletion
 
     llm = LLM(model="azure/gpt-4")
 
