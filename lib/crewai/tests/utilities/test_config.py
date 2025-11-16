@@ -197,3 +197,4 @@ class TestProcessConfig:
         assert result["context"] is None
         assert result["description"] == "test"
         assert "config" not in result
+
