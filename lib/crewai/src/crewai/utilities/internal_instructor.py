@@ -60,7 +60,7 @@ class InternalInstructor(Generic[T]):
         self.llm = llm or (agent.function_calling_llm or agent.llm if agent else None)
 
         with suppress_warnings():
-            import instructor  # type: ignore[import-untyped]
+            import instructor
 
             if (
                 self.llm is not None
