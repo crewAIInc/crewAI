@@ -15,24 +15,28 @@ def process_config(
     Returns:
         The updated values dictionary.
     """
+    from crewai.utilities.constants import NOT_SPECIFIED
+
     config = values.get("config", {})
     if not config:
         return values
 
-    # Copy values from config (originally from YAML) to the model's attributes.
-    # Only copy if the attribute isn't already set, preserving any explicitly defined values.
     for key, value in config.items():
-        if key not in model_class.model_fields or values.get(key) is not None:
+        if key not in model_class.model_fields:
+            continue
+
+        current = values.get(key)
+
+        if current is not None and current is not NOT_SPECIFIED:
             continue
 
         if isinstance(value, dict):
-            if isinstance(values.get(key), dict):
-                values[key].update(value)
+            if isinstance(current, dict):
+                current.update(value)
             else:
                 values[key] = value
         else:
             values[key] = value
 
-    # Remove the config from values to avoid duplicate processing
     values.pop("config", None)
     return values

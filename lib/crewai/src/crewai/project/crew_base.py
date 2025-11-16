@@ -696,10 +696,17 @@ def _map_task_variables(
         callback_functions: Dictionary of available callbacks.
         output_pydantic_functions: Dictionary of Pydantic output class wrappers.
     """
-    if context_list := task_info.get("context"):
-        self.tasks_config[task_name]["context"] = [
-            tasks[context_task_name]() for context_task_name in context_list
-        ]
+    if "context" in task_info:
+        context_value = task_info["context"]
+        if context_value is None:
+            self.tasks_config[task_name]["context"] = None
+        elif isinstance(context_value, list):
+            if context_value:
+                self.tasks_config[task_name]["context"] = [
+                    tasks[context_task_name]() for context_task_name in context_value
+                ]
+            else:
+                self.tasks_config[task_name]["context"] = []
 
     if tools := task_info.get("tools"):
         if _is_string_list(tools):
