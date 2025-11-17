@@ -151,15 +151,20 @@ class ConsoleFormatter:
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
     ) -> None:
-        """Print a panel with consistent formatting if verbose is enabled."""
+        """Print a panel with consistent formatting if verbose is enabled.
+        
+        Args:
+            content: The text content to display in the panel
+            title: The title for the panel
+            style: The style/color for the panel border
+            is_flow: Whether this panel is for a flow (still respects verbose)
+        """
+        if not self.verbose:
+            return
+        
         panel = self.create_panel(content, title, style)
-        if is_flow:
-            self.print(panel)
-            self.print()
-        else:
-            if self.verbose:
-                self.print(panel)
-                self.print()
+        self.print(panel)
+        self.print()
 
     def update_crew_tree(
         self,
@@ -370,6 +375,9 @@ class ConsoleFormatter:
 
     def start_flow(self, flow_name: str, flow_id: str) -> Tree | None:
         """Initialize or update a flow execution tree."""
+        if not self.verbose:
+            return None
+            
         if self.current_flow_tree is not None:
             for child in self.current_flow_tree.children:
                 if "Starting Flow" in str(child.label):
@@ -401,7 +409,7 @@ class ConsoleFormatter:
         status: str = "completed",
     ) -> None:
         """Update flow status in the tree."""
-        if flow_tree is None:
+        if not self.verbose or flow_tree is None:
             return
 
         # Update main flow label
@@ -448,7 +456,7 @@ class ConsoleFormatter:
         status: str = "running",
     ) -> Tree | None:
         """Update method status in the flow tree."""
-        if not flow_tree:
+        if not self.verbose or not flow_tree:
             return None
 
         if status == "running":

@@ -466,12 +466,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         persistence: FlowPersistence | None = None,
         tracing: bool | None = False,
+        verbose: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
+            tracing: Whether to enable tracing for this flow
+            verbose: Whether to enable verbose output for this flow (default: False)
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -485,6 +488,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
+        self.verbose: bool = verbose
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -1338,11 +1342,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Note:
             This method uses the Printer utility for colored console output
             and the standard logging module for log level support.
+            Console output and logging only occur when self.verbose is True.
         """
+        if not self.verbose:
+            return
+        
         self._printer.print(message, color=color)
         if level == "info":
             logger.info(message)
-        logger.warning(message)
+        elif level == "warning":
+            logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
         """Create interactive HTML visualization of Flow structure.

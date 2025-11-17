@@ -341,6 +341,71 @@ flow.kickoff()
 
 By providing both unstructured and structured state management options, CrewAI Flows empowers developers to build AI workflows that are both flexible and robust, catering to a wide range of application requirements.
 
+## Flow Verbosity Control
+
+The `verbose` parameter allows you to control console output and logging for your Flows. By default, Flows run in quiet mode (`verbose=False`), which suppresses flow-related console panels and log messages. When `verbose=True`, Flows will display detailed execution information, including flow creation panels, method execution status, and flow completion messages.
+
+### Basic Usage
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class ExampleFlow(Flow):
+    @start()
+    def step_1(self):
+        return "result"
+
+# Quiet mode (default) - no verbose output
+flow_quiet = ExampleFlow(verbose=False)
+result = flow_quiet.kickoff()
+
+# Verbose mode - displays flow execution details
+flow_verbose = ExampleFlow(verbose=True)
+result = flow_verbose.kickoff()
+```
+
+### Verbose and @persist Decorator
+
+The `verbose` parameter on the Flow instance controls flow-level console output and logging, while the `@persist` decorator has its own `verbose` parameter that controls persistence-specific logging. These operate independently:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+persistence = SQLiteFlowPersistence("my_flow.db")
+
+# Flow verbose=False: No flow panels/logs, but @persist can still log
+class MixedVerbosityFlow(Flow):
+    @start()
+    @persist(persistence, verbose=True)  # Persistence logging enabled
+    def init_step(self):
+        self.state["message"] = "Hello"
+        return "Initialized"
+
+# Flow runs quietly, but persistence operations are logged
+flow = MixedVerbosityFlow(verbose=False)
+flow.kickoff()
+```
+
+### Verbose vs Tracing
+
+The `verbose` parameter controls console output and logging, while `tracing` controls execution tracing for observability platforms. These are independent settings:
+
+```python
+# Verbose output but no tracing
+flow1 = ExampleFlow(verbose=True, tracing=False)
+
+# No verbose output but tracing enabled
+flow2 = ExampleFlow(verbose=False, tracing=True)
+
+# Both enabled
+flow3 = ExampleFlow(verbose=True, tracing=True)
+
+# Both disabled (default)
+flow4 = ExampleFlow(verbose=False, tracing=False)
+```
+
 ## Flow Persistence
 
 The @persist decorator enables automatic state persistence in CrewAI Flows, allowing you to maintain flow state across restarts or different workflow executions. This decorator can be applied at either the class level or method level, providing flexibility in how you manage state persistence.
