@@ -10,6 +10,7 @@ import atexit
 from collections.abc import Callable, Generator
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import contextmanager
+import contextvars
 import threading
 from typing import Any, Final, ParamSpec, TypeVar
 
@@ -288,8 +289,9 @@ class CrewAIEventsBus:
                 if event_type is LLMStreamChunkEvent:
                     self._call_handlers(source, event, level_sync)
                 else:
+                    ctx = contextvars.copy_context()
                     future = self._sync_executor.submit(
-                        self._call_handlers, source, event, level_sync
+                        ctx.run, self._call_handlers, source, event, level_sync
                     )
                     await asyncio.get_running_loop().run_in_executor(
                         None, future.result
@@ -346,8 +348,9 @@ class CrewAIEventsBus:
             if event_type is LLMStreamChunkEvent:
                 self._call_handlers(source, event, sync_handlers)
             else:
+                ctx = contextvars.copy_context()
                 sync_future = self._sync_executor.submit(
-                    self._call_handlers, source, event, sync_handlers
+                    ctx.run, self._call_handlers, source, event, sync_handlers
                 )
                 if not async_handlers:
                     return sync_future
