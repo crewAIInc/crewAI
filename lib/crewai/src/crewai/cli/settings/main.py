@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 from typing import Any
 
 from rich.console import Console
@@ -5,6 +7,7 @@ from rich.table import Table
 
 from crewai.cli.command import BaseCommand
 from crewai.cli.config import HIDDEN_SETTINGS_KEYS, READONLY_SETTINGS_KEYS, Settings
+from crewai.events.listeners.tracing.utils import _load_user_data
 
 
 console = Console()
@@ -38,6 +41,42 @@ class SettingsCommand(BaseCommand):
             )
 
             table.add_row(field_name, display_value, description)
+
+        # Add trace-related settings from user data
+        user_data = _load_user_data()
+
+        # CREWAI_TRACING_ENABLED environment variable
+        env_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
+        env_tracing_display = env_tracing if env_tracing else "Not set"
+        table.add_row(
+            "CREWAI_TRACING_ENABLED",
+            env_tracing_display,
+            "Environment variable to enable/disable tracing",
+        )
+
+        # Trace consent status
+        trace_consent = user_data.get("trace_consent")
+        if trace_consent is True:
+            consent_display = "✅ Enabled"
+        elif trace_consent is False:
+            consent_display = "❌ Disabled"
+        else:
+            consent_display = "Not set"
+        table.add_row(
+            "trace_consent", consent_display, "Whether trace collection is enabled"
+        )
+
+        # First execution timestamp
+        if user_data.get("first_execution_at"):
+            timestamp = datetime.fromtimestamp(user_data["first_execution_at"])
+            first_exec_display = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            first_exec_display = "Not set"
+        table.add_row(
+            "first_execution_at",
+            first_exec_display,
+            "Timestamp of first crew/flow execution",
+        )
 
         console.print(table)
 
