@@ -381,6 +381,7 @@ def test_azure_raises_error_when_endpoint_missing():
         with pytest.raises(ValueError, match="Azure endpoint is required"):
             AzureCompletion(model="gpt-4", api_key="test-key")
 
+
 def test_azure_raises_error_when_api_key_missing():
     """Test that AzureCompletion raises ValueError when API key is missing"""
     from crewai.llms.providers.azure.completion import AzureCompletion
@@ -389,6 +390,8 @@ def test_azure_raises_error_when_api_key_missing():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Azure API key is required"):
             AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+
+
 def test_azure_endpoint_configuration():
     """
     Test that Azure endpoint configuration works with multiple environment variable names
