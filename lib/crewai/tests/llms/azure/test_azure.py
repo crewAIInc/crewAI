@@ -1086,3 +1086,27 @@ def test_azure_mistral_and_other_models():
             )
             assert "model" in params
             assert params["model"] == model_name
+
+
+def test_azure_completion_params_preparation_with_drop_params():
+    """
+    Test that completion parameters are properly prepared with drop paramaeters attribute respected
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(
+            model="azure/o4-mini",
+            drop_params=True,
+            additional_drop_params=["stop"],
+            max_tokens=1000
+        )
+
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
+
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
+
+        assert params.get('stop') == None
