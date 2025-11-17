@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import platform
 import re
@@ -11,7 +12,7 @@ import click
 from packaging import version
 import tomli
 
-from crewai.cli.utils import read_toml
+from crewai.cli.utils import load_env_vars, read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
 from crewai.llm import LLM, BaseLLM
@@ -327,6 +328,11 @@ def load_crew_and_name() -> tuple[Crew, str]:
     """
     # Get the current working directory
     cwd = Path.cwd()
+
+    # Load environment variables from .env file before importing the crew module
+    env_vars = load_env_vars(cwd)
+    for key, value in env_vars.items():
+        os.environ.setdefault(key, value)
 
     # Path to the pyproject.toml file
     pyproject_path = cwd / "pyproject.toml"
