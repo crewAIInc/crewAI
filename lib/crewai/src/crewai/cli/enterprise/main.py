@@ -1,9 +1,10 @@
-from typing import Any
+from typing import Any, cast
 
 import requests
 from requests.exceptions import JSONDecodeError, RequestException
 from rich.console import Console
 
+from crewai.cli.authentication.main import Oauth2Settings, ProviderFactory
 from crewai.cli.command import BaseCommand
 from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.version import get_crewai_version
@@ -13,7 +14,7 @@ console = Console()
 
 
 class EnterpriseConfigureCommand(BaseCommand):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.settings_command = SettingsCommand()
 
@@ -54,25 +55,12 @@ class EnterpriseConfigureCommand(BaseCommand):
             except JSONDecodeError as e:
                 raise ValueError(f"Invalid JSON response from {oauth_endpoint}") from e
 
-            required_fields = [
-                "audience",
-                "domain",
-                "device_authorization_client_id",
-                "provider",
-            ]
-            missing_fields = [
-                field for field in required_fields if field not in oauth_config
-            ]
-
-            if missing_fields:
-                raise ValueError(
-                    f"Missing required fields in OAuth2 configuration: {', '.join(missing_fields)}"
-                )
+            self._validate_oauth_config(oauth_config)
 
             console.print(
                 "✅ Successfully retrieved OAuth2 configuration", style="green"
             )
-            return oauth_config
+            return cast(dict[str, Any], oauth_config)
 
         except RequestException as e:
             raise ValueError(f"Failed to connect to enterprise URL: {e!s}") from e
@@ -89,6 +77,7 @@ class EnterpriseConfigureCommand(BaseCommand):
                 "oauth2_audience": oauth_config["audience"],
                 "oauth2_client_id": oauth_config["device_authorization_client_id"],
                 "oauth2_domain": oauth_config["domain"],
+                "oauth2_extra": oauth_config["extra"],
             }
 
             console.print("🔄 Updating local OAuth2 configuration...")
@@ -99,3 +88,38 @@ class EnterpriseConfigureCommand(BaseCommand):
 
         except Exception as e:
             raise ValueError(f"Failed to update OAuth2 settings: {e!s}") from e
+
+    def _validate_oauth_config(self, oauth_config: dict[str, Any]) -> None:
+        required_fields = [
+            "audience",
+            "domain",
+            "device_authorization_client_id",
+            "provider",
+            "extra",
+        ]
+
+        missing_basic_fields = [
+            field for field in required_fields if field not in oauth_config
+        ]
+        missing_provider_specific_fields = [
+            field
+            for field in self._get_provider_specific_fields(oauth_config["provider"])
+            if field not in oauth_config.get("extra", {})
+        ]
+
+        if missing_basic_fields:
+            raise ValueError(
+                f"Missing required fields in OAuth2 configuration: [{', '.join(missing_basic_fields)}]"
+            )
+
+        if missing_provider_specific_fields:
+            raise ValueError(
+                f"Missing authentication provider required fields in OAuth2 configuration: [{', '.join(missing_provider_specific_fields)}] (Configured provider: '{oauth_config['provider']}')"
+            )
+
+    def _get_provider_specific_fields(self, provider_name: str) -> list[str]:
+        provider = ProviderFactory.from_settings(
+            Oauth2Settings(provider=provider_name, client_id="dummy", domain="dummy")
+        )
+
+        return provider.get_required_fields()
