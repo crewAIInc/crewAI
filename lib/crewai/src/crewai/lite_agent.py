@@ -358,6 +358,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=self._messages,
         )
 
         # Process guardrail if set
@@ -541,6 +542,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             agent_key=self.key,
                             agent_role=self.role,
                             agent=self.original_agent,
+                            crew=None,
                         )
                     except Exception as e:
                         raise e
