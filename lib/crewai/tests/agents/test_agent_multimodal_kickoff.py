@@ -279,7 +279,7 @@ def test_agent_kickoff_async_includes_platform_and_mcp_tools(mock_lite_agent):
             goal="test goal",
             backstory="test backstory",
             apps=["test_app"],
-            mcps=["test_mcp"],
+            mcps=["crewai-amp:dummy"],
             multimodal=True,
         )
 
@@ -290,6 +290,9 @@ def test_agent_kickoff_async_includes_platform_and_mcp_tools(mock_lite_agent):
         mock_lite_agent.assert_called_once()
         call_kwargs = mock_lite_agent.call_args[1]
         tools = call_kwargs["tools"]
+
+        mock_platform_tools.assert_called_once()
+        mock_mcp_tools.assert_called_once()
 
         assert any(isinstance(tool, PlatformTool) for tool in tools)
         assert any(isinstance(tool, MCPTool) for tool in tools)
