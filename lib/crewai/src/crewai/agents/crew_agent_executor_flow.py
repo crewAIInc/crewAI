@@ -289,10 +289,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             color="blue",
         )
         try:
-            # RPM enforcement (line 227)
             enforce_rpm_limit(self.request_within_rpm_limit)
 
-            # LLM call with hooks (lines 229-238)
             # Note: Hooks are already integrated in get_llm_response utility
             answer = get_llm_response(
                 llm=self.llm,
@@ -304,7 +302,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 response_model=self.response_model,
                 executor_context=self,
             )
-            print(f"answer for iteration: {self.state.iterations} is {answer}")
 
             # Parse response (line 239)
             formatted_answer = process_llm_response(answer, self.use_stop_words)

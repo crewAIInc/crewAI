@@ -21,9 +21,7 @@ from typing_extensions import Self
 from crewai.a2a.config import A2AConfig
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
-from crewai.agents.crew_agent_executor import CrewAgentExecutor
-
-# from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
+from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
@@ -99,7 +97,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor class.
+            agent_executor: An instance of the CrewAgentExecutor or CrewAgentExecutorFlow class.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -184,10 +182,6 @@ class Agent(BaseAgent):
         default=None,
         description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
     )
-    # use_flow_executor: bool = Field(
-    #     default=False,
-    #     description="Use Flow-based executor instead of traditional while-loop executor.",
-    # )
     embedder: EmbedderConfig | None = Field(
         default=None,
         description="Embedder configuration for the agent.",
@@ -654,7 +648,7 @@ class Agent(BaseAgent):
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
-            self.agent_executor = CrewAgentExecutor(
+            self.agent_executor = CrewAgentExecutorFlow(
                 llm=self.llm,
                 task=task,  # type: ignore[arg-type]
                 agent=self,
