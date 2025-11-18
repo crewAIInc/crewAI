@@ -1416,6 +1416,43 @@ class Agent(BaseAgent):
             )
             return None
 
+    def _build_runtime_tools(self) -> list[BaseTool]:
+        """Build a list of tools for runtime execution without mutating self.tools.
+
+        This method combines tools from multiple sources:
+        - Agent's configured tools (self.tools)
+        - Platform tools (if self.apps is set)
+        - MCP tools (if self.mcps is set)
+        - Multimodal tools (if self.multimodal is True)
+
+        Returns:
+            A deduplicated list of tools ready for execution.
+        """
+        runtime_tools: list[BaseTool] = list(self.tools or [])
+
+        if self.apps:
+            platform_tools = self.get_platform_tools(self.apps)
+            if platform_tools:
+                runtime_tools.extend(platform_tools)
+
+        if self.mcps:
+            mcp_tools = self.get_mcp_tools(self.mcps)
+            if mcp_tools:
+                runtime_tools.extend(mcp_tools)
+
+        if self.multimodal:
+            multimodal_tools = self.get_multimodal_tools()
+            runtime_tools.extend(multimodal_tools)
+
+        seen_names: set[str] = set()
+        deduplicated_tools: list[BaseTool] = []
+        for tool in runtime_tools:
+            if tool.name not in seen_names:
+                seen_names.add(tool.name)
+                deduplicated_tools.append(tool)
+
+        return deduplicated_tools
+
     def kickoff(
         self,
         messages: str | list[LLMMessage],
@@ -1436,14 +1473,7 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        if self.apps:
-            platform_tools = self.get_platform_tools(self.apps)
-            if platform_tools:
-                self.tools.extend(platform_tools)
-        if self.mcps:
-            mcps = self.get_mcp_tools(self.mcps)
-            if mcps:
-                self.tools.extend(mcps)
+        runtime_tools = self._build_runtime_tools()
 
         lite_agent = LiteAgent(
             id=self.id,
@@ -1451,7 +1481,7 @@ class Agent(BaseAgent):
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=runtime_tools,
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
@@ -1484,12 +1514,15 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        runtime_tools = self._build_runtime_tools()
+
         lite_agent = LiteAgent(
+            id=self.id,
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=runtime_tools,
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
