@@ -162,6 +162,7 @@ def test_task_callback_returns_task_output():
             "name": task.name or task.description,
             "expected_output": "Bullet point list of 5 interesting ideas.",
             "output_format": OutputFormat.RAW,
+            "messages": [],
         }
         assert output_dict == expected_output
 
@@ -696,8 +697,13 @@ def test_save_task_json_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_save_task_pydantic_output():
-    import uuid
+def test_save_task_pydantic_output(tmp_path, monkeypatch):
+    """Test saving pydantic output to a file.
+
+    Uses tmp_path fixture and monkeypatch to change directory to avoid
+    file system race conditions on enterprise systems.
+    """
+    from pathlib import Path
 
     class ScoreOutput(BaseModel):
         score: int
@@ -709,7 +715,9 @@ def test_save_task_pydantic_output():
         allow_delegation=False,
     )
 
-    output_file = f"score_{uuid.uuid4()}.json"
+    monkeypatch.chdir(tmp_path)
+
+    output_file = "score_output.json"
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
@@ -721,11 +729,9 @@ def test_save_task_pydantic_output():
     crew = Crew(agents=[scorer], tasks=[task])
     crew.kickoff()
 
-    output_file_exists = os.path.exists(output_file)
-    assert output_file_exists
-    assert {"score": 4} == json.loads(open(output_file).read())
-    if output_file_exists:
-        os.remove(output_file)
+    output_path = Path(output_file).resolve()
+    assert output_path.exists()
+    assert {"score": 4} == json.loads(output_path.read_text())
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
@@ -1680,3 +1686,44 @@ def test_task_copy_with_list_context():
     assert isinstance(copied_task2.context, list)
     assert len(copied_task2.context) == 1
     assert copied_task2.context[0] is task1
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_task_output_includes_messages():
+    """Test that TaskOutput includes messages from agent execution."""
+    researcher = Agent(
+        role="Researcher",
+        goal="Make the best research and analysis on content about AI and AI agents",
+        backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Give me a list of 3 interesting ideas about AI.",
+        expected_output="Bullet point list of 3 ideas.",
+        agent=researcher,
+    )
+
+    task2 = Task(
+        description="Summarize the ideas from the previous task.",
+        expected_output="A summary of the ideas.",
+        agent=researcher,
+    )
+
+    crew = Crew(agents=[researcher], tasks=[task1, task2], process=Process.sequential)
+    result = crew.kickoff()
+
+    # Verify both tasks have messages
+    assert len(result.tasks_output) == 2
+
+    # Check first task output has messages
+    task1_output = result.tasks_output[0]
+    assert hasattr(task1_output, "messages")
+    assert isinstance(task1_output.messages, list)
+    assert len(task1_output.messages) > 0
+
+    # Check second task output has messages
+    task2_output = result.tasks_output[1]
+    assert hasattr(task2_output, "messages")
+    assert isinstance(task2_output.messages, list)
+    assert len(task2_output.messages) > 0

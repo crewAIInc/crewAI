@@ -21,6 +21,21 @@ class TestTraceListenerSetup:
     """Test TraceListener is properly setup and collecting events"""
 
     @pytest.fixture(autouse=True)
+    def mock_user_data_file_io(self):
+        """Mock user data file I/O to prevent file system pollution between tests"""
+        with (
+            patch(
+                "crewai.events.listeners.tracing.utils._load_user_data",
+                return_value={},
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils._save_user_data",
+                return_value=None,
+            ),
+        ):
+            yield
+
+    @pytest.fixture(autouse=True)
     def mock_auth_token(self):
         """Mock authentication token for all tests in this class"""
         # Need to patch all the places where get_auth_token is imported/used
@@ -45,6 +60,13 @@ class TestTraceListenerSetup:
         """Reset tracing singleton instances between tests"""
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_listener import EventListener
+        from crewai.events.listeners.tracing.utils import _tracing_enabled
+
+        # Reset the tracing enabled contextvar
+        try:
+            _tracing_enabled.set(None)
+        except (LookupError, AttributeError):
+            pass
 
         # Clear event bus handlers BEFORE creating any new singletons
         with crewai_event_bus._rwlock.w_locked():
@@ -53,11 +75,19 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        # Reset TraceCollectionListener singleton
-        if hasattr(TraceCollectionListener, "_instance"):
-            TraceCollectionListener._instance = None
-            TraceCollectionListener._initialized = False
-            TraceCollectionListener._listeners_setup = False
+        # Reset TraceCollectionListener singleton - must reset instance attributes too
+        if TraceCollectionListener._instance is not None:
+            # Reset instance attributes that shadow class attributes (only if they exist as instance attrs)
+            instance_dict = TraceCollectionListener._instance.__dict__
+            if "_initialized" in instance_dict:
+                del TraceCollectionListener._instance._initialized
+            if "_listeners_setup" in instance_dict:
+                del TraceCollectionListener._instance._listeners_setup
+
+        # Reset class attributes
+        TraceCollectionListener._instance = None
+        TraceCollectionListener._initialized = False
+        TraceCollectionListener._listeners_setup = False
 
         # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
@@ -72,10 +102,19 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        if hasattr(TraceCollectionListener, "_instance"):
-            TraceCollectionListener._instance = None
-            TraceCollectionListener._initialized = False
-            TraceCollectionListener._listeners_setup = False
+        # Reset TraceCollectionListener singleton - must reset instance attributes too
+        if TraceCollectionListener._instance is not None:
+            # Reset instance attributes that shadow class attributes (only if they exist as instance attrs)
+            instance_dict = TraceCollectionListener._instance.__dict__
+            if "_initialized" in instance_dict:
+                del TraceCollectionListener._instance._initialized
+            if "_listeners_setup" in instance_dict:
+                del TraceCollectionListener._instance._listeners_setup
+
+        # Reset class attributes
+        TraceCollectionListener._instance = None
+        TraceCollectionListener._initialized = False
+        TraceCollectionListener._listeners_setup = False
 
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
@@ -119,7 +158,15 @@ class TestTraceListenerSetup:
     def test_trace_listener_collects_crew_events(self):
         """Test that trace listener properly collects events from crew execution"""
 
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -148,7 +195,15 @@ class TestTraceListenerSetup:
     def test_batch_manager_finalizes_batch_clears_buffer(self):
         """Test that batch manager properly finalizes batch and clears buffer"""
 
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -206,7 +261,15 @@ class TestTraceListenerSetup:
     def test_events_collection_batch_manager(self, mock_plus_api_calls):
         """Test that trace listener properly collects events from crew execution"""
 
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -300,7 +363,15 @@ class TestTraceListenerSetup:
     def test_trace_listener_setup_correctly_for_crew(self):
         """Test that trace listener is set up correctly when enabled"""
 
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -318,11 +389,19 @@ class TestTraceListenerSetup:
                 Crew(agents=[agent], tasks=[task], verbose=True)
                 assert mock_listener_setup.call_count >= 1
 
+    @pytest.mark.vcr(filter_headers=["authorization"])
     def test_trace_listener_setup_correctly_for_flow(self):
         """Test that trace listener is set up correctly when enabled"""
 
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
-
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             class FlowExample(Flow):
                 @start()
                 def start(self):
@@ -338,7 +417,15 @@ class TestTraceListenerSetup:
     def test_trace_listener_ephemeral_batch(self):
         """Test that trace listener properly handles ephemeral batches"""
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}),
+            patch.dict(
+                os.environ,
+                {
+                    "CREWAI_TRACING_ENABLED": "true",
+                    "CREWAI_DISABLE_TELEMETRY": "false",
+                    "CREWAI_DISABLE_TRACKING": "false",
+                    "OTEL_SDK_DISABLED": "false",
+                },
+            ),
             patch(
                 "crewai.events.listeners.tracing.trace_listener.TraceCollectionListener._check_authenticated",
                 return_value=False,
@@ -371,7 +458,15 @@ class TestTraceListenerSetup:
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_trace_listener_with_authenticated_user(self):
         """Test that trace listener properly handles authenticated batches"""
-        with patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "true"}):
+        with patch.dict(
+            os.environ,
+            {
+                "CREWAI_TRACING_ENABLED": "true",
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ):
             agent = Agent(
                 role="Test Agent",
                 goal="Test goal",
@@ -433,7 +528,15 @@ class TestTraceListenerSetup:
         """Test first-time user trace collection logic with timeout behavior"""
 
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch.dict(
+                os.environ,
+                {
+                    "CREWAI_TRACING_ENABLED": "false",
+                    "CREWAI_DISABLE_TELEMETRY": "false",
+                    "CREWAI_DISABLE_TRACKING": "false",
+                    "OTEL_SDK_DISABLED": "false",
+                },
+            ),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -472,6 +575,10 @@ class TestTraceListenerSetup:
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
 
+            trace_listener.first_time_handler = FirstTimeTraceHandler()
+            if trace_listener.first_time_handler.initialize_for_first_time_user():
+                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
+
             assert trace_listener.first_time_handler.is_first_time is True
             assert trace_listener.first_time_handler.collected_events is False
 
@@ -494,7 +601,15 @@ class TestTraceListenerSetup:
         """Test first-time user trace collection when user accepts viewing traces"""
 
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch.dict(
+                os.environ,
+                {
+                    "CREWAI_TRACING_ENABLED": "false",
+                    "CREWAI_DISABLE_TELEMETRY": "false",
+                    "CREWAI_DISABLE_TRACKING": "false",
+                    "OTEL_SDK_DISABLED": "false",
+                },
+            ),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -531,6 +646,12 @@ class TestTraceListenerSetup:
             from crewai.events.event_bus import crewai_event_bus
 
             trace_listener = TraceCollectionListener()
+            trace_listener.setup_listeners(crewai_event_bus)
+
+            # Re-initialize first-time handler after patches are applied to ensure clean state
+            trace_listener.first_time_handler = FirstTimeTraceHandler()
+            if trace_listener.first_time_handler.initialize_for_first_time_user():
+                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
 
             trace_listener.batch_manager.ephemeral_trace_url = (
                 "https://crewai.com/trace/mock-id"
@@ -546,8 +667,6 @@ class TestTraceListenerSetup:
                     trace_listener.first_time_handler, "_display_ephemeral_trace_link"
                 ) as mock_display_link,
             ):
-                trace_listener.setup_listeners(crewai_event_bus)
-
                 assert trace_listener.first_time_handler.is_first_time is True
 
                 trace_listener.first_time_handler.collected_events = True
@@ -567,7 +686,15 @@ class TestTraceListenerSetup:
     def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):
         """Test the consolidation logic for first-time users vs regular tracing"""
         with (
-            patch.dict(os.environ, {"CREWAI_TRACING_ENABLED": "false"}),
+            patch.dict(
+                os.environ,
+                {
+                    "CREWAI_TRACING_ENABLED": "",
+                    "CREWAI_DISABLE_TELEMETRY": "false",
+                    "CREWAI_DISABLE_TRACKING": "false",
+                    "OTEL_SDK_DISABLED": "false",
+                },
+            ),
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
@@ -588,6 +715,13 @@ class TestTraceListenerSetup:
                 crewai_event_bus._async_handlers = {}
 
             trace_listener = TraceCollectionListener()
+
+            # Re-initialize first-time handler after patches are applied to ensure clean state
+            # This is necessary because the singleton may have been created before patches were active
+            trace_listener.first_time_handler = FirstTimeTraceHandler()
+            if trace_listener.first_time_handler.initialize_for_first_time_user():
+                trace_listener.first_time_handler.set_batch_manager(trace_listener.batch_manager)
+
             trace_listener.setup_listeners(crewai_event_bus)
 
             assert trace_listener.first_time_handler.is_first_time is True
@@ -668,40 +802,41 @@ class TestTraceListenerSetup:
     def test_trace_batch_marked_as_failed_on_finalize_error(self):
         """Test that trace batch is marked as failed when finalization returns non-200 status"""
         # Test the error handling logic directly in TraceBatchManager
-        batch_manager = TraceBatchManager()
+        with patch("crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context", return_value=True):
+            batch_manager = TraceBatchManager()
 
-        # Initialize a batch
-        batch_manager.current_batch = batch_manager.initialize_batch(
-            user_context={"privacy_level": "standard"},
-            execution_metadata={
-                "execution_type": "crew",
-                "crew_name": "test_crew",
-            },
-        )
-        batch_manager.trace_batch_id = "test_batch_id_12345"
-        batch_manager.backend_initialized = True
-
-        # Mock the API responses
-        with (
-            patch.object(
-                batch_manager.plus_api,
-                "send_trace_events",
-                return_value=MagicMock(status_code=200),
-            ),
-            patch.object(
-                batch_manager.plus_api,
-                "finalize_trace_batch",
-                return_value=MagicMock(status_code=500, text="Internal Server Error"),
-            ),
-            patch.object(
-                batch_manager.plus_api,
-                "mark_trace_batch_as_failed",
-            ) as mock_mark_failed,
-        ):
-            # Call finalize_batch directly
-            batch_manager.finalize_batch()
-
-            # Verify that mark_trace_batch_as_failed was called with the error message
-            mock_mark_failed.assert_called_once_with(
-                "test_batch_id_12345", "Internal Server Error"
+            # Initialize a batch
+            batch_manager.current_batch = batch_manager.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "execution_type": "crew",
+                    "crew_name": "test_crew",
+                },
             )
+            batch_manager.trace_batch_id = "test_batch_id_12345"
+            batch_manager.backend_initialized = True
+
+            # Mock the API responses
+            with (
+                patch.object(
+                    batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=MagicMock(status_code=200),
+                ),
+                patch.object(
+                    batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=MagicMock(status_code=500, text="Internal Server Error"),
+                ),
+                patch.object(
+                    batch_manager.plus_api,
+                    "mark_trace_batch_as_failed",
+                ) as mock_mark_failed,
+            ):
+                # Call finalize_batch directly
+                batch_manager.finalize_batch()
+
+                # Verify that mark_trace_batch_as_failed was called with the error message
+                mock_mark_failed.assert_called_once_with(
+                    "test_batch_id_12345", "Internal Server Error"
+                )

@@ -52,7 +52,7 @@ def wrap_agent_with_a2a_instance(agent: Agent) -> None:
     Args:
         agent: The agent instance to wrap
     """
-    original_execute_task = agent.execute_task.__func__
+    original_execute_task = agent.execute_task.__func__  # type: ignore[attr-defined]
 
     @wraps(original_execute_task)
     def execute_task_with_a2a(
@@ -73,7 +73,7 @@ def wrap_agent_with_a2a_instance(agent: Agent) -> None:
             Task execution result
         """
         if not self.a2a:
-            return original_execute_task(self, task, context, tools)
+            return original_execute_task(self, task, context, tools)  # type: ignore[no-any-return]
 
         a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
 
@@ -498,6 +498,23 @@ def _delegate_to_a2a(
             conversation_history = a2a_result.get("history", [])
 
             if a2a_result["status"] in ["completed", "input_required"]:
+                if (
+                    a2a_result["status"] == "completed"
+                    and agent_config.trust_remote_completion_status
+                ):
+                    result_text = a2a_result.get("result", "")
+                    final_turn_number = turn_num + 1
+                    crewai_event_bus.emit(
+                        None,
+                        A2AConversationCompletedEvent(
+                            status="completed",
+                            final_result=result_text,
+                            error=None,
+                            total_turns=final_turn_number,
+                        ),
+                    )
+                    return result_text  # type: ignore[no-any-return]
+
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
                     a2a_result=a2a_result,

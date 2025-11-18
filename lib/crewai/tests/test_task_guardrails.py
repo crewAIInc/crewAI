@@ -38,6 +38,7 @@ def test_task_without_guardrail():
     agent.role = "test_agent"
     agent.execute_task.return_value = "test result"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(description="Test task", expected_output="Output")
 
@@ -56,6 +57,7 @@ def test_task_with_successful_guardrail_func():
     agent.role = "test_agent"
     agent.execute_task.return_value = "test result"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test task", expected_output="Output", guardrail=guardrail
@@ -76,6 +78,7 @@ def test_task_with_failing_guardrail():
     agent.role = "test_agent"
     agent.execute_task.side_effect = ["bad result", "good result"]
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test task",
@@ -103,6 +106,7 @@ def test_task_with_guardrail_retries():
     agent.role = "test_agent"
     agent.execute_task.return_value = "bad result"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test task",
@@ -128,6 +132,7 @@ def test_guardrail_error_in_context():
     agent = Mock()
     agent.role = "test_agent"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test task",
@@ -295,6 +300,7 @@ def test_hallucination_guardrail_integration():
     agent.role = "test_agent"
     agent.execute_task.return_value = "test result"
     agent.crew = None
+    agent.last_messages = []
 
     mock_llm = Mock(spec=LLM)
     guardrail = HallucinationGuardrail(
@@ -342,6 +348,7 @@ def test_multiple_guardrails_sequential_processing():
     agent.role = "sequential_agent"
     agent.execute_task.return_value = "original text"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test sequential guardrails",
@@ -391,6 +398,7 @@ def test_multiple_guardrails_with_validation_failure():
     agent.role = "validation_agent"
     agent.execute_task = mock_execute_task
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test guardrails with validation",
@@ -432,6 +440,7 @@ def test_multiple_guardrails_with_mixed_string_and_taskoutput():
     agent.role = "mixed_agent"
     agent.execute_task.return_value = "original"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test mixed return types",
@@ -469,6 +478,7 @@ def test_multiple_guardrails_with_retry_on_middle_guardrail():
     agent.role = "retry_agent"
     agent.execute_task.return_value = "base"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test retry in middle guardrail",
@@ -500,6 +510,7 @@ def test_multiple_guardrails_with_max_retries_exceeded():
     agent.role = "failing_agent"
     agent.execute_task.return_value = "test"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test max retries with multiple guardrails",
@@ -523,6 +534,7 @@ def test_multiple_guardrails_empty_list():
     agent.role = "empty_agent"
     agent.execute_task.return_value = "no guardrails"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test empty guardrails list",
@@ -582,6 +594,7 @@ def test_multiple_guardrails_processing_order():
     agent.role = "order_agent"
     agent.execute_task.return_value = "base"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test processing order",
@@ -625,6 +638,7 @@ def test_multiple_guardrails_with_pydantic_output():
     agent.role = "pydantic_agent"
     agent.execute_task.return_value = "test content"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test guardrails with Pydantic",
@@ -658,6 +672,7 @@ def test_guardrails_vs_single_guardrail_mutual_exclusion():
     agent.role = "exclusion_agent"
     agent.execute_task.return_value = "test"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test mutual exclusion",
@@ -700,6 +715,7 @@ def test_per_guardrail_independent_retry_tracking():
     agent.role = "independent_retry_agent"
     agent.execute_task.return_value = "base"
     agent.crew = None
+    agent.last_messages = []
 
     task = create_smart_task(
         description="Test independent retry tracking",
