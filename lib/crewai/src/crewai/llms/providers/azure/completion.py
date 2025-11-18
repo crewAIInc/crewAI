@@ -312,8 +312,9 @@ class AzureCompletion(BaseLLM):
 
         additional_params = self.additional_params
         additional_drop_params = additional_params.get('additional_drop_params')
+        drop_params = additional_params.get('drop_params')
 
-        if isinstance(additional_drop_params, list):
+        if drop_params and isinstance(additional_drop_params, list):
             for drop_params in additional_drop_params:
                 params.pop(drop_params, None)
 
