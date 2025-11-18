@@ -8,6 +8,11 @@ from crewai.agent.core import Agent
 from crewai.mcp import MCPServerSSE
 
 
+@pytest.fixture(autouse=True)
+def isolate_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path / "storage"))
+
+
 class FakeSSEClientError:
     def __init__(self, url, headers=None):
         self.url = url

@@ -7,6 +7,11 @@ import pytest
 from crewai.mcp.transports.sse import SSETransport
 
 
+@pytest.fixture(autouse=True)
+def isolate_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("CREWAI_STORAGE_DIR", str(tmp_path / "storage"))
+
+
 class FakeSSEClient:
     def __init__(self, url, headers=None):
         self.url = url
