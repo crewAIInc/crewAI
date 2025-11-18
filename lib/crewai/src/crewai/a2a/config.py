@@ -38,6 +38,7 @@ class A2AConfig(BaseModel):
         max_turns: Maximum conversation turns with A2A agent (default: 10).
         response_model: Optional Pydantic model for structured A2A agent responses.
         fail_fast: If True, raise error when agent unreachable; if False, skip and continue (default: True).
+        trust_remote_completion_status: If True, return A2A agent's result directly when status is "completed"; if False, always ask server agent to respond (default: False).
     """
 
     endpoint: Url = Field(description="A2A agent endpoint URL")
@@ -56,4 +57,8 @@ class A2AConfig(BaseModel):
     fail_fast: bool = Field(
         default=True,
         description="If True, raise an error immediately when the A2A agent is unreachable. If False, skip the A2A agent and continue execution.",
+    )
+    trust_remote_completion_status: bool = Field(
+        default=False,
+        description='If True, return the A2A agent\'s result directly when status is "completed" without asking the server agent to respond. If False, always ask the server agent to respond, allowing it to potentially delegate again.',
     )
