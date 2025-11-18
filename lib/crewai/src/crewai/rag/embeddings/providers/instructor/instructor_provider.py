@@ -19,7 +19,9 @@ class InstructorProvider(BaseEmbeddingsProvider[InstructorEmbeddingFunction]):
         default="hkunlp/instructor-base",
         description="Model name to use",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_INSTRUCTOR_MODEL_NAME", "INSTRUCTOR_MODEL_NAME"
+            "EMBEDDINGS_INSTRUCTOR_MODEL_NAME",
+            "INSTRUCTOR_MODEL_NAME",
+            "model",
         ),
     )
     device: str = Field(

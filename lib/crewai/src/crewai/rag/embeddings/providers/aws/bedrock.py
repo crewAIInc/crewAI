@@ -50,6 +50,7 @@ class BedrockProvider(BaseEmbeddingsProvider[AmazonBedrockEmbeddingFunction]):
             "EMBEDDINGS_BEDROCK_MODEL_NAME",
             "BEDROCK_MODEL_NAME",
             "AWS_BEDROCK_MODEL_NAME",
+            "model",
         ),
     )
     session: Any = Field(

@@ -49,6 +49,7 @@ class AzureProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
             "EMBEDDINGS_OPENAI_MODEL_NAME",
             "OPENAI_MODEL_NAME",
             "AZURE_OPENAI_MODEL_NAME",
+            "model",
         ),
     )
     default_headers: dict[str, Any] | None = Field(

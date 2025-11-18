@@ -26,7 +26,9 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         default="text-embedding-ada-002",
         description="Model name to use for embeddings",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENAI_MODEL_NAME", "OPENAI_MODEL_NAME"
+            "EMBEDDINGS_OPENAI_MODEL_NAME",
+            "OPENAI_MODEL_NAME",
+            "model",
         ),
     )
     api_base: str | None = Field(

@@ -19,7 +19,9 @@ class VertexAIProvider(BaseEmbeddingsProvider[GoogleVertexEmbeddingFunction]):
         default="textembedding-gecko",
         description="Model name to use for embeddings",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_GOOGLE_VERTEX_MODEL_NAME", "GOOGLE_VERTEX_MODEL_NAME"
+            "EMBEDDINGS_GOOGLE_VERTEX_MODEL_NAME",
+            "GOOGLE_VERTEX_MODEL_NAME",
+            "model",
         ),
     )
     api_key: str = Field(

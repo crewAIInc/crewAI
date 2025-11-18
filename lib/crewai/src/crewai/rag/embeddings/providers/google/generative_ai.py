@@ -22,7 +22,9 @@ class GenerativeAiProvider(BaseEmbeddingsProvider[GoogleGenerativeAiEmbeddingFun
     ] = Field(
         default="gemini-embedding-001",
         description="Model name to use for embeddings",
-        validation_alias="EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME", "model"
+        ),
     )
     api_key: str = Field(
         description="Google API key",
@@ -33,5 +35,9 @@ class GenerativeAiProvider(BaseEmbeddingsProvider[GoogleGenerativeAiEmbeddingFun
     task_type: str = Field(
         default="RETRIEVAL_DOCUMENT",
         description="Task type for embeddings",
-        validation_alias="EMBEDDINGS_GOOGLE_GENERATIVE_AI_TASK_TYPE",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_GOOGLE_GENERATIVE_AI_TASK_TYPE",
+            "GOOGLE_GENERATIVE_AI_TASK_TYPE",
+            "GEMINI_TASK_TYPE",
+        ),
     )

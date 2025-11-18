@@ -19,6 +19,8 @@ class Text2VecProvider(BaseEmbeddingsProvider[Text2VecEmbeddingFunction]):
         default="shibing624/text2vec-base-chinese",
         description="Model name to use",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_TEXT2VEC_MODEL_NAME", "TEXT2VEC_MODEL_NAME"
+            "EMBEDDINGS_TEXT2VEC_MODEL_NAME",
+            "TEXT2VEC_MODEL_NAME",
+            "model",
         ),
     )

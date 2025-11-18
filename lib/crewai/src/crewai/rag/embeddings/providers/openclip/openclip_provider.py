@@ -19,7 +19,9 @@ class OpenCLIPProvider(BaseEmbeddingsProvider[OpenCLIPEmbeddingFunction]):
         default="ViT-B-32",
         description="Model name to use",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OPENCLIP_MODEL_NAME", "OPENCLIP_MODEL_NAME"
+            "EMBEDDINGS_OPENCLIP_MODEL_NAME",
+            "OPENCLIP_MODEL_NAME",
+            "model",
         ),
     )
     checkpoint: str = Field(

@@ -22,6 +22,9 @@ class OllamaProvider(BaseEmbeddingsProvider[OllamaEmbeddingFunction]):
     model_name: str = Field(
         description="Model name to use for embeddings",
         validation_alias=AliasChoices(
-            "EMBEDDINGS_OLLAMA_MODEL_NAME", "OLLAMA_MODEL_NAME", "OLLAMA_MODEL"
+            "EMBEDDINGS_OLLAMA_MODEL_NAME",
+            "OLLAMA_MODEL_NAME",
+            "OLLAMA_MODEL",
+            "model",
         ),
     )

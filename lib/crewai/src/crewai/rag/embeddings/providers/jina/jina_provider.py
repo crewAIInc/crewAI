@@ -21,5 +21,9 @@ class JinaProvider(BaseEmbeddingsProvider[JinaEmbeddingFunction]):
     model_name: str = Field(
         default="jina-embeddings-v2-base-en",
         description="Model name to use for embeddings",
-        validation_alias=AliasChoices("EMBEDDINGS_JINA_MODEL_NAME", "JINA_MODEL_NAME"),
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_JINA_MODEL_NAME",
+            "JINA_MODEL_NAME",
+            "model",
+        ),
     )

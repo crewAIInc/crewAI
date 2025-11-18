@@ -21,5 +21,8 @@ class CohereProvider(BaseEmbeddingsProvider[CohereEmbeddingFunction]):
     model_name: str = Field(
         default="large",
         description="Model name to use for embeddings",
-        validation_alias="EMBEDDINGS_COHERE_MODEL_NAME",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_COHERE_MODEL_NAME",
+            "model",
+        ),
     )

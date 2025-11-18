@@ -23,6 +23,7 @@ class SentenceTransformerProvider(
         validation_alias=AliasChoices(
             "EMBEDDINGS_SENTENCE_TRANSFORMER_MODEL_NAME",
             "SENTENCE_TRANSFORMER_MODEL_NAME",
+            "model",
         ),
     )
     device: str = Field(
