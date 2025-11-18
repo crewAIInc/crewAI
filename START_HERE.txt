@@ -1,0 +1,131 @@
+================================================================================
+    CREWAI - WINDOWS 11 LOCAL LLM SETUP
+    Turnkey Setup for GTX 5080 + 64GB RAM
+================================================================================
+
+QUICK START - 3 STEPS:
+----------------------
+
+1. INSTALL OLLAMA
+   - Go to: https://ollama.ai/download
+   - Download and install Ollama for Windows
+   - It will start automatically
+
+2. RUN SETUP
+   - Double-click: setup_windows.bat
+   - Wait for setup to complete (~5 minutes)
+
+3. INSTALL MODELS
+   - Double-click: install_models.bat
+   - Choose option 1 (Qwen2.5:32b) or "all"
+   - Wait for download (~10-60 minutes depending on choice)
+
+4. TEST IT!
+   - Double-click: run_example.bat
+   - Enter a topic when prompted
+   - Watch your AI agents work!
+
+================================================================================
+
+WHAT YOU GET:
+-------------
+✓ Local AI - No cloud, no API keys, complete privacy
+✓ Multiple MoE models - Qwen, DeepSeek, Phi4
+✓ Multi-agent system - Researcher, Analyst, Writer, Reviewer
+✓ GPU accelerated - Optimized for your GTX 5080
+✓ Production ready - Proper setup with virtual environment
+
+================================================================================
+
+FILES IN THIS FOLDER:
+---------------------
+
+setup_windows.bat       - Main setup script (run first!)
+install_models.bat      - Download AI models (run second!)
+run_example.bat         - Run demo crew (run third!)
+
+test_ollama.bat         - Test your Ollama installation
+start_ollama.bat        - Manually start Ollama service
+
+WINDOWS_SETUP.md        - Complete documentation
+.env.example            - Configuration template
+
+windows_local_example/  - Example crew with config files
+
+================================================================================
+
+RECOMMENDED MODELS:
+-------------------
+
+Model               Size    Best For                 Speed
+-----------------------------------------------------------------
+qwen2.5:32b        ~20GB   Complex reasoning        Medium ⭐⭐⭐⭐⭐
+deepseek-r1:14b    ~8GB    Data analysis, code      Fast   ⭐⭐⭐⭐
+phi4:14b           ~8GB    Content writing          Fast   ⭐⭐⭐⭐
+llama3.2:3b        ~2GB    Quick tasks              V.Fast ⭐⭐⭐
+
+Your GTX 5080 can run multiple models simultaneously!
+
+================================================================================
+
+TROUBLESHOOTING:
+----------------
+
+Problem: "Ollama not found"
+Solution: Install from https://ollama.ai/download
+
+Problem: "Python not found"
+Solution: Install Python 3.10-3.13 from python.org
+          Make sure to check "Add Python to PATH"!
+
+Problem: Scripts won't run
+Solution: Run Command Prompt as Administrator
+
+Problem: Slow performance
+Solution: First run is always slower (loading models)
+          Close other GPU applications
+          Use smaller models if needed
+
+================================================================================
+
+NEED HELP?
+----------
+
+1. Read the full guide: WINDOWS_SETUP.md
+2. Run diagnostics: test_ollama.bat
+3. Join Discord: https://discord.com/invite/X4JWnZnxPb
+4. Check docs: https://docs.crewai.com
+
+================================================================================
+
+NEXT STEPS:
+-----------
+
+After running the example, you can:
+
+1. Edit the config files:
+   - windows_local_example/config/agents.yaml
+   - windows_local_example/config/tasks.yaml
+
+2. Try different models:
+   - Edit .env file
+   - Change MODEL=ollama/qwen2.5:32b to any installed model
+
+3. Create your own crew:
+   - Copy windows_local_example folder
+   - Customize for your use case
+
+4. Explore features:
+   - Add tools (web search, file ops, etc.)
+   - Enable memory for agents
+   - Use RAG with knowledge bases
+
+================================================================================
+
+You're all set! 🚀
+
+Run setup_windows.bat to begin.
+
+For detailed documentation, see WINDOWS_SETUP.md
+
+================================================================================

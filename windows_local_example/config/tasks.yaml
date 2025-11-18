@@ -1,0 +1,87 @@
+# ========================================
+# Task Configuration for Local Ollama LLMs
+# ========================================
+
+research_task:
+  description: >
+    Conduct comprehensive research on {topic}.
+    Focus on the latest developments, key trends, and significant insights.
+    Gather information from multiple perspectives and identify the most
+    important points that should be highlighted.
+  expected_output: >
+    A detailed research report with:
+    - 5-7 key findings
+    - Supporting data and examples
+    - Trend analysis
+    - Source citations
+  agent: researcher
+
+analysis_task:
+  description: >
+    Analyze the research findings on {topic}.
+    Identify patterns, trends, and correlations.
+    Provide data-driven insights and actionable recommendations.
+    Consider both short-term and long-term implications.
+  expected_output: >
+    An analytical report containing:
+    - Data analysis summary
+    - Key trends and patterns
+    - 3-5 actionable recommendations
+    - Risk assessment
+  agent: analyst
+  context:
+    - research_task
+
+writing_task:
+  description: >
+    Create a comprehensive, engaging article about {topic}.
+    Use the research and analysis to craft a well-structured piece
+    that is informative, engaging, and accessible to a general audience.
+    Include an introduction, main body with clear sections, and conclusion.
+  expected_output: >
+    A polished article (800-1200 words) with:
+    - Engaging introduction
+    - 3-5 main sections with headers
+    - Data and examples from research
+    - Clear, accessible language
+    - Strong conclusion
+  agent: writer
+  context:
+    - research_task
+    - analysis_task
+
+review_task:
+  description: >
+    Review the article for quality, accuracy, and clarity.
+    Check for:
+    - Factual accuracy
+    - Logical flow and structure
+    - Grammar and style
+    - Clarity and readability
+    Provide specific feedback and suggest improvements.
+  expected_output: >
+    A final, polished article ready for publication with:
+    - All factual claims verified
+    - Excellent readability
+    - Professional tone
+    - No grammatical errors
+  agent: reviewer
+  context:
+    - writing_task
+  output_file: output/final_article.md
+
+# ========================================
+# NOTES ON TASK CONFIGURATION:
+# ========================================
+#
+# Context: Tasks can reference previous tasks for workflow
+# Expected Output: Clear descriptions help LLMs produce better results
+# Agent: Assigns the task to a specific agent
+# Output File: Saves the final output to a file
+#
+# Additional task parameters:
+#   tools: [tool1, tool2]  # Specific tools for this task
+#   async_execution: true  # Run in parallel if possible
+#   callback: function     # Custom callback function
+#
+# ========================================

@@ -1,0 +1,14 @@
+# CrewAI Windows Local LLM Example Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies (from parent pyproject.toml)
+pydantic>=2.4.2
+openai>=1.13.3
+litellm==1.74.9
+python-dotenv>=1.0.0
+
+# For HTTP checks
+requests>=2.31.0
+
+# Note: Full crewai installation is done via setup_windows.bat
+# This file is provided for reference only
