@@ -47,7 +47,12 @@ class RAGStorage(BaseRAGStorage):
         self._client: BaseClient | None = None
 
         self.allow_reset = allow_reset
-        self.path = path
+        
+        if path and path.strip():
+            import os
+            self.path = os.path.abspath(path.strip())
+        else:
+            self.path = None
 
         warnings.filterwarnings(
             "ignore",
@@ -96,6 +101,10 @@ class RAGStorage(BaseRAGStorage):
                         ChromaEmbeddingFunctionWrapper, embedding_function
                     )
                 )
+            
+            if self.path:
+                config.settings.persist_directory = self.path
+            
             self._client = create_client(config)
 
     def _get_client(self) -> BaseClient:
