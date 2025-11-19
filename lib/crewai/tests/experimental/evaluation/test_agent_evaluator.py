@@ -144,9 +144,8 @@ class TestAgentEvaluator:
         mock_crew.tasks.append(task)
 
         events = {}
-        started_event = threading.Event()
-        completed_event = threading.Event()
-        task_completed_event = threading.Event()
+        results_condition = threading.Condition()
+        results_ready = False
 
         agent_evaluator = AgentEvaluator(
             agents=[agent], evaluators=[GoalAlignmentEvaluator()]
@@ -156,13 +155,11 @@ class TestAgentEvaluator:
         async def capture_started(source, event):
             if event.agent_id == str(agent.id):
                 events["started"] = event
-                started_event.set()
 
         @crewai_event_bus.on(AgentEvaluationCompletedEvent)
         async def capture_completed(source, event):
             if event.agent_id == str(agent.id):
                 events["completed"] = event
-                completed_event.set()
 
         @crewai_event_bus.on(AgentEvaluationFailedEvent)
         def capture_failed(source, event):
@@ -170,17 +167,20 @@ class TestAgentEvaluator:
 
         @crewai_event_bus.on(TaskCompletedEvent)
         async def on_task_completed(source, event):
-            # TaskCompletedEvent fires AFTER evaluation results are stored
+            nonlocal results_ready
             if event.task and event.task.id == task.id:
-                task_completed_event.set()
+                while not agent_evaluator.get_evaluation_results().get(agent.role):
+                    pass
+                with results_condition:
+                    results_ready = True
+                    results_condition.notify()
 
         mock_crew.kickoff()
 
-        assert started_event.wait(timeout=5), "Timeout waiting for started event"
-        assert completed_event.wait(timeout=5), "Timeout waiting for completed event"
-        assert task_completed_event.wait(timeout=5), (
-            "Timeout waiting for task completion"
-        )
+        with results_condition:
+            assert results_condition.wait_for(
+                lambda: results_ready, timeout=5
+            ), "Timeout waiting for evaluation results"
 
         assert events.keys() == {"started", "completed"}
         assert events["started"].agent_id == str(agent.id)
