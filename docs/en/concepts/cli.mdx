@@ -402,6 +402,77 @@ crewai config reset
 After resetting configuration, re-run `crewai login` to authenticate again.
 </Tip>
 
+### 14. Trace Management
+
+Manage trace collection preferences for your Crew and Flow executions.
+
+```shell Terminal
+crewai traces [COMMAND]
+```
+
+#### Commands:
+
+- `enable`: Enable trace collection for crew/flow executions
+```shell Terminal
+crewai traces enable
+```
+
+- `disable`: Disable trace collection for crew/flow executions
+```shell Terminal
+crewai traces disable
+```
+
+- `status`: Show current trace collection status
+```shell Terminal
+crewai traces status
+```
+
+#### How Tracing Works
+
+Trace collection is controlled by checking three settings in priority order:
+
+1. **Explicit flag in code** (highest priority - can enable OR disable):
+   ```python
+   crew = Crew(agents=[...], tasks=[...], tracing=True)   # Always enable
+   crew = Crew(agents=[...], tasks=[...], tracing=False)  # Always disable
+   crew = Crew(agents=[...], tasks=[...])                 # Check lower priorities (default)
+   ```
+   - `tracing=True` will **always enable** tracing (overrides everything)
+   - `tracing=False` will **always disable** tracing (overrides everything)
+   - `tracing=None` or omitted will check lower priority settings
+
+2. **Environment variable** (second priority):
+   ```env
+   CREWAI_TRACING_ENABLED=true
+   ```
+   - Checked only if `tracing` is not explicitly set to `True` or `False` in code
+   - Set to `true` or `1` to enable tracing
+
+3. **User preference** (lowest priority):
+   ```shell Terminal
+   crewai traces enable
+   ```
+   - Checked only if `tracing` is not set in code and `CREWAI_TRACING_ENABLED` is not set to `true`
+   - Running `crewai traces enable` is sufficient to enable tracing by itself
+
+<Note>
+**To enable tracing**, use any one of these methods:
+- Set `tracing=True` in your Crew/Flow code, OR
+- Add `CREWAI_TRACING_ENABLED=true` to your `.env` file, OR
+- Run `crewai traces enable`
+
+**To disable tracing**, use any ONE of these methods:
+- Set `tracing=False` in your Crew/Flow code (overrides everything), OR
+- Remove or set to `false` the `CREWAI_TRACING_ENABLED` env var, OR
+- Run `crewai traces disable`
+
+Higher priority settings override lower ones.
+</Note>
+
+<Tip>
+For more information about tracing, see the [Tracing documentation](/observability/tracing).
+</Tip>
+
 <Tip>
 CrewAI CLI handles authentication to the Tool Repository automatically when adding packages to your project. Just append `crewai` before any `uv` command to use it. E.g. `crewai uv add requests`. For more information, see [Tool Repository](https://docs.crewai.com/enterprise/features/tool-repository) docs.
 </Tip>

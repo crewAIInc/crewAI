@@ -13,7 +13,7 @@ load_result = load_dotenv(override=True)
 @pytest.fixture(autouse=True)
 def setup_test_environment():
     """Set up test environment with a temporary directory for SQLite storage."""
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
         # Create the directory with proper permissions
         storage_dir = Path(temp_dir) / "crewai_test_storage"
         storage_dir.mkdir(parents=True, exist_ok=True)

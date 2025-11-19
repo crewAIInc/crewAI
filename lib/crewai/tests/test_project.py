@@ -273,12 +273,15 @@ def another_simple_tool():
 
 
 def test_internal_crew_with_mcp():
-    from crewai_tools import MCPServerAdapter
-    from crewai_tools.adapters.mcp_adapter import ToolCollection
+    from crewai_tools.adapters.tool_collection import ToolCollection
 
-    mock = Mock(spec=MCPServerAdapter)
-    mock.tools = ToolCollection([simple_tool, another_simple_tool])
-    with patch("crewai_tools.MCPServerAdapter", return_value=mock) as adapter_mock:
+    mock_adapter = Mock()
+    mock_adapter.tools = ToolCollection([simple_tool, another_simple_tool])
+
+    with (
+        patch("crewai_tools.MCPServerAdapter", return_value=mock_adapter) as adapter_mock,
+        patch("crewai.llm.LLM.__new__", return_value=Mock()),
+    ):
         crew = InternalCrewWithMCP()
         assert crew.reporting_analyst().tools == [simple_tool, another_simple_tool]
         assert crew.researcher().tools == [simple_tool]
