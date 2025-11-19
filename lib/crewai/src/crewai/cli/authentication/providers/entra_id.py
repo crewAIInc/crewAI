@@ -17,7 +17,11 @@ class EntraIdProvider(BaseProvider):
         return f"{self._base_url()}/v2.0"
 
     def get_audience(self) -> str:
-        return self.settings.audience or ""
+        if self.settings.audience is None:
+            raise ValueError(
+                "Audience is required. Please set it in the configuration."
+            )
+        return self.settings.audience
 
     def get_client_id(self) -> str:
         if self.settings.client_id is None:
