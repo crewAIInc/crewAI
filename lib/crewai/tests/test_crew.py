@@ -4772,3 +4772,93 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     assert "Researcher" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
+
+
+def test_crew_planning_with_mismatched_task_order():
+    """Test that crew planning correctly matches plans to tasks even when LLM returns them out of order.
+    
+    This test reproduces the bug reported in issue #3953 where the task planner
+    returns plans in the wrong order (e.g., starting with Task 21 instead of Task 1),
+    causing plans to be attached to the wrong tasks.
+    """
+    from crewai.utilities.planning_handler import PlanPerTask, PlannerTaskPydanticOutput
+    
+    # Create 5 tasks with distinct descriptions
+    tasks = []
+    agents = []
+    for i in range(1, 6):
+        agent = Agent(
+            role=f"Agent {i}",
+            goal=f"Goal {i}",
+            backstory=f"Backstory {i}",
+        )
+        agents.append(agent)
+        task = Task(
+            description=f"Task {i} description",
+            expected_output=f"Output {i}",
+            agent=agent,
+        )
+        tasks.append(task)
+    
+    crew = Crew(
+        agents=agents,
+        tasks=tasks,
+        planning=True,
+        planning_llm="gpt-4o-mini",
+    )
+    
+    # Mock the LLM response to return plans in the WRONG order
+    # Simulating the bug where Task 5 plan comes first, then Task 3, etc.
+    wrong_order_plans = [
+        PlanPerTask(
+            task="Task Number 5 - Task 5 description",
+            plan="\n\nPlan for task 5"
+        ),
+        PlanPerTask(
+            task="Task Number 3 - Task 3 description",
+            plan="\n\nPlan for task 3"
+        ),
+        PlanPerTask(
+            task="Task Number 1 - Task 1 description",
+            plan="\n\nPlan for task 1"
+        ),
+        PlanPerTask(
+            task="Task Number 4 - Task 4 description",
+            plan="\n\nPlan for task 4"
+        ),
+        PlanPerTask(
+            task="Task Number 2 - Task 2 description",
+            plan="\n\nPlan for task 2"
+        ),
+    ]
+    
+    with patch.object(Task, "execute_sync") as mock_execute:
+        mock_execute.return_value = TaskOutput(
+            description="Planning task",
+            agent="planner",
+            pydantic=PlannerTaskPydanticOutput(
+                list_of_plans_per_task=wrong_order_plans
+            ),
+        )
+        
+        # Call the planning method
+        crew._handle_crew_planning()
+    
+    # Verify that each task has the CORRECT plan appended to its description
+    # Task 1 should have "Plan for task 1", not "Plan for task 5"
+    assert "Plan for task 1" in crew.tasks[0].description, \
+        f"Task 1 should have 'Plan for task 1' but got: {crew.tasks[0].description}"
+    assert "Plan for task 2" in crew.tasks[1].description, \
+        f"Task 2 should have 'Plan for task 2' but got: {crew.tasks[1].description}"
+    assert "Plan for task 3" in crew.tasks[2].description, \
+        f"Task 3 should have 'Plan for task 3' but got: {crew.tasks[2].description}"
+    assert "Plan for task 4" in crew.tasks[3].description, \
+        f"Task 4 should have 'Plan for task 4' but got: {crew.tasks[3].description}"
+    assert "Plan for task 5" in crew.tasks[4].description, \
+        f"Task 5 should have 'Plan for task 5' but got: {crew.tasks[4].description}"
+    
+    # Also verify that wrong plans are NOT in the wrong tasks
+    assert "Plan for task 5" not in crew.tasks[0].description, \
+        "Task 1 should not have Plan for task 5"
+    assert "Plan for task 3" not in crew.tasks[1].description, \
+        "Task 2 should not have Plan for task 3"

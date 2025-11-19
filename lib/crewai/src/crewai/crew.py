@@ -778,15 +778,34 @@ class Crew(FlowTrackable, BaseModel):
 
     def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
+        import re
+
         self._logger.log("info", "Planning the crew execution")
         result = CrewPlanner(
             tasks=self.tasks, planning_agent_llm=self.planning_llm
         )._handle_crew_planning()
 
-        for task, step_plan in zip(
-            self.tasks, result.list_of_plans_per_task, strict=False
-        ):
-            task.description += step_plan.plan
+        plan_map: dict[int, str] = {}
+        for step_plan in result.list_of_plans_per_task:
+            match = re.search(r"Task Number (\d+)", step_plan.task, re.IGNORECASE)
+            if match:
+                task_number = int(match.group(1))
+                plan_map[task_number] = step_plan.plan
+            else:
+                self._logger.log(
+                    "warning",
+                    f"Could not extract task number from plan task field: {step_plan.task}",
+                )
+
+        for idx, task in enumerate(self.tasks):
+            task_number = idx + 1  # Task numbers are 1-indexed
+            if task_number in plan_map:
+                task.description += plan_map[task_number]
+            else:
+                self._logger.log(
+                    "warning",
+                    f"No plan found for task {task_number}. Task description: {task.description}",
+                )
 
     def _store_execution_log(
         self,
