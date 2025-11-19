@@ -13,8 +13,9 @@ import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
 
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field, PrivateAttr, field_validator
 
+from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
@@ -28,6 +29,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms.hooks import BaseInterceptor
 from crewai.types.usage_metrics import UsageMetrics
 
 
@@ -43,7 +45,7 @@ DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
 
 
-class BaseLLM(ABC):
+class BaseLLM(BaseModel, ABC):
     """Abstract base class for LLM implementations.
 
     This class defines the interface that all LLM implementations must follow.
@@ -55,70 +57,105 @@ class BaseLLM(ABC):
     implement proper validation for input parameters and provide clear error
     messages when things go wrong.
 
+
     Attributes:
         model: The model identifier/name.
         temperature: Optional temperature setting for response generation.
-        stop: A list of stop sequences that the LLM should use to stop generation.
-        additional_params: Additional provider-specific parameters.
     """
 
-    is_litellm: bool = False
+    provider: str | re.Pattern[str] = Field(
+        default="openai", description="The provider of the LLM."
+    )
+    model: str = Field(description="The model identifier/name.")
+    temperature: float | None = Field(
+        default=None, ge=0, le=2, description="Temperature for response generation."
+    )
+    api_key: str | None = Field(default=None, description="API key for authentication.")
+    base_url: str | None = Field(default=None, description="Base URL for API calls.")
+    timeout: float | None = Field(default=None, description="Timeout for API calls.")
+    max_retries: int = Field(
+        default=2, description="Maximum number of API requests to make."
+    )
+    max_tokens: int | None = Field(
+        default=None, description="Maximum tokens for response generation."
+    )
+    stream: bool | None = Field(default=False, description="Stream the API requests.")
+    client: Any = Field(description="Underlying LLM client instance.")
+    interceptor: BaseInterceptor[Any, Any] | None = Field(
+        default=None,
+        description="An optional HTTPX interceptor for modifying requests/responses.",
+    )
+    client_params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional parameters for the underlying LLM client.",
+    )
+    supports_stop_words: bool = Field(
+        default=DEFAULT_SUPPORTS_STOP_WORDS,
+        description="Whether or not to support stop words.",
+    )
+    stop_sequences: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("stop_sequences", "stop"),
+        description="Stop sequences for generation (synchronized with stop).",
+    )
+    is_litellm: bool = Field(
+        default=False, description="Is this LLM implementation in litellm?"
+    )
+    additional_params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional parameters for LLM calls.",
+    )
+    _token_usage: TokenProcess = PrivateAttr(default_factory=TokenProcess)
 
-    def __init__(
-        self,
-        model: str,
-        temperature: float | None = None,
-        api_key: str | None = None,
-        base_url: str | None = None,
-        provider: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize the BaseLLM with default attributes.
+    @field_validator("provider", mode="before")
+    @classmethod
+    def extract_provider_from_model(
+        cls, v: str | re.Pattern[str] | None, info: Any
+    ) -> str | re.Pattern[str]:
+        """Extract provider from model string if not explicitly provided.
 
         Args:
-            model: The model identifier/name.
-            temperature: Optional temperature setting for response generation.
-            stop: Optional list of stop sequences for generation.
-            **kwargs: Additional provider-specific parameters.
+            v: Provided provider value (can be str, Pattern, or None)
+            info: Validation info containing other field values
+
+        Returns:
+            Provider name (str) or Pattern
         """
-        if not model:
-            raise ValueError("Model name is required and cannot be empty")
+        # If provider explicitly provided, validate and return it
+        if v is not None:
+            if not isinstance(v, (str, re.Pattern)):
+                raise ValueError(f"Provider must be str or Pattern, got {type(v)}")
+            return v
 
-        self.model = model
-        self.temperature = temperature
-        self.api_key = api_key
-        self.base_url = base_url
-        # Store additional parameters for provider-specific use
-        self.additional_params = kwargs
-        self._provider = provider or "openai"
+        model: str = info.data.get("model", "")
+        if "/" in model:
+            return model.partition("/")[0]
+        return "openai"
 
-        stop = kwargs.pop("stop", None)
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        elif isinstance(stop, list):
-            self.stop = stop
-        else:
-            self.stop = []
+    @field_validator("stop_sequences", mode="before")
+    @classmethod
+    def normalize_stop_sequences(
+        cls, v: str | list[str] | set[str] | None
+    ) -> list[str]:
+        """Validate and normalize stop sequences.
 
-        self._token_usage = {
-            "total_tokens": 0,
-            "prompt_tokens": 0,
-            "completion_tokens": 0,
-            "successful_requests": 0,
-            "cached_prompt_tokens": 0,
-        }
+        Converts string to list and handles None values.
+        AliasChoices handles accepting both 'stop' and 'stop_sequences' parameter names.
+        """
+        if v is None:
+            return []
+        if isinstance(v, str):
+            return [v]
+        if isinstance(v, set):
+            return list(v)
+        if isinstance(v, list):
+            return v
+        return []
 
     @property
-    def provider(self) -> str:
-        """Get the provider of the LLM."""
-        return self._provider
-
-    @provider.setter
-    def provider(self, value: str) -> None:
-        """Set the provider of the LLM."""
-        self._provider = value
+    def stop(self) -> list[str]:
+        """Alias for stop_sequences to maintain backward compatibility."""
+        return self.stop_sequences
 
     @abstractmethod
     def call(
@@ -170,14 +207,6 @@ class BaseLLM(ABC):
             List of converted tools (default implementation returns as-is)
         """
         return tools
-
-    def supports_stop_words(self) -> bool:
-        """Check if the LLM supports stop words.
-
-        Returns:
-            True if the LLM supports stop words, False otherwise.
-        """
-        return DEFAULT_SUPPORTS_STOP_WORDS
 
     def _supports_stop_words_implementation(self) -> bool:
         """Check if stop words are configured for this LLM instance.
@@ -506,7 +535,7 @@ class BaseLLM(ABC):
         """
         if "/" in model:
             return model.partition("/")[0]
-        return "openai"  # Default provider
+        return "openai"
 
     def _track_token_usage_internal(self, usage_data: dict[str, Any]) -> None:
         """Track token usage internally in the LLM instance.
@@ -535,11 +564,11 @@ class BaseLLM(ABC):
             or 0
         )
 
-        self._token_usage["prompt_tokens"] += prompt_tokens
-        self._token_usage["completion_tokens"] += completion_tokens
-        self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
+        self._token_usage.prompt_tokens += prompt_tokens
+        self._token_usage.completion_tokens += completion_tokens
+        self._token_usage.total_tokens += prompt_tokens + completion_tokens
+        self._token_usage.successful_requests += 1
+        self._token_usage.cached_prompt_tokens += cached_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
@@ -547,4 +576,10 @@ class BaseLLM(ABC):
         Returns:
             Dictionary with token usage totals
         """
-        return UsageMetrics(**self._token_usage)
+        return UsageMetrics(
+            prompt_tokens=self._token_usage.prompt_tokens,
+            completion_tokens=self._token_usage.completion_tokens,
+            total_tokens=self._token_usage.total_tokens,
+            successful_requests=self._token_usage.successful_requests,
+            cached_prompt_tokens=self._token_usage.cached_prompt_tokens,
+        )

@@ -20,8 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -61,7 +60,6 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -327,7 +325,138 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
-    completion_cost: float | None = None
+    completion_cost: float | None = Field(
+        default=None, description="The completion cost of the LLM."
+    )
+    top_p: float | None = Field(
+        default=None, description="Sampling probability threshold."
+    )
+    n: int | None = Field(
+        default=None, description="Number of completions to generate."
+    )
+    max_completion_tokens: int | None = Field(
+        default=None,
+        description="Maximum number of tokens to generate in the completion.",
+    )
+    max_tokens: int | None = Field(
+        default=None,
+        description="Maximum number of tokens allowed in the prompt + completion.",
+    )
+    presence_penalty: float | None = Field(
+        default=None, description="Penalty on the presence penalty."
+    )
+    frequency_penalty: float | None = Field(
+        default=None, description="Penalty on the frequency penalty."
+    )
+    logit_bias: dict[int, float] | None = Field(
+        default=None,
+        description="Modifies the likelihood of specified tokens appearing in the completion.",
+    )
+    response_format: type[BaseModel] | None = Field(
+        default=None,
+        description="Pydantic model class for structured response parsing.",
+    )
+    seed: int | None = Field(
+        default=None,
+        description="Random seed for reproducibility.",
+    )
+    logprobs: int | None = Field(
+        default=None,
+        description="Number of top logprobs to return.",
+    )
+    top_logprobs: int | None = Field(
+        default=None,
+        description="Number of top logprobs to return.",
+    )
+    api_base: str | None = Field(
+        default=None,
+        description="Base URL for the API endpoint.",
+    )
+    api_version: str | None = Field(
+        default=None,
+        description="API version to use.",
+    )
+    callbacks: list[Any] = Field(
+        default_factory=list,
+        description="List of callback handlers for LLM events.",
+    )
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = Field(
+        default=None,
+        description="Level of reasoning effort for the LLM.",
+    )
+    context_window_size: int = Field(
+        default=0,
+        description="The context window size of the LLM.",
+    )
+    is_anthropic: bool = Field(
+        default=False,
+        description="Indicates if the model is from Anthropic provider.",
+    )
+    supports_function_calling: bool = Field(
+        default=False,
+        description="Indicates if the model supports function calling.",
+    )
+    supports_stop_words: bool = Field(
+        default=False,
+        description="Indicates if the model supports stop words.",
+    )
+
+    @model_validator(mode="after")
+    def initialize_client(self) -> Self:
+        self.is_anthropic = any(
+            prefix in self.model.lower() for prefix in ANTHROPIC_PREFIXES
+        )
+        try:
+            provider = self._get_custom_llm_provider()
+            self.supports_function_calling = litellm.utils.supports_function_calling(
+                self.model, custom_llm_provider=provider
+            )
+        except Exception as e:
+            logging.error(f"Failed to check function calling support: {e!s}")
+            self.supports_function_calling = False
+        try:
+            params = get_supported_openai_params(model=self.model)
+            self.supports_stop_words = params is not None and "stop" in params
+        except Exception as e:
+            logging.error(f"Failed to get supported params: {e!s}")
+            self.supports_stop_words = False
+
+        with suppress_warnings():
+            callback_types = [type(callback) for callback in self.callbacks]
+            for callback in litellm.success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm.success_callback.remove(callback)
+
+            for callback in litellm._async_success_callback[:]:
+                if type(callback) in callback_types:
+                    litellm._async_success_callback.remove(callback)
+
+            litellm.callbacks = self.callbacks
+
+        with suppress_warnings():
+            success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
+            success_callbacks: list[str | Callable[..., Any] | CustomLogger] = []
+            if success_callbacks_str:
+                success_callbacks = [
+                    cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
+                ]
+
+            failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
+            if failure_callbacks_str:
+                failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = [
+                    cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
+                ]
+
+                litellm.success_callback = success_callbacks
+                litellm.failure_callback = failure_callbacks
+        return self
+
+    # @computed_field
+    # @property
+    # def is_anthropic(self) -> bool:
+    #     """Determine if the model is from Anthropic provider."""
+    #     anthropic_prefixes = ("anthropic/", "claude-", "claude/")
+    #     return any(prefix in self.model.lower() for prefix in anthropic_prefixes)
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
@@ -492,98 +621,6 @@ class LLM(BaseLLM):
             return BedrockCompletion
 
         return None
-
-    def __init__(
-        self,
-        model: str,
-        timeout: float | int | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        n: int | None = None,
-        stop: str | list[str] | None = None,
-        max_completion_tokens: int | None = None,
-        max_tokens: int | float | None = None,
-        presence_penalty: float | None = None,
-        frequency_penalty: float | None = None,
-        logit_bias: dict[int, float] | None = None,
-        response_format: type[BaseModel] | None = None,
-        seed: int | None = None,
-        logprobs: int | None = None,
-        top_logprobs: int | None = None,
-        base_url: str | None = None,
-        api_base: str | None = None,
-        api_version: str | None = None,
-        api_key: str | None = None,
-        callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize LLM instance.
-
-        Note: This __init__ method is only called for fallback instances.
-        Native provider instances handle their own initialization in their respective classes.
-        """
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_base = api_base
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.reasoning_effort = reasoning_effort
-        self.additional_params = kwargs
-        self.is_anthropic = self._is_anthropic_model(model)
-        self.stream = stream
-        self.interceptor = interceptor
-
-        litellm.drop_params = True
-
-        # Normalize self.stop to always be a list[str]
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        else:
-            self.stop = stop
-
-        self.set_callbacks(callbacks or [])
-        self.set_env_callbacks()
-
-    @staticmethod
-    def _is_anthropic_model(model: str) -> bool:
-        """Determine if the model is from Anthropic provider.
-
-        Args:
-            model: The model identifier string.
-
-        Returns:
-            bool: True if the model is from Anthropic, False otherwise.
-        """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
 
     def _prepare_completion_params(
         self,
@@ -1298,8 +1335,6 @@ class LLM(BaseLLM):
                     message["role"] = msg_role
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
-            if callbacks and len(callbacks) > 0:
-                self.set_callbacks(callbacks)
             try:
                 # --- 6) Prepare parameters for the completion call
                 params = self._prepare_completion_params(messages, tools)
@@ -1488,24 +1523,6 @@ class LLM(BaseLLM):
                 "Please remove response_format or use a supported model."
             )
 
-    def supports_function_calling(self) -> bool:
-        try:
-            provider = self._get_custom_llm_provider()
-            return litellm.utils.supports_function_calling(
-                self.model, custom_llm_provider=provider
-            )
-        except Exception as e:
-            logging.error(f"Failed to check function calling support: {e!s}")
-            return False
-
-    def supports_stop_words(self) -> bool:
-        try:
-            params = get_supported_openai_params(model=self.model)
-            return params is not None and "stop" in params
-        except Exception as e:
-            logging.error(f"Failed to get supported params: {e!s}")
-            return False
-
     def get_context_window_size(self) -> int:
         """
         Returns the context window size, using 75% of the maximum to avoid
@@ -1534,60 +1551,6 @@ class LLM(BaseLLM):
             if self.model.startswith(key):
                 self.context_window_size = int(value * CONTEXT_WINDOW_USAGE_RATIO)
         return self.context_window_size
-
-    @staticmethod
-    def set_callbacks(callbacks: list[Any]) -> None:
-        """
-        Attempt to keep a single set of callbacks in litellm by removing old
-        duplicates and adding new ones.
-        """
-        with suppress_warnings():
-            callback_types = [type(callback) for callback in callbacks]
-            for callback in litellm.success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
-
-            for callback in litellm._async_success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
-
-            litellm.callbacks = callbacks
-
-    @staticmethod
-    def set_env_callbacks() -> None:
-        """Sets the success and failure callbacks for the LiteLLM library from environment variables.
-
-        This method reads the `LITELLM_SUCCESS_CALLBACKS` and `LITELLM_FAILURE_CALLBACKS`
-        environment variables, which should contain comma-separated lists of callback names.
-        It then assigns these lists to `litellm.success_callback` and `litellm.failure_callback`,
-        respectively.
-
-        If the environment variables are not set or are empty, the corresponding callback lists
-        will be set to empty lists.
-
-        Examples:
-            LITELLM_SUCCESS_CALLBACKS="langfuse,langsmith"
-            LITELLM_FAILURE_CALLBACKS="langfuse"
-
-        This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
-        `litellm.failure_callback` to ["langfuse"].
-        """
-        with suppress_warnings():
-            success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
-            success_callbacks: list[str | Callable[..., Any] | CustomLogger] = []
-            if success_callbacks_str:
-                success_callbacks = [
-                    cb.strip() for cb in success_callbacks_str.split(",") if cb.strip()
-                ]
-
-            failure_callbacks_str = os.environ.get("LITELLM_FAILURE_CALLBACKS", "")
-            if failure_callbacks_str:
-                failure_callbacks: list[str | Callable[..., Any] | CustomLogger] = [
-                    cb.strip() for cb in failure_callbacks_str.split(",") if cb.strip()
-                ]
-
-                litellm.success_callback = success_callbacks
-                litellm.failure_callback = failure_callbacks
 
     def __copy__(self) -> LLM:
         """Create a shallow copy of the LLM instance."""
@@ -1649,7 +1612,7 @@ class LLM(BaseLLM):
             **filtered_params,
         )
 
-    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:
+    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:  # type: ignore[override]
         """Create a deep copy of the LLM instance."""
         import copy
 

@@ -4,16 +4,23 @@ from collections.abc import Iterator
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import httpx
 from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel
+from pydantic import (
+    BaseModel,
+    Field,
+    PrivateAttr,
+    model_validator,
+)
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.hooks.transport import HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -25,9 +32,26 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+
+
+OPENAI_CONTEXT_WINDOWS: dict[str, int] = {
+    "gpt-4": 8192,
+    "gpt-4o": 128000,
+    "gpt-4o-mini": 200000,
+    "gpt-4-turbo": 128000,
+    "gpt-4.1": 1047576,
+    "gpt-4.1-mini-2025-04-14": 1047576,
+    "gpt-4.1-nano-2025-04-14": 1047576,
+    "o1-preview": 128000,
+    "o1-mini": 128000,
+    "o3-mini": 200000,
+    "o4-mini": 200000,
+}
+
+MIN_CONTEXT_WINDOW: Final[int] = 1024
+MAX_CONTEXT_WINDOW: Final[int] = 2097152
 
 
 class OpenAICompletion(BaseLLM):
@@ -37,112 +61,125 @@ class OpenAICompletion(BaseLLM):
     offering native structured outputs, function calling, and streaming support.
     """
 
-    def __init__(
-        self,
-        model: str = "gpt-4o",
-        api_key: str | None = None,
-        base_url: str | None = None,
-        organization: str | None = None,
-        project: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        default_headers: dict[str, str] | None = None,
-        default_query: dict[str, Any] | None = None,
-        client_params: dict[str, Any] | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        frequency_penalty: float | None = None,
-        presence_penalty: float | None = None,
-        max_tokens: int | None = None,
-        max_completion_tokens: int | None = None,
-        seed: int | None = None,
-        stream: bool = False,
-        response_format: dict[str, Any] | type[BaseModel] | None = None,
-        logprobs: bool | None = None,
-        top_logprobs: int | None = None,
-        reasoning_effort: str | None = None,
-        provider: str | None = None,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize OpenAI chat completion client."""
+    model: str = Field(
+        default="gpt-4o",
+        description="OpenAI model name (e.g., 'gpt-4o')",
+    )
+    organization: str | None = Field(
+        default=None,
+        description="Name of the OpenAI organization",
+    )
+    project: str | None = Field(
+        default=None,
+        description="Name of the OpenAI project",
+    )
+    api_base: str | None = Field(
+        default=os.getenv("OPENAI_BASE_URL"),
+        description="Base URL for OpenAI API",
+    )
+    default_headers: dict[str, str] | None = Field(
+        default=None,
+        description="Default headers for OpenAI API requests",
+    )
+    default_query: dict[str, Any] | None = Field(
+        default=None,
+        description="Default query parameters for OpenAI API requests",
+    )
+    top_p: float | None = Field(
+        default=None,
+        description="Top-p sampling parameter",
+    )
+    frequency_penalty: float | None = Field(
+        default=None,
+        description="Frequency penalty parameter",
+    )
+    presence_penalty: float | None = Field(
+        default=None,
+        description="Presence penalty parameter",
+    )
+    max_completion_tokens: int | None = Field(
+        default=None,
+        description="Maximum tokens for completion",
+    )
+    seed: int | None = Field(
+        default=None,
+        description="Random seed for reproducibility",
+    )
+    response_format: dict[str, Any] | type[BaseModel] | None = Field(
+        default=None,
+        description="Response format for structured output",
+    )
+    logprobs: bool | None = Field(
+        default=None,
+        description="Whether to include log probabilities",
+    )
+    top_logprobs: int | None = Field(
+        default=None,
+        description="Number of top log probabilities to return",
+    )
+    reasoning_effort: str | None = Field(
+        default=None,
+        description="Reasoning effort level for o1 models",
+    )
+    supports_function_calling: bool = Field(
+        default=True,
+        description="Whether the model supports function calling",
+    )
+    is_o1_model: bool = Field(
+        default=False,
+        description="Whether the model is an o1 model",
+    )
+    is_gpt4_model: bool = Field(
+        default=False,
+        description="Whether the model is a GPT-4 model",
+    )
+    _client: OpenAI = PrivateAttr(
+        default_factory=OpenAI,
+    )
 
-        if provider is None:
-            provider = kwargs.pop("provider", "openai")
+    @model_validator(mode="after")
+    def initialize_client(self) -> Self:
+        """Initialize the Anthropic client after Pydantic validation.
 
-        self.interceptor = interceptor
-        # Client configuration attributes
-        self.organization = organization
-        self.project = project
-        self.max_retries = max_retries
-        self.default_headers = default_headers
-        self.default_query = default_query
-        self.client_params = client_params
-        self.timeout = timeout
-        self.base_url = base_url
-        self.api_base = kwargs.pop("api_base", None)
-
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            timeout=timeout,
-            provider=provider,
-            **kwargs,
-        )
-
-        client_config = self._get_client_params()
-        if self.interceptor:
-            transport = HTTPTransport(interceptor=self.interceptor)
-            http_client = httpx.Client(transport=transport)
-            client_config["http_client"] = http_client
-
-        self.client = OpenAI(**client_config)
-
-        # Completion parameters
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.max_tokens = max_tokens
-        self.max_completion_tokens = max_completion_tokens
-        self.seed = seed
-        self.stream = stream
-        self.response_format = response_format
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.reasoning_effort = reasoning_effort
-        self.is_o1_model = "o1" in model.lower()
-        self.is_gpt4_model = "gpt-4" in model.lower()
-
-    def _get_client_params(self) -> dict[str, Any]:
-        """Get OpenAI client parameters."""
-
+        This runs after all field validation is complete, ensuring that:
+        - All BaseLLM fields are set (model, temperature, stop_sequences, etc.)
+        - Field validators have run (stop_sequences is normalized to set[str])
+        - API key and other configuration is ready
+        """
         if self.api_key is None:
             self.api_key = os.getenv("OPENAI_API_KEY")
             if self.api_key is None:
                 raise ValueError("OPENAI_API_KEY is required")
 
-        base_params = {
-            "api_key": self.api_key,
-            "organization": self.organization,
-            "project": self.project,
-            "base_url": self.base_url
-            or self.api_base
-            or os.getenv("OPENAI_BASE_URL")
-            or None,
-            "timeout": self.timeout,
-            "max_retries": self.max_retries,
-            "default_headers": self.default_headers,
-            "default_query": self.default_query,
-        }
+        self.is_o1_model = "o1" in self.model.lower()
+        self.supports_function_calling = not self.is_o1_model
+        self.is_gpt4_model = "gpt-4" in self.model.lower()
+        self.supports_stop_words = not self.is_o1_model
 
-        client_params = {k: v for k, v in base_params.items() if v is not None}
+        params = self.model_dump(
+            include={
+                "api_key",
+                "organization",
+                "project",
+                "base_url",
+                "timeout",
+                "max_retries",
+                "default_headers",
+                "default_query",
+            },
+            exclude_none=True,
+        )
+
+        if self.interceptor:
+            transport = HTTPTransport(interceptor=self.interceptor)
+            http_client = httpx.Client(transport=transport)
+            params["http_client"] = http_client
 
         if self.client_params:
-            client_params.update(self.client_params)
+            params.update(self.client_params)
 
-        return client_params
+        self._client = OpenAI(**params)
+        return self
 
     def call(
         self,
@@ -213,37 +250,25 @@ class OpenAICompletion(BaseLLM):
         self, messages: list[LLMMessage], tools: list[dict[str, BaseTool]] | None = None
     ) -> dict[str, Any]:
         """Prepare parameters for OpenAI chat completion."""
-        params: dict[str, Any] = {
-            "model": self.model,
-            "messages": messages,
-        }
-        if self.stream:
-            params["stream"] = self.stream
-
+        params = self.model_dump(
+            include={
+                "model",
+                "stream",
+                "temperature",
+                "top_p",
+                "frequency_penalty",
+                "presence_penalty",
+                "max_completion_tokens",
+                "max_tokens",
+                "seed",
+                "logprobs",
+                "top_logprobs",
+                "reasoning_effort",
+            },
+            exclude_none=True,
+        )
+        params["messages"] = messages
         params.update(self.additional_params)
-
-        if self.temperature is not None:
-            params["temperature"] = self.temperature
-        if self.top_p is not None:
-            params["top_p"] = self.top_p
-        if self.frequency_penalty is not None:
-            params["frequency_penalty"] = self.frequency_penalty
-        if self.presence_penalty is not None:
-            params["presence_penalty"] = self.presence_penalty
-        if self.max_completion_tokens is not None:
-            params["max_completion_tokens"] = self.max_completion_tokens
-        elif self.max_tokens is not None:
-            params["max_tokens"] = self.max_tokens
-        if self.seed is not None:
-            params["seed"] = self.seed
-        if self.logprobs is not None:
-            params["logprobs"] = self.logprobs
-        if self.top_logprobs is not None:
-            params["top_logprobs"] = self.top_logprobs
-
-        # Handle o1 model specific parameters
-        if self.is_o1_model and self.reasoning_effort:
-            params["reasoning_effort"] = self.reasoning_effort
 
         if tools:
             params["tools"] = self._convert_tools_for_interference(tools)
@@ -296,14 +321,14 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
             if response_model:
-                parsed_response = self.client.beta.chat.completions.parse(
+                parsed_response = self._client.beta.chat.completions.parse(
                     **params,
                     response_format=response_model,
                 )
@@ -327,7 +352,7 @@ class OpenAICompletion(BaseLLM):
                     )
                     return structured_json
 
-            response: ChatCompletion = self.client.chat.completions.create(**params)
+            response: ChatCompletion = self._client.chat.completions.create(**params)
 
             usage = self._extract_openai_token_usage(response)
 
@@ -419,8 +444,8 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming chat completion."""
@@ -429,7 +454,7 @@ class OpenAICompletion(BaseLLM):
 
         if response_model:
             completion_stream: Iterator[ChatCompletionChunk] = (
-                self.client.chat.completions.create(**params)
+                self._client.chat.completions.create(**params)
             )
 
             accumulated_content = ""
@@ -472,7 +497,7 @@ class OpenAICompletion(BaseLLM):
                 )
                 return accumulated_content
 
-        stream: Iterator[ChatCompletionChunk] = self.client.chat.completions.create(
+        stream: Iterator[ChatCompletionChunk] = self._client.chat.completions.create(
             **params
         )
 
@@ -550,58 +575,31 @@ class OpenAICompletion(BaseLLM):
 
         return full_response
 
-    def supports_function_calling(self) -> bool:
-        """Check if the model supports function calling."""
-        return not self.is_o1_model
-
-    def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return not self.is_o1_model
-
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
-
-        min_context = 1024
-        max_context = 2097152
-
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
-            if value < min_context or value > max_context:
+            if value < MIN_CONTEXT_WINDOW or value > MAX_CONTEXT_WINDOW:
                 raise ValueError(
-                    f"Context window for {key} must be between {min_context} and {max_context}"
+                    f"Context window for {key} must be between {MIN_CONTEXT_WINDOW} and {MAX_CONTEXT_WINDOW}"
                 )
 
-        # Context window sizes for OpenAI models
-        context_windows = {
-            "gpt-4": 8192,
-            "gpt-4o": 128000,
-            "gpt-4o-mini": 200000,
-            "gpt-4-turbo": 128000,
-            "gpt-4.1": 1047576,
-            "gpt-4.1-mini-2025-04-14": 1047576,
-            "gpt-4.1-nano-2025-04-14": 1047576,
-            "o1-preview": 128000,
-            "o1-mini": 128000,
-            "o3-mini": 200000,
-            "o4-mini": 200000,
-        }
-
         # Find the best match for the model name
-        for model_prefix, size in context_windows.items():
+        for model_prefix, size in OPENAI_CONTEXT_WINDOWS.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_openai_token_usage(self, response: ChatCompletion) -> dict[str, Any]:
+    @staticmethod
+    def _extract_openai_token_usage(response: ChatCompletion) -> dict[str, Any]:
         """Extract token usage from OpenAI ChatCompletion response."""
-        if hasattr(response, "usage") and response.usage:
+        if response.usage:
             usage = response.usage
             return {
-                "prompt_tokens": getattr(usage, "prompt_tokens", 0),
-                "completion_tokens": getattr(usage, "completion_tokens", 0),
-                "total_tokens": getattr(usage, "total_tokens", 0),
+                "prompt_tokens": usage.prompt_tokens,
+                "completion_tokens": usage.completion_tokens,
+                "total_tokens": usage.total_tokens,
             }
         return {"total_tokens": 0}
 

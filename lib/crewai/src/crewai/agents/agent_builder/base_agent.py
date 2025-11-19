@@ -137,7 +137,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=False,
         description="Enable agent to delegate and ask questions among each other.",
     )
-    tools: list[BaseTool] | None = Field(
+    tools: list[BaseTool] = Field(
         default_factory=list, description="Tools at agents' disposal"
     )
     max_iter: int = Field(
