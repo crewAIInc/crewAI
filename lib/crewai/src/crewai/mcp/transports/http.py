@@ -28,6 +28,11 @@ class HTTPTransport(BaseTransport):
             url="https://api.example.com/mcp",
             headers={"Authorization": "Bearer ..."}
         )
+
+        transport = HTTPTransport(
+            url="http://localhost:8000/mcp"
+        )
+
         async with transport:
             # Use transport...
         ```
