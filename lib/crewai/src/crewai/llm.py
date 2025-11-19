@@ -422,7 +422,13 @@ class LLM(BaseLLM):
             return model in ANTHROPIC_MODELS
 
         if provider == "gemini":
-            return model in GEMINI_MODELS
+            if model in GEMINI_MODELS:
+                return True
+            model_lower = model.lower()
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ("gemini-", "gemma-", "learnlm-")
+            )
 
         if provider == "bedrock":
             return model in BEDROCK_MODELS
