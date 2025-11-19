@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import traceback
 from typing import TYPE_CHECKING, Any, cast
 import warnings
@@ -49,7 +50,6 @@ class RAGStorage(BaseRAGStorage):
         self.allow_reset = allow_reset
         
         if path and path.strip():
-            import os
             self.path = os.path.abspath(path.strip())
         else:
             self.path = None
