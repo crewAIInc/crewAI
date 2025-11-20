@@ -27,6 +27,7 @@ try:
         ChatCompletions,
         ChatCompletionsToolCall,
         StreamingChatCompletionsUpdate,
+        JsonSchemaFormat,
     )
     from azure.core.credentials import (
         AzureKeyCredential,
@@ -278,13 +279,15 @@ class AzureCompletion(BaseLLM):
         }
 
         if response_model and self.is_openai_model:
-            params["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": response_model.__name__,
-                    "schema": response_model.model_json_schema(),
-                },
-            }
+            response_model_json_schema = response_model.model_json_schema()
+            response_model_json_schema['additionalProperties'] = False
+            
+            params["response_format"] = JsonSchemaFormat(
+                name="Tasks_Response",
+                schema=response_model_json_schema,
+                description="Describes the task expected response",
+                strict=True,
+            )
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
