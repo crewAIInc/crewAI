@@ -589,12 +589,14 @@ class LLM(BaseLLM):
         self,
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
+            response_model: Optional response model that overrides self.response_format
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -604,7 +606,25 @@ class LLM(BaseLLM):
             messages = [{"role": "user", "content": messages}]
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
+        # --- 2) Handle response_format conversion for Pydantic models
+        # If response_model is passed to call(), it takes precedence over self.response_format
+        response_format_param = None
+        if response_model is None and self.response_format is not None:
+            if isinstance(self.response_format, type) and issubclass(
+                self.response_format, BaseModel
+            ):
+                # Convert Pydantic model to json_schema format for LiteLLM
+                response_format_param = {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": self.response_format.__name__,
+                        "schema": self.response_format.model_json_schema(),
+                    },
+                }
+            else:
+                response_format_param = self.response_format
+
+        # --- 3) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
@@ -617,7 +637,7 @@ class LLM(BaseLLM):
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
             "logit_bias": self.logit_bias,
-            "response_format": self.response_format,
+            "response_format": response_format_param,
             "seed": self.seed,
             "logprobs": self.logprobs,
             "top_logprobs": self.top_logprobs,
@@ -1115,8 +1135,32 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
+        # --- 5) If no tool calls or no available functions, handle text response
         if (not tool_calls or not available_functions) and text_response:
+            # If self.response_format is a Pydantic class, parse the response
+            if (
+                self.response_format is not None
+                and isinstance(self.response_format, type)
+                and issubclass(self.response_format, BaseModel)
+            ):
+                try:
+                    parsed_model = self.response_format.model_validate_json(
+                        text_response
+                    )
+                    structured_response = parsed_model.model_dump_json()
+                    self._handle_emit_call_events(
+                        response=structured_response,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_response
+                except Exception as e:
+                    logging.warning(
+                        f"Failed to parse response into {self.response_format.__name__}: {e}"
+                    )
+
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1302,7 +1346,7 @@ class LLM(BaseLLM):
                 self.set_callbacks(callbacks)
             try:
                 # --- 6) Prepare parameters for the completion call
-                params = self._prepare_completion_params(messages, tools)
+                params = self._prepare_completion_params(messages, tools, response_model)
                 # --- 7) Make the completion call and handle response
                 if self.stream:
                     return self._handle_streaming_response(
