@@ -682,6 +682,7 @@ def test_azure_streaming_completion():
             # Create mock update as StreamingChatCompletionsUpdate instance
             mock_update = MagicMock(spec=StreamingChatCompletionsUpdate)
             mock_update.choices = [mock_choice]
+            mock_update.id = "1"
             mock_updates.append(mock_update)
 
         mock_complete.return_value = iter(mock_updates)

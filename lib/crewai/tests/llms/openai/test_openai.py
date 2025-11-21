@@ -502,16 +502,18 @@ def test_openai_streaming_with_response_model():
     llm = LLM(model="openai/gpt-4o", stream=True)
 
     with patch.object(llm.client.chat.completions, "create") as mock_create:
+        # First chunk
         mock_chunk1 = MagicMock()
+        mock_chunk1.id = "id_1"  # ✅ Pydantic expects this to be a string
         mock_chunk1.choices = [
             MagicMock(delta=MagicMock(content='{"answer": "test", ', tool_calls=None))
         ]
 
+        # Second chunk
         mock_chunk2 = MagicMock()
+        mock_chunk2.id = "id_1"  # ✅ same response_id (if it’s part of the same stream)
         mock_chunk2.choices = [
-            MagicMock(
-                delta=MagicMock(content='"confidence": 0.95}', tool_calls=None)
-            )
+            MagicMock(delta=MagicMock(content='"confidence": 0.95}', tool_calls=None))
         ]
 
         mock_create.return_value = iter([mock_chunk1, mock_chunk2])
