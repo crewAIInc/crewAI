@@ -28,3 +28,6 @@ class BaseProvider(ABC):
     def get_required_fields(self) -> list[str]:
         """Returns which provider-specific fields inside the "extra" dict will be required"""
         return []
+
+    def get_scope(self) -> str:
+        return "openid profile email "
