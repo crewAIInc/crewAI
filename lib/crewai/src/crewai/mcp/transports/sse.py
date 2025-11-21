@@ -66,7 +66,6 @@ class SSETransport(BaseTransport):
             self._transport_context = sse_client(
                 self.url,
                 headers=self.headers if self.headers else None,
-                terminate_on_close=True,
             )
 
             read, write = await self._transport_context.__aenter__()
