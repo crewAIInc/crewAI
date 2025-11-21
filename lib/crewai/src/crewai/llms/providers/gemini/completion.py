@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from typing import Any, cast
 
 from pydantic import BaseModel
@@ -100,9 +101,8 @@ class GeminiCompletion(BaseLLM):
         self.stop_sequences = stop_sequences or []
 
         # Model-specific settings
-        self.is_gemini_2 = "gemini-2" in model.lower()
-        self.is_gemini_1_5 = "gemini-1.5" in model.lower()
-        self.supports_tools = self.is_gemini_1_5 or self.is_gemini_2
+        version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
+        self.supports_tools = bool(version_match and float(version_match.group(1)) >= 1.5)
 
     @property
     def stop(self) -> list[str]:
@@ -559,6 +559,7 @@ class GeminiCompletion(BaseLLM):
                 )
 
         context_windows = {
+            "gemini-3-pro-preview": 1048576,  # 1M tokens
             "gemini-2.0-flash": 1048576,  # 1M tokens
             "gemini-2.0-flash-thinking": 32768,
             "gemini-2.0-flash-lite": 1048576,
