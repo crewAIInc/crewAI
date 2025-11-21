@@ -70,7 +70,16 @@ from crewai.flow.utils import (
     is_simple_flow_condition,
 )
 from crewai.flow.visualization import build_flow_structure, render_interactive
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.printer import Printer, PrinterColor
+from crewai.utilities.streaming import (
+    TaskInfo,
+    create_async_chunk_generator,
+    create_chunk_generator,
+    create_streaming_state,
+    signal_end,
+    signal_error,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -456,6 +465,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     initial_state: type[T] | T | None = None
     name: str | None = None
     tracing: bool | None = None
+    stream: bool = False
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -822,20 +832,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
-    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
+    def kickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=False
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = self.kickoff(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e)
+                finally:
+                    self.stream = True
+                    signal_end(state)
+
+            streaming_output = FlowStreamingOutput(
+                sync_iterator=create_chunk_generator(state, run_flow, output_holder)
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
 
         async def _run_flow() -> Any:
             return await self.kickoff_async(inputs)
 
         return asyncio.run(_run_flow())
 
-    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
+    async def kickoff_async(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution asynchronously.
 
@@ -850,6 +896,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = await self.kickoff_async(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    self.stream = True
+                    signal_end(state, is_async=True)
+
+            streaming_output = FlowStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_flow, output_holder
+                )
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
+
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         flow_token = attach(ctx)
 
