@@ -700,3 +700,62 @@ def test_gemini_stop_sequences_sent_to_api():
         assert hasattr(config, 'stop_sequences') or 'stop_sequences' in config.__dict__
         if hasattr(config, 'stop_sequences'):
             assert config.stop_sequences == ["\nObservation:", "\nThought:"]
+
+
+def test_gemini_allows_new_preview_models_without_constants():
+    """Test that new Gemini preview models route to native provider without being in constants."""
+    test_models = [
+        "google/gemini-3-pro-preview",
+        "google/gemini-3.0-pro-preview",
+        "gemini/gemini-3-flash-preview",
+        "google/gemma-3-27b-it",
+        "gemini/learnlm-3.0-experimental",
+    ]
+
+    for model_name in test_models:
+        llm = LLM(model=model_name)
+        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        assert isinstance(llm, GeminiCompletion), f"Failed for model: {model_name}"
+        assert llm.provider == "gemini", f"Wrong provider for model: {model_name}"
+        
+        expected_model = model_name.split("/")[1]
+        assert llm.model == expected_model, f"Wrong model string for: {model_name}"
+
+
+def test_gemini_prefix_validation_case_insensitive():
+    """Test that Gemini prefix validation is case-insensitive."""
+    test_models = [
+        "google/Gemini-3-Pro-Preview",
+        "google/GEMINI-3-FLASH",
+        "google/Gemma-3-Test",
+        "google/LearnLM-Test",
+    ]
+
+    for model_name in test_models:
+        llm = LLM(model=model_name)
+        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        assert isinstance(llm, GeminiCompletion), f"Failed for model: {model_name}"
+
+
+def test_gemini_non_matching_prefix_falls_back_to_litellm():
+    """Test that models not starting with gemini-/gemma-/learnlm- fall back to LiteLLM."""
+    llm = LLM(model="google/unknown-model-xyz")
+    
+    assert llm.is_litellm == True, "Should fall back to LiteLLM for unknown model"
+    assert llm.__class__.__name__ == "LLM", "Should be LiteLLM instance"
+
+
+def test_gemini_existing_models_still_work():
+    """Test that existing models in constants still route correctly."""
+    existing_models = [
+        "google/gemini-2.0-flash-001",
+        "google/gemini-1.5-pro",
+        "gemini/gemini-2.5-flash",
+        "google/gemma-3-27b-it",
+    ]
+
+    for model_name in existing_models:
+        llm = LLM(model=model_name)
+        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        assert isinstance(llm, GeminiCompletion), f"Failed for existing model: {model_name}"
+        assert llm.provider == "gemini"
