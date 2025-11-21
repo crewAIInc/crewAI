@@ -6,10 +6,23 @@ from typing_extensions import Required, TypedDict
 
 
 class GenerativeAiProviderConfig(TypedDict, total=False):
-    """Configuration for Google Generative AI provider."""
+    """Configuration for Google Generative AI provider.
+
+    Attributes:
+        api_key: Google API key for authentication.
+        model_name: Embedding model name.
+        task_type: Task type for embeddings. Default is "RETRIEVAL_DOCUMENT".
+    """
 
     api_key: str
-    model_name: Annotated[str, "models/embedding-001"]
+    model_name: Annotated[
+        Literal[
+            "gemini-embedding-001",
+            "text-embedding-005",
+            "text-multilingual-embedding-002",
+        ],
+        "gemini-embedding-001",
+    ]
     task_type: Annotated[str, "RETRIEVAL_DOCUMENT"]
 
 

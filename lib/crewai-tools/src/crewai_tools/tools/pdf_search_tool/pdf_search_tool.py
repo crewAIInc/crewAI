@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.tools.rag.rag_tool import RagTool
@@ -24,14 +25,17 @@ class PDFSearchTool(RagTool):
         "A tool that can be used to semantic search a query from a PDF's content."
     )
     args_schema: type[BaseModel] = PDFSearchToolSchema
+    pdf: str | None = None
 
-    def __init__(self, pdf: str | None = None, **kwargs):
-        super().__init__(**kwargs)
-        if pdf is not None:
-            self.add(pdf)
-            self.description = f"A tool that can be used to semantic search a query the {pdf} PDF's content."
+    @model_validator(mode="after")
+    def _configure_for_pdf(self) -> Self:
+        """Configure tool for specific PDF if provided."""
+        if self.pdf is not None:
+            self.add(self.pdf)
+            self.description = f"A tool that can be used to semantic search a query the {self.pdf} PDF's content."
             self.args_schema = FixedPDFSearchToolSchema
             self._generate_description()
+        return self
 
     def add(self, pdf: str) -> None:
         super().add(pdf, data_type=DataType.PDF_FILE)
