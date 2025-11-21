@@ -17,12 +17,44 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
 - Uma conta Zendesk com permissões apropriadas de API
 - Sua conta Zendesk conectada através da [página de Integrações](https://app.crewai.com/integrations)
 
+## Configurando a Integração Zendesk
+
+### 1. Conecte sua Conta Zendesk
+
+1. Acesse [CrewAI AMP Integrações](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Zendesk** na seção Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para gerenciamento de tickets e usuários
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
 ## Ferramentas Disponíveis
 
 ### **Gerenciamento de Tickets**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_CREATE_TICKET">
+  <Accordion title="zendesk/create_ticket">
     **Descrição:** Crie um novo ticket de suporte no Zendesk.
 
     **Parâmetros:**
@@ -40,7 +72,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
     - `ticketCustomFields` (object, opcional): Valores de campos personalizados em formato JSON
   </Accordion>
 
-  <Accordion title="ZENDESK_UPDATE_TICKET">
+  <Accordion title="zendesk/update_ticket">
     **Descrição:** Atualize um ticket de suporte existente no Zendesk.
 
     **Parâmetros:**
@@ -58,14 +90,14 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
     - `ticketCustomFields` (object, opcional): Valores atualizados dos campos personalizados
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_TICKET_BY_ID">
+  <Accordion title="zendesk/get_ticket_by_id">
     **Descrição:** Recupere um ticket específico pelo ID.
 
     **Parâmetros:**
     - `ticketId` (string, obrigatório): ID do ticket a ser recuperado (ex.: "35436")
   </Accordion>
 
-  <Accordion title="ZENDESK_ADD_COMMENT_TO_TICKET">
+  <Accordion title="zendesk/add_comment_to_ticket">
     **Descrição:** Adicione um comentário ou nota interna a um ticket existente.
 
     **Parâmetros:**
@@ -75,7 +107,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
     - `isPublic` (boolean, opcional): Verdadeiro para comentários públicos, falso para notas internas
   </Accordion>
 
-  <Accordion title="ZENDESK_SEARCH_TICKETS">
+  <Accordion title="zendesk/search_tickets">
     **Descrição:** Busque tickets usando diversos filtros e critérios.
 
     **Parâmetros:**
@@ -100,7 +132,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
 ### **Gerenciamento de Usuários**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_CREATE_USER">
+  <Accordion title="zendesk/create_user">
     **Descrição:** Crie um novo usuário no Zendesk.
 
     **Parâmetros:**
@@ -113,7 +145,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
     - `notes` (string, opcional): Notas internas sobre o usuário
   </Accordion>
 
-  <Accordion title="ZENDESK_UPDATE_USER">
+  <Accordion title="zendesk/update_user">
     **Descrição:** Atualize informações de um usuário existente.
 
     **Parâmetros:**
@@ -127,14 +159,14 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
     - `notes` (string, opcional): Novas notas internas
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_USER_BY_ID">
+  <Accordion title="zendesk/get_user_by_id">
     **Descrição:** Recupere um usuário específico pelo ID.
 
     **Parâmetros:**
     - `userId` (string, obrigatório): ID do usuário a ser recuperado
   </Accordion>
 
-  <Accordion title="ZENDESK_SEARCH_USERS">
+  <Accordion title="zendesk/search_users">
     **Descrição:** Busque usuários utilizando vários critérios.
 
     **Parâmetros:**
@@ -150,7 +182,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
 ### **Ferramentas Administrativas**
 
 <AccordionGroup>
-  <Accordion title="ZENDESK_GET_TICKET_FIELDS">
+  <Accordion title="zendesk/get_ticket_fields">
     **Descrição:** Recupere todos os campos padrão e personalizados disponíveis para tickets.
 
     **Parâmetros:**
@@ -158,7 +190,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
       - `pageCursor` (string, opcional): Cursor de página para paginação
   </Accordion>
 
-  <Accordion title="ZENDESK_GET_TICKET_AUDITS">
+  <Accordion title="zendesk/get_ticket_audits">
     **Descrição:** Obtenha registros de auditoria (histórico somente leitura) dos tickets.
 
     **Parâmetros:**
@@ -205,19 +237,15 @@ Progresso padrão de status dos tickets:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha as ferramentas enterprise (as ferramentas Zendesk serão incluídas)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Crie um agente com capacidades Zendesk
 zendesk_agent = Agent(
     role="Gerente de Suporte",
     goal="Gerenciar tickets de suporte ao cliente e oferecer excelente atendimento",
     backstory="Um assistente de IA especializado em operações de suporte ao cliente e gerenciamento de tickets.",
-    tools=[enterprise_tools]
+    apps=['zendesk']
 )
 
 # Tarefa para criar um novo ticket de suporte
@@ -239,19 +267,16 @@ crew.kickoff()
 ### Filtrando Ferramentas Zendesk Específicas
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
 
 # Obtenha apenas ferramentas Zendesk específicas
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["zendesk_create_ticket", "zendesk_update_ticket", "zendesk_add_comment_to_ticket"]
+    actions_list=["zendesk/create_ticket", "zendesk/update_ticket", "zendesk/add_comment_to_ticket"]
 )
 
 support_agent = Agent(
     role="Agente de Suporte ao Cliente",
     goal="Atender consultas de clientes e resolver issues de suporte de forma eficiente",
     backstory="Um agente de suporte experiente que se especializa em resolução de tickets e comunicação com clientes.",
-    tools=enterprise_tools
+    apps=['zendesk']
 )
 
 # Tarefa para gerenciar o fluxo de suporte
@@ -273,17 +298,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 ticket_manager = Agent(
     role="Gerente de Tickets",
     goal="Gerenciar fluxos de tickets de suporte e garantir resolução tempestiva",
     backstory="Um assistente de IA que se especializa em triagem de tickets de suporte e otimização de fluxos de trabalho.",
-    tools=[enterprise_tools]
+    apps=['zendesk']
 )
 
 # Tarefa para gerenciar o ciclo de vida do ticket
@@ -310,17 +330,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 support_analyst = Agent(
     role="Analista de Suporte",
     goal="Analisar métricas de suporte e gerar insights para desempenho da equipe",
     backstory="Um IA analítico que se destaca na extração de insights a partir de dados de suporte e padrões de tickets.",
-    tools=[enterprise_tools]
+    apps=['zendesk']
 )
 
 # Tarefa complexa envolvendo análise e geração de relatórios

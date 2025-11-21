@@ -1,0 +1,201 @@
+---
+title: Integração Microsoft SharePoint
+description: "Gerenciamento de sites, listas e documentos com integração Microsoft SharePoint para CrewAI."
+icon: "folder-tree"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes acessem e gerenciem sites, listas e bibliotecas de documentos do SharePoint. Recupere informações do site, gerencie itens de lista, faça upload e organize arquivos, e simplifique seus fluxos de trabalho do SharePoint com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Microsoft SharePoint, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Microsoft com acesso ao SharePoint
+- Conectado sua conta Microsoft através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Microsoft SharePoint
+
+### 1. Conecte sua Conta Microsoft
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Microsoft SharePoint** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a sites e arquivos do SharePoint
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="microsoft_sharepoint/get_sites">
+    **Descrição:** Obter todos os sites do SharePoint aos quais o usuário tem acesso.
+
+    **Parâmetros:**
+    - `search` (string, opcional): Consulta de pesquisa para filtrar sites.
+    - `select` (string, opcional): Selecionar propriedades específicas para retornar (ex: 'displayName,id,webUrl').
+    - `filter` (string, opcional): Filtrar resultados usando sintaxe OData.
+    - `expand` (string, opcional): Expandir recursos relacionados inline.
+    - `top` (integer, opcional): Número de itens a retornar (mín 1, máx 999).
+    - `skip` (integer, opcional): Número de itens a pular (mín 0).
+    - `orderby` (string, opcional): Ordenar resultados por propriedades especificadas (ex: 'displayName desc').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site">
+    **Descrição:** Obter informações sobre um site específico do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `select` (string, opcional): Selecionar propriedades específicas para retornar (ex: 'displayName,id,webUrl,drives').
+    - `expand` (string, opcional): Expandir recursos relacionados inline (ex: 'drives,lists').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site_lists">
+    **Descrição:** Obter todas as listas em um site do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list">
+    **Descrição:** Obter informações sobre uma lista específica.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list_items">
+    **Descrição:** Obter itens de uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `expand` (string, opcional): Expandir dados relacionados (ex: 'fields').
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_list_item">
+    **Descrição:** Criar um novo item em uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `fields` (object, obrigatório): Os valores de campo para o novo item.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_list_item">
+    **Descrição:** Atualizar um item em uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `item_id` (string, obrigatório): O ID do item a atualizar.
+    - `fields` (object, obrigatório): Os valores de campo a atualizar.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_list_item">
+    **Descrição:** Excluir um item de uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `item_id` (string, obrigatório): O ID do item a excluir.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/upload_file_to_library">
+    **Descrição:** Fazer upload de um arquivo para uma biblioteca de documentos do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `file_path` (string, obrigatório): O caminho onde fazer upload do arquivo (ex: 'pasta/nomeDoArquivo.txt').
+    - `content` (string, obrigatório): O conteúdo do arquivo a fazer upload.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_drive_items">
+    **Descrição:** Obter arquivos e pastas de uma biblioteca de documentos do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_drive_item">
+    **Descrição:** Excluir um arquivo ou pasta da biblioteca de documentos do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `item_id` (string, obrigatório): O ID do arquivo ou pasta a excluir.
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Microsoft SharePoint
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Microsoft SharePoint
+sharepoint_agent = Agent(
+    role="Gerenciador SharePoint",
+    goal="Gerenciar sites, listas e documentos do SharePoint de forma eficiente",
+    backstory="Um assistente IA especializado em administração do Microsoft SharePoint e gerenciamento de conteúdo.",
+    apps=['microsoft_sharepoint']  # Todas as ações do SharePoint estarão disponíveis
+)
+
+# Tarefa para obter todos os sites
+get_sites_task = Task(
+    description="Listar todos os sites do SharePoint aos quais tenho acesso.",
+    agent=sharepoint_agent,
+    expected_output="Uma lista de sites do SharePoint com seus nomes de exibição e URLs."
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[sharepoint_agent],
+    tasks=[get_sites_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+- Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso ao SharePoint (ex: `Sites.Read.All`, `Sites.ReadWrite.All`).
+- Verifique se a conexão OAuth inclui todos os escopos necessários.
+
+**Problemas de ID de Site/Lista/Item**
+- Verifique novamente os IDs de site, lista e item para correção.
+- Certifique-se de que os recursos referenciados existem e estão acessíveis.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Microsoft SharePoint.
+</Card>

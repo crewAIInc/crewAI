@@ -1,0 +1,67 @@
+---
+title: Integração Google Drive
+description: "Gerenciamento de arquivos e pastas com integração Google Drive para CrewAI."
+icon: "google"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes acessem e gerenciem arquivos e pastas no Google Drive. Faça upload, download, organize conteúdo, crie links de compartilhamento e simplifique seus fluxos de trabalho de armazenamento em nuvem com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Google Drive, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Google com acesso ao Google Drive
+- Conectado sua conta Google através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Google Drive
+
+### 1. Conecte sua Conta Google
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Google Drive** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a arquivos
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+Para informações detalhadas sobre parâmetros e uso, consulte a [documentação em inglês](../../../en/enterprise/integrations/google_drive).
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+- Certifique-se de que sua conta Google tenha as permissões necessárias para acesso ao Google Drive.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Google Drive.
+</Card>

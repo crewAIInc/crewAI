@@ -1,0 +1,156 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "This should fail"}], "model":
+      "non-existent-model", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '111'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA0yOQQ6DMBAD77zCyrn0Abyj9xCRbYkUdmmyQUWIv1faHsrRY1v20QGAo1KkuAGH
+        SUML1Rpe5Aa4x0xYJFLGyMI9fVJVYu2NjYhCFSwKMyAFuzREMTaHjRCmiWqFCpLe3e0/ovtqC4m3
+        kFP0hd6Nqvrfn0twDSUsbgC3nC94kmh9e+JZ1D+lcXSWOLuz+wIAAP//AwDwJ9T24AAAAA==
+    headers:
+      CF-RAY:
+      - 983bb3062e52cfdd-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 23 Sep 2025 17:18:05 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=l6zvKL1cBSJCxBKgoyWNqDYgKbN15TzoXPOG_Pqn2x0-1758647885-1.0.1.1-rXihI1tsZOnuE2R7fcfOGGKQvNUdbuWqS0hEjwdVNeEuLmF2XwKVItJWKSsJR5_xDi4KPbe_Wk.zJPjaBzSLowk8eLMRzhsYEdH1eu_B4_I;
+        path=/; expires=Tue, 23-Sep-25 17:48:05 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=ftgVtZirdknUkriQmKHRKPo90LBNQJlaHxs6Skum1rY-1758647885920-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      vary:
+      - Origin
+      x-envoy-upstream-service-time:
+      - '77'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-request-id:
+      - req_9441b7808a504cc8abfc6276fd5c7721
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"trace_id": "13adb67d-0c60-4432-88ab-ee3b84286f78", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-09-23T17:20:19.459979+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Content-Length:
+      - '55'
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        process_action.action_controller;dur=1.58
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 6a4750c4-d698-4e70-8865-928a82e9ed81
+      x-runtime:
+      - '0.020057'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

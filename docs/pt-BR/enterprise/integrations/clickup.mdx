@@ -25,7 +25,7 @@ Antes de utilizar a integração com o ClickUp, certifique-se de que você possu
 2. Encontre **ClickUp** na seção Integrações de Autenticação
 3. Clique em **Conectar** e complete o fluxo OAuth
 4. Conceda as permissões necessárias para gerenciamento de tarefas e projetos
-5. Copie seu Token Enterprise das [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instale o Pacote Necessário
 
@@ -33,10 +33,26 @@ Antes de utilizar a integração com o ClickUp, certifique-se de que você possu
 uv add crewai-tools
 ```
 
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="CLICKUP_SEARCH_TASKS">
+  <Accordion title="clickup/search_tasks">
     **Descrição:** Busque tarefas no ClickUp utilizando filtros avançados.
 
     **Parâmetros:**
@@ -61,7 +77,7 @@ uv add crewai-tools
       Campos disponíveis: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_TASK_IN_LIST">
+  <Accordion title="clickup/get_task_in_list">
     **Descrição:** Obtenha tarefas em uma lista específica do ClickUp.
 
     **Parâmetros:**
@@ -69,7 +85,7 @@ uv add crewai-tools
     - `taskFilterFormula` (string, opcional): Busque tarefas que correspondam aos filtros especificados. Por exemplo: name=task1.
   </Accordion>
 
-  <Accordion title="CLICKUP_CREATE_TASK">
+  <Accordion title="clickup/create_task">
     **Descrição:** Crie uma tarefa no ClickUp.
 
     **Parâmetros:**
@@ -82,7 +98,7 @@ uv add crewai-tools
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
   </Accordion>
 
-  <Accordion title="CLICKUP_UPDATE_TASK">
+  <Accordion title="clickup/update_task">
     **Descrição:** Atualize uma tarefa no ClickUp.
 
     **Parâmetros:**
@@ -96,49 +112,49 @@ uv add crewai-tools
     - `additionalFields` (string, opcional): Campos Adicionais - Especifique campos adicionais para incluir nesta tarefa em formato JSON.
   </Accordion>
 
-  <Accordion title="CLICKUP_DELETE_TASK">
+  <Accordion title="clickup/delete_task">
     **Descrição:** Exclua uma tarefa no ClickUp.
 
     **Parâmetros:**
     - `taskId` (string, obrigatório): ID da tarefa - O ID da tarefa a ser excluída.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_LIST">
+  <Accordion title="clickup/get_list">
     **Descrição:** Obtenha informações da Lista no ClickUp.
 
     **Parâmetros:**
     - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as listas.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_CUSTOM_FIELDS_IN_LIST">
+  <Accordion title="clickup/get_custom_fields_in_list">
     **Descrição:** Obtenha Campos Personalizados em uma Lista no ClickUp.
 
     **Parâmetros:**
     - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter os campos personalizados.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_ALL_FIELDS_IN_LIST">
+  <Accordion title="clickup/get_all_fields_in_list">
     **Descrição:** Obtenha Todos os Campos em uma Lista no ClickUp.
 
     **Parâmetros:**
     - `listId` (string, obrigatório): ID da Lista - O ID da lista da qual obter todos os campos.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_SPACE">
+  <Accordion title="clickup/get_space">
     **Descrição:** Obtenha informações do Espaço no ClickUp.
 
     **Parâmetros:**
     - `spaceId` (string, opcional): ID do Espaço - O ID do espaço a ser recuperado.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_FOLDERS">
+  <Accordion title="clickup/get_folders">
     **Descrição:** Obtenha Pastas no ClickUp.
 
     **Parâmetros:**
     - `spaceId` (string, obrigatório): ID do Espaço - O ID do espaço que contém as pastas.
   </Accordion>
 
-  <Accordion title="CLICKUP_GET_MEMBER">
+  <Accordion title="clickup/get_member">
     **Descrição:** Obtenha informações de Membro no ClickUp.
 
     **Parâmetros:** Nenhum obrigatório.
@@ -151,19 +167,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (ClickUp tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with ClickUp capabilities
 clickup_agent = Agent(
     role="Task Manager",
     goal="Manage tasks and projects in ClickUp efficiently",
     backstory="An AI assistant specialized in task management and productivity coordination.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Task to create a new task
@@ -185,19 +195,12 @@ crew.kickoff()
 ### Filtrando Ferramentas Específicas do ClickUp
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific ClickUp tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["clickup_create_task", "clickup_update_task", "clickup_search_tasks"]
-)
 
 task_coordinator = Agent(
     role="Task Coordinator",
     goal="Create and manage tasks efficiently",
     backstory="An AI assistant that focuses on task creation and status management.",
-    tools=enterprise_tools
+    apps=['clickup']
 )
 
 # Task to manage task workflow
@@ -219,17 +222,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_manager = Agent(
     role="Project Manager",
     goal="Coordinate project activities and track team productivity",
     backstory="An experienced project manager who ensures projects are delivered on time.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Complex task involving multiple ClickUp operations
@@ -256,17 +254,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 task_analyst = Agent(
     role="Task Analyst",
     goal="Analyze task patterns and optimize team productivity",
     backstory="An AI assistant that analyzes task data to improve team efficiency.",
-    tools=[enterprise_tools]
+    apps=['clickup']
 )
 
 # Task to analyze and optimize task distribution

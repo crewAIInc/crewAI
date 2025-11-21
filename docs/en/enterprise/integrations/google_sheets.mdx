@@ -26,7 +26,7 @@ Before using the Google Sheets integration, ensure you have:
 2. Find **Google Sheets** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for spreadsheet access
-5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Install Required Package
 
@@ -34,67 +34,93 @@ Before using the Google Sheets integration, ensure you have:
 uv add crewai-tools
 ```
 
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## Available Actions
 
 <AccordionGroup>
-  <Accordion title="GOOGLE_SHEETS_GET_ROW">
-    **Description:** Get rows from a Google Sheets spreadsheet.
+  <Accordion title="google_sheets/get_spreadsheet">
+    **Description:** Retrieve properties and data of a spreadsheet.
 
     **Parameters:**
-    - `spreadsheetId` (string, required): Spreadsheet - Use Connect Portal Workflow Settings to allow users to select a spreadsheet. Defaults to using the first worksheet in the selected spreadsheet.
-    - `limit` (string, optional): Limit rows - Limit the maximum number of rows to return.
+    - `spreadsheetId` (string, required): The ID of the spreadsheet to retrieve.
+    - `ranges` (array, optional): The ranges to retrieve from the spreadsheet.
+    - `includeGridData` (boolean, optional): True if grid data should be returned. Default: false
+    - `fields` (string, optional): The fields to include in the response. Use this to improve performance by only returning needed data.
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_CREATE_ROW">
-    **Description:** Create a new row in a Google Sheets spreadsheet.
+  <Accordion title="google_sheets/get_values">
+    **Description:** Returns a range of values from a spreadsheet.
 
     **Parameters:**
-    - `spreadsheetId` (string, required): Spreadsheet - Use Connect Portal Workflow Settings to allow users to select a spreadsheet. Defaults to using the first worksheet in the selected spreadsheet..
-    - `worksheet` (string, required): Worksheet - Your worksheet must have column headers.
-    - `additionalFields` (object, required): Fields - Include fields to create this row with, as an object with keys of Column Names. Use Connect Portal Workflow Settings to allow users to select a Column Mapping.
+    - `spreadsheetId` (string, required): The ID of the spreadsheet to retrieve data from.
+    - `range` (string, required): The A1 notation or R1C1 notation of the range to retrieve values from.
+    - `valueRenderOption` (string, optional): How values should be represented in the output. Options: FORMATTED_VALUE, UNFORMATTED_VALUE, FORMULA. Default: FORMATTED_VALUE
+    - `dateTimeRenderOption` (string, optional): How dates, times, and durations should be represented in the output. Options: SERIAL_NUMBER, FORMATTED_STRING. Default: SERIAL_NUMBER
+    - `majorDimension` (string, optional): The major dimension that results should use. Options: ROWS, COLUMNS. Default: ROWS
+  </Accordion>
+
+  <Accordion title="google_sheets/update_values">
+    **Description:** Sets values in a range of a spreadsheet.
+
+    **Parameters:**
+    - `spreadsheetId` (string, required): The ID of the spreadsheet to update.
+    - `range` (string, required): The A1 notation of the range to update.
+    - `values` (array, required): The data to be written. Each array represents a row.
       ```json
-      {
-        "columnName1": "columnValue1",
-        "columnName2": "columnValue2",
-        "columnName3": "columnValue3",
-        "columnName4": "columnValue4"
-      }
+      [
+        ["Value1", "Value2", "Value3"],
+        ["Value4", "Value5", "Value6"]
+      ]
       ```
+    - `valueInputOption` (string, optional): How the input data should be interpreted. Options: RAW, USER_ENTERED. Default: USER_ENTERED
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_UPDATE_ROW">
-    **Description:** Update existing rows in a Google Sheets spreadsheet.
+  <Accordion title="google_sheets/append_values">
+    **Description:** Appends values to a spreadsheet.
 
     **Parameters:**
-    - `spreadsheetId` (string, required): Spreadsheet - Use Connect Portal Workflow Settings to allow users to select a spreadsheet. Defaults to using the first worksheet in the selected spreadsheet.
-    - `worksheet` (string, required): Worksheet - Your worksheet must have column headers.
-    - `filterFormula` (object, optional): A filter in disjunctive normal form - OR of AND groups of single conditions to identify which rows to update.
+    - `spreadsheetId` (string, required): The ID of the spreadsheet to update.
+    - `range` (string, required): The A1 notation of a range to search for a logical table of data.
+    - `values` (array, required): The data to append. Each array represents a row.
       ```json
-      {
-        "operator": "OR",
-        "conditions": [
-          {
-            "operator": "AND",
-            "conditions": [
-              {
-                "field": "status",
-                "operator": "$stringExactlyMatches",
-                "value": "pending"
-              }
-            ]
+      [
+        ["Value1", "Value2", "Value3"],
+        ["Value4", "Value5", "Value6"]
+      ]
+      ```
+    - `valueInputOption` (string, optional): How the input data should be interpreted. Options: RAW, USER_ENTERED. Default: USER_ENTERED
+    - `insertDataOption` (string, optional): How the input data should be inserted. Options: OVERWRITE, INSERT_ROWS. Default: INSERT_ROWS
+  </Accordion>
+
+  <Accordion title="google_sheets/create_spreadsheet">
+    **Description:** Creates a new spreadsheet.
+
+    **Parameters:**
+    - `title` (string, required): The title of the new spreadsheet.
+    - `sheets` (array, optional): The sheets that are part of the spreadsheet.
+      ```json
+      [
+        {
+          "properties": {
+            "title": "Sheet1"
           }
-        ]
-      }
-      ```
-      Available operators: `$stringContains`, `$stringDoesNotContain`, `$stringExactlyMatches`, `$stringDoesNotExactlyMatch`, `$stringStartsWith`, `$stringDoesNotStartWith`, `$stringEndsWith`, `$stringDoesNotEndWith`, `$numberGreaterThan`, `$numberLessThan`, `$numberEquals`, `$numberDoesNotEqual`, `$dateTimeAfter`, `$dateTimeBefore`, `$dateTimeEquals`, `$booleanTrue`, `$booleanFalse`, `$exists`, `$doesNotExist`
-    - `additionalFields` (object, required): Fields - Include fields to update, as an object with keys of Column Names. Use Connect Portal Workflow Settings to allow users to select a Column Mapping.
-      ```json
-      {
-        "columnName1": "newValue1",
-        "columnName2": "newValue2",
-        "columnName3": "newValue3",
-        "columnName4": "newValue4"
-      }
+        }
+      ]
       ```
   </Accordion>
 </AccordionGroup>
@@ -105,19 +131,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Google Sheets tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Google Sheets capabilities
 sheets_agent = Agent(
     role="Data Manager",
     goal="Manage spreadsheet data and track information efficiently",
     backstory="An AI assistant specialized in data management and spreadsheet operations.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to add new data to a spreadsheet
@@ -139,19 +159,17 @@ crew.kickoff()
 ### Filtering Specific Google Sheets Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
+from crewai import Agent, Task, Crew
 
-# Get only specific Google Sheets tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["google_sheets_get_row", "google_sheets_create_row"]
-)
-
+# Create agent with specific Google Sheets actions only
 data_collector = Agent(
     role="Data Collector",
     goal="Collect and organize data in spreadsheets",
     backstory="An AI assistant that focuses on data collection and organization.",
-    tools=enterprise_tools
+    apps=[
+        'google_sheets/get_values',
+        'google_sheets/update_values'
+    ]
 )
 
 # Task to collect and organize data
@@ -173,17 +191,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_analyst = Agent(
     role="Data Analyst",
     goal="Analyze spreadsheet data and generate insights",
     backstory="An experienced data analyst who extracts insights from spreadsheet data.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to analyze data and create reports
@@ -205,33 +218,59 @@ crew = Crew(
 crew.kickoff()
 ```
 
+### Spreadsheet Creation and Management
+
+```python
+from crewai import Agent, Task, Crew
+
+spreadsheet_manager = Agent(
+    role="Spreadsheet Manager",
+    goal="Create and manage spreadsheets efficiently",
+    backstory="An AI assistant that specializes in creating and organizing spreadsheets.",
+    apps=['google_sheets']
+)
+
+# Task to create and set up new spreadsheets
+setup_task = Task(
+    description="""
+    1. Create a new spreadsheet for quarterly reports
+    2. Set up proper headers and structure
+    3. Add initial data and formatting
+    """,
+    agent=spreadsheet_manager,
+    expected_output="New quarterly report spreadsheet created and properly structured"
+)
+
+crew = Crew(
+    agents=[spreadsheet_manager],
+    tasks=[setup_task]
+)
+
+crew.kickoff()
+```
+
 ### Automated Data Updates
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_updater = Agent(
     role="Data Updater",
     goal="Automatically update and maintain spreadsheet data",
     backstory="An AI assistant that maintains data accuracy and updates records automatically.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to update data based on conditions
 update_task = Task(
     description="""
-    1. Find all pending orders in the orders spreadsheet
-    2. Update their status to 'processing'
-    3. Add a timestamp for when the status was updated
-    4. Log the changes in a separate tracking sheet
+    1. Get spreadsheet properties and structure
+    2. Read current data from specific ranges
+    3. Update values in target ranges with new data
+    4. Append new records to the bottom of the sheet
     """,
     agent=data_updater,
-    expected_output="All pending orders updated to processing status with timestamps logged"
+    expected_output="Spreadsheet data updated successfully with new values and records"
 )
 
 crew = Crew(
@@ -246,30 +285,25 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_manager = Agent(
     role="Data Workflow Manager",
     goal="Manage complex data workflows across multiple spreadsheets",
     backstory="An AI assistant that orchestrates complex data operations across multiple spreadsheets.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Complex workflow task
 workflow_task = Task(
     description="""
     1. Get all customer data from the main customer spreadsheet
-    2. Create monthly summary entries for active customers
-    3. Update customer status based on activity in the last 30 days
-    4. Generate a monthly report with customer metrics
-    5. Archive inactive customer records to a separate sheet
+    2. Create a new monthly summary spreadsheet
+    3. Append summary data to the new spreadsheet
+    4. Update customer status based on activity metrics
+    5. Generate reports with proper formatting
     """,
     agent=workflow_manager,
-    expected_output="Monthly customer workflow completed with updated statuses and generated reports"
+    expected_output="Monthly customer workflow completed with new spreadsheet and updated data"
 )
 
 crew = Crew(
@@ -291,29 +325,28 @@ crew.kickoff()
 
 **Spreadsheet Structure Issues**
 - Ensure worksheets have proper column headers before creating or updating rows
-- Verify that column names in `additionalFields` match the actual column headers
-- Check that the specified worksheet exists in the spreadsheet
+- Verify that range notation (A1 format) is correct for the target cells
+- Check that the specified spreadsheet ID exists and is accessible
 
 **Data Type and Format Issues**
 - Ensure data values match the expected format for each column
 - Use proper date formats for date columns (ISO format recommended)
 - Verify that numeric values are properly formatted for number columns
 
-**Filter Formula Issues**
-- Ensure filter formulas follow the correct JSON structure for disjunctive normal form
-- Use valid field names that match actual column headers
-- Test simple filters before building complex multi-condition queries
-- Verify that operator types match the data types in the columns
+**Range and Cell Reference Issues**
+- Use proper A1 notation for ranges (e.g., "A1:C10", "Sheet1!A1:B5")
+- Ensure range references don't exceed the actual spreadsheet dimensions
+- Verify that sheet names in range references match actual sheet names
 
-**Row Limits and Performance**
-- Be mindful of row limits when using `GOOGLE_SHEETS_GET_ROW`
-- Consider pagination for large datasets
-- Use specific filters to reduce the amount of data processed
+**Value Input and Rendering Options**
+- Choose appropriate `valueInputOption` (RAW vs USER_ENTERED) for your data
+- Select proper `valueRenderOption` based on how you want data formatted
+- Consider `dateTimeRenderOption` for consistent date/time handling
 
-**Update Operations**
-- Ensure filter conditions properly identify the intended rows for updates
-- Test filter conditions with small datasets before large updates
-- Verify that all required fields are included in update operations
+**Spreadsheet Creation Issues**
+- Ensure spreadsheet titles are unique and follow naming conventions
+- Verify that sheet properties are properly structured when creating sheets
+- Check that you have permissions to create new spreadsheets in your account
 
 ### Getting Help
 

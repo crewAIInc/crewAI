@@ -1,0 +1,183 @@
+---
+title: Google Slides 통합
+description: "CrewAI를 위한 Google Slides 통합으로 프레젠테이션 생성 및 관리."
+icon: "chart-bar"
+mode: "wide"
+---
+
+## 개요
+
+에이전트가 Google Slides 프레젠테이션을 생성, 편집 및 관리할 수 있도록 합니다. AI 기반 자동화로 프레젠테이션 생성을 자동화하고, 콘텐츠를 업데이트하고, Google Sheets에서 데이터를 가져오며, 프레젠테이션 워크플로를 간소화합니다.
+
+## 전제 조건
+
+Google Slides 통합을 사용하기 전에 다음 사항을 확인하세요:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- Google Slides 액세스 권한이 있는 Google 계정
+- [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
+
+## Google Slides 통합 설정
+
+### 1. Google 계정 연결
+
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+2. 인증 통합 섹션에서 **Google Slides** 찾기
+3. **연결**을 클릭하고 OAuth 플로우 완료
+4. 프레젠테이션, 스프레드시트 및 드라이브 액세스에 필요한 권한 부여
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token 복사
+
+### 2. 필요한 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## 사용 가능한 작업
+
+<AccordionGroup>
+  <Accordion title="google_slides/create_blank_presentation">
+    **설명:** 내용이 없는 빈 프레젠테이션을 만듭니다.
+
+    **매개변수:**
+    - `title` (string, 필수): 프레젠테이션의 제목.
+  </Accordion>
+
+  <Accordion title="google_slides/get_presentation">
+    **설명:** ID로 프레젠테이션을 검색합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 검색할 프레젠테이션의 ID.
+    - `fields` (string, 선택사항): 응답에 포함할 필드. 성능 향상을 위해 필요한 데이터만 반환하는 데 사용.
+  </Accordion>
+
+  <Accordion title="google_slides/batch_update_presentation">
+    **설명:** 프레젠테이션에 업데이트를 적용하거나 콘텐츠를 추가하거나 제거합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 업데이트할 프레젠테이션의 ID.
+    - `requests` (array, 필수): 프레젠테이션에 적용할 업데이트 목록. 각 항목은 요청을 나타내는 객체.
+    - `writeControl` (object, 선택사항): 쓰기 요청이 실행되는 방식을 제어합니다. `requiredRevisionId` (string)를 포함.
+  </Accordion>
+
+  <Accordion title="google_slides/get_page">
+    **설명:** ID로 특정 페이지를 검색합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 프레젠테이션의 ID.
+    - `pageObjectId` (string, 필수): 검색할 페이지의 ID.
+  </Accordion>
+
+  <Accordion title="google_slides/get_thumbnail">
+    **설명:** 페이지 썸네일을 생성합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 프레젠테이션의 ID.
+    - `pageObjectId` (string, 필수): 썸네일 생성을 위한 페이지의 ID.
+  </Accordion>
+
+  <Accordion title="google_slides/import_data_from_sheet">
+    **설명:** Google 시트에서 프레젠테이션으로 데이터를 가져옵니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 프레젠테이션의 ID.
+    - `sheetId` (string, 필수): 가져올 Google 시트의 ID.
+    - `dataRange` (string, 필수): 시트에서 가져올 데이터 범위.
+  </Accordion>
+
+  <Accordion title="google_slides/upload_file_to_drive">
+    **설명:** 프레젠테이션과 연결된 Google 드라이브에 파일을 업로드합니다.
+
+    **매개변수:**
+    - `file` (string, 필수): 업로드할 파일 데이터.
+    - `presentationId` (string, 필수): 업로드된 파일을 연결할 프레젠테이션의 ID.
+  </Accordion>
+
+  <Accordion title="google_slides/link_file_to_presentation">
+    **설명:** Google 드라이브의 파일을 프레젠테이션에 연결합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 프레젠테이션의 ID.
+    - `fileId` (string, 필수): 연결할 파일의 ID.
+  </Accordion>
+
+  <Accordion title="google_slides/get_all_presentations">
+    **설명:** 사용자가 액세스할 수 있는 모든 프레젠테이션을 나열합니다.
+
+    **매개변수:**
+    - `pageSize` (integer, 선택사항): 페이지당 반환할 프레젠테이션 수.
+    - `pageToken` (string, 선택사항): 페이지네이션을 위한 토큰.
+  </Accordion>
+
+  <Accordion title="google_slides/delete_presentation">
+    **설명:** ID로 프레젠테이션을 삭제합니다.
+
+    **매개변수:**
+    - `presentationId` (string, 필수): 삭제할 프레젠테이션의 ID.
+  </Accordion>
+</AccordionGroup>
+
+## 사용 예제
+
+### 기본 Google Slides 에이전트 설정
+
+```python
+from crewai import Agent, Task, Crew
+
+# Google Slides 기능을 가진 에이전트 생성
+slides_agent = Agent(
+    role="프레젠테이션 작성자",
+    goal="Google Slides 프레젠테이션을 효율적으로 생성하고 관리",
+    backstory="프레젠테이션 디자인 및 콘텐츠 관리 전문 AI 어시스턴트.",
+    apps=['google_slides']  # 모든 Google Slides 작업을 사용할 수 있습니다
+)
+
+# 새 프레젠테이션 생성 작업
+create_presentation_task = Task(
+    description="'분기별 매출 보고서'라는 제목으로 새 빈 프레젠테이션을 만드세요",
+    agent=slides_agent,
+    expected_output="새 프레젠테이션 '분기별 매출 보고서'가 성공적으로 생성됨"
+)
+
+# 작업 실행
+crew = Crew(
+    agents=[slides_agent],
+    tasks=[create_presentation_task]
+)
+
+crew.kickoff()
+```
+
+## 문제 해결
+
+### 일반적인 문제
+
+**인증 오류**
+- Google 계정이 Google Slides 및 Google Drive 액세스에 필요한 권한을 가지고 있는지 확인하세요.
+- OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
+
+**프레젠테이션/페이지 ID 문제**
+- 프레젠테이션 ID와 페이지 객체 ID가 올바른지 다시 확인하세요.
+- 프레젠테이션이나 페이지가 존재하고 액세스할 수 있는지 확인하세요.
+
+### 도움 받기
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Google Slides 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+</Card>

@@ -1,0 +1,127 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
+      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an integer score between 1-5 for the following title: ''The impact
+      of AI in the future of work''\n\nThis is the expected criteria for your final
+      answer: The score of the title.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\nEnsure your final answer strictly adheres
+      to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
+      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
+      not include the OpenAPI schema in the final output. Ensure the final output
+      does not include any code block markers like ```json or ```python.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1394'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBattAEL3rK4Y5W0GSZcfRzQmkFFoopYeWKojNaiRtvdpddldxi/G/
+        l5UdS0lTyEWgefNm33szhwgARY0FIO+Y572R8d2PNvmS74f2jn3l3/c3u/7Th+Xt9vNtv9smuAgM
+        /fiLuH9mXXHdG0leaHWCuSXmKUxNr9fZcpOsV9cj0OuaZKC1xsf5VRr3Qok4S7JVnORxmp/pnRac
+        HBbwMwIAOIzfIFTV9BsLSBbPlZ6cYy1hcWkCQKtlqCBzTjjPlMfFBHKtPKlR+7dOD23nC/gISu+B
+        MwWteCJg0AYDwJTbky3VvVBMwnb8K+BQKoASHdeWSiwgL9Vx/oClZnAsuFSDlDOAKaU9CymN1h7O
+        yPFiRurWWP3oXlGxEUq4rrLEnFZBuPPa4IgeI4CHMbThRQ5orO6Nr7ze0fhcdpOf5uG0rBmanUGv
+        PZNTfZmuF2/Mq2ryTEg3ix054x3VE3XaERtqoWdANHP9r5q3Zp+cC9W+Z/wEcE7GU10ZS7XgLx1P
+        bZbCLf+v7ZLyKBgd2SfBqfKCbNhETQ0b5OnA0P1xnvqqEaola6w4XVljqpxnm1XabNYZRsfoLwAA
+        AP//AwAGpQmxdAMAAA==
+    headers:
+      CF-RAY:
+      - REDACTED-RAY
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 05 Nov 2025 22:10:57 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=REDACTED;
+        path=/; expires=Wed, 05-Nov-25 22:40:57 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=REDACTED;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - user-hortuttj2f3qtmxyik2zxf4q
+      openai-processing-ms:
+      - '537'
+      openai-project:
+      - proj_fL4UBWR1CMpAAdgzaSKqsVvA
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '558'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '500'
+      x-ratelimit-limit-tokens:
+      - '200000'
+      x-ratelimit-remaining-requests:
+      - '499'
+      x-ratelimit-remaining-tokens:
+      - '199687'
+      x-ratelimit-reset-requests:
+      - 120ms
+      x-ratelimit-reset-tokens:
+      - 93ms
+      x-request-id:
+      - req_REDACTED
+    status:
+      code: 200
+      message: OK
+version: 1

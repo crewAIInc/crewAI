@@ -1,0 +1,418 @@
+---
+title: Google Contacts Integration
+description: "Contact and directory management with Google Contacts integration for CrewAI."
+icon: "address-book"
+mode: "wide"
+---
+
+## Overview
+
+Enable your agents to manage contacts and directory information through Google Contacts. Access personal contacts, search directory people, create and update contact information, and manage contact groups with AI-powered automation.
+
+## Prerequisites
+
+Before using the Google Contacts integration, ensure you have:
+
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
+- A Google account with Google Contacts access
+- Connected your Google account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
+
+## Setting Up Google Contacts Integration
+
+### 1. Connect Your Google Account
+
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Google Contacts** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for contacts and directory access
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## Available Actions
+
+<AccordionGroup>
+  <Accordion title="google_contacts/get_contacts">
+    **Description:** Retrieve user's contacts from Google Contacts.
+
+    **Parameters:**
+    - `pageSize` (integer, optional): Number of contacts to return (max 1000). Minimum: 1, Maximum: 1000
+    - `pageToken` (string, optional): The token of the page to retrieve.
+    - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
+    - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
+    - `sortOrder` (string, optional): The order in which the connections should be sorted. Options: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+  </Accordion>
+
+  <Accordion title="google_contacts/search_contacts">
+    **Description:** Search for contacts using a query string.
+
+    **Parameters:**
+    - `query` (string, required): Search query string
+    - `readMask` (string, required): Fields to read (e.g., 'names,emailAddresses,phoneNumbers')
+    - `pageSize` (integer, optional): Number of results to return. Minimum: 1, Maximum: 30
+    - `pageToken` (string, optional): Token specifying which result page to return.
+    - `sources` (array, optional): The sources to search in. Options: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. Default: READ_SOURCE_TYPE_CONTACT
+  </Accordion>
+
+  <Accordion title="google_contacts/list_directory_people">
+    **Description:** List people in the authenticated user's directory.
+
+    **Parameters:**
+    - `sources` (array, required): Directory sources to search within. Options: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE, DIRECTORY_SOURCE_TYPE_DOMAIN_CONTACT. Default: DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE
+    - `pageSize` (integer, optional): Number of people to return. Minimum: 1, Maximum: 1000
+    - `pageToken` (string, optional): Token specifying which result page to return.
+    - `readMask` (string, optional): Fields to read (e.g., 'names,emailAddresses')
+    - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
+    - `mergeSources` (array, optional): Additional data to merge into the directory people responses. Options: CONTACT
+  </Accordion>
+
+  <Accordion title="google_contacts/search_directory_people">
+    **Description:** Search for people in the directory.
+
+    **Parameters:**
+    - `query` (string, required): Search query
+    - `sources` (string, required): Directory sources (use 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE')
+    - `pageSize` (integer, optional): Number of results to return
+    - `readMask` (string, optional): Fields to read
+  </Accordion>
+
+  <Accordion title="google_contacts/list_other_contacts">
+    **Description:** List other contacts (not in user's personal contacts).
+
+    **Parameters:**
+    - `pageSize` (integer, optional): Number of contacts to return. Minimum: 1, Maximum: 1000
+    - `pageToken` (string, optional): Token specifying which result page to return.
+    - `readMask` (string, optional): Fields to read
+    - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
+  </Accordion>
+
+  <Accordion title="google_contacts/search_other_contacts">
+    **Description:** Search other contacts.
+
+    **Parameters:**
+    - `query` (string, required): Search query
+    - `readMask` (string, required): Fields to read (e.g., 'names,emailAddresses')
+    - `pageSize` (integer, optional): Number of results
+  </Accordion>
+
+  <Accordion title="google_contacts/get_person">
+    **Description:** Get a single person's contact information by resource name.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the person to get (e.g., 'people/c123456789')
+    - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact">
+    **Description:** Create a new contact in the user's address book.
+
+    **Parameters:**
+    - `names` (array, optional): Person's names
+      ```json
+      [
+        {
+          "givenName": "John",
+          "familyName": "Doe",
+          "displayName": "John Doe"
+        }
+      ]
+      ```
+    - `emailAddresses` (array, optional): Email addresses
+      ```json
+      [
+        {
+          "value": "john.doe@example.com",
+          "type": "work"
+        }
+      ]
+      ```
+    - `phoneNumbers` (array, optional): Phone numbers
+      ```json
+      [
+        {
+          "value": "+1234567890",
+          "type": "mobile"
+        }
+      ]
+      ```
+    - `addresses` (array, optional): Postal addresses
+      ```json
+      [
+        {
+          "formattedValue": "123 Main St, City, State 12345",
+          "type": "home"
+        }
+      ]
+      ```
+    - `organizations` (array, optional): Organizations/companies
+      ```json
+      [
+        {
+          "name": "Company Name",
+          "title": "Job Title",
+          "type": "work"
+        }
+      ]
+      ```
+  </Accordion>
+
+  <Accordion title="google_contacts/update_contact">
+    **Description:** Update an existing contact's information.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the person to update (e.g., 'people/c123456789')
+    - `updatePersonFields` (string, required): Fields to update (e.g., 'names,emailAddresses,phoneNumbers')
+    - `names` (array, optional): Person's names
+    - `emailAddresses` (array, optional): Email addresses
+    - `phoneNumbers` (array, optional): Phone numbers
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact">
+    **Description:** Delete a contact from the user's address book.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the person to delete (e.g., 'people/c123456789')
+  </Accordion>
+
+  <Accordion title="google_contacts/batch_get_people">
+    **Description:** Get information about multiple people in a single request.
+
+    **Parameters:**
+    - `resourceNames` (array, required): Resource names of people to get. Maximum: 200 items
+    - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
+  </Accordion>
+
+  <Accordion title="google_contacts/list_contact_groups">
+    **Description:** List the user's contact groups (labels).
+
+    **Parameters:**
+    - `pageSize` (integer, optional): Number of contact groups to return. Minimum: 1, Maximum: 1000
+    - `pageToken` (string, optional): Token specifying which result page to return.
+    - `groupFields` (string, optional): Fields to include (e.g., 'name,memberCount,clientData'). Default: name,memberCount
+  </Accordion>
+</AccordionGroup>
+
+## Usage Examples
+
+### Basic Google Contacts Agent Setup
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Contacts capabilities
+contacts_agent = Agent(
+    role="Contact Manager",
+    goal="Manage contacts and directory information efficiently",
+    backstory="An AI assistant specialized in contact management and directory operations.",
+    apps=['google_contacts']  # All Google Contacts actions will be available
+)
+
+# Task to retrieve and organize contacts
+contact_management_task = Task(
+    description="Retrieve all contacts and organize them by company affiliation",
+    agent=contacts_agent,
+    expected_output="Contacts retrieved and organized by company with summary report"
+)
+
+# Run the task
+crew = Crew(
+    agents=[contacts_agent],
+    tasks=[contact_management_task]
+)
+
+crew.kickoff()
+```
+
+### Directory Search and Management
+
+```python
+from crewai import Agent, Task, Crew
+
+directory_manager = Agent(
+    role="Directory Manager",
+    goal="Search and manage directory people and contacts",
+    backstory="An AI assistant that specializes in directory management and people search.",
+    apps=[
+        'google_contacts/search_directory_people',
+        'google_contacts/list_directory_people',
+        'google_contacts/search_contacts'
+    ]
+)
+
+# Task to search and manage directory
+directory_task = Task(
+    description="Search for team members in the company directory and create a team contact list",
+    agent=directory_manager,
+    expected_output="Team directory compiled with contact information"
+)
+
+crew = Crew(
+    agents=[directory_manager],
+    tasks=[directory_task]
+)
+
+crew.kickoff()
+```
+
+### Contact Creation and Updates
+
+```python
+from crewai import Agent, Task, Crew
+
+contact_curator = Agent(
+    role="Contact Curator",
+    goal="Create and update contact information systematically",
+    backstory="An AI assistant that maintains accurate and up-to-date contact information.",
+    apps=['google_contacts']
+)
+
+# Task to create and update contacts
+curation_task = Task(
+    description="""
+    1. Search for existing contacts related to new business partners
+    2. Create new contacts for partners not in the system
+    3. Update existing contact information with latest details
+    4. Organize contacts into appropriate groups
+    """,
+    agent=contact_curator,
+    expected_output="Contact database updated with new partners and organized groups"
+)
+
+crew = Crew(
+    agents=[contact_curator],
+    tasks=[curation_task]
+)
+
+crew.kickoff()
+```
+
+### Contact Group Management
+
+```python
+from crewai import Agent, Task, Crew
+
+group_organizer = Agent(
+    role="Contact Group Organizer",
+    goal="Organize contacts into meaningful groups and categories",
+    backstory="An AI assistant that specializes in contact organization and group management.",
+    apps=['google_contacts']
+)
+
+# Task to organize contact groups
+organization_task = Task(
+    description="""
+    1. List all existing contact groups
+    2. Analyze contact distribution across groups
+    3. Create new groups for better organization
+    4. Move contacts to appropriate groups based on their information
+    """,
+    agent=group_organizer,
+    expected_output="Contacts organized into logical groups with improved structure"
+)
+
+crew = Crew(
+    agents=[group_organizer],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```
+
+### Comprehensive Contact Management
+
+```python
+from crewai import Agent, Task, Crew
+
+contact_specialist = Agent(
+    role="Contact Management Specialist",
+    goal="Provide comprehensive contact management across all sources",
+    backstory="An AI assistant that handles all aspects of contact management including personal, directory, and other contacts.",
+    apps=['google_contacts']
+)
+
+# Complex contact management task
+comprehensive_task = Task(
+    description="""
+    1. Retrieve contacts from all sources (personal, directory, other)
+    2. Search for duplicate contacts and merge information
+    3. Update outdated contact information
+    4. Create missing contacts for important stakeholders
+    5. Organize contacts into meaningful groups
+    6. Generate a comprehensive contact report
+    """,
+    agent=contact_specialist,
+    expected_output="Complete contact management performed with unified contact database and detailed report"
+)
+
+crew = Crew(
+    agents=[contact_specialist],
+    tasks=[comprehensive_task]
+)
+
+crew.kickoff()
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Permission Errors**
+- Ensure your Google account has appropriate permissions for contacts access
+- Verify that the OAuth connection includes required scopes for Google Contacts API
+- Check that directory access permissions are granted for organization contacts
+
+**Resource Name Format Issues**
+- Ensure resource names follow the correct format (e.g., 'people/c123456789' for contacts)
+- Verify that contact group resource names use the format 'contactGroups/groupId'
+- Check that resource names exist and are accessible
+
+**Search and Query Issues**
+- Ensure search queries are properly formatted and not empty
+- Use appropriate readMask fields for the data you need
+- Verify that search sources are correctly specified (contacts vs profiles)
+
+**Contact Creation and Updates**
+- Ensure required fields are provided when creating contacts
+- Verify that email addresses and phone numbers are properly formatted
+- Check that updatePersonFields parameter includes all fields being updated
+
+**Directory Access Issues**
+- Ensure you have appropriate permissions to access organization directory
+- Verify that directory sources are correctly specified
+- Check that your organization allows API access to directory information
+
+**Pagination and Limits**
+- Be mindful of page size limits (varies by endpoint)
+- Use pageToken for pagination through large result sets
+- Respect API rate limits and implement appropriate delays
+
+**Contact Groups and Organization**
+- Ensure contact group names are unique when creating new groups
+- Verify that contacts exist before adding them to groups
+- Check that you have permissions to modify contact groups
+
+### Getting Help
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for assistance with Google Contacts integration setup or troubleshooting.
+</Card>

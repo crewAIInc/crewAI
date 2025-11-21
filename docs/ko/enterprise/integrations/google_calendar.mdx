@@ -25,7 +25,7 @@ Google Calendar 통합을 사용하기 전에 다음을 준비해야 합니다:
 2. 인증 통합 섹션에서 **Google Calendar**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 과정을 완료합니다.
 4. 캘린더 및 연락처 접근 권한을 허용합니다.
-5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ Google Calendar 통합을 사용하기 전에 다음을 준비해야 합니다:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 작업
 
 <AccordionGroup>
-  <Accordion title="GOOGLE_CALENDAR_CREATE_EVENT">
+  <Accordion title="google_calendar/create_event">
     **설명:** Google 캘린더에 이벤트를 생성합니다.
 
     **파라미터:**
@@ -51,7 +67,7 @@ uv add crewai-tools
     - `includeMeetLink` (boolean, 선택): Google Meet 링크 포함 여부? - 이 이벤트에 대해 Google Meet 컨퍼런스 링크를 자동으로 생성합니다.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_UPDATE_EVENT">
+  <Accordion title="google_calendar/update_event">
     **설명:** Google 캘린더에서 기존 이벤트를 업데이트합니다.
 
     **파라미터:**
@@ -65,7 +81,7 @@ uv add crewai-tools
     - `eventDescription` (string, 선택): 이벤트 설명.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_LIST_EVENTS">
+  <Accordion title="google_calendar/view_events">
     **설명:** Google 캘린더에서 이벤트 목록을 가져옵니다.
 
     **파라미터:**
@@ -74,7 +90,7 @@ uv add crewai-tools
     - `before` (string, 선택): 이전 - 제공된 날짜 이전에 종료되는 이벤트를 필터링합니다 (밀리초 단위의 Unix 또는 ISO 타임스탬프). (예시: "2025-04-12T10:00:00Z 또는 1712908800000").
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_GET_EVENT_BY_ID">
+  <Accordion title="google_calendar/get_event_by_id">
     **설명:** Google 캘린더에서 ID로 특정 이벤트를 가져옵니다.
 
     **파라미터:**
@@ -82,7 +98,7 @@ uv add crewai-tools
     - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_DELETE_EVENT">
+  <Accordion title="google_calendar/delete_event">
     **설명:** Google 캘린더에서 이벤트를 삭제합니다.
 
     **파라미터:**
@@ -90,7 +106,7 @@ uv add crewai-tools
     - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_GET_CONTACTS">
+  <Accordion title="google_calendar/get_contacts">
     **설명:** Google 캘린더에서 연락처를 가져옵니다.
 
     **파라미터:**
@@ -102,14 +118,14 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_SEARCH_CONTACTS">
+  <Accordion title="google_calendar/search_contacts">
     **설명:** Google 캘린더에서 연락처를 검색합니다.
 
     **파라미터:**
     - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_LIST_DIRECTORY_PEOPLE">
+  <Accordion title="google_calendar/list_directory_people">
     **설명:** 디렉토리 구성원 목록을 가져옵니다.
 
     **파라미터:**
@@ -121,7 +137,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_SEARCH_DIRECTORY_PEOPLE">
+  <Accordion title="google_calendar/search_directory_people">
     **설명:** 디렉토리 구성원을 검색합니다.
 
     **파라미터:**
@@ -134,7 +150,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_LIST_OTHER_CONTACTS">
+  <Accordion title="google_calendar/list_other_contacts">
     **설명:** 기타 연락처 목록을 가져옵니다.
 
     **파라미터:**
@@ -146,14 +162,14 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_SEARCH_OTHER_CONTACTS">
+  <Accordion title="google_calendar/search_other_contacts">
     **설명:** 기타 연락처를 검색합니다.
 
     **파라미터:**
     - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
   </Accordion>
 
-  <Accordion title="GOOGLE_CALENDAR_GET_AVAILABILITY">
+  <Accordion title="google_calendar/get_availability">
     **설명:** 캘린더의 가용성 정보를 가져옵니다.
 
     **파라미터:**
@@ -180,19 +196,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Google Calendar tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Google Calendar capabilities
 calendar_agent = Agent(
     role="Schedule Manager",
     goal="Manage calendar events and scheduling efficiently",
     backstory="An AI assistant specialized in calendar management and scheduling coordination.",
-    tools=[enterprise_tools]
+    apps=['google_calendar']
 )
 
 # Task to create a meeting
@@ -214,19 +224,12 @@ crew.kickoff()
 ### 특정 캘린더 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Google Calendar tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["google_calendar_create_event", "google_calendar_list_events", "google_calendar_get_availability"]
-)
 
 meeting_coordinator = Agent(
     role="Meeting Coordinator",
     goal="Coordinate meetings and check availability",
     backstory="An AI assistant that focuses on meeting scheduling and availability management.",
-    tools=enterprise_tools
+    apps=['google_calendar']
 )
 
 # Task to schedule a meeting with availability check
@@ -248,17 +251,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 event_manager = Agent(
     role="Event Manager",
     goal="Manage and update calendar events efficiently",
     backstory="An experienced event manager who handles event logistics and updates.",
-    tools=[enterprise_tools]
+    apps=['google_calendar']
 )
 
 # Task to manage event updates
@@ -284,17 +282,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 availability_coordinator = Agent(
     role="Availability Coordinator",
     goal="Coordinate availability and manage contacts for scheduling",
     backstory="An AI assistant that specializes in availability management and contact coordination.",
-    tools=[enterprise_tools]
+    apps=['google_calendar']
 )
 
 # Task to coordinate availability
@@ -321,17 +314,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 scheduling_automator = Agent(
     role="Scheduling Automator",
     goal="Automate scheduling workflows and calendar management",
     backstory="An AI assistant that automates complex scheduling scenarios and calendar workflows.",
-    tools=[enterprise_tools]
+    apps=['google_calendar']
 )
 
 # Complex scheduling automation task

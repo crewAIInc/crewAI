@@ -25,7 +25,7 @@ Antes de usar a integração com o Notion, certifique-se de que você tem:
 2. Procure por **Notion** na seção de Integrações de Autenticação
 3. Clique em **Conectar** e complete o fluxo de OAuth
 4. Conceda as permissões necessárias para gerenciamento de páginas e bancos de dados
-5. Copie seu Token Enterprise em [Configurações da Conta](https://app.crewai.com/crewai_plus/settings/account)
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Instale o Pacote Necessário
 
@@ -33,10 +33,26 @@ Antes de usar a integração com o Notion, certifique-se de que você tem:
 uv add crewai-tools
 ```
 
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
 ## Ações Disponíveis
 
 <AccordionGroup>
-  <Accordion title="NOTION_CREATE_PAGE">
+  <Accordion title="notion/create_page">
     **Descrição:** Cria uma página no Notion.
 
     **Parâmetros:**
@@ -93,7 +109,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_UPDATE_PAGE">
+  <Accordion title="notion/update_page">
     **Descrição:** Atualiza uma página no Notion.
 
     **Parâmetros:**
@@ -127,21 +143,21 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_GET_PAGE_BY_ID">
+  <Accordion title="notion/get_page_by_id">
     **Descrição:** Busca uma página pelo ID no Notion.
 
     **Parâmetros:**
     - `pageId` (string, obrigatório): Page ID - Especifique o ID da Página a ser buscada. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_ARCHIVE_PAGE">
+  <Accordion title="notion/archive_page">
     **Descrição:** Arquiva uma página no Notion.
 
     **Parâmetros:**
     - `pageId` (string, obrigatório): Page ID - Especifique o ID da Página a ser arquivada. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_SEARCH_PAGES">
+  <Accordion title="notion/search_pages">
     **Descrição:** Pesquisa páginas no Notion utilizando filtros.
 
     **Parâmetros:**
@@ -166,14 +182,14 @@ uv add crewai-tools
       Campos disponíveis: `query`, `filter.value`, `direction`, `page_size`
   </Accordion>
 
-  <Accordion title="NOTION_GET_PAGE_CONTENT">
+  <Accordion title="notion/get_page_content">
     **Descrição:** Obtém o conteúdo (blocos) de uma página no Notion.
 
     **Parâmetros:**
     - `blockId` (string, obrigatório): Page ID - Especifique o ID de um Bloco ou Página para receber todos os seus blocos filhos na ordem correta. (exemplo: "59833787-2cf9-4fdf-8782-e53db20768a5").
   </Accordion>
 
-  <Accordion title="NOTION_UPDATE_BLOCK">
+  <Accordion title="notion/update_block">
     **Descrição:** Atualiza um bloco no Notion.
 
     **Parâmetros:**
@@ -260,14 +276,14 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="NOTION_GET_BLOCK_BY_ID">
+  <Accordion title="notion/get_block_by_id">
     **Descrição:** Busca um bloco pelo ID no Notion.
 
     **Parâmetros:**
     - `blockId` (string, obrigatório): Block ID - Especifique o ID do Bloco a ser buscado. (exemplo: "9bc30ad4-9373-46a5-84ab-0a7845ee52e6").
   </Accordion>
 
-  <Accordion title="NOTION_DELETE_BLOCK">
+  <Accordion title="notion/delete_block">
     **Descrição:** Exclui um bloco no Notion.
 
     **Parâmetros:**
@@ -281,19 +297,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Notion tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Notion capabilities
 notion_agent = Agent(
     role="Documentation Manager",
     goal="Manage documentation and knowledge base in Notion efficiently",
     backstory="An AI assistant specialized in content management and documentation.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to create a meeting notes page
@@ -315,19 +325,12 @@ crew.kickoff()
 ### Filtrando Ferramentas Específicas do Notion
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Notion tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["notion_create_page", "notion_update_block", "notion_search_pages"]
-)
 
 content_manager = Agent(
     role="Content Manager",
     goal="Create and manage content pages efficiently",
     backstory="An AI assistant that focuses on content creation and management.",
-    tools=enterprise_tools
+    apps=['notion']
 )
 
 # Task to manage content workflow
@@ -349,17 +352,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 knowledge_curator = Agent(
     role="Knowledge Curator",
     goal="Curate and organize knowledge base content in Notion",
     backstory="An experienced knowledge manager who organizes and maintains comprehensive documentation.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to curate knowledge base
@@ -386,17 +384,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 content_organizer = Agent(
     role="Content Organizer",
     goal="Organize and structure content blocks for optimal readability",
     backstory="An AI assistant that specializes in content structure and user experience.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Task to organize content structure
@@ -424,17 +417,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 doc_automator = Agent(
     role="Documentation Automator",
     goal="Automate documentation workflows and maintenance",
     backstory="An AI assistant that automates repetitive documentation tasks.",
-    tools=[enterprise_tools]
+    apps=['notion']
 )
 
 # Complex documentation automation task
