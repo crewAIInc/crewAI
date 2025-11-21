@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any
-
+from urllib.parse import urlparse
 from pydantic import BaseModel
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
@@ -161,7 +161,9 @@ class AzureCompletion(BaseLLM):
         Returns:
             Validated and potentially corrected endpoint URL
         """
-        if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
+        parsed_url = urlparse(endpoint)
+        hostname = parsed_url.hostname or ""
+        if (hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")) and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 
             if not endpoint.endswith("/openai/deployments"):
