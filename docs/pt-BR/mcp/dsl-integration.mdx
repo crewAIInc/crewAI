@@ -60,9 +60,9 @@ Use a sintaxe `#` para selecionar ferramentas específicas de um servidor:
 "https://mcp.exa.ai/mcp?api_key=sua_chave#web_search_exa"
 ```
 
-### Marketplace CrewAI AMP
+### Marketplace CrewAI AOP
 
-Acesse ferramentas do marketplace CrewAI AMP:
+Acesse ferramentas do marketplace CrewAI AOP:
 
 ```python
 # Serviço completo com todas as ferramentas
@@ -97,7 +97,7 @@ agente_multi_fonte = Agent(
         "https://mcp.exa.ai/mcp?api_key=sua_chave_exa&profile=pesquisa",
         "https://weather.api.com/mcp#get_current_conditions",
 
-        # Marketplace CrewAI AMP
+        # Marketplace CrewAI AOP
         "crewai-amp:financial-insights",
         "crewai-amp:academic-research#pubmed_search",
         "crewai-amp:market-intelligence#competitor_analysis"

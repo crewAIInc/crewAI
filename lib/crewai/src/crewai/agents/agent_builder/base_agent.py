@@ -83,7 +83,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
-        apps: List of enterprise applications that the agent can access through CrewAI AMP Tools.
+        apps: List of enterprise applications that the agent can access through CrewAI AOP Tools.
 
     Methods:
         execute_task(task: Any, context: str | None = None, tools: list[BaseTool] | None = None) -> str:
