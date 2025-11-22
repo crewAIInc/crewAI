@@ -20,26 +20,26 @@ class CacheHandler(BaseModel):
     _cache: dict[str, Any] = PrivateAttr(default_factory=dict)
     _lock: RWLock = PrivateAttr(default_factory=RWLock)
 
-    def add(self, tool: str, input: str, output: Any) -> None:
+    def add(self, tool: str, tool_input: str, output: Any) -> None:
         """Add a tool result to the cache.
 
         Args:
             tool: Name of the tool.
-            input: Input string used for the tool.
+            tool_input: Input string used for the tool.
             output: Output result from tool execution.
 
         Notes:
             - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
         with self._lock.w_locked():
-            self._cache[f"{tool}-{input}"] = output
+            self._cache[f"{tool}-{tool_input}"] = output
 
-    def read(self, tool: str, input: str) -> Any | None:
+    def read(self, tool: str, tool_input: str) -> Any | None:
         """Retrieve a cached tool result.
 
         Args:
             tool: Name of the tool.
-            input: Input string used for the tool.
+            tool_input: Input string used for the tool.
 
         Returns:
             Cached result if found, None otherwise.
@@ -48,4 +48,4 @@ class CacheHandler(BaseModel):
             - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
         with self._lock.r_locked():
-            return self._cache.get(f"{tool}-{input}")
+            return self._cache.get(f"{tool}-{tool_input}")
