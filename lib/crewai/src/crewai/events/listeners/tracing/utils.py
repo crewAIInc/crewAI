@@ -91,8 +91,45 @@ def is_tracing_enabled_in_context() -> bool:
     return enabled if enabled is not None else False
 
 
+def _user_data_file() -> Path:
+    base = Path(db_storage_path())
+    base.mkdir(parents=True, exist_ok=True)
+    return base / ".crewai_user.json"
+
+
+def _load_user_data() -> dict[str, Any]:
+    p = _user_data_file()
+    if p.exists():
+        try:
+            return cast(dict[str, Any], json.loads(p.read_text()))
+        except (json.JSONDecodeError, OSError, PermissionError) as e:
+            logger.warning(f"Failed to load user data: {e}")
+    return {}
+
+
+def _save_user_data(data: dict[str, Any]) -> None:
+    try:
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Failed to save user data: {e}")
+
+
+def has_user_declined_tracing() -> bool:
+    """Check if user has explicitly declined trace collection.
+
+    Returns:
+        True if user previously declined tracing, False otherwise.
+    """
+    data = _load_user_data()
+    if data.get("first_execution_done", False):
+        return data.get("trace_consent", False) is False
+    return False
+
+
 def is_tracing_enabled() -> bool:
     """Check if tracing should be enabled.
+
 
     Returns:
         True if tracing is enabled and not disabled, False otherwise.
@@ -288,42 +325,6 @@ def _get_generic_system_id() -> str | None:
         pass
 
     return None
-
-
-def _user_data_file() -> Path:
-    base = Path(db_storage_path())
-    base.mkdir(parents=True, exist_ok=True)
-    return base / ".crewai_user.json"
-
-
-def _load_user_data() -> dict[str, Any]:
-    p = _user_data_file()
-    if p.exists():
-        try:
-            return cast(dict[str, Any], json.loads(p.read_text()))
-        except (json.JSONDecodeError, OSError, PermissionError) as e:
-            logger.warning(f"Failed to load user data: {e}")
-    return {}
-
-
-def _save_user_data(data: dict[str, Any]) -> None:
-    try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
-
-
-def has_user_declined_tracing() -> bool:
-    """Check if user has explicitly declined trace collection.
-
-    Returns:
-        True if user previously declined tracing, False otherwise.
-    """
-    data = _load_user_data()
-    if data.get("first_execution_done", False):
-        return data.get("trace_consent", False) is False
-    return False
 
 
 def get_user_id() -> str:
