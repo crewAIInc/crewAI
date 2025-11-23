@@ -380,3 +380,58 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
 def mark_first_execution_completed() -> None:
     """Mark first execution as completed (called after trace prompt)."""
     mark_first_execution_done()
+
+
+def has_user_declined_tracing() -> bool:
+    """Check if user has explicitly declined tracing."""
+    data = _load_user_data()
+    return data.get("tracing_declined", False)
+
+
+_tracing_enabled_override: bool | None = None
+
+
+def should_enable_tracing(override: bool | None = None) -> bool:
+    """Determine if tracing should be enabled.
+    
+    Args:
+        override: Explicit tracing setting. True=always enable, False=always disable, None=check environment/user settings
+        
+    Returns:
+        True if tracing should be enabled, False otherwise
+    """
+    global _tracing_enabled_override
+    
+    # If override is explicitly False, always disable
+    if override is False:
+        return False
+    
+    # If override is explicitly True, always enable
+    if override is True:
+        return True
+    
+    # If override is None, check environment and user settings
+    if override is None:
+        # Check if user has declined
+        if has_user_declined_tracing():
+            return False
+        
+        # Check environment variable
+        if is_tracing_enabled():
+            return True
+        
+        # Check if this is first execution (auto-collect)
+        if should_auto_collect_first_time_traces():
+            return True
+    
+    return False
+
+
+def set_tracing_enabled(enabled: bool) -> None:
+    """Set the global tracing enabled state.
+    
+    Args:
+        enabled: Whether tracing should be enabled
+    """
+    global _tracing_enabled_override
+    _tracing_enabled_override = enabled

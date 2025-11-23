@@ -33,8 +33,9 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    has_user_declined_tracing,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -493,18 +494,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
-        # Only enable tracing if explicitly True, or if None and environment/user settings allow it
-        # tracing=False should always disable tracing
-        if self.tracing is False:
-            # Explicitly disabled, do nothing
-            pass
-        elif (
-            self.tracing is True
-            or (self.tracing is None and is_tracing_enabled())
-            or (self.tracing is None and should_auto_collect_first_time_traces())
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)  # type: ignore[no-untyped-call]
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
+
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -927,23 +921,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            # Only finalize tracing if explicitly True, or if None and environment/user settings allow it
-            # tracing=False should always disable tracing
-            if self.tracing is False:
-                # Explicitly disabled, do nothing
-                pass
-            elif (
-                self.tracing is True
-                or (self.tracing is None and is_tracing_enabled())
-                or (self.tracing is None and should_auto_collect_first_time_traces())
-            ):
-                trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()  # type: ignore[no-untyped-call]
-                        trace_listener.first_time_handler.handle_execution_completion()  # type: ignore[no-untyped-call]
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
             return final_output
         finally:
