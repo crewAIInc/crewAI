@@ -293,13 +293,15 @@ class EventListener(BaseEventListener):
             self._telemetry.flow_creation_span(event.flow_name)
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 tree = self.formatter.create_flow_tree(event.flow_name, str(source.flow_id))
                 self.formatter.current_flow_tree = tree
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         @crewai_event_bus.on(FlowStartedEvent)
         def on_flow_started(source, event: FlowStartedEvent):
@@ -308,32 +310,37 @@ class EventListener(BaseEventListener):
             )
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 self.formatter.start_flow(event.flow_name, str(source.flow_id))
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source, event: FlowFinishedEvent):
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 self.formatter.update_flow_status(
                     self.formatter.current_flow_tree, event.flow_name, source.flow_id
                 )
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(source, event: MethodExecutionStartedEvent):
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 method_branch = self.method_branches.get(event.method_name)
                 updated_branch = self.formatter.update_method_status(
@@ -344,14 +351,16 @@ class EventListener(BaseEventListener):
                 )
                 self.method_branches[event.method_name] = updated_branch
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(source, event: MethodExecutionFinishedEvent):
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 method_branch = self.method_branches.get(event.method_name)
                 updated_branch = self.formatter.update_method_status(
@@ -362,14 +371,16 @@ class EventListener(BaseEventListener):
                 )
                 self.method_branches[event.method_name] = updated_branch
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         @crewai_event_bus.on(MethodExecutionFailedEvent)
         def on_method_execution_failed(source, event: MethodExecutionFailedEvent):
             # Check Flow's verbose flag and temporarily set formatter verbose
             flow_verbose = getattr(source, "verbose", False)
-            original_verbose = self.formatter.verbose
-            self.formatter.verbose = flow_verbose
+            with self._crew_tree_lock:
+                original_verbose = self.formatter.verbose
+                self.formatter.verbose = flow_verbose
             try:
                 method_branch = self.method_branches.get(event.method_name)
                 updated_branch = self.formatter.update_method_status(
@@ -380,7 +391,8 @@ class EventListener(BaseEventListener):
                 )
                 self.method_branches[event.method_name] = updated_branch
             finally:
-                self.formatter.verbose = original_verbose
+                with self._crew_tree_lock:
+                    self.formatter.verbose = original_verbose
 
         # ----------- TOOL USAGE EVENTS -----------
 
