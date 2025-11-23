@@ -4,7 +4,7 @@ import httpx
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llm.hooks.base import BaseInterceptor
 
 
 class OpenAITestInterceptor(BaseInterceptor[httpx.Request, httpx.Response]):

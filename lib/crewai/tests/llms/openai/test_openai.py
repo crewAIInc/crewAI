@@ -6,7 +6,7 @@ import openai
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.llm.providers.openai.completion import OpenAICompletion
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -29,7 +29,7 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     """
     llm = LLM(model="gpt-4o")
 
-    from crewai.llms.providers.openai.completion import OpenAICompletion
+    from crewai.llm.providers.openai.completion import OpenAICompletion
     assert isinstance(llm, OpenAICompletion)
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
@@ -63,7 +63,7 @@ def test_openai_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using OpenAI provider
     """
-    module_name = "crewai.llms.providers.openai.completion"
+    module_name = "crewai.llm.providers.openai.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -114,7 +114,7 @@ def test_openai_completion_initialization_parameters():
         api_key="test-key"
     )
 
-    from crewai.llms.providers.openai.completion import OpenAICompletion
+    from crewai.llm.providers.openai.completion import OpenAICompletion
     assert isinstance(llm, OpenAICompletion)
     assert llm.model == "gpt-4o"
     assert llm.temperature == 0.7
@@ -335,7 +335,7 @@ def test_openai_completion_call_returns_usage_metrics():
 def test_openai_raises_error_when_model_not_supported():
     """Test that OpenAICompletion raises ValueError when model not supported"""
 
-    with patch('crewai.llms.providers.openai.completion.OpenAI') as mock_openai_class:
+    with patch('crewai.llm.providers.openai.completion.OpenAI') as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
@@ -369,11 +369,11 @@ def test_openai_client_setup_with_extra_arguments():
     assert llm.top_p == 0.5
 
     # Check that client parameters are properly configured
-    assert llm.client.max_retries == 3
-    assert llm.client.timeout == 30
+    assert llm._client.max_retries == 3
+    assert llm._client.timeout == 30
 
     # Test that parameters are properly used in API calls
-    with patch.object(llm.client.chat.completions, 'create') as mock_create:
+    with patch.object(llm._client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -394,7 +394,7 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
-    with patch.object(llm.client.chat.completions, 'create') as mock_create:
+    with patch.object(llm._client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -501,7 +501,7 @@ def test_openai_streaming_with_response_model():
 
     llm = LLM(model="openai/gpt-4o", stream=True)
 
-    with patch.object(llm.client.chat.completions, "create") as mock_create:
+    with patch.object(llm._client.chat.completions, "create") as mock_create:
         mock_chunk1 = MagicMock()
         mock_chunk1.choices = [
             MagicMock(delta=MagicMock(content='{"answer": "test", ', tool_calls=None))

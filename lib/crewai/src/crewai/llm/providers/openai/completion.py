@@ -6,16 +6,20 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from dotenv import load_dotenv
 import httpx
 from openai import APIConnectionError, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
-from crewai.llms.hooks.transport import HTTPTransport
+from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+from crewai.llm.hooks.transport import HTTPTransport
+from crewai.llm.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -25,9 +29,11 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+
+
+load_dotenv()
 
 
 class OpenAICompletion(BaseLLM):
@@ -37,60 +43,56 @@ class OpenAICompletion(BaseLLM):
     offering native structured outputs, function calling, and streaming support.
     """
 
-    def __init__(
-        self,
-        model: str = "gpt-4o",
-        api_key: str | None = None,
-        base_url: str | None = None,
-        organization: str | None = None,
-        project: str | None = None,
-        timeout: float | None = None,
-        max_retries: int = 2,
-        default_headers: dict[str, str] | None = None,
-        default_query: dict[str, Any] | None = None,
-        client_params: dict[str, Any] | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        frequency_penalty: float | None = None,
-        presence_penalty: float | None = None,
-        max_tokens: int | None = None,
-        max_completion_tokens: int | None = None,
-        seed: int | None = None,
-        stream: bool = False,
-        response_format: dict[str, Any] | type[BaseModel] | None = None,
-        logprobs: bool | None = None,
-        top_logprobs: int | None = None,
-        reasoning_effort: str | None = None,
-        provider: str | None = None,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize OpenAI chat completion client."""
+    # Client configuration fields
+    organization: str | None = Field(default=None, description="OpenAI organization ID")
+    project: str | None = Field(default=None, description="OpenAI project ID")
+    max_retries: int = Field(default=2, description="Maximum number of retries")
+    default_headers: dict[str, str] = Field(
+        default_factory=dict, description="Default headers for requests"
+    )
+    default_query: dict[str, Any] = Field(
+        default_factory=dict, description="Default query parameters"
+    )
+    client_params: dict[str, Any] = Field(
+        default_factory=dict, description="Additional client parameters"
+    )
+    timeout: float | None = Field(default=None, description="Request timeout")
+    api_base: str | None = Field(
+        default=None, description="API base URL", deprecated=True
+    )
 
-        if provider is None:
-            provider = kwargs.pop("provider", "openai")
+    # Completion parameters
+    top_p: float | None = Field(default=None, description="Top-p sampling parameter")
+    frequency_penalty: float | None = Field(
+        default=None, description="Frequency penalty"
+    )
+    presence_penalty: float | None = Field(default=None, description="Presence penalty")
+    max_tokens: int | None = Field(default=None, description="Maximum tokens")
+    max_completion_tokens: int | None = Field(
+        None, description="Maximum completion tokens"
+    )
+    seed: int | None = Field(default=None, description="Random seed")
+    stream: bool = Field(default=False, description="Enable streaming")
+    response_format: dict[str, Any] | type[BaseModel] | None = Field(
+        default=None, description="Response format"
+    )
+    logprobs: bool | None = Field(default=None, description="Return log probabilities")
+    top_logprobs: int | None = Field(
+        default=None, description="Number of top log probabilities"
+    )
+    reasoning_effort: str | None = Field(
+        default=None, description="Reasoning effort level"
+    )
 
-        self.interceptor = interceptor
-        # Client configuration attributes
-        self.organization = organization
-        self.project = project
-        self.max_retries = max_retries
-        self.default_headers = default_headers
-        self.default_query = default_query
-        self.client_params = client_params
-        self.timeout = timeout
-        self.base_url = base_url
-        self.api_base = kwargs.pop("api_base", None)
+    _client: OpenAI = PrivateAttr(default=None)  # type: ignore[assignment]
+    is_o1_model: bool = Field(default=False, description="Whether this is an O1 model")
+    is_gpt4_model: bool = Field(
+        default=False, description="Whether this is a GPT-4 model"
+    )
 
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key or os.getenv("OPENAI_API_KEY"),
-            base_url=base_url,
-            timeout=timeout,
-            provider=provider,
-            **kwargs,
-        )
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize OpenAI client after model validation."""
 
         client_config = self._get_client_params()
         if self.interceptor:
@@ -98,31 +100,15 @@ class OpenAICompletion(BaseLLM):
             http_client = httpx.Client(transport=transport)
             client_config["http_client"] = http_client
 
-        self.client = OpenAI(**client_config)
+        self._client = OpenAI(**client_config)
 
-        # Completion parameters
-        self.top_p = top_p
-        self.frequency_penalty = frequency_penalty
-        self.presence_penalty = presence_penalty
-        self.max_tokens = max_tokens
-        self.max_completion_tokens = max_completion_tokens
-        self.seed = seed
-        self.stream = stream
-        self.response_format = response_format
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.reasoning_effort = reasoning_effort
-        self.is_o1_model = "o1" in model.lower()
-        self.is_gpt4_model = "gpt-4" in model.lower()
+        self.is_o1_model = "o1" in self.model.lower()
+        self.is_gpt4_model = "gpt-4" in self.model.lower()
+
+        return self
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenAI client parameters."""
-
-        if self.api_key is None:
-            self.api_key = os.getenv("OPENAI_API_KEY")
-            if self.api_key is None:
-                raise ValueError("OPENAI_API_KEY is required")
-
         base_params = {
             "api_key": self.api_key,
             "organization": self.organization,
@@ -268,7 +254,6 @@ class OpenAICompletion(BaseLLM):
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
 
         openai_tools = []
 
@@ -296,14 +281,14 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
             if response_model:
-                parsed_response = self.client.beta.chat.completions.parse(
+                parsed_response = self._client.beta.chat.completions.parse(
                     **params,
                     response_format=response_model,
                 )
@@ -327,7 +312,7 @@ class OpenAICompletion(BaseLLM):
                     )
                     return structured_json
 
-            response: ChatCompletion = self.client.chat.completions.create(**params)
+            response: ChatCompletion = self._client.chat.completions.create(**params)
 
             usage = self._extract_openai_token_usage(response)
 
@@ -419,8 +404,8 @@ class OpenAICompletion(BaseLLM):
         self,
         params: dict[str, Any],
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming chat completion."""
@@ -429,7 +414,7 @@ class OpenAICompletion(BaseLLM):
 
         if response_model:
             completion_stream: Iterator[ChatCompletionChunk] = (
-                self.client.chat.completions.create(**params)
+                self._client.chat.completions.create(**params)
             )
 
             accumulated_content = ""
@@ -472,7 +457,7 @@ class OpenAICompletion(BaseLLM):
                 )
                 return accumulated_content
 
-        stream: Iterator[ChatCompletionChunk] = self.client.chat.completions.create(
+        stream: Iterator[ChatCompletionChunk] = self._client.chat.completions.create(
             **params
         )
 
@@ -560,7 +545,6 @@ class OpenAICompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
 
         min_context = 1024
         max_context = 2097152

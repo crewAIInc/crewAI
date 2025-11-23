@@ -34,7 +34,7 @@ def test_gemini_completion_is_used_when_gemini_provider():
     """
     llm = LLM(model="gemini/gemini-2.0-flash-001")
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
     assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
@@ -47,7 +47,7 @@ def test_gemini_tool_use_conversation_flow():
     Test that the Gemini completion properly handles tool use conversation flow
     """
     from unittest.mock import Mock, patch
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
 
     # Create GeminiCompletion instance
     completion = GeminiCompletion(model="gemini-2.0-flash-001")
@@ -59,7 +59,7 @@ def test_gemini_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Google Gemini client responses
-    with patch.object(completion.client.models, 'generate_content') as mock_generate:
+    with patch.object(completion._client.models, 'generate_content') as mock_generate:
         # Mock function call in response
         mock_function_call = Mock()
         mock_function_call.name = "get_weather"
@@ -102,7 +102,7 @@ def test_gemini_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Google provider
     """
-    module_name = "crewai.llms.providers.gemini.completion"
+    module_name = "crewai.llm.providers.gemini.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -159,7 +159,7 @@ def test_gemini_completion_initialization_parameters():
         api_key="test-key"
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
     assert llm.model == "gemini-2.0-flash-001"
     assert llm.temperature == 0.7
@@ -186,9 +186,9 @@ def test_gemini_specific_parameters():
         location="us-central1"
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
-    assert llm.stop_sequences == ["Human:", "Assistant:"]
+    assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
     assert llm.safety_settings == safety_settings
     assert llm.project == "test-project"
@@ -382,7 +382,7 @@ def test_gemini_raises_error_when_model_not_supported():
     """Test that GeminiCompletion raises ValueError when model not supported"""
 
     # Mock the Google client to raise an error
-    with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
+    with patch('crewai.llm.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
 
@@ -420,7 +420,7 @@ def test_gemini_vertex_ai_setup():
             location="us-west1"
         )
 
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion)
 
         assert llm.project == "test-project"
@@ -435,7 +435,7 @@ def test_gemini_api_key_configuration():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion)
         assert llm.api_key == "test-google-key"
 
@@ -453,7 +453,7 @@ def test_gemini_model_capabilities():
     """
     # Test Gemini 2.0 model
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm_2_0, GeminiCompletion)
     assert llm_2_0.is_gemini_2 == True
     assert llm_2_0.supports_tools == True
@@ -477,7 +477,7 @@ def test_gemini_generation_config():
         max_output_tokens=1000
     )
 
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from crewai.llm.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
 
     # Test config preparation
@@ -504,7 +504,7 @@ def test_gemini_model_detection():
 
     for model_name in gemini_test_cases:
         llm = LLM(model=model_name)
-        from crewai.llms.providers.gemini.completion import GeminiCompletion
+        from crewai.llm.providers.gemini.completion import GeminiCompletion
         assert isinstance(llm, GeminiCompletion), f"Failed for model: {model_name}"
 
 
@@ -614,8 +614,8 @@ def test_gemini_environment_variable_api_key():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
-        assert llm.client is not None
-        assert hasattr(llm.client, 'models')
+        assert llm._client is not None
+        assert hasattr(llm._client, 'models')
         assert llm.api_key == "test-google-key"
 
 
@@ -626,7 +626,7 @@ def test_gemini_token_usage_tracking():
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     # Mock the Gemini response with usage information
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+    with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "test response"
         mock_response.candidates = []
@@ -651,23 +651,20 @@ def test_gemini_token_usage_tracking():
 
 
 def test_gemini_stop_sequences_sync():
-    """Test that stop and stop_sequences attributes stay synchronized."""
+    """Test that stop sequences can be set and retrieved correctly."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
     # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
-    assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
     # Test setting stop as a string
     llm.stop = "\nFinal Answer:"
-    assert llm.stop_sequences == ["\nFinal Answer:"]
-    assert llm.stop == ["\nFinal Answer:"]
+    assert llm.stop == "\nFinal Answer:"
 
     # Test setting stop as None
     llm.stop = None
-    assert llm.stop_sequences == []
-    assert llm.stop == []
+    assert llm.stop is None
 
 
 def test_gemini_stop_sequences_sent_to_api():
@@ -678,7 +675,7 @@ def test_gemini_stop_sequences_sent_to_api():
     llm.stop = ["\nObservation:", "\nThought:"]
 
     # Patch the API call to capture parameters without making real call
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+    with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "Hello"
         mock_response.candidates = []

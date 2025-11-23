@@ -11,7 +11,7 @@ from crewai.events.event_types import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -229,7 +229,7 @@ def test_validate_call_params_supported():
         a: int
 
     # Patch supports_response_schema to simulate a supported model.
-    with patch("crewai.llm.supports_response_schema", return_value=True):
+    with patch("crewai.llm.core.supports_response_schema", return_value=True):
         llm = LLM(
             model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse
         )
@@ -242,7 +242,7 @@ def test_validate_call_params_not_supported():
         a: int
 
     # Patch supports_response_schema to simulate an unsupported model.
-    with patch("crewai.llm.supports_response_schema", return_value=False):
+    with patch("crewai.llm.core.supports_response_schema", return_value=False):
         llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse, is_litellm=True)
         with pytest.raises(ValueError) as excinfo:
             llm._validate_call_params()
@@ -342,7 +342,7 @@ def test_context_window_validation():
     # Test invalid window size
     with pytest.raises(ValueError) as excinfo:
         with patch.dict(
-            "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
+            "crewai.llm.core.LLM_CONTEXT_WINDOW_SIZES",
             {"test-model": 500},  # Below minimum
             clear=True,
         ):
@@ -703,8 +703,8 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
 
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
-    with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
-        with patch("crewai.llm.LLM._get_native_provider") as mock_get_native:
+    with patch("crewai.llm.internal.meta.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
+        with patch("crewai.llm.internal.meta.LLMMeta._get_native_provider") as mock_get_native:
             # Mock that provider exists but throws an error when instantiated
             mock_provider = MagicMock()
             mock_provider.side_effect = ValueError("Native provider initialization failed")
@@ -719,7 +719,7 @@ def test_native_provider_raises_error_when_supported_but_fails():
 
 def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
     """Test that when a provider is not in SUPPORTED_NATIVE_PROVIDERS, we fall back to LiteLLM."""
-    with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
+    with patch("crewai.llm.internal.meta.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
         # Using a provider not in the supported list
         llm = LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
 

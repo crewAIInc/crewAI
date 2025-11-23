@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llm.hooks.base import BaseInterceptor
 
 
 @pytest.fixture(autouse=True)

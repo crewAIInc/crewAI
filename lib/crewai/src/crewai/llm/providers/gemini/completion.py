@@ -1,17 +1,27 @@
+from __future__ import annotations
+
 import logging
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel
+from dotenv import load_dotenv
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
-from crewai.llms.hooks.base import BaseInterceptor
+from crewai.llm.base_llm import BaseLLM
+from crewai.llm.core import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
+from crewai.llm.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent.core import Agent
+    from crewai.task import Task
 
 
 try:
@@ -24,111 +34,93 @@ except ImportError:
     ) from None
 
 
+load_dotenv()
+
+
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
 
     This class provides direct integration with the Google Gen AI Python SDK,
     offering native function calling, streaming support, and proper Gemini formatting.
+
+    Attributes:
+        model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
+        project: Google Cloud project ID (for Vertex AI)
+        location: Google Cloud location (for Vertex AI, defaults to 'us-central1')
+        top_p: Nucleus sampling parameter
+        top_k: Top-k sampling parameter
+        max_output_tokens: Maximum tokens in response
+        stream: Enable streaming responses
+        safety_settings: Safety filter settings
+        client_params: Additional parameters for Google Gen AI Client constructor
+        interceptor: HTTP interceptor (not yet supported for Gemini)
     """
 
-    def __init__(
-        self,
-        model: str = "gemini-2.0-flash-001",
-        api_key: str | None = None,
-        project: str | None = None,
-        location: str | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        top_k: int | None = None,
-        max_output_tokens: int | None = None,
-        stop_sequences: list[str] | None = None,
-        stream: bool = False,
-        safety_settings: dict[str, Any] | None = None,
-        client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Google Gemini chat completion client.
+    project: str | None = Field(
+        default_factory=lambda: os.getenv("GOOGLE_CLOUD_PROJECT"),
+        description="Google Cloud project ID (for Vertex AI)",
+    )
+    location: str = Field(
+        default_factory=lambda: os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1"),
+        description="Google Cloud location (for Vertex AI, defaults to 'us-central1')",
+    )
+    top_p: float | None = Field(default=None, description="Nucleus sampling parameter")
+    top_k: int | None = Field(default=None, description="Top-k sampling parameter")
+    max_output_tokens: int | None = Field(
+        default=None, description="Maximum tokens in response"
+    )
+    stream: bool = Field(default=False, description="Enable streaming responses")
+    safety_settings: dict[str, Any] = Field(
+        default_factory=dict, description="Safety filter settings"
+    )
+    client_params: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional parameters for Google Gen AI Client constructor",
+    )
+    _client: Any = PrivateAttr(default=None)
 
-        Args:
-            model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
-            api_key: Google API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
-            project: Google Cloud project ID (for Vertex AI)
-            location: Google Cloud location (for Vertex AI, defaults to 'us-central1')
-            temperature: Sampling temperature (0-2)
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter
-            max_output_tokens: Maximum tokens in response
-            stop_sequences: Stop sequences
-            stream: Enable streaming responses
-            safety_settings: Safety filter settings
-            client_params: Additional parameters to pass to the Google Gen AI Client constructor.
-                          Supports parameters like http_options, credentials, debug_config, etc.
-            interceptor: HTTP interceptor (not yet supported for Gemini).
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _is_gemini_2: bool = PrivateAttr(default=False)
+    _is_gemini_1_5: bool = PrivateAttr(default=False)
+    _supports_tools: bool = PrivateAttr(default=False)
+
+    @model_validator(mode="after")
+    def setup_client(self) -> Self:
+        """Initialize the Gemini client and validate configuration."""
+        if self.interceptor is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Google Gemini provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        super().__init__(
-            model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
-        )
-
-        # Store client params for later use
-        self.client_params = client_params or {}
-
-        # Get API configuration with environment variable fallbacks
-        self.api_key = (
-            api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        )
-        self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
-        self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
+        if self.api_key is None:
+            self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
 
         use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
 
-        self.client = self._initialize_client(use_vertexai)
+        self._client = self._initialize_client(use_vertexai)
 
-        # Store completion parameters
-        self.top_p = top_p
-        self.top_k = top_k
-        self.max_output_tokens = max_output_tokens
-        self.stream = stream
-        self.safety_settings = safety_settings or {}
-        self.stop_sequences = stop_sequences or []
+        self._is_gemini_2 = "gemini-2" in self.model.lower()
+        self._is_gemini_1_5 = "gemini-1.5" in self.model.lower()
+        self._supports_tools = self._is_gemini_1_5 or self._is_gemini_2
 
-        # Model-specific settings
-        self.is_gemini_2 = "gemini-2" in model.lower()
-        self.is_gemini_1_5 = "gemini-1.5" in model.lower()
-        self.supports_tools = self.is_gemini_1_5 or self.is_gemini_2
+        return self
 
     @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return self.stop_sequences
+    def is_gemini_2(self) -> bool:
+        """Check if model is Gemini 2."""
+        return self._is_gemini_2
 
-    @stop.setter
-    def stop(self, value: list[str] | str | None) -> None:
-        """Set stop sequences.
+    @property
+    def is_gemini_1_5(self) -> bool:
+        """Check if model is Gemini 1.5."""
+        return self._is_gemini_1_5
 
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Gemini API.
+    @property
+    def supports_tools(self) -> bool:
+        """Check if model supports tools."""
+        return self._supports_tools
 
-        Args:
-            value: Stop sequences as a list, single string, or None
-        """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, list):
-            self.stop_sequences = value
-        else:
-            self.stop_sequences = []
-
-    def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:  # type: ignore[no-any-unimported]
+    def _initialize_client(self, use_vertexai: bool = False) -> Any:
         """Initialize the Google Gen AI client with proper parameter handling.
 
         Args:
@@ -150,12 +142,9 @@ class GeminiCompletion(BaseLLM):
                     "location": self.location,
                 }
             )
-
             client_params.pop("api_key", None)
-
         elif self.api_key:
             client_params["api_key"] = self.api_key
-
             client_params.pop("vertexai", None)
             client_params.pop("project", None)
             client_params.pop("location", None)
@@ -180,11 +169,10 @@ class GeminiCompletion(BaseLLM):
         params = {}
 
         if (
-            hasattr(self, "client")
-            and hasattr(self.client, "vertexai")
-            and self.client.vertexai
+            hasattr(self, "_client")
+            and hasattr(self._client, "vertexai")
+            and self._client.vertexai
         ):
-            # Vertex AI configuration
             params.update(
                 {
                     "vertexai": True,
@@ -206,8 +194,8 @@ class GeminiCompletion(BaseLLM):
         tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call Google Gemini generate content API.
@@ -296,15 +284,12 @@ class GeminiCompletion(BaseLLM):
         self.tools = tools
         config_params = {}
 
-        # Add system instruction if present
         if system_instruction:
-            # Convert system instruction to Content format
             system_content = types.Content(
                 role="user", parts=[types.Part.from_text(text=system_instruction)]
             )
             config_params["system_instruction"] = system_content
 
-        # Add generation config parameters
         if self.temperature is not None:
             config_params["temperature"] = self.temperature
         if self.top_p is not None:
@@ -313,14 +298,13 @@ class GeminiCompletion(BaseLLM):
             config_params["top_k"] = self.top_k
         if self.max_output_tokens is not None:
             config_params["max_output_tokens"] = self.max_output_tokens
-        if self.stop_sequences:
-            config_params["stop_sequences"] = self.stop_sequences
+        if self.stop:
+            config_params["stop_sequences"] = self.stop
 
         if response_model:
             config_params["response_mime_type"] = "application/json"
             config_params["response_schema"] = response_model.model_json_schema()
 
-        # Handle tools for supported models
         if tools and self.supports_tools:
             config_params["tools"] = self._convert_tools_for_interference(tools)
 
@@ -335,8 +319,6 @@ class GeminiCompletion(BaseLLM):
         """Convert CrewAI tool format to Gemini function declaration format."""
         gemini_tools = []
 
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "Gemini")
 
@@ -345,7 +327,6 @@ class GeminiCompletion(BaseLLM):
                 description=description,
             )
 
-            # Add parameters if present - ensure parameters is a dict
             if parameters and isinstance(parameters, dict):
                 function_declaration.parameters = parameters
 
@@ -381,16 +362,12 @@ class GeminiCompletion(BaseLLM):
             content = message.get("content", "")
 
             if role == "system":
-                # Extract system instruction - Gemini handles it separately
                 if system_instruction:
                     system_instruction += f"\n\n{content}"
                 else:
                     system_instruction = cast(str, content)
             else:
-                # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
-
-                # Create Content object
                 gemini_content = types.Content(
                     role=gemini_role, parts=[types.Part.from_text(text=content)]
                 )
@@ -404,8 +381,8 @@ class GeminiCompletion(BaseLLM):
         system_instruction: str | None,
         config: types.GenerateContentConfig,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle non-streaming content generation."""
@@ -416,7 +393,7 @@ class GeminiCompletion(BaseLLM):
         }
 
         try:
-            response = self.client.models.generate_content(**api_params)
+            response = self._client.models.generate_content(**api_params)
 
             usage = self._extract_token_usage(response)
         except Exception as e:
@@ -470,8 +447,8 @@ class GeminiCompletion(BaseLLM):
         contents: list[types.Content],
         config: types.GenerateContentConfig,
         available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming content generation."""
@@ -484,7 +461,7 @@ class GeminiCompletion(BaseLLM):
             "config": config,
         }
 
-        for chunk in self.client.models.generate_content_stream(**api_params):
+        for chunk in self._client.models.generate_content_stream(**api_params):
             if hasattr(chunk, "text") and chunk.text:
                 full_response += chunk.text
                 self._emit_stream_chunk_event(
@@ -507,13 +484,11 @@ class GeminiCompletion(BaseLLM):
                                     else {},
                                 }
 
-        # Handle completed function calls
         if function_calls and available_functions:
             for call_data in function_calls.values():
                 function_name = call_data["name"]
                 function_args = call_data["args"]
 
-                # Execute tool
                 result = self._handle_tool_execution(
                     function_name=function_name,
                     function_args=function_args,
@@ -547,7 +522,6 @@ class GeminiCompletion(BaseLLM):
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
-        from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM_CONTEXT_WINDOW_SIZES
 
         min_context = 1024
         max_context = 2097152
@@ -574,13 +548,11 @@ class GeminiCompletion(BaseLLM):
             "gemma-3-27b": 128000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size for Gemini models
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens
+        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def _extract_token_usage(self, response: dict[str, Any]) -> dict[str, Any]:
         """Extract token usage from Gemini response."""

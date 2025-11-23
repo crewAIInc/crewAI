@@ -19,7 +19,7 @@ def mock_aws_credentials():
         "AWS_DEFAULT_REGION": "us-east-1"
     }):
         # Mock boto3 Session to prevent actual AWS connections
-        with patch('crewai.llms.providers.bedrock.completion.Session') as mock_session_class:
+        with patch('crewai.llm.providers.bedrock.completion.Session') as mock_session_class:
             # Create mock session instance
             mock_session_instance = MagicMock()
             mock_client = MagicMock()
@@ -67,7 +67,7 @@ def test_bedrock_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Bedrock provider
     """
-    module_name = "crewai.llms.providers.bedrock.completion"
+    module_name = "crewai.llm.providers.bedrock.completion"
 
     # Remove module from cache if it exists
     if module_name in sys.modules:
@@ -124,7 +124,7 @@ def test_bedrock_completion_initialization_parameters():
         region_name="us-west-2"
     )
 
-    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    from crewai.llm.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm, BedrockCompletion)
     assert llm.model == "anthropic.claude-3-5-sonnet-20241022-v2:0"
     assert llm.temperature == 0.7
@@ -145,9 +145,9 @@ def test_bedrock_specific_parameters():
         region_name="us-east-1"
     )
 
-    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    from crewai.llm.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm, BedrockCompletion)
-    assert llm.stop_sequences == ["Human:", "Assistant:"]
+    assert llm.stop == ["Human:", "Assistant:"]
     assert llm.stream == True
     assert llm.region_name == "us-east-1"
 
@@ -369,7 +369,7 @@ def test_bedrock_aws_credentials_configuration():
     }):
         llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-        from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        from crewai.llm.providers.bedrock.completion import BedrockCompletion
         assert isinstance(llm, BedrockCompletion)
         assert llm.region_name == "us-east-1"
 
@@ -390,7 +390,7 @@ def test_bedrock_model_capabilities():
     """
     # Test Claude model
     llm_claude = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
-    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    from crewai.llm.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm_claude, BedrockCompletion)
     assert llm_claude.is_claude_model == True
     assert llm_claude.supports_tools == True
@@ -413,7 +413,7 @@ def test_bedrock_inference_config():
         max_tokens=1000
     )
 
-    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    from crewai.llm.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm, BedrockCompletion)
 
     # Test config preparation
@@ -444,7 +444,7 @@ def test_bedrock_model_detection():
 
     for model_name in bedrock_test_cases:
         llm = LLM(model=model_name)
-        from crewai.llms.providers.bedrock.completion import BedrockCompletion
+        from crewai.llm.providers.bedrock.completion import BedrockCompletion
         assert isinstance(llm, BedrockCompletion), f"Failed for model: {model_name}"
 
 
@@ -579,7 +579,7 @@ def test_bedrock_token_usage_tracking():
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Mock the Bedrock response with usage information
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         mock_response = {
             'output': {
                 'message': {
@@ -624,7 +624,7 @@ def test_bedrock_tool_use_conversation_flow():
     available_functions = {"get_weather": mock_weather_tool}
 
     # Mock the Bedrock client responses
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         # First response: tool use request
         tool_use_response = {
             'output': {
@@ -710,7 +710,7 @@ def test_bedrock_client_error_handling():
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Test ValidationException
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
                 'Code': 'ValidationException',
@@ -724,7 +724,7 @@ def test_bedrock_client_error_handling():
         assert "validation" in str(exc_info.value).lower()
 
     # Test ThrottlingException
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
                 'Code': 'ThrottlingException',
@@ -739,23 +739,19 @@ def test_bedrock_client_error_handling():
 
 
 def test_bedrock_stop_sequences_sync():
-    """Test that stop and stop_sequences attributes stay synchronized."""
+    """Test that stop sequences can be set and retrieved correctly."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
     # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
-    assert list(llm.stop_sequences) == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
-    # Test setting stop as a string
-    llm.stop = "\nFinal Answer:"
-    assert list(llm.stop_sequences) == ["\nFinal Answer:"]
-    assert llm.stop == ["\nFinal Answer:"]
+    llm2 = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", stop_sequences="\nFinal Answer:")
+    assert llm2.stop == ["\nFinal Answer:"]
 
     # Test setting stop as None
     llm.stop = None
-    assert list(llm.stop_sequences) == []
-    assert llm.stop == []
+    assert llm.stop is None
 
 
 def test_bedrock_stop_sequences_sent_to_api():
@@ -766,7 +762,7 @@ def test_bedrock_stop_sequences_sent_to_api():
     llm.stop = ["\nObservation:", "\nThought:"]
 
     # Patch the API call to capture parameters without making real call
-    with patch.object(llm.client, 'converse') as mock_converse:
+    with patch.object(llm._client, 'converse') as mock_converse:
         mock_response = {
             'output': {
                 'message': {

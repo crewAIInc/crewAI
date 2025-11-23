@@ -1,6 +1,15 @@
-"""Interceptor contracts for crewai"""
+"""Deprecated: Use crewai.llm.hooks instead.
 
-from crewai.llms.hooks.base import BaseInterceptor
+.. deprecated:: 1.4.0
+"""
+
+import warnings
 
 
-__all__ = ["BaseInterceptor"]
+warnings.warn(
+    "crewai.llms.hooks is deprecated. Use crewai.llm.hooks instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from crewai.llm.hooks import *  # noqa: E402, F403

@@ -20,9 +20,7 @@ from typing import (
 )
 
 from dotenv import load_dotenv
-import httpx
 from pydantic import BaseModel, Field
-from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
@@ -37,14 +35,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM
-from crewai.llms.constants import (
-    ANTHROPIC_MODELS,
-    AZURE_MODELS,
-    BEDROCK_MODELS,
-    GEMINI_MODELS,
-    OPENAI_MODELS,
-)
+from crewai.llm.base_llm import BaseLLM
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -61,7 +52,6 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
-    from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -327,249 +317,57 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
-    completion_cost: float | None = None
+    """LiteLLM-based LLM implementation for CrewAI.
 
-    def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
-        """Factory method that routes to native SDK or falls back to LiteLLM.
+    This class provides LiteLLM integration for models not covered by native providers.
+    The metaclass (LLMMeta) automatically routes to native providers when appropriate.
+    """
 
-        Routing priority:
-            1. If 'provider' kwarg is present, use that provider with constants
-            2. If only 'model' kwarg, use constants to infer provider
-            3. If "/" in model name:
-               - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
-               - If yes, validate model against constants
-               - If valid, route to native SDK; otherwise route to LiteLLM
-        """
-        if not model or not isinstance(model, str):
-            raise ValueError("Model must be a non-empty string")
+    # LiteLLM-specific fields
+    completion_cost: float | None = Field(None, description="Cost of completion")
+    timeout: float | int | None = Field(None, description="Request timeout")
+    top_p: float | None = Field(None, description="Top-p sampling parameter")
+    n: int | None = Field(None, description="Number of completions to generate")
+    max_completion_tokens: int | None = Field(
+        None, description="Maximum completion tokens"
+    )
+    max_tokens: int | float | None = Field(None, description="Maximum total tokens")
+    presence_penalty: float | None = Field(None, description="Presence penalty")
+    frequency_penalty: float | None = Field(None, description="Frequency penalty")
+    logit_bias: dict[int, float] | None = Field(None, description="Logit bias")
+    response_format: type[BaseModel] | None = Field(
+        None, description="Response format model"
+    )
+    seed: int | None = Field(None, description="Random seed for reproducibility")
+    logprobs: int | None = Field(None, description="Log probabilities to return")
+    top_logprobs: int | None = Field(None, description="Top log probabilities")
+    api_base: str | None = Field(None, description="API base URL (alias for base_url)")
+    api_version: str | None = Field(None, description="API version")
+    callbacks: list[Any] | None = Field(None, description="Callback functions")
+    context_window_size: int = Field(0, description="Context window size in tokens")
+    reasoning_effort: Literal["none", "low", "medium", "high"] | None = Field(
+        None, description="Reasoning effort level"
+    )
+    is_anthropic: bool = Field(False, description="Whether model is from Anthropic")
+    stream: bool = Field(False, description="Whether to stream responses")
 
-        explicit_provider = kwargs.get("provider")
-
-        if explicit_provider:
-            provider = explicit_provider
-            use_native = True
-            model_string = model
-        elif "/" in model:
-            prefix, _, model_part = model.partition("/")
-
-            provider_mapping = {
-                "openai": "openai",
-                "anthropic": "anthropic",
-                "claude": "anthropic",
-                "azure": "azure",
-                "azure_openai": "azure",
-                "google": "gemini",
-                "gemini": "gemini",
-                "bedrock": "bedrock",
-                "aws": "bedrock",
-            }
-
-            canonical_provider = provider_mapping.get(prefix.lower())
-
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
-            ):
-                provider = canonical_provider
-                use_native = True
-                model_string = model_part
-            else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
-        else:
-            provider = cls._infer_provider_from_model(model)
-            use_native = True
-            model_string = model
-
-        native_class = cls._get_native_provider(provider) if use_native else None
-        if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
-            try:
-                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != 'provider'}
-                return cast(
-                    Self, native_class(model=model_string, provider=provider, **kwargs_copy)
-                )
-            except NotImplementedError:
-                raise
-            except Exception as e:
-                raise ImportError(f"Error importing native provider: {e}") from e
-
-        # FALLBACK to LiteLLM
-        if not LITELLM_AVAILABLE:
-            logger.error("LiteLLM is not available, falling back to LiteLLM")
-            raise ImportError("Fallback to LiteLLM is not available") from None
-
-        instance = object.__new__(cls)
-        super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
-        instance.is_litellm = True
-        return instance
-
-    @classmethod
-    def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
-        """Validate if a model name exists in the provider's constants.
+    def model_post_init(self, __context: Any) -> None:
+        """Initialize LiteLLM-specific settings after model initialization.
 
         Args:
-            model: The model name to validate
-            provider: The provider to check against (canonical name)
-
-        Returns:
-            True if the model exists in the provider's constants, False otherwise
+            __context: Pydantic context
         """
-        if provider == "openai":
-            return model in OPENAI_MODELS
+        super().model_post_init(__context)
 
-        if provider == "anthropic" or provider == "claude":
-            return model in ANTHROPIC_MODELS
+        # Configure LiteLLM
+        if LITELLM_AVAILABLE:
+            litellm.drop_params = True
 
-        if provider == "gemini":
-            return model in GEMINI_MODELS
+        # Determine if this is an Anthropic model
+        self.is_anthropic = self._is_anthropic_model(self.model)
 
-        if provider == "bedrock":
-            return model in BEDROCK_MODELS
-
-        if provider == "azure":
-            # azure does not provide a list of available models, determine a better way to handle this
-            return True
-
-        return False
-
-    @classmethod
-    def _infer_provider_from_model(cls, model: str) -> str:
-        """Infer the provider from the model name.
-
-        Args:
-            model: The model name without provider prefix
-
-        Returns:
-            The inferred provider name, defaults to "openai"
-        """
-
-        if model in OPENAI_MODELS:
-            return "openai"
-
-        if model in ANTHROPIC_MODELS:
-            return "anthropic"
-
-        if model in GEMINI_MODELS:
-            return "gemini"
-
-        if model in BEDROCK_MODELS:
-            return "bedrock"
-
-        if model in AZURE_MODELS:
-            return "azure"
-
-        return "openai"
-
-    @classmethod
-    def _get_native_provider(cls, provider: str) -> type | None:
-        """Get native provider class if available."""
-        if provider == "openai":
-            from crewai.llms.providers.openai.completion import OpenAICompletion
-
-            return OpenAICompletion
-
-        if provider == "anthropic" or provider == "claude":
-            from crewai.llms.providers.anthropic.completion import (
-                AnthropicCompletion,
-            )
-
-            return AnthropicCompletion
-
-        if provider == "azure" or provider == "azure_openai":
-            from crewai.llms.providers.azure.completion import AzureCompletion
-
-            return AzureCompletion
-
-        if provider == "google" or provider == "gemini":
-            from crewai.llms.providers.gemini.completion import GeminiCompletion
-
-            return GeminiCompletion
-
-        if provider == "bedrock":
-            from crewai.llms.providers.bedrock.completion import BedrockCompletion
-
-            return BedrockCompletion
-
-        return None
-
-    def __init__(
-        self,
-        model: str,
-        timeout: float | int | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        n: int | None = None,
-        stop: str | list[str] | None = None,
-        max_completion_tokens: int | None = None,
-        max_tokens: int | float | None = None,
-        presence_penalty: float | None = None,
-        frequency_penalty: float | None = None,
-        logit_bias: dict[int, float] | None = None,
-        response_format: type[BaseModel] | None = None,
-        seed: int | None = None,
-        logprobs: int | None = None,
-        top_logprobs: int | None = None,
-        base_url: str | None = None,
-        api_base: str | None = None,
-        api_version: str | None = None,
-        api_key: str | None = None,
-        callbacks: list[Any] | None = None,
-        reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
-        stream: bool = False,
-        interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize LLM instance.
-
-        Note: This __init__ method is only called for fallback instances.
-        Native provider instances handle their own initialization in their respective classes.
-        """
-        super().__init__(
-            model=model,
-            temperature=temperature,
-            api_key=api_key,
-            base_url=base_url,
-            timeout=timeout,
-            **kwargs,
-        )
-        self.model = model
-        self.timeout = timeout
-        self.temperature = temperature
-        self.top_p = top_p
-        self.n = n
-        self.max_completion_tokens = max_completion_tokens
-        self.max_tokens = max_tokens
-        self.presence_penalty = presence_penalty
-        self.frequency_penalty = frequency_penalty
-        self.logit_bias = logit_bias
-        self.response_format = response_format
-        self.seed = seed
-        self.logprobs = logprobs
-        self.top_logprobs = top_logprobs
-        self.base_url = base_url
-        self.api_base = api_base
-        self.api_version = api_version
-        self.api_key = api_key
-        self.callbacks = callbacks
-        self.context_window_size = 0
-        self.reasoning_effort = reasoning_effort
-        self.additional_params = kwargs
-        self.is_anthropic = self._is_anthropic_model(model)
-        self.stream = stream
-        self.interceptor = interceptor
-
-        litellm.drop_params = True
-
-        # Normalize self.stop to always be a list[str]
-        if stop is None:
-            self.stop: list[str] = []
-        elif isinstance(stop, str):
-            self.stop = [stop]
-        else:
-            self.stop = stop
-
-        self.set_callbacks(callbacks or [])
+        # Set up callbacks
+        self.set_callbacks(self.callbacks or [])
         self.set_env_callbacks()
 
     @staticmethod
@@ -1649,7 +1447,7 @@ class LLM(BaseLLM):
             **filtered_params,
         )
 
-    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:
+    def __deepcopy__(self, memo: dict[int, Any] | None) -> LLM:  # type: ignore[override]
         """Create a deep copy of the LLM instance."""
         import copy
 

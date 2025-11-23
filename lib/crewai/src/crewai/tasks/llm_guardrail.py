@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.lite_agent_output import LiteAgentOutput
-from crewai.llms.base_llm import BaseLLM
+from crewai.llm.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
 
 
