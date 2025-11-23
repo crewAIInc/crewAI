@@ -50,6 +50,7 @@ class AnthropicCompletion(BaseLLM):
         top_p: float | None = None,
         stop_sequences: list[str] | None = None,
         stream: bool = False,
+        thinking: dict[str, Any] | None = None,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         **kwargs: Any,
@@ -67,6 +68,7 @@ class AnthropicCompletion(BaseLLM):
             top_p: Nucleus sampling parameter
             stop_sequences: Stop sequences (Anthropic uses stop_sequences, not stop)
             stream: Enable streaming responses
+            thinking: Extended thinking configuration (e.g., {'type': 'enabled', 'budget_tokens': 5000})
             client_params: Additional parameters for the Anthropic client
             interceptor: HTTP interceptor for modifying requests/responses at transport level.
             **kwargs: Additional parameters
@@ -89,6 +91,7 @@ class AnthropicCompletion(BaseLLM):
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
+        self.thinking = thinking
 
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
@@ -247,6 +250,10 @@ class AnthropicCompletion(BaseLLM):
             params["top_p"] = self.top_p
         if self.stop_sequences:
             params["stop_sequences"] = self.stop_sequences
+
+        # Add extended thinking configuration if set
+        if self.thinking is not None:
+            params["thinking"] = self.thinking
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:

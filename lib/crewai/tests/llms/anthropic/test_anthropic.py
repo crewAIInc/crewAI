@@ -698,3 +698,253 @@ def test_anthropic_stop_sequences_sent_to_api():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+def test_anthropic_extended_thinking_parameter():
+    """
+    Test that AnthropicCompletion accepts and stores the thinking parameter
+    """
+    thinking_config = {"type": "enabled", "budget_tokens": 5000}
+    
+    llm = LLM(
+        model="anthropic/claude-3-5-sonnet-20241022",
+        thinking=thinking_config
+    )
+    
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    assert isinstance(llm, AnthropicCompletion)
+    assert llm.thinking == thinking_config
+
+
+def test_anthropic_extended_thinking_added_to_api_call():
+    """
+    Test that the thinking parameter is added to the API call parameters
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    
+    thinking_config = {"type": "enabled", "budget_tokens": 5000}
+    completion = AnthropicCompletion(
+        model="claude-3-5-sonnet-20241022",
+        thinking=thinking_config
+    )
+    
+    # Test _prepare_completion_params includes thinking
+    messages = [{"role": "user", "content": "Hello"}]
+    params = completion._prepare_completion_params(messages)
+    
+    assert "thinking" in params
+    assert params["thinking"] == thinking_config
+
+
+def test_anthropic_extended_thinking_not_added_when_none():
+    """
+    Test that the thinking parameter is not added to API call when None
+    """
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    
+    completion = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
+    
+    # Test _prepare_completion_params does not include thinking when None
+    messages = [{"role": "user", "content": "Hello"}]
+    params = completion._prepare_completion_params(messages)
+    
+    assert "thinking" not in params
+
+
+def test_anthropic_extended_thinking_with_tool_use_preserves_thinking_blocks():
+    """
+    Test that thinking blocks are preserved in tool use conversation flow
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from anthropic.types.tool_use_block import ToolUseBlock
+    from anthropic.types import ThinkingBlock
+    
+    thinking_config = {"type": "enabled", "budget_tokens": 5000}
+    completion = AnthropicCompletion(
+        model="claude-3-5-sonnet-20241022",
+        thinking=thinking_config
+    )
+    
+    # Mock tool function
+    def mock_calculator(operation: str, a: int, b: int) -> str:
+        if operation == "add":
+            return str(a + b)
+        return "0"
+    
+    available_functions = {"calculator": mock_calculator}
+    
+    # Mock the Anthropic client responses
+    with patch.object(completion.client.messages, 'create') as mock_create:
+        # Mock thinking block
+        mock_thinking_block = Mock(spec=ThinkingBlock)
+        mock_thinking_block.type = "thinking"
+        mock_thinking_block.thinking = "I need to use the calculator tool to add 5 and 3"
+        
+        # Mock tool use block
+        mock_tool_use = Mock(spec=ToolUseBlock)
+        mock_tool_use.id = "tool_456"
+        mock_tool_use.name = "calculator"
+        mock_tool_use.input = {"operation": "add", "a": 5, "b": 3}
+        mock_tool_use.type = "tool_use"
+        
+        # Mock initial response with thinking block + tool use
+        mock_initial_response = Mock()
+        mock_initial_response.content = [mock_thinking_block, mock_tool_use]
+        mock_initial_response.usage = Mock()
+        mock_initial_response.usage.input_tokens = 100
+        mock_initial_response.usage.output_tokens = 50
+        
+        # Mock final response after tool result
+        mock_text_block = Mock()
+        mock_text_block.configure_mock(text="The sum of 5 and 3 is 8.")
+        
+        mock_final_response = Mock()
+        mock_final_response.content = [mock_text_block]
+        mock_final_response.usage = Mock()
+        mock_final_response.usage.input_tokens = 150
+        mock_final_response.usage.output_tokens = 75
+        
+        # Configure mock to return different responses on successive calls
+        mock_create.side_effect = [mock_initial_response, mock_final_response]
+        
+        # Test the call
+        messages = [{"role": "user", "content": "What is 5 + 3?"}]
+        result = completion.call(
+            messages=messages,
+            available_functions=available_functions
+        )
+        
+        # Verify the result contains the final response
+        assert "sum of 5 and 3 is 8" in result
+        
+        # Verify that two API calls were made (initial + follow-up)
+        assert mock_create.call_count == 2
+        
+        # Verify the first call includes thinking parameter
+        first_call_kwargs = mock_create.call_args_list[0][1]
+        assert "thinking" in first_call_kwargs
+        assert first_call_kwargs["thinking"] == thinking_config
+        
+        # Verify the second call includes thinking blocks in assistant message
+        second_call_kwargs = mock_create.call_args_list[1][1]
+        messages_in_second_call = second_call_kwargs["messages"]
+        
+        # Should have original user message + assistant (with thinking + tool_use) + user tool result
+        assert len(messages_in_second_call) == 3
+        assert messages_in_second_call[0]["role"] == "user"
+        assert messages_in_second_call[1]["role"] == "assistant"
+        assert messages_in_second_call[2]["role"] == "user"
+        
+        # Verify assistant message content includes both thinking and tool_use blocks
+        assistant_content = messages_in_second_call[1]["content"]
+        assert len(assistant_content) == 2
+        assert assistant_content[0] == mock_thinking_block  # Thinking block preserved
+        assert assistant_content[1] == mock_tool_use  # Tool use block preserved
+        
+        # Verify tool result format
+        tool_result = messages_in_second_call[2]["content"][0]
+        assert tool_result["type"] == "tool_result"
+        assert tool_result["tool_use_id"] == "tool_456"
+        assert "8" in tool_result["content"]
+        
+        # Verify the second call also includes thinking parameter
+        assert "thinking" in second_call_kwargs
+        assert second_call_kwargs["thinking"] == thinking_config
+
+
+def test_anthropic_extended_thinking_with_multiple_tool_calls():
+    """
+    Test that thinking blocks are preserved across multiple tool calls
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+    from anthropic.types.tool_use_block import ToolUseBlock
+    from anthropic.types import ThinkingBlock
+    
+    thinking_config = {"type": "enabled", "budget_tokens": 10000}
+    completion = AnthropicCompletion(
+        model="claude-3-5-sonnet-20241022",
+        thinking=thinking_config
+    )
+    
+    # Mock tool functions
+    def mock_search(query: str) -> str:
+        return f"Search results for: {query}"
+    
+    def mock_summarize(text: str) -> str:
+        return f"Summary: {text[:20]}..."
+    
+    available_functions = {
+        "search": mock_search,
+        "summarize": mock_summarize
+    }
+    
+    # Mock the Anthropic client responses
+    with patch.object(completion.client.messages, 'create') as mock_create:
+        # Mock thinking block
+        mock_thinking_block = Mock(spec=ThinkingBlock)
+        mock_thinking_block.type = "thinking"
+        mock_thinking_block.thinking = "I should search first, then summarize"
+        
+        # Mock first tool use
+        mock_tool_use_1 = Mock(spec=ToolUseBlock)
+        mock_tool_use_1.id = "tool_1"
+        mock_tool_use_1.name = "search"
+        mock_tool_use_1.input = {"query": "AI agents"}
+        mock_tool_use_1.type = "tool_use"
+        
+        # Mock second tool use
+        mock_tool_use_2 = Mock(spec=ToolUseBlock)
+        mock_tool_use_2.id = "tool_2"
+        mock_tool_use_2.name = "summarize"
+        mock_tool_use_2.input = {"text": "Search results for: AI agents"}
+        mock_tool_use_2.type = "tool_use"
+        
+        # Mock initial response with thinking + multiple tool uses
+        mock_initial_response = Mock()
+        mock_initial_response.content = [mock_thinking_block, mock_tool_use_1, mock_tool_use_2]
+        mock_initial_response.usage = Mock()
+        mock_initial_response.usage.input_tokens = 100
+        mock_initial_response.usage.output_tokens = 50
+        
+        # Mock final response
+        mock_text_block = Mock()
+        mock_text_block.configure_mock(text="Here's the summary of AI agents research.")
+        
+        mock_final_response = Mock()
+        mock_final_response.content = [mock_text_block]
+        mock_final_response.usage = Mock()
+        mock_final_response.usage.input_tokens = 200
+        mock_final_response.usage.output_tokens = 100
+        
+        mock_create.side_effect = [mock_initial_response, mock_final_response]
+        
+        # Test the call
+        messages = [{"role": "user", "content": "Research AI agents and summarize"}]
+        result = completion.call(
+            messages=messages,
+            available_functions=available_functions
+        )
+        
+        # Verify result
+        assert "summary of AI agents" in result
+        
+        # Verify two API calls
+        assert mock_create.call_count == 2
+        
+        # Verify the second call preserves thinking block and all tool uses
+        second_call_kwargs = mock_create.call_args_list[1][1]
+        messages_in_second_call = second_call_kwargs["messages"]
+        
+        assistant_content = messages_in_second_call[1]["content"]
+        assert len(assistant_content) == 3  # thinking + 2 tool uses
+        assert assistant_content[0] == mock_thinking_block
+        assert assistant_content[1] == mock_tool_use_1
+        assert assistant_content[2] == mock_tool_use_2
+        
+        # Verify tool results
+        tool_results = messages_in_second_call[2]["content"]
+        assert len(tool_results) == 2
+        assert tool_results[0]["tool_use_id"] == "tool_1"
+        assert tool_results[1]["tool_use_id"] == "tool_2"
