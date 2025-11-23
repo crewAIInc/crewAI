@@ -465,7 +465,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: FlowPersistence | None = None,
-        tracing: bool | None = False,
+        tracing: bool | None = None,
         verbose: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -473,7 +473,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Args:
             persistence: Optional persistence backend for storing flow states
-            tracing: Whether to enable tracing for this flow
+            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             verbose: Whether to enable verbose output for this flow (default: False)
             **kwargs: Additional state values to initialize or override
         """
