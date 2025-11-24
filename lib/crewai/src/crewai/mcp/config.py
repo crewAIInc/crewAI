@@ -18,6 +18,7 @@ def _count_required_params(sig: inspect.Signature) -> int:
     This is used to distinguish between:
     - Static filters: 1 required param (tool: dict)
     - Dynamic filters: 2 required params (context: ToolFilterContext, tool: dict)
+    - Invalid filters: 0 or 3+ params (treated as no filter)
     """
     count = 0
     for param in sig.parameters.values():
@@ -31,6 +32,35 @@ def _count_required_params(sig: inspect.Signature) -> int:
         if param.default is inspect.Parameter.empty:
             count += 1
     return count
+
+
+def _determine_filter_type(
+    tool_filter: "ToolFilter | None",
+) -> Literal["dynamic", "static", "none"]:
+    """Determine the filter type based on function signature.
+
+    Returns:
+        "dynamic" for 2-param filters (context, tool)
+        "static" for 1-param filters (tool)
+        "none" for no filter or invalid signatures (0 or 3+ params)
+    """
+    if tool_filter is None:
+        return "none"
+
+    if not callable(tool_filter):
+        return "none"
+
+    sig = inspect.signature(tool_filter)
+    num_required = _count_required_params(sig)
+
+    if num_required == 2:
+        return "dynamic"
+    elif num_required == 1:
+        return "static"
+    else:
+        # 0 or 3+ params is invalid - treat as no filter to avoid errors
+        # This handles edge cases like lambda: True or malformed filters
+        return "none"
 
 
 class MCPServerStdio(BaseModel):
@@ -77,20 +107,7 @@ class MCPServerStdio(BaseModel):
     @model_validator(mode="after")
     def _cache_filter_type(self):
         """Cache the filter type for performance optimization."""
-        if self.tool_filter is None:
-            self._filter_type = "none"
-        elif callable(self.tool_filter):
-            sig = inspect.signature(self.tool_filter)
-            num_required = _count_required_params(sig)
-            if num_required == 2:
-                self._filter_type = "dynamic"
-            elif num_required == 1:
-                self._filter_type = "static"
-            else:
-                # Unexpected signature - default to static for backward compatibility
-                self._filter_type = "static"
-        else:
-            self._filter_type = "none"
+        self._filter_type = _determine_filter_type(self.tool_filter)
         return self
 
 
@@ -134,20 +151,7 @@ class MCPServerHTTP(BaseModel):
     @model_validator(mode="after")
     def _cache_filter_type(self):
         """Cache the filter type for performance optimization."""
-        if self.tool_filter is None:
-            self._filter_type = "none"
-        elif callable(self.tool_filter):
-            sig = inspect.signature(self.tool_filter)
-            num_required = _count_required_params(sig)
-            if num_required == 2:
-                self._filter_type = "dynamic"
-            elif num_required == 1:
-                self._filter_type = "static"
-            else:
-                # Unexpected signature - default to static for backward compatibility
-                self._filter_type = "static"
-        else:
-            self._filter_type = "none"
+        self._filter_type = _determine_filter_type(self.tool_filter)
         return self
 
 
@@ -187,20 +191,7 @@ class MCPServerSSE(BaseModel):
     @model_validator(mode="after")
     def _cache_filter_type(self):
         """Cache the filter type for performance optimization."""
-        if self.tool_filter is None:
-            self._filter_type = "none"
-        elif callable(self.tool_filter):
-            sig = inspect.signature(self.tool_filter)
-            num_required = _count_required_params(sig)
-            if num_required == 2:
-                self._filter_type = "dynamic"
-            elif num_required == 1:
-                self._filter_type = "static"
-            else:
-                # Unexpected signature - default to static for backward compatibility
-                self._filter_type = "static"
-        else:
-            self._filter_type = "none"
+        self._filter_type = _determine_filter_type(self.tool_filter)
         return self
 
 

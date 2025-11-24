@@ -964,7 +964,10 @@ class Agent(BaseAgent):
                 tool_schema = {
                     "name": tool_name,
                     "description": tool_def.get("description", ""),
-                    "args_schema": args_schema,
+                    "inputSchema": tool_def.get(
+                        "inputSchema"
+                    ),  # Original MCP schema for filter consistency
+                    "args_schema": args_schema,  # Converted Pydantic model for internal use
                 }
 
                 try:

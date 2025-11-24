@@ -422,6 +422,56 @@ def test_filter_with_variadic_params_classified_correctly(mock_tool_definitions)
     assert config2._filter_type == "dynamic"
 
 
+def test_invalid_filter_signatures_treated_as_none(mock_tool_definitions):
+    """Test that invalid filter signatures are safely treated as no filter.
+
+    Filters with 0 or 3+ required parameters cannot work correctly,
+    so they should be treated as "none" to avoid runtime errors.
+    """
+    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        # 0-parameter filter - would fail if called with any args
+        def zero_param_filter() -> bool:
+            return True
+
+        config = MCPServerStdio(
+            command="python",
+            args=["server.py"],
+            tool_filter=zero_param_filter,
+        )
+        assert config._filter_type == "none"  # Should be treated as no filter
+
+        # 3-parameter filter - neither static nor dynamic
+        def three_param_filter(a, b, c) -> bool:
+            return True
+
+        config2 = MCPServerStdio(
+            command="python",
+            args=["server.py"],
+            tool_filter=three_param_filter,
+        )
+        assert config2._filter_type == "none"  # Should be treated as no filter
+
+        # Verify agent gets all tools when filter is invalid (no filtering applied)
+        agent = Agent(
+            role="Test Agent",
+            goal="Test",
+            backstory="Test",
+            mcps=[config],  # Uses 0-param filter
+        )
+        agent.tools = agent.get_mcp_tools([config])
+        assert len(agent.tools) == 4  # All tools should be available
+
+        # Note: Non-callable filters are already rejected by Pydantic validation,
+        # so we don't need to test that case here
+
+
 def test_tool_filter_context_has_task(mock_tool_definitions):
     """Test that ToolFilterContext has task field populated."""
     context_captured = None
@@ -505,6 +555,67 @@ def test_convenience_properties(mock_tool_definitions):
     assert context_no_task.task_description == ""
     assert context_no_task.task_expected_output == ""
     assert context_no_task.has_task_context is False
+
+
+def test_filter_receives_consistent_schema_structure(mock_tool_definitions):
+    """Test that filters receive consistent tool schema at agent and task level.
+
+    Both agent-level and task-level filtering should receive schemas with
+    'inputSchema' field for consistency.
+    """
+    schemas_received = []
+
+    def capture_schema_filter(context: ToolFilterContext, tool: dict) -> bool:
+        schemas_received.append(tool.copy())
+        return True
+
+    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        config = MCPServerStdio(
+            command="python",
+            args=["server.py"],
+            tool_filter=create_dynamic_tool_filter(capture_schema_filter),
+        )
+
+        agent = Agent(
+            role="Test Agent",
+            goal="Test",
+            backstory="Test",
+            mcps=[config],
+        )
+
+        # Clear and load MCP tools (agent-level filtering happens here)
+        schemas_received.clear()
+        agent.tools = agent.get_mcp_tools([config])
+
+        # Check agent-level schemas have inputSchema
+        agent_level_schemas = schemas_received.copy()
+        for schema in agent_level_schemas:
+            assert "name" in schema
+            assert "inputSchema" in schema, "Agent-level filter should receive inputSchema"
+
+        # Task-level filtering
+        schemas_received.clear()
+        task = Task(description="Test task", expected_output="Result", agent=agent)
+        agent._get_task_filtered_tools(task)
+
+        # Check task-level schemas also have inputSchema
+        task_level_schemas = schemas_received.copy()
+        for schema in task_level_schemas:
+            assert "name" in schema
+            assert "inputSchema" in schema, "Task-level filter should receive inputSchema"
+
+        # Verify both levels received the same structure
+        assert len(agent_level_schemas) == len(task_level_schemas)
+        for agent_schema, task_schema in zip(agent_level_schemas, task_level_schemas):
+            assert agent_schema["name"] == task_schema["name"]
+            assert agent_schema["inputSchema"] == task_schema["inputSchema"]
 
 
 def test_explicit_empty_tools_list_respected():
