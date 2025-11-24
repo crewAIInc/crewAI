@@ -1086,11 +1086,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     def _copy_and_serialize_state(self) -> dict[str, Any]:
         state_copy = self._copy_state()
-        return (
-            state_copy.model_dump(mode="json")
-            if isinstance(state_copy, BaseModel)
-            else state_copy
-        )
+        if isinstance(state_copy, BaseModel):
+            try:
+                return state_copy.model_dump(mode="json")
+            except Exception:
+                return state_copy.model_dump()
+        else:
+            return state_copy
 
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any
