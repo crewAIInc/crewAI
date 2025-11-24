@@ -67,7 +67,11 @@ class ProviderFactory:
         module = importlib.import_module(
             f"crewai.cli.authentication.providers.{settings.provider.lower()}"
         )
-        provider = getattr(module, f"{settings.provider.capitalize()}Provider")
+        # Converts from snake_case to CamelCase to obtain the provider class name.
+        provider = getattr(
+            module,
+            f"{''.join(word.capitalize() for word in settings.provider.split('_'))}Provider",
+        )
 
         return cast("BaseProvider", provider(settings))
 
@@ -91,7 +95,7 @@ class AuthenticationCommand:
 
         device_code_payload = {
             "client_id": self.oauth2_provider.get_client_id(),
-            "scope": "openid",
+            "scope": " ".join(self.oauth2_provider.get_oauth_scopes()),
             "audience": self.oauth2_provider.get_audience(),
         }
         response = requests.post(
@@ -104,9 +108,14 @@ class AuthenticationCommand:
 
     def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
         """Display the authentication instructions to the user."""
-        console.print("1. Navigate to: ", device_code_data["verification_uri_complete"])
+
+        verification_uri = device_code_data.get(
+            "verification_uri_complete", device_code_data.get("verification_uri", "")
+        )
+
+        console.print("1. Navigate to: ", verification_uri)
         console.print("2. Enter the following code: ", device_code_data["user_code"])
-        webbrowser.open(device_code_data["verification_uri_complete"])
+        webbrowser.open(verification_uri)
 
     def _poll_for_token(self, device_code_data: dict[str, Any]) -> None:
         """Polls the server for the token until it is received, or max attempts are reached."""
@@ -186,8 +195,9 @@ class AuthenticationCommand:
             )
 
             settings = Settings()
+
             console.print(
-                f"You are authenticated to the tool repository as [bold cyan]'{settings.org_name}'[/bold cyan] ({settings.org_uuid})",
+                f"You are now authenticated to the tool repository for organization [bold cyan]'{settings.org_name if settings.org_name else settings.org_uuid}'[/bold cyan]",
                 style="green",
             )
         except Exception:
