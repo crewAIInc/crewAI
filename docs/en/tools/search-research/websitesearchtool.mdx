@@ -66,10 +66,10 @@ tool = WebsiteSearchTool(
             ),
         ),
         embedder=dict(
-            provider="google", # or openai, ollama, ...
+            provider="google-generativeai", # or openai, ollama, ...
             config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
+                model_name="gemini-embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
                 # title="Embeddings",
             ),
         ),
