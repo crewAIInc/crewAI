@@ -385,9 +385,10 @@ class LLM(BaseLLM):
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
                 # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != 'provider'}
+                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
                 return cast(
-                    Self, native_class(model=model_string, provider=provider, **kwargs_copy)
+                    Self,
+                    native_class(model=model_string, provider=provider, **kwargs_copy),
                 )
             except NotImplementedError:
                 raise
@@ -756,6 +757,7 @@ class LLM(BaseLLM):
                             chunk=chunk_content,
                             from_task=from_task,
                             from_agent=from_agent,
+                            call_type=LLMCallType.LLM_CALL,
                         ),
                     )
             # --- 4) Fallback to non-streaming if no content received
@@ -957,6 +959,7 @@ class LLM(BaseLLM):
                     chunk=tool_call.function.arguments,
                     from_task=from_task,
                     from_agent=from_agent,
+                    call_type=LLMCallType.TOOL_CALL,
                 ),
             )
 
