@@ -1,5 +1,5 @@
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 import webbrowser
 
 from pydantic import BaseModel, Field
@@ -12,6 +12,8 @@ from crewai.cli.shared.token_manager import TokenManager
 
 
 console = Console()
+
+TOauth2Settings = TypeVar("TOauth2Settings", bound="Oauth2Settings")
 
 
 class Oauth2Settings(BaseModel):
@@ -28,9 +30,15 @@ class Oauth2Settings(BaseModel):
         description="OAuth2 audience value, typically used to identify the target API or resource.",
         default=None,
     )
+    extra: dict[str, Any] = Field(
+        description="Extra configuration for the OAuth2 provider.",
+        default={},
+    )
 
     @classmethod
-    def from_settings(cls):
+    def from_settings(cls: type[TOauth2Settings]) -> TOauth2Settings:
+        """Create an Oauth2Settings instance from the CLI settings."""
+
         settings = Settings()
 
         return cls(
@@ -38,12 +46,20 @@ class Oauth2Settings(BaseModel):
             domain=settings.oauth2_domain,
             client_id=settings.oauth2_client_id,
             audience=settings.oauth2_audience,
+            extra=settings.oauth2_extra,
         )
+
+
+if TYPE_CHECKING:
+    from crewai.cli.authentication.providers.base_provider import BaseProvider
 
 
 class ProviderFactory:
     @classmethod
-    def from_settings(cls, settings: Oauth2Settings | None = None):
+    def from_settings(
+        cls: type["ProviderFactory"],  # noqa: UP037
+        settings: Oauth2Settings | None = None,
+    ) -> "BaseProvider":  # noqa: UP037
         settings = settings or Oauth2Settings.from_settings()
 
         import importlib
@@ -53,11 +69,11 @@ class ProviderFactory:
         )
         provider = getattr(module, f"{settings.provider.capitalize()}Provider")
 
-        return provider(settings)
+        return cast("BaseProvider", provider(settings))
 
 
 class AuthenticationCommand:
-    def __init__(self):
+    def __init__(self) -> None:
         self.token_manager = TokenManager()
         self.oauth2_provider = ProviderFactory.from_settings()
 
@@ -84,7 +100,7 @@ class AuthenticationCommand:
             timeout=20,
         )
         response.raise_for_status()
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
     def _display_auth_instructions(self, device_code_data: dict[str, str]) -> None:
         """Display the authentication instructions to the user."""

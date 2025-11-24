@@ -1,0 +1,498 @@
+---
+title: Hooks de Chamada de Ferramenta
+description: Aprenda a usar hooks de chamada de ferramenta para interceptar, modificar e controlar execução de ferramentas no CrewAI
+mode: "wide"
+---
+
+Os Hooks de Chamada de Ferramenta fornecem controle fino sobre a execução de ferramentas durante operações do agente. Esses hooks permitem interceptar chamadas de ferramenta, modificar entradas, transformar saídas, implementar verificações de segurança e adicionar logging ou monitoramento abrangente.
+
+## Visão Geral
+
+Os hooks de ferramenta são executados em dois pontos críticos:
+- **Antes da Chamada de Ferramenta**: Modificar entradas, validar parâmetros ou bloquear execução
+- **Depois da Chamada de Ferramenta**: Transformar resultados, sanitizar saídas ou registrar detalhes de execução
+
+## Tipos de Hook
+
+### Hooks Antes da Chamada de Ferramenta
+
+Executados antes de cada execução de ferramenta, esses hooks podem:
+- Inspecionar e modificar entradas de ferramenta
+- Bloquear execução de ferramenta com base em condições
+- Implementar gates de aprovação para operações perigosas
+- Validar parâmetros
+- Registrar invocações de ferramenta
+
+**Assinatura:**
+```python
+def before_hook(context: ToolCallHookContext) -> bool | None:
+    # Retorne False para bloquear execução
+    # Retorne True ou None para permitir execução
+    ...
+```
+
+### Hooks Depois da Chamada de Ferramenta
+
+Executados depois de cada execução de ferramenta, esses hooks podem:
+- Modificar ou sanitizar resultados de ferramenta
+- Adicionar metadados ou formatação
+- Registrar resultados de execução
+- Implementar validação de resultado
+- Transformar formatos de saída
+
+**Assinatura:**
+```python
+def after_hook(context: ToolCallHookContext) -> str | None:
+    # Retorne string de resultado modificado
+    # Retorne None para manter resultado original
+    ...
+```
+
+## Contexto do Hook de Ferramenta
+
+O objeto `ToolCallHookContext` fornece acesso abrangente ao estado de execução da ferramenta:
+
+```python
+class ToolCallHookContext:
+    tool_name: str                    # Nome da ferramenta sendo chamada
+    tool_input: dict[str, Any]        # Parâmetros de entrada mutáveis da ferramenta
+    tool: CrewStructuredTool          # Referência da instância da ferramenta
+    agent: Agent | BaseAgent | None   # Agente executando a ferramenta
+    task: Task | None                 # Tarefa atual
+    crew: Crew | None                 # Instância da crew
+    tool_result: str | None           # Resultado da ferramenta (apenas hooks posteriores)
+```
+
+### Modificando Entradas de Ferramenta
+
+**Importante:** Sempre modifique entradas de ferramenta in-place:
+
+```python
+# ✅ Correto - modificar in-place
+def sanitize_input(context: ToolCallHookContext) -> None:
+    context.tool_input['query'] = context.tool_input['query'].lower()
+
+# ❌ Errado - substitui referência do dict
+def wrong_approach(context: ToolCallHookContext) -> None:
+    context.tool_input = {'query': 'nova consulta'}
+```
+
+## Métodos de Registro
+
+### 1. Registro Baseado em Decoradores (Recomendado)
+
+Use decoradores para sintaxe mais limpa:
+
+```python
+from crewai.hooks import before_tool_call, after_tool_call
+
+@before_tool_call
+def block_dangerous_tools(context):
+    """Bloqueia ferramentas perigosas."""
+    dangerous_tools = ['delete_database', 'drop_table', 'rm_rf']
+    if context.tool_name in dangerous_tools:
+        print(f"⛔ Ferramenta perigosa bloqueada: {context.tool_name}")
+        return False  # Bloquear execução
+    return None
+
+@after_tool_call
+def sanitize_results(context):
+    """Sanitiza resultados."""
+    if context.tool_result and "password" in context.tool_result.lower():
+        return context.tool_result.replace("password", "[CENSURADO]")
+    return None
+```
+
+### 2. Hooks com Escopo de Crew
+
+Registre hooks para uma instância específica de crew:
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_tool_call_crew, after_tool_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_tool_call_crew
+    def validate_tool_inputs(self, context):
+        # Aplica-se apenas a esta crew
+        if context.tool_name == "web_search":
+            if not context.tool_input.get('query'):
+                print("❌ Consulta de busca inválida")
+                return False
+        return None
+    
+    @after_tool_call_crew
+    def log_tool_results(self, context):
+        # Logging de ferramenta específico da crew
+        print(f"✅ {context.tool_name} concluída")
+        return None
+    
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+## Casos de Uso Comuns
+
+### 1. Guardrails de Segurança
+
+```python
+@before_tool_call
+def safety_check(context: ToolCallHookContext) -> bool | None:
+    """Bloqueia ferramentas que podem causar danos."""
+    destructive_tools = [
+        'delete_file',
+        'drop_table',
+        'remove_user',
+        'system_shutdown'
+    ]
+    
+    if context.tool_name in destructive_tools:
+        print(f"🛑 Ferramenta destrutiva bloqueada: {context.tool_name}")
+        return False
+    
+    # Avisar em operações sensíveis
+    sensitive_tools = ['send_email', 'post_to_social_media', 'charge_payment']
+    if context.tool_name in sensitive_tools:
+        print(f"⚠️  Executando ferramenta sensível: {context.tool_name}")
+    
+    return None
+```
+
+### 2. Gate de Aprovação Humana
+
+```python
+@before_tool_call
+def require_approval_for_actions(context: ToolCallHookContext) -> bool | None:
+    """Requer aprovação para ações específicas."""
+    approval_required = [
+        'send_email',
+        'make_purchase',
+        'delete_file',
+        'post_message'
+    ]
+    
+    if context.tool_name in approval_required:
+        response = context.request_human_input(
+            prompt=f"Aprovar {context.tool_name}?",
+            default_message=f"Entrada: {context.tool_input}\nDigite 'sim' para aprovar:"
+        )
+        
+        if response.lower() != 'sim':
+            print(f"❌ Execução de ferramenta negada: {context.tool_name}")
+            return False
+    
+    return None
+```
+
+### 3. Validação e Sanitização de Entrada
+
+```python
+@before_tool_call
+def validate_and_sanitize_inputs(context: ToolCallHookContext) -> bool | None:
+    """Valida e sanitiza entradas."""
+    # Validar consultas de busca
+    if context.tool_name == 'web_search':
+        query = context.tool_input.get('query', '')
+        if len(query) < 3:
+            print("❌ Consulta de busca muito curta")
+            return False
+        
+        # Sanitizar consulta
+        context.tool_input['query'] = query.strip().lower()
+    
+    # Validar caminhos de arquivo
+    if context.tool_name == 'read_file':
+        path = context.tool_input.get('path', '')
+        if '..' in path or path.startswith('/'):
+            print("❌ Caminho de arquivo inválido")
+            return False
+    
+    return None
+```
+
+### 4. Sanitização de Resultado
+
+```python
+@after_tool_call
+def sanitize_sensitive_data(context: ToolCallHookContext) -> str | None:
+    """Sanitiza dados sensíveis."""
+    if not context.tool_result:
+        return None
+    
+    import re
+    result = context.tool_result
+    
+    # Remover chaves de API
+    result = re.sub(
+        r'(api[_-]?key|token)["\']?\s*[:=]\s*["\']?[\w-]+',
+        r'\1: [CENSURADO]',
+        result,
+        flags=re.IGNORECASE
+    )
+    
+    # Remover endereços de email
+    result = re.sub(
+        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+        '[EMAIL-CENSURADO]',
+        result
+    )
+    
+    # Remover números de cartão de crédito
+    result = re.sub(
+        r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b',
+        '[CARTÃO-CENSURADO]',
+        result
+    )
+    
+    return result
+```
+
+### 5. Análise de Uso de Ferramenta
+
+```python
+import time
+from collections import defaultdict
+
+tool_stats = defaultdict(lambda: {'count': 0, 'total_time': 0, 'failures': 0})
+
+@before_tool_call
+def start_timer(context: ToolCallHookContext) -> None:
+    context.tool_input['_start_time'] = time.time()
+    return None
+
+@after_tool_call
+def track_tool_usage(context: ToolCallHookContext) -> None:
+    start_time = context.tool_input.get('_start_time', time.time())
+    duration = time.time() - start_time
+    
+    tool_stats[context.tool_name]['count'] += 1
+    tool_stats[context.tool_name]['total_time'] += duration
+    
+    if not context.tool_result or 'error' in context.tool_result.lower():
+        tool_stats[context.tool_name]['failures'] += 1
+    
+    print(f"""
+    📊 Estatísticas da Ferramenta {context.tool_name}:
+    - Execuções: {tool_stats[context.tool_name]['count']}
+    - Tempo Médio: {tool_stats[context.tool_name]['total_time'] / tool_stats[context.tool_name]['count']:.2f}s
+    - Falhas: {tool_stats[context.tool_name]['failures']}
+    """)
+    
+    return None
+```
+
+### 6. Limitação de Taxa
+
+```python
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+tool_call_history = defaultdict(list)
+
+@before_tool_call
+def rate_limit_tools(context: ToolCallHookContext) -> bool | None:
+    """Limita taxa de chamadas de ferramenta."""
+    tool_name = context.tool_name
+    now = datetime.now()
+    
+    # Limpar entradas antigas (mais antigas que 1 minuto)
+    tool_call_history[tool_name] = [
+        call_time for call_time in tool_call_history[tool_name]
+        if now - call_time < timedelta(minutes=1)
+    ]
+    
+    # Verificar limite de taxa (máximo 10 chamadas por minuto)
+    if len(tool_call_history[tool_name]) >= 10:
+        print(f"🚫 Limite de taxa excedido para {tool_name}")
+        return False
+    
+    # Registrar esta chamada
+    tool_call_history[tool_name].append(now)
+    return None
+```
+
+### 7. Logging de Debug
+
+```python
+@before_tool_call
+def debug_tool_call(context: ToolCallHookContext) -> None:
+    """Debug de chamada de ferramenta."""
+    print(f"""
+    🔍 Debug de Chamada de Ferramenta:
+    - Ferramenta: {context.tool_name}
+    - Agente: {context.agent.role if context.agent else 'Desconhecido'}
+    - Tarefa: {context.task.description[:50] if context.task else 'Desconhecida'}...
+    - Entrada: {context.tool_input}
+    """)
+    return None
+
+@after_tool_call
+def debug_tool_result(context: ToolCallHookContext) -> None:
+    """Debug de resultado de ferramenta."""
+    if context.tool_result:
+        result_preview = context.tool_result[:200]
+        print(f"✅ Preview do Resultado: {result_preview}...")
+    else:
+        print("⚠️  Nenhum resultado retornado")
+    return None
+```
+
+## Gerenciamento de Hooks
+
+### Desregistrando Hooks
+
+```python
+from crewai.hooks import (
+    unregister_before_tool_call_hook,
+    unregister_after_tool_call_hook
+)
+
+# Desregistrar hook específico
+def my_hook(context):
+    ...
+
+register_before_tool_call_hook(my_hook)
+# Mais tarde...
+success = unregister_before_tool_call_hook(my_hook)
+print(f"Desregistrado: {success}")
+```
+
+### Limpando Hooks
+
+```python
+from crewai.hooks import (
+    clear_before_tool_call_hooks,
+    clear_after_tool_call_hooks,
+    clear_all_tool_call_hooks
+)
+
+# Limpar tipo específico de hook
+count = clear_before_tool_call_hooks()
+print(f"Limpou {count} hooks antes")
+
+# Limpar todos os hooks de ferramenta
+before_count, after_count = clear_all_tool_call_hooks()
+print(f"Limpou {before_count} hooks antes e {after_count} hooks depois")
+```
+
+## Padrões Avançados
+
+### Execução Condicional de Hook
+
+```python
+@before_tool_call
+def conditional_blocking(context: ToolCallHookContext) -> bool | None:
+    """Bloqueia apenas em condições específicas."""
+    # Bloquear apenas para agentes específicos
+    if context.agent and context.agent.role == "junior_agent":
+        if context.tool_name in ['delete_file', 'send_email']:
+            print(f"❌ Agentes júnior não podem usar {context.tool_name}")
+            return False
+    
+    # Bloquear apenas durante tarefas específicas
+    if context.task and "sensível" in context.task.description.lower():
+        if context.tool_name == 'web_search':
+            print("❌ Busca na web bloqueada para tarefas sensíveis")
+            return False
+    
+    return None
+```
+
+### Modificação de Entrada com Consciência de Contexto
+
+```python
+@before_tool_call
+def enhance_tool_inputs(context: ToolCallHookContext) -> None:
+    """Adiciona contexto baseado no papel do agente."""
+    # Adicionar contexto baseado no papel do agente
+    if context.agent and context.agent.role == "researcher":
+        if context.tool_name == 'web_search':
+            # Adicionar restrições de domínio para pesquisadores
+            context.tool_input['domains'] = ['edu', 'gov', 'org']
+    
+    # Adicionar contexto baseado na tarefa
+    if context.task and "urgente" in context.task.description.lower():
+        if context.tool_name == 'send_email':
+            context.tool_input['priority'] = 'high'
+    
+    return None
+```
+
+## Melhores Práticas
+
+1. **Mantenha Hooks Focados**: Cada hook deve ter uma responsabilidade única
+2. **Evite Computação Pesada**: Hooks executam em cada chamada de ferramenta
+3. **Trate Erros Graciosamente**: Use try-except para prevenir falhas de hooks
+4. **Use Type Hints**: Aproveite `ToolCallHookContext` para melhor suporte IDE
+5. **Documente Condições de Bloqueio**: Deixe claro quando/por que ferramentas são bloqueadas
+6. **Teste Hooks Independentemente**: Teste unitário de hooks antes de usar em produção
+7. **Limpe Hooks em Testes**: Use `clear_all_tool_call_hooks()` entre execuções de teste
+8. **Modifique In-Place**: Sempre modifique `context.tool_input` in-place, nunca substitua
+9. **Registre Decisões Importantes**: Especialmente ao bloquear execução de ferramenta
+10. **Considere Performance**: Cache validações caras quando possível
+
+## Tratamento de Erros
+
+```python
+@before_tool_call
+def safe_validation(context: ToolCallHookContext) -> bool | None:
+    try:
+        # Sua lógica de validação
+        if not validate_input(context.tool_input):
+            return False
+    except Exception as e:
+        print(f"⚠️ Erro no hook: {e}")
+        # Decida: permitir ou bloquear em erro
+        return None  # Permitir execução apesar do erro
+```
+
+## Segurança de Tipos
+
+```python
+from crewai.hooks import ToolCallHookContext, BeforeToolCallHookType, AfterToolCallHookType
+
+# Anotações de tipo explícitas
+def my_before_hook(context: ToolCallHookContext) -> bool | None:
+    return None
+
+def my_after_hook(context: ToolCallHookContext) -> str | None:
+    return None
+
+# Registro type-safe
+register_before_tool_call_hook(my_before_hook)
+register_after_tool_call_hook(my_after_hook)
+```
+
+## Solução de Problemas
+
+### Hook Não Está Executando
+- Verifique se hook está registrado antes da execução da crew
+- Verifique se hook anterior retornou `False` (bloqueia execução e hooks subsequentes)
+- Garanta que assinatura do hook corresponda ao tipo esperado
+
+### Modificações de Entrada Não Funcionam
+- Use modificações in-place: `context.tool_input['key'] = value`
+- Não substitua o dict: `context.tool_input = {}`
+
+### Modificações de Resultado Não Funcionam
+- Retorne a string modificada dos hooks posteriores
+- Retornar `None` mantém o resultado original
+- Garanta que a ferramenta realmente retornou um resultado
+
+### Ferramenta Bloqueada Inesperadamente
+- Verifique todos os hooks antes por condições de bloqueio
+- Verifique ordem de execução do hook
+- Adicione logging de debug para identificar qual hook está bloqueando
+
+## Conclusão
+
+Os Hooks de Chamada de Ferramenta fornecem capacidades poderosas para controlar e monitorar execução de ferramentas no CrewAI. Use-os para implementar guardrails de segurança, gates de aprovação, validação de entrada, sanitização de resultado, logging e análise. Combinados com tratamento adequado de erros e segurança de tipos, os hooks permitem sistemas de agentes seguros e prontos para produção com observabilidade abrangente.
+

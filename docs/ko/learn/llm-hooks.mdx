@@ -1,0 +1,412 @@
+---
+title: LLM 호출 훅
+description: CrewAI에서 언어 모델 상호작용을 가로채고, 수정하고, 제어하는 LLM 호출 훅 사용 방법 배우기
+mode: "wide"
+---
+
+LLM 호출 훅(LLM Call Hooks)은 에이전트 실행 중 언어 모델 상호작용에 대한 세밀한 제어를 제공합니다. 이러한 훅을 사용하면 LLM 호출을 가로채고, 프롬프트를 수정하고, 응답을 변환하고, 승인 게이트를 구현하고, 사용자 정의 로깅 또는 모니터링을 추가할 수 있습니다.
+
+## 개요
+
+LLM 훅은 두 가지 중요한 시점에 실행됩니다:
+- **LLM 호출 전**: 메시지 수정, 입력 검증 또는 실행 차단
+- **LLM 호출 후**: 응답 변환, 출력 정제 또는 대화 기록 수정
+
+## 훅 타입
+
+### LLM 호출 전 훅
+
+모든 LLM 호출 전에 실행되며, 다음을 수행할 수 있습니다:
+- LLM에 전송되는 메시지 검사 및 수정
+- 조건에 따라 LLM 실행 차단
+- 속도 제한 또는 승인 게이트 구현
+- 컨텍스트 또는 시스템 메시지 추가
+- 요청 세부사항 로깅
+
+**시그니처:**
+```python
+def before_hook(context: LLMCallHookContext) -> bool | None:
+    # 실행을 차단하려면 False 반환
+    # 실행을 허용하려면 True 또는 None 반환
+    ...
+```
+
+### LLM 호출 후 훅
+
+모든 LLM 호출 후에 실행되며, 다음을 수행할 수 있습니다:
+- LLM 응답 수정 또는 정제
+- 메타데이터 또는 서식 추가
+- 응답 세부사항 로깅
+- 대화 기록 업데이트
+- 콘텐츠 필터링 구현
+
+**시그니처:**
+```python
+def after_hook(context: LLMCallHookContext) -> str | None:
+    # 수정된 응답 문자열 반환
+    # 원본 응답을 유지하려면 None 반환
+    ...
+```
+
+## LLM 훅 컨텍스트
+
+`LLMCallHookContext` 객체는 실행 상태에 대한 포괄적인 액세스를 제공합니다:
+
+```python
+class LLMCallHookContext:
+    executor: CrewAgentExecutor  # 전체 실행자 참조
+    messages: list               # 변경 가능한 메시지 목록
+    agent: Agent                 # 현재 에이전트
+    task: Task                   # 현재 작업
+    crew: Crew                   # 크루 인스턴스
+    llm: BaseLLM                 # LLM 인스턴스
+    iterations: int              # 현재 반복 횟수
+    response: str | None         # LLM 응답 (후 훅용)
+```
+
+### 메시지 수정
+
+**중요:** 항상 메시지를 제자리에서 수정하세요:
+
+```python
+# ✅ 올바름 - 제자리에서 수정
+def add_context(context: LLMCallHookContext) -> None:
+    context.messages.append({"role": "system", "content": "간결하게 작성하세요"})
+
+# ❌ 잘못됨 - 리스트 참조를 교체
+def wrong_approach(context: LLMCallHookContext) -> None:
+    context.messages = [{"role": "system", "content": "간결하게 작성하세요"}]
+```
+
+## 등록 방법
+
+### 1. 데코레이터 기반 등록 (권장)
+
+더 깔끔한 구문을 위해 데코레이터를 사용합니다:
+
+```python
+from crewai.hooks import before_llm_call, after_llm_call
+
+@before_llm_call
+def validate_iteration_count(context):
+    """반복 횟수를 검증합니다."""
+    if context.iterations > 10:
+        print("⚠️ 최대 반복 횟수 초과")
+        return False  # 실행 차단
+    return None
+
+@after_llm_call
+def sanitize_response(context):
+    """민감한 데이터를 제거합니다."""
+    if context.response and "API_KEY" in context.response:
+        return context.response.replace("API_KEY", "[수정됨]")
+    return None
+```
+
+### 2. 크루 범위 훅
+
+특정 크루 인스턴스에 대한 훅을 등록합니다:
+
+```python
+from crewai import CrewBase
+from crewai.project import crew
+from crewai.hooks import before_llm_call_crew, after_llm_call_crew
+
+@CrewBase
+class MyProjCrew:
+    @before_llm_call_crew
+    def validate_inputs(self, context):
+        # 이 크루에만 적용됩니다
+        if context.iterations == 0:
+            print(f"작업 시작: {context.task.description}")
+        return None
+    
+    @after_llm_call_crew
+    def log_responses(self, context):
+        # 크루별 응답 로깅
+        print(f"응답 길이: {len(context.response)}")
+        return None
+    
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True
+        )
+```
+
+## 일반적인 사용 사례
+
+### 1. 반복 제한
+
+```python
+@before_llm_call
+def limit_iterations(context: LLMCallHookContext) -> bool | None:
+    """무한 루프를 방지하기 위해 반복을 제한합니다."""
+    max_iterations = 15
+    if context.iterations > max_iterations:
+        print(f"⛔ 차단됨: {max_iterations}회 반복 초과")
+        return False  # 실행 차단
+    return None
+```
+
+### 2. 사람의 승인 게이트
+
+```python
+@before_llm_call
+def require_approval(context: LLMCallHookContext) -> bool | None:
+    """특정 반복 후 승인을 요구합니다."""
+    if context.iterations > 5:
+        response = context.request_human_input(
+            prompt=f"반복 {context.iterations}: LLM 호출을 승인하시겠습니까?",
+            default_message="승인하려면 Enter를 누르고, 차단하려면 'no'를 입력하세요:"
+        )
+        if response.lower() == "no":
+            print("🚫 사용자에 의해 LLM 호출이 차단되었습니다")
+            return False
+    return None
+```
+
+### 3. 시스템 컨텍스트 추가
+
+```python
+@before_llm_call
+def add_guardrails(context: LLMCallHookContext) -> None:
+    """모든 LLM 호출에 안전 가이드라인을 추가합니다."""
+    context.messages.append({
+        "role": "system",
+        "content": "응답이 사실에 기반하고 가능한 경우 출처를 인용하도록 하세요."
+    })
+    return None
+```
+
+### 4. 응답 정제
+
+```python
+@after_llm_call
+def sanitize_sensitive_data(context: LLMCallHookContext) -> str | None:
+    """민감한 데이터 패턴을 제거합니다."""
+    if not context.response:
+        return None
+    
+    import re
+    sanitized = context.response
+    sanitized = re.sub(r'\b\d{3}-\d{2}-\d{4}\b', '[주민번호-수정됨]', sanitized)
+    sanitized = re.sub(r'\b\d{4}[- ]?\d{4}[- ]?\d{4}[- ]?\d{4}\b', '[카드번호-수정됨]', sanitized)
+    
+    return sanitized
+```
+
+### 5. 비용 추적
+
+```python
+import tiktoken
+
+@before_llm_call
+def track_token_usage(context: LLMCallHookContext) -> None:
+    """입력 토큰을 추적합니다."""
+    encoding = tiktoken.get_encoding("cl100k_base")
+    total_tokens = sum(
+        len(encoding.encode(msg.get("content", ""))) 
+        for msg in context.messages
+    )
+    print(f"📊 입력 토큰: ~{total_tokens}")
+    return None
+
+@after_llm_call
+def track_response_tokens(context: LLMCallHookContext) -> None:
+    """응답 토큰을 추적합니다."""
+    if context.response:
+        encoding = tiktoken.get_encoding("cl100k_base")
+        tokens = len(encoding.encode(context.response))
+        print(f"📊 응답 토큰: ~{tokens}")
+    return None
+```
+
+### 6. 디버그 로깅
+
+```python
+@before_llm_call
+def debug_request(context: LLMCallHookContext) -> None:
+    """LLM 요청을 디버그합니다."""
+    print(f"""
+    🔍 LLM 호출 디버그:
+    - 에이전트: {context.agent.role}
+    - 작업: {context.task.description[:50]}...
+    - 반복: {context.iterations}
+    - 메시지 수: {len(context.messages)}
+    - 마지막 메시지: {context.messages[-1] if context.messages else 'None'}
+    """)
+    return None
+
+@after_llm_call
+def debug_response(context: LLMCallHookContext) -> None:
+    """LLM 응답을 디버그합니다."""
+    if context.response:
+        print(f"✅ 응답 미리보기: {context.response[:100]}...")
+    return None
+```
+
+## 훅 관리
+
+### 훅 등록 해제
+
+```python
+from crewai.hooks import (
+    unregister_before_llm_call_hook,
+    unregister_after_llm_call_hook
+)
+
+# 특정 훅 등록 해제
+def my_hook(context):
+    ...
+
+register_before_llm_call_hook(my_hook)
+# 나중에...
+unregister_before_llm_call_hook(my_hook)  # 찾으면 True 반환
+```
+
+### 훅 지우기
+
+```python
+from crewai.hooks import (
+    clear_before_llm_call_hooks,
+    clear_after_llm_call_hooks,
+    clear_all_llm_call_hooks
+)
+
+# 특정 훅 타입 지우기
+count = clear_before_llm_call_hooks()
+print(f"{count}개의 전(before) 훅이 지워졌습니다")
+
+# 모든 LLM 훅 지우기
+before_count, after_count = clear_all_llm_call_hooks()
+print(f"{before_count}개의 전(before) 훅과 {after_count}개의 후(after) 훅이 지워졌습니다")
+```
+
+## 고급 패턴
+
+### 조건부 훅 실행
+
+```python
+@before_llm_call
+def conditional_blocking(context: LLMCallHookContext) -> bool | None:
+    """특정 조건에서만 차단합니다."""
+    # 특정 에이전트에 대해서만 차단
+    if context.agent.role == "researcher" and context.iterations > 10:
+        return False
+    
+    # 특정 작업에 대해서만 차단
+    if "민감한" in context.task.description.lower() and context.iterations > 5:
+        return False
+    
+    return None
+```
+
+### 컨텍스트 인식 수정
+
+```python
+@before_llm_call
+def adaptive_prompting(context: LLMCallHookContext) -> None:
+    """반복에 따라 다른 컨텍스트를 추가합니다."""
+    if context.iterations == 0:
+        context.messages.append({
+            "role": "system",
+            "content": "높은 수준의 개요부터 시작하세요."
+        })
+    elif context.iterations > 3:
+        context.messages.append({
+            "role": "system",
+            "content": "구체적인 세부사항에 집중하고 예제를 제공하세요."
+        })
+    return None
+```
+
+### 훅 체이닝
+
+```python
+# 여러 훅은 등록 순서대로 실행됩니다
+
+@before_llm_call
+def first_hook(context):
+    print("1. 첫 번째 훅 실행됨")
+    return None
+
+@before_llm_call
+def second_hook(context):
+    print("2. 두 번째 훅 실행됨")
+    return None
+
+@before_llm_call
+def blocking_hook(context):
+    if context.iterations > 10:
+        print("3. 차단 훅 - 실행 중지")
+        return False  # 후속 훅은 실행되지 않습니다
+    print("3. 차단 훅 - 실행 허용")
+    return None
+```
+
+## 모범 사례
+
+1. **훅을 집중적으로 유지**: 각 훅은 단일 책임을 가져야 합니다
+2. **무거운 계산 피하기**: 훅은 모든 LLM 호출마다 실행됩니다
+3. **오류를 우아하게 처리**: try-except를 사용하여 훅 실패로 인한 실행 중단 방지
+4. **타입 힌트 사용**: 더 나은 IDE 지원을 위해 `LLMCallHookContext` 활용
+5. **훅 동작 문서화**: 특히 차단 조건에 대해
+6. **훅을 독립적으로 테스트**: 프로덕션에서 사용하기 전에 단위 테스트
+7. **테스트에서 훅 지우기**: 테스트 실행 간 `clear_all_llm_call_hooks()` 사용
+8. **제자리에서 수정**: 항상 `context.messages`를 제자리에서 수정하고 교체하지 마세요
+
+## 오류 처리
+
+```python
+@before_llm_call
+def safe_hook(context: LLMCallHookContext) -> bool | None:
+    try:
+        # 훅 로직
+        if some_condition:
+            return False
+    except Exception as e:
+        print(f"⚠️ 훅 오류: {e}")
+        # 결정: 오류 발생 시 허용 또는 차단
+        return None  # 오류에도 불구하고 실행 허용
+```
+
+## 타입 안전성
+
+```python
+from crewai.hooks import LLMCallHookContext, BeforeLLMCallHookType, AfterLLMCallHookType
+
+# 명시적 타입 주석
+def my_before_hook(context: LLMCallHookContext) -> bool | None:
+    return None
+
+def my_after_hook(context: LLMCallHookContext) -> str | None:
+    return None
+
+# 타입 안전 등록
+register_before_llm_call_hook(my_before_hook)
+register_after_llm_call_hook(my_after_hook)
+```
+
+## 문제 해결
+
+### 훅이 실행되지 않음
+- 크루 실행 전에 훅이 등록되었는지 확인
+- 이전 훅이 `False`를 반환했는지 확인 (후속 훅 차단)
+- 훅 시그니처가 예상 타입과 일치하는지 확인
+
+### 메시지 수정이 지속되지 않음
+- 제자리 수정 사용: `context.messages.append()`
+- 리스트를 교체하지 마세요: `context.messages = []`
+
+### 응답 수정이 작동하지 않음
+- 후 훅에서 수정된 문자열을 반환
+- `None`을 반환하면 원본 응답이 유지됩니다
+
+## 결론
+
+LLM 호출 훅은 CrewAI에서 언어 모델 상호작용을 제어하고 모니터링하는 강력한 기능을 제공합니다. 이를 사용하여 안전 가드레일, 승인 게이트, 로깅, 비용 추적 및 응답 정제를 구현하세요. 적절한 오류 처리 및 타입 안전성과 결합하면, 훅을 통해 강력하고 프로덕션 준비가 된 에이전트 시스템을 구축할 수 있습니다.
+

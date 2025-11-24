@@ -11,18 +11,18 @@ console = Console()
 
 
 class BaseCommand:
-    def __init__(self):
+    def __init__(self) -> None:
         self._telemetry = Telemetry()
         self._telemetry.set_tracer()
 
 
 class PlusAPIMixin:
-    def __init__(self, telemetry):
+    def __init__(self, telemetry: Telemetry) -> None:
         try:
             telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token())
         except Exception:
-            self._deploy_signup_error_span = telemetry.deploy_signup_error_span()
+            telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
                 style="bold red",

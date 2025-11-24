@@ -30,11 +30,11 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     A class to handle tool repository related operations for CrewAI projects.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
-    def create(self, handle: str):
+    def create(self, handle: str) -> None:
         self._ensure_not_in_project()
 
         folder_name = handle.replace(" ", "_").replace("-", "_").lower()
@@ -64,7 +64,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         finally:
             os.chdir(old_directory)
 
-    def publish(self, is_public: bool, force: bool = False):
+    def publish(self, is_public: bool, force: bool = False) -> None:
         if not git.Repository().is_synced() and not force:
             console.print(
                 "[bold red]Failed to publish tool.[/bold red]\n"
@@ -137,7 +137,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             style="bold green",
         )
 
-    def install(self, handle: str):
+    def install(self, handle: str) -> None:
         self._print_current_organization()
         get_response = self.plus_api_client.get_tool(handle)
 
@@ -180,7 +180,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         settings.org_name = login_response_json["current_organization"]["name"]
         settings.dump()
 
-    def _add_package(self, tool_details: dict[str, Any]):
+    def _add_package(self, tool_details: dict[str, Any]) -> None:
         is_from_pypi = tool_details.get("source", None) == "pypi"
         tool_handle = tool_details["handle"]
         repository_handle = tool_details["repository"]["handle"]
@@ -209,7 +209,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             click.echo(add_package_result.stderr, err=True)
             raise SystemExit
 
-    def _ensure_not_in_project(self):
+    def _ensure_not_in_project(self) -> None:
         if os.path.isfile("./pyproject.toml"):
             console.print(
                 "[bold red]Oops! It looks like you're inside a project.[/bold red]"

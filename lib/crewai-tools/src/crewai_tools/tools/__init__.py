@@ -79,6 +79,9 @@ from crewai_tools.tools.json_search_tool.json_search_tool import JSONSearchTool
 from crewai_tools.tools.linkup.linkup_search_tool import LinkupSearchTool
 from crewai_tools.tools.llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from crewai_tools.tools.mdx_search_tool.mdx_search_tool import MDXSearchTool
+from crewai_tools.tools.merge_agent_handler_tool.merge_agent_handler_tool import (
+    MergeAgentHandlerTool,
+)
 from crewai_tools.tools.mongodb_vector_search_tool import (
     MongoDBToolSchema,
     MongoDBVectorSearchConfig,
@@ -218,6 +221,7 @@ __all__ = [
     "LinkupSearchTool",
     "LlamaIndexTool",
     "MDXSearchTool",
+    "MergeAgentHandlerTool",
     "MongoDBToolSchema",
     "MongoDBVectorSearchConfig",
     "MongoDBVectorSearchTool",

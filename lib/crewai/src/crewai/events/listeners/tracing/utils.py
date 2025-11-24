@@ -1,3 +1,4 @@
+from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
 import hashlib
@@ -8,7 +9,7 @@ from pathlib import Path
 import platform
 import re
 import subprocess
-from typing import Any
+from typing import Any, cast
 import uuid
 
 import click
@@ -23,7 +24,120 @@ from crewai.utilities.serialization import to_serializable
 logger = logging.getLogger(__name__)
 
 
+_tracing_enabled: ContextVar[bool | None] = ContextVar("_tracing_enabled", default=None)
+
+
+def should_enable_tracing(*, override: bool | None = None) -> bool:
+    """Determine if tracing should be enabled.
+
+    This is the single source of truth for tracing enablement.
+    Priority order:
+    1. Explicit override (e.g., Crew.tracing=True/False)
+    2. Environment variable CREWAI_TRACING_ENABLED
+    3. User consent from user_data
+
+    Args:
+        override: Explicit override for tracing (True=always enable, False=always disable, None=check other settings)
+
+    Returns:
+        True if tracing should be enabled, False otherwise.
+    """
+    if override is True:
+        return True
+    if override is False:
+        return False
+
+    env_value = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
+    if env_value in ("true", "1"):
+        return True
+
+    data = _load_user_data()
+
+    if data.get("trace_consent", False) is not False:
+        return True
+
+    return False
+
+
+def set_tracing_enabled(enabled: bool) -> object:
+    """Set tracing enabled state for current execution context.
+
+    Args:
+        enabled: Whether tracing should be enabled
+
+    Returns:
+        A token that can be used with reset_tracing_enabled to restore previous value.
+    """
+    return _tracing_enabled.set(enabled)
+
+
+def reset_tracing_enabled(token: Token[bool | None]) -> None:
+    """Reset tracing enabled state to previous value.
+
+    Args:
+        token: Token returned from set_tracing_enabled
+    """
+    _tracing_enabled.reset(token)
+
+
+def is_tracing_enabled_in_context() -> bool:
+    """Check if tracing is enabled in current execution context.
+
+    Returns:
+        True if tracing is enabled in context, False otherwise.
+        Returns False if context has not been set.
+    """
+    enabled = _tracing_enabled.get()
+    return enabled if enabled is not None else False
+
+
+def _user_data_file() -> Path:
+    base = Path(db_storage_path())
+    base.mkdir(parents=True, exist_ok=True)
+    return base / ".crewai_user.json"
+
+
+def _load_user_data() -> dict[str, Any]:
+    p = _user_data_file()
+    if p.exists():
+        try:
+            return cast(dict[str, Any], json.loads(p.read_text()))
+        except (json.JSONDecodeError, OSError, PermissionError) as e:
+            logger.warning(f"Failed to load user data: {e}")
+    return {}
+
+
+def _save_user_data(data: dict[str, Any]) -> None:
+    try:
+        p = _user_data_file()
+        p.write_text(json.dumps(data, indent=2))
+    except (OSError, PermissionError) as e:
+        logger.warning(f"Failed to save user data: {e}")
+
+
+def has_user_declined_tracing() -> bool:
+    """Check if user has explicitly declined trace collection.
+
+    Returns:
+        True if user previously declined tracing, False otherwise.
+    """
+    data = _load_user_data()
+    if data.get("first_execution_done", False):
+        return data.get("trace_consent", False) is False
+    return False
+
+
 def is_tracing_enabled() -> bool:
+    """Check if tracing should be enabled.
+
+
+    Returns:
+        True if tracing is enabled and not disabled, False otherwise.
+    """
+    # If user has explicitly declined tracing, never enable it
+    if has_user_declined_tracing():
+        return False
+
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
 
 
@@ -213,36 +327,12 @@ def _get_generic_system_id() -> str | None:
     return None
 
 
-def _user_data_file() -> Path:
-    base = Path(db_storage_path())
-    base.mkdir(parents=True, exist_ok=True)
-    return base / ".crewai_user.json"
-
-
-def _load_user_data() -> dict:
-    p = _user_data_file()
-    if p.exists():
-        try:
-            return json.loads(p.read_text())
-        except (json.JSONDecodeError, OSError, PermissionError) as e:
-            logger.warning(f"Failed to load user data: {e}")
-    return {}
-
-
-def _save_user_data(data: dict) -> None:
-    try:
-        p = _user_data_file()
-        p.write_text(json.dumps(data, indent=2))
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to save user data: {e}")
-
-
 def get_user_id() -> str:
     """Stable, anonymized user identifier with caching."""
     data = _load_user_data()
 
     if "user_id" in data:
-        return data["user_id"]
+        return cast(str, data["user_id"])
 
     try:
         username = getpass.getuser()
@@ -263,8 +353,12 @@ def is_first_execution() -> bool:
     return not data.get("first_execution_done", False)
 
 
-def mark_first_execution_done() -> None:
-    """Mark that the first execution has been completed."""
+def mark_first_execution_done(user_consented: bool = False) -> None:
+    """Mark that the first execution has been completed.
+
+    Args:
+        user_consented: Whether the user consented to trace collection.
+    """
     data = _load_user_data()
     if data.get("first_execution_done", False):
         return
@@ -275,12 +369,13 @@ def mark_first_execution_done() -> None:
             "first_execution_at": datetime.now().timestamp(),
             "user_id": get_user_id(),
             "machine_id": _get_machine_id(),
+            "trace_consent": user_consented,
         }
     )
     _save_user_data(data)
 
 
-def safe_serialize_to_dict(obj, exclude: set[str] | None = None) -> dict[str, Any]:
+def safe_serialize_to_dict(obj: Any, exclude: set[str] | None = None) -> dict[str, Any]:
     """Safely serialize an object to a dictionary for event data."""
     try:
         serialized = to_serializable(obj, exclude)
@@ -291,7 +386,9 @@ def safe_serialize_to_dict(obj, exclude: set[str] | None = None) -> dict[str, An
         return {"serialization_error": str(e), "object_type": type(obj).__name__}
 
 
-def truncate_messages(messages, max_content_length=500, max_messages=5):
+def truncate_messages(
+    messages: list[dict[str, Any]], max_content_length: int = 500, max_messages: int = 5
+) -> list[dict[str, Any]]:
     """Truncate message content and limit number of messages"""
     if not messages or not isinstance(messages, list):
         return messages
@@ -308,9 +405,22 @@ def truncate_messages(messages, max_content_length=500, max_messages=5):
 
 
 def should_auto_collect_first_time_traces() -> bool:
-    """True if we should auto-collect traces for first-time user."""
+    """True if we should auto-collect traces for first-time user.
+
+
+    Returns:
+        True if first-time user AND telemetry not disabled AND tracing not explicitly enabled, False otherwise.
+    """
     if _is_test_environment():
         return False
+
+    # If user has previously declined, never auto-collect
+    if has_user_declined_tracing():
+        return False
+
+    if is_tracing_enabled_in_context():
+        return False
+
     return is_first_execution()
 
 
@@ -355,7 +465,7 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
 
         result = [False]
 
-        def get_input():
+        def get_input() -> None:
             try:
                 response = input().strip().lower()
                 result[0] = response in ["y", "yes"]
@@ -377,6 +487,10 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return False
 
 
-def mark_first_execution_completed() -> None:
-    """Mark first execution as completed (called after trace prompt)."""
-    mark_first_execution_done()
+def mark_first_execution_completed(user_consented: bool = False) -> None:
+    """Mark first execution as completed (called after trace prompt).
+
+    Args:
+        user_consented: Whether the user consented to trace collection.
+    """
+    mark_first_execution_done(user_consented=user_consented)

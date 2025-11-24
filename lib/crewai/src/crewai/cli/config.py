@@ -2,6 +2,7 @@ import json
 from logging import getLogger
 from pathlib import Path
 import tempfile
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -136,7 +137,12 @@ class Settings(BaseModel):
         default=DEFAULT_CLI_SETTINGS["oauth2_domain"],
     )
 
-    def __init__(self, config_path: Path | None = None, **data):
+    oauth2_extra: dict[str, Any] = Field(
+        description="Extra configuration for the OAuth2 provider.",
+        default={},
+    )
+
+    def __init__(self, config_path: Path | None = None, **data: dict[str, Any]) -> None:
         """Load Settings from config path with fallback support"""
         if config_path is None:
             config_path = get_writable_config_path()

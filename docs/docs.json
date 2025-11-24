@@ -313,7 +313,10 @@
                   "en/learn/multimodal-agents",
                   "en/learn/replay-tasks-from-latest-crew-kickoff",
                   "en/learn/sequential-process",
-                  "en/learn/using-annotations"
+                  "en/learn/using-annotations",
+                  "en/learn/execution-hooks",
+                  "en/learn/llm-hooks",
+                  "en/learn/tool-hooks"
                 ]
               },
               {
@@ -737,7 +740,10 @@
                   "pt-BR/learn/multimodal-agents",
                   "pt-BR/learn/replay-tasks-from-latest-crew-kickoff",
                   "pt-BR/learn/sequential-process",
-                  "pt-BR/learn/using-annotations"
+                  "pt-BR/learn/using-annotations",
+                  "pt-BR/learn/execution-hooks",
+                  "pt-BR/learn/llm-hooks",
+                  "pt-BR/learn/tool-hooks"
                 ]
               },
               {
@@ -1170,7 +1176,10 @@
                   "ko/learn/multimodal-agents",
                   "ko/learn/replay-tasks-from-latest-crew-kickoff",
                   "ko/learn/sequential-process",
-                  "ko/learn/using-annotations"
+                  "ko/learn/using-annotations",
+                  "ko/learn/execution-hooks",
+                  "ko/learn/llm-hooks",
+                  "ko/learn/tool-hooks"
                 ]
               },
               {

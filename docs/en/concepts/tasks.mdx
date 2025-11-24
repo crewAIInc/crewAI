@@ -60,6 +60,7 @@ crew = Crew(
 | **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
 | **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
 | **Guardrail** _(optional)_       | `guardrail`       | `Optional[Callable]`             | Function to validate task output before proceeding to next task.                                                  |
+| **Guardrails** _(optional)_       | `guardrails`       | `Optional[List[Callable] | List[str]]` | List of guardrails to validate task output before proceeding to next task.                                      |
 | **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`     | Maximum number of retries when guardrail validation fails. Defaults to 3.                                         |
 
 <Note type="warning" title="Deprecated: max_retries">
@@ -223,6 +224,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 | **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
 | **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
 | **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
+| **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                           |
 
 ### Task Methods and Properties
 
@@ -341,7 +343,11 @@ Task guardrails provide a way to validate and transform task outputs before they
 are passed to the next task. This feature helps ensure data quality and provides
 feedback to agents when their output doesn't meet specific criteria.
 
-Guardrails are implemented as Python functions that contain custom validation logic, giving you complete control over the validation process and ensuring reliable, deterministic results.
+CrewAI supports two types of guardrails:
+
+1. **Function-based guardrails**: Python functions with custom validation logic, giving you complete control over the validation process and ensuring reliable, deterministic results.
+
+2. **LLM-based guardrails**: String descriptions that use the agent's LLM to validate outputs based on natural language criteria. These are ideal for complex or subjective validation requirements.
 
 ### Function-Based Guardrails
 
@@ -355,12 +361,12 @@ def validate_blog_content(result: TaskOutput) -> Tuple[bool, Any]:
     """Validate blog content meets requirements."""
     try:
         # Check word count
-        word_count = len(result.split())
+        word_count = len(result.raw.split())
         if word_count > 200:
             return (False, "Blog content exceeds 200 words")
 
         # Additional validation logic here
-        return (True, result.strip())
+        return (True, result.raw.strip())
     except Exception as e:
         return (False, "Unexpected error during validation")
 
@@ -371,6 +377,147 @@ blog_task = Task(
     guardrail=validate_blog_content  # Add the guardrail function
 )
 ```
+
+### LLM-Based Guardrails (String Descriptions)
+
+Instead of writing custom validation functions, you can use string descriptions that leverage LLM-based validation. When you provide a string to the `guardrail` or `guardrails` parameter, CrewAI automatically creates an `LLMGuardrail` that uses the agent's LLM to validate the output based on your description.
+
+**Requirements**:
+- The task must have an `agent` assigned (the guardrail uses the agent's LLM)
+- Provide a clear, descriptive string explaining the validation criteria
+
+```python Code
+from crewai import Task
+
+# Single LLM-based guardrail
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A blog post under 200 words",
+    agent=blog_agent,
+    guardrail="The blog post must be under 200 words and contain no technical jargon"
+)
+```
+
+LLM-based guardrails are particularly useful for:
+- **Complex validation logic** that's difficult to express programmatically
+- **Subjective criteria** like tone, style, or quality assessments
+- **Natural language requirements** that are easier to describe than code
+
+The LLM guardrail will:
+1. Analyze the task output against your description
+2. Return `(True, output)` if the output complies with the criteria
+3. Return `(False, feedback)` with specific feedback if validation fails
+
+**Example with detailed validation criteria**:
+
+```python Code
+research_task = Task(
+    description="Research the latest developments in quantum computing",
+    expected_output="A comprehensive research report",
+    agent=researcher_agent,
+    guardrail="""
+    The research report must:
+    - Be at least 1000 words long
+    - Include at least 5 credible sources
+    - Cover both technical and practical applications
+    - Be written in a professional, academic tone
+    - Avoid speculation or unverified claims
+    """
+)
+```
+
+### Multiple Guardrails
+
+You can apply multiple guardrails to a task using the `guardrails` parameter. Multiple guardrails are executed sequentially, with each guardrail receiving the output from the previous one. This allows you to chain validation and transformation steps.
+
+The `guardrails` parameter accepts:
+- A list of guardrail functions or string descriptions
+- A single guardrail function or string (same as `guardrail`)
+
+**Note**: If `guardrails` is provided, it takes precedence over `guardrail`. The `guardrail` parameter will be ignored when `guardrails` is set.
+
+```python Code
+from typing import Tuple, Any
+from crewai import TaskOutput, Task
+
+def validate_word_count(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate word count is within limits."""
+    word_count = len(result.raw.split())
+    if word_count < 100:
+        return (False, f"Content too short: {word_count} words. Need at least 100 words.")
+    if word_count > 500:
+        return (False, f"Content too long: {word_count} words. Maximum is 500 words.")
+    return (True, result.raw)
+
+def validate_no_profanity(result: TaskOutput) -> Tuple[bool, Any]:
+    """Check for inappropriate language."""
+    profanity_words = ["badword1", "badword2"]  # Example list
+    content_lower = result.raw.lower()
+    for word in profanity_words:
+        if word in content_lower:
+            return (False, f"Inappropriate language detected: {word}")
+    return (True, result.raw)
+
+def format_output(result: TaskOutput) -> Tuple[bool, Any]:
+    """Format and clean the output."""
+    formatted = result.raw.strip()
+    # Capitalize first letter
+    formatted = formatted[0].upper() + formatted[1:] if formatted else formatted
+    return (True, formatted)
+
+# Apply multiple guardrails sequentially
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A well-formatted blog post between 100-500 words",
+    agent=blog_agent,
+    guardrails=[
+        validate_word_count,      # First: validate length
+        validate_no_profanity,    # Second: check content
+        format_output             # Third: format the result
+    ],
+    guardrail_max_retries=3
+)
+```
+
+In this example, the guardrails execute in order:
+1. `validate_word_count` checks the word count
+2. `validate_no_profanity` checks for inappropriate language (using the output from step 1)
+3. `format_output` formats the final result (using the output from step 2)
+
+If any guardrail fails, the error is sent back to the agent, and the task is retried up to `guardrail_max_retries` times.
+
+**Mixing function-based and LLM-based guardrails**:
+
+You can combine both function-based and string-based guardrails in the same list:
+
+```python Code
+from typing import Tuple, Any
+from crewai import TaskOutput, Task
+
+def validate_word_count(result: TaskOutput) -> Tuple[bool, Any]:
+    """Validate word count is within limits."""
+    word_count = len(result.raw.split())
+    if word_count < 100:
+        return (False, f"Content too short: {word_count} words. Need at least 100 words.")
+    if word_count > 500:
+        return (False, f"Content too long: {word_count} words. Maximum is 500 words.")
+    return (True, result.raw)
+
+# Mix function-based and LLM-based guardrails
+blog_task = Task(
+    description="Write a blog post about AI",
+    expected_output="A well-formatted blog post between 100-500 words",
+    agent=blog_agent,
+    guardrails=[
+        validate_word_count,  # Function-based: precise word count check
+        "The content must be engaging and suitable for a general audience",  # LLM-based: subjective quality check
+        "The writing style should be clear, concise, and free of technical jargon"  # LLM-based: style validation
+    ],
+    guardrail_max_retries=3
+)
+```
+
+This approach combines the precision of programmatic validation with the flexibility of LLM-based assessment for subjective criteria.
 
 ### Guardrail Function Requirements
 

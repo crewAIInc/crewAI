@@ -539,6 +539,7 @@ class Task(BaseModel):
                 json_dict=json_output,
                 agent=agent.role,
                 output_format=self._get_output_format(),
+                messages=agent.last_messages,
             )
 
             if self._guardrails:
@@ -949,6 +950,7 @@ Follow these guidelines:
                 json_dict=json_output,
                 agent=agent.role,
                 output_format=self._get_output_format(),
+                messages=agent.last_messages,
             )
 
         return task_output

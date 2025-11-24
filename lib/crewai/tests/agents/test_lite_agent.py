@@ -239,6 +239,27 @@ def test_lite_agent_returns_usage_metrics():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
+def test_lite_agent_output_includes_messages():
+    """Test that LiteAgentOutput includes messages from agent execution."""
+    llm = LLM(model="gpt-4o-mini")
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the population of Tokyo",
+        backstory="You are a helpful research assistant who can search for information about the population of Tokyo.",
+        llm=llm,
+        tools=[WebSearchTool()],
+        verbose=True,
+    )
+
+    result = agent.kickoff("What is the population of Tokyo?")
+
+    assert isinstance(result, LiteAgentOutput)
+    assert hasattr(result, "messages")
+    assert isinstance(result.messages, list)
+    assert len(result.messages) > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.mark.asyncio
 async def test_lite_agent_returns_usage_metrics_async():
     """Test that LiteAgent returns usage metrics when run asynchronously."""

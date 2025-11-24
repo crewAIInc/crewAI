@@ -12,12 +12,16 @@ from pydantic.types import ImportString
 
 
 class QdrantToolSchema(BaseModel):
-    query: str = Field(..., description="Query to search in Qdrant DB")
+    query: str = Field(
+        ..., description="Query to search in Qdrant DB - always required."
+    )
     filter_by: str | None = Field(
-        default=None, description="Parameter to filter the search by."
+        default=None,
+        description="Parameter to filter the search by. When filtering, needs to be used in conjunction with filter_value.",
     )
     filter_value: Any | None = Field(
-        default=None, description="Value to filter the search by."
+        default=None,
+        description="Value to filter the search by. When filtering, needs to be used in conjunction with filter_by.",
     )
 
 

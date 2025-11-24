@@ -1,3 +1,4 @@
+import threading
 from typing import Any, ClassVar
 
 from rich.console import Console
@@ -27,6 +28,7 @@ class ConsoleFormatter:
     _pending_a2a_turn_number: int | None = None
     _a2a_turn_branches: ClassVar[dict[int, Tree]] = {}
     _current_a2a_agent_name: str | None = None
+    crew_completion_printed: ClassVar[threading.Event] = threading.Event()
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -47,13 +49,44 @@ class ConsoleFormatter:
             padding=(1, 2),
         )
 
+    def _show_tracing_disabled_message_if_needed(self) -> None:
+        """Show tracing disabled message if tracing is not enabled."""
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            is_tracing_enabled_in_context,
+        )
+
+        if not is_tracing_enabled_in_context():
+            if has_user_declined_tracing():
+                message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+            else:
+                message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+            panel = Panel(
+                message,
+                title="Tracing Status",
+                border_style="blue",
+                padding=(1, 2),
+            )
+            self.console.print(panel)
+
     def create_status_content(
         self,
         title: str,
         name: str,
         status_style: str = "blue",
         tool_args: dict[str, Any] | str = "",
-        **fields,
+        **fields: Any,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
         content = Text()
@@ -92,7 +125,7 @@ class ConsoleFormatter:
         """Add a node to the tree with consistent styling."""
         return parent.add(Text(text, style=style))
 
-    def print(self, *args, **kwargs) -> None:
+    def print(self, *args: Any, **kwargs: Any) -> None:
         """Custom print that replaces consecutive Tree renders.
 
         * If the argument is a single ``Tree`` instance, we either start a
@@ -208,10 +241,19 @@ class ConsoleFormatter:
 
         self.print_panel(content, title, style)
 
+        if status in ["completed", "failed"]:
+            self.crew_completion_printed.set()
+
+            # Show tracing disabled message after crew completion
+            self._show_tracing_disabled_message_if_needed()
+
     def create_crew_tree(self, crew_name: str, source_id: str) -> Tree | None:
         """Create and initialize a new crew tree with initial status."""
         if not self.verbose:
             return None
+
+        # Reset the crew completion event for this new crew execution
+        ConsoleFormatter.crew_completion_printed.clear()
 
         tree = Tree(
             Text("🚀 Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
@@ -497,7 +539,7 @@ class ConsoleFormatter:
 
         return method_branch
 
-    def get_llm_tree(self, tool_name: str):
+    def get_llm_tree(self, tool_name: str) -> Tree:
         text = Text()
         text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
 
@@ -512,7 +554,7 @@ class ConsoleFormatter:
         self,
         tool_name: str,
         tool_args: dict[str, Any] | str,
-    ):
+    ) -> None:
         # Create status content for the tool usage
         content = self.create_status_content(
             "Tool Usage Started", tool_name, Status="In Progress", tool_args=tool_args
@@ -528,7 +570,7 @@ class ConsoleFormatter:
     def handle_llm_tool_usage_finished(
         self,
         tool_name: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
         self.print(tree)
@@ -538,7 +580,7 @@ class ConsoleFormatter:
         self,
         tool_name: str,
         error: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
         self.print(tree)
@@ -1558,7 +1600,7 @@ class ConsoleFormatter:
         if branch_to_use is None and tree_to_use is not None:
             branch_to_use = tree_to_use
 
-        def add_panel():
+        def add_panel() -> None:
             memory_text = str(memory_content)
             if len(memory_text) > 500:
                 memory_text = memory_text[:497] + "..."

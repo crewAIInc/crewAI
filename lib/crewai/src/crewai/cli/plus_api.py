@@ -1,3 +1,4 @@
+from typing import Any
 from urllib.parse import urljoin
 
 import requests
@@ -36,19 +37,21 @@ class PlusAPI:
             str(settings.enterprise_base_url) or DEFAULT_CREWAI_ENTERPRISE_URL
         )
 
-    def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
+    def _make_request(
+        self, method: str, endpoint: str, **kwargs: Any
+    ) -> requests.Response:
         url = urljoin(self.base_url, endpoint)
         session = requests.Session()
         session.trust_env = False
         return session.request(method, url, headers=self.headers, **kwargs)
 
-    def login_to_tool_repository(self):
+    def login_to_tool_repository(self) -> requests.Response:
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}/login")
 
-    def get_tool(self, handle: str):
+    def get_tool(self, handle: str) -> requests.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
-    def get_agent(self, handle: str):
+    def get_agent(self, handle: str) -> requests.Response:
         return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
 
     def publish_tool(
@@ -58,8 +61,8 @@ class PlusAPI:
         version: str,
         description: str | None,
         encoded_file: str,
-        available_exports: list[str] | None = None,
-    ):
+        available_exports: list[dict[str, Any]] | None = None,
+    ) -> requests.Response:
         params = {
             "handle": handle,
             "public": is_public,
@@ -111,13 +114,13 @@ class PlusAPI:
     def list_crews(self) -> requests.Response:
         return self._make_request("GET", self.CREWS_RESOURCE)
 
-    def create_crew(self, payload) -> requests.Response:
+    def create_crew(self, payload: dict[str, Any]) -> requests.Response:
         return self._make_request("POST", self.CREWS_RESOURCE, json=payload)
 
     def get_organizations(self) -> requests.Response:
         return self._make_request("GET", self.ORGANIZATIONS_RESOURCE)
 
-    def initialize_trace_batch(self, payload) -> requests.Response:
+    def initialize_trace_batch(self, payload: dict[str, Any]) -> requests.Response:
         return self._make_request(
             "POST",
             f"{self.TRACING_RESOURCE}/batches",
@@ -125,14 +128,18 @@ class PlusAPI:
             timeout=30,
         )
 
-    def initialize_ephemeral_trace_batch(self, payload) -> requests.Response:
+    def initialize_ephemeral_trace_batch(
+        self, payload: dict[str, Any]
+    ) -> requests.Response:
         return self._make_request(
             "POST",
             f"{self.EPHEMERAL_TRACING_RESOURCE}/batches",
             json=payload,
         )
 
-    def send_trace_events(self, trace_batch_id: str, payload) -> requests.Response:
+    def send_trace_events(
+        self, trace_batch_id: str, payload: dict[str, Any]
+    ) -> requests.Response:
         return self._make_request(
             "POST",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/events",
@@ -141,7 +148,7 @@ class PlusAPI:
         )
 
     def send_ephemeral_trace_events(
-        self, trace_batch_id: str, payload
+        self, trace_batch_id: str, payload: dict[str, Any]
     ) -> requests.Response:
         return self._make_request(
             "POST",
@@ -150,7 +157,9 @@ class PlusAPI:
             timeout=30,
         )
 
-    def finalize_trace_batch(self, trace_batch_id: str, payload) -> requests.Response:
+    def finalize_trace_batch(
+        self, trace_batch_id: str, payload: dict[str, Any]
+    ) -> requests.Response:
         return self._make_request(
             "PATCH",
             f"{self.TRACING_RESOURCE}/batches/{trace_batch_id}/finalize",
@@ -159,7 +168,7 @@ class PlusAPI:
         )
 
     def finalize_ephemeral_trace_batch(
-        self, trace_batch_id: str, payload
+        self, trace_batch_id: str, payload: dict[str, Any]
     ) -> requests.Response:
         return self._make_request(
             "PATCH",
