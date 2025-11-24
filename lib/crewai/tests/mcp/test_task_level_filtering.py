@@ -348,6 +348,80 @@ def test_static_filter_fallback(mock_tool_definitions):
         assert "python_server.py_delete_file" not in tool_names
 
 
+def test_filter_with_optional_params_classified_as_static(mock_tool_definitions):
+    """Test that filters with optional parameters are correctly classified.
+
+    A filter with signature (tool: dict, optional: str = "default") should be
+    classified as static (1 required param), not dynamic (2 params).
+    """
+    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        # Filter with 1 required param + 1 optional param should be static
+        def static_filter_with_optional(
+            tool: dict, optional_param: str = "default"
+        ) -> bool:
+            return "delete" not in tool.get("name", "")
+
+        config = MCPServerStdio(
+            command="python",
+            args=["server.py"],
+            tool_filter=static_filter_with_optional,
+        )
+
+        # Verify it's classified as static, not dynamic
+        assert config._filter_type == "static"
+
+        agent = Agent(
+            role="Test Agent",
+            goal="Test",
+            backstory="Test",
+            mcps=[config],
+        )
+
+        # Load and assign MCP tools
+        agent.tools = agent.get_mcp_tools([config])
+
+        task = Task(description="Test task", expected_output="Result", agent=agent)
+
+        tools = agent._get_task_filtered_tools(task)
+
+        # Should work correctly as static filter (3 tools, no delete)
+        assert len(tools) == 3
+        tool_names = [t.name for t in tools]
+        assert "python_server.py_delete_file" not in tool_names
+
+
+def test_filter_with_variadic_params_classified_correctly(mock_tool_definitions):
+    """Test that filters with *args/**kwargs are correctly classified."""
+    # Filter with 1 required + *args should be static
+    def static_with_args(tool: dict, *args) -> bool:
+        return True
+
+    config = MCPServerStdio(
+        command="python",
+        args=["server.py"],
+        tool_filter=static_with_args,
+    )
+    assert config._filter_type == "static"
+
+    # Filter with 2 required + **kwargs should be dynamic
+    def dynamic_with_kwargs(context, tool: dict, **kwargs) -> bool:
+        return True
+
+    config2 = MCPServerStdio(
+        command="python",
+        args=["server.py"],
+        tool_filter=dynamic_with_kwargs,
+    )
+    assert config2._filter_type == "dynamic"
+
+
 def test_tool_filter_context_has_task(mock_tool_definitions):
     """Test that ToolFilterContext has task field populated."""
     context_captured = None

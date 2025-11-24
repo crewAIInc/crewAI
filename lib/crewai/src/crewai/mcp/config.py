@@ -12,6 +12,27 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from crewai.mcp.filters import ToolFilter
 
 
+def _count_required_params(sig: inspect.Signature) -> int:
+    """Count only required positional parameters (no defaults, no *args/**kwargs).
+
+    This is used to distinguish between:
+    - Static filters: 1 required param (tool: dict)
+    - Dynamic filters: 2 required params (context: ToolFilterContext, tool: dict)
+    """
+    count = 0
+    for param in sig.parameters.values():
+        # Skip *args and **kwargs
+        if param.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            continue
+        # Count only parameters without defaults
+        if param.default is inspect.Parameter.empty:
+            count += 1
+    return count
+
+
 class MCPServerStdio(BaseModel):
     """Stdio MCP server configuration.
 
@@ -60,10 +81,10 @@ class MCPServerStdio(BaseModel):
             self._filter_type = "none"
         elif callable(self.tool_filter):
             sig = inspect.signature(self.tool_filter)
-            num_params = len(sig.parameters)
-            if num_params == 2:
+            num_required = _count_required_params(sig)
+            if num_required == 2:
                 self._filter_type = "dynamic"
-            elif num_params == 1:
+            elif num_required == 1:
                 self._filter_type = "static"
             else:
                 # Unexpected signature - default to static for backward compatibility
@@ -117,10 +138,10 @@ class MCPServerHTTP(BaseModel):
             self._filter_type = "none"
         elif callable(self.tool_filter):
             sig = inspect.signature(self.tool_filter)
-            num_params = len(sig.parameters)
-            if num_params == 2:
+            num_required = _count_required_params(sig)
+            if num_required == 2:
                 self._filter_type = "dynamic"
-            elif num_params == 1:
+            elif num_required == 1:
                 self._filter_type = "static"
             else:
                 # Unexpected signature - default to static for backward compatibility
@@ -170,10 +191,10 @@ class MCPServerSSE(BaseModel):
             self._filter_type = "none"
         elif callable(self.tool_filter):
             sig = inspect.signature(self.tool_filter)
-            num_params = len(sig.parameters)
-            if num_params == 2:
+            num_required = _count_required_params(sig)
+            if num_required == 2:
                 self._filter_type = "dynamic"
-            elif num_params == 1:
+            elif num_required == 1:
                 self._filter_type = "static"
             else:
                 # Unexpected signature - default to static for backward compatibility
