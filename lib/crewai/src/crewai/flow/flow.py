@@ -1008,6 +1008,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -1109,6 +1110,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
@@ -1116,7 +1118,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -1134,13 +1136,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                     result=result,
                 ),
             )
@@ -1161,6 +1164,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             raise e
+
+    def _copy_and_serialize_state(self) -> dict[str, Any]:
+        state_copy = self._copy_state()
+        if isinstance(state_copy, BaseModel):
+            try:
+                return state_copy.model_dump(mode="json")
+            except Exception:
+                return state_copy.model_dump()
+        else:
+            return state_copy
 
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any
