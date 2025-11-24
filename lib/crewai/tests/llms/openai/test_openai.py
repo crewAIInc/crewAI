@@ -528,3 +528,50 @@ def test_openai_streaming_with_response_model():
 
         assert "input" not in call_kwargs
         assert "text_format" not in call_kwargs
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_openai_response_format_with_pydantic_model():
+    """
+    Test that response_format with a Pydantic BaseModel returns structured output.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnswerResponse(BaseModel):
+        """Response model with structured fields."""
+
+        answer: str = Field(description="The answer to the question")
+        confidence: float = Field(description="Confidence score between 0 and 1")
+
+    llm = LLM(model="gpt-4o", response_format=AnswerResponse)
+    result = llm.call("What is the capital of France? Be concise.")
+
+    assert isinstance(result, AnswerResponse)
+    assert result.answer is not None
+    assert 0 <= result.confidence <= 1
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_openai_response_format_with_dict():
+    """
+    Test that response_format with a dict returns JSON output.
+    """
+    import json
+
+    llm = LLM(model="gpt-4o", response_format={"type": "json_object"})
+    result = llm.call("Return a JSON object with a 'status' field set to 'success'")
+
+    parsed = json.loads(result)
+    assert "status" in parsed
+
+
+@pytest.mark.vcr(filter_headers=["authorization"])
+def test_openai_response_format_none():
+    """
+    Test that when response_format is None, the API returns plain text.
+    """
+    llm = LLM(model="gpt-4o", response_format=None)
+    result = llm.call("Say hello in one word")
+
+    assert isinstance(result, str)
+    assert len(result) > 0
