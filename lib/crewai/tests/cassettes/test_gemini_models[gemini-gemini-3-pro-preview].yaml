@@ -1,0 +1,69 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '123'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - litellm/1.78.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/21UW4+iSBh9719heGxmBgFvbDIPgKAgNwUV3OxDCSWU3KFApdP/fWl77XF2l6RI
+        5ftOnVN1ku+8vQwGhA+yAAUAw5r4Y/BnXxkM3u7/j16eYZjhvvEo9cUCVPgX9vN7e9r3EAyvH4cI
+        J4IDHxQIg2SQnwZyBTIfDlA9eH21QIXq19cfxLd/HY3yJoywjcIM4KaCHzRSvZbEWpL4YIlRytG8
+        a3eoGiukHPHm3jH2FNvMTC1qLlgS05RL42PVyPMdz1uFHpQuytZSBqcHf7PexMHK3mjJQjWKIbM+
+        MxFL6cvWMMfQFsOJ3UQk5j1hWmoxK1DrLqncyrpcQ+UY0uZog2oqkTmXiQ2f27ZBpS58MXBTxRbX
+        qdfsl25Vn5tswrUHeVhVxenW7kaG0cKdt2hjjxPUBYY26BAUvbqqw30AoG0eTMmzdImnIrI51+VY
+        xeqUl/HKs8ZgfBPF0bbtMDjMzxZSkv3KNuJgwTlYMkw9YEyKMcfkRvUmkiPpBqL486niJEuQKtE7
+        XibhpJy1AltrXSrjq+iEucKfK5z43Ci6bTu+VIVuRNecmwRN2gnbqQHH6lQ06eNM5ttpwEjZVOI3
+        umesM9qbcxMySprtbDYXaboQdioPMpuEy3U4VZrM6njN0rAk8Fh3/ON+E58FJPDtxD8upIWTbI/D
+        MrqM7RWj7VWo6kMFUgaj5Dpzsg8bE6GoIc+rJEcnau8qGNnZygGNcRO61nD5sXgyWbUQ+Z4XQhrX
+        3C6UyS2OTHAp2cUJVp0eSZqtyTuTy48XjmW0xLJVYRqYYmSZhatQ45ROKPZiXTZTxiq2ceDPIhii
+        7tBurqtSL7ylp5NRw5FUzJXsLkiRJs1BIi05Oxit51ToBF2oTGOvYTXjfJptR62SVdTB7W5aaJzq
+        nb9adAVFIii3gZE5Qz87C+ViVKa3eJ2f4pyiSzasywoHJA2klNL01IIYX6o55V8n3BUc8vKagLIp
+        d/pRZoatSfor/yx4bAYp/udP4mlc3r/2f/2aIqLKk/vUpHkAkwf8/QEgTihDdbSBoM6zD5jtmNbX
+        EBIoC+C1Lw9fHgJ3aqKpQQh1iEGfFOArD4iiytMCO3kMMzFv7kkx++R6ypX/beO8D4XfOvSI/vYf
+        1nrea6LkOW+eoqh/IkgQvt2zRnKdpzDpBZ5VHza8PLn1yJrfL0gz45d//Pq0cAerGn16FcK0d+87
+        +72/Yb9gi+DlrklUsC7yrIZK8IHbeV4/2Sy/LL9r50a3aquVZ2uPeHl/+RvdmjG6dAUAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 19 Nov 2025 08:56:53 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2508
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
