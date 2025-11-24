@@ -95,7 +95,7 @@ class AuthenticationCommand:
 
         device_code_payload = {
             "client_id": self.oauth2_provider.get_client_id(),
-            "scope": self.oauth2_provider.get_scope(),
+            "scope": " ".join(self.oauth2_provider.get_oauth_scopes()),
             "audience": self.oauth2_provider.get_audience(),
         }
         response = requests.post(

@@ -236,7 +236,7 @@ class TestAuthenticationCommand:
             "https://example.com/device"
         )
         self.auth_command.oauth2_provider.get_audience.return_value = "test_audience"
-        self.auth_command.oauth2_provider.get_scope.return_value = "openid profile email"
+        self.auth_command.oauth2_provider.get_oauth_scopes.return_value = ["openid", "profile", "email"]
 
         result = self.auth_command._get_device_code()
 

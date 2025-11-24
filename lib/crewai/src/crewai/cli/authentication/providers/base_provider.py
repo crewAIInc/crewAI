@@ -29,5 +29,5 @@ class BaseProvider(ABC):
         """Returns which provider-specific fields inside the "extra" dict will be required"""
         return []
 
-    def get_scope(self) -> str:
-        return "openid profile email "
+    def get_oauth_scopes(self) -> list[str]:
+        return ["openid", "profile", "email"]

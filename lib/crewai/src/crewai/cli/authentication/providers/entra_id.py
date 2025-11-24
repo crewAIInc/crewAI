@@ -30,8 +30,11 @@ class EntraIdProvider(BaseProvider):
             )
         return self.settings.client_id
 
-    def get_scope(self) -> str:
-        return super().get_scope() + cast(str, self.settings.extra.get("scope", ""))
+    def get_oauth_scopes(self) -> list[str]:
+        return [
+            *super().get_oauth_scopes(),
+            *cast(str, self.settings.extra.get("scope", "")).split(),
+        ]
 
     def get_required_fields(self) -> list[str]:
         return ["scope"]

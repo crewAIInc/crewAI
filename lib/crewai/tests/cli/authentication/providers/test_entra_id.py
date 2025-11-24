@@ -110,6 +110,32 @@ class TestEntraIdProvider:
 
     def test_get_required_fields(self):
         assert set(self.provider.get_required_fields()) == set(["scope"]) 
+
+    def test_get_oauth_scopes(self):
+        settings = Oauth2Settings(
+            provider="entra_id",
+            domain="tenant-id-abcdef123456",
+            client_id="test-client-id",
+            audience="test-audience",
+            extra={
+                "scope": "api://crewai-cli-dev/read"
+            }
+        )
+        provider = EntraIdProvider(settings)
+        assert provider.get_oauth_scopes() == ["openid", "profile", "email", "api://crewai-cli-dev/read"]
     
+    def test_get_oauth_scopes_with_multiple_custom_scopes(self):
+        settings = Oauth2Settings(  
+            provider="entra_id",
+            domain="tenant-id-abcdef123456",
+            client_id="test-client-id",
+            audience="test-audience",
+            extra={
+                "scope": "api://crewai-cli-dev/read api://crewai-cli-dev/write custom-scope1 custom-scope2"
+            }
+        )
+        provider = EntraIdProvider(settings)
+        assert provider.get_oauth_scopes() == ["openid", "profile", "email", "api://crewai-cli-dev/read", "api://crewai-cli-dev/write", "custom-scope1", "custom-scope2"]
+
     def test_base_url(self):
         assert self.provider._base_url() == "https://login.microsoftonline.com/tenant-id-abcdef123456"
