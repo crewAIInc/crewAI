@@ -128,8 +128,6 @@ class TestAgentEvaluator:
 
     @pytest.mark.vcr(filter_headers=["authorization"])
     def test_eval_specific_agents_from_crew(self, mock_crew):
-        from crewai.events.types.task_events import TaskCompletedEvent
-
         agent = Agent(
             role="Test Agent Eval",
             goal="Complete test tasks successfully",
@@ -145,7 +143,7 @@ class TestAgentEvaluator:
 
         events = {}
         results_condition = threading.Condition()
-        results_ready = False
+        completed_event_received = False
 
         agent_evaluator = AgentEvaluator(
             agents=[agent], evaluators=[GoalAlignmentEvaluator()]
@@ -158,29 +156,23 @@ class TestAgentEvaluator:
 
         @crewai_event_bus.on(AgentEvaluationCompletedEvent)
         async def capture_completed(source, event):
+            nonlocal completed_event_received
             if event.agent_id == str(agent.id):
                 events["completed"] = event
+                with results_condition:
+                    completed_event_received = True
+                    results_condition.notify()
 
         @crewai_event_bus.on(AgentEvaluationFailedEvent)
         def capture_failed(source, event):
             events["failed"] = event
 
-        @crewai_event_bus.on(TaskCompletedEvent)
-        async def on_task_completed(source, event):
-            nonlocal results_ready
-            if event.task and event.task.id == task.id:
-                while not agent_evaluator.get_evaluation_results().get(agent.role):
-                    pass
-                with results_condition:
-                    results_ready = True
-                    results_condition.notify()
-
         mock_crew.kickoff()
 
         with results_condition:
             assert results_condition.wait_for(
-                lambda: results_ready, timeout=5
-            ), "Timeout waiting for evaluation results"
+                lambda: completed_event_received, timeout=5
+            ), "Timeout waiting for evaluation completed event"
 
         assert events.keys() == {"started", "completed"}
         assert events["started"].agent_id == str(agent.id)
