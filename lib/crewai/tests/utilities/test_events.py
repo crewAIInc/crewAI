@@ -26,6 +26,7 @@ from crewai.events.types.flow_events import (
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
+    MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import (
@@ -47,7 +48,7 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.llm import LLM
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from pydantic import Field
+from pydantic import BaseModel, Field
 import pytest
 
 from ..utils import wait_for_event_handlers
@@ -701,6 +702,156 @@ def test_flow_emits_method_execution_failed_event():
     assert received_events[0].flow_name == "TestFlow"
     assert received_events[0].type == "method_execution_failed"
     assert received_events[0].error == error
+
+
+def test_flow_method_execution_started_includes_unstructured_state():
+    """Test that MethodExecutionStartedEvent includes unstructured (dict) state."""
+    received_events = []
+    event_received = threading.Event()
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_started(source, event):
+        received_events.append(event)
+        if event.method_name == "process":
+            event_received.set()
+
+    class TestFlow(Flow[dict]):
+        @start()
+        def begin(self):
+            self.state["counter"] = 1
+            self.state["message"] = "test"
+            return "started"
+
+        @listen("begin")
+        def process(self):
+            self.state["counter"] = 2
+            return "processed"
+
+    flow = TestFlow()
+    flow.kickoff()
+
+    assert event_received.wait(timeout=5), (
+        "Timeout waiting for method execution started event"
+    )
+
+    # Find the events for each method
+    begin_event = next(e for e in received_events if e.method_name == "begin")
+    process_event = next(e for e in received_events if e.method_name == "process")
+
+    # Verify state is included and is a dict
+    assert begin_event.state is not None
+    assert isinstance(begin_event.state, dict)
+    assert "id" in begin_event.state  # Auto-generated ID
+
+    # Verify state from begin method is captured in process event
+    assert process_event.state is not None
+    assert isinstance(process_event.state, dict)
+    assert process_event.state["counter"] == 1
+    assert process_event.state["message"] == "test"
+
+
+def test_flow_method_execution_started_includes_structured_state():
+    """Test that MethodExecutionStartedEvent includes structured (BaseModel) state and serializes it properly."""
+    received_events = []
+    event_received = threading.Event()
+
+    class FlowState(BaseModel):
+        counter: int = 0
+        message: str = ""
+        items: list[str] = []
+
+    @crewai_event_bus.on(MethodExecutionStartedEvent)
+    def handle_method_started(source, event):
+        received_events.append(event)
+        if event.method_name == "process":
+            event_received.set()
+
+    class TestFlow(Flow[FlowState]):
+        @start()
+        def begin(self):
+            self.state.counter = 1
+            self.state.message = "initial"
+            self.state.items = ["a", "b"]
+            return "started"
+
+        @listen("begin")
+        def process(self):
+            self.state.counter += 1
+            return "processed"
+
+    flow = TestFlow()
+    flow.kickoff()
+
+    assert event_received.wait(timeout=5), (
+        "Timeout waiting for method execution started event"
+    )
+
+    begin_event = next(e for e in received_events if e.method_name == "begin")
+    process_event = next(e for e in received_events if e.method_name == "process")
+
+    assert begin_event.state is not None
+    assert isinstance(begin_event.state, dict)
+    assert begin_event.state["counter"] == 0  # Initial state
+    assert begin_event.state["message"] == ""
+    assert begin_event.state["items"] == []
+
+    assert process_event.state is not None
+    assert isinstance(process_event.state, dict)
+    assert process_event.state["counter"] == 1
+    assert process_event.state["message"] == "initial"
+    assert process_event.state["items"] == ["a", "b"]
+
+
+def test_flow_method_execution_finished_includes_serialized_state():
+    """Test that MethodExecutionFinishedEvent includes properly serialized state."""
+    received_events = []
+    event_received = threading.Event()
+
+    class FlowState(BaseModel):
+        result: str = ""
+        completed: bool = False
+
+    @crewai_event_bus.on(MethodExecutionFinishedEvent)
+    def handle_method_finished(source, event):
+        received_events.append(event)
+        if event.method_name == "process":
+            event_received.set()
+
+    class TestFlow(Flow[FlowState]):
+        @start()
+        def begin(self):
+            self.state.result = "begin done"
+            return "started"
+
+        @listen("begin")
+        def process(self):
+            self.state.result = "process done"
+            self.state.completed = True
+            return "final_result"
+
+    flow = TestFlow()
+    final_output = flow.kickoff()
+
+    assert event_received.wait(timeout=5), (
+        "Timeout waiting for method execution finished event"
+    )
+
+    begin_finished = next(e for e in received_events if e.method_name == "begin")
+    process_finished = next(e for e in received_events if e.method_name == "process")
+
+    assert begin_finished.state is not None
+    assert isinstance(begin_finished.state, dict)
+    assert begin_finished.state["result"] == "begin done"
+    assert begin_finished.state["completed"] is False
+    assert begin_finished.result == "started"
+
+    # Verify process finished event has final state and result
+    assert process_finished.state is not None
+    assert isinstance(process_finished.state, dict)
+    assert process_finished.state["result"] == "process done"
+    assert process_finished.state["completed"] is True
+    assert process_finished.result == "final_result"
+    assert final_output == "final_result"
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
