@@ -114,8 +114,8 @@ class TestStreamingCrewIntegration:
         result = streaming.result
         assert result.raw is not None
 
-    @pytest.mark.asyncio
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.asyncio
     async def test_async_streaming_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
@@ -247,8 +247,8 @@ class TestStreamingFlowIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.asyncio
     @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.asyncio
     async def test_async_flow_streaming_from_docs(self) -> None:
         """Test async flow streaming example from documentation."""
 
@@ -270,8 +270,11 @@ class TestStreamingFlowIntegration:
                     agent=researcher,
                 )
 
-                crew = Crew(agents=[researcher], tasks=[task], verbose=False)
-                return crew.kickoff().raw
+                crew = Crew(agents=[researcher], tasks=[task], stream=True, verbose=False)
+                streaming = crew.kickoff()
+                for _ in streaming:
+                    pass
+                return streaming.result.raw
 
         flow = AsyncResearchFlow()
 
