@@ -91,6 +91,7 @@ PROVIDER_PATHS = {
     "cohere": "crewai.rag.embeddings.providers.cohere.cohere_provider.CohereProvider",
     "custom": "crewai.rag.embeddings.providers.custom.custom_provider.CustomProvider",
     "google-generativeai": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
+    "google": "crewai.rag.embeddings.providers.google.generative_ai.GenerativeAiProvider",
     "google-vertex": "crewai.rag.embeddings.providers.google.vertex.VertexAIProvider",
     "huggingface": "crewai.rag.embeddings.providers.huggingface.huggingface_provider.HuggingFaceProvider",
     "instructor": "crewai.rag.embeddings.providers.instructor.instructor_provider.InstructorProvider",
