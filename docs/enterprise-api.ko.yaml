@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: CrewAI 엔터프라이즈 API
   description: |
-    CrewAI AOP에 배포된 crew와 상호작용하기 위한 REST API입니다.
+    CrewAI AMP에 배포된 crew와 상호작용하기 위한 REST API입니다.
 
     ## 시작하기
     1. **Crew URL 확인**: 대시보드에서 고유한 crew URL을 확인하세요

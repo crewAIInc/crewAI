@@ -83,7 +83,7 @@ class AuthenticationCommand:
 
     def login(self) -> None:
         """Sign up to CrewAI+"""
-        console.print("Signing in to CrewAI AOP...\n", style="bold blue")
+        console.print("Signing in to CrewAI AMP...\n", style="bold blue")
 
         device_code_data = self._get_device_code()
         self._display_auth_instructions(device_code_data)
@@ -145,7 +145,7 @@ class AuthenticationCommand:
 
                 self._login_to_tool_repository()
 
-                console.print("\n[bold green]Welcome to CrewAI AOP![/bold green]\n")
+                console.print("\n[bold green]Welcome to CrewAI AMP![/bold green]\n")
                 return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):

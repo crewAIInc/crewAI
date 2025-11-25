@@ -4,7 +4,7 @@ description: Aprenda a usar o CLI do CrewAI para interagir com o CrewAI.
 icon: terminal
 mode: "wide"
 ---
-<Warning>A partir da versão 0.140.0, a plataforma CrewAI AOP iniciou um processo de migração de seu provedor de login. Como resultado, o fluxo de autenticação via CLI foi atualizado. Usuários que utlizam o Google para fazer login, ou que criaram conta após 3 de julho de 2025 não poderão fazer login com versões anteriores da biblioteca `crewai`.</Warning>
+<Warning>A partir da versão 0.140.0, a plataforma CrewAI AMP iniciou um processo de migração de seu provedor de login. Como resultado, o fluxo de autenticação via CLI foi atualizado. Usuários que utlizam o Google para fazer login, ou que criaram conta após 3 de julho de 2025 não poderão fazer login com versões anteriores da biblioteca `crewai`.</Warning>
 
 ## Visão Geral
 
@@ -201,9 +201,9 @@ def crew(self) -> Crew:
 
 ### 10. Deploy
 
-Implemente o crew ou flow no [CrewAI AOP](https://app.crewai.com).
+Implemente o crew ou flow no [CrewAI AMP](https://app.crewai.com).
 
-- **Autenticação**: Você precisa estar autenticado para implementar no CrewAI AOP.
+- **Autenticação**: Você precisa estar autenticado para implementar no CrewAI AMP.
     Você pode fazer login ou criar uma conta com:
     ```shell Terminal
     crewai login
@@ -218,7 +218,7 @@ Implemente o crew ou flow no [CrewAI AOP](https://app.crewai.com).
 
 ### 11. Gerenciamento de Organização
 
-Gerencie suas organizações no CrewAI AOP.
+Gerencie suas organizações no CrewAI AMP.
 
 ```shell Terminal
 crewai org [COMMAND] [OPTIONS]
@@ -242,17 +242,17 @@ crewai org switch <organization_id>
 ```
 
 <Note>
-Você deve estar autenticado no CrewAI AOP para usar estes comandos de gerenciamento de organização.
+Você deve estar autenticado no CrewAI AMP para usar estes comandos de gerenciamento de organização.
 </Note>
 
 - **Criar um deployment** (continuação):
     - Vincula o deployment ao respectivo repositório remoto do GitHub (normalmente detectado automaticamente).
 
-- **Implantar o Crew**: Depois de autenticado, você pode implantar seu crew ou flow no CrewAI AOP.
+- **Implantar o Crew**: Depois de autenticado, você pode implantar seu crew ou flow no CrewAI AMP.
     ```shell Terminal
     crewai deploy push
     ```
-    - Inicia o processo de deployment na plataforma CrewAI AOP.
+    - Inicia o processo de deployment na plataforma CrewAI AMP.
     - Após a iniciação bem-sucedida, será exibida a mensagem Deployment created successfully! juntamente com o Nome do Deployment e um Deployment ID (UUID) único.
 
 - **Status do Deployment**: Você pode verificar o status do seu deployment com:
@@ -277,7 +277,7 @@ Você deve estar autenticado no CrewAI AOP para usar estes comandos de gerenciam
     ```shell Terminal
     crewai deploy remove
     ```
-    Isto exclui o deployment da plataforma CrewAI AOP.
+    Isto exclui o deployment da plataforma CrewAI AMP.
 
 - **Comando de Ajuda**: Você pode obter ajuda sobre o CLI com:
     ```shell Terminal
@@ -285,7 +285,7 @@ Você deve estar autenticado no CrewAI AOP para usar estes comandos de gerenciam
     ```
     Isto exibe a mensagem de ajuda para o CLI CrewAI Deploy.
 
-Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantação do seu crew no [CrewAI AOP](http://app.crewai.com) usando o CLI.
+Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantação do seu crew no [CrewAI AMP](http://app.crewai.com) usando o CLI.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -351,7 +351,7 @@ crewai config reset
 
 #### Parâmetros de Configuração Disponíveis
 
-- `enterprise_base_url`: URL base da instância CrewAI AOP
+- `enterprise_base_url`: URL base da instância CrewAI AMP
 - `oauth2_provider`: Provedor OAuth2 usado para autenticação (ex: workos, okta, auth0)
 - `oauth2_audience`: Valor de audiência OAuth2, tipicamente usado para identificar a API ou recurso de destino
 - `oauth2_client_id`: ID do cliente OAuth2 emitido pelo provedor, usado durante solicitações de autenticação
@@ -368,7 +368,7 @@ Exemplo de saída:
 
 | Parâmetro            | Valor                   | Descrição                                                     |
 | :------------------- | :---------------------- | :------------------------------------------------------------ |
-| enterprise_base_url  | https://app.crewai.com | URL base da instância CrewAI AOP                       |
+| enterprise_base_url  | https://app.crewai.com | URL base da instância CrewAI AMP                       |
 | org_name             | Not set                 | Nome da organização atualmente ativa                          |
 | org_uuid             | Not set                 | UUID da organização atualmente ativa                          |
 | oauth2_provider      | workos                  | Provedor OAuth2 (ex.: workos, okta, auth0)                    |
