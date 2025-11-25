@@ -416,3 +416,255 @@ def test_router_paths_not_in_and_conditions():
     assert "step_1" in targets
     assert "step_3_or" in targets
     assert "step_2_and" not in targets
+
+
+def test_chained_routers_no_self_loops():
+    """Test that chained routers don't create self-referencing edges.
+
+    This tests the bug where routers with string triggers (like 'auth', 'exp')
+    would incorrectly create edges to themselves when another router outputs
+    those strings.
+    """
+
+    class ChainedRouterFlow(Flow):
+        """Flow with multiple chained routers using string outputs."""
+
+        @start()
+        def entrance(self):
+            return "started"
+
+        @router(entrance)
+        def session_in_cache(self):
+            return "exp"
+
+        @router("exp")
+        def check_exp(self):
+            return "auth"
+
+        @router("auth")
+        def call_ai_auth(self):
+            return "action"
+
+        @listen("action")
+        def forward_to_action(self):
+            return "done"
+
+        @listen("authenticate")
+        def forward_to_authenticate(self):
+            return "need_auth"
+
+    flow = ChainedRouterFlow()
+    structure = build_flow_structure(flow)
+
+    # Check that no self-loops exist
+    for edge in structure["edges"]:
+        assert edge["source"] != edge["target"], (
+            f"Self-loop detected: {edge['source']} -> {edge['target']}"
+        )
+
+    # Verify correct connections
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+
+    # session_in_cache -> check_exp (via 'exp')
+    exp_edges = [
+        edge
+        for edge in router_edges
+        if edge["router_path_label"] == "exp" and edge["source"] == "session_in_cache"
+    ]
+    assert len(exp_edges) == 1
+    assert exp_edges[0]["target"] == "check_exp"
+
+    # check_exp -> call_ai_auth (via 'auth')
+    auth_edges = [
+        edge
+        for edge in router_edges
+        if edge["router_path_label"] == "auth" and edge["source"] == "check_exp"
+    ]
+    assert len(auth_edges) == 1
+    assert auth_edges[0]["target"] == "call_ai_auth"
+
+    # call_ai_auth -> forward_to_action (via 'action')
+    action_edges = [
+        edge
+        for edge in router_edges
+        if edge["router_path_label"] == "action" and edge["source"] == "call_ai_auth"
+    ]
+    assert len(action_edges) == 1
+    assert action_edges[0]["target"] == "forward_to_action"
+
+
+def test_routers_with_shared_output_strings():
+    """Test that routers with shared output strings don't create incorrect edges.
+
+    This tests a scenario where multiple routers can output the same string,
+    ensuring the visualization only creates edges for the router that actually
+    outputs the string, not all routers.
+    """
+
+    class SharedOutputRouterFlow(Flow):
+        """Flow where multiple routers can output 'auth'."""
+
+        @start()
+        def start(self):
+            return "started"
+
+        @router(start)
+        def router_a(self):
+            # This router can output 'auth' or 'skip'
+            return "auth"
+
+        @router("auth")
+        def router_b(self):
+            # This router listens to 'auth' but outputs 'done'
+            return "done"
+
+        @listen("done")
+        def finalize(self):
+            return "complete"
+
+        @listen("skip")
+        def handle_skip(self):
+            return "skipped"
+
+    flow = SharedOutputRouterFlow()
+    structure = build_flow_structure(flow)
+
+    # Check no self-loops
+    for edge in structure["edges"]:
+        assert edge["source"] != edge["target"], (
+            f"Self-loop detected: {edge['source']} -> {edge['target']}"
+        )
+
+    # router_a should connect to router_b via 'auth'
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+    auth_from_a = [
+        edge
+        for edge in router_edges
+        if edge["source"] == "router_a" and edge["router_path_label"] == "auth"
+    ]
+    assert len(auth_from_a) == 1
+    assert auth_from_a[0]["target"] == "router_b"
+
+    # router_b should connect to finalize via 'done'
+    done_from_b = [
+        edge
+        for edge in router_edges
+        if edge["source"] == "router_b" and edge["router_path_label"] == "done"
+    ]
+    assert len(done_from_b) == 1
+    assert done_from_b[0]["target"] == "finalize"
+
+
+def test_warning_for_router_without_paths(caplog):
+    """Test that a warning is logged when a router has no determinable paths."""
+    import logging
+
+    class RouterWithoutPathsFlow(Flow):
+        """Flow with a router that returns a dynamic value."""
+
+        @start()
+        def begin(self):
+            return "started"
+
+        @router(begin)
+        def dynamic_router(self):
+            # Returns a variable that can't be statically analyzed
+            import random
+            return random.choice(["path_a", "path_b"])
+
+        @listen("path_a")
+        def handle_a(self):
+            return "a"
+
+        @listen("path_b")
+        def handle_b(self):
+            return "b"
+
+    flow = RouterWithoutPathsFlow()
+
+    with caplog.at_level(logging.WARNING):
+        build_flow_structure(flow)
+
+    # Check that warning was logged for the router
+    assert any(
+        "Could not determine return paths for router 'dynamic_router'" in record.message
+        for record in caplog.records
+    )
+
+    # Check that error was logged for orphaned triggers
+    assert any(
+        "Found listeners waiting for triggers" in record.message
+        for record in caplog.records
+    )
+
+
+def test_warning_for_orphaned_listeners(caplog):
+    """Test that an error is logged when listeners wait for triggers no router outputs."""
+    import logging
+    from typing import Literal
+
+    class OrphanedListenerFlow(Flow):
+        """Flow where a listener waits for a trigger that no router outputs."""
+
+        @start()
+        def begin(self):
+            return "started"
+
+        @router(begin)
+        def my_router(self) -> Literal["option_a", "option_b"]:
+            return "option_a"
+
+        @listen("option_a")
+        def handle_a(self):
+            return "a"
+
+        @listen("option_c")  # This trigger is never output by any router
+        def handle_orphan(self):
+            return "orphan"
+
+    flow = OrphanedListenerFlow()
+
+    with caplog.at_level(logging.ERROR):
+        build_flow_structure(flow)
+
+    # Check that error was logged for orphaned trigger
+    assert any(
+        "Found listeners waiting for triggers" in record.message
+        and "option_c" in record.message
+        for record in caplog.records
+    )
+
+
+def test_no_warning_for_properly_typed_router(caplog):
+    """Test that no warning is logged when router has proper type annotations."""
+    import logging
+    from typing import Literal
+
+    class ProperlyTypedRouterFlow(Flow):
+        """Flow with properly typed router."""
+
+        @start()
+        def begin(self):
+            return "started"
+
+        @router(begin)
+        def typed_router(self) -> Literal["path_a", "path_b"]:
+            return "path_a"
+
+        @listen("path_a")
+        def handle_a(self):
+            return "a"
+
+        @listen("path_b")
+        def handle_b(self):
+            return "b"
+
+    flow = ProperlyTypedRouterFlow()
+
+    with caplog.at_level(logging.WARNING):
+        build_flow_structure(flow)
+
+    # No warnings should be logged
+    warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
+    assert not any("Could not determine return paths" in msg for msg in warning_messages)
+    assert not any("Found listeners waiting for triggers" in msg for msg in warning_messages)

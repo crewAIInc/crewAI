@@ -17,6 +17,7 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.hooks.transport import HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -245,6 +246,16 @@ class OpenAICompletion(BaseLLM):
         if self.is_o1_model and self.reasoning_effort:
             params["reasoning_effort"] = self.reasoning_effort
 
+        if self.response_format is not None:
+            if isinstance(self.response_format, type) and issubclass(
+                self.response_format, BaseModel
+            ):
+                params["response_format"] = generate_model_description(
+                    self.response_format
+                )
+            elif isinstance(self.response_format, dict):
+                params["response_format"] = self.response_format
+
         if tools:
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
@@ -303,8 +314,11 @@ class OpenAICompletion(BaseLLM):
         """Handle non-streaming chat completion."""
         try:
             if response_model:
+                parse_params = {
+                    k: v for k, v in params.items() if k != "response_format"
+                }
                 parsed_response = self.client.beta.chat.completions.parse(
-                    **params,
+                    **parse_params,
                     response_format=response_model,
                 )
                 math_reasoning = parsed_response.choices[0].message

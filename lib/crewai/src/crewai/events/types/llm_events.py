@@ -10,7 +10,7 @@ class LLMEventBase(BaseEvent):
     from_task: Any | None = None
     from_agent: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         if data.get("from_task"):
             task = data["from_task"]
             data["task_id"] = str(task.id)
@@ -84,3 +84,4 @@ class LLMStreamChunkEvent(LLMEventBase):
     type: str = "llm_stream_chunk"
     chunk: str
     tool_call: ToolCall | None = None
+    call_type: LLMCallType | None = None

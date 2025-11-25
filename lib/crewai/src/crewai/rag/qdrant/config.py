@@ -1,14 +1,21 @@
 """Qdrant configuration model."""
 
+from __future__ import annotations
+
 from dataclasses import field
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic.dataclasses import dataclass as pyd_dataclass
-from qdrant_client.models import VectorParams
 
 from crewai.rag.config.base import BaseRagConfig
 from crewai.rag.qdrant.constants import DEFAULT_EMBEDDING_MODEL, DEFAULT_STORAGE_PATH
 from crewai.rag.qdrant.types import QdrantClientParams, QdrantEmbeddingFunctionWrapper
+
+
+if TYPE_CHECKING:
+    from qdrant_client.models import VectorParams
+else:
+    VectorParams = Any
 
 
 def _default_options() -> QdrantClientParams:
@@ -26,7 +33,7 @@ def _default_embedding_function() -> QdrantEmbeddingFunctionWrapper:
     Returns:
         Default embedding function using fastembed with all-MiniLM-L6-v2.
     """
-    from fastembed import TextEmbedding  # type: ignore[import-not-found]
+    from fastembed import TextEmbedding
 
     model = TextEmbedding(model_name=DEFAULT_EMBEDDING_MODEL)
 

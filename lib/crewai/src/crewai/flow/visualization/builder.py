@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterable
 import inspect
+import logging
 from typing import TYPE_CHECKING, Any
 
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_wrappers import FlowCondition
-from crewai.flow.types import FlowMethodName, FlowRouteName
+from crewai.flow.types import FlowMethodName
 from crewai.flow.utils import (
     is_flow_condition_dict,
     is_simple_flow_condition,
 )
 from crewai.flow.visualization.schema import extract_method_signature
 from crewai.flow.visualization.types import FlowStructure, NodeMetadata, StructureEdge
+
+
+logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -346,34 +349,43 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
                     if trigger_method in nodes
                 )
 
+    all_string_triggers: set[str] = set()
+    for condition_data in flow._listeners.values():
+        if is_simple_flow_condition(condition_data):
+            _, methods = condition_data
+            for m in methods:
+                if str(m) not in nodes:  # It's a string trigger, not a method name
+                    all_string_triggers.add(str(m))
+        elif is_flow_condition_dict(condition_data):
+            for trigger in _extract_direct_or_triggers(condition_data):
+                if trigger not in nodes:
+                    all_string_triggers.add(trigger)
+
+    all_router_outputs: set[str] = set()
     for router_method_name in router_methods:
         if router_method_name not in flow._router_paths:
             flow._router_paths[FlowMethodName(router_method_name)] = []
 
-        inferred_paths: Iterable[FlowMethodName | FlowRouteName] = set(
-            flow._router_paths.get(FlowMethodName(router_method_name), [])
-        )
+        current_paths = flow._router_paths.get(FlowMethodName(router_method_name), [])
+        if current_paths and router_method_name in nodes:
+            nodes[router_method_name]["router_paths"] = [str(p) for p in current_paths]
+            all_router_outputs.update(str(p) for p in current_paths)
 
-        for condition_data in flow._listeners.values():
-            trigger_strings: list[str] = []
-
-            if is_simple_flow_condition(condition_data):
-                _, methods = condition_data
-                trigger_strings = [str(m) for m in methods]
-            elif is_flow_condition_dict(condition_data):
-                trigger_strings = _extract_direct_or_triggers(condition_data)
-
-            for trigger_str in trigger_strings:
-                if trigger_str not in nodes:
-                    # This is likely a router path output
-                    inferred_paths.add(trigger_str)  # type: ignore[attr-defined]
-
-        if inferred_paths:
-            flow._router_paths[FlowMethodName(router_method_name)] = list(
-                inferred_paths  # type: ignore[arg-type]
+        if not current_paths:
+            logger.warning(
+                f"Could not determine return paths for router '{router_method_name}'. "
+                f"Add a return type annotation like "
+                f"'-> Literal[\"path1\", \"path2\"]' or '-> YourEnum' "
+                f"to enable proper flow visualization."
             )
-            if router_method_name in nodes:
-                nodes[router_method_name]["router_paths"] = list(inferred_paths)
+
+    orphaned_triggers = all_string_triggers - all_router_outputs
+    if orphaned_triggers:
+        logger.error(
+            f"Found listeners waiting for triggers {orphaned_triggers} "
+            f"but no router outputs these values explicitly. "
+            f"If your router returns a non-static value, check that your router has proper return type annotations."
+        )
 
     for router_method_name in router_methods:
         if router_method_name not in flow._router_paths:
@@ -383,6 +395,9 @@ def build_flow_structure(flow: Flow[Any]) -> FlowStructure:
 
         for path in router_paths:
             for listener_name, condition_data in flow._listeners.items():
+                if listener_name == router_method_name:
+                    continue
+
                 trigger_strings_from_cond: list[str] = []
 
                 if is_simple_flow_condition(condition_data):

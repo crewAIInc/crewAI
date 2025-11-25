@@ -17,7 +17,7 @@ Use the `mcps` field directly on agents for seamless MCP tool integration. The D
 
 #### String-Based References (Quick Setup)
 
-Perfect for remote HTTPS servers and CrewAI AMP marketplace:
+Perfect for remote HTTPS servers and CrewAI AOP marketplace:
 
 ```python
 from crewai import Agent
@@ -29,7 +29,7 @@ agent = Agent(
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=your_key",           # External MCP server
         "https://api.weather.com/mcp#get_forecast",          # Specific tool from server
-        "crewai-amp:financial-data",                         # CrewAI AMP marketplace
+        "crewai-amp:financial-data",                         # CrewAI AOP marketplace
         "crewai-amp:research-tools#pubmed_search"            # Specific AMP tool
     ]
 )
@@ -203,7 +203,7 @@ mcps=[
 ]
 ```
 
-#### CrewAI AMP Marketplace
+#### CrewAI AOP Marketplace
 
 ```python
 mcps=[

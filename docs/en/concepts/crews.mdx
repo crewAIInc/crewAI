@@ -33,6 +33,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Planning** *(optional)*             | `planning`             | Adds planning ability to the Crew. When activated before each Crew iteration, all Crew data is sent to an AgentPlanner that will plan the tasks and this plan will be added to each task description.                                                     |
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
 | **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available at the crew level, accessible to all the agents.                                                                                                                                                                                    |
+| **Stream** _(optional)_               | `stream`               | Enable streaming output to receive real-time updates during crew execution. Returns a `CrewStreamingOutput` object that can be iterated for chunks. Defaults to `False`.                                                                                    |
 
 <Tip>
 **Crew Max RPM**: The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -337,6 +338,29 @@ for async_result in async_results:
 ```
 
 These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs.
+
+### Streaming Crew Execution
+
+For real-time visibility into crew execution, you can enable streaming to receive output as it's generated:
+
+```python Code
+# Enable streaming
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True
+)
+
+# Iterate over streaming output
+streaming = crew.kickoff(inputs={"topic": "AI"})
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# Access final result
+result = streaming.result
+```
+
+Learn more about streaming in the [Streaming Crew Execution](/en/learn/streaming-crew-execution) guide.
 
 ### Replaying from a Specific Task
 

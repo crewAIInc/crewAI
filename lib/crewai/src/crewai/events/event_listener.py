@@ -409,6 +409,8 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(_: Any, event: LLMCallStartedEvent) -> None:
+            self.text_stream = StringIO()
+            self.next_chunk = 0
             # Capture the returned tool branch and update the current_tool_branch reference
             thinking_branch = self.formatter.handle_llm_call_started(
                 self.formatter.current_agent_branch,
@@ -420,6 +422,7 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LLMCallCompletedEvent)
         def on_llm_call_completed(_: Any, event: LLMCallCompletedEvent) -> None:
+            self.formatter.handle_llm_stream_completed()
             self.formatter.handle_llm_call_completed(
                 self.formatter.current_tool_branch,
                 self.formatter.current_agent_branch,
@@ -428,6 +431,7 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(LLMCallFailedEvent)
         def on_llm_call_failed(_: Any, event: LLMCallFailedEvent) -> None:
+            self.formatter.handle_llm_stream_completed()
             self.formatter.handle_llm_call_failed(
                 self.formatter.current_tool_branch,
                 event.error,
@@ -440,6 +444,14 @@ class EventListener(BaseEventListener):
             self.text_stream.seek(self.next_chunk)
             self.text_stream.read()
             self.next_chunk = self.text_stream.tell()
+
+            accumulated_text = self.text_stream.getvalue()
+            self.formatter.handle_llm_stream_chunk(
+                event.chunk,
+                accumulated_text,
+                self.formatter.current_crew_tree,
+                event.call_type,
+            )
 
         # ----------- LLM GUARDRAIL EVENTS -----------
 

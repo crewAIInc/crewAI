@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: CrewAI AMP API
+  title: CrewAI AOP API
   description: |
-    REST API for interacting with your deployed CrewAI crews on CrewAI AMP.
+    REST API for interacting with your deployed CrewAI crews on CrewAI AOP.
 
     ## Getting Started
 
-    1. **Find your crew URL**: Get your unique crew URL from the CrewAI AMP dashboard
+    1. **Find your crew URL**: Get your unique crew URL from the CrewAI AOP dashboard
     2. **Copy examples**: Use the code examples from each endpoint page as templates
     3. **Replace placeholders**: Update URLs and tokens with your actual values
     4. **Test with your tools**: Use cURL, Postman, or your preferred API client
@@ -18,7 +18,7 @@ info:
     - **Bearer Token**: Organization-level token for full crew operations
     - **User Bearer Token**: User-scoped token for individual access with limited permissions
 
-    You can find your bearer tokens in the Status tab of your crew's detail page in the CrewAI AMP dashboard.
+    You can find your bearer tokens in the Status tab of your crew's detail page in the CrewAI AOP dashboard.
 
     ## Reference Documentation
 
@@ -43,7 +43,7 @@ info:
     url: https://crewai.com
 servers:
   - url: https://your-actual-crew-name.crewai.com
-    description: Replace with your actual deployed crew URL from the CrewAI AMP dashboard
+    description: Replace with your actual deployed crew URL from the CrewAI AOP dashboard
   - url: https://my-travel-crew.crewai.com
     description: Example travel planning crew (replace with your URL)
   - url: https://content-creation-crew.crewai.com
@@ -412,7 +412,7 @@ components:
       description: |
         **📋 Reference Documentation** - *The tokens shown in examples are placeholders for reference only.*
 
-        Use your actual Bearer Token or User Bearer Token from the CrewAI AMP dashboard for real API calls.
+        Use your actual Bearer Token or User Bearer Token from the CrewAI AOP dashboard for real API calls.
 
         **Bearer Token**: Organization-level access for full crew operations
         **User Bearer Token**: User-scoped access with limited permissions

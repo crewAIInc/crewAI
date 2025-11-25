@@ -341,7 +341,7 @@ crew = Crew(
     embedder={
         "provider": "openai",
         "config": {
-            "model": "text-embedding-3-small"  # or "text-embedding-3-large"
+            "model_name": "text-embedding-3-small"  # or "text-embedding-3-large"
         }
     }
 )
@@ -353,7 +353,7 @@ crew = Crew(
         "provider": "openai",
         "config": {
             "api_key": "your-openai-api-key",  # Optional: override env var
-            "model": "text-embedding-3-large",
+            "model_name": "text-embedding-3-large",
             "dimensions": 1536,  # Optional: reduce dimensions for smaller storage
             "organization_id": "your-org-id"  # Optional: for organization accounts
         }
@@ -375,7 +375,7 @@ crew = Crew(
             "api_base": "https://your-resource.openai.azure.com/",
             "api_type": "azure",
             "api_version": "2023-05-15",
-            "model": "text-embedding-3-small",
+            "model_name": "text-embedding-3-small",
             "deployment_id": "your-deployment-name"  # Azure deployment name
         }
     }
@@ -390,10 +390,10 @@ Use Google's text embedding models for integration with Google Cloud services.
 crew = Crew(
     memory=True,
     embedder={
-        "provider": "google",
+        "provider": "google-generativeai",
         "config": {
             "api_key": "your-google-api-key",
-            "model": "text-embedding-004"  # or "text-embedding-preview-0409"
+            "model_name": "gemini-embedding-001"  # or "text-embedding-005", "text-multilingual-embedding-002"
         }
     }
 )
@@ -461,7 +461,7 @@ crew = Crew(
         "provider": "cohere",
         "config": {
             "api_key": "your-cohere-api-key",
-            "model": "embed-english-v3.0"  # or "embed-multilingual-v3.0"
+            "model_name": "embed-english-v3.0"  # or "embed-multilingual-v3.0"
         }
     }
 )
@@ -478,7 +478,7 @@ crew = Crew(
         "provider": "voyageai",
         "config": {
             "api_key": "your-voyage-api-key",
-            "model": "voyage-large-2",  # or "voyage-code-2" for code
+            "model": "voyage-3",  # or "voyage-3-lite", "voyage-code-3"
             "input_type": "document"  # or "query"
         }
     }
@@ -912,10 +912,10 @@ crew = Crew(
 crew = Crew(
     memory=True,
     embedder={
-        "provider": "google",
+        "provider": "google-generativeai",
         "config": {
             "api_key": "your-api-key",
-            "model": "text-embedding-004"
+            "model_name": "gemini-embedding-001"
         }
     }
 )
