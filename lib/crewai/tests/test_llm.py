@@ -259,6 +259,7 @@ def test_validate_call_params_no_response_format():
 @pytest.mark.parametrize(
     "model",
     [
+        "gemini/gemini-3-pro-preview",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-lite-001",

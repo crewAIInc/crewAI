@@ -64,6 +64,7 @@ class FlowFinishedEvent(FlowEvent):
     flow_name: str
     result: Any | None = None
     type: str = "flow_finished"
+    state: dict[str, Any] | BaseModel
 
 
 class FlowPlotEvent(FlowEvent):

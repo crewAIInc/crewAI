@@ -5,7 +5,7 @@ from typing import Any
 from chromadb.utils.embedding_functions.amazon_bedrock_embedding_function import (
     AmazonBedrockEmbeddingFunction,
 )
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 
@@ -21,7 +21,7 @@ def create_aws_session() -> Any:
         ValueError: If AWS session creation fails
     """
     try:
-        import boto3  # type: ignore[import]
+        import boto3
 
         return boto3.Session()
     except ImportError as e:
@@ -46,7 +46,12 @@ class BedrockProvider(BaseEmbeddingsProvider[AmazonBedrockEmbeddingFunction]):
     model_name: str = Field(
         default="amazon.titan-embed-text-v1",
         description="Model name to use for embeddings",
-        validation_alias="EMBEDDINGS_BEDROCK_MODEL_NAME",
+        validation_alias=AliasChoices(
+            "EMBEDDINGS_BEDROCK_MODEL_NAME",
+            "BEDROCK_MODEL_NAME",
+            "AWS_BEDROCK_MODEL_NAME",
+            "model",
+        ),
     )
     session: Any = Field(
         default_factory=create_aws_session, description="AWS session object"
