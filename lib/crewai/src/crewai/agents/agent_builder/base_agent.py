@@ -448,7 +448,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        # self.create_agent_executor()
+        # TODO: we should do if agent_executor, then we update as we were re-creating the agent_executor which is not ideal
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -458,7 +458,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            # self.create_agent_executor()
+            # TODO: we should do if agent_executor, then we update as we were re-creating the agent_executor which is not ideal
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass

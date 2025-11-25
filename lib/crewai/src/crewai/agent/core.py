@@ -636,9 +636,7 @@ class Agent(BaseAgent):
             self._rpm_controller.check_or_wait if self._rpm_controller else None
         )
 
-        # Update existing executor or create new one (avoid recreation overhead)
         if self.agent_executor is not None:
-            # Update task-varying parameters on existing executor
             self._update_executor_parameters(
                 task=task,
                 tools=parsed_tools,
@@ -650,7 +648,7 @@ class Agent(BaseAgent):
         else:
             self.agent_executor = CrewAgentExecutorFlow(
                 llm=self.llm,
-                task=task,  # type: ignore[arg-type]
+                task=task,
                 agent=self,
                 crew=self.crew,
                 tools=parsed_tools,
@@ -688,8 +686,7 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
-        # Update task-specific parameters
-        self.agent_executor.task = task  # type: ignore[arg-type]
+        self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -698,11 +695,9 @@ class Agent(BaseAgent):
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = task.response_model if task else None
 
-        # Update potentially-changed dependencies
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        # Update LLM stop words
         if self.agent_executor.llm:
             existing_stop = getattr(self.agent_executor.llm, "stop", [])
             self.agent_executor.llm.stop = list(

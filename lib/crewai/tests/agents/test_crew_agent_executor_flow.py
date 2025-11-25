@@ -14,7 +14,6 @@ from crewai.agents.crew_agent_executor_flow import (
 )
 from crewai.agents.parser import AgentAction, AgentFinish
 
-
 class TestAgentReActState:
     """Test AgentReActState Pydantic model."""
 
@@ -168,14 +167,17 @@ class TestCrewAgentExecutorFlow:
             mock_show_logs.assert_called_once()
 
     def test_finalize_failure(self, mock_dependencies):
-        """Test finalize raises error without AgentFinish."""
+        """Test finalize skips when given AgentAction instead of AgentFinish."""
         executor = CrewAgentExecutorFlow(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="search", tool_input="query", text="action text"
         )
 
-        with pytest.raises(RuntimeError, match="without reaching a final answer"):
-            executor.finalize()
+        result = executor.finalize()
+
+        # Should return "skipped" and not set is_finished
+        assert result == "skipped"
+        assert executor.state.is_finished is False
 
     def test_format_prompt(self, mock_dependencies):
         """Test prompt formatting."""
@@ -409,9 +411,14 @@ class TestFlowInvoke:
     ):
         """Test successful invoke without human feedback."""
         executor = CrewAgentExecutorFlow(**mock_dependencies)
-        executor.state.current_answer = AgentFinish(
-            thought="final thinking", output="Final result", text="complete"
-        )
+
+        # Mock kickoff to set the final answer in state
+        def mock_kickoff_side_effect():
+            executor.state.current_answer = AgentFinish(
+                thought="final thinking", output="Final result", text="complete"
+            )
+
+        mock_kickoff.side_effect = mock_kickoff_side_effect
 
         inputs = {"input": "test", "tool_names": "", "tools": ""}
         result = executor.invoke(inputs)
@@ -436,24 +443,37 @@ class TestFlowInvoke:
             executor.invoke(inputs)
 
     @patch.object(CrewAgentExecutorFlow, "kickoff")
-    def test_invoke_with_system_prompt(self, mock_kickoff, mock_dependencies):
+    @patch.object(CrewAgentExecutorFlow, "_create_short_term_memory")
+    @patch.object(CrewAgentExecutorFlow, "_create_long_term_memory")
+    @patch.object(CrewAgentExecutorFlow, "_create_external_memory")
+    def test_invoke_with_system_prompt(
+        self,
+        mock_external_memory,
+        mock_long_term_memory,
+        mock_short_term_memory,
+        mock_kickoff,
+        mock_dependencies,
+    ):
         """Test invoke with system prompt configuration."""
         mock_dependencies["prompt"] = {
             "system": "System: {input}",
             "user": "User: {input} {tool_names} {tools}",
         }
         executor = CrewAgentExecutorFlow(**mock_dependencies)
-        executor.state.current_answer = AgentFinish(
-            thought="final thoughts", output="Done", text="complete"
-        )
+
+        def mock_kickoff_side_effect():
+            executor.state.current_answer = AgentFinish(
+                thought="final thoughts", output="Done", text="complete"
+            )
+
+        mock_kickoff.side_effect = mock_kickoff_side_effect
 
         inputs = {"input": "test", "tool_names": "", "tools": ""}
         result = executor.invoke(inputs)
+        mock_short_term_memory.assert_called_once()
+        mock_long_term_memory.assert_called_once()
+        mock_external_memory.assert_called_once()
+        mock_kickoff.assert_called_once()
 
         assert result == {"output": "Done"}
-        # Should have system and user messages
         assert len(executor.state.messages) >= 2
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
