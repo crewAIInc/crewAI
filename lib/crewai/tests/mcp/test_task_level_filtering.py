@@ -472,6 +472,53 @@ def test_invalid_filter_signatures_treated_as_none(mock_tool_definitions):
         # so we don't need to test that case here
 
 
+def test_mcp_tools_auto_loaded_for_task_filtering(mock_tool_definitions):
+    """Test that MCP tools are automatically loaded when needed for task filtering.
+
+    When an agent has mcps configured but tools haven't been explicitly loaded,
+    they should be auto-loaded when task-level filtering is triggered.
+    """
+    with patch("crewai.agent.core.MCPClient") as mock_client_class:
+        mock_client = AsyncMock()
+        mock_client.list_tools = AsyncMock(return_value=mock_tool_definitions)
+        mock_client.connected = False
+        mock_client.connect = AsyncMock()
+        mock_client.disconnect = AsyncMock()
+        mock_client_class.return_value = mock_client
+
+        config = MCPServerStdio(
+            command="python",
+            args=["server.py"],
+            tool_filter=lambda tool: "delete" not in tool.get("name", ""),
+        )
+
+        agent = Agent(
+            role="Test Agent",
+            goal="Test",
+            backstory="Test",
+            mcps=[config],
+            # Note: NOT calling agent.tools = agent.get_mcp_tools([config])
+        )
+
+        # Agent should have no tools initially (or just default tools)
+        initial_tool_count = len(agent.tools) if agent.tools else 0
+
+        task = Task(description="Test task", expected_output="Result", agent=agent)
+
+        # Get task-filtered tools - this should auto-load MCP tools
+        filtered_tools = agent._get_task_filtered_tools(task)
+
+        # Should have MCP tools now (3 tools after filtering out delete_file)
+        assert len(filtered_tools) >= 3
+        tool_names = [t.name for t in filtered_tools]
+        assert any("read_file" in name for name in tool_names)
+        assert any("write_file" in name for name in tool_names)
+        assert not any("delete_file" in name for name in tool_names)
+
+        # Verify tools were added to agent.tools
+        assert len(agent.tools) > initial_tool_count
+
+
 def test_tool_filter_context_has_task(mock_tool_definitions):
     """Test that ToolFilterContext has task field populated."""
     context_captured = None

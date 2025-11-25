@@ -995,6 +995,9 @@ class Agent(BaseAgent):
         Applies cascading filter: starts with agent's tools and further restricts
         based on task context. MCP tools are re-filtered, non-MCP tools pass through.
 
+        If agent has mcps configured but MCP tools haven't been loaded into self.tools,
+        they will be automatically loaded.
+
         Args:
             task: The task being executed.
 
@@ -1002,6 +1005,14 @@ class Agent(BaseAgent):
             List of tools allowed for this specific task (subset of agent.tools).
         """
         from crewai.tools.mcp_native_tool import MCPNativeTool
+
+        # Auto-load MCP tools if they haven't been loaded yet
+        if self.mcps and self.tools is not None:
+            has_mcp_tools = any(isinstance(t, MCPNativeTool) for t in self.tools)
+            if not has_mcp_tools:
+                # MCP tools not loaded yet, load them now
+                mcp_tools_loaded = self.get_mcp_tools(self.mcps)
+                self.tools = list(self.tools) + mcp_tools_loaded
 
         if not self.tools:
             return []
