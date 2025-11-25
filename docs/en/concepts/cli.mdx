@@ -5,7 +5,7 @@ icon: terminal
 mode: "wide"
 ---
 
-<Warning>Since release 0.140.0, CrewAI AMP started a process of migrating their login provider. As such, the authentication flow via CLI was updated. Users that use Google to login, or that created their account after July 3rd, 2025 will be unable to log in with older versions of the `crewai` library.</Warning>
+<Warning>Since release 0.140.0, CrewAI AOP started a process of migrating their login provider. As such, the authentication flow via CLI was updated. Users that use Google to login, or that created their account after July 3rd, 2025 will be unable to log in with older versions of the `crewai` library.</Warning>
 
 ## Overview
 
@@ -186,9 +186,9 @@ def crew(self) -> Crew:
 
 ### 10. Deploy
 
-Deploy the crew or flow to [CrewAI AMP](https://app.crewai.com).
+Deploy the crew or flow to [CrewAI AOP](https://app.crewai.com).
 
-- **Authentication**: You need to be authenticated to deploy to CrewAI AMP.
+- **Authentication**: You need to be authenticated to deploy to CrewAI AOP.
     You can login or create an account with:
     ```shell Terminal
     crewai login
@@ -203,7 +203,7 @@ Deploy the crew or flow to [CrewAI AMP](https://app.crewai.com).
 
 ### 11. Organization Management
 
-Manage your CrewAI AMP organizations.
+Manage your CrewAI AOP organizations.
 
 ```shell Terminal
 crewai org [COMMAND] [OPTIONS]
@@ -227,17 +227,17 @@ crewai org switch <organization_id>
 ```
 
 <Note>
-You must be authenticated to CrewAI AMP to use these organization management commands.
+You must be authenticated to CrewAI AOP to use these organization management commands.
 </Note>
 
 - **Create a deployment** (continued):
     - Links the deployment to the corresponding remote GitHub repository (it usually detects this automatically).
 
-- **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI AMP.
+- **Deploy the Crew**: Once you are authenticated, you can deploy your crew or flow to CrewAI AOP.
     ```shell Terminal
     crewai deploy push
     ```
-    - Initiates the deployment process on the CrewAI AMP platform.
+    - Initiates the deployment process on the CrewAI AOP platform.
     - Upon successful initiation, it will output the Deployment created successfully! message along with the Deployment Name and a unique Deployment ID (UUID).
 
 - **Deployment Status**: You can check the status of your deployment with:
@@ -262,7 +262,7 @@ You must be authenticated to CrewAI AMP to use these organization management com
     ```shell Terminal
     crewai deploy remove
     ```
-    This deletes the deployment from the CrewAI AMP platform.
+    This deletes the deployment from the CrewAI AOP platform.
 
 - **Help Command**: You can get help with the CLI with:
     ```shell Terminal
@@ -270,7 +270,7 @@ You must be authenticated to CrewAI AMP to use these organization management com
     ```
     This shows the help message for the CrewAI Deploy CLI.
 
-Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI AMP](http://app.crewai.com) using the CLI.
+Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI AOP](http://app.crewai.com) using the CLI.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -283,7 +283,7 @@ Watch this video tutorial for a step-by-step demonstration of deploying your cre
 
 ### 11. Login
 
-Authenticate with CrewAI AMP using a secure device code flow (no email entry required).
+Authenticate with CrewAI AOP using a secure device code flow (no email entry required).
 
 ```shell Terminal
 crewai login
@@ -354,7 +354,7 @@ crewai config reset
 
 #### Available Configuration Parameters
 
-- `enterprise_base_url`: Base URL of the CrewAI AMP instance
+- `enterprise_base_url`: Base URL of the CrewAI AOP instance
 - `oauth2_provider`: OAuth2 provider used for authentication (e.g., workos, okta, auth0)
 - `oauth2_audience`: OAuth2 audience value, typically used to identify the target API or resource
 - `oauth2_client_id`: OAuth2 client ID issued by the provider, used during authentication requests
@@ -370,7 +370,7 @@ crewai config list
 Example output:
 | Setting             | Value                    | Description                                                 |
 | :------------------ | :----------------------- | :---------------------------------------------------------- |
-| enterprise_base_url | https://app.crewai.com   | Base URL of the CrewAI AMP instance                  |
+| enterprise_base_url | https://app.crewai.com   | Base URL of the CrewAI AOP instance                  |
 | org_name            | Not set                  | Name of the currently active organization                   |
 | org_uuid            | Not set                  | UUID of the currently active organization                   |
 | oauth2_provider     | workos                   | OAuth2 provider (e.g., workos, okta, auth0)                 |
@@ -400,6 +400,77 @@ crewai config reset
 
 <Tip>
 After resetting configuration, re-run `crewai login` to authenticate again.
+</Tip>
+
+### 14. Trace Management
+
+Manage trace collection preferences for your Crew and Flow executions.
+
+```shell Terminal
+crewai traces [COMMAND]
+```
+
+#### Commands:
+
+- `enable`: Enable trace collection for crew/flow executions
+```shell Terminal
+crewai traces enable
+```
+
+- `disable`: Disable trace collection for crew/flow executions
+```shell Terminal
+crewai traces disable
+```
+
+- `status`: Show current trace collection status
+```shell Terminal
+crewai traces status
+```
+
+#### How Tracing Works
+
+Trace collection is controlled by checking three settings in priority order:
+
+1. **Explicit flag in code** (highest priority - can enable OR disable):
+   ```python
+   crew = Crew(agents=[...], tasks=[...], tracing=True)   # Always enable
+   crew = Crew(agents=[...], tasks=[...], tracing=False)  # Always disable
+   crew = Crew(agents=[...], tasks=[...])                 # Check lower priorities (default)
+   ```
+   - `tracing=True` will **always enable** tracing (overrides everything)
+   - `tracing=False` will **always disable** tracing (overrides everything)
+   - `tracing=None` or omitted will check lower priority settings
+
+2. **Environment variable** (second priority):
+   ```env
+   CREWAI_TRACING_ENABLED=true
+   ```
+   - Checked only if `tracing` is not explicitly set to `True` or `False` in code
+   - Set to `true` or `1` to enable tracing
+
+3. **User preference** (lowest priority):
+   ```shell Terminal
+   crewai traces enable
+   ```
+   - Checked only if `tracing` is not set in code and `CREWAI_TRACING_ENABLED` is not set to `true`
+   - Running `crewai traces enable` is sufficient to enable tracing by itself
+
+<Note>
+**To enable tracing**, use any one of these methods:
+- Set `tracing=True` in your Crew/Flow code, OR
+- Add `CREWAI_TRACING_ENABLED=true` to your `.env` file, OR
+- Run `crewai traces enable`
+
+**To disable tracing**, use any ONE of these methods:
+- Set `tracing=False` in your Crew/Flow code (overrides everything), OR
+- Remove or set to `false` the `CREWAI_TRACING_ENABLED` env var, OR
+- Run `crewai traces disable`
+
+Higher priority settings override lower ones.
+</Note>
+
+<Tip>
+For more information about tracing, see the [Tracing documentation](/observability/tracing).
 </Tip>
 
 <Tip>

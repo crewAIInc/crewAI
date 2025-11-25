@@ -1,3 +1,4 @@
+import threading
 from typing import Any, ClassVar
 
 from rich.console import Console
@@ -20,13 +21,14 @@ class ConsoleFormatter:
     current_reasoning_branch: Tree | None = None
     _live_paused: bool = False
     current_llm_tool_tree: Tree | None = None
-    current_a2a_conversation_branch: Tree | None = None
+    current_a2a_conversation_branch: Tree | str | None = None
     current_a2a_turn_count: int = 0
     _pending_a2a_message: str | None = None
     _pending_a2a_agent_role: str | None = None
     _pending_a2a_turn_number: int | None = None
     _a2a_turn_branches: ClassVar[dict[int, Tree]] = {}
     _current_a2a_agent_name: str | None = None
+    crew_completion_printed: ClassVar[threading.Event] = threading.Event()
 
     def __init__(self, verbose: bool = False):
         self.console = Console(width=None)
@@ -37,6 +39,10 @@ class ConsoleFormatter:
         # Once any non-Tree renderable is printed we stop the Live session so the
         # final Tree persists on the terminal.
         self._live: Live | None = None
+        self._streaming_live: Live | None = None
+        self._is_streaming: bool = False
+        self._just_streamed_final_answer: bool = False
+        self._last_stream_call_type: Any = None
 
     def create_panel(self, content: Text, title: str, style: str = "blue") -> Panel:
         """Create a standardized panel with consistent styling."""
@@ -47,13 +53,44 @@ class ConsoleFormatter:
             padding=(1, 2),
         )
 
+    def _show_tracing_disabled_message_if_needed(self) -> None:
+        """Show tracing disabled message if tracing is not enabled."""
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            is_tracing_enabled_in_context,
+        )
+
+        if not is_tracing_enabled_in_context():
+            if has_user_declined_tracing():
+                message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+            else:
+                message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+            panel = Panel(
+                message,
+                title="Tracing Status",
+                border_style="blue",
+                padding=(1, 2),
+            )
+            self.console.print(panel)
+
     def create_status_content(
         self,
         title: str,
         name: str,
         status_style: str = "blue",
         tool_args: dict[str, Any] | str = "",
-        **fields,
+        **fields: Any,
     ) -> Text:
         """Create standardized status content with consistent formatting."""
         content = Text()
@@ -92,7 +129,7 @@ class ConsoleFormatter:
         """Add a node to the tree with consistent styling."""
         return parent.add(Text(text, style=style))
 
-    def print(self, *args, **kwargs) -> None:
+    def print(self, *args: Any, **kwargs: Any) -> None:
         """Custom print that replaces consecutive Tree renders.
 
         * If the argument is a single ``Tree`` instance, we either start a
@@ -112,6 +149,9 @@ class ConsoleFormatter:
         # Case 1: updating / starting live Tree rendering
         if len(args) == 1 and isinstance(args[0], Tree):
             tree = args[0]
+
+            if self._is_streaming:
+                return
 
             if not self._live:
                 # Start a new Live session for the first tree
@@ -208,10 +248,19 @@ class ConsoleFormatter:
 
         self.print_panel(content, title, style)
 
+        if status in ["completed", "failed"]:
+            self.crew_completion_printed.set()
+
+            # Show tracing disabled message after crew completion
+            self._show_tracing_disabled_message_if_needed()
+
     def create_crew_tree(self, crew_name: str, source_id: str) -> Tree | None:
         """Create and initialize a new crew tree with initial status."""
         if not self.verbose:
             return None
+
+        # Reset the crew completion event for this new crew execution
+        ConsoleFormatter.crew_completion_printed.clear()
 
         tree = Tree(
             Text("🚀 Crew: ", style="cyan bold") + Text(crew_name, style="cyan")
@@ -497,7 +546,7 @@ class ConsoleFormatter:
 
         return method_branch
 
-    def get_llm_tree(self, tool_name: str):
+    def get_llm_tree(self, tool_name: str) -> Tree:
         text = Text()
         text.append(f"🔧 Using {tool_name} from LLM available_function", style="yellow")
 
@@ -512,7 +561,7 @@ class ConsoleFormatter:
         self,
         tool_name: str,
         tool_args: dict[str, Any] | str,
-    ):
+    ) -> Tree:
         # Create status content for the tool usage
         content = self.create_status_content(
             "Tool Usage Started", tool_name, Status="In Progress", tool_args=tool_args
@@ -528,7 +577,7 @@ class ConsoleFormatter:
     def handle_llm_tool_usage_finished(
         self,
         tool_name: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "✅ Tool Usage Completed", "green")
         self.print(tree)
@@ -538,7 +587,7 @@ class ConsoleFormatter:
         self,
         tool_name: str,
         error: str,
-    ):
+    ) -> None:
         tree = self.get_llm_tree(tool_name)
         self.add_tree_node(tree, "❌ Tool Usage Failed", "red")
         self.print(tree)
@@ -720,11 +769,14 @@ class ConsoleFormatter:
         thinking_branch_to_remove = None
         removed = False
 
-        # Method 1: Use the provided tool_branch if it's a thinking node
-        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+        # Method 1: Use the provided tool_branch if it's a thinking/streaming node
+        if tool_branch is not None and (
+            "Thinking" in str(tool_branch.label)
+            or "Streaming" in str(tool_branch.label)
+        ):
             thinking_branch_to_remove = tool_branch
 
-        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        # Method 2: Fallback - search for any thinking/streaming node if tool_branch is None or not found
         if thinking_branch_to_remove is None:
             parents = [
                 self.current_lite_agent_branch,
@@ -735,7 +787,8 @@ class ConsoleFormatter:
             for parent in parents:
                 if isinstance(parent, Tree):
                     for child in parent.children:
-                        if "Thinking" in str(child.label):
+                        label_str = str(child.label)
+                        if "Thinking" in label_str or "Streaming" in label_str:
                             thinking_branch_to_remove = child
                             break
                     if thinking_branch_to_remove:
@@ -779,11 +832,13 @@ class ConsoleFormatter:
         # Find the thinking branch to update (similar to completion logic)
         thinking_branch_to_update = None
 
-        # Method 1: Use the provided tool_branch if it's a thinking node
-        if tool_branch is not None and "Thinking" in str(tool_branch.label):
+        if tool_branch is not None and (
+            "Thinking" in str(tool_branch.label)
+            or "Streaming" in str(tool_branch.label)
+        ):
             thinking_branch_to_update = tool_branch
 
-        # Method 2: Fallback - search for any thinking node if tool_branch is None or not thinking
+        # Method 2: Fallback - search for any thinking/streaming node if tool_branch is None or not found
         if thinking_branch_to_update is None:
             parents = [
                 self.current_lite_agent_branch,
@@ -794,7 +849,8 @@ class ConsoleFormatter:
             for parent in parents:
                 if isinstance(parent, Tree):
                     for child in parent.children:
-                        if "Thinking" in str(child.label):
+                        label_str = str(child.label)
+                        if "Thinking" in label_str or "Streaming" in label_str:
                             thinking_branch_to_update = child
                             break
                     if thinking_branch_to_update:
@@ -817,6 +873,83 @@ class ConsoleFormatter:
         error_content.append(str(error), style="red")
 
         self.print_panel(error_content, "LLM Error", "red")
+
+    def handle_llm_stream_chunk(
+        self,
+        chunk: str,
+        accumulated_text: str,
+        crew_tree: Tree | None,
+        call_type: Any = None,
+    ) -> None:
+        """Handle LLM stream chunk event - display streaming text in a panel.
+
+        Args:
+            chunk: The new chunk of text received.
+            accumulated_text: All text accumulated so far.
+            crew_tree: The current crew tree for rendering.
+            call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
+        """
+        if not self.verbose:
+            return
+
+        self._is_streaming = True
+        self._last_stream_call_type = call_type
+
+        if self._live:
+            self._live.stop()
+            self._live = None
+
+        display_text = accumulated_text
+        max_lines = 20
+        lines = display_text.split("\n")
+        if len(lines) > max_lines:
+            display_text = "\n".join(lines[-max_lines:])
+            display_text = "...\n" + display_text
+
+        content = Text()
+
+        from crewai.events.types.llm_events import LLMCallType
+
+        if call_type == LLMCallType.TOOL_CALL:
+            content.append(display_text, style="yellow")
+            title = "🔧 Tool Arguments"
+            border_style = "yellow"
+        else:
+            content.append(display_text, style="bright_green")
+            title = "✅ Agent Final Answer"
+            border_style = "green"
+
+        streaming_panel = Panel(
+            content,
+            title=title,
+            border_style=border_style,
+            padding=(1, 2),
+        )
+
+        if not self._streaming_live:
+            self._streaming_live = Live(
+                streaming_panel, console=self.console, refresh_per_second=10
+            )
+            self._streaming_live.start()
+        else:
+            self._streaming_live.update(streaming_panel, refresh=True)
+
+    def handle_llm_stream_completed(self) -> None:
+        """Handle completion of LLM streaming - stop the streaming live display."""
+        self._is_streaming = False
+
+        from crewai.events.types.llm_events import LLMCallType
+
+        if self._last_stream_call_type == LLMCallType.LLM_CALL:
+            self._just_streamed_final_answer = True
+        else:
+            self._just_streamed_final_answer = False
+
+        self._last_stream_call_type = None
+
+        if self._streaming_live:
+            self._streaming_live.stop()
+            self._streaming_live = None
 
     def handle_crew_test_started(
         self, crew_name: str, source_id: str, n_iterations: int
@@ -1486,6 +1619,10 @@ class ConsoleFormatter:
             self.print()
 
         elif isinstance(formatted_answer, AgentFinish):
+            if self._just_streamed_final_answer:
+                self._just_streamed_final_answer = False
+                return
+
             is_a2a_delegation = False
             try:
                 output_data = json.loads(formatted_answer.output)
@@ -1558,7 +1695,7 @@ class ConsoleFormatter:
         if branch_to_use is None and tree_to_use is not None:
             branch_to_use = tree_to_use
 
-        def add_panel():
+        def add_panel() -> None:
             memory_text = str(memory_content)
             if len(memory_text) > 500:
                 memory_text = memory_text[:497] + "..."
@@ -1824,7 +1961,7 @@ class ConsoleFormatter:
         agent_id: str,
         is_multiturn: bool = False,
         turn_number: int = 1,
-    ) -> None:
+    ) -> Tree | None:
         """Handle A2A delegation started event.
 
         Args:
@@ -1937,7 +2074,7 @@ class ConsoleFormatter:
             if status == "input_required" and error:
                 pass
             elif status == "completed":
-                if has_tree:
+                if has_tree and isinstance(self.current_a2a_conversation_branch, Tree):
                     final_turn = self.current_a2a_conversation_branch.add("")
                     self.update_tree_label(
                         final_turn,
@@ -1953,7 +2090,7 @@ class ConsoleFormatter:
                 self.current_a2a_conversation_branch = None
                 self.current_a2a_turn_count = 0
             elif status == "failed":
-                if has_tree:
+                if has_tree and isinstance(self.current_a2a_conversation_branch, Tree):
                     error_turn = self.current_a2a_conversation_branch.add("")
                     error_msg = (
                         error[:150] + "..." if error and len(error) > 150 else error

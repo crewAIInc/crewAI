@@ -313,6 +313,14 @@ class AzureCompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
+        additional_params = self.additional_params
+        additional_drop_params = additional_params.get('additional_drop_params')
+        drop_params = additional_params.get('drop_params')
+
+        if drop_params and isinstance(additional_drop_params, list):
+            for drop_param in additional_drop_params:
+                params.pop(drop_param, None)
+
         return params
 
     def _convert_tools_for_interference(

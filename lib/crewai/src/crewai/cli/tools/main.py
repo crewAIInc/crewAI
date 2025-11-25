@@ -162,7 +162,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if login_response.status_code != 200:
             console.print(
-                "Authentication failed. Verify access to the tool repository, or try `crewai login`. ",
+                "Authentication failed. Verify if the currently active organization access to the tool repository, and run 'crewai login' again. ",
                 style="bold red",
             )
             raise SystemExit

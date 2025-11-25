@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import ast
 from collections import defaultdict, deque
+from enum import Enum
 import inspect
 import textwrap
 from typing import TYPE_CHECKING, Any
@@ -40,11 +41,123 @@ if TYPE_CHECKING:
 _printer = Printer()
 
 
+def _extract_string_literals_from_type_annotation(
+    node: ast.expr,
+    function_globals: dict[str, Any] | None = None,
+) -> list[str]:
+    """Extract string literals from a type annotation AST node.
+
+    Handles:
+    - Literal["a", "b", "c"]
+    - "a" | "b" | "c" (union of string literals)
+    - Just "a" (single string constant annotation)
+    - Enum types with string values (e.g., class MyEnum(str, Enum))
+
+    Args:
+        node: The AST node representing a type annotation.
+        function_globals: The globals dict from the function, used to resolve Enum types.
+
+    Returns:
+        List of string literals found in the annotation.
+    """
+
+    strings: list[str] = []
+
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        strings.append(node.value)
+
+    elif isinstance(node, ast.Name) and function_globals:
+        enum_class = function_globals.get(node.id)
+        if (
+            enum_class is not None
+            and isinstance(enum_class, type)
+            and issubclass(enum_class, Enum)
+        ):
+            strings.extend(
+                member.value for member in enum_class if isinstance(member.value, str)
+            )
+
+    elif isinstance(node, ast.Attribute) and function_globals:
+        try:
+            if isinstance(node.value, ast.Name):
+                module = function_globals.get(node.value.id)
+                if module is not None:
+                    enum_class = getattr(module, node.attr, None)
+                    if (
+                        enum_class is not None
+                        and isinstance(enum_class, type)
+                        and issubclass(enum_class, Enum)
+                    ):
+                        strings.extend(
+                            member.value
+                            for member in enum_class
+                            if isinstance(member.value, str)
+                        )
+        except (AttributeError, TypeError):
+            pass
+
+    elif isinstance(node, ast.Subscript):
+        is_literal = False
+        if isinstance(node.value, ast.Name) and node.value.id == "Literal":
+            is_literal = True
+        elif isinstance(node.value, ast.Attribute) and node.value.attr == "Literal":
+            is_literal = True
+
+        if is_literal:
+            if isinstance(node.slice, ast.Tuple):
+                strings.extend(
+                    elt.value
+                    for elt in node.slice.elts
+                    if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                )
+            elif isinstance(node.slice, ast.Constant) and isinstance(
+                node.slice.value, str
+            ):
+                strings.append(node.slice.value)
+
+    elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+        strings.extend(
+            _extract_string_literals_from_type_annotation(node.left, function_globals)
+        )
+        strings.extend(
+            _extract_string_literals_from_type_annotation(node.right, function_globals)
+        )
+
+    return strings
+
+
+def _unwrap_function(function: Any) -> Any:
+    """Unwrap a function to get the original function with correct globals.
+
+    Flow methods are wrapped by decorators like @router, @listen, etc.
+    This function unwraps them to get the original function which has
+    the correct __globals__ for resolving type annotations like Enums.
+
+    Args:
+        function: The potentially wrapped function.
+
+    Returns:
+        The unwrapped original function.
+    """
+    if hasattr(function, "__func__"):
+        function = function.__func__
+
+    if hasattr(function, "__wrapped__"):
+        wrapped = function.__wrapped__
+        if hasattr(wrapped, "unwrap"):
+            return wrapped.unwrap()
+        return wrapped
+
+    return function
+
+
 def get_possible_return_constants(function: Any) -> list[str] | None:
     """Extract possible string return values from a function using AST parsing.
 
     This function analyzes the source code of a router method to identify
     all possible string values it might return. It handles:
+    - Return type annotations: -> Literal["a", "b"] or -> "a" | "b" | "c"
+    - Enum type annotations: -> MyEnum (extracts string values from members)
     - Direct string literals: return "value"
     - Variable assignments: x = "value"; return x
     - Dictionary lookups: d = {"k": "v"}; return d[key]
@@ -57,6 +170,8 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
     Returns:
         List of possible string return values, or None if analysis fails.
     """
+    unwrapped = _unwrap_function(function)
+
     try:
         source = inspect.getsource(function)
     except OSError:
@@ -97,6 +212,17 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         return None
 
     return_values: set[str] = set()
+
+    function_globals = getattr(unwrapped, "__globals__", None)
+
+    for node in ast.walk(code_ast):
+        if isinstance(node, ast.FunctionDef):
+            if node.returns:
+                annotation_values = _extract_string_literals_from_type_annotation(
+                    node.returns, function_globals
+                )
+                return_values.update(annotation_values)
+            break  # Only process the first function definition
     dict_definitions: dict[str, list[str]] = {}
     variable_values: dict[str, list[str]] = {}
     state_attribute_values: dict[str, list[str]] = {}

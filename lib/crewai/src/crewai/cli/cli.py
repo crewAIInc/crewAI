@@ -271,7 +271,7 @@ def update():
 
 @crewai.command()
 def login():
-    """Sign Up/Login to CrewAI AMP."""
+    """Sign Up/Login to CrewAI AOP."""
     Settings().clear_user_settings()
     AuthenticationCommand().login()
 
@@ -460,7 +460,7 @@ def enterprise():
 @enterprise.command("configure")
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str):
-    """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
+    """Configure CrewAI AOP OAuth2 settings from the provided Enterprise URL."""
     enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 
@@ -491,6 +491,207 @@ def config_reset():
     """Reset all CLI configuration parameters to default values."""
     config_command = SettingsCommand()
     config_command.reset_all_settings()
+
+
+@crewai.group()
+def env():
+    """Environment variable commands."""
+
+
+@env.command("view")
+def env_view():
+    """View tracing-related environment variables."""
+    import os
+    from pathlib import Path
+
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+
+    console = Console()
+
+    # Check for .env file
+    env_file = Path(".env")
+    env_file_exists = env_file.exists()
+
+    # Create table for environment variables
+    table = Table(show_header=True, header_style="bold cyan", expand=True)
+    table.add_column("Environment Variable", style="cyan", width=30)
+    table.add_column("Value", style="white", width=20)
+    table.add_column("Source", style="yellow", width=20)
+
+    # Check CREWAI_TRACING_ENABLED
+    crewai_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
+    if crewai_tracing:
+        table.add_row(
+            "CREWAI_TRACING_ENABLED",
+            crewai_tracing,
+            "Environment/Shell",
+        )
+    else:
+        table.add_row(
+            "CREWAI_TRACING_ENABLED",
+            "[dim]Not set[/dim]",
+            "[dim]—[/dim]",
+        )
+
+    # Check other related env vars
+    crewai_testing = os.getenv("CREWAI_TESTING", "")
+    if crewai_testing:
+        table.add_row("CREWAI_TESTING", crewai_testing, "Environment/Shell")
+
+    crewai_user_id = os.getenv("CREWAI_USER_ID", "")
+    if crewai_user_id:
+        table.add_row("CREWAI_USER_ID", crewai_user_id, "Environment/Shell")
+
+    crewai_org_id = os.getenv("CREWAI_ORG_ID", "")
+    if crewai_org_id:
+        table.add_row("CREWAI_ORG_ID", crewai_org_id, "Environment/Shell")
+
+    # Check if .env file exists
+    table.add_row(
+        ".env file",
+        "✅ Found" if env_file_exists else "❌ Not found",
+        str(env_file.resolve()) if env_file_exists else "N/A",
+    )
+
+    panel = Panel(
+        table,
+        title="Tracing Environment Variables",
+        border_style="blue",
+        padding=(1, 2),
+    )
+    console.print("\n")
+    console.print(panel)
+
+    # Show helpful message
+    if env_file_exists:
+        console.print(
+            "\n[dim]💡 Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
+        )
+    else:
+        console.print(
+            "\n[dim]💡 Tip: Create a .env file in your project root and add: CREWAI_TRACING_ENABLED=true[/dim]"
+        )
+    console.print()
+
+
+@crewai.group()
+def traces():
+    """Trace collection management commands."""
+
+
+@traces.command("enable")
+def traces_enable():
+    """Enable trace collection for crew/flow executions."""
+    from rich.console import Console
+    from rich.panel import Panel
+
+    from crewai.events.listeners.tracing.utils import (
+        _load_user_data,
+        _save_user_data,
+    )
+
+    console = Console()
+
+    # Update user data to enable traces
+    user_data = _load_user_data()
+    user_data["trace_consent"] = True
+    user_data["first_execution_done"] = True
+    _save_user_data(user_data)
+
+    panel = Panel(
+        "✅ Trace collection has been enabled!\n\n"
+        "Your crew/flow executions will now send traces to CrewAI+.\n"
+        "Use 'crewai traces disable' to turn off trace collection.",
+        title="Traces Enabled",
+        border_style="green",
+        padding=(1, 2),
+    )
+    console.print(panel)
+
+
+@traces.command("disable")
+def traces_disable():
+    """Disable trace collection for crew/flow executions."""
+    from rich.console import Console
+    from rich.panel import Panel
+
+    from crewai.events.listeners.tracing.utils import (
+        _load_user_data,
+        _save_user_data,
+    )
+
+    console = Console()
+
+    # Update user data to disable traces
+    user_data = _load_user_data()
+    user_data["trace_consent"] = False
+    user_data["first_execution_done"] = True
+    _save_user_data(user_data)
+
+    panel = Panel(
+        "❌ Trace collection has been disabled!\n\n"
+        "Your crew/flow executions will no longer send traces.\n"
+        "Use 'crewai traces enable' to turn trace collection back on.",
+        title="Traces Disabled",
+        border_style="red",
+        padding=(1, 2),
+    )
+    console.print(panel)
+
+
+@traces.command("status")
+def traces_status():
+    """Show current trace collection status."""
+    import os
+
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.table import Table
+
+    from crewai.events.listeners.tracing.utils import (
+        _load_user_data,
+        is_tracing_enabled,
+    )
+
+    console = Console()
+    user_data = _load_user_data()
+
+    table = Table(show_header=False, box=None)
+    table.add_column("Setting", style="cyan")
+    table.add_column("Value", style="white")
+
+    # Check environment variable
+    env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
+    table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
+
+    # Check user consent
+    trace_consent = user_data.get("trace_consent")
+    if trace_consent is True:
+        consent_status = "✅ Enabled (user consented)"
+    elif trace_consent is False:
+        consent_status = "❌ Disabled (user declined)"
+    else:
+        consent_status = "⚪ Not set (first-time user)"
+    table.add_row("User Consent", consent_status)
+
+    # Check overall status
+    if is_tracing_enabled():
+        overall_status = "✅ ENABLED"
+        border_style = "green"
+    else:
+        overall_status = "❌ DISABLED"
+        border_style = "red"
+    table.add_row("Overall Status", overall_status)
+
+    panel = Panel(
+        table,
+        title="Trace Collection Status",
+        border_style=border_style,
+        padding=(1, 2),
+    )
+    console.print(panel)
 
 
 if __name__ == "__main__":

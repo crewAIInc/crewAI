@@ -26,14 +26,17 @@ from uuid import uuid4
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
 from pydantic import BaseModel, Field, ValidationError
+from rich.console import Console
+from rich.panel import Panel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    has_user_declined_tracing,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -67,7 +70,16 @@ from crewai.flow.utils import (
     is_simple_flow_condition,
 )
 from crewai.flow.visualization import build_flow_structure, render_interactive
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.printer import Printer, PrinterColor
+from crewai.utilities.streaming import (
+    TaskInfo,
+    create_async_chunk_generator,
+    create_chunk_generator,
+    create_streaming_state,
+    signal_end,
+    signal_error,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -452,7 +464,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
     initial_state: type[T] | T | None = None
     name: str | None = None
-    tracing: bool | None = False
+    tracing: bool | None = None
+    stream: bool = False
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -464,13 +477,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: FlowPersistence | None = None,
-        tracing: bool | None = False,
+        tracing: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
+            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -488,13 +502,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
-        if (
-            is_tracing_enabled()
-            or self.tracing
-            or should_auto_collect_first_time_traces()
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
+
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -820,20 +832,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
-    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
+    def kickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=False
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = self.kickoff(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e)
+                finally:
+                    self.stream = True
+                    signal_end(state)
+
+            streaming_output = FlowStreamingOutput(
+                sync_iterator=create_chunk_generator(state, run_flow, output_holder)
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
 
         async def _run_flow() -> Any:
             return await self.kickoff_async(inputs)
 
         return asyncio.run(_run_flow())
 
-    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
+    async def kickoff_async(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution asynchronously.
 
@@ -848,6 +896,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = await self.kickoff_async(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    self.stream = True
+                    signal_end(state, is_async=True)
+
+            streaming_output = FlowStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_flow, output_holder
+                )
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
+
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         flow_token = attach(ctx)
 
@@ -925,6 +1008,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -936,18 +1020,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            if (
-                is_tracing_enabled()
-                or self.tracing
-                or should_auto_collect_first_time_traces()
-            ):
-                trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
             return final_output
         finally:
@@ -1031,6 +1110,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
@@ -1038,7 +1118,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -1056,13 +1136,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                     result=result,
                 ),
             )
@@ -1083,6 +1164,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             raise e
+
+    def _copy_and_serialize_state(self) -> dict[str, Any]:
+        state_copy = self._copy_state()
+        if isinstance(state_copy, BaseModel):
+            try:
+                return state_copy.model_dump(mode="json")
+            except Exception:
+                return state_copy.model_dump()
+        else:
+            return state_copy
 
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any
@@ -1381,3 +1472,32 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         structure = build_flow_structure(self)
         return render_interactive(structure, filename=filename, show=show)
+
+    @staticmethod
+    def _show_tracing_disabled_message() -> None:
+        """Show a message when tracing is disabled."""
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)
