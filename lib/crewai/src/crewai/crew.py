@@ -27,6 +27,8 @@ from pydantic import (
     model_validator,
 )
 from pydantic_core import PydanticCustomError
+from rich.console import Console
+from rich.panel import Panel
 from typing_extensions import Self
 
 from crewai.agent import Agent
@@ -39,8 +41,8 @@ from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -72,6 +74,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
@@ -88,6 +91,14 @@ from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
 from crewai.utilities.rpm_controller import RPMController
+from crewai.utilities.streaming import (
+    TaskInfo,
+    create_async_chunk_generator,
+    create_chunk_generator,
+    create_streaming_state,
+    signal_end,
+    signal_error,
+)
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -223,6 +234,10 @@ class Crew(FlowTrackable, BaseModel):
             "It may be used to adjust the output of the crew."
         ),
     )
+    stream: bool = Field(
+        default=False,
+        description="Whether to stream output from the crew execution.",
+    )
     max_rpm: int | None = Field(
         default=None,
         description=(
@@ -280,8 +295,8 @@ class Crew(FlowTrackable, BaseModel):
         description="Metrics for the LLM usage during all tasks execution.",
     )
     tracing: bool | None = Field(
-        default=False,
-        description="Whether to enable tracing for the crew.",
+        default=None,
+        description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
     )
 
     @field_validator("id", mode="before")
@@ -311,17 +326,16 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
-
         self._cache_handler = CacheHandler()
         event_listener = EventListener()  # type: ignore[no-untyped-call]
 
-        if (
-            is_tracing_enabled()
-            or self.tracing
-            or should_auto_collect_first_time_traces()
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+        # Determine and set tracing state once for this execution
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
+
+        # Always setup trace listener - actual execution control is via contextvar
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         event_listener.verbose = self.verbose
         event_listener.formatter.verbose = self.verbose
         self._logger = Logger(verbose=self.verbose)
@@ -659,7 +673,43 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
-    ) -> CrewOutput:
+    ) -> CrewOutput | CrewStreamingOutput:
+        if self.stream:
+            for agent in self.agents:
+                if agent.llm is not None:
+                    agent.llm.stream = True
+
+            result_holder: list[CrewOutput] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(current_task_info, result_holder)
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            def run_crew() -> None:
+                """Execute the crew and capture the result."""
+                try:
+                    self.stream = False
+                    crew_result = self.kickoff(inputs=inputs)
+                    if isinstance(crew_result, CrewOutput):
+                        result_holder.append(crew_result)
+                except Exception as exc:
+                    signal_error(state, exc)
+                finally:
+                    self.stream = True
+                    signal_end(state)
+
+            streaming_output = CrewStreamingOutput(
+                sync_iterator=create_chunk_generator(state, run_crew, output_holder)
+            )
+            output_holder.append(streaming_output)
+            return streaming_output
+
         ctx = baggage.set_baggage(
             "crew_context", CrewContext(id=str(self.id), key=self.key)
         )
@@ -725,11 +775,16 @@ class Crew(FlowTrackable, BaseModel):
         finally:
             detach(token)
 
-    def kickoff_for_each(self, inputs: list[dict[str, Any]]) -> list[CrewOutput]:
-        """Executes the Crew's workflow for each input and aggregates results."""
-        results: list[CrewOutput] = []
+    def kickoff_for_each(
+        self, inputs: list[dict[str, Any]]
+    ) -> list[CrewOutput | CrewStreamingOutput]:
+        """Executes the Crew's workflow for each input and aggregates results.
 
-        # Initialize the parent crew's usage metrics
+        If stream=True, returns a list of CrewStreamingOutput objects that must
+        each be iterated to get stream chunks and access results.
+        """
+        results: list[CrewOutput | CrewStreamingOutput] = []
+
         total_usage_metrics = UsageMetrics()
 
         for input_data in inputs:
@@ -737,43 +792,161 @@ class Crew(FlowTrackable, BaseModel):
 
             output = crew.kickoff(inputs=input_data)
 
-            if crew.usage_metrics:
+            if not self.stream and crew.usage_metrics:
                 total_usage_metrics.add_usage_metrics(crew.usage_metrics)
 
             results.append(output)
 
-        self.usage_metrics = total_usage_metrics
+        if not self.stream:
+            self.usage_metrics = total_usage_metrics
         self._task_output_handler.reset()
         return results
 
-    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> CrewOutput:
-        """Asynchronous kickoff method to start the crew execution."""
+    async def kickoff_async(
+        self, inputs: dict[str, Any] | None = None
+    ) -> CrewOutput | CrewStreamingOutput:
+        """Asynchronous kickoff method to start the crew execution.
+
+        If stream=True, returns a CrewStreamingOutput that can be async-iterated
+        to get stream chunks. After iteration completes, access the final result
+        via .result.
+        """
         inputs = inputs or {}
+
+        if self.stream:
+            for agent in self.agents:
+                if agent.llm is not None:
+                    agent.llm.stream = True
+
+            result_holder: list[CrewOutput] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_crew() -> None:
+                try:
+                    self.stream = False
+                    result = await asyncio.to_thread(self.kickoff, inputs)
+                    if isinstance(result, CrewOutput):
+                        result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    self.stream = True
+                    signal_end(state, is_async=True)
+
+            streaming_output = CrewStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_crew, output_holder
+                )
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
+
         return await asyncio.to_thread(self.kickoff, inputs)
 
     async def kickoff_for_each_async(
         self, inputs: list[dict[str, Any]]
-    ) -> list[CrewOutput]:
+    ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
+        """Executes the Crew's workflow for each input asynchronously.
+
+        If stream=True, returns a single CrewStreamingOutput that yields chunks
+        from all crews as they arrive. After iteration, access results via .results
+        (list of CrewOutput).
+        """
         crew_copies = [self.copy() for _ in inputs]
 
-        async def run_crew(crew: Self, input_data: Any) -> CrewOutput:
-            return await crew.kickoff_async(inputs=input_data)
+        if self.stream:
+            result_holder: list[list[CrewOutput]] = [[]]
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_all_crews() -> None:
+                """Run all crew copies and aggregate their streaming outputs."""
+                try:
+                    streaming_outputs: list[CrewStreamingOutput] = []
+                    for i, crew in enumerate(crew_copies):
+                        streaming = await crew.kickoff_async(inputs=inputs[i])
+                        if isinstance(streaming, CrewStreamingOutput):
+                            streaming_outputs.append(streaming)
+
+                    async def consume_stream(
+                        stream_output: CrewStreamingOutput,
+                    ) -> CrewOutput:
+                        """Consume stream chunks and forward to parent queue.
+
+                        Args:
+                            stream_output: The streaming output to consume.
+
+                        Returns:
+                            The final CrewOutput result.
+                        """
+                        async for chunk in stream_output:
+                            if state.async_queue is not None and state.loop is not None:
+                                state.loop.call_soon_threadsafe(
+                                    state.async_queue.put_nowait, chunk
+                                )
+                        return stream_output.result
+
+                    crew_results = await asyncio.gather(
+                        *[consume_stream(s) for s in streaming_outputs]
+                    )
+                    result_holder[0] = list(crew_results)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    signal_end(state, is_async=True)
+
+            streaming_output = CrewStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_all_crews, output_holder
+                )
+            )
+
+            def set_results_wrapper(result: Any) -> None:
+                """Wrap _set_results to match _set_result signature."""
+                streaming_output._set_results(result)
+
+            streaming_output._set_result = set_results_wrapper  # type: ignore[method-assign]
+            output_holder.append(streaming_output)
+
+            return streaming_output
 
         tasks = [
-            asyncio.create_task(run_crew(crew_copies[i], inputs[i]))
-            for i in range(len(inputs))
+            asyncio.create_task(crew_copy.kickoff_async(inputs=input_data))
+            for crew_copy, input_data in zip(crew_copies, inputs, strict=True)
         ]
 
         results = await asyncio.gather(*tasks)
 
         total_usage_metrics = UsageMetrics()
-        for crew in crew_copies:
-            if crew.usage_metrics:
-                total_usage_metrics.add_usage_metrics(crew.usage_metrics)
-
+        for crew_copy in crew_copies:
+            if crew_copy.usage_metrics:
+                total_usage_metrics.add_usage_metrics(crew_copy.usage_metrics)
         self.usage_metrics = total_usage_metrics
+
         self._task_output_handler.reset()
-        return results
+        return list(results)
 
     def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
@@ -1171,6 +1344,10 @@ class Crew(FlowTrackable, BaseModel):
                 total_tokens=self.token_usage.total_tokens,
             ),
         )
+
+        # Finalization is handled by trace listener (always initialized)
+        # The batch manager checks contextvar to determine if tracing is enabled
+
         return CrewOutput(
             raw=final_task_output.raw,
             pydantic=final_task_output.pydantic,
@@ -1651,3 +1828,32 @@ class Crew(FlowTrackable, BaseModel):
             and able_to_inject
         ):
             self.tasks[0].allow_crewai_trigger_context = True
+
+    def _show_tracing_disabled_message(self) -> None:
+        """Show a message when tracing is disabled."""
+        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)

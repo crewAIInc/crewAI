@@ -697,8 +697,13 @@ def test_save_task_json_output():
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
-def test_save_task_pydantic_output():
-    import uuid
+def test_save_task_pydantic_output(tmp_path, monkeypatch):
+    """Test saving pydantic output to a file.
+
+    Uses tmp_path fixture and monkeypatch to change directory to avoid
+    file system race conditions on enterprise systems.
+    """
+    from pathlib import Path
 
     class ScoreOutput(BaseModel):
         score: int
@@ -710,7 +715,9 @@ def test_save_task_pydantic_output():
         allow_delegation=False,
     )
 
-    output_file = f"score_{uuid.uuid4()}.json"
+    monkeypatch.chdir(tmp_path)
+
+    output_file = "score_output.json"
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
@@ -722,11 +729,9 @@ def test_save_task_pydantic_output():
     crew = Crew(agents=[scorer], tasks=[task])
     crew.kickoff()
 
-    output_file_exists = os.path.exists(output_file)
-    assert output_file_exists
-    assert {"score": 4} == json.loads(open(output_file).read())
-    if output_file_exists:
-        os.remove(output_file)
+    output_path = Path(output_file).resolve()
+    assert output_path.exists()
+    assert {"score": 4} == json.loads(output_path.read_text())
 
 
 @pytest.mark.vcr(filter_headers=["authorization"])
