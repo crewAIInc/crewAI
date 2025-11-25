@@ -1,0 +1,112 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Say hello in one word"}],"model":"gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '81'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJNT9wwEIbv+RXunDdVNtoPuteiCoEQJ7SiFYqMPcm6OB7LnvAhtP8d
+        OWE3oYDUiw9+5h2/73heMiHAaNgIUDvJqvU2/1nf1K44vVzePG6vr5cPV2V5/nt7eqG36lcLs6Sg
+        u7+o+KD6rqj1FtmQG7AKKBlT1/l6tSjKYr1a96AljTbJGs/5gvKyKBd5cZIXqzfhjozCCBvxJxNC
+        iJf+TBadxifYiGJ2uGkxRtkgbI5FQkAgm25AxmgiS8cwG6Eix+h612doLX2bwoB1F2Xy5jprJ0A6
+        RyxTtt7W7RvZH41Yanygu/iPFGrjTNxVAWUklx6NTB56us+EuO0Dd+8ygA/Ueq6Y7rF/bl4O7WCc
+        8AgPjImlnWgWs0+aVRpZGhsn8wIl1Q71qByHKzttaAKySeSPXj7rPcQ2rvmf9iNQCj2jrnxAbdT7
+        vGNZwLR+X5UdR9wbhojhwSis2GBI36Cxlp0dNgPic2Rsq9q4BoMPZliP2lfqxwkWSyXna8j22SsA
+        AAD//wMAmJrFFCcDAAA=
+    headers:
+      CF-RAY:
+      - 9a3c18dff8580f53-EWR
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 24 Nov 2025 21:46:08 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - FILTERED
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - FILTERED
+      openai-processing-ms:
+      - '1096'
+      openai-project:
+      - FILTERED
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1138'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999992'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_670507131d6c455caf0e8cbc30a1a792
+    status:
+      code: 200
+      message: OK
+version: 1
