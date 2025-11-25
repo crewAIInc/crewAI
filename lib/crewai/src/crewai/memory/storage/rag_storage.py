@@ -16,6 +16,7 @@ from crewai.utilities.paths import db_storage_path
 
 
 if TYPE_CHECKING:
+    from crewai.crew import Crew
     from crewai.rag.core.base_client import BaseClient
     from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
     from crewai.rag.embeddings.types import ProviderSpec
@@ -32,16 +33,16 @@ class RAGStorage(BaseRAGStorage):
         self,
         type: str,
         allow_reset: bool = True,
-        embedder_config: ProviderSpec | BaseEmbeddingsProvider | None = None,
-        crew: Any = None,
+        embedder_config: ProviderSpec | BaseEmbeddingsProvider[Any] | None = None,
+        crew: Crew | None = None,
         path: str | None = None,
     ) -> None:
         super().__init__(type, allow_reset, embedder_config, crew)
-        agents = crew.agents if crew else []
-        agents = [self._sanitize_role(agent.role) for agent in agents]
-        agents = "_".join(agents)
-        self.agents = agents
-        self.storage_file_name = self._build_storage_file_name(type, agents)
+        crew_agents = crew.agents if crew else []
+        sanitized_roles = [self._sanitize_role(agent.role) for agent in crew_agents]
+        agents_str = "_".join(sanitized_roles)
+        self.agents = agents_str
+        self.storage_file_name = self._build_storage_file_name(type, agents_str)
 
         self.type = type
         self._client: BaseClient | None = None
@@ -96,6 +97,10 @@ class RAGStorage(BaseRAGStorage):
                         ChromaEmbeddingFunctionWrapper, embedding_function
                     )
                 )
+
+            if self.path:
+                config.settings.persist_directory = self.path
+
             self._client = create_client(config)
 
     def _get_client(self) -> BaseClient:
