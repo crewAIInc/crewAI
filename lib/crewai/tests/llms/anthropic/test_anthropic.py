@@ -13,12 +13,10 @@ from crewai.task import Task
 @pytest.fixture(autouse=True)
 def mock_anthropic_api_key():
     """Automatically mock ANTHROPIC_API_KEY for all tests in this module if not already set."""
-    # Only mock if ANTHROPIC_API_KEY is not already set (for VCR recording)
     if "ANTHROPIC_API_KEY" not in os.environ:
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
             yield
     else:
-        # Real API key exists, don't override it (needed for VCR recording)
         yield
 
 
