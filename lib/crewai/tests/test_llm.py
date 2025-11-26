@@ -777,15 +777,17 @@ def test_prefixed_models_with_invalid_constants_use_litellm():
 
 def test_prefixed_models_with_valid_patterns_use_native_sdk():
     """Test that models matching provider patterns use native SDK even if not in constants."""
-    llm = LLM(model="openai/gpt-future-6", is_litellm=False)
-    assert llm.is_litellm is False
-    assert llm.provider == "openai"
-    assert llm.model == "gpt-future-6"
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="openai/gpt-future-6", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
+        assert llm.model == "gpt-future-6"
 
-    llm2 = LLM(model="anthropic/claude-future-5", is_litellm=False)
-    assert llm2.is_litellm is False
-    assert llm2.provider == "anthropic"
-    assert llm2.model == "claude-future-5"
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm2 = LLM(model="anthropic/claude-future-5", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "anthropic"
+        assert llm2.model == "claude-future-5"
 
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
