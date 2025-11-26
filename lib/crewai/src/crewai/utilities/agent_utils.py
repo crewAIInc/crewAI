@@ -416,12 +416,9 @@ def is_context_length_exceeded(
 
     Args:
         exception: The exception to check
-        messages: Messages sent to the LLM
-        llm: The LLM instance
 
     Returns:
-        True if the exception is due to context length exceeding or
-        the response is empty because of context length.
+        True if the exception is due to context length exceeding
     """
     return LLMContextLengthExceededError(str(exception))._is_context_limit_error(
         str(exception)
@@ -441,6 +438,7 @@ def is_null_response_because_context_length_exceeded(
     Returns:
         bool: True if the exception is due to context length exceeding
     """
+    return True
     messages_string = " ".join([message["content"] for message in messages])
     cut_size = llm.get_context_window_size()
 
