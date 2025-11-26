@@ -66,6 +66,7 @@ def test_anthropic_tool_use_conversation_flow():
     with patch.object(completion.client.messages, 'create') as mock_create:
         # Mock initial response with tool use - need to properly mock ToolUseBlock
         mock_tool_use = Mock(spec=ToolUseBlock)
+        mock_tool_use.type = "tool_use"
         mock_tool_use.id = "tool_123"
         mock_tool_use.name = "get_weather"
         mock_tool_use.input = {"location": "San Francisco"}
@@ -78,6 +79,7 @@ def test_anthropic_tool_use_conversation_flow():
 
         # Mock final response after tool result - properly mock text content
         mock_text_block = Mock()
+        mock_text_block.type = "text"
         # Set the text attribute as a string, not another Mock
         mock_text_block.configure_mock(text="Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature.")
 
