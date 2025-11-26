@@ -12,8 +12,13 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_anthropic_api_key():
-    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+    """Automatically mock ANTHROPIC_API_KEY for all tests in this module if not already set."""
+    # Only mock if ANTHROPIC_API_KEY is not already set (for VCR recording)
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+    else:
+        # Real API key exists, don't override it (needed for VCR recording)
         yield
 
 
@@ -698,3 +703,39 @@ def test_anthropic_stop_sequences_sent_to_api():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking():
+    """Test that thinking is properly handled and thinking params are passed to messages.create"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    original_create = llm.client.messages.create
+    captured_params = {}
+
+    def capture_and_call(**kwargs):
+        captured_params.update(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        result = llm.call("What is the weather in Tokyo?")
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+        assert "thinking" in captured_params
+        assert captured_params["thinking"] == {"type": "enabled", "budget_tokens": 5000}
+
+        assert captured_params["model"] == "claude-sonnet-4-5"
+        assert captured_params["max_tokens"] == 10000
+        assert "messages" in captured_params
+        assert len(captured_params["messages"]) > 0

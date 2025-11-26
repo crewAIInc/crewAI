@@ -52,6 +52,7 @@ class AnthropicCompletion(BaseLLM):
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
+        thinking: dict[str, Any] | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -89,7 +90,7 @@ class AnthropicCompletion(BaseLLM):
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
-
+        self.thinking = thinking
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
@@ -251,6 +252,9 @@ class AnthropicCompletion(BaseLLM):
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
             params["tools"] = self._convert_tools_for_interference(tools)
+
+        if self.thinking:
+            params["thinking"] = self.thinking
 
         return params
 
