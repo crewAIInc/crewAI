@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 
 try:
     from anthropic import Anthropic
-    from anthropic.types import Message
-    from anthropic.types.tool_use_block import ToolUseBlock
+    from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -91,9 +90,16 @@ class AnthropicCompletion(BaseLLM):
         self.stream = stream
         self.stop_sequences = stop_sequences or []
         self.thinking = thinking
+        self.previous_thinking_blocks: list[ThinkingBlock] = []
         # Model-specific settings
         self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+        self.supports_tools = (
+            "claude-3" in model.lower()
+            or "claude-4" in model.lower()
+            or "claude-sonnet-4" in model.lower()
+            or "claude-opus-4" in model.lower()
+            or "claude-haiku-4" in model.lower()
+        )
 
     @property
     def stop(self) -> list[str]:
@@ -295,6 +301,34 @@ class AnthropicCompletion(BaseLLM):
 
         return anthropic_tools
 
+    def _extract_thinking_block(
+        self, content_block: Any
+    ) -> ThinkingBlock | dict[str, Any] | None:
+        """Extract and format thinking block from content block.
+
+        Args:
+            content_block: Content block from Anthropic response
+
+        Returns:
+            Dictionary with thinking block data including signature, or None if not a thinking block
+        """
+        if content_block.type == "thinking":
+            thinking_block = {
+                "type": "thinking",
+                "thinking": content_block.thinking,
+            }
+            if hasattr(content_block, "signature"):
+                thinking_block["signature"] = content_block.signature
+            return thinking_block
+        if content_block.type == "redacted_thinking":
+            redacted_block = {"type": "redacted_thinking"}
+            if hasattr(content_block, "thinking"):
+                redacted_block["thinking"] = content_block.thinking
+            if hasattr(content_block, "signature"):
+                redacted_block["signature"] = content_block.signature
+            return redacted_block
+        return None
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -304,6 +338,7 @@ class AnthropicCompletion(BaseLLM):
         - System messages are separate from conversation messages
         - Messages must alternate between user and assistant
         - First message must be from user
+        - When thinking is enabled, assistant messages must start with thinking blocks
 
         Args:
             messages: Input messages
@@ -328,8 +363,29 @@ class AnthropicCompletion(BaseLLM):
                     system_message = cast(str, content)
             else:
                 role_str = role if role is not None else "user"
-                content_str = content if content is not None else ""
-                formatted_messages.append({"role": role_str, "content": content_str})
+
+                if isinstance(content, list):
+                    formatted_messages.append({"role": role_str, "content": content})
+                elif (
+                    role_str == "assistant"
+                    and self.thinking
+                    and self.previous_thinking_blocks
+                ):
+                    structured_content = cast(
+                        list[dict[str, Any]],
+                        [
+                            *self.previous_thinking_blocks,
+                            {"type": "text", "text": content if content else ""},
+                        ],
+                    )
+                    formatted_messages.append(
+                        LLMMessage(role=role_str, content=structured_content)
+                    )
+                else:
+                    content_str = content if content is not None else ""
+                    formatted_messages.append(
+                        LLMMessage(role=role_str, content=content_str)
+                    )
 
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
@@ -379,7 +435,6 @@ class AnthropicCompletion(BaseLLM):
             if tool_uses and tool_uses[0].name == "structured_output":
                 structured_data = tool_uses[0].input
                 structured_json = json.dumps(structured_data)
-
                 self._emit_call_completed_event(
                     response=structured_json,
                     call_type=LLMCallType.LLM_CALL,
@@ -407,15 +462,22 @@ class AnthropicCompletion(BaseLLM):
                     from_agent,
                 )
 
-        # Extract text content
         content = ""
+        thinking_blocks: list[ThinkingBlock] = []
+
         if response.content:
             for content_block in response.content:
                 if hasattr(content_block, "text"):
                     content += content_block.text
+                else:
+                    thinking_block = self._extract_thinking_block(content_block)
+                    if thinking_block:
+                        thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self.previous_thinking_blocks = thinking_blocks
 
         content = self._apply_stop_words(content)
-
         self._emit_call_completed_event(
             response=content,
             call_type=LLMCallType.LLM_CALL,
@@ -467,6 +529,16 @@ class AnthropicCompletion(BaseLLM):
                     )
 
             final_message: Message = stream.get_final_message()
+
+        thinking_blocks: list[ThinkingBlock] = []
+        if final_message.content:
+            for content_block in final_message.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self.previous_thinking_blocks = thinking_blocks
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
@@ -570,7 +642,26 @@ class AnthropicCompletion(BaseLLM):
         follow_up_params = params.copy()
 
         # Add Claude's tool use response to conversation
-        assistant_message = {"role": "assistant", "content": initial_response.content}
+        assistant_content: list[
+            ThinkingBlock | ToolUseBlock | TextBlock | dict[str, Any]
+        ] = []
+        for block in initial_response.content:
+            thinking_block = self._extract_thinking_block(block)
+            if thinking_block:
+                assistant_content.append(thinking_block)
+            elif block.type == "tool_use":
+                assistant_content.append(
+                    {
+                        "type": "tool_use",
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.input,
+                    }
+                )
+            elif hasattr(block, "text"):
+                assistant_content.append({"type": "text", "text": block.text})
+
+        assistant_message = {"role": "assistant", "content": assistant_content}
 
         # Add user message with tool results
         user_message = {"role": "user", "content": tool_results}
@@ -589,12 +680,20 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
-            # Extract final text content
             final_content = ""
+            thinking_blocks: list[ThinkingBlock] = []
+
             if final_response.content:
                 for content_block in final_response.content:
                     if hasattr(content_block, "text"):
                         final_content += content_block.text
+                    else:
+                        thinking_block = self._extract_thinking_block(content_block)
+                        if thinking_block:
+                            thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+            if thinking_blocks:
+                self.previous_thinking_blocks = thinking_blocks
 
             final_content = self._apply_stop_words(final_content)
 
