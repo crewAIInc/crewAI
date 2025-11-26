@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
@@ -9,6 +9,7 @@ from crewai.utilities.printer import Printer
 
 if TYPE_CHECKING:
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.lite_agent import LiteAgent
 
 
 class LLMCallHookContext:
@@ -38,7 +39,7 @@ class LLMCallHookContext:
 
     def __init__(
         self,
-        executor: CrewAgentExecutor,
+        executor: CrewAgentExecutor | LiteAgent,
         response: str | None = None,
     ) -> None:
         """Initialize hook context with executor reference.
@@ -49,12 +50,23 @@ class LLMCallHookContext:
         """
         self.executor = executor
         self.messages = executor.messages
-        self.agent = executor.agent
-        self.task = executor.task
-        self.crew = executor.crew
         self.llm = executor.llm
         self.iterations = executor.iterations
         self.response = response
+
+        # CrewAgentExecutor
+        if hasattr(executor, "agent"):
+            self.agent = executor.agent
+            agent_executor = cast(CrewAgentExecutor, executor)
+            self.task = agent_executor.task
+            self.crew = agent_executor.crew
+        else:
+            # LiteAgent case
+            self.agent = (
+                executor.original_agent
+                if hasattr(executor, "original_agent")
+                else executor
+            )
 
     def request_human_input(
         self,

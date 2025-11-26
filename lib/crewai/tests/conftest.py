@@ -215,8 +215,41 @@ def clear_event_bus_handlers(setup_test_environment):
 @pytest.fixture(scope="module")
 def vcr_config(request) -> dict:
     import os
+
+    def filter_response_headers(response):
+        """Filter sensitive and time-varying headers from VCR responses."""
+        headers_to_remove = {
+            "set-cookie",
+            "cookie",
+            "cf-ray",
+            "x-request-id",
+            "x-ratelimit-limit-requests",
+            "x-ratelimit-limit-tokens",
+            "x-ratelimit-limit-project-tokens",
+            "x-ratelimit-remaining-requests",
+            "x-ratelimit-remaining-tokens",
+            "x-ratelimit-remaining-project-tokens",
+            "x-ratelimit-reset-requests",
+            "x-ratelimit-reset-tokens",
+            "x-ratelimit-reset-project-tokens",
+            "openai-organization",
+            "openai-project",
+            "openai-processing-ms",
+            "x-envoy-upstream-service-time",
+        }
+
+        return {
+            **response,
+            "headers": {
+                k: v
+                for k, v in response["headers"].items()
+                if k.lower() not in headers_to_remove
+            },
+        }
+
     return {
         "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
         "record_mode": "new_episodes",
         "filter_headers": [("authorization", "AUTHORIZATION-XXX")],
+        "before_record_response": filter_response_headers,
     }

@@ -1,0 +1,194 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1119'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLrtMwEN33K0ZeN1UfaUuz47JAvRsEArEgV4lrTxKDYxt7clW46r8j
+        p4+kPCQ2VjRnzsmZM/bLBIApyTJgouEkWqeTN/XefHhfVQ+fH6rw6fnn9vF7Jd4+uu07czyyaWTY
+        w1cUdGXNhG2dRlLWnGHhkRNG1cV2ky52r+abdQ+0VqKOtNpRks4WSauMSpbz5TqZp8kivdAbqwQG
+        lsGXCQDAS39Go0bikWUwn14rLYbAa2TZrQmAeatjhfEQVCBuiE0HUFhDaHrvZVnm5mNju7qhDPZg
+        ECWQBS4lrIEbCSvogjI1UIMguBad5oRF6Foga/UsN69FnDq7B69l2BvXUQYvOeM5y2A9hZwd4tfq
+        lJuyLMe+PFZd4DEc02k9ArgxlnjU6xN5uiCnWwba1s7bQ/iNyiplVGgKjzxYE+cNZB3r0dME4KnP
+        uruLjzlvW0cF2W/Y/265Ss96bNjxgKaXRTCyxPWItb2y7vQKicSVDqNtMcFFg3KgDqvlnVR2BExG
+        U//p5m/a58mVqf9HfgCEQEcoC+dRKnE/8dDmMT6Bf7XdUu4Ns4D+WQksSKGPm5BY8U6f7yULPwJh
+        W1TK1OidV+fLWblit91scJ3uDks2OU1+AQAA//8DAFFf5O2rAwAA
+    headers:
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Nov 2025 23:01:06 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."},{"role":"assistant","content":"```\nThought:
+      I need to add 5 and 3 using the calculate_sum tool.\nAction: calculate_sum\nAction
+      Input: {\"a\": 5, \"b\": 3}\n```\nObservation: 8"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1298'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=EgGuO5hgnp06dK0YvjXSfnQgeEnicZKeNb2ArIOpoyY-1764198066-1.0.1.1-jvQ_vCOhpHIWpVRS05eJx9WTVcA55hbw8Jyv8IcsdmnsHaAIRr1qvQhsS1dduaPIAHMvbdK7MsU7gI.gu3nXi8A0eoUATyo5E9cyNMrAcf4;
+        _cfuvid=Df2VHLRwnlcPiknNSDOlKAm50W8V3YC3BdrRvxuFPdw-1764198066229-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA4xSwW7UMBC95yssnzdVsk3T3dwQAmlBICF6QWyVeJ1JYuqMjT2h0Gr/HTnZblIo
+        EhdLM2/e87yZeYwY46rmBeOyEyR7q+PX7Q4/06fh3Xd8+KI2sOs+0oftw82bVrxP+CowzOEbSHpi
+        XUjTWw2kDE6wdCAIgmp6nWfpdpPk+Qj0pgYdaK2lOLtI416hitfJ+ipOsjjNTvTOKAmeF+xrxBhj
+        j+MbGsUafvKCJaunTA/eixZ4cS5ijDujQ4YL75UngcRXMygNEuDYe1VVe7zpzNB2VLAdQ3PP7sJD
+        HbBGodBMoL8Ht8e3Y/RqjAq22WNVVUtVB83gRbCGg9YLQCAaEmE0o5/bE3I8O9Cmtc4c/B9U3ihU
+        visdCG8wdOvJWD6ix4ix23FSwzPz3DrTWyrJ3MH43XpzOenxeUMzmm5OIBkSes5fJunqBb2yBhJK
+        +8WsuRSyg3qmzosRQ63MAogWrv/u5iXtybnC9n/kZ0BKsAR1aR3USj53PJc5CAf8r7LzlMeGuQf3
+        Q0koSYELm6ihEYOeror7X56gLxuFLTjr1HRajS2313kOV9n2sObRMfoNAAD//wMAfN+hHWkDAAA=
+    headers:
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 26 Nov 2025 23:01:06 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+    status:
+      code: 200
+      message: OK
+version: 1

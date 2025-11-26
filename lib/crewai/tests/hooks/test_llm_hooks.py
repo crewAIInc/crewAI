@@ -309,3 +309,103 @@ class TestLLMHooksIntegration:
         clear_all_llm_call_hooks()
         hooks = get_before_llm_call_hooks()
         assert len(hooks) == 0
+
+    @pytest.mark.vcr()
+    def test_lite_agent_hooks_integration_with_real_llm(self):
+        """Test that LiteAgent executes before/after LLM call hooks and prints messages correctly."""
+        import os
+        from crewai.lite_agent import LiteAgent
+
+        # Skip if no API key available
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set - skipping real LLM test")
+
+        # Track hook invocations
+        hook_calls = {"before": [], "after": []}
+
+        def before_llm_call_hook(context: LLMCallHookContext) -> bool:
+            """Log and verify before hook execution."""
+            print(f"\n[BEFORE HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+            print(f"[BEFORE HOOK] Iterations: {context.iterations}")
+            print(f"[BEFORE HOOK] Message count: {len(context.messages)}")
+            print(f"[BEFORE HOOK] Messages: {context.messages}")
+
+            # Track the call
+            hook_calls["before"].append({
+                "iterations": context.iterations,
+                "message_count": len(context.messages),
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+            })
+
+            return True  # Allow execution
+
+        def after_llm_call_hook(context: LLMCallHookContext) -> str | None:
+            """Log and verify after hook execution."""
+            print(f"\n[AFTER HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+            print(f"[AFTER HOOK] Iterations: {context.iterations}")
+            print(f"[AFTER HOOK] Response: {context.response[:100] if context.response else 'None'}...")
+            print(f"[AFTER HOOK] Final message count: {len(context.messages)}")
+
+            # Track the call
+            hook_calls["after"].append({
+                "iterations": context.iterations,
+                "has_response": context.response is not None,
+                "response_length": len(context.response) if context.response else 0,
+            })
+
+            # Optionally modify response
+            if context.response:
+                return f"[HOOKED] {context.response}"
+            return None
+
+        # Register hooks
+        register_before_llm_call_hook(before_llm_call_hook)
+        register_after_llm_call_hook(after_llm_call_hook)
+
+        try:
+            # Create LiteAgent
+            lite_agent = LiteAgent(
+                role="Test Assistant",
+                goal="Answer questions briefly",
+                backstory="You are a helpful test assistant",
+                verbose=True,
+            )
+
+            # Verify hooks are loaded
+            assert len(lite_agent.before_llm_call_hooks) > 0, "Before hooks not loaded"
+            assert len(lite_agent.after_llm_call_hooks) > 0, "After hooks not loaded"
+
+            # Execute with a simple prompt
+            result = lite_agent.kickoff("Say 'Hello World' and nothing else")
+
+
+            # Verify hooks were called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+
+            # Verify context had correct attributes for LiteAgent (used in flows)
+            # LiteAgent doesn't have task/crew context, unlike agents in CrewBase
+            before_call = hook_calls["before"][0]
+            assert before_call["has_task"] is False, "Task should be None for LiteAgent in flows"
+            assert before_call["has_crew"] is False, "Crew should be None for LiteAgent in flows"
+            assert before_call["message_count"] > 0, "Should have messages"
+
+            # Verify after hook received response
+            after_call = hook_calls["after"][0]
+            assert after_call["has_response"] is True, "After hook should have response"
+            assert after_call["response_length"] > 0, "Response should not be empty"
+
+            # Verify response was modified by after hook
+            # Note: The hook modifies the raw LLM response, but LiteAgent then parses it
+            # to extract the "Final Answer" portion. We check the messages to see the modification.
+            assert len(result.messages) > 2, "Should have assistant message in messages"
+            last_message = result.messages[-1]
+            assert last_message["role"] == "assistant", "Last message should be from assistant"
+            assert "[HOOKED]" in last_message["content"], "Hook should have modified the assistant message"
+
+
+        finally:
+            # Clean up hooks
+            unregister_before_llm_call_hook(before_llm_call_hook)
+            unregister_after_llm_call_hook(after_llm_call_hook)
