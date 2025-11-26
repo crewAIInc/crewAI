@@ -1864,7 +1864,10 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
 @pytest.mark.vcr(filter_headers=["authorization"])
 def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, writer, ceo):
     """
-    Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools
+    Tests that async tasks in hierarchical crews are handled correctly with proper delegation tools.
+    
+    After fix for issue #3887, the manager should be able to delegate to ALL crew agents,
+    not just the task's assigned agent.
     """
     task = Task(
         description="Write one amazing paragraph about AI.",
@@ -1906,13 +1909,15 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
 
         # Verify the delegation tools were passed correctly
         assert len(tools) == 2
+        
+        # After fix for issue #3887, manager can delegate to ALL crew agents
         assert any(
-            "Delegate a specific task to one of the following coworkers: Senior Writer\n"
+            "Delegate a specific task to one of the following coworkers: Senior Writer, Researcher, CEO"
             in tool.description
             for tool in tools
         )
         assert any(
-            "Ask a specific question to one of the following coworkers: Senior Writer\n"
+            "Ask a specific question to one of the following coworkers: Senior Writer, Researcher, CEO"
             in tool.description
             for tool in tools
         )
@@ -4772,3 +4777,186 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     assert "Researcher" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
+
+
+def test_hierarchical_manager_can_delegate_to_crew_agents_issue_3887():
+    """
+    Test that reproduces and fixes issue #3887.
+    
+    When using hierarchical process with a custom manager_agent and tasks assigned
+    to that manager, the manager should be able to delegate to all agents in the
+    crew's agents list, not just the task's assigned agent.
+    
+    Bug scenario from issue #3887:
+    - Crew has agents=[planner]
+    - manager_agent=coordinator
+    - Task is assigned to coordinator (the manager)
+    - Manager tries to delegate to "planner"
+    - Before fix: Error "coworker mentioned not found, it must be one of the following options: - coordinator"
+    - After fix: Manager can successfully delegate to "planner"
+    """
+    # Create agents matching the bug report scenario
+    coordinator = Agent(
+        role="Coordinator",
+        goal="Coordinate the team to complete tasks",
+        backstory="You're a coordinator who delegates work to team members.",
+        allow_delegation=True,
+    )
+    
+    planner = Agent(
+        role="Planner",
+        goal="Create technical plans",
+        backstory="You're a planner who creates detailed technical plans.",
+        allow_delegation=False,
+    )
+    
+    # Create a task assigned to the coordinator (manager agent)
+    task = Task(
+        description="Create a technical plan for the project",
+        expected_output="A detailed technical plan",
+        agent=coordinator,
+    )
+    
+    # Create hierarchical crew with custom manager_agent
+    crew = Crew(
+        agents=[planner],  # Only planner in crew agents
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_agent=coordinator,  # Coordinator is the manager
+    )
+    
+    mock_task_output = TaskOutput(
+        description="Mock description", 
+        raw="mocked output", 
+        agent="mocked agent",
+        messages=[]
+    )
+    task.output = mock_task_output
+    
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        crew.kickoff()
+        
+        # Verify execute_sync was called
+        mock_execute_sync.assert_called_once()
+        
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+        
+        # Verify the delegation tools were passed correctly
+        # The manager should be able to delegate to "planner" (from crew.agents)
+        assert len(tools) == 2
+        
+        # Check that the delegation tool includes "Planner" as a coworker
+        delegation_tool = next(
+            (tool for tool in tools if "Delegate" in tool.name), None
+        )
+        assert delegation_tool is not None
+        assert "Planner" in delegation_tool.description, (
+            f"Expected 'Planner' in delegation tool description, "
+            f"but got: {delegation_tool.description}"
+        )
+        
+        # Verify the delegation tool has the planner agent in its agents list
+        assert hasattr(delegation_tool, "agents")
+        agent_roles = [agent.role for agent in delegation_tool.agents]
+        assert "Planner" in agent_roles, (
+            f"Expected 'Planner' in delegation tool agents, "
+            f"but got: {agent_roles}"
+        )
+        
+        # Verify that "Coordinator" is NOT in the coworkers list
+        # (manager should not delegate to itself)
+        assert "Coordinator" not in delegation_tool.description or (
+            "Coordinator" in delegation_tool.description and "Planner" in delegation_tool.description
+        ), "Manager should be able to delegate to crew agents"
+
+
+def test_hierarchical_manager_can_delegate_to_multiple_crew_agents():
+    """
+    Test that the manager can delegate to multiple crew agents.
+    
+    This extends the fix for issue #3887 to ensure it works with multiple agents.
+    """
+    # Create manager agent
+    manager = Agent(
+        role="Manager",
+        goal="Manage the team",
+        backstory="You're a manager who coordinates team members.",
+        allow_delegation=True,
+    )
+    
+    # Create multiple crew agents
+    researcher = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="You're a researcher.",
+        allow_delegation=False,
+    )
+    
+    writer = Agent(
+        role="Writer",
+        goal="Write content",
+        backstory="You're a writer.",
+        allow_delegation=False,
+    )
+    
+    analyst = Agent(
+        role="Analyst",
+        goal="Analyze data",
+        backstory="You're an analyst.",
+        allow_delegation=False,
+    )
+    
+    # Create a task assigned to the manager
+    task = Task(
+        description="Coordinate the team to complete the project",
+        expected_output="Project completed",
+        agent=manager,
+    )
+    
+    # Create hierarchical crew with multiple agents
+    crew = Crew(
+        agents=[researcher, writer, analyst],
+        tasks=[task],
+        process=Process.hierarchical,
+        manager_agent=manager,
+    )
+    
+    mock_task_output = TaskOutput(
+        description="Mock description",
+        raw="mocked output",
+        agent="mocked agent",
+        messages=[]
+    )
+    task.output = mock_task_output
+    
+    with patch.object(
+        Task, "execute_sync", return_value=mock_task_output
+    ) as mock_execute_sync:
+        crew.kickoff()
+        
+        # Get the tools argument from the call
+        _, kwargs = mock_execute_sync.call_args
+        tools = kwargs["tools"]
+        
+        # Find the delegation tool
+        delegation_tool = next(
+            (tool for tool in tools if "Delegate" in tool.name), None
+        )
+        assert delegation_tool is not None
+        
+        # Verify all crew agents are available for delegation
+        assert hasattr(delegation_tool, "agents")
+        agent_roles = [agent.role for agent in delegation_tool.agents]
+        
+        assert "Researcher" in agent_roles
+        assert "Writer" in agent_roles
+        assert "Analyst" in agent_roles
+        
+        # Verify all agents are mentioned in the description
+        assert "Researcher" in delegation_tool.description
+        assert "Writer" in delegation_tool.description
+        assert "Analyst" in delegation_tool.description
