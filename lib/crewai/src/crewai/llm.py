@@ -433,7 +433,7 @@ class LLM(BaseLLM):
                 model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
             )
 
-        if provider == "gemini":
+        if provider == "gemini" or provider == "google":
             return any(
                 model_lower.startswith(prefix)
                 for prefix in ["gemini-", "gemma-", "learnlm-"]
@@ -473,7 +473,7 @@ class LLM(BaseLLM):
         ) and model in ANTHROPIC_MODELS:
             return True
 
-        if provider == "gemini" and model in GEMINI_MODELS:
+        if (provider == "gemini" or provider == "google") and model in GEMINI_MODELS:
             return True
 
         if provider == "bedrock" and model in BEDROCK_MODELS:
@@ -515,21 +515,6 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
-        # Fallback to pattern matching for models not in constants
-        model_lower = model.lower()
-
-        # Check Azure-specific patterns first (gpt-35- prefix is Azure-specific)
-        if model_lower.startswith(("gpt-35-", "azure-")):
-            return "azure"
-
-        # Check other providers in order of specificity (most specific first)
-        # Note: OpenAI is checked before Azure to avoid Azure matching general "gpt-" patterns
-        providers_to_check = ["bedrock", "anthropic", "gemini", "openai", "azure"]
-        for provider in providers_to_check:
-            if cls._matches_provider_pattern(model, provider):
-                return provider
-
-        # Default to OpenAI if no pattern matches (backward compatibility)
         return "openai"
 
     @classmethod
