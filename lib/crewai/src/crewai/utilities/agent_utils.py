@@ -438,7 +438,8 @@ def is_null_response_because_context_length_exceeded(
     Returns:
         bool: True if the exception is due to context length exceeding
     """
-    return True
+    if isinstance(exception, ValueError) and "None or empty" in str(exception):
+        return True
     messages_string = " ".join([message["content"] for message in messages])
     cut_size = llm.get_context_window_size()
 
