@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -496,7 +497,7 @@ class GeminiCompletion(BaseLLM):
             if hasattr(chunk, "candidates") and chunk.candidates:
                 candidate = chunk.candidates[0]
                 if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
+                    for part_index, part in enumerate(candidate.content.parts):
                         if hasattr(part, "function_call") and part.function_call:
                             call_id = part.function_call.name or "default"
                             if call_id not in function_calls:
@@ -505,7 +506,26 @@ class GeminiCompletion(BaseLLM):
                                     "args": dict(part.function_call.args)
                                     if part.function_call.args
                                     else {},
+                                    "index": part_index,
                                 }
+
+                            # Emit tool call streaming event
+                            args_str = json.dumps(function_calls[call_id]["args"]) if function_calls[call_id]["args"] else ""
+                            tool_call_event_data = {
+                                "id": call_id,
+                                "function": {
+                                    "name": function_calls[call_id]["name"],
+                                    "arguments": args_str,
+                                },
+                                "type": "function",
+                                "index": function_calls[call_id]["index"],
+                            }
+                            self._emit_stream_chunk_event(
+                                chunk=args_str,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call=tool_call_event_data,
+                            )
 
         # Handle completed function calls
         if function_calls and available_functions:

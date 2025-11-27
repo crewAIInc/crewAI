@@ -567,11 +567,30 @@ class BedrockCompletion(BaseLLM):
 
                     elif "contentBlockStart" in event:
                         start = event["contentBlockStart"].get("start", {})
+                        block_index = event["contentBlockStart"].get("contentBlockIndex", 0)
                         if "toolUse" in start:
                             current_tool_use = start["toolUse"]
+                            current_tool_use["_block_index"] = block_index
+                            current_tool_use["_accumulated_input"] = ""
                             tool_use_id = current_tool_use.get("toolUseId")
                             logging.debug(
                                 f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
+                            )
+                            # Emit tool call start event
+                            tool_call_event_data = {
+                                "id": tool_use_id,
+                                "function": {
+                                    "name": current_tool_use.get("name", ""),
+                                    "arguments": "",
+                                },
+                                "type": "function",
+                                "index": block_index,
+                            }
+                            self._emit_stream_chunk_event(
+                                chunk="",
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call=tool_call_event_data,
                             )
 
                     elif "contentBlockDelta" in event:
@@ -589,6 +608,23 @@ class BedrockCompletion(BaseLLM):
                             tool_input = delta["toolUse"].get("input", "")
                             if tool_input:
                                 logging.debug(f"Tool input delta: {tool_input}")
+                                current_tool_use["_accumulated_input"] += tool_input
+                                # Emit tool call delta event
+                                tool_call_event_data = {
+                                    "id": current_tool_use.get("toolUseId"),
+                                    "function": {
+                                        "name": current_tool_use.get("name", ""),
+                                        "arguments": tool_input,
+                                    },
+                                    "type": "function",
+                                    "index": current_tool_use.get("_block_index", 0),
+                                }
+                                self._emit_stream_chunk_event(
+                                    chunk=tool_input,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                    tool_call=tool_call_event_data,
+                                )
 
                     # Content block stop - end of a content block
                     elif "contentBlockStop" in event:

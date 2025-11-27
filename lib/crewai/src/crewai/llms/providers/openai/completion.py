@@ -510,14 +510,33 @@ class OpenAICompletion(BaseLLM):
                     call_id = tool_call.id or "default"
                     if call_id not in tool_calls:
                         tool_calls[call_id] = {
+                            "id": call_id,
                             "name": "",
                             "arguments": "",
+                            "index": tool_call.index if tool_call.index is not None else 0,
                         }
 
                     if tool_call.function and tool_call.function.name:
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+                    # Emit tool call streaming event
+                    tool_call_event_data = {
+                        "id": tool_calls[call_id]["id"],
+                        "function": {
+                            "name": tool_calls[call_id]["name"],
+                            "arguments": tool_call.function.arguments if tool_call.function and tool_call.function.arguments else "",
+                        },
+                        "type": "function",
+                        "index": tool_calls[call_id]["index"],
+                    }
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments if tool_call.function and tool_call.function.arguments else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call=tool_call_event_data,
+                    )
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():

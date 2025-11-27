@@ -450,9 +450,14 @@ class AnthropicCompletion(BaseLLM):
         # (the SDK sets it internally)
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        # Track tool use blocks during streaming
+        current_tool_use: dict[str, Any] = {}
+        tool_use_index = 0
+
         # Make streaming API call
         with self.client.messages.stream(**stream_params) as stream:
             for event in stream:
+                # Handle text content
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -461,6 +466,55 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+                # Handle tool use start (content_block_start event with tool_use type)
+                if hasattr(event, "content_block") and hasattr(event.content_block, "type"):
+                    if event.content_block.type == "tool_use":
+                        current_tool_use = {
+                            "id": getattr(event.content_block, "id", None),
+                            "name": getattr(event.content_block, "name", ""),
+                            "input": "",
+                            "index": tool_use_index,
+                        }
+                        tool_use_index += 1
+                        # Emit tool call start event
+                        tool_call_event_data = {
+                            "id": current_tool_use["id"],
+                            "function": {
+                                "name": current_tool_use["name"],
+                                "arguments": "",
+                            },
+                            "type": "function",
+                            "index": current_tool_use["index"],
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk="",
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call=tool_call_event_data,
+                        )
+
+                # Handle tool use input delta (input_json events)
+                if hasattr(event, "delta") and hasattr(event.delta, "partial_json"):
+                    partial_json = event.delta.partial_json
+                    if current_tool_use and partial_json:
+                        current_tool_use["input"] += partial_json
+                        # Emit tool call delta event
+                        tool_call_event_data = {
+                            "id": current_tool_use["id"],
+                            "function": {
+                                "name": current_tool_use["name"],
+                                "arguments": partial_json,
+                            },
+                            "type": "function",
+                            "index": current_tool_use["index"],
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk=partial_json,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call=tool_call_event_data,
+                        )
 
             final_message: Message = stream.get_final_message()
 

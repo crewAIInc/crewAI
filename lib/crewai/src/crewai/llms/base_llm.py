@@ -316,10 +316,32 @@ class BaseLLM(ABC):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
+        call_type: LLMCallType | None = None,
     ) -> None:
-        """Emit stream chunk event."""
+        """Emit stream chunk event.
+
+        Args:
+            chunk: The text content of the chunk
+            from_task: Optional task that initiated the call
+            from_agent: Optional agent that initiated the call
+            tool_call: Optional tool call information as a dict with keys:
+                - id: Tool call ID
+                - function: Dict with 'name' and 'arguments'
+                - type: Tool call type (e.g., 'function')
+                - index: Index of the tool call
+            call_type: Optional call type. If not provided, it will be inferred
+                from the presence of tool_call (TOOL_CALL if tool_call is present,
+                LLM_CALL otherwise)
+        """
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
+
+        # Infer call_type from tool_call presence if not explicitly provided
+        effective_call_type = call_type
+        if effective_call_type is None:
+            effective_call_type = (
+                LLMCallType.TOOL_CALL if tool_call is not None else LLMCallType.LLM_CALL
+            )
 
         crewai_event_bus.emit(
             self,
@@ -328,6 +350,7 @@ class BaseLLM(ABC):
                 tool_call=tool_call,
                 from_task=from_task,
                 from_agent=from_agent,
+                call_type=effective_call_type,
             ),
         )
 
