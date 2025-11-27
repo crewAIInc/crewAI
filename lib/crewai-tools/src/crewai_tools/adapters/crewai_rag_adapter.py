@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict, cast
+from typing import TYPE_CHECKING, Any, cast
 import uuid
 
 from crewai.rag.config.types import RagConfigType
@@ -19,13 +18,11 @@ from typing_extensions import TypeIs, Unpack
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.rag.misc import sanitize_metadata_for_chromadb
 from crewai_tools.tools.rag.rag_tool import Adapter
+from crewai_tools.tools.rag.types import AddDocumentParams, ContentItem
 
 
 if TYPE_CHECKING:
     from crewai.rag.qdrant.config import QdrantConfig
-
-
-ContentItem: TypeAlias = str | Path | dict[str, Any]
 
 
 def _is_qdrant_config(config: Any) -> TypeIs[QdrantConfig]:
@@ -44,19 +41,6 @@ def _is_qdrant_config(config: Any) -> TypeIs[QdrantConfig]:
         return cast(bool, config.provider == "qdrant")  # type: ignore[attr-defined]
     except (AttributeError, ImportError):
         return False
-
-
-class AddDocumentParams(TypedDict, total=False):
-    """Parameters for adding documents to the RAG system."""
-
-    data_type: DataType
-    metadata: dict[str, Any]
-    website: str
-    url: str
-    file_path: str | Path
-    github_url: str
-    youtube_url: str
-    directory_path: str | Path
 
 
 class CrewAIRagAdapter(Adapter):
@@ -131,13 +115,26 @@ class CrewAIRagAdapter(Adapter):
     def add(self, *args: ContentItem, **kwargs: Unpack[AddDocumentParams]) -> None:
         """Add content to the knowledge base.
 
-        This method handles various input types and converts them to documents
-        for the vector database. It supports the data_type parameter for
-        compatibility with existing tools.
-
         Args:
             *args: Content items to add (strings, paths, or document dicts)
-            **kwargs: Additional parameters including data_type, metadata, etc.
+            **kwargs: Additional parameters including:
+                - data_type: DataType enum or string (e.g., "file", "pdf_file", "text")
+                - path: Path to file or directory (alternative to positional arg)
+                - file_path: Alias for path
+                - metadata: Additional metadata to attach to documents
+                - url: URL to fetch content from
+                - website: Website URL to scrape
+                - github_url: GitHub repository URL
+                - youtube_url: YouTube video URL
+                - directory_path: Path to directory
+
+        Examples:
+            rag_tool.add("path/to/document.pdf", data_type=DataType.PDF_FILE)
+
+            rag_tool.add(path="path/to/document.pdf", data_type="file")
+            rag_tool.add(file_path="path/to/document.pdf", data_type="pdf_file")
+
+            rag_tool.add("path/to/document.pdf")  # auto-detects PDF
         """
         import os
 
@@ -146,10 +143,54 @@ class CrewAIRagAdapter(Adapter):
         from crewai_tools.rag.source_content import SourceContent
 
         documents: list[BaseRecord] = []
-        data_type: DataType | None = kwargs.get("data_type")
+        raw_data_type = kwargs.get("data_type")
         base_metadata: dict[str, Any] = kwargs.get("metadata", {})
 
-        for arg in args:
+        data_type: DataType | None = None
+        if raw_data_type is not None:
+            if isinstance(raw_data_type, DataType):
+                if raw_data_type != DataType.FILE:
+                    data_type = raw_data_type
+            elif isinstance(raw_data_type, str):
+                if raw_data_type != "file":
+                    try:
+                        data_type = DataType(raw_data_type)
+                    except ValueError:
+                        raise ValueError(
+                            f"Invalid data_type: '{raw_data_type}'. "
+                            f"Valid values are: 'file' (auto-detect), or one of: "
+                            f"{', '.join(dt.value for dt in DataType)}"
+                        ) from None
+
+        content_items: list[ContentItem] = list(args)
+
+        path_value = kwargs.get("path") or kwargs.get("file_path")
+        if path_value is not None:
+            content_items.append(path_value)
+
+        if url := kwargs.get("url"):
+            content_items.append(url)
+        if website := kwargs.get("website"):
+            content_items.append(website)
+        if github_url := kwargs.get("github_url"):
+            content_items.append(github_url)
+        if youtube_url := kwargs.get("youtube_url"):
+            content_items.append(youtube_url)
+        if directory_path := kwargs.get("directory_path"):
+            content_items.append(directory_path)
+
+        file_extensions = {
+            ".pdf",
+            ".txt",
+            ".csv",
+            ".json",
+            ".xml",
+            ".docx",
+            ".mdx",
+            ".md",
+        }
+
+        for arg in content_items:
             source_ref: str
             if isinstance(arg, dict):
                 source_ref = str(arg.get("source", arg.get("content", "")))
@@ -157,6 +198,9 @@ class CrewAIRagAdapter(Adapter):
                 source_ref = str(arg)
 
             if not data_type:
+                ext = os.path.splitext(source_ref)[1].lower()
+                if ext in file_extensions and not os.path.isfile(source_ref):
+                    raise FileNotFoundError(f"File does not exist: {source_ref}")
                 data_type = DataTypes.from_content(source_ref)
 
             if data_type == DataType.DIRECTORY:
