@@ -208,6 +208,9 @@ class AzureCompletion(BaseLLM):
             # Format messages for Azure
             formatted_messages = self._format_messages_for_azure(messages)
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
                 formatted_messages, tools, response_model
@@ -311,8 +314,8 @@ class AzureCompletion(BaseLLM):
             params["tool_choice"] = "auto"
 
         additional_params = self.additional_params
-        additional_drop_params = additional_params.get('additional_drop_params')
-        drop_params = additional_params.get('drop_params')
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
 
         if drop_params and isinstance(additional_drop_params, list):
             for drop_param in additional_drop_params:
@@ -457,6 +460,10 @@ class AzureCompletion(BaseLLM):
                 messages=params["messages"],
             )
 
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
+
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
@@ -549,7 +556,9 @@ class AzureCompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""

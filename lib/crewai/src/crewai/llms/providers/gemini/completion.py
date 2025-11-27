@@ -102,7 +102,9 @@ class GeminiCompletion(BaseLLM):
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
-        self.supports_tools = bool(version_match and float(version_match.group(1)) >= 1.5)
+        self.supports_tools = bool(
+            version_match and float(version_match.group(1)) >= 1.5
+        )
 
     @property
     def stop(self) -> list[str]:
@@ -237,6 +239,11 @@ class GeminiCompletion(BaseLLM):
             formatted_content, system_instruction = self._format_messages_for_gemini(
                 messages
             )
+
+            messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+
+            if not self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
 
             config = self._prepare_generation_config(
                 system_instruction, tools, response_model
@@ -463,7 +470,9 @@ class GeminiCompletion(BaseLLM):
             messages=messages_for_event,
         )
 
-        return content
+        return self._invoke_after_llm_call_hooks(
+            messages_for_event, content, from_agent
+        )
 
     def _handle_streaming_completion(  # type: ignore[no-any-unimported]
         self,
@@ -535,7 +544,9 @@ class GeminiCompletion(BaseLLM):
             messages=messages_for_event,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            messages_for_event, full_response, from_agent
+        )
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -598,18 +609,16 @@ class GeminiCompletion(BaseLLM):
     def _convert_contents_to_dict(  # type: ignore[no-any-unimported]
         self,
         contents: list[types.Content],
-    ) -> list[dict[str, str]]:
+    ) -> list[LLMMessage]:
         """Convert contents to dict format."""
         return [
-            {
-                "role": "assistant"
-                if content_obj.role == "model"
-                else content_obj.role,
-                "content": " ".join(
+            LLMMessage(
+                role=content_obj.role,
+                content=" ".join(
                     part.text
                     for part in content_obj.parts
                     if hasattr(part, "text") and part.text
                 ),
-            }
+            )
             for content_obj in contents
         ]

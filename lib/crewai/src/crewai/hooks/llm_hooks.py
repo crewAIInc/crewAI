@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
@@ -10,17 +10,21 @@ from crewai.utilities.printer import Printer
 if TYPE_CHECKING:
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
     from crewai.lite_agent import LiteAgent
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.utilities.types import LLMMessage
 
 
 class LLMCallHookContext:
-    """Context object passed to LLM call hooks with full executor access.
+    """Context object passed to LLM call hooks.
 
-    Provides hooks with complete access to the executor state, allowing
+    Provides hooks with complete access to the execution state, allowing
     modification of messages, responses, and executor attributes.
 
+    Supports both executor-based calls (agents in crews/flows) and direct LLM calls.
+
     Attributes:
-        executor: Full reference to the CrewAgentExecutor instance
-        messages: Direct reference to executor.messages (mutable list).
+        executor: Reference to the executor (CrewAgentExecutor/LiteAgent) or None for direct calls
+        messages: Direct reference to messages (mutable list).
             Can be modified in both before_llm_call and after_llm_call hooks.
             Modifications in after_llm_call hooks persist to the next iteration,
             allowing hooks to modify conversation history for subsequent LLM calls.
@@ -28,45 +32,76 @@ class LLMCallHookContext:
             Do NOT replace the list (e.g., context.messages = []), as this will break
             the executor. Use context.messages.append() or context.messages.extend()
             instead of assignment.
-        agent: Reference to the agent executing the task
-        task: Reference to the task being executed
-        crew: Reference to the crew instance
+        agent: Reference to the agent executing the task (None for direct LLM calls)
+        task: Reference to the task being executed (None for direct LLM calls or LiteAgent)
+        crew: Reference to the crew instance (None for direct LLM calls or LiteAgent)
         llm: Reference to the LLM instance
-        iterations: Current iteration count
+        iterations: Current iteration count (0 for direct LLM calls)
         response: LLM response string (only set for after_llm_call hooks).
             Can be modified by returning a new string from after_llm_call hook.
     """
 
+    executor: CrewAgentExecutor | LiteAgent | None
+    messages: list[LLMMessage]
+    agent: Any
+    task: Any
+    crew: Any
+    llm: BaseLLM | None | str | Any
+    iterations: int
+    response: str | None
+
     def __init__(
         self,
-        executor: CrewAgentExecutor | LiteAgent,
+        executor: CrewAgentExecutor | LiteAgent | None = None,
         response: str | None = None,
+        messages: list[LLMMessage] | None = None,
+        llm: BaseLLM | str | Any | None = None,  # TODO: look into
+        agent: Any | None = None,
+        task: Any | None = None,
+        crew: Any | None = None,
     ) -> None:
-        """Initialize hook context with executor reference.
+        """Initialize hook context with executor reference or direct parameters.
 
         Args:
-            executor: The CrewAgentExecutor instance
+            executor: The CrewAgentExecutor or LiteAgent instance (None for direct LLM calls)
             response: Optional response string (for after_llm_call hooks)
+            messages: Optional messages list (for direct LLM calls when executor is None)
+            llm: Optional LLM instance (for direct LLM calls when executor is None)
+            agent: Optional agent reference (for direct LLM calls when executor is None)
+            task: Optional task reference (for direct LLM calls when executor is None)
+            crew: Optional crew reference (for direct LLM calls when executor is None)
         """
-        self.executor = executor
-        self.messages = executor.messages
-        self.llm = executor.llm
-        self.iterations = executor.iterations
-        self.response = response
-
-        # CrewAgentExecutor
-        if hasattr(executor, "agent"):
-            self.agent = executor.agent
-            agent_executor = cast(CrewAgentExecutor, executor)
-            self.task = agent_executor.task
-            self.crew = agent_executor.crew
+        if executor is not None:
+            # Existing path: extract from executor
+            self.executor = executor
+            self.messages = executor.messages
+            self.llm = executor.llm
+            self.iterations = executor.iterations
+            # Handle CrewAgentExecutor vs LiteAgent differences
+            if hasattr(executor, "agent"):
+                self.agent = executor.agent
+                self.task = cast("CrewAgentExecutor", executor).task
+                self.crew = cast("CrewAgentExecutor", executor).crew
+            else:
+                # LiteAgent case - is the agent itself, doesn't have task/crew
+                self.agent = (
+                    executor.original_agent
+                    if hasattr(executor, "original_agent")
+                    else executor
+                )
+                self.task = None
+                self.crew = None
         else:
-            # LiteAgent case
-            self.agent = (
-                executor.original_agent
-                if hasattr(executor, "original_agent")
-                else executor
-            )
+            # New path: direct LLM call with explicit parameters
+            self.executor = None
+            self.messages = messages or []
+            self.llm = llm
+            self.agent = agent
+            self.task = task
+            self.crew = crew
+            self.iterations = 0
+
+        self.response = response
 
     def request_human_input(
         self,
