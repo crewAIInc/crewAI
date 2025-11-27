@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -21,12 +22,12 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     file_paths: Path | list[Path] | str | list[str] | None = Field(
         default_factory=list, description="The path to the file"
     )
-    chunks: list[str] = Field(default_factory=list)
+    chunks: list[dict[str, Any]] = Field(default_factory=list)
     content: dict[Path, dict[str, str]] = Field(default_factory=dict)
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
-    def validate_file_path(cls, v, info):  # noqa: N805
+    def validate_file_path(cls, v: Any, info: Any) -> Any:  # noqa: N805
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
         if (
@@ -69,7 +70,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
         return [self.convert_to_path(path) for path in path_list]
 
-    def validate_content(self):
+    def validate_content(self) -> None:
         """Validate the paths."""
         for path in self.safe_file_paths:
             if not path.exists():
@@ -86,7 +87,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
                     color="red",
                 )
 
-    def model_post_init(self, _) -> None:
+    def model_post_init(self, __context: Any) -> None:
         if self.file_path:
             self._logger.log(
                 "warning",
@@ -128,10 +129,10 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
 
-    def _import_dependencies(self):
+    def _import_dependencies(self) -> Any:
         """Dynamically import dependencies."""
         try:
-            import pandas as pd  # type: ignore[import-untyped,import-not-found]
+            import pandas as pd  # type: ignore[import-untyped]
 
             return pd
         except ImportError as e:
@@ -142,21 +143,25 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add Excel file content to the knowledge source, chunk it, compute embeddings,
-        and save the embeddings.
+        Add Excel file content to the knowledge source, chunk it per sheet,
+        attach filepath & sheet metadata, and persist via the configured storage.
         """
-        # Convert dictionary values to a single string if content is a dictionary
-        # Updated to account for .xlsx workbooks with multiple tabs/sheets
-        content_str = ""
-        for value in self.content.values():
-            if isinstance(value, dict):
-                for sheet_value in value.values():
-                    content_str += str(sheet_value) + "\n"
-            else:
-                content_str += str(value) + "\n"
-
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
+        for filepath, sheets in self.content.items():
+            for sheet_name, sheet_csv_str in sheets.items():
+                chunk_idx = 0
+                for chunk in self._chunk_text(sheet_csv_str):
+                    self.chunks.append(
+                        {
+                            "content": chunk,
+                            "metadata": {
+                                "filepath": str(filepath),
+                                "sheet_name": str(sheet_name),
+                                "chunk_index": chunk_idx,
+                                "source_type": "excel",
+                            },
+                        }
+                    )
+                    chunk_idx += 1
         self._save_documents()
 
     def _chunk_text(self, text: str) -> list[str]:

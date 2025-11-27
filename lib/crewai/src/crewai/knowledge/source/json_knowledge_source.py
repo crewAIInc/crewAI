@@ -34,15 +34,24 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
 
     def add(self) -> None:
         """
-        Add JSON file content to the knowledge source, chunk it, compute embeddings,
-        and save the embeddings.
+        Add JSON file content to the knowledge source, chunk it per file,
+        attach filepath metadata, and persist via the configured storage.
         """
-        content_str = (
-            str(self.content) if isinstance(self.content, dict) else self.content
-        )
-        new_chunks = self._chunk_text(content_str)
-        self.chunks.extend(new_chunks)
-        self._save_documents()
+        for filepath, text in self.content.items():
+            chunk_idx = 0
+            for chunk in self._chunk_text(text):
+                self.chunks.append(
+                    {
+                        "content": chunk,
+                        "metadata": {
+                            "filepath": str(filepath),
+                            "chunk_index": chunk_idx,
+                            "source_type": "json",
+                        },
+                    }
+                )
+                chunk_idx += 1
+        self._save_documents()  # type: ignore[no-untyped-call]
 
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
