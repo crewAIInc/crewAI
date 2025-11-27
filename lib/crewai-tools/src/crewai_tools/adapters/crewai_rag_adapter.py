@@ -199,7 +199,12 @@ class CrewAIRagAdapter(Adapter):
 
             if not data_type:
                 ext = os.path.splitext(source_ref)[1].lower()
-                if ext in file_extensions and not os.path.isfile(source_ref):
+                is_url = source_ref.startswith(("http://", "https://", "file://"))
+                if (
+                    ext in file_extensions
+                    and not is_url
+                    and not os.path.isfile(source_ref)
+                ):
                     raise FileNotFoundError(f"File does not exist: {source_ref}")
                 data_type = DataTypes.from_content(source_ref)
 
