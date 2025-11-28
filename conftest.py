@@ -44,6 +44,10 @@ def setup_test_environment() -> Generator[None, Any, None]:
         finally:
             os.environ.pop("CREWAI_TESTING", None)
             os.environ.pop("CREWAI_STORAGE_DIR", None)
+            os.environ.pop("CREWAI_DISABLE_TELEMETRY", None)
+            os.environ.pop("OTEL_SDK_DISABLED", None)
+            os.environ.pop("OPENAI_BASE_URL", None)
+            os.environ.pop("OPENAI_API_BASE", None)
 
 
 HEADERS_TO_FILTER = {

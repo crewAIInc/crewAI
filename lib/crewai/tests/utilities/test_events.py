@@ -881,7 +881,6 @@ def test_llm_emits_call_started_event():
 
 
 @pytest.mark.vcr()
-@pytest.mark.isolated
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
