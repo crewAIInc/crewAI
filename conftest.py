@@ -8,6 +8,7 @@ from typing import Any
 
 from dotenv import load_dotenv
 import pytest
+from vcr.request import Request  # type: ignore[import-untyped]
 
 
 env_test_path = Path(__file__).parent / ".env.test"
@@ -82,12 +83,12 @@ HEADERS_TO_FILTER = {
 }
 
 
-def _filter_request_headers(request: dict[str, Any]) -> dict[str, Any]:
+def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any-unimported]
     """Filter sensitive headers from request before recording."""
     for header_name, replacement in HEADERS_TO_FILTER.items():
         for variant in [header_name, header_name.upper(), header_name.title()]:
-            if variant in request["headers"]:
-                request["headers"][variant] = [replacement]
+            if variant in request.headers:
+                request.headers[variant] = [replacement]
     return request
 
 
