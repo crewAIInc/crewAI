@@ -568,6 +568,13 @@ class OpenAICompletion(BaseLLM):
         """Check if the model supports function calling."""
         return not self.is_o1_model
 
+    def supports_response_model(self) -> bool:
+        """Check if the model supports structured outputs via response_model.
+
+        OpenAI models support structured outputs via the beta.chat.completions.parse API.
+        """
+        return not self.is_o1_model
+
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return not self.is_o1_model

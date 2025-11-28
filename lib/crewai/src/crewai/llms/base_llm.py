@@ -179,6 +179,18 @@ class BaseLLM(ABC):
         """
         return DEFAULT_SUPPORTS_STOP_WORDS
 
+    def supports_response_model(self) -> bool:
+        """Check if the LLM supports structured outputs via response_model.
+
+        This is separate from supports_function_calling() because some providers
+        (like Azure AI Inference) support function/tool calling but do not support
+        the json_schema response_format required for structured outputs.
+
+        Returns:
+            True if the LLM supports structured outputs via response_model, False otherwise.
+        """
+        return False
+
     def _supports_stop_words_implementation(self) -> bool:
         """Check if stop words are configured for this LLM instance.
 

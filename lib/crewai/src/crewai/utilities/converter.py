@@ -25,6 +25,40 @@ _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
 _I18N = get_i18n()
 
 
+def _llm_supports_response_model(llm: BaseLLM | LLM | Any) -> bool:
+    """Check if the LLM supports structured outputs via response_model.
+
+    This helper function checks for the new supports_response_model() method first,
+    then falls back to supports_function_calling() for backwards compatibility with
+    custom LLM implementations that haven't been updated yet.
+
+    Args:
+        llm: The language model instance.
+
+    Returns:
+        True if the LLM supports structured outputs via response_model, False otherwise.
+    """
+    if llm is None or isinstance(llm, str):
+        return False
+
+    # Check for the new supports_response_model method first
+    if hasattr(llm, "supports_response_model"):
+        try:
+            return llm.supports_response_model()
+        except TypeError:
+            return False
+
+    # Backwards compatibility: fall back to supports_function_calling
+    # for custom LLMs that haven't implemented supports_response_model yet
+    if hasattr(llm, "supports_function_calling"):
+        try:
+            return llm.supports_function_calling()
+        except TypeError:
+            return False
+
+    return False
+
+
 class ConverterError(Exception):
     """Error raised when Converter fails to parse the input."""
 
@@ -55,7 +89,7 @@ class Converter(OutputConverter):
             ConverterError: If conversion fails after maximum attempts.
         """
         try:
-            if self.llm.supports_function_calling():
+            if _llm_supports_response_model(self.llm):
                 response = self.llm.call(
                     messages=[
                         {"role": "system", "content": self.instructions},
@@ -125,7 +159,7 @@ class Converter(OutputConverter):
 
         """
         try:
-            if self.llm.supports_function_calling():
+            if _llm_supports_response_model(self.llm):
                 return self._create_instructor().to_json()
             return json.dumps(
                 self.llm.call(
@@ -346,12 +380,7 @@ def get_conversion_instructions(
 
     """
     instructions = ""
-    if (
-        llm
-        and not isinstance(llm, str)
-        and hasattr(llm, "supports_function_calling")
-        and llm.supports_function_calling()
-    ):
+    if _llm_supports_response_model(llm):
         schema_dict = generate_model_description(model)
         schema = json.dumps(schema_dict, indent=2)
         formatted_task_instructions = _I18N.slice("formatted_task_instructions").format(

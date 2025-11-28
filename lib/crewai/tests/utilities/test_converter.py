@@ -960,3 +960,144 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# Tests for _llm_supports_response_model helper function
+# These tests cover GitHub issue #3986: Azure API doesn't support json_schema response_format
+from crewai.utilities.converter import _llm_supports_response_model
+
+
+def test_llm_supports_response_model_with_none() -> None:
+    """Test _llm_supports_response_model returns False for None."""
+    assert _llm_supports_response_model(None) is False
+
+
+def test_llm_supports_response_model_with_string() -> None:
+    """Test _llm_supports_response_model returns False for string LLM."""
+    assert _llm_supports_response_model("gpt-4o") is False
+
+
+def test_llm_supports_response_model_with_supports_response_model_true() -> None:
+    """Test _llm_supports_response_model returns True when supports_response_model() returns True."""
+    mock_llm = Mock()
+    mock_llm.supports_response_model.return_value = True
+    assert _llm_supports_response_model(mock_llm) is True
+
+
+def test_llm_supports_response_model_with_supports_response_model_false() -> None:
+    """Test _llm_supports_response_model returns False when supports_response_model() returns False."""
+    mock_llm = Mock()
+    mock_llm.supports_response_model.return_value = False
+    assert _llm_supports_response_model(mock_llm) is False
+
+
+def test_llm_supports_response_model_fallback_to_function_calling_true() -> None:
+    """Test _llm_supports_response_model falls back to supports_function_calling() when supports_response_model doesn't exist."""
+    mock_llm = Mock(spec=['supports_function_calling'])
+    mock_llm.supports_function_calling.return_value = True
+    assert _llm_supports_response_model(mock_llm) is True
+
+
+def test_llm_supports_response_model_fallback_to_function_calling_false() -> None:
+    """Test _llm_supports_response_model falls back to supports_function_calling() when supports_response_model doesn't exist."""
+    mock_llm = Mock(spec=['supports_function_calling'])
+    mock_llm.supports_function_calling.return_value = False
+    assert _llm_supports_response_model(mock_llm) is False
+
+
+def test_llm_supports_response_model_no_methods() -> None:
+    """Test _llm_supports_response_model returns False when LLM has neither method."""
+    mock_llm = Mock(spec=[])
+    assert _llm_supports_response_model(mock_llm) is False
+
+
+def test_llm_supports_response_model_azure_provider() -> None:
+    """Test that Azure provider returns False for supports_response_model.
+
+    This is the core fix for GitHub issue #3986: Azure AI Inference SDK doesn't
+    support json_schema response_format, so we need to use the text-based fallback.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Create a mock Azure completion instance
+    azure_llm = Mock(spec=AzureCompletion)
+    azure_llm.supports_response_model.return_value = False
+    azure_llm.supports_function_calling.return_value = True
+
+    # Azure should return False for supports_response_model even though it supports function calling
+    assert azure_llm.supports_response_model() is False
+    assert azure_llm.supports_function_calling() is True
+
+
+def test_converter_uses_text_fallback_for_azure() -> None:
+    """Test that Converter uses text-based fallback when LLM doesn't support response_model.
+
+    This verifies the fix for GitHub issue #3986: when using Azure AI Inference SDK,
+    the Converter should NOT pass response_model to the LLM call, but instead use
+    the text-based JSON extraction fallback.
+    """
+    # Mock Azure-like LLM that supports function calling but NOT response_model
+    mock_llm = Mock()
+    mock_llm.supports_response_model.return_value = False
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = '{"name": "Azure Test", "age": 42}'
+
+    instructions = get_conversion_instructions(SimpleModel, mock_llm)
+    converter = Converter(
+        llm=mock_llm,
+        text="Name: Azure Test, Age: 42",
+        model=SimpleModel,
+        instructions=instructions,
+    )
+
+    output = converter.to_pydantic()
+
+    # Verify the output is correct
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Azure Test"
+    assert output.age == 42
+
+    # Verify that call was made WITHOUT response_model parameter
+    # (text-based fallback path)
+    mock_llm.call.assert_called_once()
+    call_args = mock_llm.call.call_args
+    # The text-based fallback passes messages as a list, not as keyword argument
+    assert call_args[0][0] == [
+        {"role": "system", "content": instructions},
+        {"role": "user", "content": "Name: Azure Test, Age: 42"},
+    ]
+    # Verify response_model was NOT passed
+    assert "response_model" not in call_args[1] if call_args[1] else True
+
+
+def test_converter_uses_response_model_for_openai() -> None:
+    """Test that Converter uses response_model when LLM supports it.
+
+    This verifies that OpenAI and other providers that support structured outputs
+    still use the response_model path for better performance.
+    """
+    # Mock OpenAI-like LLM that supports both function calling AND response_model
+    mock_llm = Mock()
+    mock_llm.supports_response_model.return_value = True
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = '{"name": "OpenAI Test", "age": 35}'
+
+    instructions = get_conversion_instructions(SimpleModel, mock_llm)
+    converter = Converter(
+        llm=mock_llm,
+        text="Name: OpenAI Test, Age: 35",
+        model=SimpleModel,
+        instructions=instructions,
+    )
+
+    output = converter.to_pydantic()
+
+    # Verify the output is correct
+    assert isinstance(output, SimpleModel)
+    assert output.name == "OpenAI Test"
+    assert output.age == 35
+
+    # Verify that call was made WITH response_model parameter
+    mock_llm.call.assert_called_once()
+    call_args = mock_llm.call.call_args
+    assert call_args[1].get("response_model") == SimpleModel

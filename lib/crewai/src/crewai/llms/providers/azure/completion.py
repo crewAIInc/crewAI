@@ -556,6 +556,20 @@ class AzureCompletion(BaseLLM):
         # Azure OpenAI models support function calling
         return self.is_openai_model
 
+    def supports_response_model(self) -> bool:
+        """Check if the model supports structured outputs via response_model.
+
+        The Azure AI Inference SDK (azure.ai.inference.ChatCompletionsClient) does NOT
+        support the json_schema response_format required for structured outputs.
+        While Azure OpenAI models support function calling, the native SDK cannot
+        handle response_format with json_schema type, causing errors like:
+        "Unsupported `response_format` {'type': 'json_schema', ...}"
+
+        Users who need structured outputs with Azure should use the text-based
+        JSON extraction fallback path instead.
+        """
+        return False
+
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return True  # Most Azure models support stop sequences

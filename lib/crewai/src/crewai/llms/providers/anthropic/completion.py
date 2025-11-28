@@ -630,6 +630,13 @@ class AnthropicCompletion(BaseLLM):
         """Check if the model supports function calling."""
         return self.supports_tools
 
+    def supports_response_model(self) -> bool:
+        """Check if the model supports structured outputs via response_model.
+
+        Anthropic models support structured outputs via tool-based approach with input_schema.
+        """
+        return self.supports_tools
+
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return True  # All Claude models support stop sequences

@@ -541,6 +541,13 @@ class GeminiCompletion(BaseLLM):
         """Check if the model supports function calling."""
         return self.supports_tools
 
+    def supports_response_model(self) -> bool:
+        """Check if the model supports structured outputs via response_model.
+
+        Gemini models support structured outputs via response_schema in generation config.
+        """
+        return self.supports_tools
+
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return True
