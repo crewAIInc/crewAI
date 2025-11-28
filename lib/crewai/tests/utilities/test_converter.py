@@ -21,13 +21,6 @@ from pydantic import BaseModel
 import pytest
 
 
-@pytest.fixture(scope="module")
-def vcr_config(request: pytest.FixtureRequest) -> dict[str, str]:
-    return {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-    }
-
-
 # Sample Pydantic models for testing
 class EmailResponse(BaseModel):
     previous_message_content: str

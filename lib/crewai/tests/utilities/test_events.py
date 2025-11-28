@@ -55,13 +55,6 @@ from ..utils import wait_for_event_handlers
 
 
 @pytest.fixture(scope="module")
-def vcr_config(request) -> dict:
-    return {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-    }
-
-
-@pytest.fixture(scope="module")
 def base_agent():
     return Agent(
         role="base_agent",

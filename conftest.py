@@ -82,6 +82,15 @@ HEADERS_TO_FILTER = {
 }
 
 
+def _filter_request_headers(request: dict[str, Any]) -> dict[str, Any]:
+    """Filter sensitive headers from request before recording."""
+    for header_name, replacement in HEADERS_TO_FILTER.items():
+        for variant in [header_name, header_name.upper(), header_name.title()]:
+            if variant in request["headers"]:
+                request["headers"][variant] = [replacement]
+    return request
+
+
 def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
     """Filter sensitive headers from response before recording."""
     for header_name, replacement in HEADERS_TO_FILTER.items():
@@ -127,8 +136,9 @@ def vcr_config(vcr_cassette_dir: str) -> dict[str, Any]:
     """Configure VCR with organized cassette storage."""
     config = {
         "cassette_library_dir": vcr_cassette_dir,
-        "record_mode": os.getenv("PYTEST_VCR_RECORD_MODE") or "once",
+        "record_mode": os.getenv("PYTEST_VCR_RECORD_MODE", "once"),
         "filter_headers": [(k, v) for k, v in HEADERS_TO_FILTER.items()],
+        "before_record_request": _filter_request_headers,
         "before_record_response": _filter_response_headers,
     }
 

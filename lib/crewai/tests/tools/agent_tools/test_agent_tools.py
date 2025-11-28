@@ -16,13 +16,6 @@ delegate_tool = tools[0]
 ask_tool = tools[1]
 
 
-@pytest.fixture(scope="module")
-def vcr_config(request) -> dict:
-    return {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-    }
-
-
 @pytest.mark.vcr()
 def test_delegate_work():
     result = delegate_tool.run(
