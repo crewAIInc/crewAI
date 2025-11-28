@@ -38,9 +38,12 @@ def setup_test_environment() -> Generator[None, Any, None]:
 
         os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
         os.environ["CREWAI_TESTING"] = "true"
-        yield
 
-        os.environ.pop("CREWAI_TESTING", None)
+        try:
+            yield
+        finally:
+            os.environ.pop("CREWAI_TESTING", None)
+            os.environ.pop("CREWAI_STORAGE_DIR", None)
 
 
 HEADERS_TO_FILTER = {
