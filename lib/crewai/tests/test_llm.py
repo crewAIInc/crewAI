@@ -18,7 +18,7 @@ import pytest
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_callback_replacement():
     llm1 = LLM(model="gpt-4o-mini", is_litellm=True)
     llm2 = LLM(model="gpt-4o-mini", is_litellm=True)
@@ -45,7 +45,7 @@ def test_llm_callback_replacement():
     assert usage_metrics_1 == calc_handler_1.token_cost_process.get_summary()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_string_input():
     llm = LLM(model="gpt-4o-mini")
 
@@ -55,7 +55,7 @@ def test_llm_call_with_string_input():
     assert len(result.strip()) > 0  # Ensure the response is not empty
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_string_input_and_callbacks():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
     calc_handler = TokenCalcHandler(token_cost_process=TokenProcess())
@@ -72,7 +72,7 @@ def test_llm_call_with_string_input_and_callbacks():
     assert usage_metrics.successful_requests == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_message_list():
     llm = LLM(model="gpt-4o-mini")
     messages = [{"role": "user", "content": "What is the capital of France?"}]
@@ -83,7 +83,7 @@ def test_llm_call_with_message_list():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_tool_and_string_input():
     llm = LLM(model="gpt-4o-mini")
 
@@ -121,7 +121,7 @@ def test_llm_call_with_tool_and_string_input():
     assert result == get_current_year()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_tool_and_message_list():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
 
@@ -161,7 +161,7 @@ def test_llm_call_with_tool_and_message_list():
     assert result == 25
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_passes_additional_params():
     llm = LLM(
         model="gpt-4o-mini",
@@ -290,7 +290,7 @@ def test_gemma3(model):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.parametrize(
     "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
 )
@@ -301,7 +301,7 @@ def test_gpt_4_1(model):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(
         model="o3-mini",
@@ -312,7 +312,7 @@ def test_o3_mini_reasoning_effort_high():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_low():
     llm = LLM(
         model="o3-mini",
@@ -323,7 +323,7 @@ def test_o3_mini_reasoning_effort_low():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_medium():
     llm = LLM(
         model="o3-mini",
@@ -412,7 +412,7 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
@@ -552,7 +552,7 @@ def mock_emit() -> MagicMock:
         yield mock_emit
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
@@ -580,7 +580,7 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_emit):
     def get_weather_error(location):
         raise Exception("Error")
@@ -605,7 +605,7 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_no_available_functions(
     get_weather_tool_schema, mock_emit
 ):
@@ -626,7 +626,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_no_tools(mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
@@ -647,7 +647,7 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.skip(reason="Highly flaky on ci")
 def test_llm_call_when_stop_is_unsupported(caplog):
     llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
@@ -658,7 +658,7 @@ def test_llm_call_when_stop_is_unsupported(caplog):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.skip(reason="Highly flaky on ci")
 def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(
     caplog,

@@ -23,7 +23,7 @@ def vcr_config(request) -> dict:
     }
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_delegate_work():
     result = delegate_tool.run(
         coworker="researcher",
@@ -37,7 +37,7 @@ def test_delegate_work():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_delegate_work_with_wrong_co_worker_variable():
     result = delegate_tool.run(
         coworker="researcher",
@@ -51,7 +51,7 @@ def test_delegate_work_with_wrong_co_worker_variable():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_ask_question():
     result = ask_tool.run(
         coworker="researcher",
@@ -65,7 +65,7 @@ def test_ask_question():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_ask_question_with_wrong_co_worker_variable():
     result = ask_tool.run(
         coworker="researcher",
@@ -79,7 +79,7 @@ def test_ask_question_with_wrong_co_worker_variable():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_delegate_work_withwith_coworker_as_array():
     result = delegate_tool.run(
         coworker="[researcher]",
@@ -93,7 +93,7 @@ def test_delegate_work_withwith_coworker_as_array():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_ask_question_with_coworker_as_array():
     result = ask_tool.run(
         coworker="[researcher]",

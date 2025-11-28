@@ -177,7 +177,7 @@ def task_output():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_guardrail_process_output(task_output):
     guardrail = LLMGuardrail(
         description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o")
@@ -197,7 +197,7 @@ def test_task_guardrail_process_output(task_output):
     assert result[1] == task_output.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_emits_events(sample_agent):
     started_guardrail = []
     completed_guardrail = []
@@ -272,7 +272,7 @@ def test_guardrail_emits_events(sample_agent):
         assert completed_guardrail == expected_completed_events
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_when_an_error_occurs(sample_agent, task_output):
     with (
         patch(
