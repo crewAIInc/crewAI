@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, overload
 
 from crewai.project.utils import memoize
-
-
-if TYPE_CHECKING:
-    from crewai import Agent, Crew, Task
-
 from crewai.project.wrappers import (
     AfterKickoffMethod,
     AgentMethod,
@@ -26,6 +22,31 @@ from crewai.project.wrappers import (
     TaskResultT,
     ToolMethod,
 )
+
+
+if TYPE_CHECKING:
+    from crewai import Agent, Crew, Task
+
+
+def _check_async_method(meth: Callable[..., Any], decorator_name: str) -> None:
+    """Check if a method is async and raise an error if so.
+
+    Args:
+        meth: The method to check.
+        decorator_name: The name of the decorator for the error message.
+
+    Raises:
+        TypeError: If the method is an async function.
+    """
+    if asyncio.iscoroutinefunction(meth):
+        raise TypeError(
+            f"The @{decorator_name} decorator does not support async methods. "
+            f"Method '{meth.__name__}' is defined as async. "
+            f"Please use a synchronous method instead. "
+            f"If you need to perform async operations, consider: "
+            f"1) Creating tools/resources synchronously before crew execution, or "
+            f"2) Using asyncio.run() within a sync method for isolated async calls."
+        )
 
 
 P = ParamSpec("P")
@@ -44,7 +65,11 @@ def before_kickoff(meth: Callable[P, R]) -> BeforeKickoffMethod[P, R]:
 
     Returns:
         A wrapped method marked for before kickoff execution.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "before_kickoff")
     return BeforeKickoffMethod(meth)
 
 
@@ -56,7 +81,11 @@ def after_kickoff(meth: Callable[P, R]) -> AfterKickoffMethod[P, R]:
 
     Returns:
         A wrapped method marked for after kickoff execution.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "after_kickoff")
     return AfterKickoffMethod(meth)
 
 
@@ -68,7 +97,11 @@ def task(meth: Callable[P, TaskResultT]) -> TaskMethod[P, TaskResultT]:
 
     Returns:
         A wrapped method marked as a task with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "task")
     return TaskMethod(memoize(meth))
 
 
@@ -80,7 +113,11 @@ def agent(meth: Callable[P, R]) -> AgentMethod[P, R]:
 
     Returns:
         A wrapped method marked as an agent with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "agent")
     return AgentMethod(memoize(meth))
 
 
@@ -92,7 +129,11 @@ def llm(meth: Callable[P, R]) -> LLMMethod[P, R]:
 
     Returns:
         A wrapped method marked as an LLM provider with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "llm")
     return LLMMethod(memoize(meth))
 
 
@@ -128,7 +169,11 @@ def tool(meth: Callable[P, R]) -> ToolMethod[P, R]:
 
     Returns:
         A wrapped method marked as a tool with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "tool")
     return ToolMethod(memoize(meth))
 
 
@@ -140,7 +185,11 @@ def callback(meth: Callable[P, R]) -> CallbackMethod[P, R]:
 
     Returns:
         A wrapped method marked as a callback with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "callback")
     return CallbackMethod(memoize(meth))
 
 
@@ -152,7 +201,11 @@ def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
 
     Returns:
         A wrapped method marked as a cache handler with memoization.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "cache_handler")
     return CacheHandlerMethod(memoize(meth))
 
 
@@ -174,7 +227,11 @@ def crew(
 
     Returns:
         A wrapped method that instantiates tasks and agents before execution.
+
+    Raises:
+        TypeError: If the method is an async function.
     """
+    _check_async_method(meth, "crew")
 
     @wraps(meth)
     def wrapper(self: CrewInstance, *args: Any, **kwargs: Any) -> Crew:
