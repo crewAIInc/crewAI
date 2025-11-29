@@ -478,6 +478,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
+        suppress_flow_events: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -485,6 +486,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Args:
             persistence: Optional persistence backend for storing flow states
             tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
+            suppress_flow_events: Whether to suppress flow event emissions (internal use)
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -498,6 +500,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
+        self.suppress_flow_events: bool = suppress_flow_events
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -511,13 +514,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        crewai_event_bus.emit(
-            self,
-            FlowCreatedEvent(
-                type="flow_created",
-                flow_name=self.name or self.__class__.__name__,
-            ),
-        )
+        if not self.suppress_flow_events:
+            crewai_event_bus.emit(
+                self,
+                FlowCreatedEvent(
+                    type="flow_created",
+                    flow_name=self.name or self.__class__.__name__,
+                ),
+            )
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -974,19 +978,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     self._initialize_state(filtered_inputs)
 
             # Emit FlowStartedEvent and log the start of the flow.
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self.name or self.__class__.__name__,
-                    inputs=inputs,
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
-            self._log_flow_event(
-                f"Flow started with ID: {self.flow_id}", color="bold_magenta"
-            )
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    FlowStartedEvent(
+                        type="flow_started",
+                        flow_name=self.name or self.__class__.__name__,
+                        inputs=inputs,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
@@ -1002,17 +1004,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
-            future = crewai_event_bus.emit(
-                self,
-                FlowFinishedEvent(
-                    type="flow_finished",
-                    flow_name=self.name or self.__class__.__name__,
-                    result=final_output,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    FlowFinishedEvent(
+                        type="flow_finished",
+                        flow_name=self.name or self.__class__.__name__,
+                        result=final_output,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             if self._event_futures:
                 await asyncio.gather(
@@ -1111,18 +1114,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 kwargs or {}
             )
 
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionStartedEvent(
-                    type="method_execution_started",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    params=dumped_params,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionStartedEvent(
+                        type="method_execution_started",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        params=dumped_params,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             result = (
                 await method(*args, **kwargs)
@@ -1137,32 +1141,34 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             self._completed_methods.add(method_name)
 
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_and_serialize_state(),
-                    result=result,
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionFinishedEvent(
+                        type="method_execution_finished",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        state=self._copy_and_serialize_state(),
+                        result=result,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             return result
         except Exception as e:
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionFailedEvent(
-                    type="method_execution_failed",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    error=e,
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionFailedEvent(
+                        type="method_execution_failed",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        error=e,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
             raise e
 
     def _copy_and_serialize_state(self) -> dict[str, Any]:
