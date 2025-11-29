@@ -76,7 +76,7 @@ class TraceBatchManager:
         use_ephemeral: bool = False,
     ) -> TraceBatch:
         """Initialize a new trace batch (thread-safe)"""
-        with self._init_lock:
+        with self._batch_ready_cv:
             if self.current_batch is not None:
                 logger.debug(
                     "Batch already initialized, skipping duplicate initialization"
@@ -98,10 +98,8 @@ class TraceBatchManager:
                 )
                 self.backend_initialized = True
 
-        with self._batch_ready_cv:
             self._batch_ready_cv.notify_all()
-
-        return self.current_batch
+            return self.current_batch
 
     def _initialize_backend_batch(
         self,

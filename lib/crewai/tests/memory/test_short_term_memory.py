@@ -107,22 +107,19 @@ def test_short_term_memory_search_events(short_term_memory):
 
 
 def test_short_term_memory_save_events(short_term_memory):
-    events = defaultdict(list)
+    events: dict[str, list] = defaultdict(list)
     condition = threading.Condition()
-    events_received = {"save_started": False, "save_completed": False}
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def on_save_started(source, event):
         with condition:
             events["MemorySaveStartedEvent"].append(event)
-            events_received["save_started"] = True
             condition.notify()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def on_save_completed(source, event):
         with condition:
             events["MemorySaveCompletedEvent"].append(event)
-            events_received["save_completed"] = True
             condition.notify()
 
     short_term_memory.save(
@@ -131,14 +128,12 @@ def test_short_term_memory_save_events(short_term_memory):
     )
 
     with condition:
-        if not events_received["save_started"]:
-            condition.wait(timeout=5)
-    assert events_received["save_started"], "Timeout waiting for save started event"
-
-    with condition:
-        if not events_received["save_completed"]:
-            condition.wait(timeout=5)
-    assert events_received["save_completed"], "Timeout waiting for save completed event"
+        success = condition.wait_for(
+            lambda: len(events["MemorySaveStartedEvent"]) >= 1
+            and len(events["MemorySaveCompletedEvent"]) >= 1,
+            timeout=5,
+        )
+    assert success, "Timeout waiting for save events"
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
