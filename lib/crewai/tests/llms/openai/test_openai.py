@@ -34,7 +34,7 @@ def test_openai_completion_is_used_when_no_provider_prefix():
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
     """
     Test that OpenAI is the default provider when no explicit LLM is set on the agent
@@ -302,7 +302,7 @@ def test_openai_completion_with_tools():
             assert call_kwargs['tools'] is not None
             assert len(call_kwargs['tools']) > 0
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_completion_call_returns_usage_metrics():
     """
     Test that OpenAICompletion.call returns usage metrics
@@ -530,7 +530,7 @@ def test_openai_streaming_with_response_model():
         assert "text_format" not in call_kwargs
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_response_format_with_pydantic_model():
     """
     Test that response_format with a Pydantic BaseModel returns structured output.
@@ -551,7 +551,7 @@ def test_openai_response_format_with_pydantic_model():
     assert 0 <= result.confidence <= 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_response_format_with_dict():
     """
     Test that response_format with a dict returns JSON output.
@@ -565,7 +565,7 @@ def test_openai_response_format_with_dict():
     assert "status" in parsed
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_openai_response_format_none():
     """
     Test that when response_format is None, the API returns plain text.

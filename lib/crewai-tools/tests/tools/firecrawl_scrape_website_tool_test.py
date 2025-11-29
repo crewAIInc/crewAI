@@ -4,7 +4,7 @@ from crewai_tools.tools.firecrawl_scrape_website_tool.firecrawl_scrape_website_t
     FirecrawlScrapeWebsiteTool,
 )
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_firecrawl_scrape_tool_integration():
     tool = FirecrawlScrapeWebsiteTool()
     result = tool.run(url="https://firecrawl.dev")

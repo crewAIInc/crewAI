@@ -50,9 +50,9 @@ interactions:
       Date:
       - Mon, 05 May 2025 18:37:34 GMT
       Permissions-Policy:
-      - publickey-credentials-create=(self),publickey-credentials-get=(self),accelerometer=(),ambient-light-sensor=(),autoplay=(),battery=(),camera=(),display-capture=(),document-domain=(),encrypted-media=(),execution-while-not-rendered=(),execution-while-out-of-viewport=(),fullscreen=(),gamepad=(),geolocation=(),gyroscope=(),hid=(),identity-credentials-get=(),idle-detection=(),local-fonts=(),magnetometer=(),microphone=(),midi=(),otp-credentials=(),payment=(),picture-in-picture=(),screen-wake-lock=(),serial=(),speaker-selection=(),storage-access=(),usb=(),web-share=(),xr-spatial-tracking=()
+      - PERMISSIONS-POLICY-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Vary:
       - Accept-Encoding
       X-Cache:
@@ -60,11 +60,11 @@ interactions:
       X-Cache-Hits:
       - 0, 34, 0
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       X-Frame-Options:
-      - deny
+      - X-FRAME-OPTIONS-XXX
       X-Permitted-Cross-Domain-Policies:
-      - none
+      - X-PERMITTED-XXX
       X-Served-By:
       - cache-iad-kjyo7100160-IAD, cache-iad-kjyo7100044-IAD, cache-gru-sbsp2090079-GRU
       X-Timer:
@@ -78,32 +78,19 @@ interactions:
       access-control-allow-origin:
       - '*'
       access-control-expose-headers:
-      - X-PyPI-Last-Serial
+      - ACCESS-CONTROL-XXX
       access-control-max-age:
       - '86400'
       cache-control:
       - max-age=900, public
       content-security-policy:
-      - base-uri 'self'; connect-src 'self' https://api.github.com/repos/ https://api.github.com/search/issues
-        https://gitlab.com/api/ https://analytics.python.org fastly-insights.com *.fastly-insights.com
-        *.ethicalads.io https://api.pwnedpasswords.com https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/sre/mathmaps/
-        https://2p66nmmycsj3.statuspage.io; default-src 'none'; font-src 'self' fonts.gstatic.com;
-        form-action 'self' https://checkout.stripe.com; frame-ancestors 'none'; frame-src
-        'none'; img-src 'self' https://pypi-camo.freetls.fastly.net/ *.fastly-insights.com
-        *.ethicalads.io ethicalads.blob.core.windows.net; script-src 'self' https://analytics.python.org
-        *.fastly-insights.com *.ethicalads.io 'sha256-U3hKDidudIaxBDEzwGJApJgPEf2mWk6cfMWghrAa6i0='
-        https://cdn.jsdelivr.net/npm/mathjax@3.2.2/ 'sha256-1CldwzdEg2k1wTmf7s5RWVd7NMXI/7nxxjJM2C4DqII='
-        'sha256-0POaN8stWYQxhzjKS+/eOfbbJ/u4YHO5ZagJvLpMypo='; style-src 'self' fonts.googleapis.com
-        *.ethicalads.io 'sha256-2YHqZokjiizkHi1Zt+6ar0XJ0OeEy/egBnlm+MDMtrM=' 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='
-        'sha256-JLEjeN9e5dGsz5475WyRaoA4eQOdNPxDIeUhclnJDCE=' 'sha256-mQyxHEuwZJqpxCw3SLmc4YOySNKXunyu2Oiz1r3/wAE='
-        'sha256-OCf+kv5Asiwp++8PIevKBYSgnNLNUZvxAp4a7wMLuKA=' 'sha256-h5LOiLhk6wiJrGsG5ItM0KimwzWQH/yAcmoJDJL//bY=';
-        worker-src *.fastly-insights.com
+      - CSP-FILTERED
       content-type:
       - application/json
       etag:
-      - '"ggQSbqfOWm/rak+86bKvfA"'
+      - ETAG-XXX
       referrer-policy:
-      - origin-when-cross-origin
+      - REFERRER-POLICY-XXX
       x-pypi-last-serial:
       - '28851779'
     status:
@@ -137,19 +124,19 @@ interactions:
       user-agent:
       - OpenAI/Python 1.75.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
       - 1.75.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -173,7 +160,7 @@ interactions:
       \"default\",\n  \"system_fingerprint\": \"fp_dbaca60df0\"\n}\n"
     headers:
       CF-RAY:
-      - 93b259955a50a166-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -187,35 +174,229 @@ interactions:
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
       - '333'
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999826'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_1821906e2f17a712ceb213bd130355ee
+      - X-REQUEST-ID-XXX
     http_version: HTTP/1.1
     status_code: 200
+- request:
+    body: '{"trace_id": "1b96b2cd-2b52-4507-b7ac-4ba5452e3614", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "TestCrew", "flow_name": null, "crewai_version": "1.6.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-28T22:38:09.909251+00:00"},
+      "ephemeral_trace_id": "1b96b2cd-2b52-4507-b7ac-4ba5452e3614"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '492'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.6.0
+      X-Crewai-Organization-Id:
+      - 73c2b193-f579-422c-84c7-76a39a1da77f
+      X-Crewai-Version:
+      - 1.6.0
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"adab193e-2496-4b41-83df-da4901c39502","ephemeral_trace_id":"1b96b2cd-2b52-4507-b7ac-4ba5452e3614","execution_type":"crew","crew_name":"TestCrew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"TestCrew","flow_name":null,"crewai_version":"1.6.0","privacy_level":"standard"},"created_at":"2025-11-28T22:38:10.222Z","updated_at":"2025-11-28T22:38:10.222Z","access_code":"TRACE-ab608edfd9","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '523'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 28 Nov 2025 22:38:10 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are agent. You are a helpful
+      assistant that just says hi\nYour personal goal is: Just say hi\nTo give my
+      best complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task:
+      Just say hi\n\nThis is the expected criteria for your final answer: hi\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '795'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJNb9swDL37VxA614OdeUnj21BgH9iKHXfYCoORaVubLAkS3XQo8t8H
+        KWnsdCvQiwHz8T29R/IxAxCqFTUIOSDL0en8Zii/3X5/uP00VviF/WZ/89HpXTVeT6X7Kq4iw+5+
+        keQn1htpR6eJlTVHWHpCpqhabtbV2/W22hYJGG1LOtJ6x3ll81EZla+KVZUXm7y8PrEHqyQFUcOP
+        DADgMX2jT9PSg6ghaaXKSCFgT6I+NwEIb3WsCAxBBUbD4moGpTVMJln/DMbuQaKBXt0TIPTRNqAJ
+        e/IAP80HZVDD+/Rfw6CWOp66KWDMYiatFwAaYxnjLFKCuxNyOHvWtnfe7sIzquiUUWFoPGGwJvoL
+        bJ1I6CEDuEuzmS7iCuft6Lhh+5vSc+X6NBsxr2SBrk4gW0a9qG+egAu9piVGpcNiukKiHKidqfMq
+        cGqVXQDZIvW/bv6nfUyuTP8a+RmQkhxT2zhPrZKXiec2T/FiX2o7TzkZFoH8vZLUsCIfN9FSh5M+
+        3pEIfwLT2HTK9OSdV8dj6lzzrtgW626FKEV2yP4CAAD//wMAQ/5zVVoDAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 28 Nov 2025 22:38:11 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '520'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '690'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-project-tokens:
+      - '149999825'
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1
