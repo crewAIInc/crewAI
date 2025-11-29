@@ -326,3 +326,38 @@ class TestCrewPlanningIntegration:
 
         assert "Original task description" in task.description
         assert "Additional plan steps" in task.description
+
+    def test_crew_planning_with_duplicate_task_numbers(self):
+        """Test that duplicate task numbers use the first plan and log a warning."""
+        agent = Agent(role="Agent 1", goal="Goal 1", backstory="Backstory 1")
+
+        task = Task(
+            description="Task description",
+            expected_output="Output 1",
+            agent=agent,
+        )
+
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            planning=True,
+        )
+
+        # Two plans with the same task_number - should use the first one
+        duplicate_plans = [
+            PlanPerTask(task_number=1, task="Task 1", plan=" [FIRST PLAN]"),
+            PlanPerTask(task_number=1, task="Task 1", plan=" [SECOND PLAN]"),
+        ]
+
+        mock_planner_result = PlannerTaskPydanticOutput(
+            list_of_plans_per_task=duplicate_plans
+        )
+
+        with patch.object(
+            CrewPlanner, "_handle_crew_planning", return_value=mock_planner_result
+        ):
+            crew._handle_crew_planning()
+
+        # Should use the first plan, not the second
+        assert "[FIRST PLAN]" in task.description
+        assert "[SECOND PLAN]" not in task.description
