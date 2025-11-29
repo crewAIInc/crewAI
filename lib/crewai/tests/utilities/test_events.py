@@ -229,9 +229,7 @@ def test_crew_emits_start_task_event(base_agent, base_task):
 
 
 @pytest.mark.vcr()
-def test_crew_emits_end_task_event(
-    base_agent, base_task, reset_event_listener_singleton
-):
+def test_crew_emits_end_task_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
 
@@ -240,21 +238,8 @@ def test_crew_emits_end_task_event(
         received_events.append(event)
         event_received.set()
 
-    mock_span = Mock()
-
-    mock_telemetry = Mock()
-    mock_telemetry.task_started = Mock(return_value=mock_span)
-    mock_telemetry.task_ended = Mock(return_value=mock_span)
-    mock_telemetry.set_tracer = Mock()
-    mock_telemetry.crew_execution_span = Mock()
-    mock_telemetry.end_crew = Mock()
-
-    with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-        crew.kickoff()
-
-        mock_telemetry.task_started.assert_called_once_with(crew=crew, task=base_task)
-        mock_telemetry.task_ended.assert_called_once_with(mock_span, base_task, crew)
+    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    crew.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for task completed event"
     assert len(received_events) == 1

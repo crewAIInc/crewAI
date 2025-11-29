@@ -74,10 +74,11 @@ def test_shutdown_flag_prevents_emit():
                 condition.notify()
 
         event1 = ShutdownTestEvent(type="before_shutdown")
-        bus.emit("test_source", event1)
+        future = bus.emit("test_source", event1)
 
-        with condition:
-            condition.wait_for(lambda: emitted_count[0] >= 1, timeout=2)
+        if future:
+            future.result(timeout=2.0)
+
         assert emitted_count[0] == 1
 
         bus._shutting_down = True

@@ -449,12 +449,12 @@ class TestTraceListenerSetup:
 
             crew.kickoff()
 
-            wait_for_event_handlers()
-
             initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
             assert initialized, (
                 "Batch should have been initialized for unauthenticated user"
             )
+
+            wait_for_event_handlers()
 
     @pytest.mark.vcr()
     def test_trace_listener_with_authenticated_user(self):
