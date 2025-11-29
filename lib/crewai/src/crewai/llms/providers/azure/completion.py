@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -26,8 +27,8 @@ try:
     from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
-        StreamingChatCompletionsUpdate,
         JsonSchemaFormat,
+        StreamingChatCompletionsUpdate,
     )
     from azure.core.credentials import (
         AzureKeyCredential,
@@ -279,14 +280,15 @@ class AzureCompletion(BaseLLM):
         }
 
         if response_model and self.is_openai_model:
-            response_model_json_schema = response_model.model_json_schema()
-            response_model_json_schema['additionalProperties'] = False
-            
+            model_description = generate_model_description(response_model)
+            json_schema_info = model_description["json_schema"]
+            json_schema_name = json_schema_info["name"]
+
             params["response_format"] = JsonSchemaFormat(
-                name="Tasks_Response",
-                schema=response_model_json_schema,
-                description="Describes the task expected response",
-                strict=True,
+                name=json_schema_name,
+                schema=json_schema_info["schema"],
+                description=f"Schema for {json_schema_name}",
+                strict=json_schema_info["strict"],
             )
 
         # Only include model parameter for non-Azure OpenAI endpoints
@@ -314,8 +316,8 @@ class AzureCompletion(BaseLLM):
             params["tool_choice"] = "auto"
 
         additional_params = self.additional_params
-        additional_drop_params = additional_params.get('additional_drop_params')
-        drop_params = additional_params.get('drop_params')
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
 
         if drop_params and isinstance(additional_drop_params, list):
             for drop_param in additional_drop_params:
