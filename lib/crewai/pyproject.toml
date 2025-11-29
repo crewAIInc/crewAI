@@ -91,7 +91,7 @@ azure-ai-inference = [
     "azure-ai-inference>=1.0.0b9",
 ]
 anthropic = [
-    "anthropic>=0.75.0",
+    "anthropic>=0.69.0",
 ]
  a2a = [
      "a2a-sdk~=0.3.10",

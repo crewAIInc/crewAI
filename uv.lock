@@ -1150,7 +1150,7 @@ watson = [
 [package.metadata]
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
-    { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.75.0" },
+    { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.69.0" },
     { name = "appdirs", specifier = ">=1.4.4" },
     { name = "azure-ai-inference", marker = "extra == 'azure-ai-inference'", specifier = ">=1.0.0b9" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.40.38" },
