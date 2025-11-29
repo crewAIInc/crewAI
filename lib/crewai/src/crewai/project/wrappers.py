@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from functools import partial
+import inspect
 from pathlib import Path
 from typing import (
     TYPE_CHECKING,
@@ -210,6 +212,22 @@ class AfterKickoffMethod(DecoratedMethod[P, R]):
     is_after_kickoff: bool = True
 
 
+def _resolve_result(result: Any) -> Any:
+    """Resolve a potentially async result to its value."""
+    if inspect.iscoroutine(result):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                return pool.submit(asyncio.run, result).result()
+        return asyncio.run(result)
+    return result
+
+
 class BoundTaskMethod(Generic[TaskResultT]):
     """Bound task method with task marker attribute."""
 
@@ -236,6 +254,7 @@ class BoundTaskMethod(Generic[TaskResultT]):
             The task result with name ensured.
         """
         result = self._task_method.unwrap()(self._obj, *args, **kwargs)
+        result = _resolve_result(result)
         return self._task_method.ensure_task_name(result)
 
 
@@ -292,7 +311,9 @@ class TaskMethod(Generic[P, TaskResultT]):
         Returns:
             The task instance with name set if not already provided.
         """
-        return self.ensure_task_name(self._meth(*args, **kwargs))
+        result = self._meth(*args, **kwargs)
+        result = _resolve_result(result)
+        return self.ensure_task_name(result)
 
     def unwrap(self) -> Callable[P, TaskResultT]:
         """Get the original unwrapped method.
