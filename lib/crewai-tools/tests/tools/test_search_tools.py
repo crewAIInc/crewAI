@@ -29,6 +29,7 @@ def mock_adapter():
     return mock_adapter
 
 
+@pytest.mark.vcr()
 def test_directory_search_tool():
     with tempfile.TemporaryDirectory() as temp_dir:
         test_file = Path(temp_dir) / "test.txt"
@@ -62,6 +63,7 @@ def test_pdf_search_tool(mock_adapter):
     )
 
 
+@pytest.mark.vcr()
 def test_txt_search_tool():
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
         temp_file.write(b"This is a test file for txt search")
@@ -99,6 +101,7 @@ def test_docx_search_tool(mock_adapter):
     )
 
 
+@pytest.mark.vcr()
 def test_json_search_tool():
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as temp_file:
         temp_file.write(b'{"test": "This is a test JSON file"}')
@@ -124,6 +127,7 @@ def test_xml_search_tool(mock_adapter):
     )
 
 
+@pytest.mark.vcr()
 def test_csv_search_tool():
     with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as temp_file:
         temp_file.write(b"name,description\ntest,This is a test CSV file")
@@ -138,6 +142,7 @@ def test_csv_search_tool():
         os.unlink(temp_file_path)
 
 
+@pytest.mark.vcr()
 def test_mdx_search_tool():
     with tempfile.NamedTemporaryFile(suffix=".mdx", delete=False) as temp_file:
         temp_file.write(b"# Test MDX\nThis is a test MDX file")
