@@ -2116,7 +2116,7 @@ def test_agent_with_knowledge_sources_generate_search_query():
         assert "red" in result.raw.lower()
 
 
-@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_with_knowledge_with_no_crewai_knowledge():
     mock_knowledge = MagicMock(spec=Knowledge)
 
@@ -2168,7 +2168,7 @@ def test_agent_with_only_crewai_knowledge():
     mock_knowledge.query.assert_called_once()
 
 
-@pytest.mark.vcr(record_mode="none", filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_knowledege_with_crewai_knowledge():
     crew_knowledge = MagicMock(spec=Knowledge)
     agent_knowledge = MagicMock(spec=Knowledge)

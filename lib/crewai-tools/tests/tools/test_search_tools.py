@@ -23,9 +23,6 @@ from crewai_tools.tools.rag.rag_tool import Adapter
 import pytest
 
 
-pytestmark = [pytest.mark.vcr(filter_headers=["authorization"])]
-
-
 @pytest.fixture
 def mock_adapter():
     mock_adapter = MagicMock(spec=Adapter)
