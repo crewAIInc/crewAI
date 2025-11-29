@@ -108,26 +108,37 @@ def test_short_term_memory_search_events(short_term_memory):
 
 def test_short_term_memory_save_events(short_term_memory):
     events = defaultdict(list)
-    save_started = threading.Event()
-    save_completed = threading.Event()
+    condition = threading.Condition()
+    events_received = {"save_started": False, "save_completed": False}
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def on_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
-        save_started.set()
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            events_received["save_started"] = True
+            condition.notify()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def on_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
-        save_completed.set()
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            events_received["save_completed"] = True
+            condition.notify()
 
     short_term_memory.save(
         value="test value",
         metadata={"task": "test_task"},
     )
 
-    assert save_started.wait(timeout=2), "Timeout waiting for save started event"
-    assert save_completed.wait(timeout=2), "Timeout waiting for save completed event"
+    with condition:
+        if not events_received["save_started"]:
+            condition.wait(timeout=5)
+    assert events_received["save_started"], "Timeout waiting for save started event"
+
+    with condition:
+        if not events_received["save_completed"]:
+            condition.wait(timeout=5)
+    assert events_received["save_completed"], "Timeout waiting for save completed event"
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1

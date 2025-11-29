@@ -2899,15 +2899,13 @@ def test_crew_train_success(researcher, writer, monkeypatch):
     def on_crew_train_started(source, event: CrewTrainStartedEvent):
         with condition:
             received_events.append(event)
-            if len(received_events) == 2:
-                condition.notify()
+            condition.notify()
 
     @crewai_event_bus.on(CrewTrainCompletedEvent)
     def on_crew_train_completed(source, event: CrewTrainCompletedEvent):
         with condition:
             received_events.append(event)
-            if len(received_events) == 2:
-                condition.notify()
+            condition.notify()
 
     # Mock human input to avoid blocking during training
     # Use StringIO to simulate user input for multiple calls to input()

@@ -63,17 +63,21 @@ async def test_aemit_during_shutdown():
 def test_shutdown_flag_prevents_emit():
     bus = CrewAIEventsBus()
     emitted_count = [0]
+    condition = threading.Condition()
 
     with bus.scoped_handlers():
 
         @bus.on(ShutdownTestEvent)
         def handler(source: object, event: BaseEvent) -> None:
-            emitted_count[0] += 1
+            with condition:
+                emitted_count[0] += 1
+                condition.notify()
 
         event1 = ShutdownTestEvent(type="before_shutdown")
         bus.emit("test_source", event1)
 
-        time.sleep(0.1)
+        with condition:
+            condition.wait_for(lambda: emitted_count[0] >= 1, timeout=2)
         assert emitted_count[0] == 1
 
         bus._shutting_down = True
@@ -90,14 +94,15 @@ def test_shutdown_flag_prevents_emit():
 def test_concurrent_access_during_shutdown_flag():
     bus = CrewAIEventsBus()
     received_events = []
-    lock = threading.Lock()
+    condition = threading.Condition()
 
     with bus.scoped_handlers():
 
         @bus.on(ShutdownTestEvent)
         def handler(source: object, event: BaseEvent) -> None:
-            with lock:
+            with condition:
                 received_events.append(event)
+                condition.notify()
 
         def emit_events() -> None:
             for i in range(10):
@@ -118,7 +123,8 @@ def test_concurrent_access_during_shutdown_flag():
         emit_thread.join()
         shutdown_thread.join()
 
-        time.sleep(0.2)
+        with condition:
+            condition.wait_for(lambda: len(received_events) > 0, timeout=2)
 
         assert len(received_events) < 10
         assert len(received_events) > 0
@@ -153,36 +159,47 @@ def test_scoped_handlers_cleanup():
     received_before = []
     received_during = []
     received_after = []
+    condition = threading.Condition()
 
     with bus.scoped_handlers():
 
         @bus.on(ShutdownTestEvent)
         def before_handler(source: object, event: BaseEvent) -> None:
-            received_before.append(event)
+            with condition:
+                received_before.append(event)
+                condition.notify()
 
         with bus.scoped_handlers():
 
             @bus.on(ShutdownTestEvent)
             def during_handler(source: object, event: BaseEvent) -> None:
-                received_during.append(event)
+                with condition:
+                    received_during.append(event)
+                    condition.notify()
 
             event1 = ShutdownTestEvent(type="during")
             bus.emit("source", event1)
-            time.sleep(0.1)
+
+            with condition:
+                condition.wait_for(lambda: len(received_during) >= 1, timeout=2)
 
             assert len(received_before) == 0
             assert len(received_during) == 1
 
         event2 = ShutdownTestEvent(type="after_inner_scope")
         bus.emit("source", event2)
-        time.sleep(0.1)
+
+        with condition:
+            condition.wait_for(lambda: len(received_before) >= 1, timeout=2)
 
         assert len(received_before) == 1
         assert len(received_during) == 1
 
     event3 = ShutdownTestEvent(type="after_outer_scope")
     bus.emit("source", event3)
-    time.sleep(0.1)
+
+    with condition:
+        condition.wait(timeout=0.2)
 
     assert len(received_before) == 1
     assert len(received_during) == 1
@@ -224,24 +241,36 @@ async def test_mixed_sync_async_handler_execution():
     bus = CrewAIEventsBus()
     sync_executed = []
     async_executed = []
+    condition = threading.Condition()
 
     with bus.scoped_handlers():
 
         @bus.on(ShutdownTestEvent)
         def sync_handler(source: object, event: BaseEvent) -> None:
             time.sleep(0.01)
-            sync_executed.append(event)
+            with condition:
+                sync_executed.append(event)
+                condition.notify()
 
         @bus.on(ShutdownTestEvent)
         async def async_handler(source: object, event: BaseEvent) -> None:
             await asyncio.sleep(0.01)
-            async_executed.append(event)
+            with condition:
+                async_executed.append(event)
+                condition.notify()
 
         for i in range(5):
             event = ShutdownTestEvent(type=f"event_{i}")
             bus.emit("source", event)
 
-        await asyncio.sleep(0.2)
+        def wait_for_completion():
+            with condition:
+                return condition.wait_for(
+                    lambda: len(sync_executed) == 5 and len(async_executed) == 5,
+                    timeout=5
+                )
+
+        await asyncio.get_event_loop().run_in_executor(None, wait_for_completion)
 
         assert len(sync_executed) == 5
         assert len(async_executed) == 5

@@ -451,7 +451,8 @@ class TestTraceListenerSetup:
 
             wait_for_event_handlers()
 
-            assert trace_listener.batch_manager.is_batch_initialized(), (
+            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
+            assert initialized, (
                 "Batch should have been initialized for unauthenticated user"
             )
 
@@ -487,7 +488,8 @@ class TestTraceListenerSetup:
 
             wait_for_event_handlers()
 
-            assert trace_listener.batch_manager.is_batch_initialized(), (
+            initialized = trace_listener.batch_manager.wait_for_batch_initialization(timeout=5.0)
+            assert initialized, (
                 "Batch should have been initialized for authenticated user"
             )
 
@@ -657,6 +659,10 @@ class TestTraceListenerSetup:
                 "https://crewai.com/trace/mock-id"
             )
 
+            assert trace_listener.first_time_handler.is_first_time is True
+
+            trace_listener.first_time_handler.collected_events = True
+
             with (
                 patch.object(
                     trace_listener.first_time_handler,
@@ -667,20 +673,14 @@ class TestTraceListenerSetup:
                     trace_listener.first_time_handler, "_display_ephemeral_trace_link"
                 ) as mock_display_link,
             ):
-                assert trace_listener.first_time_handler.is_first_time is True
-
-                trace_listener.first_time_handler.collected_events = True
-
                 crew.kickoff()
                 wait_for_event_handlers()
-
-                trace_listener.first_time_handler.handle_execution_completion()
 
                 mock_init_backend.assert_called_once()
 
                 mock_display_link.assert_called_once()
 
-                mock_mark_completed.assert_called_once()
+            mock_mark_completed.assert_called_once()
 
     @pytest.mark.vcr()
     def test_first_time_user_trace_consolidation_logic(self, mock_plus_api_calls):

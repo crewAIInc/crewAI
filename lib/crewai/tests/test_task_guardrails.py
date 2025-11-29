@@ -199,8 +199,11 @@ def test_task_guardrail_process_output(task_output):
 
 @pytest.mark.vcr()
 def test_guardrail_emits_events(sample_agent):
+    import threading
+
     started_guardrail = []
     completed_guardrail = []
+    condition = threading.Condition()
 
     task = create_smart_task(
         description="Gather information about available books on the First World War",
@@ -213,24 +216,31 @@ def test_guardrail_emits_events(sample_agent):
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def handle_guardrail_started(source, event):
-            assert source == task
-            started_guardrail.append(
-                {"guardrail": event.guardrail, "retry_count": event.retry_count}
-            )
+            with condition:
+                assert source == task
+                started_guardrail.append(
+                    {"guardrail": event.guardrail, "retry_count": event.retry_count}
+                )
+                condition.notify()
 
         @crewai_event_bus.on(LLMGuardrailCompletedEvent)
         def handle_guardrail_completed(source, event):
-            assert source == task
-            completed_guardrail.append(
-                {
-                    "success": event.success,
-                    "result": event.result,
-                    "error": event.error,
-                    "retry_count": event.retry_count,
-                }
-            )
+            with condition:
+                assert source == task
+                completed_guardrail.append(
+                    {
+                        "success": event.success,
+                        "result": event.result,
+                        "error": event.error,
+                        "retry_count": event.retry_count,
+                    }
+                )
+                condition.notify()
 
         result = task.execute_sync(agent=sample_agent)
+
+        with condition:
+            condition.wait_for(lambda: len(started_guardrail) >= 2 and len(completed_guardrail) >= 2, timeout=5)
 
         def custom_guardrail(result: TaskOutput):
             return (True, "good result from callable function")
@@ -242,6 +252,9 @@ def test_guardrail_emits_events(sample_agent):
         )
 
         task.execute_sync(agent=sample_agent)
+
+        with condition:
+            condition.wait_for(lambda: len(started_guardrail) >= 3 and len(completed_guardrail) >= 3, timeout=5)
 
         expected_started_events = [
             {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},

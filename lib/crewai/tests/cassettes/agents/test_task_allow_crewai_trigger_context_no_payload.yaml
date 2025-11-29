@@ -1,0 +1,211 @@
+interactions:
+- request:
+    body: '{"trace_id": "4d0d2b51-d83a-4054-b41e-8c2d17baa88f", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.6.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-29T02:50:39.376314+00:00"},
+      "ephemeral_trace_id": "4d0d2b51-d83a-4054-b41e-8c2d17baa88f"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.6.0
+      X-Crewai-Version:
+      - 1.6.0
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"71726285-2e63-4d2a-b4c4-4bbd0ff6a9f1","ephemeral_trace_id":"4d0d2b51-d83a-4054-b41e-8c2d17baa88f","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.6.0","privacy_level":"standard"},"created_at":"2025-11-29T02:50:39.931Z","updated_at":"2025-11-29T02:50:39.931Z","access_code":"TRACE-bf7f3f49b3","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 29 Nov 2025 02:50:39 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: Analyze the data\n\nThis
+      is the expected criteria for your final answer: Analysis report\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '785'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 29 Nov 2025 02:50:45 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '5125'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '5227'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-project-tokens:
+      - '149999830'
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
