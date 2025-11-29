@@ -218,7 +218,7 @@ Update the root `README.md` only if the tool introduces a new category or notabl
 
 ## Discovery and specs
 
-Our internal tooling discovers classes whose names end with `Tool`. Keep your class exported from the module path under `crewai_tools/tools/...` to be picked up by scripts like `generate_tool_specs.py`.
+Our internal tooling discovers classes whose names end with `Tool`. Keep your class exported from the module path under `crewai_tools/tools/...` to be picked up by scripts like `crewai_tools.generate_tool_specs.py`.
 
 ---
 

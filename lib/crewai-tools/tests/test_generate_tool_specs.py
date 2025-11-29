@@ -2,7 +2,7 @@ import json
 from unittest import mock
 
 from crewai.tools.base_tool import BaseTool, EnvVar
-from generate_tool_specs import ToolSpecExtractor
+from crewai_tools.generate_tool_specs import ToolSpecExtractor
 from pydantic import BaseModel, Field
 import pytest
 
@@ -61,8 +61,8 @@ def test_unwrap_schema(extractor):
 @pytest.fixture
 def mock_tool_extractor(extractor):
     with (
-        mock.patch("generate_tool_specs.dir", return_value=["MockTool"]),
-        mock.patch("generate_tool_specs.getattr", return_value=MockTool),
+        mock.patch("crewai_tools.generate_tool_specs.dir", return_value=["MockTool"]),
+        mock.patch("crewai_tools.generate_tool_specs.getattr", return_value=MockTool),
     ):
         extractor.extract_all_tools()
         assert len(extractor.tools_spec) == 1
