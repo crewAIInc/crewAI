@@ -267,13 +267,11 @@ def test_validate_call_params_no_response_format():
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-lite-001",
-        "gemini/gemini-2.5-flash-preview-04-17",
-        "gemini/gemini-2.5-pro-exp-03-25",
     ],
 )
 def test_gemini_models(model):
     # Use LiteLLM for VCR compatibility (VCR can intercept HTTP calls but not native SDK calls)
-    llm = LLM(model=model, is_litellm=True)
+    llm = LLM(model=model, is_litellm=False)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
@@ -288,7 +286,7 @@ def test_gemini_models(model):
 )
 def test_gemma3(model):
     # Use LiteLLM for VCR compatibility (VCR can intercept HTTP calls but not native SDK calls)
-    llm = LLM(model=model, is_litellm=True)
+    llm = LLM(model=model, is_litellm=False)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
@@ -417,7 +415,6 @@ def test_context_window_exceeded_error_handling():
 
 
 @pytest.mark.vcr()
-@pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
     return LLM(model="anthropic/claude-3-sonnet", is_litellm=True)

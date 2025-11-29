@@ -48,9 +48,351 @@ interactions:
       - X-Origin
       - Referer
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       X-Frame-Options:
-      - SAMEORIGIN
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '123'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - litellm/1.78.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent?key=AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/62RX0/CMBTF3/cpmj4ujGwIzPlmVIxGIupCjH9iruxuNIx2tgU1hO9utzHo9NU9
+        LM09p/fc/u7GIYTOgCcsAY2KnpBnUyFkU/1LTXCNXBuhKZliAVIfvPW3sc7GovGrvETjOZIZFExD
+        TkRKRhL4DAlTxHUnIJly3e4Lp9bd7f782jkkSpFj2W4pEswb+7Yx0JRxpub3CErw0vYQ307oXoV1
+        diOyQor3cmjP7/rBMByGA/+4PzgKo14UhU4TXYXSlYIMx6jBUIH926lpsSx0LBbIz8SqohLWKRbD
+        lhztZC0MgJYSDDt/mqpzE8lyG61F3bwdcqa/K6wXjzG1+OjWTA0fx8L4e8J/yoraWc5uK/WipigV
+        qzeS4dLsyOt1fS/NQc090x093w+qzlSiKgRXeJWUZn69+ICny9Hpmk/fVuMJS8H/vOtTZ+v8ANZj
+        CTCxAgAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 06:58:36 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=310
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '123'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - litellm/1.78.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent?key=AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/62RX2+CMBTF3/kUTR+JGMRNZa/7ky3RjG1kWdwWc4UrNkKLtC4zhu++AqJlex0P
+        pLnn9J7b3z1YhNAIeMxiUCjpFXnXFUIO9b/SBFfIlRbaki7mUKizt/kOxllbFH5Xl2i4RhJBzhSk
+        RKzIXQE8QsIkse0ACiZtu//BqXG3PJ0/e+fEQqRYtctEjGlrL1sDXTHO5PoZQQpe2V7Cx4CeVPhK
+        piLJC7Gshnbcvuv63mjiDr3B2PeHkwvPu7Ta7DqV7iQkOEMFGgucHk91jyxXodggvxa7Gsu4iTEg
+        dmT/KCuhCXSUwaj3p6m80ZEsNdka2PXjIWVqX3O9fQupAUh1ZmoBWQbH3xP+U5bfzbKOa2k29YqF
+        ZM1KEsz0khyv7zqrFOTa0d3Rcd1B3ZkWKHPBJT7ElXk/32xhGTjTxf18sZsFmdxusqeIWqX1A5Hg
+        f62yAgAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 06:59:22 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=343
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - application/json
+      user-agent:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini/gemini-2.0-flash-lite-001:generateContent
+  response:
+    body:
+      string: ''
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Length:
+      - '0'
+      Content-Type:
+      - text/html
+      Date:
+      - Sat, 29 Nov 2025 07:08:24 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=27
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 404
+      message: Not Found
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '123'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - litellm/1.78.5
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent?key=AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/62RXU+DMBSG7/kVTS/JWDo2t+GtH4nR6VQyTdSLI5yxKrSMdn5k2X+3wGBFb+WC
+        NOd9e97T52wdQmgEIuYxaFT0mDyZCiHb6l9qUmgU2ghNyRRzKPTBW39b62wsGr/KSzRcIYkg5xpS
+        IpfkvAARIeGKuO4cCq5ct/8sqHV3155feofEQqZYtstkjGlj3zUGuuSCq9UdgpKitN2HN3PaqvCR
+        XMkkL+RrObTH+owF/njKhv5gEgTD6cj3j5wmu0qlGwUJzlCDwQLt46npkeU6lO8oTuSmwjKpYyyI
+        HTnYy1oaAh1lMO79aapOTSRPbbYWdvN4SLn+rriePYbUAqQ7MzWAHIvj7wn/KSvoZjn7tdSbWmCh
+        eL2SBDOzJM/vM2+Zglp5pjt6jA2qzrRAlUuh8CIuzQ/55xpgPbq+hNnbLJp7UbZgtwl1ds4PJuZR
+        P7ICAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 07:10:19 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=326
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - application/json
+      user-agent:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The capital of France is **Paris**.\\n\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.016767508453792997\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 7,\n    \"candidatesTokenCount\": 9,\n    \"totalTokenCount\":
+        16,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 9\n      }\n
+        \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-lite-001\",\n  \"responseId\":
+        \"a50qabeyJK7VjMcPzP_jwQg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 07:14:51 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=288
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - application/json
+      user-agent:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The capital of France is **Paris**.\\n\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.0092680321799384225\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 7,\n    \"candidatesTokenCount\": 9,\n    \"totalTokenCount\":
+        16,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 9\n      }\n
+        \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-lite-001\",\n  \"responseId\":
+        \"8Z0qaYzZF8a9jrEPgLvAsA0\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 07:17:05 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=311
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
       X-XSS-Protection:
       - '0'
     status:
