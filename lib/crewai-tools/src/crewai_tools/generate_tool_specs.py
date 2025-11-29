@@ -4,17 +4,20 @@ from collections.abc import Mapping
 import inspect
 import json
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from crewai.tools.base_tool import BaseTool, EnvVar
-from crewai_tools import tools
 from pydantic import BaseModel
 from pydantic.json_schema import GenerateJsonSchema
 from pydantic_core import PydanticOmit
 
+from crewai_tools import tools
+
 
 class SchemaGenerator(GenerateJsonSchema):
-    def handle_invalid_for_json_schema(self, schema, error_info):
+    def handle_invalid_for_json_schema(
+        self, schema: Any, error_info: Any
+    ) -> dict[str, Any]:
         raise PydanticOmit
 
 
@@ -73,7 +76,7 @@ class ToolSpecExtractor:
 
     @staticmethod
     def _extract_field_default(
-        field: dict | None, fallback: str | list[Any] = ""
+        field: dict[str, Any] | None, fallback: str | list[Any] = ""
     ) -> str | list[Any] | int:
         if not field:
             return fallback
@@ -83,7 +86,7 @@ class ToolSpecExtractor:
         return default if isinstance(default, (list, str, int)) else fallback
 
     @staticmethod
-    def _extract_params(args_schema_field: dict | None) -> dict[str, Any]:
+    def _extract_params(args_schema_field: dict[str, Any] | None) -> dict[str, Any]:
         if not args_schema_field:
             return {}
 
@@ -94,15 +97,15 @@ class ToolSpecExtractor:
         ):
             return {}
 
-        # Cast to type[BaseModel] after runtime check
-        schema_class = cast(type[BaseModel], args_schema_class)
         try:
-            return schema_class.model_json_schema(schema_generator=SchemaGenerator)
+            return args_schema_class.model_json_schema(schema_generator=SchemaGenerator)
         except Exception:
             return {}
 
     @staticmethod
-    def _extract_env_vars(env_vars_field: dict | None) -> list[dict[str, Any]]:
+    def _extract_env_vars(
+        env_vars_field: dict[str, Any] | None,
+    ) -> list[dict[str, Any]]:
         if not env_vars_field:
             return []
 

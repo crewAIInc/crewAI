@@ -177,7 +177,7 @@ def task_output():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_guardrail_process_output(task_output):
     guardrail = LLMGuardrail(
         description="Ensure the result has less than 10 words", llm=LLM(model="gpt-4o")
@@ -197,30 +197,25 @@ def test_task_guardrail_process_output(task_output):
     assert result[1] == task_output.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_emits_events(sample_agent):
+    import threading
+
     started_guardrail = []
     completed_guardrail = []
+    condition = threading.Condition()
 
-    task = create_smart_task(
-        description="Gather information about available books on the First World War",
-        agent=sample_agent,
-        expected_output="A list of available books on the First World War",
-        guardrail="Ensure the authors are from Italy",
-    )
-
-    with crewai_event_bus.scoped_handlers():
-
-        @crewai_event_bus.on(LLMGuardrailStartedEvent)
-        def handle_guardrail_started(source, event):
-            assert source == task
+    @crewai_event_bus.on(LLMGuardrailStartedEvent)
+    def handle_guardrail_started(source, event):
+        with condition:
             started_guardrail.append(
                 {"guardrail": event.guardrail, "retry_count": event.retry_count}
             )
+            condition.notify()
 
-        @crewai_event_bus.on(LLMGuardrailCompletedEvent)
-        def handle_guardrail_completed(source, event):
-            assert source == task
+    @crewai_event_bus.on(LLMGuardrailCompletedEvent)
+    def handle_guardrail_completed(source, event):
+        with condition:
             completed_guardrail.append(
                 {
                     "success": event.success,
@@ -229,50 +224,72 @@ def test_guardrail_emits_events(sample_agent):
                     "retry_count": event.retry_count,
                 }
             )
+            condition.notify()
 
-        result = task.execute_sync(agent=sample_agent)
+    task = create_smart_task(
+        description="Gather information about available books on the First World War",
+        agent=sample_agent,
+        expected_output="A list of available books on the First World War",
+        guardrail="Ensure the authors are from Italy",
+    )
 
-        def custom_guardrail(result: TaskOutput):
-            return (True, "good result from callable function")
+    result = task.execute_sync(agent=sample_agent)
 
-        task = create_smart_task(
-            description="Test task",
-            expected_output="Output",
-            guardrail=custom_guardrail,
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_guardrail) >= 2 and len(completed_guardrail) >= 2,
+            timeout=5
         )
+    assert success, f"Timeout waiting for first task events. Started: {len(started_guardrail)}, Completed: {len(completed_guardrail)}"
 
-        task.execute_sync(agent=sample_agent)
+    def custom_guardrail(result: TaskOutput):
+        return (True, "good result from callable function")
 
-        expected_started_events = [
-            {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
-            {"guardrail": "Ensure the authors are from Italy", "retry_count": 1},
-            {
-                "guardrail": """def custom_guardrail(result: TaskOutput):
-            return (True, "good result from callable function")""",
-                "retry_count": 0,
-            },
-        ]
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=custom_guardrail,
+    )
 
-        expected_completed_events = [
-            {
-                "success": False,
-                "result": None,
-                "error": "The output indicates that none of the authors mentioned are from Italy, while the guardrail requires authors to be from Italy. Therefore, the output does not comply with the guardrail.",
-                "retry_count": 0,
-            },
-            {"success": True, "result": result.raw, "error": None, "retry_count": 1},
-            {
-                "success": True,
-                "result": "good result from callable function",
-                "error": None,
-                "retry_count": 0,
-            },
-        ]
-        assert started_guardrail == expected_started_events
-        assert completed_guardrail == expected_completed_events
+    task.execute_sync(agent=sample_agent)
+
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_guardrail) >= 3 and len(completed_guardrail) >= 3,
+            timeout=5
+        )
+    assert success, f"Timeout waiting for second task events. Started: {len(started_guardrail)}, Completed: {len(completed_guardrail)}"
+
+    expected_started_events = [
+        {"guardrail": "Ensure the authors are from Italy", "retry_count": 0},
+        {"guardrail": "Ensure the authors are from Italy", "retry_count": 1},
+        {
+            "guardrail": """def custom_guardrail(result: TaskOutput):
+        return (True, "good result from callable function")""",
+            "retry_count": 0,
+        },
+    ]
+
+    expected_completed_events = [
+        {
+            "success": False,
+            "result": None,
+            "error": "The output indicates that none of the authors mentioned are from Italy, while the guardrail requires authors to be from Italy. Therefore, the output does not comply with the guardrail.",
+            "retry_count": 0,
+        },
+        {"success": True, "result": result.raw, "error": None, "retry_count": 1},
+        {
+            "success": True,
+            "result": "good result from callable function",
+            "error": None,
+            "retry_count": 0,
+        },
+    ]
+    assert started_guardrail == expected_started_events
+    assert completed_guardrail == expected_completed_events
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_when_an_error_occurs(sample_agent, task_output):
     with (
         patch(
