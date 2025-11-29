@@ -417,7 +417,7 @@ def test_context_window_exceeded_error_handling():
 @pytest.mark.vcr()
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
-    return LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    return LLM(model="anthropic/claude-3-sonnet", is_litellm=False)
 
 
 @pytest.fixture

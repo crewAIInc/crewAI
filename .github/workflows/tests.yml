@@ -71,13 +71,23 @@ jobs:
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
 
-          uv run pytest \
+          cd lib/crewai && uv run pytest \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             $DURATIONS_ARG \
             --durations=10 \
             --maxfail=3
+
+      - name: Run tool tests (group ${{ matrix.group }} of 8)
+        run: |
+          cd lib/crewai-tools && uv run pytest \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --durations=10 \
+            --maxfail=3
+
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

@@ -429,4 +429,65 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - application/json
+      user-agent:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The capital of France is **Paris**.\",\n
+        \           \"thoughtSignature\": \"EpQECpEEAXLI2nxkONgKMasR+MmG0P3iBz4sP0NlcvMiJL2juUJ3UC97WJNCHMc/n1gsaWOFlSjh/Gy//6ccB+NyxoywlvsZCaQJbjsqRYkfHxvdUvxAFr5V3KgPNhwdJYDgbUNS2NxqCcCN9o+5LR3u/owRrvFotN9g4BAFrSd9p9F86rntgMBo/ahjs2Ny8We9nrE57hMckckBjCJvQxpQ1LLesg6qiDU12tTkJLeh5VO7ksaLwer4Ri7cpyLTdfwrFLN93LdRZu2/dEuNZcBDsezFpkTdb7xh0tzpErfQyZZ1w30dSTkovfTLwUa0zCH/guiTQKc7xHk1VyFb1s1kLFAEZ2LoisjE52hPeTGcgt1LKVMZ5pdNpeIEWkCB0Ae7vyd3MuKqYezPv8fNpimKUSRsPqCvj/IWm77/SVLpGeJS6Pqc0ogPQOVInWK7Tr7WUtn8uA2OIIGMxcJrdyYFqxUNH80/Ig0dZxEp7gHw5HEGy/7SFDq2zu/lfEj3kgw//4V1uu6o9j/v6Xp/wMmo4tomqLtkbtY4jl8Nu8/o5+GgKXZ8c/wj8vHVfXh0qtmN18/T/kwZPIKMBmGkkFHZdkYDapdHBsOz1qQZt3elemWHcDcAdYBa0WmBFyn6myCwJFhZjhu5ZyA2vZtLTSk1cCkkvcvTg9CtGWiYxMXEjwaW28UJ+AGBbet6M/T9zyfmnB+cfg==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 129,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 113\n  },\n  \"modelVersion\": \"gemini-3-pro-preview\",\n
+        \ \"responseId\": \"16gqabPSG_HojMcPwtfb0Q4\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 08:03:35 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2594
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
 version: 1
