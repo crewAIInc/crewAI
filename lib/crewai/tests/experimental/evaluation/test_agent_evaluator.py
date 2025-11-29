@@ -62,23 +62,22 @@ class TestAgentEvaluator:
             agents=mock_crew.agents, evaluators=[GoalAlignmentEvaluator()]
         )
 
-        task_completed_condition = threading.Condition()
-        task_completed = False
+        evaluation_condition = threading.Condition()
+        evaluation_completed = False
 
-        @crewai_event_bus.on(TaskCompletedEvent)
-        async def on_task_completed(source, event):
-            # TaskCompletedEvent fires AFTER evaluation results are stored
-            nonlocal task_completed
-            with task_completed_condition:
-                task_completed = True
-                task_completed_condition.notify()
+        @crewai_event_bus.on(AgentEvaluationCompletedEvent)
+        async def on_evaluation_completed(source, event):
+            nonlocal evaluation_completed
+            with evaluation_condition:
+                evaluation_completed = True
+                evaluation_condition.notify()
 
         mock_crew.kickoff()
 
-        with task_completed_condition:
-            assert task_completed_condition.wait_for(
-                lambda: task_completed, timeout=5
-            ), "Timeout waiting for task completion"
+        with evaluation_condition:
+            assert evaluation_condition.wait_for(
+                lambda: evaluation_completed, timeout=5
+            ), "Timeout waiting for evaluation completion"
 
         results = agent_evaluator.get_evaluation_results()
 
