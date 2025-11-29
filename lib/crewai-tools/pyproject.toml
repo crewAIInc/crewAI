@@ -12,13 +12,13 @@ dependencies = [
     "pytube>=15.0.0",
     "requests>=2.32.5",
     "docker>=7.1.0",
-    "crewai==1.6.0",
+    "crewai==1.6.1",
     "lancedb>=0.5.4",
     "tiktoken>=0.8.0",
     "beautifulsoup4>=4.13.4",
-    "pypdf>=5.9.0",
     "python-docx>=1.2.0",
     "youtube-transcript-api>=1.2.2",
+    "pymupdf>=1.26.6",
 ]
 
 
