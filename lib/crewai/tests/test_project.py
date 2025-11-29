@@ -171,7 +171,7 @@ def test_task_guardrail():
     assert reporting_task.guardrail is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_before_kickoff_modification():
     crew = InternalCrew()
     inputs = {"topic": "LLMs"}
@@ -179,7 +179,7 @@ def test_before_kickoff_modification():
     assert "bicycles" in result.raw, "Before kickoff function did not modify inputs"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_after_kickoff_modification():
     crew = InternalCrew()
     # Assuming the crew execution returns a dict
@@ -190,14 +190,14 @@ def test_after_kickoff_modification():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_before_kickoff_with_none_input():
     crew = InternalCrew()
     crew.crew().kickoff(None)
     # Test should pass without raising exceptions
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multiple_before_after_kickoff():
     @CrewBase
     class MultipleHooksCrew:

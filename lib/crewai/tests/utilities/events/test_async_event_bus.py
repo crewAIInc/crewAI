@@ -81,22 +81,27 @@ async def test_multiple_async_handlers():
 async def test_mixed_sync_and_async_handlers():
     sync_events = []
     async_events = []
+    sync_done = asyncio.Event()
+    async_done = asyncio.Event()
 
     with crewai_event_bus.scoped_handlers():
 
         @crewai_event_bus.on(AsyncTestEvent)
         def sync_handler(source: object, event: BaseEvent) -> None:
             sync_events.append(event)
+            sync_done.set()
 
         @crewai_event_bus.on(AsyncTestEvent)
         async def async_handler(source: object, event: BaseEvent) -> None:
             await asyncio.sleep(0.01)
             async_events.append(event)
+            async_done.set()
 
         event = AsyncTestEvent(type="mixed_test")
         crewai_event_bus.emit("test_source", event)
 
-        await asyncio.sleep(0.1)
+        await asyncio.wait_for(sync_done.wait(), timeout=5)
+        await asyncio.wait_for(async_done.wait(), timeout=5)
 
         assert len(sync_events) == 1
         assert len(async_events) == 1
