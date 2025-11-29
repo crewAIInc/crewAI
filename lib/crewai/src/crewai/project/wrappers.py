@@ -134,6 +134,22 @@ class CrewClass(Protocol):
     crew: Callable[..., Crew]
 
 
+def _resolve_result(result: Any) -> Any:
+    """Resolve a potentially async result to its value."""
+    if inspect.iscoroutine(result):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                return pool.submit(asyncio.run, result).result()
+        return asyncio.run(result)
+    return result
+
+
 class DecoratedMethod(Generic[P, R]):
     """Base wrapper for methods with decorator metadata.
 
@@ -164,7 +180,12 @@ class DecoratedMethod(Generic[P, R]):
         """
         if obj is None:
             return self
-        bound = partial(self._meth, obj)
+        inner = partial(self._meth, obj)
+
+        def _bound(*args: Any, **kwargs: Any) -> R:
+            result: R = _resolve_result(inner(*args, **kwargs))  # type: ignore[call-arg]
+            return result
+
         for attr in (
             "is_agent",
             "is_llm",
@@ -176,8 +197,8 @@ class DecoratedMethod(Generic[P, R]):
             "is_crew",
         ):
             if hasattr(self, attr):
-                setattr(bound, attr, getattr(self, attr))
-        return bound
+                setattr(_bound, attr, getattr(self, attr))
+        return _bound
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Call the wrapped method.
@@ -210,22 +231,6 @@ class AfterKickoffMethod(DecoratedMethod[P, R]):
     """Wrapper for methods marked to execute after crew kickoff."""
 
     is_after_kickoff: bool = True
-
-
-def _resolve_result(result: Any) -> Any:
-    """Resolve a potentially async result to its value."""
-    if inspect.iscoroutine(result):
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-        if loop and loop.is_running():
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, result).result()
-        return asyncio.run(result)
-    return result
 
 
 class BoundTaskMethod(Generic[TaskResultT]):
