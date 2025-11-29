@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -26,6 +27,7 @@ try:
     from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
+        JsonSchemaFormat,
         StreamingChatCompletionsUpdate,
     )
     from azure.core.credentials import (
@@ -278,13 +280,16 @@ class AzureCompletion(BaseLLM):
         }
 
         if response_model and self.is_openai_model:
-            params["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": response_model.__name__,
-                    "schema": response_model.model_json_schema(),
-                },
-            }
+            model_description = generate_model_description(response_model)
+            json_schema_info = model_description["json_schema"]
+            json_schema_name = json_schema_info["name"]
+
+            params["response_format"] = JsonSchemaFormat(
+                name=json_schema_name,
+                schema=json_schema_info["schema"],
+                description=f"Schema for {json_schema_name}",
+                strict=json_schema_info["strict"],
+            )
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
@@ -309,6 +314,14 @@ class AzureCompletion(BaseLLM):
         if tools and self.is_openai_model:
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
+
+        additional_params = self.additional_params
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
+
+        if drop_params and isinstance(additional_drop_params, list):
+            for drop_param in additional_drop_params:
+                params.pop(drop_param, None)
 
         return params
 

@@ -381,6 +381,7 @@ def test_azure_raises_error_when_endpoint_missing():
         with pytest.raises(ValueError, match="Azure endpoint is required"):
             AzureCompletion(model="gpt-4", api_key="test-key")
 
+
 def test_azure_raises_error_when_api_key_missing():
     """Test that AzureCompletion raises ValueError when API key is missing"""
     from crewai.llms.providers.azure.completion import AzureCompletion
@@ -389,6 +390,8 @@ def test_azure_raises_error_when_api_key_missing():
     with patch.dict(os.environ, {}, clear=True):
         with pytest.raises(ValueError, match="Azure API key is required"):
             AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
+
+
 def test_azure_endpoint_configuration():
     """
     Test that Azure endpoint configuration works with multiple environment variable names
@@ -1086,3 +1089,27 @@ def test_azure_mistral_and_other_models():
             )
             assert "model" in params
             assert params["model"] == model_name
+
+
+def test_azure_completion_params_preparation_with_drop_params():
+    """
+    Test that completion parameters are properly prepared with drop paramaeters attribute respected
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        llm = LLM(
+            model="azure/o4-mini",
+            drop_params=True,
+            additional_drop_params=["stop"],
+            max_tokens=1000
+        )
+
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
+
+        messages = [{"role": "user", "content": "Hello"}]
+        params = llm._prepare_completion_params(messages)
+
+        assert params.get('stop') == None

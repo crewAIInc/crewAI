@@ -182,6 +182,8 @@ OPENAI_MODELS: list[OpenAIModels] = [
 
 
 AnthropicModels: TypeAlias = Literal[
+    "claude-opus-4-5-20251101",
+    "claude-opus-4-5",
     "claude-3-7-sonnet-latest",
     "claude-3-7-sonnet-20250219",
     "claude-3-5-haiku-latest",
@@ -208,6 +210,8 @@ AnthropicModels: TypeAlias = Literal[
     "claude-3-haiku-20240307",
 ]
 ANTHROPIC_MODELS: list[AnthropicModels] = [
+    "claude-opus-4-5-20251101",
+    "claude-opus-4-5",
     "claude-3-7-sonnet-latest",
     "claude-3-7-sonnet-20250219",
     "claude-3-5-haiku-latest",
@@ -235,6 +239,7 @@ ANTHROPIC_MODELS: list[AnthropicModels] = [
 ]
 
 GeminiModels: TypeAlias = Literal[
+    "gemini-3-pro-preview",
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
@@ -287,6 +292,7 @@ GeminiModels: TypeAlias = Literal[
     "learnlm-2.0-flash-experimental",
 ]
 GEMINI_MODELS: list[GeminiModels] = [
+    "gemini-3-pro-preview",
     "gemini-2.5-pro",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
@@ -450,6 +456,7 @@ BedrockModels: TypeAlias = Literal[
     "anthropic.claude-3-sonnet-20240229-v1:0:28k",
     "anthropic.claude-haiku-4-5-20251001-v1:0",
     "anthropic.claude-instant-v1:2:100k",
+    "anthropic.claude-opus-4-5-20251101-v1:0",
     "anthropic.claude-opus-4-1-20250805-v1:0",
     "anthropic.claude-opus-4-20250514-v1:0",
     "anthropic.claude-sonnet-4-20250514-v1:0",
@@ -522,6 +529,7 @@ BEDROCK_MODELS: list[BedrockModels] = [
     "anthropic.claude-3-sonnet-20240229-v1:0:28k",
     "anthropic.claude-haiku-4-5-20251001-v1:0",
     "anthropic.claude-instant-v1:2:100k",
+    "anthropic.claude-opus-4-5-20251101-v1:0",
     "anthropic.claude-opus-4-1-20250805-v1:0",
     "anthropic.claude-opus-4-20250514-v1:0",
     "anthropic.claude-sonnet-4-20250514-v1:0",

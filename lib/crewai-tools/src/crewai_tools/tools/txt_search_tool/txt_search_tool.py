@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+from typing_extensions import Self
 
 from crewai_tools.tools.rag.rag_tool import RagTool
 
@@ -24,14 +25,17 @@ class TXTSearchTool(RagTool):
         "A tool that can be used to semantic search a query from a txt's content."
     )
     args_schema: type[BaseModel] = TXTSearchToolSchema
+    txt: str | None = None
 
-    def __init__(self, txt: str | None = None, **kwargs):
-        super().__init__(**kwargs)
-        if txt is not None:
-            self.add(txt)
-            self.description = f"A tool that can be used to semantic search a query the {txt} txt's content."
+    @model_validator(mode="after")
+    def _configure_for_txt(self) -> Self:
+        """Configure tool for specific TXT file if provided."""
+        if self.txt is not None:
+            self.add(self.txt)
+            self.description = f"A tool that can be used to semantic search a query the {self.txt} txt's content."
             self.args_schema = FixedTXTSearchToolSchema
             self._generate_description()
+        return self
 
     def _run(  # type: ignore[override]
         self,

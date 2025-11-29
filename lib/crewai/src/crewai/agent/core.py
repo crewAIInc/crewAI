@@ -951,7 +951,7 @@ class Agent(BaseAgent):
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
     def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
-        """Get tools from CrewAI AMP MCP marketplace."""
+        """Get tools from CrewAI AOP MCP marketplace."""
         # Parse: "crewai-amp:mcp-name" or "crewai-amp:mcp-name#tool_name"
         amp_part = amp_ref.replace("crewai-amp:", "")
         if "#" in amp_part:
@@ -1204,7 +1204,7 @@ class Agent(BaseAgent):
 
     @staticmethod
     def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict]:
-        """Fetch MCP server configurations from CrewAI AMP API."""
+        """Fetch MCP server configurations from CrewAI AOP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs
         return []

@@ -243,7 +243,11 @@ def test_validate_call_params_not_supported():
 
     # Patch supports_response_schema to simulate an unsupported model.
     with patch("crewai.llm.supports_response_schema", return_value=False):
-        llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse, is_litellm=True)
+        llm = LLM(
+            model="gemini/gemini-1.5-pro",
+            response_format=DummyResponse,
+            is_litellm=True,
+        )
         with pytest.raises(ValueError) as excinfo:
             llm._validate_call_params()
         assert "does not support response_format" in str(excinfo.value)
@@ -259,6 +263,7 @@ def test_validate_call_params_no_response_format():
 @pytest.mark.parametrize(
     "model",
     [
+        "gemini/gemini-3-pro-preview",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-lite-001",
@@ -701,13 +706,16 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
 
     assert formatted == original_messages
 
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
         with patch("crewai.llm.LLM._get_native_provider") as mock_get_native:
             # Mock that provider exists but throws an error when instantiated
             mock_provider = MagicMock()
-            mock_provider.side_effect = ValueError("Native provider initialization failed")
+            mock_provider.side_effect = ValueError(
+                "Native provider initialization failed"
+            )
             mock_get_native.return_value = mock_provider
 
             with pytest.raises(ImportError) as excinfo:
@@ -750,21 +758,36 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
 
 
 def test_prefixed_models_with_invalid_constants_use_litellm():
-    """Test that models with native provider prefixes use LiteLLM when model is NOT in constants."""
+    """Test that models with native provider prefixes use LiteLLM when model is NOT in constants and does NOT match patterns."""
     # Test openai/ prefix with non-OpenAI model (not in OPENAI_MODELS) → LiteLLM
     llm = LLM(model="openai/gemini-2.5-flash", is_litellm=False)
     assert llm.is_litellm is True
     assert llm.model == "openai/gemini-2.5-flash"
 
-    # Test openai/ prefix with unknown future model → LiteLLM
-    llm2 = LLM(model="openai/gpt-future-6", is_litellm=False)
+    # Test openai/ prefix with model that doesn't match patterns (e.g. no gpt- prefix) → LiteLLM
+    llm2 = LLM(model="openai/custom-finetune-model", is_litellm=False)
     assert llm2.is_litellm is True
-    assert llm2.model == "openai/gpt-future-6"
+    assert llm2.model == "openai/custom-finetune-model"
 
     # Test anthropic/ prefix with non-Anthropic model → LiteLLM
     llm3 = LLM(model="anthropic/gpt-4o", is_litellm=False)
     assert llm3.is_litellm is True
     assert llm3.model == "anthropic/gpt-4o"
+
+
+def test_prefixed_models_with_valid_patterns_use_native_sdk():
+    """Test that models matching provider patterns use native SDK even if not in constants."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="openai/gpt-future-6", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
+        assert llm.model == "gpt-future-6"
+
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm2 = LLM(model="anthropic/claude-future-5", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "anthropic"
+        assert llm2.model == "claude-future-5"
 
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
@@ -820,19 +843,36 @@ def test_validate_model_in_constants():
     """Test the _validate_model_in_constants method."""
     # OpenAI models
     assert LLM._validate_model_in_constants("gpt-4o", "openai") is True
-    assert LLM._validate_model_in_constants("gpt-future-6", "openai") is False
+    assert LLM._validate_model_in_constants("gpt-future-6", "openai") is True
+    assert LLM._validate_model_in_constants("o1-latest", "openai") is True
+    assert LLM._validate_model_in_constants("unknown-model", "openai") is False
 
     # Anthropic models
     assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
-    assert LLM._validate_model_in_constants("claude-future-5", "claude") is False
+    assert LLM._validate_model_in_constants("claude-future-5", "claude") is True
+    assert (
+        LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
+    )
+    assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models
     assert LLM._validate_model_in_constants("gemini-2.5-pro", "gemini") is True
-    assert LLM._validate_model_in_constants("gemini-future", "gemini") is False
+    assert LLM._validate_model_in_constants("gemini-future", "gemini") is True
+    assert LLM._validate_model_in_constants("gemma-3-latest", "gemini") is True
+    assert LLM._validate_model_in_constants("unknown-model", "gemini") is False
 
     # Azure models
     assert LLM._validate_model_in_constants("gpt-4o", "azure") is True
     assert LLM._validate_model_in_constants("gpt-35-turbo", "azure") is True
 
     # Bedrock models
-    assert LLM._validate_model_in_constants("anthropic.claude-opus-4-1-20250805-v1:0", "bedrock") is True
+    assert (
+        LLM._validate_model_in_constants(
+            "anthropic.claude-opus-4-1-20250805-v1:0", "bedrock"
+        )
+        is True
+    )
+    assert (
+        LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
+        is True
+    )
