@@ -12,6 +12,7 @@ from crewai.events.event_types import (
     ToolUsageStartedEvent,
 )
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
@@ -417,7 +418,7 @@ def test_context_window_exceeded_error_handling():
 @pytest.mark.vcr()
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
-    return LLM(model="anthropic/claude-3-sonnet", is_litellm=False)
+    return AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
 
 
 @pytest.fixture
@@ -432,21 +433,22 @@ def user_message():
     return {"role": "user", "content": "test"}
 
 
-def test_anthropic_message_formatting_edge_cases(anthropic_llm):
+def test_anthropic_message_formatting_edge_cases():
     """Test edge cases for Anthropic message formatting."""
     # Test None messages
+    anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
     with pytest.raises(TypeError, match="Messages cannot be None"):
-        anthropic_llm._format_messages_for_provider(None)
+        anthropic_llm._format_messages_for_anthropic(None)
 
     # Test empty message list
-    formatted = anthropic_llm._format_messages_for_provider([])
+    formatted, system_message = anthropic_llm._format_messages_for_anthropic([])
     assert len(formatted) == 1
     assert formatted[0]["role"] == "user"
     assert formatted[0]["content"] == "."
 
     # Test invalid message format
     with pytest.raises(TypeError, match="Invalid message format"):
-        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
+        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
 def test_anthropic_model_detection():
@@ -464,17 +466,17 @@ def test_anthropic_model_detection():
         assert llm.is_anthropic == expected, f"Failed for model: {model}"
 
 
-def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
+def test_anthropic_message_formatting(system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
+    anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
 
-    formatted = anthropic_llm._format_messages_for_provider([])
+    formatted, system_message = anthropic_llm._format_messages_for_anthropic([])
     assert len(formatted) == 1
     assert formatted[0]["role"] == "user"
     assert formatted[0]["content"] == "."
-
     with pytest.raises(TypeError, match="Invalid message format"):
-        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
+        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
 def test_deepseek_r1_with_open_router():

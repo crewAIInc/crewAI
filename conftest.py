@@ -156,6 +156,7 @@ def vcr_config(vcr_cassette_dir: str) -> dict[str, Any]:
         "filter_headers": [(k, v) for k, v in HEADERS_TO_FILTER.items()],
         "before_record_request": _filter_request_headers,
         "before_record_response": _filter_response_headers,
+        "filter_query_parameters": ["key"],
     }
 
     if os.getenv("GITHUB_ACTIONS") == "true":
