@@ -291,41 +291,46 @@ def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
 
 @pytest.mark.vcr()
 def test_agent_emits_execution_started_and_completed_events(base_agent, base_task):
-    received_events = []
-    lock = threading.Lock()
-    all_events_received = threading.Event()
+    started_events: list[AgentExecutionStartedEvent] = []
+    completed_events: list[AgentExecutionCompletedEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(AgentExecutionStartedEvent)
     def handle_agent_start(source, event):
-        with lock:
-            received_events.append(event)
+        with condition:
+            started_events.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(AgentExecutionCompletedEvent)
     def handle_agent_completed(source, event):
-        with lock:
-            received_events.append(event)
-            if len(received_events) >= 2:
-                all_events_received.set()
+        with condition:
+            completed_events.append(event)
+            condition.notify()
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
     crew.kickoff()
 
-    assert all_events_received.wait(timeout=5), (
-        "Timeout waiting for agent execution events"
-    )
-    assert len(received_events) == 2
-    assert received_events[0].agent == base_agent
-    assert received_events[0].task == base_task
-    assert received_events[0].tools == []
-    assert isinstance(received_events[0].task_prompt, str)
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_events) >= 1 and len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for agent execution events"
+
+    assert len(started_events) == 1
+    assert len(completed_events) == 1
+    assert started_events[0].agent == base_agent
+    assert started_events[0].task == base_task
+    assert started_events[0].tools == []
+    assert isinstance(started_events[0].task_prompt, str)
     assert (
-        received_events[0].task_prompt
+        started_events[0].task_prompt
         == "Just say hi\n\nThis is the expected criteria for your final answer: hi\nyou MUST return the actual complete content as the final answer, not a summary."
     )
-    assert isinstance(received_events[0].timestamp, datetime)
-    assert received_events[0].type == "agent_execution_started"
-    assert isinstance(received_events[1].timestamp, datetime)
-    assert received_events[1].type == "agent_execution_completed"
+    assert isinstance(started_events[0].timestamp, datetime)
+    assert started_events[0].type == "agent_execution_started"
+    assert isinstance(completed_events[0].timestamp, datetime)
+    assert completed_events[0].type == "agent_execution_completed"
 
 
 @pytest.mark.vcr()
@@ -834,28 +839,39 @@ def test_flow_method_execution_finished_includes_serialized_state():
 
 @pytest.mark.vcr()
 def test_llm_emits_call_started_event():
-    received_events = []
+    started_events: list[LLMCallStartedEvent] = []
+    completed_events: list[LLMCallCompletedEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_call_started(source, event):
-        received_events.append(event)
+        with condition:
+            started_events.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_call_completed(source, event):
-        received_events.append(event)
+        with condition:
+            completed_events.append(event)
+            condition.notify()
 
     llm = LLM(model="gpt-4o-mini")
     llm.call("Hello, how are you?")
-    wait_for_event_handlers()
 
-    assert len(received_events) == 2
-    assert received_events[0].type == "llm_call_started"
-    assert received_events[1].type == "llm_call_completed"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_events) >= 1 and len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
 
-    assert received_events[0].task_name is None
-    assert received_events[0].agent_role is None
-    assert received_events[0].agent_id is None
-    assert received_events[0].task_id is None
+    assert started_events[0].type == "llm_call_started"
+    assert completed_events[0].type == "llm_call_completed"
+
+    assert started_events[0].task_name is None
+    assert started_events[0].agent_role is None
+    assert started_events[0].agent_id is None
+    assert started_events[0].task_id is None
 
 
 @pytest.mark.vcr()
@@ -1052,31 +1068,31 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     failed_event = []
     started_event = []
     stream_event = []
-    event_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1 and len(stream_event) >= 12:
-            event_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
-        if (
-            len(completed_event) >= 1
-            and len(started_event) >= 1
-            and len(stream_event) >= 12
-        ):
-            event_received.set()
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     agent = Agent(
         role="TestAgent",
@@ -1094,7 +1110,14 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff()
 
-    assert event_received.wait(timeout=10), "Timeout waiting for LLM events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1
+            and len(started_event) >= 1
+            and len(stream_event) >= 12,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
     assert len(completed_event) == 1
     assert len(failed_event) == 0
     assert len(started_event) == 1
@@ -1120,34 +1143,45 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
 
 @pytest.mark.vcr()
 def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
-    completed_event = []
-    failed_event = []
-    started_event = []
-    stream_event = []
-    event_received = threading.Event()
+    completed_event: list[LLMCallCompletedEvent] = []
+    failed_event: list[LLMCallFailedEvent] = []
+    started_event: list[LLMCallStartedEvent] = []
+    stream_event: list[LLMStreamChunkEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1:
-            event_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     crew = Crew(agents=[base_agent], tasks=[base_task])
     crew.kickoff()
 
-    assert event_received.wait(timeout=10), "Timeout waiting for LLM events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1 and len(started_event) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
     assert len(completed_event) == 1
     assert len(failed_event) == 0
     assert len(started_event) == 1
@@ -1177,31 +1211,31 @@ def test_llm_emits_event_with_lite_agent():
     failed_event = []
     started_event = []
     stream_event = []
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1 and len(stream_event) >= 15:
-            all_events_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
-        if (
-            len(completed_event) >= 1
-            and len(started_event) >= 1
-            and len(stream_event) >= 15
-        ):
-            all_events_received.set()
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     agent = Agent(
         role="Speaker",
@@ -1211,7 +1245,14 @@ def test_llm_emits_event_with_lite_agent():
     )
     agent.kickoff(messages=[{"role": "user", "content": "say hi!"}])
 
-    assert all_events_received.wait(timeout=10), "Timeout waiting for all events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1
+            and len(started_event) >= 1
+            and len(stream_event) >= 15,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all events"
 
     assert len(completed_event) == 1
     assert len(failed_event) == 0

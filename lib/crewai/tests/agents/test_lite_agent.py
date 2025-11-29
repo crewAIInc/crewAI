@@ -356,7 +356,7 @@ def test_sets_parent_flow_when_inside_flow():
 
 @pytest.mark.vcr()
 def test_guardrail_is_called_using_string():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
@@ -369,35 +369,33 @@ def test_guardrail_is_called_using_string():
         guardrail="""Only include Brazilian players, both women and men""",
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
         assert isinstance(source, LiteAgent)
         assert source.original_agent == agent
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 2
-            and len(guardrail_events["completed"]) == 2
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
         assert isinstance(source, LiteAgent)
         assert source.original_agent == agent
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 2
-            and len(guardrail_events["completed"]) == 2
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     result = agent.kickoff(messages="Top 10 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 2
+            and len(guardrail_events["completed"]) >= 2,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 2
     assert len(guardrail_events["completed"]) == 2
     assert not guardrail_events["completed"][0].success
@@ -410,31 +408,25 @@ def test_guardrail_is_called_using_string():
 
 @pytest.mark.vcr()
 def test_guardrail_is_called_using_callable():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 1
-            and len(guardrail_events["completed"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 1
-            and len(guardrail_events["completed"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     agent = Agent(
         role="Sports Analyst",
@@ -445,9 +437,13 @@ def test_guardrail_is_called_using_callable():
 
     result = agent.kickoff(messages="Top 1 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 1
+            and len(guardrail_events["completed"]) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 1
     assert len(guardrail_events["completed"]) == 1
     assert guardrail_events["completed"][0].success
@@ -456,31 +452,25 @@ def test_guardrail_is_called_using_callable():
 
 @pytest.mark.vcr()
 def test_guardrail_reached_attempt_limit():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 3
-            and len(guardrail_events["completed"]) == 3
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 3
-            and len(guardrail_events["completed"]) == 3
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     agent = Agent(
         role="Sports Analyst",
@@ -498,9 +488,13 @@ def test_guardrail_reached_attempt_limit():
     ):
         agent.kickoff(messages="Top 10 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 3
+            and len(guardrail_events["completed"]) >= 3,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 3  # 2 retries + 1 initial call
     assert len(guardrail_events["completed"]) == 3  # 2 retries + 1 initial call
     assert not guardrail_events["completed"][0].success

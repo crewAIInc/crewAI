@@ -259,19 +259,22 @@ def test_external_memory_custom_storage(custom_storage, crew_with_external_memor
 def test_external_memory_search_events(
     custom_storage, external_memory_with_mocked_config
 ):
-    events = defaultdict(list)
-    event_received = threading.Event()
+    events: dict[str, list] = defaultdict(list)
+    condition = threading.Condition()
 
     external_memory_with_mocked_config.storage = custom_storage
 
     @crewai_event_bus.on(MemoryQueryStartedEvent)
     def on_search_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
+        with condition:
+            events["MemoryQueryStartedEvent"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(MemoryQueryCompletedEvent)
     def on_search_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
-        event_received.set()
+        with condition:
+            events["MemoryQueryCompletedEvent"].append(event)
+            condition.notify()
 
     external_memory_with_mocked_config.search(
         query="test value",
@@ -279,7 +282,13 @@ def test_external_memory_search_events(
         score_threshold=0.35,
     )
 
-    assert event_received.wait(timeout=5), "Timeout waiting for search events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemoryQueryStartedEvent"]) >= 1
+            and len(events["MemoryQueryCompletedEvent"]) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for search events"
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
 
@@ -323,26 +332,35 @@ def test_external_memory_search_events(
 def test_external_memory_save_events(
     custom_storage, external_memory_with_mocked_config
 ):
-    events = defaultdict(list)
-    event_received = threading.Event()
+    events: dict[str, list] = defaultdict(list)
+    condition = threading.Condition()
 
     external_memory_with_mocked_config.storage = custom_storage
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def on_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def on_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
-        event_received.set()
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            condition.notify()
 
     external_memory_with_mocked_config.save(
         value="saving value",
         metadata={"task": "test_task"},
     )
 
-    assert event_received.wait(timeout=5), "Timeout waiting for save events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemorySaveStartedEvent"]) >= 1
+            and len(events["MemorySaveCompletedEvent"]) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for save events"
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
 

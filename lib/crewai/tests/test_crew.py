@@ -3765,15 +3765,13 @@ def test_crew_testing_function(researcher):
     def on_crew_test_started(source, event: CrewTestStartedEvent):
         with condition:
             received_events.append(event)
-            if len(received_events) == 2:
-                condition.notify()
+            condition.notify()
 
     @crewai_event_bus.on(CrewTestCompletedEvent)
     def on_crew_test_completed(source, event: CrewTestCompletedEvent):
         with condition:
             received_events.append(event)
-            if len(received_events) == 2:
-                condition.notify()
+            condition.notify()
 
     crew.test(n_iterations, llm_instance, inputs={"topic": "AI"})
 

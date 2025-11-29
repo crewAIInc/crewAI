@@ -17,6 +17,21 @@ load_dotenv(override=True)
 
 
 @pytest.fixture(autouse=True, scope="function")
+def cleanup_event_handlers() -> Generator[None, Any, None]:
+    """Clean up event bus handlers after each test to prevent test pollution."""
+    yield
+
+    try:
+        from crewai.events.event_bus import crewai_event_bus
+
+        with crewai_event_bus._rwlock.w_locked():
+            crewai_event_bus._sync_handlers.clear()
+            crewai_event_bus._async_handlers.clear()
+    except Exception:  # noqa: S110
+        pass
+
+
+@pytest.fixture(autouse=True, scope="function")
 def setup_test_environment() -> Generator[None, Any, None]:
     """Setup test environment for crewAI workspace."""
     with tempfile.TemporaryDirectory() as temp_dir:
