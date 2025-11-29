@@ -18,7 +18,7 @@ interactions:
       x-goog-api-client:
       - google-genai-sdk/1.2.0 gl-python/3.12.9
       x-goog-api-key:
-      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+      - X-GOOG-API-KEY-XXX
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-thinking-exp-01-21:generateContent
   response:
@@ -27,10 +27,10 @@ interactions:
         [\n          {\n            \"text\": \"The capital of France is **Paris**.\"\n
         \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
         \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 39,\n    \"promptTokensDetails\":
+        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 41,\n    \"promptTokensDetails\":
         [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
-        \   ],\n    \"thoughtsTokenCount\": 23\n  },\n  \"modelVersion\": \"models/gemini-2.5-flash-preview-05-20\",\n
-        \ \"responseId\": \"2KgqabjOA4vQjMcPko_pyAg\"\n}\n"
+        \   ],\n    \"thoughtsTokenCount\": 25\n  },\n  \"modelVersion\": \"models/gemini-2.5-flash-preview-05-20\",\n
+        \ \"responseId\": \"xFIrafO6NLO2jrEPrPTzwAY\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -39,11 +39,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Sat, 29 Nov 2025 08:03:36 GMT
+      - Sat, 29 Nov 2025 20:08:36 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=487
+      - gfet4t7; dur=509
       Transfer-Encoding:
       - chunked
       Vary:

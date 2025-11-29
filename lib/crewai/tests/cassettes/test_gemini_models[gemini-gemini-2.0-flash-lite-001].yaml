@@ -18,21 +18,21 @@ interactions:
       x-goog-api-client:
       - google-genai-sdk/1.2.0 gl-python/3.12.9
       x-goog-api-key:
-      - AIzaSyDACffvUgJJntvSqQJY06h8ITyIU1lH-yQ
+      - X-GOOG-API-KEY-XXX
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite-001:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The capital of France is **Paris**.\\n\"\n
+        [\n          {\n            \"text\": \"The capital of France is Paris.\\n\"\n
         \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.048390895128250122\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 7,\n    \"candidatesTokenCount\": 9,\n    \"totalTokenCount\":
-        16,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \"STOP\",\n      \"avgLogprobs\": -0.13051052391529083\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 7,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\":
+        15,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
         \       \"tokenCount\": 7\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 9\n      }\n
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
         \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-lite-001\",\n  \"responseId\":
-        \"2Kgqaaf4E7ONjMcPsanu0Q4\"\n}\n"
+        \"xVIradGLA4SajrEPj4CmyQg\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -41,11 +41,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Sat, 29 Nov 2025 08:03:36 GMT
+      - Sat, 29 Nov 2025 20:08:37 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=311
+      - gfet4t7; dur=301
       Transfer-Encoding:
       - chunked
       Vary:

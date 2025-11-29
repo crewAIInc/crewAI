@@ -95,6 +95,7 @@ HEADERS_TO_FILTER = {
     "x-ratelimit-remaining-tokens": "X-RATELIMIT-REMAINING-TOKENS-XXX",
     "x-ratelimit-reset-requests": "X-RATELIMIT-RESET-REQUESTS-XXX",
     "x-ratelimit-reset-tokens": "X-RATELIMIT-RESET-TOKENS-XXX",
+    "x-goog-api-key": "X-GOOG-API-KEY-XXX",
 }
 
 
