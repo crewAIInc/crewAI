@@ -3511,6 +3511,111 @@ def test_replay_setup_context():
         assert crew.tasks[1].prompt_context == "context raw output"
 
 
+def test_replay_preserves_original_task_id_after_replay():
+    """Test that original task IDs remain valid after replay.
+
+    This test verifies the fix for issue #3999 where replaying a task would
+    overwrite the original task ID in storage, making it impossible to replay
+    the same task again using the original ID.
+    """
+    agent = Agent(role="test_agent", backstory="Test Description", goal="Test Goal")
+    task1 = Task(description="First Task", expected_output="First Output", agent=agent)
+    task2 = Task(description="Second Task", expected_output="Second Output", agent=agent)
+
+    # Store the original task IDs
+    original_task1_id = str(task1.id)
+    original_task2_id = str(task2.id)
+
+    task1_output = TaskOutput(
+        description="First Task Output",
+        agent="test_agent",
+        raw="first task raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+        messages=[],
+    )
+    task2_output = TaskOutput(
+        description="Second Task Output",
+        agent="test_agent",
+        raw="second task raw output",
+        pydantic=None,
+        json_dict={},
+        output_format=OutputFormat.RAW,
+        messages=[],
+    )
+
+    crew = Crew(agents=[agent], tasks=[task1, task2], process=Process.sequential)
+
+    # Track what gets passed to storage.update
+    update_calls = []
+    original_update = None
+
+    def mock_storage_update(task_index, **kwargs):
+        update_calls.append({"task_index": task_index, "kwargs": kwargs})
+
+    with patch.object(Task, "execute_sync") as mock_execute_task:
+        mock_execute_task.return_value = task2_output
+
+        with patch(
+            "crewai.utilities.task_output_storage_handler.TaskOutputStorageHandler.load",
+            return_value=[
+                {
+                    "task_id": original_task1_id,
+                    "output": {
+                        "description": task1_output.description,
+                        "summary": task1_output.summary,
+                        "raw": task1_output.raw,
+                        "pydantic": task1_output.pydantic,
+                        "json_dict": task1_output.json_dict,
+                        "output_format": task1_output.output_format,
+                        "agent": task1_output.agent,
+                        "messages": [],
+                    },
+                    "inputs": {},
+                },
+                {
+                    "task_id": original_task2_id,
+                    "output": {
+                        "description": task2_output.description,
+                        "summary": task2_output.summary,
+                        "raw": task2_output.raw,
+                        "pydantic": task2_output.pydantic,
+                        "json_dict": task2_output.json_dict,
+                        "output_format": task2_output.output_format,
+                        "agent": task2_output.agent,
+                        "messages": [],
+                    },
+                    "inputs": {},
+                },
+            ],
+        ):
+            with patch(
+                "crewai.memory.storage.kickoff_task_outputs_storage.KickoffTaskOutputsSQLiteStorage.update"
+            ) as mock_update:
+                mock_update.side_effect = mock_storage_update
+
+                # Replay from task2
+                crew.replay(original_task2_id)
+
+                # Verify that the update was called but did NOT include task_id
+                # This is the key assertion - task_id should NOT be updated during replay
+                assert len(update_calls) == 1
+                update_kwargs = update_calls[0]["kwargs"]
+
+                # The fix ensures task_id is NOT included in the update kwargs
+                # so the original task_id is preserved in storage
+                assert "task_id" not in update_kwargs, (
+                    "task_id should not be updated during replay to preserve "
+                    "the original task ID for future replays"
+                )
+
+                # Verify other fields are still updated
+                assert "output" in update_kwargs
+                assert "was_replayed" in update_kwargs
+                assert update_kwargs["was_replayed"] is True
+
+
 def test_key(researcher, writer):
     tasks = [
         Task(
