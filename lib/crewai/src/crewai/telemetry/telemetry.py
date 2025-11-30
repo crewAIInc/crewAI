@@ -208,8 +208,13 @@ class Telemetry:
                     raise SystemExit(0)
 
             signal.signal(sig, handler)
-        except (ValueError, OSError):
-            pass
+        except ValueError as e:
+            logger.warning(
+                f"Cannot register {sig.name} handler: not running in main thread",
+                exc_info=e,
+            )
+        except OSError as e:
+            logger.warning(f"Cannot register {sig.name} handler: {e}", exc_info=e)
 
     def _shutdown(self) -> None:
         """Flush and shutdown the telemetry provider on process exit.
