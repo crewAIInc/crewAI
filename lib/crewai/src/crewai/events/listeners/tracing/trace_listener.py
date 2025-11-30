@@ -71,6 +71,7 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
+from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -159,6 +160,7 @@ class TraceCollectionListener(BaseEventListener):
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
+        self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
 
@@ -457,6 +459,15 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: KnowledgeQueryFailedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
+
+    def _register_system_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
+        """Register handlers for system signal events (SIGTERM, SIGINT, etc.)."""
+
+        @on_signal
+        def handle_signal(source: Any, event: SignalEvent) -> None:
+            """Flush trace batch on system signals to prevent data loss."""
+            if self.batch_manager.is_batch_initialized():
+                self.batch_manager.finalize_batch()
 
     def _initialize_crew_batch(self, source: Any, event: Any) -> None:
         """Initialize trace batch.
