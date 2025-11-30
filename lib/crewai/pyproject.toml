@@ -31,13 +31,13 @@ dependencies = [
     "appdirs~=1.4.4",
     "jsonref~=1.1.0",
     "json-repair~=0.25.2",
-    "uv~=0.4.25",
     "tomli-w~=1.1.0",
     "tomli~=2.0.2",
     "json5~=0.10.0",
     "portalocker~=2.7.0",
     "pydantic-settings~=2.10.1",
     "mcp~=1.16.0",
+    "uv~=0.9.13",
 ]
 
 [project.urls]
