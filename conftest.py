@@ -96,6 +96,13 @@ HEADERS_TO_FILTER = {
     "x-ratelimit-reset-requests": "X-RATELIMIT-RESET-REQUESTS-XXX",
     "x-ratelimit-reset-tokens": "X-RATELIMIT-RESET-TOKENS-XXX",
     "x-goog-api-key": "X-GOOG-API-KEY-XXX",
+    "api-key": "X-API-KEY-XXX",
+    "User-Agent": "X-USER-AGENT-XXX",
+    "apim-request-id:": "X-API-CLIENT-REQUEST-ID-XXX",
+    "azureml-model-session": "AZUREML-MODEL-SESSION-XXX",
+    "x-ms-client-request-id": "X-MS-CLIENT-REQUEST-ID-XXX",
+    "x-ms-region": "X-MS-REGION-XXX",
+    "apim-request-id": "APIM-REQUEST-ID-XXX",
 }
 
 
