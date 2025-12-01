@@ -158,7 +158,6 @@ class BaseLLM(ABC):
             RuntimeError: If the LLM request fails for other reasons.
         """
 
-    @abstractmethod
     async def acall(
         self,
         messages: str | list[LLMMessage],
@@ -195,6 +194,7 @@ class BaseLLM(ABC):
             TimeoutError: If the LLM request times out.
             RuntimeError: If the LLM request fails for other reasons.
         """
+        raise NotImplementedError
 
     def _convert_tools_for_interference(
         self, tools: list[dict[str, BaseTool]]
