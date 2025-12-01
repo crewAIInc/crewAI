@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "What is the capital
-      of France?"}]}], "generationConfig": {"stop_sequences": []}}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
     headers:
       accept:
       - '*/*'
@@ -10,25 +9,25 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '131'
+      - '123'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       user-agent:
-      - litellm/1.74.9
+      - litellm/1.80.7
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemma-3-27b-it:generateContent
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/21RwWrbQBC96yuGvRSMFYp7aOktxAnY1MQ0ahtIfJhII3vwalfZGdUpxv/elRQ5
-        CkQL2uXNm7f75h0TAJOjK7hAJTHf4SEiAMfu39a8U3IaCwMUwRqDvnH77zg6R4rSS9tksh1BjjUr
-        WvAl3AR0OQELTCZrDCyTyQU8uke30E8Ce+cPDkofgOO9nIONL6sw7AUs7wk0il1zWZKFzB8oTDvk
-        h2/+BoJVI9RUU4gtHXwZcigIssC+qncUCwIHsrbdWQVKlB17N4W8YWFHfWfeWG0CXbRvapcZ2Tqd
-        z5vp2zCCt9Q6rXxBdqCfBoIp2bHsfhKKdy3tLrtdm3OVXUEvEf6cDBd00qYR3NKKFGMseB6+qUP0
-        opnfk7vyTRfLt17LqI8j/rAyapJ5lGQ7zm4Ua3SAlvVfl9v1fWZGLvWd8uCy2zfJq99+BL8pCPde
-        t1RVmH5JZ1+fUtZOzgSS2juhRdEylvgnw+VTMU/T5bPKmos7nV3+Mskp+Q+x/LCbmwIAAA==
+        H4sIAAAAAAAC/21R70vDMBD93r/iyBehbOIU8ce3oRMmDocWUVQkttf1XJrUXOKUsf/dtLWzgg00
+        4d27l7x76whApFJnlEmHLE7hMSAA6+Zf14x2qF0odFAAK2ndL7f91r1zoDj8rJtEUiCksiInFZgc
+        LqzUKQIxxPFcWuI43oUn/aSnbodhqc1KQ24sULiXUlDhZaW0SwZFSwQXxCaU56ggMSu0gwa5Mv7D
+        Isw8oy8HEFoaeGxTyBASS6asCgwFhhUqVe/kGHLJBRk9gNQTk8a2M/XKeYu79ZvqJXq2Ntvz8+B3
+        GNYorJ2WJkPV0TcdQeSkiYsblGx0TbtNrudiWyWd4WeA96LugkZaeJYLnKGTIRa5Hb6obPDiErNE
+        fWZ8E8txqyWcCSP+t9Jr4vMgSaqfXS/W4EAqcl9NbpP7RPRcuj/Knctmf45+/LYjuEPL1HpdYFnK
+        4cFw/+h1SK6RExa5MppxmtWMy9GxlZkeTQ/frl/8bH6SHZ29jx9EtIm+AdW7QZKbAgAA
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -37,11 +36,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 06 Aug 2025 18:55:33 GMT
+      - Sat, 29 Nov 2025 21:01:27 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1529
+      - gfet4t7; dur=1410
       Transfer-Encoding:
       - chunked
       Vary:
@@ -49,9 +48,9 @@ interactions:
       - X-Origin
       - Referer
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       X-Frame-Options:
-      - SAMEORIGIN
+      - X-FRAME-OPTIONS-XXX
       X-XSS-Protection:
       - '0'
     status:

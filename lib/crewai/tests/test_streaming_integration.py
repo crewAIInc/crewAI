@@ -31,7 +31,7 @@ def simple_task(researcher: Agent) -> Task:
 class TestStreamingCrewIntegration:
     """Integration tests for crew streaming that match documentation examples."""
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_basic_crew_streaming_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
@@ -57,7 +57,7 @@ class TestStreamingCrewIntegration:
         assert result.raw is not None
         assert len(result.raw) > 0
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_streaming_with_chunk_context_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
@@ -89,7 +89,7 @@ class TestStreamingCrewIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_streaming_properties_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
@@ -114,7 +114,7 @@ class TestStreamingCrewIntegration:
         result = streaming.result
         assert result.raw is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     @pytest.mark.asyncio
     async def test_async_streaming_from_docs(
         self, researcher: Agent, simple_task: Task
@@ -140,7 +140,7 @@ class TestStreamingCrewIntegration:
         result = streaming.result
         assert result.raw is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_kickoff_for_each_streaming_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
@@ -174,7 +174,7 @@ class TestStreamingCrewIntegration:
 class TestStreamingFlowIntegration:
     """Integration tests for flow streaming that match documentation examples."""
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_basic_flow_streaming_from_docs(self) -> None:
         """Test basic flow streaming example from documentation."""
 
@@ -223,7 +223,7 @@ class TestStreamingFlowIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     def test_flow_streaming_properties_from_docs(self) -> None:
         """Test flow streaming properties example from documentation."""
 
@@ -247,7 +247,7 @@ class TestStreamingFlowIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr(filter_headers=["authorization"])
+    @pytest.mark.vcr()
     @pytest.mark.asyncio
     async def test_async_flow_streaming_from_docs(self) -> None:
         """Test async flow streaming example from documentation."""

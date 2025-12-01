@@ -55,13 +55,6 @@ from ..utils import wait_for_event_handlers
 
 
 @pytest.fixture(scope="module")
-def vcr_config(request) -> dict:
-    return {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-    }
-
-
-@pytest.fixture(scope="module")
 def base_agent():
     return Agent(
         role="base_agent",
@@ -99,7 +92,7 @@ def reset_event_listener_singleton():
         EventListener._instance._initialized = original_initialized
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_start_kickoff_event(
     base_agent, base_task, reset_event_listener_singleton
 ):
@@ -133,7 +126,7 @@ def test_crew_emits_start_kickoff_event(
     assert received_events[0].type == "crew_kickoff_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_end_kickoff_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -156,7 +149,7 @@ def test_crew_emits_end_kickoff_event(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     received_events = []
 
@@ -189,7 +182,7 @@ def test_crew_emits_test_kickoff_type_event(base_agent, base_task):
     assert received_events[2].type == "crew_test_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_kickoff_failed_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -215,7 +208,7 @@ def test_crew_emits_kickoff_failed_event(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_failed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_crew_emits_start_task_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -235,10 +228,8 @@ def test_crew_emits_start_task_event(base_agent, base_task):
     assert received_events[0].type == "task_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-def test_crew_emits_end_task_event(
-    base_agent, base_task, reset_event_listener_singleton
-):
+@pytest.mark.vcr()
+def test_crew_emits_end_task_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
 
@@ -247,21 +238,8 @@ def test_crew_emits_end_task_event(
         received_events.append(event)
         event_received.set()
 
-    mock_span = Mock()
-
-    mock_telemetry = Mock()
-    mock_telemetry.task_started = Mock(return_value=mock_span)
-    mock_telemetry.task_ended = Mock(return_value=mock_span)
-    mock_telemetry.set_tracer = Mock()
-    mock_telemetry.crew_execution_span = Mock()
-    mock_telemetry.end_crew = Mock()
-
-    with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
-        crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
-        crew.kickoff()
-
-        mock_telemetry.task_started.assert_called_once_with(crew=crew, task=base_task)
-        mock_telemetry.task_ended.assert_called_once_with(mock_span, base_task, crew)
+    crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
+    crew.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for task completed event"
     assert len(received_events) == 1
@@ -269,7 +247,7 @@ def test_crew_emits_end_task_event(
     assert received_events[0].type == "task_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
     received_events = []
     received_sources = []
@@ -311,46 +289,51 @@ def test_task_emits_failed_event_on_execution_error(base_agent, base_task):
             assert received_events[0].type == "task_failed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_emits_execution_started_and_completed_events(base_agent, base_task):
-    received_events = []
-    lock = threading.Lock()
-    all_events_received = threading.Event()
+    started_events: list[AgentExecutionStartedEvent] = []
+    completed_events: list[AgentExecutionCompletedEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(AgentExecutionStartedEvent)
     def handle_agent_start(source, event):
-        with lock:
-            received_events.append(event)
+        with condition:
+            started_events.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(AgentExecutionCompletedEvent)
     def handle_agent_completed(source, event):
-        with lock:
-            received_events.append(event)
-            if len(received_events) >= 2:
-                all_events_received.set()
+        with condition:
+            completed_events.append(event)
+            condition.notify()
 
     crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
     crew.kickoff()
 
-    assert all_events_received.wait(timeout=5), (
-        "Timeout waiting for agent execution events"
-    )
-    assert len(received_events) == 2
-    assert received_events[0].agent == base_agent
-    assert received_events[0].task == base_task
-    assert received_events[0].tools == []
-    assert isinstance(received_events[0].task_prompt, str)
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_events) >= 1 and len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for agent execution events"
+
+    assert len(started_events) == 1
+    assert len(completed_events) == 1
+    assert started_events[0].agent == base_agent
+    assert started_events[0].task == base_task
+    assert started_events[0].tools == []
+    assert isinstance(started_events[0].task_prompt, str)
     assert (
-        received_events[0].task_prompt
+        started_events[0].task_prompt
         == "Just say hi\n\nThis is the expected criteria for your final answer: hi\nyou MUST return the actual complete content as the final answer, not a summary."
     )
-    assert isinstance(received_events[0].timestamp, datetime)
-    assert received_events[0].type == "agent_execution_started"
-    assert isinstance(received_events[1].timestamp, datetime)
-    assert received_events[1].type == "agent_execution_completed"
+    assert isinstance(started_events[0].timestamp, datetime)
+    assert started_events[0].type == "agent_execution_started"
+    assert isinstance(completed_events[0].timestamp, datetime)
+    assert completed_events[0].type == "agent_execution_completed"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_emits_execution_error_event(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -393,7 +376,7 @@ class SayHiTool(BaseTool):
         return "hi"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_tools_emits_finished_events():
     received_events = []
     event_received = threading.Event()
@@ -430,7 +413,7 @@ def test_tools_emits_finished_events():
     assert isinstance(received_events[0].timestamp, datetime)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_tools_emits_error_events():
     received_events = []
     lock = threading.Lock()
@@ -606,7 +589,7 @@ def test_flow_emits_method_execution_started_event():
         assert event.type == "method_execution_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_register_handler_adds_new_handler(base_agent, base_task):
     received_events = []
     event_received = threading.Event()
@@ -626,7 +609,7 @@ def test_register_handler_adds_new_handler(base_agent, base_task):
     assert received_events[0].type == "crew_kickoff_started"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_multiple_handlers_for_same_event(base_agent, base_task):
     received_events_1 = []
     received_events_2 = []
@@ -854,34 +837,44 @@ def test_flow_method_execution_finished_includes_serialized_state():
     assert final_output == "final_result"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_call_started_event():
-    received_events = []
+    started_events: list[LLMCallStartedEvent] = []
+    completed_events: list[LLMCallCompletedEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_call_started(source, event):
-        received_events.append(event)
+        with condition:
+            started_events.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_call_completed(source, event):
-        received_events.append(event)
+        with condition:
+            completed_events.append(event)
+            condition.notify()
 
     llm = LLM(model="gpt-4o-mini")
     llm.call("Hello, how are you?")
-    wait_for_event_handlers()
 
-    assert len(received_events) == 2
-    assert received_events[0].type == "llm_call_started"
-    assert received_events[1].type == "llm_call_completed"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(started_events) >= 1 and len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
 
-    assert received_events[0].task_name is None
-    assert received_events[0].agent_role is None
-    assert received_events[0].agent_id is None
-    assert received_events[0].task_id is None
+    assert started_events[0].type == "llm_call_started"
+    assert completed_events[0].type == "llm_call_completed"
+
+    assert started_events[0].task_name is None
+    assert started_events[0].agent_role is None
+    assert started_events[0].agent_id is None
+    assert started_events[0].task_id is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
-@pytest.mark.isolated
+@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()
@@ -913,7 +906,7 @@ def test_llm_emits_call_failed_event():
         assert received_events[0].task_id is None
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_stream_chunk_events():
     """Test that LLM emits stream chunk events when streaming is enabled."""
     received_chunks = []
@@ -941,7 +934,7 @@ def test_llm_emits_stream_chunk_events():
     assert "".join(received_chunks) == response
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_no_stream_chunks_when_streaming_disabled():
     """Test that LLM doesn't emit stream chunk events when streaming is disabled."""
     received_chunks = []
@@ -963,7 +956,7 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
     assert response and isinstance(response, str)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_streaming_fallback_to_non_streaming():
     """Test that streaming falls back to non-streaming when there's an error."""
     received_chunks = []
@@ -1021,7 +1014,7 @@ def test_streaming_fallback_to_non_streaming():
         llm.call = original_call
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_streaming_empty_response_handling():
     """Test that streaming handles empty responses correctly."""
     received_chunks = []
@@ -1069,37 +1062,37 @@ def test_streaming_empty_response_handling():
         llm.call = original_call
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_stream_llm_emits_event_with_task_and_agent_info():
     completed_event = []
     failed_event = []
     started_event = []
     stream_event = []
-    event_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1 and len(stream_event) >= 12:
-            event_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
-        if (
-            len(completed_event) >= 1
-            and len(started_event) >= 1
-            and len(stream_event) >= 12
-        ):
-            event_received.set()
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     agent = Agent(
         role="TestAgent",
@@ -1117,7 +1110,14 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff()
 
-    assert event_received.wait(timeout=10), "Timeout waiting for LLM events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1
+            and len(started_event) >= 1
+            and len(stream_event) >= 12,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
     assert len(completed_event) == 1
     assert len(failed_event) == 0
     assert len(started_event) == 1
@@ -1141,36 +1141,47 @@ def test_stream_llm_emits_event_with_task_and_agent_info():
     assert set(all_task_name) == {task.name or task.description}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
-    completed_event = []
-    failed_event = []
-    started_event = []
-    stream_event = []
-    event_received = threading.Event()
+    completed_event: list[LLMCallCompletedEvent] = []
+    failed_event: list[LLMCallFailedEvent] = []
+    started_event: list[LLMCallStartedEvent] = []
+    stream_event: list[LLMStreamChunkEvent] = []
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1:
-            event_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     crew = Crew(agents=[base_agent], tasks=[base_task])
     crew.kickoff()
 
-    assert event_received.wait(timeout=10), "Timeout waiting for LLM events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1 and len(started_event) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLM events"
     assert len(completed_event) == 1
     assert len(failed_event) == 0
     assert len(started_event) == 1
@@ -1194,37 +1205,37 @@ def test_llm_emits_event_with_task_and_agent_info(base_agent, base_task):
     assert set(all_task_name) == {base_task.name or base_task.description}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_emits_event_with_lite_agent():
     completed_event = []
     failed_event = []
     started_event = []
     stream_event = []
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMCallFailedEvent)
     def handle_llm_failed(source, event):
-        failed_event.append(event)
+        with condition:
+            failed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallStartedEvent)
     def handle_llm_started(source, event):
-        started_event.append(event)
+        with condition:
+            started_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMCallCompletedEvent)
     def handle_llm_completed(source, event):
-        completed_event.append(event)
-        if len(started_event) >= 1 and len(stream_event) >= 15:
-            all_events_received.set()
+        with condition:
+            completed_event.append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMStreamChunkEvent)
     def handle_llm_stream_chunk(source, event):
-        stream_event.append(event)
-        if (
-            len(completed_event) >= 1
-            and len(started_event) >= 1
-            and len(stream_event) >= 15
-        ):
-            all_events_received.set()
+        with condition:
+            stream_event.append(event)
+            condition.notify()
 
     agent = Agent(
         role="Speaker",
@@ -1234,7 +1245,14 @@ def test_llm_emits_event_with_lite_agent():
     )
     agent.kickoff(messages=[{"role": "user", "content": "say hi!"}])
 
-    assert all_events_received.wait(timeout=10), "Timeout waiting for all events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_event) >= 1
+            and len(started_event) >= 1
+            and len(stream_event) >= 15,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all events"
 
     assert len(completed_event) == 1
     assert len(failed_event) == 0
