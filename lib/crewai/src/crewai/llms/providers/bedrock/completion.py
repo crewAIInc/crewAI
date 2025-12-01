@@ -387,7 +387,21 @@ class BedrockCompletion(BaseLLM):
     ) -> str | Any:
         """Async call to AWS Bedrock Converse API.
 
-        Requires aiobotocore to be installed. Install with: uv add "crewai[bedrock-async]"
+        Args:
+            messages: Input messages as string or list of message dicts.
+            tools: Optional list of tool definitions.
+            callbacks: Optional list of callback handlers.
+            available_functions: Optional dict mapping function names to callables.
+            from_task: Optional task context for events.
+            from_agent: Optional agent context for events.
+            response_model: Optional Pydantic model for structured output.
+
+        Returns:
+            Generated text response or structured output.
+
+        Raises:
+            NotImplementedError: If aiobotocore is not installed.
+            LLMContextLengthExceededError: If context window is exceeded.
         """
         if not AIOBOTOCORE_AVAILABLE:
             raise NotImplementedError(
