@@ -20,7 +20,7 @@ interactions:
       x-amz-date:
       - X-AMZ-DATE-XXX
     method: POST
-    uri: https://bedrock-runtime.X-AWS-REGION-XXX.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
   response:
     body:
       string: '{"metrics":{"latencyMs":583},"output":{"message":{"content":[{"text":"1+1=2"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":14,"outputTokens":9,"serverToolUsage":{},"totalTokens":23}}'
@@ -59,7 +59,7 @@ interactions:
       x-amz-date:
       - X-AMZ-DATE-XXX
     method: POST
-    uri: https://bedrock-runtime.X-AWS-REGION-XXX.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
   response:
     body:
       string: '{"metrics":{"latencyMs":869},"output":{"message":{"content":[{"text":"2+2=4"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":14,"outputTokens":9,"serverToolUsage":{},"totalTokens":23}}'
