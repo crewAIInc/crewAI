@@ -158,6 +158,44 @@ class BaseLLM(ABC):
             RuntimeError: If the LLM request fails for other reasons.
         """
 
+    @abstractmethod
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Call the LLM with the given messages.
+
+        Args:
+            messages: Input messages for the LLM.
+                     Can be a string or list of message dictionaries.
+                     If string, it will be converted to a single user message.
+                     If list, each dict must have 'role' and 'content' keys.
+            tools: Optional list of tool schemas for function calling.
+                  Each tool should define its name, description, and parameters.
+            callbacks: Optional list of callback functions to be executed
+                      during and after the LLM call.
+            available_functions: Optional dict mapping function names to callables
+                               that can be invoked by the LLM.
+            from_task: Optional task caller to be used for the LLM call.
+            from_agent: Optional agent caller to be used for the LLM call.
+            response_model: Optional response model to be used for the LLM call.
+
+        Returns:
+            Either a text response from the LLM (str) or
+            the result of a tool function call (Any).
+
+        Raises:
+            ValueError: If the messages format is invalid.
+            TimeoutError: If the LLM request times out.
+            RuntimeError: If the LLM request fails for other reasons.
+        """
+
     def _convert_tools_for_interference(
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, BaseTool]]:
