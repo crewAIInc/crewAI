@@ -115,6 +115,11 @@ HEADERS_TO_FILTER = {
     "anthropic-ratelimit-tokens-limit": "ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX",
     "anthropic-ratelimit-tokens-remaining": "ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX",
     "anthropic-ratelimit-tokens-reset": "ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX",
+    "x-amz-date": "X-AMZ-DATE-XXX",
+    "amz-sdk-invocation-id": "AMZ-SDK-INVOCATION-ID-XXX",
+    "accept-encoding": "ACCEPT-ENCODING-XXX",
+    "x-amzn-requestid": "X-AMZN-REQUESTID-XXX",
+    "x-amzn-RequestId": "X-AMZN-REQUESTID-XXX",
 }
 
 
