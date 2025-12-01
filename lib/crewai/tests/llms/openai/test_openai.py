@@ -475,10 +475,14 @@ def test_openai_get_client_params_priority_order():
         params3 = llm3._get_client_params()
         assert params3["base_url"] == "https://env.openai.com/v1"
 
-def test_openai_get_client_params_no_base_url():
+def test_openai_get_client_params_no_base_url(monkeypatch):
     """
     Test that _get_client_params works correctly when no base_url is specified
     """
+    # Clear env vars that could set base_url
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+
     llm = OpenAICompletion(model="gpt-4o")
     client_params = llm._get_client_params()
     # When no base_url is provided, it should not be in the params (filtered out as None)
