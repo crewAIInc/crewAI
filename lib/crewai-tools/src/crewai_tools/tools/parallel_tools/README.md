@@ -22,6 +22,7 @@ pip install 'crewai[tools]' parallel-web
 ## Environment
 
 - `PARALLEL_API_KEY` (required)
+- `ANTHROPIC_API_KEY` (optional, for the agent example)
 
 ## Initialization Parameters
 
@@ -120,6 +121,100 @@ resp_json = tool.run(
     objective="Latest news on AI regulation",
 )
 ```
+
+## Example with CrewAI Agents
+
+Here's a complete example that uses `ParallelSearchTool` with a CrewAI agent to research a topic and produce a cited answer. 
+
+**Additional requirements:**
+
+```shell
+uv add "crewai[anthropic]"
+```
+
+**Environment variable:**
+- `ANTHROPIC_API_KEY` (for the LLM)
+
+```python
+import os
+from crewai import Agent, Task, Crew, LLM, Process
+from crewai_tools import ParallelSearchTool
+
+# Configure Claude as the LLM
+llm = LLM(
+    model="anthropic/claude-opus-4-5-20251101",
+    temperature=0.5,
+    max_tokens=4096,
+    api_key=os.getenv("ANTHROPIC_API_KEY"),
+)
+
+# Initialize ParallelSearchTool with agentic mode for multi-step workflows
+search = ParallelSearchTool(
+    mode="agentic",
+    max_results=10,
+    excerpts={"max_chars_per_result": 10000},
+)
+
+# User query
+query = "What are current best practices for LLM evaluation and benchmarking?"
+
+# Create a researcher agent
+researcher = Agent(
+    role="Web Researcher",
+    backstory="You are an expert web researcher who finds and synthesizes information from multiple sources.",
+    goal="Find high-quality, cited sources and provide accurate, well-sourced answers.",
+    tools=[search],
+    llm=llm,
+    verbose=True,
+)
+
+# Define the research task
+task = Task(
+    description=f"Research: {query}\n\nProvide a comprehensive answer with citations.",
+    expected_output="A concise answer with inline citations in the format: [claim] - [source URL]",
+    agent=researcher,
+    output_file="research_output.md",
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    verbose=True,
+    process=Process.sequential,
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+**Example output:**
+
+```markdown
+# Current Best Practices for LLM Evaluation and Benchmarking
+
+## Overview
+
+LLM evaluation is the systematic process of assessing the performance of Large Language
+Models to determine their effectiveness, reliability, and efficiency, helping developers
+understand the model's strengths and weaknesses while ensuring it functions as expected
+in real-world applications - https://www.singlestore.com/blog/complete-guide-to-evaluating-large-language-models/
+
+## Key Evaluation Methodologies
+
+### 1. Multiple-Choice Benchmarks
+
+Multiple-choice benchmarks like MMLU test an LLM's knowledge recall in a straightforward,
+quantifiable way similar to standardized tests, measuring accuracy as the fraction of
+correctly answered questions - https://magazine.sebastianraschka.com/p/llm-evaluation-4-approaches
+
+...
+```
+
+**Tips:**
+- Use `mode="agentic"` for multi-step reasoning workflows (more concise, token-efficient results)
+- Use `mode="one-shot"` for single comprehensive searches
+- Increase `excerpts={"max_chars_per_result": N}` for more detailed source content
 
 ## Deprecated Parameters
 
