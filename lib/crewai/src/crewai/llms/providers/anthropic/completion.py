@@ -89,10 +89,7 @@ class AnthropicCompletion(BaseLLM):
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
-
-        # Model-specific settings
-        self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+        self.supports_tools = True
 
     @property
     def stop(self) -> list[str]:
@@ -546,7 +543,7 @@ class AnthropicCompletion(BaseLLM):
             # Execute the tool
             result = self._handle_tool_execution(
                 function_name=function_name,
-                function_args=function_args,  # type: ignore
+                function_args=function_args,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
