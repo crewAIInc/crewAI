@@ -158,6 +158,7 @@ def vcr_config(vcr_cassette_dir: str) -> dict[str, Any]:
         "before_record_request": _filter_request_headers,
         "before_record_response": _filter_response_headers,
         "filter_query_parameters": ["key"],
+        "match_on": ["method", "scheme", "host", "port", "path"],
     }
 
     if os.getenv("GITHUB_ACTIONS") == "true":
