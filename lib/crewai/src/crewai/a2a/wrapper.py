@@ -15,6 +15,7 @@ from a2a.types import Role
 from pydantic import BaseModel, ValidationError
 
 from crewai.a2a.config import A2AConfig
+from crewai.a2a.extensions.base import ExtensionRegistry
 from crewai.a2a.templates import (
     AVAILABLE_AGENTS_TEMPLATE,
     CONVERSATION_TURN_INFO_TEMPLATE,
@@ -42,7 +43,9 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
 
 
-def wrap_agent_with_a2a_instance(agent: Agent) -> None:
+def wrap_agent_with_a2a_instance(
+    agent: Agent, extension_registry: ExtensionRegistry | None = None
+) -> None:
     """Wrap an agent instance's execute_task method with A2A support.
 
     This function modifies the agent instance by wrapping its execute_task
@@ -51,7 +54,13 @@ def wrap_agent_with_a2a_instance(agent: Agent) -> None:
 
     Args:
         agent: The agent instance to wrap
+        extension_registry: Optional registry of A2A extensions for injecting tools and custom logic
     """
+    if extension_registry is None:
+        extension_registry = ExtensionRegistry()
+
+    extension_registry.inject_all_tools(agent)
+
     original_execute_task = agent.execute_task.__func__  # type: ignore[attr-defined]
 
     @wraps(original_execute_task)
@@ -85,6 +94,7 @@ def wrap_agent_with_a2a_instance(agent: Agent) -> None:
             agent_response_model=agent_response_model,
             context=context,
             tools=tools,
+            extension_registry=extension_registry,
         )
 
     object.__setattr__(agent, "execute_task", MethodType(execute_task_with_a2a, agent))
@@ -154,6 +164,7 @@ def _execute_task_with_a2a(
     agent_response_model: type[BaseModel],
     context: str | None,
     tools: list[BaseTool] | None,
+    extension_registry: ExtensionRegistry,
 ) -> str:
     """Wrap execute_task with A2A delegation logic.
 
@@ -165,6 +176,7 @@ def _execute_task_with_a2a(
         context: Optional context for task execution
         tools: Optional tools available to the agent
         agent_response_model: Optional agent response model
+        extension_registry: Registry of A2A extensions
 
     Returns:
         Task execution result (either from LLM or A2A agent)
@@ -190,11 +202,12 @@ def _execute_task_with_a2a(
         finally:
             task.description = original_description
 
-    task.description = _augment_prompt_with_a2a(
+    task.description, _ = _augment_prompt_with_a2a(
         a2a_agents=a2a_agents,
         task_description=original_description,
         agent_cards=agent_cards,
         failed_agents=failed_agents,
+        extension_registry=extension_registry,
     )
     task.response_model = agent_response_model
 
@@ -203,6 +216,11 @@ def _execute_task_with_a2a(
         agent_response = _parse_agent_response(
             raw_result=raw_result, agent_response_model=agent_response_model
         )
+
+        if extension_registry and isinstance(agent_response, BaseModel):
+            agent_response = extension_registry.process_response_with_all(
+                agent_response, {}
+            )
 
         if isinstance(agent_response, BaseModel) and isinstance(
             agent_response, AgentResponseProtocol
@@ -217,6 +235,7 @@ def _execute_task_with_a2a(
                     tools=tools,
                     agent_cards=agent_cards,
                     original_task_description=original_description,
+                    extension_registry=extension_registry,
                 )
             return str(agent_response.message)
 
@@ -235,7 +254,8 @@ def _augment_prompt_with_a2a(
     turn_num: int = 0,
     max_turns: int | None = None,
     failed_agents: dict[str, str] | None = None,
-) -> str:
+    extension_registry: ExtensionRegistry | None = None,
+) -> tuple[str, bool]:
     """Add A2A delegation instructions to prompt.
 
     Args:
@@ -246,13 +266,14 @@ def _augment_prompt_with_a2a(
         turn_num: Current turn number (0-indexed)
         max_turns: Maximum allowed turns (from config)
         failed_agents: Dictionary mapping failed agent endpoints to error messages
+        extension_registry: Optional registry of A2A extensions
 
     Returns:
-        Augmented task description with A2A instructions
+        Tuple of (augmented prompt, disable_structured_output flag)
     """
 
     if not agent_cards:
-        return task_description
+        return task_description, False
 
     agents_text = ""
 
@@ -270,6 +291,7 @@ def _augment_prompt_with_a2a(
     agents_text = AVAILABLE_AGENTS_TEMPLATE.substitute(available_a2a_agents=agents_text)
 
     history_text = ""
+
     if conversation_history:
         for msg in conversation_history:
             history_text += f"\n{msg.model_dump_json(indent=2, exclude_none=True, exclude={'message_id'})}\n"
@@ -277,6 +299,15 @@ def _augment_prompt_with_a2a(
     history_text = PREVIOUS_A2A_CONVERSATION_TEMPLATE.substitute(
         previous_a2a_conversation=history_text
     )
+
+    extension_states = {}
+    disable_structured_output = False
+    if extension_registry and conversation_history:
+        extension_states = extension_registry.extract_all_states(conversation_history)
+        for state in extension_states.values():
+            if state.is_ready():
+                disable_structured_output = True
+                break
     turn_info = ""
 
     if max_turns is not None and conversation_history:
@@ -296,15 +327,21 @@ def _augment_prompt_with_a2a(
             warning=warning,
         )
 
-    return f"""{task_description}
+    augmented_prompt = f"""{task_description}
 
 IMPORTANT: You have the ability to delegate this task to remote A2A agents.
-
 {agents_text}
 {history_text}{turn_info}
 
 
 """
+
+    if extension_registry:
+        augmented_prompt = extension_registry.augment_prompt_with_all(
+            augmented_prompt, extension_states
+        )
+
+    return augmented_prompt, disable_structured_output
 
 
 def _parse_agent_response(
@@ -373,7 +410,7 @@ def _handle_agent_response_and_continue(
     if "agent_card" in a2a_result and agent_id not in agent_cards_dict:
         agent_cards_dict[agent_id] = a2a_result["agent_card"]
 
-    task.description = _augment_prompt_with_a2a(
+    task.description, disable_structured_output = _augment_prompt_with_a2a(
         a2a_agents=a2a_agents,
         task_description=original_task_description,
         conversation_history=conversation_history,
@@ -382,7 +419,38 @@ def _handle_agent_response_and_continue(
         agent_cards=agent_cards_dict,
     )
 
+    original_response_model = task.response_model
+    if disable_structured_output:
+        task.response_model = None
+
     raw_result = original_fn(self, task, context, tools)
+
+    if disable_structured_output:
+        task.response_model = original_response_model
+
+    if disable_structured_output:
+        final_turn_number = turn_num + 1
+        result_text = str(raw_result)
+        crewai_event_bus.emit(
+            None,
+            A2AMessageSentEvent(
+                message=result_text,
+                turn_number=final_turn_number,
+                is_multiturn=True,
+                agent_role=self.role,
+            ),
+        )
+        crewai_event_bus.emit(
+            None,
+            A2AConversationCompletedEvent(
+                status="completed",
+                final_result=result_text,
+                error=None,
+                total_turns=final_turn_number,
+            ),
+        )
+        return result_text, None
+
     llm_response = _parse_agent_response(
         raw_result=raw_result, agent_response_model=agent_response_model
     )
@@ -425,6 +493,7 @@ def _delegate_to_a2a(
     tools: list[BaseTool] | None,
     agent_cards: dict[str, AgentCard] | None = None,
     original_task_description: str | None = None,
+    extension_registry: ExtensionRegistry | None = None,
 ) -> str:
     """Delegate to A2A agent with multi-turn conversation support.
 
@@ -437,6 +506,7 @@ def _delegate_to_a2a(
         tools: Optional tools available to the agent
         agent_cards: Pre-fetched agent cards from _execute_task_with_a2a
         original_task_description: The original task description before A2A augmentation
+        extension_registry: Optional registry of A2A extensions
 
     Returns:
         Result from A2A agent
@@ -447,9 +517,13 @@ def _delegate_to_a2a(
     a2a_agents, agent_response_model = get_a2a_agents_and_response_model(self.a2a)
     agent_ids = tuple(config.endpoint for config in a2a_agents)
     current_request = str(agent_response.message)
-    agent_id = agent_response.a2a_ids[0]
 
-    if agent_id not in agent_ids:
+    if hasattr(agent_response, "a2a_ids") and agent_response.a2a_ids:
+        agent_id = agent_response.a2a_ids[0]
+    else:
+        agent_id = agent_ids[0] if agent_ids else ""
+
+    if agent_id and agent_id not in agent_ids:
         raise ValueError(
             f"Unknown A2A agent ID(s): {agent_response.a2a_ids} not in {agent_ids}"
         )
@@ -497,6 +571,13 @@ def _delegate_to_a2a(
 
             conversation_history = a2a_result.get("history", [])
 
+            if conversation_history:
+                latest_message = conversation_history[-1]
+                if latest_message.task_id is not None:
+                    task_id_config = latest_message.task_id
+                if latest_message.context_id is not None:
+                    context_id = latest_message.context_id
+
             if a2a_result["status"] in ["completed", "input_required"]:
                 if (
                     a2a_result["status"] == "completed"
@@ -513,7 +594,15 @@ def _delegate_to_a2a(
                             total_turns=final_turn_number,
                         ),
                     )
-                    return result_text  # type: ignore[no-any-return]
+                    return cast(str, result_text)
+
+                if task_id_config is not None:
+                    if reference_task_ids is None:
+                        reference_task_ids = []
+                    if task_id_config not in reference_task_ids:
+                        reference_task_ids.append(task_id_config)
+                    if a2a_result["status"] == "completed":
+                        task_id_config = None
 
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
@@ -541,6 +630,31 @@ def _delegate_to_a2a(
                 continue
 
             error_msg = a2a_result.get("error", "Unknown error")
+
+            final_result, next_request = _handle_agent_response_and_continue(
+                self=self,
+                a2a_result=a2a_result,
+                agent_id=agent_id,
+                agent_cards=agent_cards,
+                a2a_agents=a2a_agents,
+                original_task_description=original_task_description,
+                conversation_history=conversation_history,
+                turn_num=turn_num,
+                max_turns=max_turns,
+                task=task,
+                original_fn=original_fn,
+                context=context,
+                tools=tools,
+                agent_response_model=agent_response_model,
+            )
+
+            if final_result is not None:
+                return final_result
+
+            if next_request is not None:
+                current_request = next_request
+                continue
+
             crewai_event_bus.emit(
                 None,
                 A2AConversationCompletedEvent(
@@ -550,7 +664,7 @@ def _delegate_to_a2a(
                     total_turns=turn_num + 1,
                 ),
             )
-            raise Exception(f"A2A delegation failed: {error_msg}")
+            return f"A2A delegation failed: {error_msg}"
 
         if conversation_history:
             for msg in reversed(conversation_history):
