@@ -1,0 +1,183 @@
+---
+title: "Parallel Search Tool"
+description: "Perform LLM-optimized web searches using the Parallel Search API"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+The `ParallelSearchTool` provides an interface to the [Parallel Search API](https://docs.parallel.ai/search/search-quickstart), enabling CrewAI agents to perform web searches that return ranked results with compressed excerpts optimized for LLMs. It replaces the traditional search → scrape → extract pipeline with a single, low-latency API call.
+
+## Installation
+
+To use the `ParallelSearchTool`, you need to install the `parallel-web` library:
+
+```shell
+pip install 'crewai[tools]' parallel-web
+```
+
+## Environment Variables
+
+Ensure your Parallel API key is set as an environment variable:
+
+```bash
+export PARALLEL_API_KEY='your_parallel_api_key'
+```
+
+Get an API key at [platform.parallel.ai](https://platform.parallel.ai).
+
+## Example Usage
+
+Here's how to initialize and use the `ParallelSearchTool` within a CrewAI agent:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import ParallelSearchTool
+
+# Initialize the tool
+parallel_tool = ParallelSearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Market Researcher',
+    goal='Find information about the latest AI trends',
+    backstory='An expert market researcher specializing in technology.',
+    tools=[parallel_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Search for the top 3 AI trends in 2024.',
+    expected_output='A JSON report summarizing the top 3 AI trends found.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `ParallelSearchTool` accepts the following arguments during initialization:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `api_key` | str | env var | Parallel API key (defaults to `PARALLEL_API_KEY` env var) |
+| `mode` | str | None | `"one-shot"` (comprehensive results) or `"agentic"` (concise, token-efficient for multi-step workflows) |
+| `max_results` | int | 10 | Maximum number of results to return (1-20) |
+| `excerpts` | dict | None | Excerpt configuration, e.g., `{"max_chars_per_result": 10000, "max_chars_total": 50000}` |
+| `fetch_policy` | dict | None | Content freshness control, e.g., `{"max_age_seconds": 3600}` |
+| `source_policy` | dict | None | Domain inclusion/exclusion policy |
+
+## Run Parameters
+
+When calling `run()`, pass these parameters:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `objective` | str | At least one required | Natural-language research goal (<= 5000 chars) |
+| `search_queries` | list[str] | At least one required | Up to 5 keyword queries (each <= 200 chars) |
+
+<Note>
+At least one of `objective` or `search_queries` is required.
+</Note>
+
+## Advanced Usage
+
+You can configure the tool with custom parameters:
+
+```python
+# Example: Initialize with specific parameters
+custom_parallel_tool = ParallelSearchTool(
+    mode='agentic',
+    max_results=5,
+    excerpts={"max_chars_per_result": 10000}
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research with comprehensive results",
+    tools=[custom_parallel_tool]
+)
+```
+
+### Domain Filtering
+
+Restrict searches to specific domains:
+
+```python
+parallel_tool = ParallelSearchTool(
+    max_results=5,
+    source_policy={
+        "allow": {"domains": ["un.org", "who.int"]},
+        # "deny": {"domains": ["example.com"]},  # optional
+    }
+)
+
+result = parallel_tool.run(
+    objective="When was the United Nations established?"
+)
+```
+
+### Fresh Content
+
+Request recent content only:
+
+```python
+parallel_tool = ParallelSearchTool(
+    fetch_policy={"max_age_seconds": 3600},  # Content no older than 1 hour
+    max_results=10
+)
+
+result = parallel_tool.run(
+    objective="Latest news on AI regulation"
+)
+```
+
+### Agentic Mode
+
+For multi-step reasoning workflows, use `agentic` mode for more concise, token-efficient results:
+
+```python
+parallel_tool = ParallelSearchTool(
+    mode="agentic",
+    max_results=5
+)
+
+result = parallel_tool.run(
+    objective="Find recent research on quantum error correction",
+    search_queries=["quantum error correction 2024", "QEC algorithms"]
+)
+```
+
+## Features
+
+- **Single-Call Pipeline**: Replaces search → scrape → extract with one API call
+- **LLM-Optimized**: Returns compressed excerpts designed for LLM prompts
+- **Flexible Modes**: Choose between comprehensive (`one-shot`) or concise (`agentic`) results
+- **Domain Control**: Include or exclude specific domains via `source_policy`
+- **Freshness Control**: Limit results to recent content via `fetch_policy`
+- **Built-in Reliability**: SDK includes retries, timeouts, and error handling
+
+## Response Format
+
+The tool returns search results as a JSON string containing:
+- `search_id`: Unique identifier for the search
+- `results`: Array of ranked results, each with:
+  - `url`: Source URL
+  - `title`: Page title
+  - `excerpts`: Compressed, relevant excerpts from the page
+
+## References
+
+- [Search API Quickstart](https://docs.parallel.ai/search/search-quickstart)
+- [Search API Best Practices](https://docs.parallel.ai/search/best-practices)
+- [Parallel Platform](https://platform.parallel.ai)
