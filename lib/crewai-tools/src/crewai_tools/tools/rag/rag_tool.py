@@ -14,9 +14,14 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import Self
+from typing_extensions import Self, Unpack
 
-from crewai_tools.tools.rag.types import RagToolConfig, VectorDbConfig
+from crewai_tools.tools.rag.types import (
+    AddDocumentParams,
+    ContentItem,
+    RagToolConfig,
+    VectorDbConfig,
+)
 
 
 def _validate_embedding_config(
@@ -72,6 +77,8 @@ def _validate_embedding_config(
 
 
 class Adapter(BaseModel, ABC):
+    """Abstract base class for RAG adapters."""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @abstractmethod
@@ -86,8 +93,8 @@ class Adapter(BaseModel, ABC):
     @abstractmethod
     def add(
         self,
-        *args: Any,
-        **kwargs: Any,
+        *args: ContentItem,
+        **kwargs: Unpack[AddDocumentParams],
     ) -> None:
         """Add content to the knowledge base."""
 
@@ -102,7 +109,11 @@ class RagTool(BaseTool):
         ) -> str:
             raise NotImplementedError
 
-        def add(self, *args: Any, **kwargs: Any) -> None:
+        def add(
+            self,
+            *args: ContentItem,
+            **kwargs: Unpack[AddDocumentParams],
+        ) -> None:
             raise NotImplementedError
 
     name: str = "Knowledge base"
@@ -207,9 +218,34 @@ class RagTool(BaseTool):
 
     def add(
         self,
-        *args: Any,
-        **kwargs: Any,
+        *args: ContentItem,
+        **kwargs: Unpack[AddDocumentParams],
     ) -> None:
+        """Add content to the knowledge base.
+
+
+        Args:
+            *args: Content items to add (strings, paths, or document dicts)
+            data_type: DataType enum or string (e.g., "file", "pdf_file", "text")
+            path: Path to file or directory, alias to positional arg
+            file_path: Alias for path
+            metadata: Additional metadata to attach to documents
+            url: URL to fetch content from
+            website: Website URL to scrape
+            github_url: GitHub repository URL
+            youtube_url: YouTube video URL
+            directory_path: Path to directory
+
+        Examples:
+            rag_tool.add("path/to/document.pdf", data_type=DataType.PDF_FILE)
+
+            # Keyword argument (documented API)
+            rag_tool.add(path="path/to/document.pdf", data_type="file")
+            rag_tool.add(file_path="path/to/document.pdf", data_type="pdf_file")
+
+            # Auto-detect type from extension
+            rag_tool.add("path/to/document.pdf")  # auto-detects PDF
+        """
         self.adapter.add(*args, **kwargs)
 
     def _run(

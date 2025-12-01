@@ -407,37 +407,92 @@ class LLM(BaseLLM):
         return instance
 
     @classmethod
+    def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
+        """Check if a model name matches provider-specific patterns.
+
+        This allows supporting models that aren't in the hardcoded constants list,
+        including "latest" versions and new models that follow provider naming conventions.
+
+        Args:
+            model: The model name to check
+            provider: The provider to check against (canonical name)
+
+        Returns:
+            True if the model matches the provider's naming pattern, False otherwise
+        """
+        model_lower = model.lower()
+
+        if provider == "openai":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
+            )
+
+        if provider == "anthropic" or provider == "claude":
+            return any(
+                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+            )
+
+        if provider == "gemini" or provider == "google":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gemini-", "gemma-", "learnlm-"]
+            )
+
+        if provider == "bedrock":
+            return "." in model_lower
+
+        if provider == "azure":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
+            )
+
+        return False
+
+    @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
-        """Validate if a model name exists in the provider's constants.
+        """Validate if a model name exists in the provider's constants or matches provider patterns.
+
+        This method first checks the hardcoded constants list for known models.
+        If not found, it falls back to pattern matching to support new models,
+        "latest" versions, and models that follow provider naming conventions.
 
         Args:
             model: The model name to validate
             provider: The provider to check against (canonical name)
 
         Returns:
-            True if the model exists in the provider's constants, False otherwise
+            True if the model exists in constants or matches provider patterns, False otherwise
         """
-        if provider == "openai":
-            return model in OPENAI_MODELS
+        if provider == "openai" and model in OPENAI_MODELS:
+            return True
 
-        if provider == "anthropic" or provider == "claude":
-            return model in ANTHROPIC_MODELS
+        if (
+            provider == "anthropic" or provider == "claude"
+        ) and model in ANTHROPIC_MODELS:
+            return True
 
-        if provider == "gemini":
-            return model in GEMINI_MODELS
+        if (provider == "gemini" or provider == "google") and model in GEMINI_MODELS:
+            return True
 
-        if provider == "bedrock":
-            return model in BEDROCK_MODELS
+        if provider == "bedrock" and model in BEDROCK_MODELS:
+            return True
 
         if provider == "azure":
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
-        return False
+        # Fallback to pattern matching for models not in constants
+        return cls._matches_provider_pattern(model, provider)
 
     @classmethod
     def _infer_provider_from_model(cls, model: str) -> str:
         """Infer the provider from the model name.
+
+        This method first checks the hardcoded constants list for known models.
+        If not found, it uses pattern matching to infer the provider from model name patterns.
+        This allows supporting new models and "latest" versions without hardcoding.
 
         Args:
             model: The model name without provider prefix
@@ -445,7 +500,6 @@ class LLM(BaseLLM):
         Returns:
             The inferred provider name, defaults to "openai"
         """
-
         if model in OPENAI_MODELS:
             return "openai"
 
@@ -1699,12 +1753,14 @@ class LLM(BaseLLM):
             max_tokens=self.max_tokens,
             presence_penalty=self.presence_penalty,
             frequency_penalty=self.frequency_penalty,
-            logit_bias=copy.deepcopy(self.logit_bias, memo)
-            if self.logit_bias
-            else None,
-            response_format=copy.deepcopy(self.response_format, memo)
-            if self.response_format
-            else None,
+            logit_bias=(
+                copy.deepcopy(self.logit_bias, memo) if self.logit_bias else None
+            ),
+            response_format=(
+                copy.deepcopy(self.response_format, memo)
+                if self.response_format
+                else None
+            ),
             seed=self.seed,
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,

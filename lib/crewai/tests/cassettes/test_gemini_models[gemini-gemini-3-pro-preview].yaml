@@ -1,43 +1,37 @@
 interactions:
 - request:
-    body: '{"contents":[{"role":"user","parts":[{"text":"What is the capital of France?"}]}],"generationConfig":{"stop_sequences":[]}}'
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
     headers:
-      accept:
+      Accept:
       - '*/*'
-      accept-encoding:
-      - gzip, deflate
-      connection:
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
       - keep-alive
-      content-length:
-      - '123'
-      content-type:
+      Content-Length:
+      - '111'
+      Content-Type:
       - application/json
-      host:
-      - generativelanguage.googleapis.com
       user-agent:
-      - litellm/1.78.5
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAC/21UW4+iSBh9719heGxmBgFvbDIPgKAgNwUV3OxDCSWU3KFApdP/fWl77XF2l6RI
-        5ftOnVN1ku+8vQwGhA+yAAUAw5r4Y/BnXxkM3u7/j16eYZjhvvEo9cUCVPgX9vN7e9r3EAyvH4cI
-        J4IDHxQIg2SQnwZyBTIfDlA9eH21QIXq19cfxLd/HY3yJoywjcIM4KaCHzRSvZbEWpL4YIlRytG8
-        a3eoGiukHPHm3jH2FNvMTC1qLlgS05RL42PVyPMdz1uFHpQuytZSBqcHf7PexMHK3mjJQjWKIbM+
-        MxFL6cvWMMfQFsOJ3UQk5j1hWmoxK1DrLqncyrpcQ+UY0uZog2oqkTmXiQ2f27ZBpS58MXBTxRbX
-        qdfsl25Vn5tswrUHeVhVxenW7kaG0cKdt2hjjxPUBYY26BAUvbqqw30AoG0eTMmzdImnIrI51+VY
-        xeqUl/HKs8ZgfBPF0bbtMDjMzxZSkv3KNuJgwTlYMkw9YEyKMcfkRvUmkiPpBqL486niJEuQKtE7
-        XibhpJy1AltrXSrjq+iEucKfK5z43Ci6bTu+VIVuRNecmwRN2gnbqQHH6lQ06eNM5ttpwEjZVOI3
-        umesM9qbcxMySprtbDYXaboQdioPMpuEy3U4VZrM6njN0rAk8Fh3/ON+E58FJPDtxD8upIWTbI/D
-        MrqM7RWj7VWo6kMFUgaj5Dpzsg8bE6GoIc+rJEcnau8qGNnZygGNcRO61nD5sXgyWbUQ+Z4XQhrX
-        3C6UyS2OTHAp2cUJVp0eSZqtyTuTy48XjmW0xLJVYRqYYmSZhatQ45ROKPZiXTZTxiq2ceDPIhii
-        7tBurqtSL7ylp5NRw5FUzJXsLkiRJs1BIi05Oxit51ToBF2oTGOvYTXjfJptR62SVdTB7W5aaJzq
-        nb9adAVFIii3gZE5Qz87C+ViVKa3eJ2f4pyiSzasywoHJA2klNL01IIYX6o55V8n3BUc8vKagLIp
-        d/pRZoatSfor/yx4bAYp/udP4mlc3r/2f/2aIqLKk/vUpHkAkwf8/QEgTihDdbSBoM6zD5jtmNbX
-        EBIoC+C1Lw9fHgJ3aqKpQQh1iEGfFOArD4iiytMCO3kMMzFv7kkx++R6ypX/beO8D4XfOvSI/vYf
-        1nrea6LkOW+eoqh/IkgQvt2zRnKdpzDpBZ5VHza8PLn1yJrfL0gz45d//Pq0cAerGn16FcK0d+87
-        +72/Yb9gi+DlrklUsC7yrIZK8IHbeV4/2Sy/LL9r50a3aquVZ2uPeHl/+RvdmjG6dAUAAA==
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The capital of France is **Paris**.\",\n
+        \           \"thoughtSignature\": \"ErYDCrMDAXLI2nxqP91JUT+ukOUiDfsRxJMh6wlKuN3qt7oHYxuFdQN2p6cbogULRi6Ucri5UsdVdc8y3/RaOMRs1gWnh8SGeb81k1PcI+vSZZ3Cl6pyD8Ajn39AZ1YaFFrLan4cpIbliO1Goj8FjW2TF2z4zOXdg52a0hrvi6V4cjfNLCLQazKJ7r4J/P8LOHEQQMdsDte7eD+0p1bPZfNNlTKLeHV9PowZbiGl1UtSVX6Cy7wow6VYMJ4es+PfuOISZe77ksiY8GTkx6fICce9hyIlFNRvU9xwaxwliaK6EXLIcGdXLkfjyGN11+3YwXMxmIQ8g62l0s/GwzmLmjz42aihAHP33YMgmP1L5rY+o0pStwQwavFh9XVKWHrZEJfVCWE615N0dikgWNN/bpICELBPajzlZ5BSR0e9Hm0unbFOwQt54FWPCHfAD1UT+g5pDrqM28mG94BjCmwS0OmsSaI1gl612zk3Q+ZL8UYfNzeiPVFkgTRmbgLXOJqMiC0aBLrLR4cvIiS/Kc5CDttfu6EXMWoXqRGCt1FI7pNjfG9I/QGRVk/KqIauTLauGcEEeGPsB7h5\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 106,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 90\n  },\n  \"modelVersion\": \"gemini-3-pro-preview\",\n
+        \ \"responseId\": \"xFIrafrxEOag_uMP_ayUwA0\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -46,11 +40,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Wed, 19 Nov 2025 08:56:53 GMT
+      - Sat, 29 Nov 2025 20:08:36 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2508
+      - gfet4t7; dur=2675
       Transfer-Encoding:
       - chunked
       Vary:
@@ -58,9 +52,9 @@ interactions:
       - X-Origin
       - Referer
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       X-Frame-Options:
-      - SAMEORIGIN
+      - X-FRAME-OPTIONS-XXX
       X-XSS-Protection:
       - '0'
     status:

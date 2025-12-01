@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from functools import wraps
+import inspect
 from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, overload
 
 from crewai.project.utils import memoize
@@ -156,6 +158,23 @@ def cache_handler(meth: Callable[P, R]) -> CacheHandlerMethod[P, R]:
     return CacheHandlerMethod(memoize(meth))
 
 
+def _call_method(method: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+    """Call a method, awaiting it if async and running in an event loop."""
+    result = method(*args, **kwargs)
+    if inspect.iscoroutine(result):
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            import concurrent.futures
+
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                return pool.submit(asyncio.run, result).result()
+        return asyncio.run(result)
+    return result
+
+
 @overload
 def crew(
     meth: Callable[Concatenate[SelfT, P], Crew],
@@ -198,7 +217,7 @@ def crew(
 
         # Instantiate tasks in order
         for _, task_method in tasks:
-            task_instance = task_method(self)
+            task_instance = _call_method(task_method, self)
             instantiated_tasks.append(task_instance)
             agent_instance = getattr(task_instance, "agent", None)
             if agent_instance and agent_instance.role not in agent_roles:
@@ -207,7 +226,7 @@ def crew(
 
         # Instantiate agents not included by tasks
         for _, agent_method in agents:
-            agent_instance = agent_method(self)
+            agent_instance = _call_method(agent_method, self)
             if agent_instance.role not in agent_roles:
                 instantiated_agents.append(agent_instance)
                 agent_roles.add(agent_instance.role)
@@ -215,7 +234,7 @@ def crew(
         self.agents = instantiated_agents
         self.tasks = instantiated_tasks
 
-        crew_instance = meth(self, *args, **kwargs)
+        crew_instance: Crew = _call_method(meth, self, *args, **kwargs)
 
         def callback_wrapper(
             hook: Callable[Concatenate[CrewInstance, P2], R2], instance: CrewInstance
