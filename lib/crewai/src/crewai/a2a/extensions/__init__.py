@@ -2,16 +2,3 @@
 
 This module contains extensions to the A2A (Agent-to-Agent) protocol.
 """
-
-from crewai.a2a.extensions.base import (
-    A2AExtension,
-    ConversationState,
-    ExtensionRegistry,
-)
-
-
-__all__ = [
-    "A2AExtension",
-    "ConversationState",
-    "ExtensionRegistry",
-]
