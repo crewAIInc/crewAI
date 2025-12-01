@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from contextlib import AsyncExitStack
+import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any, TypedDict, cast
@@ -41,6 +43,16 @@ except ImportError:
     raise ImportError(
         'AWS Bedrock native provider not available, to install: uv add "crewai[bedrock]"'
     ) from None
+
+try:
+    from aiobotocore.session import (  # type: ignore[import-untyped]
+        get_session as get_aiobotocore_session,
+    )
+
+    AIOBOTOCORE_AVAILABLE = True
+except ImportError:
+    AIOBOTOCORE_AVAILABLE = False
+    get_aiobotocore_session = None
 
 
 if TYPE_CHECKING:
@@ -221,6 +233,15 @@ class BedrockCompletion(BaseLLM):
         self.client = session.client("bedrock-runtime", config=config)
         self.region_name = region_name
 
+        self.aws_access_key_id = aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID")
+        self.aws_secret_access_key = aws_secret_access_key or os.getenv(
+            "AWS_SECRET_ACCESS_KEY"
+        )
+        self.aws_session_token = aws_session_token or os.getenv("AWS_SESSION_TOKEN")
+
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        self._async_client_initialized = False
+
         # Store completion parameters
         self.max_tokens = max_tokens
         self.top_p = top_p
@@ -339,6 +360,96 @@ class BedrockCompletion(BaseLLM):
                 )
 
             return self._handle_converse(
+                formatted_messages, body, available_functions, from_task, from_agent
+            )
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
+            error_msg = f"AWS Bedrock API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise
+
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[Any, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Async call to AWS Bedrock Converse API.
+
+        Requires aiobotocore to be installed. Install with: uv add "crewai[bedrock-async]"
+        """
+        if not AIOBOTOCORE_AVAILABLE:
+            raise NotImplementedError(
+                "Async support for AWS Bedrock requires aiobotocore. "
+                'Install with: uv add "crewai[bedrock-async]"'
+            )
+
+        try:
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            formatted_messages, system_message = self._format_messages_for_converse(
+                messages  # type: ignore[arg-type]
+            )
+
+            body: BedrockConverseRequestBody = {
+                "inferenceConfig": self._get_inference_config(),
+            }
+
+            if system_message:
+                body["system"] = cast(
+                    "list[SystemContentBlockTypeDef]",
+                    cast(object, [{"text": system_message}]),
+                )
+
+            if tools:
+                tool_config: ToolConfigurationTypeDef = {
+                    "tools": cast(
+                        "Sequence[ToolTypeDef]",
+                        cast(object, self._format_tools_for_converse(tools)),
+                    )
+                }
+                body["toolConfig"] = tool_config
+
+            if self.guardrail_config:
+                guardrail_config: GuardrailConfigurationTypeDef = cast(
+                    "GuardrailConfigurationTypeDef", cast(object, self.guardrail_config)
+                )
+                body["guardrailConfig"] = guardrail_config
+
+            if self.additional_model_request_fields:
+                body["additionalModelRequestFields"] = (
+                    self.additional_model_request_fields
+                )
+
+            if self.additional_model_response_field_paths:
+                body["additionalModelResponseFieldPaths"] = (
+                    self.additional_model_response_field_paths
+                )
+
+            if self.stream:
+                return await self._ahandle_streaming_converse(
+                    formatted_messages, body, available_functions, from_task, from_agent
+                )
+
+            return await self._ahandle_converse(
                 formatted_messages, body, available_functions, from_task, from_agent
             )
 
@@ -570,6 +681,341 @@ class BedrockCompletion(BaseLLM):
                         if "toolUse" in start:
                             current_tool_use = start["toolUse"]
                             tool_use_id = current_tool_use.get("toolUseId")
+                        logging.debug(
+                            f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
+                        )
+
+                    elif "contentBlockDelta" in event:
+                        delta = event["contentBlockDelta"]["delta"]
+                        if "text" in delta:
+                            text_chunk = delta["text"]
+                            logging.debug(f"Streaming text chunk: {text_chunk[:50]}...")
+                            full_response += text_chunk
+                            self._emit_stream_chunk_event(
+                                chunk=text_chunk,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
+                        elif "toolUse" in delta and current_tool_use:
+                            tool_input = delta["toolUse"].get("input", "")
+                            if tool_input:
+                                logging.debug(f"Tool input delta: {tool_input}")
+                    elif "contentBlockStop" in event:
+                        logging.debug("Content block stopped in stream")
+                        if current_tool_use and available_functions:
+                            function_name = current_tool_use["name"]
+                            function_args = cast(
+                                dict[str, Any], current_tool_use.get("input", {})
+                            )
+                            tool_result = self._handle_tool_execution(
+                                function_name=function_name,
+                                function_args=function_args,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
+                            if tool_result is not None and tool_use_id:
+                                messages.append(
+                                    {
+                                        "role": "assistant",
+                                        "content": [{"toolUse": current_tool_use}],
+                                    }
+                                )
+                                messages.append(
+                                    {
+                                        "role": "user",
+                                        "content": [
+                                            {
+                                                "toolResult": {
+                                                    "toolUseId": tool_use_id,
+                                                    "content": [
+                                                        {"text": str(tool_result)}
+                                                    ],
+                                                }
+                                            }
+                                        ],
+                                    }
+                                )
+                                return self._handle_converse(
+                                    messages,
+                                    body,
+                                    available_functions,
+                                    from_task,
+                                    from_agent,
+                                )
+                            current_tool_use = None
+                            tool_use_id = None
+                    elif "messageStop" in event:
+                        stop_reason = event["messageStop"].get("stopReason")
+                        logging.debug(f"Streaming message stopped: {stop_reason}")
+                        if stop_reason == "max_tokens":
+                            logging.warning(
+                                "Streaming response truncated due to max_tokens"
+                            )
+                        elif stop_reason == "content_filtered":
+                            logging.warning(
+                                "Streaming response filtered due to content policy"
+                            )
+                            break
+                    elif "metadata" in event:
+                        metadata = event["metadata"]
+                        if "usage" in metadata:
+                            usage_metrics = metadata["usage"]
+                            self._track_token_usage_internal(usage_metrics)
+                            logging.debug(f"Token usage: {usage_metrics}")
+                            if "trace" in metadata:
+                                logging.debug(
+                                    f"Trace information available: {metadata['trace']}"
+                                )
+
+        except ClientError as e:
+            error_msg = self._handle_client_error(e)
+            raise RuntimeError(error_msg) from e
+        except BotoCoreError as e:
+            error_msg = f"Bedrock streaming connection error: {e}"
+            logging.error(error_msg)
+            raise ConnectionError(error_msg) from e
+
+        full_response = self._apply_stop_words(full_response)
+
+        if not full_response or full_response.strip() == "":
+            logging.warning("Bedrock streaming returned empty content, using fallback")
+            full_response = (
+                "I apologize, but I couldn't generate a response. Please try again."
+            )
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=messages,
+        )
+
+        return full_response
+
+    async def _ensure_async_client(self) -> Any:
+        """Ensure async client is initialized and return it."""
+        if not self._async_client_initialized and get_aiobotocore_session:
+            if self._async_exit_stack is None:
+                raise RuntimeError(
+                    "Async exit stack not initialized - aiobotocore not available"
+                )
+            session = get_aiobotocore_session()
+            client = await self._async_exit_stack.enter_async_context(
+                session.create_client(
+                    "bedrock-runtime",
+                    region_name=self.region_name,
+                    aws_access_key_id=self.aws_access_key_id,
+                    aws_secret_access_key=self.aws_secret_access_key,
+                    aws_session_token=self.aws_session_token,
+                )
+            )
+            self._async_client = client
+            self._async_client_initialized = True
+        return self._async_client
+
+    async def _ahandle_converse(
+        self,
+        messages: list[dict[str, Any]],
+        body: BedrockConverseRequestBody,
+        available_functions: Mapping[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Handle async non-streaming converse API call."""
+        try:
+            if not messages:
+                raise ValueError("Messages cannot be empty")
+
+            for i, msg in enumerate(messages):
+                if (
+                    not isinstance(msg, dict)
+                    or "role" not in msg
+                    or "content" not in msg
+                ):
+                    raise ValueError(f"Invalid message format at index {i}")
+
+            async_client = await self._ensure_async_client()
+            response = await async_client.converse(
+                modelId=self.model_id,
+                messages=cast(
+                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                    cast(object, messages),
+                ),
+                **body,
+            )
+
+            if "usage" in response:
+                self._track_token_usage_internal(response["usage"])
+
+            stop_reason = response.get("stopReason")
+            if stop_reason:
+                logging.debug(f"Response stop reason: {stop_reason}")
+                if stop_reason == "max_tokens":
+                    logging.warning("Response truncated due to max_tokens limit")
+                elif stop_reason == "content_filtered":
+                    logging.warning("Response was filtered due to content policy")
+
+            output = response.get("output", {})
+            message = output.get("message", {})
+            content = message.get("content", [])
+
+            if not content:
+                logging.warning("No content in Bedrock response")
+                return (
+                    "I apologize, but I received an empty response. Please try again."
+                )
+
+            text_content = ""
+
+            for content_block in content:
+                if "text" in content_block:
+                    text_content += content_block["text"]
+
+                elif "toolUse" in content_block and available_functions:
+                    tool_use_block = content_block["toolUse"]
+                    tool_use_id = tool_use_block.get("toolUseId")
+                    function_name = tool_use_block["name"]
+                    function_args = tool_use_block.get("input", {})
+
+                    logging.debug(
+                        f"Tool use requested: {function_name} with ID {tool_use_id}"
+                    )
+
+                    tool_result = self._handle_tool_execution(
+                        function_name=function_name,
+                        function_args=function_args,
+                        available_functions=dict(available_functions),
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+                    if tool_result is not None:
+                        messages.append(
+                            {
+                                "role": "assistant",
+                                "content": [{"toolUse": tool_use_block}],
+                            }
+                        )
+
+                        messages.append(
+                            {
+                                "role": "user",
+                                "content": [
+                                    {
+                                        "toolResult": {
+                                            "toolUseId": tool_use_id,
+                                            "content": [{"text": str(tool_result)}],
+                                        }
+                                    }
+                                ],
+                            }
+                        )
+
+                        return await self._ahandle_converse(
+                            messages, body, available_functions, from_task, from_agent
+                        )
+
+            text_content = self._apply_stop_words(text_content)
+
+            if not text_content or text_content.strip() == "":
+                logging.warning("Extracted empty text content from Bedrock response")
+                text_content = "I apologize, but I couldn't generate a proper response. Please try again."
+
+            self._emit_call_completed_event(
+                response=text_content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages,
+            )
+
+            return text_content
+
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            error_msg = e.response.get("Error", {}).get("Message", str(e))
+            logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
+
+            if error_code == "ValidationException":
+                if "last turn" in error_msg and "user message" in error_msg:
+                    raise ValueError(
+                        f"Conversation format error: {error_msg}. Check message alternation."
+                    ) from e
+                raise ValueError(f"Request validation failed: {error_msg}") from e
+            if error_code == "AccessDeniedException":
+                raise PermissionError(
+                    f"Access denied to model {self.model_id}: {error_msg}"
+                ) from e
+            if error_code == "ResourceNotFoundException":
+                raise ValueError(f"Model {self.model_id} not found: {error_msg}") from e
+            if error_code == "ThrottlingException":
+                raise RuntimeError(
+                    f"API throttled, please retry later: {error_msg}"
+                ) from e
+            if error_code == "ModelTimeoutException":
+                raise TimeoutError(f"Model request timed out: {error_msg}") from e
+            if error_code == "ServiceQuotaExceededException":
+                raise RuntimeError(f"Service quota exceeded: {error_msg}") from e
+            if error_code == "ModelNotReadyException":
+                raise RuntimeError(
+                    f"Model {self.model_id} not ready: {error_msg}"
+                ) from e
+            if error_code == "ModelErrorException":
+                raise RuntimeError(f"Model error: {error_msg}") from e
+            if error_code == "InternalServerException":
+                raise RuntimeError(f"Internal server error: {error_msg}") from e
+            if error_code == "ServiceUnavailableException":
+                raise RuntimeError(f"Service unavailable: {error_msg}") from e
+
+            raise RuntimeError(f"Bedrock API error ({error_code}): {error_msg}") from e
+
+        except BotoCoreError as e:
+            error_msg = f"Bedrock connection error: {e}"
+            logging.error(error_msg)
+            raise ConnectionError(error_msg) from e
+        except Exception as e:
+            error_msg = f"Unexpected error in Bedrock converse call: {e}"
+            logging.error(error_msg)
+            raise RuntimeError(error_msg) from e
+
+    async def _ahandle_streaming_converse(
+        self,
+        messages: list[dict[str, Any]],
+        body: BedrockConverseRequestBody,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Handle async streaming converse API call."""
+        full_response = ""
+        current_tool_use = None
+        tool_use_id = None
+
+        try:
+            async_client = await self._ensure_async_client()
+            response = await async_client.converse_stream(
+                modelId=self.model_id,
+                messages=cast(
+                    "Sequence[MessageTypeDef | MessageOutputTypeDef]",
+                    cast(object, messages),
+                ),
+                **body,
+            )
+
+            stream = response.get("stream")
+            if stream:
+                async for event in stream:
+                    if "messageStart" in event:
+                        role = event["messageStart"].get("role")
+                        logging.debug(f"Streaming message started with role: {role}")
+
+                    elif "contentBlockStart" in event:
+                        start = event["contentBlockStart"].get("start", {})
+                        if "toolUse" in start:
+                            current_tool_use = start["toolUse"]
+                            tool_use_id = current_tool_use.get("toolUseId")
                             logging.debug(
                                 f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
                             )
@@ -590,17 +1036,14 @@ class BedrockCompletion(BaseLLM):
                             if tool_input:
                                 logging.debug(f"Tool input delta: {tool_input}")
 
-                    # Content block stop - end of a content block
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
-                        # If we were accumulating a tool use, it's now complete
                         if current_tool_use and available_functions:
                             function_name = current_tool_use["name"]
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
 
-                            # Execute tool
                             tool_result = self._handle_tool_execution(
                                 function_name=function_name,
                                 function_args=function_args,
@@ -610,7 +1053,6 @@ class BedrockCompletion(BaseLLM):
                             )
 
                             if tool_result is not None and tool_use_id:
-                                # Continue conversation with tool result
                                 messages.append(
                                     {
                                         "role": "assistant",
@@ -634,8 +1076,7 @@ class BedrockCompletion(BaseLLM):
                                     }
                                 )
 
-                                # Recursive call - note this switches to non-streaming
-                                return self._handle_converse(
+                                return await self._ahandle_converse(
                                     messages,
                                     body,
                                     available_functions,
@@ -643,10 +1084,9 @@ class BedrockCompletion(BaseLLM):
                                     from_agent,
                                 )
 
-                            current_tool_use = None
-                            tool_use_id = None
+                                current_tool_use = None
+                                tool_use_id = None
 
-                    # Message stop - end of entire message
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
                         logging.debug(f"Streaming message stopped: {stop_reason}")
@@ -660,7 +1100,6 @@ class BedrockCompletion(BaseLLM):
                             )
                         break
 
-                    # Metadata - contains usage information and trace details
                     elif "metadata" in event:
                         metadata = event["metadata"]
                         if "usage" in metadata:
@@ -680,17 +1119,14 @@ class BedrockCompletion(BaseLLM):
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
 
-        # Apply stop words to full response
         full_response = self._apply_stop_words(full_response)
 
-        # Ensure we don't return empty content
         if not full_response or full_response.strip() == "":
             logging.warning("Bedrock streaming returned empty content, using fallback")
             full_response = (
                 "I apologize, but I couldn't generate a response. Please try again."
             )
 
-        # Emit completion event
         self._emit_call_completed_event(
             response=full_response,
             call_type=LLMCallType.LLM_CALL,
