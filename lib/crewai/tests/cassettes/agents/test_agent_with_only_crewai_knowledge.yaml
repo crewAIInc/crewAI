@@ -1,0 +1,251 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user
+      query so that it is optimized for retrieval from a vector database. Consider
+      how the query will be used to find relevant documents, and aim to make it more
+      specific and context-aware. \n\n Do not include any other text than the rewritten
+      query, especially any preamble or postamble and only add expected output format
+      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
+      task and to retrieve the most relevant information. \n\n There will be some
+      extra context provided that might need to be removed such as expected_output
+      formats structured_outputs and other instructions."},{"role":"user","content":"The
+      original query is: What is Vidit''s favorite color?\n\nThis is the expected
+      criteria for your final answer: Vidit''s favorite color.\nyou MUST return the
+      actual complete content as the final answer, not a summary.."}],"model":"gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '950'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBTtwwFLznKyxfetmg3YXspnutCmpVIS70UqHI2C/JK46fZb+sQGj/
+        HTlZNqGA1IsPnjfjmfF7zoSQaOROSN0q1p23+Te9rh8vr67tj+99Wdw8NDc/Xdy32KvbX71cJAbd
+        /wXNr6wzTZ23wEhuhHUAxZBUV9vN+apcb8tiADoyYBOt8ZxfUN6hw3y9XF/ky22+Ko/sllBDlDvx
+        JxNCiOfhTD6dgUe5E8vF600HMaoG5O40JIQMZNONVDFiZOVYLiZQk2Nwg/XfaJC/RFGrPQVkEJos
+        hbP5dIC6jyo5dr21M0A5R6xS4sHn3RE5nJxZanyg+/gPVdboMLZVABXJJReRycsBPWRC3A0N9G9C
+        SR+o81wxPcDw3Gp7PurJqfgJLY4YEys7J5WLD+QqA6zQxlmFUivdgpmoU9+qN0gzIJuFfm/mI+0x
+        OLrmf+QnQGvwDKbyAQzqt4GnsQBpLT8bO5U8GJYRwh41VIwQ0kcYqFVvx2WR8SkydFWNroHgA44b
+        U/uq2CxVvYGi+CqzQ/YCAAD//wMAZMa5Sz8DAAA=
+    headers:
+      CF-RAY:
+      - 99ec2e536dcc3c7d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 15 Nov 2025 04:59:45 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=REDACTED;
+        path=/; expires=Sat, 15-Nov-25 05:29:45 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=REDACTED;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - REDACTED_ORG
+      openai-processing-ms:
+      - '418'
+      openai-project:
+      - REDACTED_PROJECT
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '434'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999785'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999785'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - REDACTED_REQUEST_ID
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Information Agent. You
+      have access to specific knowledge sources.\nYour personal goal is: Provide information
+      based on knowledge sources\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: What is Vidit''s
+      favorite color?\n\nThis is the expected criteria for your final answer: Vidit''s
+      favorite color.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '884'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=REDACTED;
+        _cfuvid=REDACTED
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNbxNBDL3nV1hz4bKp8tGkITdEBVRC4oLgAFXkzHg3prP2aGY2aaj6
+        39Fu0mxaisRlpfXze7bHzw8DAMPOLMHYDWZbBz98byfl/bW9mcrH69GX37Kd8v6z/X63Ubz/aoqW
+        oetfZPMT68JqHTxlVjnANhJmalXHV/PpeDG5Wsw6oFZHvqVVIQ8vdViz8HAymlwOR1fD8eLI3ihb
+        SmYJPwYAAA/dt+1THN2bJYyKp0hNKWFFZnlKAjBRfRsxmBKnjJJN0YNWJZN0rd+A6A4sClS8JUCo
+        2rYBJe0oAvyUDyzo4V33v4Rv7Di/SVDiViNnAqteI3AC0QyhWXu2fg9ObVOTZHKACTh3BbYY97DG
+        RA5UIFBM2kqHSCVFEkvpAj7pjrYUC7Ba1yov6iTAWqUCFsdbdg36BFpmEmCxvnEEa99Q0c5AUgCK
+        g0iugHWTIStYlZJjfRoiBbJcsn1RpQAVgp023oEQuSM1NT4DQiTPuPYESZtoCTSC40g2+z1guoMN
+        1xfnbx2pbBK2+5bG+zMARTRj65duy7dH5PG0V69ViLpOL6imZOG0WUXCpNLuMGUNpkMfBwC3nX+a
+        Z5YwIWod8irrHXXlxvPFQc/0tu3R+fwIZs3o+/hkelm8ordylJF9OnOgsWg35Hpqb1dsHOsZMDib
+        +u9uXtM+TM5S/Y98D1hLIZNbhUiO7fOJ+7RI7VX/K+30yl3DJlHcsqVVZortJhyV2PjDrZm0T5nq
+        VclSUQyRDwdXhtVsPsJyTrPZWzN4HPwBAAD//wMAtb7X3X4EAAA=
+    headers:
+      CF-RAY:
+      - 99ec2e59baca3c7d-SJC
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 15 Nov 2025 04:59:47 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - REDACTED_ORG
+      openai-processing-ms:
+      - '1471'
+      openai-project:
+      - REDACTED_PROJECT
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1488'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999805'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999802'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - REDACTED_REQUEST_ID
+    status:
+      code: 200
+      message: OK
+version: 1

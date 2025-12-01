@@ -1,17 +1,17 @@
 ---
 title: "웹후크 자동화"
-description: "ActivePieces, Zapier, Make.com과 같은 플랫폼을 사용하여 CrewAI Enterprise 워크플로우를 웹후크로 자동화하세요"
+description: "ActivePieces, Zapier, Make.com과 같은 플랫폼을 사용하여 CrewAI AOP 워크플로우를 웹후크로 자동화하세요"
 icon: "webhook"
 mode: "wide"
 ---
 
-CrewAI Enterprise를 사용하면 웹훅을 통해 워크플로우를 자동화할 수 있습니다. 이 문서에서는 웹훅을 설정하고 사용하는 과정을 안내하며, Zapier와 Make.com과 유사한 워크플로우 자동화 플랫폼인 ActivePieces와의 통합에 중점을 두고 crew 실행을 시작하는 방법을 설명합니다.
+CrewAI AOP를 사용하면 웹훅을 통해 워크플로우를 자동화할 수 있습니다. 이 문서에서는 웹훅을 설정하고 사용하는 과정을 안내하며, Zapier와 Make.com과 유사한 워크플로우 자동화 플랫폼인 ActivePieces와의 통합에 중점을 두고 crew 실행을 시작하는 방법을 설명합니다.
 
 ## Webhook 설정하기
 
 <Steps>
     <Step title="Kickoff 인터페이스 접근">
-        - CrewAI Enterprise 대시보드로 이동하세요.
+        - CrewAI AOP 대시보드로 이동하세요.
         - crew 실행을 시작할 때 사용하는 `/kickoff` 섹션을 찾으세요.
             <Frame>
                 <img src="/images/enterprise/kickoff-interface.png" alt="Kickoff 인터페이스" />
@@ -44,7 +44,7 @@ CrewAI Enterprise를 사용하면 웹훅을 통해 워크플로우를 자동화�
         3. HTTP 액션 단계를 추가하세요.
             - 액션을 `Send HTTP request`로 설정하세요.
             - 메소드는 `POST`로 사용하세요.
-            - URL은 CrewAI Enterprise kickoff 엔드포인트로 설정하세요.
+            - URL은 CrewAI AOP kickoff 엔드포인트로 설정하세요.
             - 필요한 헤더 추가 (예: `Bearer Token`)
                 <Frame>
                     <img src="/images/enterprise/activepieces-headers.png" alt="ActivePieces 헤더" />

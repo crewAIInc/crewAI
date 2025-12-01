@@ -57,25 +57,41 @@ By default, the tool uses OpenAI for both embeddings and summarization.
 To customize the model, you can use a config dictionary as follows:
 
 ```python Code
+from chromadb.config import Settings
+
 tool = TXTSearchTool(
-    config=dict(
-        llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
-            config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google", # or openai, ollama, ...
-            config=dict(
-                model="models/embedding-001",
-                task_type="retrieval_document",
-                # title="Embeddings",
-            ),
-        ),
-    )
+    config={
+        # Required: embeddings provider + config
+        "embedding_model": {
+            "provider": "openai",  # or google-generativeai, cohere, ollama, ...
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",  # optional if env var is set (e.g., OPENAI_API_KEY or EMBEDDINGS_OPENAI_API_KEY)
+                # Provider examples:
+                # Google → model_name: "gemini-embedding-001", task_type: "RETRIEVAL_DOCUMENT"
+                # Cohere → model: "embed-english-v3.0"
+                # Ollama → model: "nomic-embed-text"
+            },
+        },
+
+        # Required: vector database config
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # Chroma settings (optional persistence)
+                # "settings": Settings(
+                #     persist_directory="/content/chroma",
+                #     allow_reset=True,
+                #     is_persistent=True,
+                # ),
+
+                # Qdrant vector params example:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # Note: collection name is controlled by the tool (default: "rag_tool_collection").
+            }
+        },
+    }
 )
 ```

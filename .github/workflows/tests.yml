@@ -5,10 +5,6 @@ on: [pull_request]
 permissions:
   contents: read
 
-env:
-  OPENAI_API_KEY: fake-api-key
-  PYTHONUNBUFFERED: 1
-
 jobs:
   tests:
     name: tests (${{ matrix.python-version }})
@@ -56,13 +52,13 @@ jobs:
       - name: Run tests (group ${{ matrix.group }} of 8)
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
-          DURATION_FILE=".test_durations_py${PYTHON_VERSION_SAFE}"
-          
+          DURATION_FILE="../../.test_durations_py${PYTHON_VERSION_SAFE}"
+
           # Temporarily always skip cached durations to fix test splitting
           # When durations don't match, pytest-split runs duplicate tests instead of splitting
           echo "Using even test splitting (duration cache disabled until fix merged)"
           DURATIONS_ARG=""
-          
+
           # Original logic (disabled temporarily):
           # if [ ! -f "$DURATION_FILE" ]; then
           #   echo "No cached durations found, tests will be split evenly"
@@ -74,17 +70,24 @@ jobs:
           #   echo "No test changes detected, using cached test durations for optimal splitting"
           #   DURATIONS_ARG="--durations-path=${DURATION_FILE}"
           # fi
-          
-          uv run pytest \
-            --block-network \
-            --timeout=30 \
+
+          cd lib/crewai && uv run pytest \
             -vv \
             --splits 8 \
             --group ${{ matrix.group }} \
             $DURATIONS_ARG \
             --durations=10 \
-            -n auto \
             --maxfail=3
+
+      - name: Run tool tests (group ${{ matrix.group }} of 8)
+        run: |
+          cd lib/crewai-tools && uv run pytest \
+            -vv \
+            --splits 8 \
+            --group ${{ matrix.group }} \
+            --durations=10 \
+            --maxfail=3
+
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'

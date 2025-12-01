@@ -875,14 +875,13 @@ By exploring these examples, you can gain insights into how to leverage CrewAI F
 Also, check out our YouTube video on how to use flows in CrewAI below!
 
 <iframe
-  width="560"
-  height="315"
+  className="w-full aspect-video rounded-xl"
   src="https://www.youtube.com/embed/MTb5my6VOT8"
-  title="YouTube video player"
-  frameborder="0"
+  title="CrewAI Flows overview"
+  frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-  referrerpolicy="strict-origin-when-cross-origin"
-  allowfullscreen
+  referrerPolicy="strict-origin-when-cross-origin"
+  allowFullScreen
 ></iframe>
 
 ## Running Flows
@@ -897,6 +896,31 @@ You can run a flow programmatically by creating an instance of your flow class a
 flow = ExampleFlow()
 result = flow.kickoff()
 ```
+
+### Streaming Flow Execution
+
+For real-time visibility into flow execution, you can enable streaming to receive output as it's generated:
+
+```python
+class StreamingFlow(Flow):
+    stream = True  # Enable streaming
+
+    @start()
+    def research(self):
+        # Your flow implementation
+        pass
+
+# Iterate over streaming output
+flow = StreamingFlow()
+streaming = flow.kickoff()
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# Access final result
+result = streaming.result
+```
+
+Learn more about streaming in the [Streaming Flow Execution](/en/learn/streaming-flow-execution) guide.
 
 ### Using the CLI
 

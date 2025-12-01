@@ -1,0 +1,12 @@
+[project]
+name = "{{folder_name}}"
+version = "0.1.0"
+description = "Power up your crews with {{folder_name}}"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[tools]>=0.203.1"
+]
+
+[tool.crewai]
+type = "tool"

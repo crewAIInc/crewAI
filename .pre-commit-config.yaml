@@ -3,17 +3,25 @@ repos:
     hooks:
       - id: ruff
         name: ruff
-        entry: uv run ruff check
+        entry: bash -c 'source .venv/bin/activate && uv run ruff check --config pyproject.toml "$@"' --
         language: system
+        pass_filenames: true
         types: [python]
       - id: ruff-format
         name: ruff-format
-        entry: uv run ruff format
+        entry: bash -c 'source .venv/bin/activate && uv run ruff format --config pyproject.toml "$@"' --
         language: system
+        pass_filenames: true
         types: [python]
       - id: mypy
         name: mypy
-        entry: uv run mypy
+        entry: bash -c 'source .venv/bin/activate && uv run mypy --config-file pyproject.toml "$@"' --
         language: system
+        pass_filenames: true
         types: [python]
-        exclude: ^tests/
+        exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/crewai/tests/|lib/crewai-tools/tests/)
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.3
+    hooks:
+      - id: uv-lock
+

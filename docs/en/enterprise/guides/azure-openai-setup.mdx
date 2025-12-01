@@ -19,8 +19,8 @@ This guide walks you through connecting Azure OpenAI with Crew Studio for seamle
             </Frame>
     </Step>
 
-    <Step title="Configure CrewAI Enterprise Connection">
-        4. In another tab, open `CrewAI Enterprise > LLM Connections`. Name your LLM Connection, select Azure as the provider, and choose the same model you selected in Azure.
+    <Step title="Configure CrewAI AOP Connection">
+        4. In another tab, open `CrewAI AOP > LLM Connections`. Name your LLM Connection, select Azure as the provider, and choose the same model you selected in Azure.
         5. On the same page, add environment variables from step 3:
             - One named `AZURE_DEPLOYMENT_TARGET_URL` (using the Target URI). The URL should look like this: https://your-deployment.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-08-01-preview
             - Another named `AZURE_API_KEY` (using the Key).
@@ -28,7 +28,7 @@ This guide walks you through connecting Azure OpenAI with Crew Studio for seamle
     </Step>
 
     <Step title="Set Default Configuration">
-        7. In `CrewAI Enterprise > Settings > Defaults > Crew Studio LLM Settings`, set the new LLM Connection and model as defaults.
+        7. In `CrewAI AOP > Settings > Defaults > Crew Studio LLM Settings`, set the new LLM Connection and model as defaults.
     </Step>
 
     <Step title="Configure Network Access">
@@ -49,4 +49,4 @@ If you encounter issues:
 - Verify the Target URI format matches the expected pattern
 - Check that the API key is correct and has proper permissions
 - Ensure network access is configured to allow CrewAI connections
-- Confirm the deployment model matches what you've configured in CrewAI 
+- Confirm the deployment model matches what you've configured in CrewAI

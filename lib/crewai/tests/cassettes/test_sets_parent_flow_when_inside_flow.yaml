@@ -1,0 +1,477 @@
+interactions:
+- request:
+    body: '{"trace_id": "fabb9e5b-b761-4b21-8514-cd4d3c937d09", "execution_type":
+      "flow", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": null, "flow_name": "MyFlow", "crewai_version": "1.0.0", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-21T14:26:37.988214+00:00"},
+      "ephemeral_trace_id": "fabb9e5b-b761-4b21-8514-cd4d3c937d09"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0
+      X-Crewai-Version:
+      - 1.0.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"fe167fd8-d9b8-4faa-bb28-ed13f10e8d2e","ephemeral_trace_id":"fabb9e5b-b761-4b21-8514-cd4d3c937d09","execution_type":"flow","crew_name":null,"flow_name":"MyFlow","status":"running","duration_ms":null,"crewai_version":"1.0.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":null,"flow_name":"MyFlow","crewai_version":"1.0.0","privacy_level":"standard"},"created_at":"2025-10-21T14:26:38.410Z","updated_at":"2025-10-21T14:26:38.410Z","access_code":"TRACE-8b1efdc7b5","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '519'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 21 Oct 2025 14:26:38 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"3ccda5b1eea02b7d1edeeb99b7968370"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - b3682ed8-18b9-485a-8171-74e61d843589
+      x-runtime:
+      - '0.064552'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "c6d1cb65-7e55-40a5-9319-766591bcd1ae", "timestamp":
+      "2025-10-21T14:26:37.986131+00:00", "type": "flow_started", "event_data": {"timestamp":
+      "2025-10-21T14:26:37.986131+00:00", "type": "flow_started", "source_fingerprint":
+      null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name":
+      null, "agent_id": null, "agent_role": null, "flow_name": "MyFlow", "inputs":
+      null}}, {"event_id": "17621b79-f10a-497f-9eb1-c567f8ca43f1", "timestamp": "2025-10-21T14:26:37.986545+00:00",
+      "type": "method_execution_started", "event_data": {"timestamp": "2025-10-21T14:26:37.986545+00:00",
+      "type": "method_execution_started", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
+      null, "agent_role": null, "flow_name": "MyFlow", "method_name": "start", "state":
+      {"id": "c1c5fe64-dcf4-43b2-9081-c4a513770607"}, "params": {}}}, {"event_id":
+      "60654efd-c07b-4171-a75d-9b943863e4bf", "timestamp": "2025-10-21T14:26:37.989677+00:00",
+      "type": "method_execution_finished", "event_data": {"timestamp": "2025-10-21T14:26:37.989677+00:00",
+      "type": "method_execution_finished", "source_fingerprint": null, "source_type":
+      null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
+      null, "agent_role": null, "flow_name": "MyFlow", "method_name": "start", "result":
+      {"parent_flow": "<tests.test_crew.test_sets_parent_flow_when_inside_flow.<locals>.MyFlow
+      object at 0x12b835520>", "name": "crew", "cache": true, "tasks": [{"used_tools":
+      "0", "tools_errors": "0", "delegations": "0", "i18n": "{''prompt_file'': None}",
+      "name": "None", "prompt_context": "None", "description": "''Task 1''", "expected_output":
+      "''output''", "config": "None", "callback": "None", "agent": "{''id'': UUID(''7fadf38e-4090-4643-9fcf-bd24b07e05e1''),
+      ''role'': ''Researcher'', ''goal'': ''Make the best research and analysis on
+      content about AI and AI agents'', ''backstory'': \"You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\",
+      ''cache'': True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'':
+      False, ''tools'': [], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b973fe0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b910290>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
+      {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b9934d0>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None,
+      ''apps'': None, ''mcps'': None}", "context": "NOT_SPECIFIED", "async_execution":
+      "False", "output_json": "None", "output_pydantic": "None", "output_file": "None",
+      "create_directory": "True", "output": "None", "tools": "[]", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "id": "UUID(''d8c03737-58d2-4c8e-929e-d9e0bf022a3b'')",
+      "human_input": "False", "markdown": "False", "converter_cls": "None", "processed_by_agents":
+      "set()", "guardrail": "None", "guardrails": "None", "max_retries": "None", "guardrail_max_retries":
+      "3", "retry_count": "0", "start_time": "None", "end_time": "None", "allow_crewai_trigger_context":
+      "None"}, {"used_tools": "0", "tools_errors": "0", "delegations": "0", "i18n":
+      "{''prompt_file'': None}", "name": "None", "prompt_context": "None", "description":
+      "''Task 2''", "expected_output": "''output''", "config": "None", "callback":
+      "None", "agent": "{''id'': UUID(''49785d1e-2cfa-4967-a503-da9f6fea46df''), ''role'':
+      ''Senior Writer'', ''goal'': ''Write the best content about AI and AI agents.'',
+      ''backstory'': \"You''re a senior writer, specialized in technology, software
+      engineering, AI and startups. You work as a freelancer and are now working on
+      writing content for a new customer.\", ''cache'': True, ''verbose'': False,
+      ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [], ''max_iter'':
+      25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b7bbbf0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b9903b0>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
+      {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b631bb0>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None,
+      ''apps'': None, ''mcps'': None}", "context": "NOT_SPECIFIED", "async_execution":
+      "False", "output_json": "None", "output_pydantic": "None", "output_file": "None",
+      "create_directory": "True", "output": "None", "tools": "[]", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "id": "UUID(''530f34b2-29dd-4ba8-a4e0-f68ba958890b'')",
+      "human_input": "False", "markdown": "False", "converter_cls": "None", "processed_by_agents":
+      "set()", "guardrail": "None", "guardrails": "None", "max_retries": "None", "guardrail_max_retries":
+      "3", "retry_count": "0", "start_time": "None", "end_time": "None", "allow_crewai_trigger_context":
+      "None"}], "agents": [{"id": "UUID(''7fadf38e-4090-4643-9fcf-bd24b07e05e1'')",
+      "role": "''Researcher''", "goal": "''Make the best research and analysis on
+      content about AI and AI agents''", "backstory": "\"You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\"",
+      "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
+      "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b973fe0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b910290>", "crew": "None", "i18n": "{''prompt_file'': None}",
+      "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x12b9934d0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
+      "None", "knowledge_sources": "None", "knowledge_storage": "None", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "callbacks": "[]", "adapted_agent":
+      "False", "knowledge_config": "None", "apps": "None", "mcps": "None"}, {"id":
+      "UUID(''49785d1e-2cfa-4967-a503-da9f6fea46df'')", "role": "''Senior Writer''",
+      "goal": "''Write the best content about AI and AI agents.''", "backstory": "\"You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\"",
+      "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
+      "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b7bbbf0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b9903b0>", "crew": "None", "i18n": "{''prompt_file'': None}",
+      "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x12b631bb0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
+      "None", "knowledge_sources": "None", "knowledge_storage": "None", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "callbacks": "[]", "adapted_agent":
+      "False", "knowledge_config": "None", "apps": "None", "mcps": "None"}], "process":
+      "sequential", "verbose": false, "memory": false, "short_term_memory": null,
+      "long_term_memory": null, "entity_memory": null, "external_memory": null, "embedder":
+      null, "usage_metrics": null, "manager_llm": null, "manager_agent": null, "function_calling_llm":
+      null, "config": null, "id": "5a10d62b-4eab-47e7-b91f-6878b682acb5", "share_crew":
+      false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": {"metadata": "{}"}}, "token_usage":
+      null, "tracing": false}, "state": {"id": "c1c5fe64-dcf4-43b2-9081-c4a513770607"}}},
+      {"event_id": "191d1d3e-8d9d-40cf-a7e4-48c44b05c2d3", "timestamp": "2025-10-21T14:26:37.989913+00:00",
+      "type": "flow_finished", "event_data": {"timestamp": "2025-10-21T14:26:37.989913+00:00",
+      "type": "flow_finished", "source_fingerprint": null, "source_type": null, "fingerprint_metadata":
+      null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null,
+      "flow_name": "MyFlow", "result": {"parent_flow": "<tests.test_crew.test_sets_parent_flow_when_inside_flow.<locals>.MyFlow
+      object at 0x12b835520>", "name": "crew", "cache": true, "tasks": [{"used_tools":
+      "0", "tools_errors": "0", "delegations": "0", "i18n": "{''prompt_file'': None}",
+      "name": "None", "prompt_context": "None", "description": "''Task 1''", "expected_output":
+      "''output''", "config": "None", "callback": "None", "agent": "{''id'': UUID(''7fadf38e-4090-4643-9fcf-bd24b07e05e1''),
+      ''role'': ''Researcher'', ''goal'': ''Make the best research and analysis on
+      content about AI and AI agents'', ''backstory'': \"You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\",
+      ''cache'': True, ''verbose'': False, ''max_rpm'': None, ''allow_delegation'':
+      False, ''tools'': [], ''max_iter'': 25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b973fe0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b910290>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
+      {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b9934d0>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None,
+      ''apps'': None, ''mcps'': None}", "context": "NOT_SPECIFIED", "async_execution":
+      "False", "output_json": "None", "output_pydantic": "None", "output_file": "None",
+      "create_directory": "True", "output": "None", "tools": "[]", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "id": "UUID(''d8c03737-58d2-4c8e-929e-d9e0bf022a3b'')",
+      "human_input": "False", "markdown": "False", "converter_cls": "None", "processed_by_agents":
+      "set()", "guardrail": "None", "guardrails": "None", "max_retries": "None", "guardrail_max_retries":
+      "3", "retry_count": "0", "start_time": "None", "end_time": "None", "allow_crewai_trigger_context":
+      "None"}, {"used_tools": "0", "tools_errors": "0", "delegations": "0", "i18n":
+      "{''prompt_file'': None}", "name": "None", "prompt_context": "None", "description":
+      "''Task 2''", "expected_output": "''output''", "config": "None", "callback":
+      "None", "agent": "{''id'': UUID(''49785d1e-2cfa-4967-a503-da9f6fea46df''), ''role'':
+      ''Senior Writer'', ''goal'': ''Write the best content about AI and AI agents.'',
+      ''backstory'': \"You''re a senior writer, specialized in technology, software
+      engineering, AI and startups. You work as a freelancer and are now working on
+      writing content for a new customer.\", ''cache'': True, ''verbose'': False,
+      ''max_rpm'': None, ''allow_delegation'': False, ''tools'': [], ''max_iter'':
+      25, ''agent_executor'': <crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b7bbbf0>, ''llm'': <crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b9903b0>, ''crew'': None, ''i18n'': {''prompt_file'': None}, ''cache_handler'':
+      {}, ''tools_handler'': <crewai.agents.tools_handler.ToolsHandler object at 0x12b631bb0>,
+      ''tools_results'': [], ''max_tokens'': None, ''knowledge'': None, ''knowledge_sources'':
+      None, ''knowledge_storage'': None, ''security_config'': {''fingerprint'': {''metadata'':
+      {}}}, ''callbacks'': [], ''adapted_agent'': False, ''knowledge_config'': None,
+      ''apps'': None, ''mcps'': None}", "context": "NOT_SPECIFIED", "async_execution":
+      "False", "output_json": "None", "output_pydantic": "None", "output_file": "None",
+      "create_directory": "True", "output": "None", "tools": "[]", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "id": "UUID(''530f34b2-29dd-4ba8-a4e0-f68ba958890b'')",
+      "human_input": "False", "markdown": "False", "converter_cls": "None", "processed_by_agents":
+      "set()", "guardrail": "None", "guardrails": "None", "max_retries": "None", "guardrail_max_retries":
+      "3", "retry_count": "0", "start_time": "None", "end_time": "None", "allow_crewai_trigger_context":
+      "None"}], "agents": [{"id": "UUID(''7fadf38e-4090-4643-9fcf-bd24b07e05e1'')",
+      "role": "''Researcher''", "goal": "''Make the best research and analysis on
+      content about AI and AI agents''", "backstory": "\"You''re an expert researcher,
+      specialized in technology, software engineering, AI and startups. You work as
+      a freelancer and is now working on doing research and analysis for a new customer.\"",
+      "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
+      "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b973fe0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b910290>", "crew": "None", "i18n": "{''prompt_file'': None}",
+      "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x12b9934d0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
+      "None", "knowledge_sources": "None", "knowledge_storage": "None", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "callbacks": "[]", "adapted_agent":
+      "False", "knowledge_config": "None", "apps": "None", "mcps": "None"}, {"id":
+      "UUID(''49785d1e-2cfa-4967-a503-da9f6fea46df'')", "role": "''Senior Writer''",
+      "goal": "''Write the best content about AI and AI agents.''", "backstory": "\"You''re
+      a senior writer, specialized in technology, software engineering, AI and startups.
+      You work as a freelancer and are now working on writing content for a new customer.\"",
+      "cache": "True", "verbose": "False", "max_rpm": "None", "allow_delegation":
+      "False", "tools": "[]", "max_iter": "25", "agent_executor": "<crewai.agents.crew_agent_executor.CrewAgentExecutor
+      object at 0x12b7bbbf0>", "llm": "<crewai.llms.providers.openai.completion.OpenAICompletion
+      object at 0x12b9903b0>", "crew": "None", "i18n": "{''prompt_file'': None}",
+      "cache_handler": "{}", "tools_handler": "<crewai.agents.tools_handler.ToolsHandler
+      object at 0x12b631bb0>", "tools_results": "[]", "max_tokens": "None", "knowledge":
+      "None", "knowledge_sources": "None", "knowledge_storage": "None", "security_config":
+      "{''fingerprint'': {''metadata'': {}}}", "callbacks": "[]", "adapted_agent":
+      "False", "knowledge_config": "None", "apps": "None", "mcps": "None"}], "process":
+      "sequential", "verbose": false, "memory": false, "short_term_memory": null,
+      "long_term_memory": null, "entity_memory": null, "external_memory": null, "embedder":
+      null, "usage_metrics": null, "manager_llm": null, "manager_agent": null, "function_calling_llm":
+      null, "config": null, "id": "5a10d62b-4eab-47e7-b91f-6878b682acb5", "share_crew":
+      false, "step_callback": null, "task_callback": null, "before_kickoff_callbacks":
+      [], "after_kickoff_callbacks": [], "max_rpm": null, "prompt_file": null, "output_log_file":
+      null, "planning": false, "planning_llm": null, "task_execution_output_json_files":
+      null, "execution_logs": [], "knowledge_sources": null, "chat_llm": null, "knowledge":
+      null, "security_config": {"fingerprint": {"metadata": "{}"}}, "token_usage":
+      null, "tracing": false}}}], "batch_metadata": {"events_count": 4, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '15841'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0
+      X-Crewai-Version:
+      - 1.0.0
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/fabb9e5b-b761-4b21-8514-cd4d3c937d09/events
+  response:
+    body:
+      string: '{"events_created":4,"ephemeral_trace_batch_id":"fe167fd8-d9b8-4faa-bb28-ed13f10e8d2e"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '86'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 21 Oct 2025 14:26:38 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"31af819a6bb47947663469e423c6c943"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 7e1b0d5e-c0c3-4745-aebd-6f86f9292bdd
+      x-runtime:
+      - '0.141007'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 856, "final_event_count": 4}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0
+      X-Crewai-Version:
+      - 1.0.0
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/fabb9e5b-b761-4b21-8514-cd4d3c937d09/finalize
+  response:
+    body:
+      string: '{"id":"fe167fd8-d9b8-4faa-bb28-ed13f10e8d2e","ephemeral_trace_id":"fabb9e5b-b761-4b21-8514-cd4d3c937d09","execution_type":"flow","crew_name":null,"flow_name":"MyFlow","status":"completed","duration_ms":856,"crewai_version":"1.0.0","total_events":4,"execution_context":{"crew_name":null,"flow_name":"MyFlow","privacy_level":"standard","crewai_version":"1.0.0","crew_fingerprint":null},"created_at":"2025-10-21T14:26:38.410Z","updated_at":"2025-10-21T14:26:39.268Z","access_code":"TRACE-8b1efdc7b5","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '520'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 21 Oct 2025 14:26:39 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
+        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
+        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
+        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
+        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
+        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
+        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
+        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
+        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
+        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
+        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
+        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
+        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
+        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
+        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
+        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
+        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
+        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
+        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
+        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
+        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
+        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
+        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
+        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
+        https://drive.google.com https://slides.google.com https://accounts.google.com
+        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
+        https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"dfa32cefa9e9282e5792820119ebc7f4"
+      expires:
+      - '0'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      pragma:
+      - no-cache
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 58bc91dd-a0a8-4299-be3a-16f998de8786
+      x-runtime:
+      - '0.061567'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

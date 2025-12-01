@@ -13,7 +13,7 @@ mode: "wide"
 
 Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 되어 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 되어 있는 [CrewAI AOP](https://app.crewai.com) 계정
 - Google Sheets에 액세스할 수 있는 Google 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정 연결
 - 데이터 작업을 위한 올바른 열 헤더가 있는 스프레드시트
@@ -22,11 +22,11 @@ Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Google 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **Google Sheets**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 흐름을 완료합니다.
 4. 스프레드시트 접근에 필요한 권한을 허용합니다.
-5. [Account Settings](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -34,10 +34,26 @@ Google Sheets 통합을 사용하기 전에 다음을 확인하세요:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 작업
 
 <AccordionGroup>
-  <Accordion title="GOOGLE_SHEETS_GET_ROW">
+  <Accordion title="google_sheets/get_values">
     **설명:** Google Sheets 스프레드시트에서 행을 가져옵니다.
 
     **매개변수:**
@@ -45,7 +61,7 @@ uv add crewai-tools
     - `limit` (string, 선택): 행 제한 - 반환할 최대 행 수를 제한합니다.
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_CREATE_ROW">
+  <Accordion title="google_sheets/append_values">
     **설명:** Google Sheets 스프레드시트에 새로운 행을 만듭니다.
 
     **매개변수:**
@@ -62,7 +78,7 @@ uv add crewai-tools
       ```
   </Accordion>
 
-  <Accordion title="GOOGLE_SHEETS_UPDATE_ROW">
+  <Accordion title="google_sheets/update_values">
     **설명:** Google Sheets 스프레드시트의 기존 행을 업데이트합니다.
 
     **매개변수:**
@@ -105,19 +121,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Google Sheets tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Google Sheets capabilities
 sheets_agent = Agent(
     role="Data Manager",
     goal="Manage spreadsheet data and track information efficiently",
     backstory="An AI assistant specialized in data management and spreadsheet operations.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to add new data to a spreadsheet
@@ -139,19 +149,12 @@ crew.kickoff()
 ### 특정 Google Sheets 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Google Sheets tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["google_sheets_get_row", "google_sheets_create_row"]
-)
 
 data_collector = Agent(
     role="Data Collector",
     goal="Collect and organize data in spreadsheets",
     backstory="An AI assistant that focuses on data collection and organization.",
-    tools=enterprise_tools
+    apps=['google_sheets']
 )
 
 # Task to collect and organize data
@@ -173,17 +176,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_analyst = Agent(
     role="Data Analyst",
     goal="Analyze spreadsheet data and generate insights",
     backstory="An experienced data analyst who extracts insights from spreadsheet data.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to analyze data and create reports
@@ -209,17 +207,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_updater = Agent(
     role="Data Updater",
     goal="Automatically update and maintain spreadsheet data",
     backstory="An AI assistant that maintains data accuracy and updates records automatically.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Task to update data based on conditions
@@ -246,17 +239,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 workflow_manager = Agent(
     role="Data Workflow Manager",
     goal="Manage complex data workflows across multiple spreadsheets",
     backstory="An AI assistant that orchestrates complex data operations across multiple spreadsheets.",
-    tools=[enterprise_tools]
+    apps=['google_sheets']
 )
 
 # Complex workflow task

@@ -13,7 +13,7 @@ Enable your agents to manage repositories, issues, and releases through GitHub. 
 
 Before using the GitHub integration, ensure you have:
 
-- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A [CrewAI AOP](https://app.crewai.com) account with an active subscription
 - A GitHub account with appropriate repository permissions
 - Connected your GitHub account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
 
@@ -21,11 +21,11 @@ Before using the GitHub integration, ensure you have:
 
 ### 1. Connect Your GitHub Account
 
-1. Navigate to [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)
+1. Navigate to [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)
 2. Find **GitHub** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for repository and issue management
-5. Copy your Enterprise Token from [Account Settings](https://app.crewai.com/crewai_plus/settings/account)
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
 
 ### 2. Install Required Package
 
@@ -33,10 +33,26 @@ Before using the GitHub integration, ensure you have:
 uv add crewai-tools
 ```
 
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## Available Actions
 
 <AccordionGroup>
-  <Accordion title="GITHUB_CREATE_ISSUE">
+  <Accordion title="github/create_issue">
     **Description:** Create an issue in GitHub.
 
     **Parameters:**
@@ -47,7 +63,7 @@ uv add crewai-tools
     - `assignees` (string, optional): Assignees - Specify the assignee(s)' GitHub login as an array of strings for this issue. (example: `["octocat"]`).
   </Accordion>
 
-  <Accordion title="GITHUB_UPDATE_ISSUE">
+  <Accordion title="github/update_issue">
     **Description:** Update an issue in GitHub.
 
     **Parameters:**
@@ -61,7 +77,7 @@ uv add crewai-tools
       - Options: `open`, `closed`
   </Accordion>
 
-  <Accordion title="GITHUB_GET_ISSUE_BY_NUMBER">
+  <Accordion title="github/get_issue_by_number">
     **Description:** Get an issue by number in GitHub.
 
     **Parameters:**
@@ -70,7 +86,7 @@ uv add crewai-tools
     - `issue_number` (string, required): Issue Number - Specify the number of the issue to fetch.
   </Accordion>
 
-  <Accordion title="GITHUB_LOCK_ISSUE">
+  <Accordion title="github/lock_issue">
     **Description:** Lock an issue in GitHub.
 
     **Parameters:**
@@ -81,7 +97,7 @@ uv add crewai-tools
       - Options: `off-topic`, `too heated`, `resolved`, `spam`
   </Accordion>
 
-  <Accordion title="GITHUB_SEARCH_ISSUE">
+  <Accordion title="github/search_issue">
     **Description:** Search for issues in GitHub.
 
     **Parameters:**
@@ -108,7 +124,7 @@ uv add crewai-tools
       Available fields: `assignee`, `creator`, `mentioned`, `labels`
   </Accordion>
 
-  <Accordion title="GITHUB_CREATE_RELEASE">
+  <Accordion title="github/create_release">
     **Description:** Create a release in GitHub.
 
     **Parameters:**
@@ -126,7 +142,7 @@ uv add crewai-tools
       - Options: `true`, `false`
   </Accordion>
 
-  <Accordion title="GITHUB_UPDATE_RELEASE">
+  <Accordion title="github/update_release">
     **Description:** Update a release in GitHub.
 
     **Parameters:**
@@ -145,7 +161,7 @@ uv add crewai-tools
       - Options: `true`, `false`
   </Accordion>
 
-  <Accordion title="GITHUB_GET_RELEASE_BY_ID">
+  <Accordion title="github/get_release_by_id">
     **Description:** Get a release by ID in GitHub.
 
     **Parameters:**
@@ -154,7 +170,7 @@ uv add crewai-tools
     - `id` (string, required): Release ID - Specify the release ID of the release to fetch.
   </Accordion>
 
-  <Accordion title="GITHUB_GET_RELEASE_BY_TAG_NAME">
+  <Accordion title="github/get_release_by_tag_name">
     **Description:** Get a release by tag name in GitHub.
 
     **Parameters:**
@@ -163,7 +179,7 @@ uv add crewai-tools
     - `tag_name` (string, required): Name - Specify the tag of the release to fetch. (example: "v1.0.0").
   </Accordion>
 
-  <Accordion title="GITHUB_DELETE_RELEASE">
+  <Accordion title="github/delete_release">
     **Description:** Delete a release in GitHub.
 
     **Parameters:**
@@ -179,19 +195,14 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
+from crewai import Agent, Task, Crew
 
-# Get enterprise tools (GitHub tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
-
-# Create an agent with GitHub capabilities
+# Create an agent with Github capabilities
 github_agent = Agent(
     role="Repository Manager",
     goal="Manage GitHub repositories, issues, and releases efficiently",
     backstory="An AI assistant specialized in repository management and issue tracking.",
-    tools=[enterprise_tools]
+    apps=['github']  # All Github actions will be available
 )
 
 # Task to create a new issue
@@ -213,19 +224,12 @@ crew.kickoff()
 ### Filtering Specific GitHub Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific GitHub tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["github_create_issue", "github_update_issue", "github_search_issue"]
-)
 
 issue_manager = Agent(
     role="Issue Manager",
     goal="Create and manage GitHub issues efficiently",
     backstory="An AI assistant that focuses on issue tracking and management.",
-    tools=enterprise_tools
+    apps=['github/create_issue']
 )
 
 # Task to manage issue workflow
@@ -247,17 +251,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 release_manager = Agent(
     role="Release Manager",
     goal="Manage software releases and versioning",
     backstory="An experienced release manager who handles version control and release processes.",
-    tools=[enterprise_tools]
+    apps=['github']
 )
 
 # Task to create a new release
@@ -284,17 +283,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_coordinator = Agent(
     role="Project Coordinator",
     goal="Track and coordinate project issues and development progress",
     backstory="An AI assistant that helps coordinate development work and track project progress.",
-    tools=[enterprise_tools]
+    apps=['github']
 )
 
 # Complex task involving multiple GitHub operations

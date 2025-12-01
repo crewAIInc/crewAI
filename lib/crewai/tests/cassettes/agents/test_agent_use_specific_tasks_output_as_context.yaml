@@ -1,0 +1,1073 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Just say hi.\n\nThis is
+      the expect criteria for your final answer: Your greeting.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '772'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7OJYO5S0oxXqdh7OsU7deFaG6Mp\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213383,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      154,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85df1cbb761cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:29:43 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '406'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999817'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_bd5e677909453f9d761345dcd1b7af96
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Just say bye.\n\nThis is
+      the expect criteria for your final answer: Your farewell.\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nThis is the context
+      you''re working with:\nHi!\n\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '822'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7OKjfY4W3Sb91r1R3lwbNaWrYBW\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213384,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Bye!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      164,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 179,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85df2119c01cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:29:44 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '388'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999806'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_4fb7c6a4aee0c29431cc41faf56b6e6b
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are test role2. test backstory2\nYour
+      personal goal is: test goal2\nTo give my best complete final answer to the task
+      use the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Answer accordingly to the
+      context you got.\n\nThis is the expect criteria for your final answer: Your
+      answer.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '852'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7OK8oHq66mHii53aw3gUNsAZLow\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213384,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: Hi!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      171,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 186,\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85df25383c1cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:29:45 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '335'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999797'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_0e03176bfa219d7bf47910ebd0041e1e
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"trace_id": "71ed9e01-5013-496d-bb6a-72cea8f389b8", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:11:00.405361+00:00"},
+      "ephemeral_trace_id": "71ed9e01-5013-496d-bb6a-72cea8f389b8"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"d0adab5b-7d5b-4096-b6da-33cd2eb86628","ephemeral_trace_id":"71ed9e01-5013-496d-bb6a-72cea8f389b8","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T20:11:00.473Z","updated_at":"2025-09-23T20:11:00.473Z","access_code":"TRACE-b8851ea500","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '519'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"01011533361876418a081ce43467041b"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.12, sql.active_record;dur=11.40, cache_generate.active_support;dur=5.40,
+        cache_write.active_support;dur=0.16, cache_read_multi.active_support;dur=0.18,
+        start_processing.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=6.25, process_action.action_controller;dur=9.16
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 52ce5948-cc0a-414c-8fcc-19e33590ada0
+      x-runtime:
+      - '0.066923'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "c26a941f-6e16-4589-958e-b0d869ce2f6d", "timestamp":
+      "2025-09-23T20:11:00.478420+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-23T20:11:00.404684+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "7a185f1a-4fe3-4f4d-8653-81185e858be2",
+      "timestamp": "2025-09-23T20:11:00.479625+00:00", "type": "task_started", "event_data":
+      {"task_description": "Just say hi.", "expected_output": "Your greeting.", "task_name":
+      "Just say hi.", "context": "", "agent_role": "test role", "task_id": "19b2ccd8-6500-4332-a1b0-0e317a6cdcdd"}},
+      {"event_id": "6972e01c-2f6f-4f0b-8f21-373e5fe62972", "timestamp": "2025-09-23T20:11:00.479889+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "84c1d1bb-9a32-4490-8846-e0a1b1b07eab", "timestamp": "2025-09-23T20:11:00.479946+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T20:11:00.479930+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "19b2ccd8-6500-4332-a1b0-0e317a6cdcdd",
+      "task_name": "Just say hi.", "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are test role. test backstory\nYour personal goal is: test goal\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi.\n\nThis is the expected criteria for
+      your final answer: Your greeting.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x14e7b6000>"], "available_functions": null}}, {"event_id": "9da5663d-6cc1-4bf6-b0fe-1baf3f8f2c73",
+      "timestamp": "2025-09-23T20:11:00.480836+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T20:11:00.480820+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "19b2ccd8-6500-4332-a1b0-0e317a6cdcdd", "task_name": "Just say hi.",
+      "agent_id": null, "agent_role": null, "from_task": null, "from_agent": null,
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Just say hi.\n\nThis
+      is the expected criteria for your final answer: Your greeting.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "response": "Thought: I now can give
+      a great answer\nFinal Answer: Hi!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "9680ac56-8e34-4966-b223-c0fdbccf55b9",
+      "timestamp": "2025-09-23T20:11:00.480913+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "39d5beec-c46d-450b-9611-dfc730a65099", "timestamp":
+      "2025-09-23T20:11:00.480963+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Just say hi.", "task_name": "Just say hi.", "task_id":
+      "19b2ccd8-6500-4332-a1b0-0e317a6cdcdd", "output_raw": "Hi!", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "c2f4befb-e82f-450a-9e8f-959e4b121389",
+      "timestamp": "2025-09-23T20:11:00.481631+00:00", "type": "task_started", "event_data":
+      {"task_description": "Just say bye.", "expected_output": "Your farewell.", "task_name":
+      "Just say bye.", "context": "Hi!", "agent_role": "test role", "task_id": "e2044f89-7d6d-4136-b8f9-de15f25ae48a"}},
+      {"event_id": "14b72e1a-1460-485d-9b58-f6bbf0e1ba26", "timestamp": "2025-09-23T20:11:00.481955+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "2a3852b9-049a-4c51-a32e-a02720b1d6bb", "timestamp": "2025-09-23T20:11:00.481994+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T20:11:00.481984+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "e2044f89-7d6d-4136-b8f9-de15f25ae48a",
+      "task_name": "Just say bye.", "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
+      "content": "You are test role. test backstory\nYour personal goal is: test goal\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say bye.\n\nThis is the expected criteria for
+      your final answer: Your farewell.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
+      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x14e3ed970>"],
+      "available_functions": null}}, {"event_id": "5b7492f6-1e3f-4cdb-9efe-a9f69a5ea808",
+      "timestamp": "2025-09-23T20:11:00.482639+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T20:11:00.482627+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "e2044f89-7d6d-4136-b8f9-de15f25ae48a", "task_name": "Just say bye.",
+      "agent_id": null, "agent_role": null, "from_task": null, "from_agent": null,
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Just say bye.\n\nThis
+      is the expected criteria for your final answer: Your farewell.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nThis is the
+      context you''re working with:\nHi!\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "response": "Thought: I now can give a great answer\nFinal
+      Answer: Bye!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model":
+      "gpt-4o-mini"}}, {"event_id": "7b76e037-e4f3-49e6-a33b-95b6ea143939", "timestamp":
+      "2025-09-23T20:11:00.482696+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory": "test
+      backstory"}}, {"event_id": "a27cfa17-86f6-4dbe-ab24-9f4ace8183b4", "timestamp":
+      "2025-09-23T20:11:00.482722+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Just say bye.", "task_name": "Just say bye.", "task_id":
+      "e2044f89-7d6d-4136-b8f9-de15f25ae48a", "output_raw": "Bye!", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "cd969d89-4134-4d0d-99bb-8cecf815f723",
+      "timestamp": "2025-09-23T20:11:00.483244+00:00", "type": "task_started", "event_data":
+      {"task_description": "Answer accordingly to the context you got.", "expected_output":
+      "Your answer.", "task_name": "Answer accordingly to the context you got.", "context":
+      "Hi!", "agent_role": "test role2", "task_id": "8b3d52c7-ebc8-4099-9f88-cb70a61c5d74"}},
+      {"event_id": "b0aa94a9-a27b-436f-84ea-fc7fa011496c", "timestamp": "2025-09-23T20:11:00.483439+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role2",
+      "agent_goal": "test goal2", "agent_backstory": "test backstory2"}}, {"event_id":
+      "441248e6-0368-42e8-91e1-988cd43f41d6", "timestamp": "2025-09-23T20:11:00.483475+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T20:11:00.483465+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "8b3d52c7-ebc8-4099-9f88-cb70a61c5d74",
+      "task_name": "Answer accordingly to the context you got.", "agent_id": null,
+      "agent_role": null, "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are test role2. test backstory2\nYour
+      personal goal is: test goal2\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Answer accordingly
+      to the context you got.\n\nThis is the expected criteria for your final answer:
+      Your answer.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x14e7b56d0>"], "available_functions": null}}, {"event_id": "0ad6b11f-4576-4a7e-8ccd-41b3ad08df3a",
+      "timestamp": "2025-09-23T20:11:00.484148+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-23T20:11:00.484134+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "8b3d52c7-ebc8-4099-9f88-cb70a61c5d74", "task_name": "Answer accordingly
+      to the context you got.", "agent_id": null, "agent_role": null, "from_task":
+      null, "from_agent": null, "messages": [{"role": "system", "content": "You are
+      test role2. test backstory2\nYour personal goal is: test goal2\nTo give my best
+      complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Answer accordingly to the context you got.\n\nThis is the expected criteria
+      for your final answer: Your answer.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "Thought: I now
+      can give a great answer\nFinal Answer: Hi!", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "1c524823-fba6-40a2-97f5-40879ab72f3f",
+      "timestamp": "2025-09-23T20:11:00.484211+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role2", "agent_goal": "test goal2", "agent_backstory":
+      "test backstory2"}}, {"event_id": "798dad64-1d7d-4f7b-8cff-5d60e4a81323", "timestamp":
+      "2025-09-23T20:11:00.484240+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Answer accordingly to the context you got.", "task_name":
+      "Answer accordingly to the context you got.", "task_id": "8b3d52c7-ebc8-4099-9f88-cb70a61c5d74",
+      "output_raw": "Hi!", "output_format": "OutputFormat.RAW", "agent_role": "test
+      role2"}}, {"event_id": "05599cf9-612d-42c0-9212-10c3a38802e3", "timestamp":
+      "2025-09-23T20:11:00.484900+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-09-23T20:11:00.484885+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Answer accordingly to the context
+      you got.", "name": "Answer accordingly to the context you got.", "expected_output":
+      "Your answer.", "summary": "Answer accordingly to the context you got....",
+      "raw": "Hi!", "pydantic": null, "json_dict": null, "agent": "test role2", "output_format":
+      "raw"}, "total_tokens": 534}}], "batch_metadata": {"events_count": 20, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '13594'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/71ed9e01-5013-496d-bb6a-72cea8f389b8/events
+  response:
+    body:
+      string: '{"events_created":20,"ephemeral_trace_batch_id":"d0adab5b-7d5b-4096-b6da-33cd2eb86628"}'
+    headers:
+      Content-Length:
+      - '87'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"6c7add3a44bf9ea84525163bb3f2a80d"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.09, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=35.89, instantiation.active_record;dur=0.03, start_transaction.active_record;dur=0.00,
+        transaction.active_record;dur=74.58, process_action.action_controller;dur=80.92
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 5d5d4c21-504e-41db-861f-056aa17d5c1d
+      x-runtime:
+      - '0.106026'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 194, "final_event_count": 20}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/71ed9e01-5013-496d-bb6a-72cea8f389b8/finalize
+  response:
+    body:
+      string: '{"id":"d0adab5b-7d5b-4096-b6da-33cd2eb86628","ephemeral_trace_id":"71ed9e01-5013-496d-bb6a-72cea8f389b8","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":194,"crewai_version":"0.193.2","total_events":20,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T20:11:00.473Z","updated_at":"2025-09-23T20:11:00.624Z","access_code":"TRACE-b8851ea500","user_identifier":null}'
+    headers:
+      Content-Length:
+      - '521'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"1a105461707298d2ec8406427e40c9fc"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.06, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=2.03, instantiation.active_record;dur=0.03, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=1.31,
+        process_action.action_controller;dur=4.57
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - c5cb7cbc-c3fb-45d9-8b39-fe6d6ebe4207
+      x-runtime:
+      - '0.019069'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "909da497-c8ba-4fc0-a3db-090c507811d9", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T05:26:00.269467+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"id":"65aa0065-5140-4310-b3b3-216fb21f5f6f","trace_id":"909da497-c8ba-4fc0-a3db-090c507811d9","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T05:26:00.560Z","updated_at":"2025-09-24T05:26:00.560Z"}'
+    headers:
+      Content-Length:
+      - '480'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"f35b137a9b756c03919d69e8a8529996"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.06, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=21.59, instantiation.active_record;dur=0.44, feature_operation.flipper;dur=0.03,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=4.89,
+        process_action.action_controller;dur=273.31
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - f970d54c-d95a-4318-8c31-dd003fd53481
+      x-runtime:
+      - '0.293412'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "14ef810b-9334-4707-bd7a-68786e0e7886", "timestamp":
+      "2025-09-24T05:26:00.565895+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-09-24T05:26:00.268163+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": null}}, {"event_id": "b9ab6c5e-c9d5-4d17-a4b5-0f1e4a15b546",
+      "timestamp": "2025-09-24T05:26:00.568072+00:00", "type": "task_started", "event_data":
+      {"task_description": "Just say hi.", "expected_output": "Your greeting.", "task_name":
+      "Just say hi.", "context": "", "agent_role": "test role", "task_id": "95f73383-c971-4f0d-bc1d-3baf104d5bb0"}},
+      {"event_id": "62ae7533-a350-4c9c-8813-5345ec9bbede", "timestamp": "2025-09-24T05:26:00.568845+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "9033feee-854e-404d-b33a-f5186d038b0a", "timestamp": "2025-09-24T05:26:00.568950+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:26:00.568922+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "95f73383-c971-4f0d-bc1d-3baf104d5bb0",
+      "task_name": "Just say hi.", "agent_id": "bef969a6-8694-408f-957c-170d254cc4f4",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Just say hi.\n\nThis
+      is the expected criteria for your final answer: Your greeting.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13afb26c0>"], "available_functions": null}}, {"event_id": "fb20475c-da15-44c4-9d01-718c71613d08",
+      "timestamp": "2025-09-24T05:26:00.570494+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:26:00.570462+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "95f73383-c971-4f0d-bc1d-3baf104d5bb0", "task_name": "Just say hi.",
+      "agent_id": "bef969a6-8694-408f-957c-170d254cc4f4", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are test role. test backstory\nYour personal goal is: test goal\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi.\n\nThis is the expected criteria for
+      your final answer: Your greeting.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "response": "Thought: I now can give a great answer\nFinal
+      Answer: Hi!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model":
+      "gpt-4o-mini"}}, {"event_id": "b0f700fb-e49c-4914-88b3-f348fe4663e2", "timestamp":
+      "2025-09-24T05:26:00.570634+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory": "test
+      backstory"}}, {"event_id": "b0c9b846-ff58-48ce-ab14-1d0204b90f31", "timestamp":
+      "2025-09-24T05:26:00.570689+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Just say hi.", "task_name": "Just say hi.", "task_id":
+      "95f73383-c971-4f0d-bc1d-3baf104d5bb0", "output_raw": "Hi!", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "28a1293a-e579-4fc5-a6f9-f9ceff4dbde9",
+      "timestamp": "2025-09-24T05:26:00.571888+00:00", "type": "task_started", "event_data":
+      {"task_description": "Just say bye.", "expected_output": "Your farewell.", "task_name":
+      "Just say bye.", "context": "Hi!", "agent_role": "test role", "task_id": "a43474f8-cc92-42d4-92cb-0ab853675bd6"}},
+      {"event_id": "1d44cabc-9958-4822-8144-69eb74f1b828", "timestamp": "2025-09-24T05:26:00.572295+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role",
+      "agent_goal": "test goal", "agent_backstory": "test backstory"}}, {"event_id":
+      "9aaff984-495f-4254-b03e-85d274393056", "timestamp": "2025-09-24T05:26:00.572391+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:26:00.572366+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "a43474f8-cc92-42d4-92cb-0ab853675bd6",
+      "task_name": "Just say bye.", "agent_id": "bef969a6-8694-408f-957c-170d254cc4f4",
+      "agent_role": "test role", "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
+      "messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+      personal goal is: test goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Just say bye.\n\nThis
+      is the expected criteria for your final answer: Your farewell.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nThis is the
+      context you''re working with:\nHi!\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x13af60320>"], "available_functions": null}}, {"event_id": "9677effe-16b2-4715-a449-829c1afd956f",
+      "timestamp": "2025-09-24T05:26:00.573792+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:26:00.573765+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "a43474f8-cc92-42d4-92cb-0ab853675bd6", "task_name": "Just say bye.",
+      "agent_id": "bef969a6-8694-408f-957c-170d254cc4f4", "agent_role": "test role",
+      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
+      "You are test role. test backstory\nYour personal goal is: test goal\nTo give
+      my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say bye.\n\nThis is the expected criteria for
+      your final answer: Your farewell.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "response": "Thought: I now
+      can give a great answer\nFinal Answer: Bye!", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "ddb74fd4-aa8b-42d0-90bd-d98d40c89a1f",
+      "timestamp": "2025-09-24T05:26:00.573921+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role", "agent_goal": "test goal", "agent_backstory":
+      "test backstory"}}, {"event_id": "196bb5af-b989-4d8c-add0-3c42107d2477", "timestamp":
+      "2025-09-24T05:26:00.573973+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Just say bye.", "task_name": "Just say bye.", "task_id":
+      "a43474f8-cc92-42d4-92cb-0ab853675bd6", "output_raw": "Bye!", "output_format":
+      "OutputFormat.RAW", "agent_role": "test role"}}, {"event_id": "79c24125-2a5c-455d-b6ca-4f66cc5cb205",
+      "timestamp": "2025-09-24T05:26:00.575233+00:00", "type": "task_started", "event_data":
+      {"task_description": "Answer accordingly to the context you got.", "expected_output":
+      "Your answer.", "task_name": "Answer accordingly to the context you got.", "context":
+      "Hi!", "agent_role": "test role2", "task_id": "43436548-60e0-4508-8737-e377c1a011d1"}},
+      {"event_id": "3a8beb12-d2ee-483c-94e4-5db3cd9d39cd", "timestamp": "2025-09-24T05:26:00.575602+00:00",
+      "type": "agent_execution_started", "event_data": {"agent_role": "test role2",
+      "agent_goal": "test goal2", "agent_backstory": "test backstory2"}}, {"event_id":
+      "70629109-cfb0-432c-8dc5-c2f5047f4eda", "timestamp": "2025-09-24T05:26:00.575676+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T05:26:00.575656+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "43436548-60e0-4508-8737-e377c1a011d1",
+      "task_name": "Answer accordingly to the context you got.", "agent_id": "e08baa88-db5f-452c-853a-75f12a458690",
+      "agent_role": "test role2", "from_task": null, "from_agent": null, "model":
+      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are test role2.
+      test backstory2\nYour personal goal is: test goal2\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Answer accordingly to the context you got.\n\nThis is the expected criteria
+      for your final answer: Your answer.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
+      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x13afb2750>"],
+      "available_functions": null}}, {"event_id": "4f8b661c-e3e0-4836-b6f0-2059a6ea49a3",
+      "timestamp": "2025-09-24T05:26:00.576811+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-09-24T05:26:00.576790+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "43436548-60e0-4508-8737-e377c1a011d1", "task_name": "Answer accordingly
+      to the context you got.", "agent_id": "e08baa88-db5f-452c-853a-75f12a458690",
+      "agent_role": "test role2", "from_task": null, "from_agent": null, "messages":
+      [{"role": "system", "content": "You are test role2. test backstory2\nYour personal
+      goal is: test goal2\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Answer accordingly to the
+      context you got.\n\nThis is the expected criteria for your final answer: Your
+      answer.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nHi!\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "response": "Thought: I now can give
+      a great answer\nFinal Answer: Hi!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>",
+      "model": "gpt-4o-mini"}}, {"event_id": "c58a895d-c733-4a31-875b-5d9ba096621b",
+      "timestamp": "2025-09-24T05:26:00.576912+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "test role2", "agent_goal": "test goal2", "agent_backstory":
+      "test backstory2"}}, {"event_id": "2b32e0bc-273b-47cb-9b0b-d2dd3e183051", "timestamp":
+      "2025-09-24T05:26:00.576958+00:00", "type": "task_completed", "event_data":
+      {"task_description": "Answer accordingly to the context you got.", "task_name":
+      "Answer accordingly to the context you got.", "task_id": "43436548-60e0-4508-8737-e377c1a011d1",
+      "output_raw": "Hi!", "output_format": "OutputFormat.RAW", "agent_role": "test
+      role2"}}, {"event_id": "9dcbe60a-fff1-41d0-8a3c-02e708f25745", "timestamp":
+      "2025-09-24T05:26:00.578046+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-09-24T05:26:00.578009+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Answer accordingly to the context
+      you got.", "name": "Answer accordingly to the context you got.", "expected_output":
+      "Your answer.", "summary": "Answer accordingly to the context you got....",
+      "raw": "Hi!", "pydantic": null, "json_dict": null, "agent": "test role2", "output_format":
+      "raw"}, "total_tokens": 534}}], "batch_metadata": {"events_count": 20, "batch_sequence":
+      1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '13842'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/909da497-c8ba-4fc0-a3db-090c507811d9/events
+  response:
+    body:
+      string: '{"events_created":20,"trace_batch_id":"65aa0065-5140-4310-b3b3-216fb21f5f6f"}'
+    headers:
+      Content-Length:
+      - '77'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"c6a8603f43137accf9b346098c6aab36"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, sql.active_record;dur=57.54, cache_generate.active_support;dur=1.96,
+        cache_write.active_support;dur=0.10, cache_read_multi.active_support;dur=0.06,
+        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.38,
+        start_transaction.active_record;dur=0.01, transaction.active_record;dur=84.53,
+        process_action.action_controller;dur=718.33
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - cc94adb6-627c-4674-9052-c1c300ca9367
+      x-runtime:
+      - '0.742701'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1060, "final_event_count": 20}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '69'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/909da497-c8ba-4fc0-a3db-090c507811d9/finalize
+  response:
+    body:
+      string: '{"id":"65aa0065-5140-4310-b3b3-216fb21f5f6f","trace_id":"909da497-c8ba-4fc0-a3db-090c507811d9","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1060,"crewai_version":"0.193.2","privacy_level":"standard","total_events":20,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T05:26:00.560Z","updated_at":"2025-09-24T05:26:01.785Z"}'
+    headers:
+      Content-Length:
+      - '483'
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      etag:
+      - W/"b9124c02e95cf0041ebb1e86b50e0264"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.04, cache_fetch_hit.active_support;dur=0.00,
+        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
+        sql.active_record;dur=6.37, instantiation.active_record;dur=0.59, unpermitted_parameters.action_controller;dur=0.00,
+        start_transaction.active_record;dur=0.00, transaction.active_record;dur=1.94,
+        process_action.action_controller;dur=436.41
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - afc16366-577c-4638-b72d-33021439222c
+      x-runtime:
+      - '0.451670'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

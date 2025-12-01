@@ -1,0 +1,103 @@
+---
+title: "자동화"
+description: "배포된 크루(자동화)를 한 곳에서 관리, 배포 및 모니터링하세요."
+icon: "rocket"
+mode: "wide"
+---
+
+## 개요
+
+자동화는 배포된 크루를 운영하는 허브입니다. GitHub 또는 ZIP으로 배포하고, 환경 변수를 관리하고, 필요 시 재배포하며 각 자동화의 상태를 모니터링하세요.
+
+<Frame>
+  ![자동화 개요](/images/enterprise/automations-overview.png)
+</Frame>
+
+## 배포 방법
+
+### GitHub로 배포
+
+버전 관리 및 지속적 배포에 적합합니다.
+
+<Steps>
+  <Step title="GitHub 연결">
+    <b>Configure GitHub</b>를 클릭하고 접근을 승인합니다.
+  </Step>
+  <Step title="리포지토리 & 브랜치 선택">
+    배포할 <b>리포지토리</b>와 <b>브랜치</b>를 선택합니다.
+  </Step>
+  <Step title="자동 배포 활성화(선택)">
+    <b>Automatically deploy new commits</b>를 켜면 푸시 시마다 자동 배포됩니다.
+  </Step>
+  <Step title="환경 변수 추가">
+    개별로 추가하거나 <b>Bulk View</b>를 사용해 여러 변수를 한 번에 추가합니다.
+  </Step>
+  <Step title="배포">
+    <b>Deploy</b>를 클릭해 라이브 자동화를 생성합니다.
+  </Step>
+</Steps>
+
+<Frame>
+  ![GitHub 배포](/images/enterprise/deploy-from-github.png)
+</Frame>
+
+### ZIP으로 배포
+
+Git 없이 빠르게 배포 — 프로젝트 ZIP 패키지를 업로드하세요.
+
+<Steps>
+  <Step title="파일 선택">
+    컴퓨터에서 ZIP 파일을 선택합니다.
+  </Step>
+  <Step title="환경 변수 추가">
+    필요한 변수를 제공합니다.
+  </Step>
+  <Step title="배포">
+    <b>Deploy</b>를 클릭해 라이브 자동화를 생성합니다.
+  </Step>
+</Steps>
+
+<Frame>
+  ![ZIP 배포](/images/enterprise/deploy-from-zip.png)
+</Frame>
+
+## 자동화 대시보드
+
+테이블에는 모든 라이브 자동화가 다음 정보와 함께 표시됩니다:
+
+- **CREW**: 자동화 이름
+- **STATUS**: Online / Failed / In Progress
+- **URL**: kickoff/status 엔드포인트
+- **TOKEN**: 자동화 토큰
+- **ACTIONS**: 재배포, 삭제 등
+
+우측 상단 컨트롤로 필터 및 검색:
+
+- 이름으로 검색
+- <b>Status</b>로 필터
+- <b>Source</b>로 필터 (GitHub / Studio / ZIP)
+
+배포 후 **Options** 드롭다운에서 `chat with this crew`, `Export React Component`, `Export as MCP`를 사용할 수 있습니다.
+
+<Frame>
+  ![자동화 표](/images/enterprise/automations-table.png)
+</Frame>
+
+## 모범 사례
+
+- 버전 관리 및 CI/CD를 위해 GitHub 배포를 권장
+- 코드/구성 변경 후 재배포 사용 또는 푸시마다 자동 배포 설정
+
+## 관련 문서
+
+<CardGroup cols={3}>
+  <Card title="크루 배포" href="/ko/enterprise/guides/deploy-crew" icon="rocket">
+    GitHub 또는 ZIP 파일로 크루 배포
+  </Card>
+  <Card title="자동화 트리거" href="/ko/enterprise/guides/automation-triggers" icon="trigger">
+    웹훅 또는 API로 자동화 트리거
+  </Card>
+  <Card title="Webhook 자동화" href="/ko/enterprise/guides/webhook-automation" icon="webhook">
+    실시간 이벤트/업데이트 스트리밍
+  </Card>
+</CardGroup>

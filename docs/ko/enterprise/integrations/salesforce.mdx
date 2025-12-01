@@ -13,16 +13,48 @@ mode: "wide"
 
 Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 Salesforce 계정
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Salesforce 계정 연결
+
+## Salesforce 통합 설정
+
+### 1. Salesforce 계정 연결
+
+1. [CrewAI AOP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+2. 인증 통합 섹션에서 **Salesforce**를 찾습니다.
+3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+4. CRM 및 영업 관리에 필요한 권한을 부여합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+### 2. 필수 패키지 설치
+
+```bash
+uv add crewai-tools
+```
+
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
 
 ## 사용 가능한 도구
 
 ### **레코드 관리**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_CREATE_RECORD_CONTACT">
+  <Accordion title="salesforce/create_record_contact">
     **설명:** Salesforce에서 새로운 Contact 레코드를 생성합니다.
 
     **파라미터:**
@@ -35,7 +67,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 사용자 정의 Contact 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_LEAD">
+  <Accordion title="salesforce/create_record_lead">
     **설명:** Salesforce에서 새로운 Lead 레코드를 생성합니다.
 
     **파라미터:**
@@ -51,7 +83,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 사용자 정의 Lead 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_OPPORTUNITY">
+  <Accordion title="salesforce/create_record_opportunity">
     **설명:** Salesforce에서 새로운 Opportunity 레코드를 생성합니다.
 
     **파라미터:**
@@ -66,7 +98,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 사용자 정의 Opportunity 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_TASK">
+  <Accordion title="salesforce/create_record_task">
     **설명:** Salesforce에서 새로운 Task 레코드를 생성합니다.
 
     **파라미터:**
@@ -84,7 +116,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 사용자 정의 Task 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_ACCOUNT">
+  <Accordion title="salesforce/create_record_account">
     **설명:** Salesforce에서 새로운 Account 레코드를 생성합니다.
 
     **파라미터:**
@@ -96,7 +128,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 사용자 정의 Account 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_RECORD_ANY">
+  <Accordion title="salesforce/create_record_any">
     **설명:** Salesforce에서 모든 오브젝트 유형의 레코드를 생성합니다.
 
     **참고:** 이 기능은 사용자 정의 또는 알려지지 않은 오브젝트 유형의 레코드를 생성할 때 유연하게 사용할 수 있습니다.
@@ -106,7 +138,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **레코드 업데이트**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_UPDATE_RECORD_CONTACT">
+  <Accordion title="salesforce/update_record_contact">
     **설명:** Salesforce에서 기존 연락처(Contact) 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -120,7 +152,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 커스텀 연락처 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_LEAD">
+  <Accordion title="salesforce/update_record_lead">
     **설명:** Salesforce에서 기존 리드(Lead) 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -137,7 +169,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 커스텀 리드 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_OPPORTUNITY">
+  <Accordion title="salesforce/update_record_opportunity">
     **설명:** Salesforce에서 기존 기회(Opportunity) 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -153,7 +185,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 커스텀 기회 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_TASK">
+  <Accordion title="salesforce/update_record_task">
     **설명:** Salesforce에서 기존 작업(Task) 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -171,7 +203,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 커스텀 작업 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_ACCOUNT">
+  <Accordion title="salesforce/update_record_account">
     **설명:** Salesforce에서 기존 계정(Account) 레코드를 업데이트합니다.
 
     **파라미터:**
@@ -184,7 +216,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `additionalFields` (object, 선택): 커스텀 계정 필드를 위한 JSON 형식의 추가 필드
   </Accordion>
 
-  <Accordion title="SALESFORCE_UPDATE_RECORD_ANY">
+  <Accordion title="salesforce/update_record_any">
     **설명:** Salesforce에서 어떤 객체 유형이든 레코드를 업데이트합니다.
 
     **참고:** 이는 커스텀 또는 미확인 객체 유형의 레코드 업데이트를 위한 유연한 도구입니다.
@@ -194,42 +226,42 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **레코드 조회**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_CONTACT">
+  <Accordion title="salesforce/get_record_by_id_contact">
     **설명:** ID로 Contact 레코드를 조회합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): Contact의 레코드 ID
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_LEAD">
+  <Accordion title="salesforce/get_record_by_id_lead">
     **설명:** ID로 Lead 레코드를 조회합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): Lead의 레코드 ID
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_OPPORTUNITY">
+  <Accordion title="salesforce/get_record_by_id_opportunity">
     **설명:** ID로 Opportunity 레코드를 조회합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): Opportunity의 레코드 ID
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_TASK">
+  <Accordion title="salesforce/get_record_by_id_task">
     **설명:** ID로 Task 레코드를 조회합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): Task의 레코드 ID
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ACCOUNT">
+  <Accordion title="salesforce/get_record_by_id_account">
     **설명:** ID로 Account 레코드를 조회합니다.
 
     **파라미터:**
     - `recordId` (string, 필수): Account의 레코드 ID
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_ID_ANY">
+  <Accordion title="salesforce/get_record_by_id_any">
     **설명:** ID로 임의 객체 유형의 레코드를 조회합니다.
 
     **파라미터:**
@@ -241,7 +273,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **레코드 검색**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_CONTACT">
+  <Accordion title="salesforce/search_records_contact">
     **설명:** 고급 필터링으로 연락처(Contact) 레코드를 검색합니다.
 
     **파라미터:**
@@ -252,7 +284,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_LEAD">
+  <Accordion title="salesforce/search_records_lead">
     **설명:** 고급 필터링으로 리드(Lead) 레코드를 검색합니다.
 
     **파라미터:**
@@ -263,7 +295,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_OPPORTUNITY">
+  <Accordion title="salesforce/search_records_opportunity">
     **설명:** 고급 필터링으로 기회(Opportunity) 레코드를 검색합니다.
 
     **파라미터:**
@@ -274,7 +306,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_TASK">
+  <Accordion title="salesforce/search_records_task">
     **설명:** 고급 필터링으로 작업(Task) 레코드를 검색합니다.
 
     **파라미터:**
@@ -285,7 +317,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_ACCOUNT">
+  <Accordion title="salesforce/search_records_account">
     **설명:** 고급 필터링으로 계정(Account) 레코드를 검색합니다.
 
     **파라미터:**
@@ -296,7 +328,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_SEARCH_RECORDS_ANY">
+  <Accordion title="salesforce/search_records_any">
     **설명:** 모든 오브젝트 유형의 레코드를 검색합니다.
 
     **파라미터:**
@@ -310,7 +342,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **리스트 뷰 조회**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_CONTACT">
+  <Accordion title="salesforce/get_record_by_view_id_contact">
     **설명:** 특정 리스트 뷰에서 Contact 레코드를 가져옵니다.
 
     **파라미터:**
@@ -318,7 +350,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_LEAD">
+  <Accordion title="salesforce/get_record_by_view_id_lead">
     **설명:** 특정 리스트 뷰에서 Lead 레코드를 가져옵니다.
 
     **파라미터:**
@@ -326,7 +358,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_OPPORTUNITY">
+  <Accordion title="salesforce/get_record_by_view_id_opportunity">
     **설명:** 특정 리스트 뷰에서 Opportunity 레코드를 가져옵니다.
 
     **파라미터:**
@@ -334,7 +366,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_TASK">
+  <Accordion title="salesforce/get_record_by_view_id_task">
     **설명:** 특정 리스트 뷰에서 Task 레코드를 가져옵니다.
 
     **파라미터:**
@@ -342,7 +374,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ACCOUNT">
+  <Accordion title="salesforce/get_record_by_view_id_account">
     **설명:** 특정 리스트 뷰에서 Account 레코드를 가져옵니다.
 
     **파라미터:**
@@ -350,7 +382,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
   </Accordion>
 
-  <Accordion title="SALESFORCE_GET_RECORD_BY_VIEW_ID_ANY">
+  <Accordion title="salesforce/get_record_by_view_id_any">
     **설명:** 특정 리스트 뷰에서 임의의 객체 유형의 레코드를 가져옵니다.
 
     **파라미터:**
@@ -363,7 +395,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **커스텀 필드**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_CONTACT">
+  <Accordion title="salesforce/create_custom_field_contact">
     **설명:** Contact 오브젝트에 대한 커스텀 필드를 배포합니다.
 
     **파라미터:**
@@ -379,7 +411,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `defaultFieldValue` (string, 선택): 필드의 기본값
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_LEAD">
+  <Accordion title="salesforce/create_custom_field_lead">
     **설명:** Lead 오브젝트에 대한 커스텀 필드를 배포합니다.
 
     **파라미터:**
@@ -395,7 +427,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `defaultFieldValue` (string, 선택): 필드의 기본값
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_OPPORTUNITY">
+  <Accordion title="salesforce/create_custom_field_opportunity">
     **설명:** Opportunity 오브젝트에 대한 커스텀 필드를 배포합니다.
 
     **파라미터:**
@@ -411,7 +443,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `defaultFieldValue` (string, 선택): 필드의 기본값
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_TASK">
+  <Accordion title="salesforce/create_custom_field_task">
     **설명:** Task 오브젝트에 대한 커스텀 필드를 배포합니다.
 
     **파라미터:**
@@ -427,7 +459,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `defaultFieldValue` (string, 선택): 필드의 기본값
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ACCOUNT">
+  <Accordion title="salesforce/create_custom_field_account">
     **설명:** Account 오브젝트에 대한 커스텀 필드를 배포합니다.
 
     **파라미터:**
@@ -443,7 +475,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `defaultFieldValue` (string, 선택): 필드의 기본값
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_FIELD_ANY">
+  <Accordion title="salesforce/create_custom_field_any">
     **설명:** 모든 오브젝트 타입에 대한 커스텀 필드를 배포합니다.
 
     **참고:** 커스텀 또는 미지의 오브젝트 타입에 커스텀 필드를 생성할 수 있는 유연한 도구입니다.
@@ -453,14 +485,14 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 ### **고급 작업**
 
 <AccordionGroup>
-  <Accordion title="SALESFORCE_WRITE_SOQL_QUERY">
+  <Accordion title="salesforce/write_soql_query">
     **설명:** Salesforce 데이터에 대해 커스텀 SOQL 쿼리를 실행합니다.
 
     **파라미터:**
     - `query` (string, 필수): SOQL 쿼리 (예: "SELECT Id, Name FROM Account WHERE Name = 'Example'")
   </Accordion>
 
-  <Accordion title="SALESFORCE_CREATE_CUSTOM_OBJECT">
+  <Accordion title="salesforce/create_custom_object">
     **설명:** Salesforce에 새로운 커스텀 오브젝트를 배포합니다.
 
     **파라미터:**
@@ -470,7 +502,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
     - `recordName` (string, 필수): 레이아웃과 검색에 표시되는 레코드 이름 (예: "Account Name")
   </Accordion>
 
-  <Accordion title="SALESFORCE_DESCRIBE_ACTION_SCHEMA">
+  <Accordion title="salesforce/describe_action_schema">
     **설명:** 특정 오브젝트 타입에 대한 작업의 예상 스키마를 가져옵니다.
 
     **파라미터:**
@@ -487,19 +519,13 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Salesforce tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Salesforce capabilities
 salesforce_agent = Agent(
     role="CRM Manager",
     goal="Manage customer relationships and sales processes efficiently",
     backstory="An AI assistant specialized in CRM operations and sales automation.",
-    tools=[enterprise_tools]
+    apps=['salesforce']
 )
 
 # Task to create a new lead
@@ -521,19 +547,12 @@ crew.kickoff()
 ### 특정 Salesforce 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Salesforce tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["salesforce_create_record_lead", "salesforce_update_record_opportunity", "salesforce_search_records_contact"]
-)
 
 sales_manager = Agent(
     role="Sales Manager",
     goal="Manage leads and opportunities in the sales pipeline",
     backstory="An experienced sales manager who handles lead qualification and opportunity management.",
-    tools=enterprise_tools
+    apps=['salesforce']
 )
 
 # Task to manage sales pipeline
@@ -555,17 +574,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 account_manager = Agent(
     role="Account Manager",
     goal="Manage customer accounts and maintain strong relationships",
     backstory="An AI assistant that specializes in account management and customer relationship building.",
-    tools=[enterprise_tools]
+    apps=['salesforce']
 )
 
 # Task to manage customer accounts
@@ -591,17 +605,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 data_analyst = Agent(
     role="Sales Data Analyst",
     goal="Generate insights from Salesforce data using SOQL queries",
     backstory="An analytical AI that excels at extracting meaningful insights from CRM data.",
-    tools=[enterprise_tools]
+    apps=['salesforce']
 )
 
 # Complex task involving SOQL queries and data analysis

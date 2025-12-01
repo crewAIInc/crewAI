@@ -13,16 +13,48 @@ Enable your agents to manage payments, subscriptions, and customer billing throu
 
 Before using the Stripe integration, ensure you have:
 
-- A [CrewAI Enterprise](https://app.crewai.com) account with an active subscription
+- A [CrewAI AOP](https://app.crewai.com) account with an active subscription
 - A Stripe account with appropriate API permissions
 - Connected your Stripe account through the [Integrations page](https://app.crewai.com/integrations)
+
+## Setting Up Stripe Integration
+
+### 1. Connect Your Stripe Account
+
+1. Navigate to [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)
+2. Find **Stripe** in the Authentication Integrations section
+3. Click **Connect** and complete the OAuth flow
+4. Grant the necessary permissions for payment processing
+5. Copy your Enterprise Token from [Integration Settings](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Install Required Package
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Environment Variable Setup
+
+<Note>
+  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+Or add it to your `.env` file:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
 
 ## Available Tools
 
 ### **Customer Management**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_CUSTOMER">
+  <Accordion title="stripe/create_customer">
     **Description:** Create a new customer in your Stripe account.
 
     **Parameters:**
@@ -32,14 +64,14 @@ Before using the Stripe integration, ensure you have:
     - `metadataCreateCustomer` (object, optional): Additional metadata as key-value pairs (e.g., `{"field1": 1, "field2": 2}`)
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMER_BY_ID">
+  <Accordion title="stripe/get_customer_by_id">
     **Description:** Retrieve a specific customer by their Stripe customer ID.
 
     **Parameters:**
     - `idGetCustomer` (string, required): The Stripe customer ID to retrieve
   </Accordion>
 
-  <Accordion title="STRIPE_GET_CUSTOMERS">
+  <Accordion title="stripe/get_customers">
     **Description:** Retrieve a list of customers with optional filtering.
 
     **Parameters:**
@@ -49,7 +81,7 @@ Before using the Stripe integration, ensure you have:
     - `limitGetCustomers` (string, optional): Maximum number of customers to return (defaults to 10)
   </Accordion>
 
-  <Accordion title="STRIPE_UPDATE_CUSTOMER">
+  <Accordion title="stripe/update_customer">
     **Description:** Update an existing customer's information.
 
     **Parameters:**
@@ -64,7 +96,7 @@ Before using the Stripe integration, ensure you have:
 ### **Subscription Management**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_SUBSCRIPTION">
+  <Accordion title="stripe/create_subscription">
     **Description:** Create a new subscription for a customer.
 
     **Parameters:**
@@ -73,7 +105,7 @@ Before using the Stripe integration, ensure you have:
     - `metadataCreateSubscription` (object, optional): Additional metadata for the subscription
   </Accordion>
 
-  <Accordion title="STRIPE_GET_SUBSCRIPTIONS">
+  <Accordion title="stripe/get_subscriptions">
     **Description:** Retrieve subscriptions with optional filtering.
 
     **Parameters:**
@@ -86,7 +118,7 @@ Before using the Stripe integration, ensure you have:
 ### **Product Management**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_CREATE_PRODUCT">
+  <Accordion title="stripe/create_product">
     **Description:** Create a new product in your Stripe catalog.
 
     **Parameters:**
@@ -95,14 +127,14 @@ Before using the Stripe integration, ensure you have:
     - `metadataProduct` (object, optional): Additional product metadata as key-value pairs
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCT_BY_ID">
+  <Accordion title="stripe/get_product_by_id">
     **Description:** Retrieve a specific product by its Stripe product ID.
 
     **Parameters:**
     - `productId` (string, required): The Stripe product ID to retrieve
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PRODUCTS">
+  <Accordion title="stripe/get_products">
     **Description:** Retrieve a list of products with optional filtering.
 
     **Parameters:**
@@ -115,7 +147,7 @@ Before using the Stripe integration, ensure you have:
 ### **Financial Operations**
 
 <AccordionGroup>
-  <Accordion title="STRIPE_GET_BALANCE_TRANSACTIONS">
+  <Accordion title="stripe/get_balance_transactions">
     **Description:** Retrieve balance transactions from your Stripe account.
 
     **Parameters:**
@@ -124,7 +156,7 @@ Before using the Stripe integration, ensure you have:
       - `pageCursor` (string, optional): Page cursor for pagination
   </Accordion>
 
-  <Accordion title="STRIPE_GET_PLANS">
+  <Accordion title="stripe/get_plans">
     **Description:** Retrieve subscription plans from your Stripe account.
 
     **Parameters:**
@@ -140,19 +172,14 @@ Before using the Stripe integration, ensure you have:
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Stripe tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
+from crewai import Agent, Task, Crew
 
 # Create an agent with Stripe capabilities
 stripe_agent = Agent(
     role="Payment Manager",
     goal="Manage customer payments, subscriptions, and billing operations efficiently",
     backstory="An AI assistant specialized in payment processing and subscription management.",
-    tools=[enterprise_tools]
+    apps=['stripe']  # All Stripe actions will be available
 )
 
 # Task to create a new customer
@@ -174,19 +201,12 @@ crew.kickoff()
 ### Filtering Specific Stripe Tools
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Stripe tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["stripe_create_customer", "stripe_create_subscription", "stripe_get_balance_transactions"]
-)
 
 billing_manager = Agent(
     role="Billing Manager",
     goal="Handle customer billing, subscriptions, and payment processing",
     backstory="An experienced billing manager who handles subscription lifecycle and payment operations.",
-    tools=enterprise_tools
+    apps=['stripe']
 )
 
 # Task to manage billing operations
@@ -208,17 +228,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 subscription_manager = Agent(
     role="Subscription Manager",
     goal="Manage customer subscriptions and optimize recurring revenue",
     backstory="An AI assistant that specializes in subscription lifecycle management and customer retention.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Task to manage subscription operations
@@ -245,17 +260,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 financial_analyst = Agent(
     role="Financial Analyst",
     goal="Analyze payment data and generate financial insights",
     backstory="An analytical AI that excels at extracting insights from payment and subscription data.",
-    tools=[enterprise_tools]
+    apps=['stripe']
 )
 
 # Complex task involving financial analysis

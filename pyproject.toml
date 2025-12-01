@@ -1,119 +1,54 @@
-[project]
-name = "crewai"
-dynamic = ["version"]
+name = "crewai-workspace"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 authors = [
     { name = "Joao Moura", email = "joao@crewai.com" }
 ]
-dependencies = [
-    # Core Dependencies
-    "pydantic>=2.11.9",
-    "openai>=1.13.3",
-    "litellm==1.74.9",
-    "instructor>=1.3.3",
-    # Text Processing
-    "pdfplumber>=0.11.4",
-    "regex>=2024.9.11",
-    # Telemetry and Monitoring
-    "opentelemetry-api>=1.30.0",
-    "opentelemetry-sdk>=1.30.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.30.0",
-    # Data Handling
-    "chromadb~=1.1.0",
-    "tokenizers>=0.20.3",
-    "openpyxl>=3.1.5",
-    "pyvis>=0.3.2",
-    # Authentication and Security
-    "python-dotenv>=1.1.1",
-    "pyjwt>=2.9.0",
-    # Configuration and Utils
-    "click>=8.1.7",
-    "appdirs>=1.4.4",
-    "jsonref>=1.1.0",
-    "json-repair==0.25.2",
-    "uv>=0.4.25",
-    "tomli-w>=1.1.0",
-    "tomli>=2.0.2",
-    "blinker>=1.9.0",
-    "json5>=0.10.0",
-    "portalocker==2.7.0",
-    "pydantic-settings>=2.10.1",
-]
-
-[project.urls]
-Homepage = "https://crewai.com"
-Documentation = "https://docs.crewai.com"
-Repository = "https://github.com/crewAIInc/crewAI"
-
-[project.optional-dependencies]
-tools = [
-    "crewai-tools>=0.74.0",
-]
-embeddings = [
-    "tiktoken~=0.8.0"
-]
-pdfplumber = [
-    "pdfplumber>=0.11.4",
-]
-pandas = [
-    "pandas>=2.2.3",
-]
-openpyxl = [
-    "openpyxl>=3.1.5",
-]
-mem0 = ["mem0ai>=0.1.94"]
-docling = [
-    "docling>=2.12.0",
-]
-aisuite = [
-    "aisuite>=0.1.10",
-]
-qdrant = [
-    "qdrant-client[fastembed]>=1.14.3",
-]
-aws = [
-    "boto3>=1.40.38",
-]
-watson = [
-    "ibm-watsonx-ai>=1.3.39",
-]
-voyageai = [
-    "voyageai>=0.3.5",
-]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.13.1",
-    "mypy>=1.18.2",
-    "pre-commit>=4.3.0",
-    "bandit>=1.8.6",
-    "pytest>=8.4.2",
-    "pytest-asyncio>=1.2.0",
-    "pytest-subprocess>=1.5.3",
-    "pytest-recording>=0.13.4",
-    "pytest-randomly>=4.0.1",
-    "pytest-timeout>=2.4.0",
-    "pytest-xdist>=3.8.0",
-    "pytest-split>=0.10.0",
-    "types-requests==2.32.*",
+    "ruff==0.14.7",
+    "mypy==1.19.0",
+    "pre-commit==4.5.0",
+    "bandit==1.9.2",
+    "pytest==8.4.2",
+    "pytest-asyncio==1.3.0",
+    "pytest-subprocess==1.5.3",
+    "vcrpy==7.0.0", # pinned, less versions break pytest-recording
+    "pytest-recording==0.13.4",
+    "pytest-randomly==4.0.1",
+    "pytest-timeout==2.4.0",
+    "pytest-xdist==3.8.0",
+    "pytest-split==0.10.0",
+    "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
     "types-regex==2024.11.6.*",
     "types-appdirs==1.4.*",
+    "boto3-stubs[bedrock-runtime]==1.40.54",
+    "types-psycopg2==2.9.21.20251012",
+    "types-pymysql==1.1.0.20250916",
 ]
 
-[project.scripts]
-crewai = "crewai.cli.cli:crewai"
 
 [tool.ruff]
-exclude = [
-    "src/crewai/cli/templates",
+src = ["lib/*"]
+extend-exclude = [
+    "lib/crewai/src/crewai/cli/templates",
+    "lib/crewai/tests/",
+    "lib/crewai-tools/tests/",
 ]
+respect-gitignore = true
+force-exclude = true
 fix = true
+target-version = "py310"
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
-select = [
+future-annotations = true
+extend-select = [
     "E",      # pycodestyle errors (style issues)
     "F",      # Pyflakes (code errors)
     "B",      # flake8-bugbear (bug prevention)
@@ -121,8 +56,12 @@ select = [
     "RUF",    # ruff-specific rules
     "N",      # pep8-naming (naming conventions)
     "W",      # pycodestyle warnings
+    "I",      # isort (import formatting)
+    "T",      # flake8-print (print statements)
+#    "D",      # pydocstyle (docstring conventions) disabled until
     "PERF",   # performance issues
     "PIE",    # flake8-pie (unnecessary code)
+    "TID",    # flake8-tidy-imports (import best practices)
     "ASYNC",  # async/await best practices
     "RET",    # flake8-return (return improvements)
     "UP006",  # use collections.abc
@@ -141,58 +80,75 @@ select = [
 ]
 ignore = ["E501"]  # ignore line too long globally
 
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
+[tool.ruff.lint.isort]
+no-sections = false
+case-sensitive = true
+combine-as-imports = true
+force-single-line = false
+force-sort-within-sections = true
+known-first-party = []
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+lines-after-imports = 2
+split-on-trailing-comma = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+ignore-decorators = ["typing.overload"]
+
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "RET504"]  # Allow assert statements and unnecessary assignments before return in tests
+"lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
+"lib/crewai-tools/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "RUF012", "N818", "E402", "RUF043", "S110", "B017"]  # Allow various test-specific patterns
+
 
 [tool.mypy]
-exclude = ["src/crewai/cli/templates", "tests/"]
-plugins = ["pydantic.mypy"]
+strict = true
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+show_error_codes = true
+warn_unused_ignores = true
+python_version = "3.12"
+exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/ | ^lib/crewai/tests/ | ^lib/crewai-tools/tests/)"
+plugins = ["pydantic.mypy", "crewai.mypy"]
 
 
 [tool.bandit]
-exclude_dirs = ["src/crewai/cli/templates"]
+exclude_dirs = ["lib/crewai/src/crewai/cli/templates"]
+
 
 [tool.pytest.ini_options]
 markers = [
     "telemetry: mark test as a telemetry test (don't mock telemetry)",
 ]
+testpaths = [
+    "lib/crewai/tests",
+    "lib/crewai-tools/tests",
+]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--tb=short -n auto --timeout=60 --dist=loadfile --max-worker-restart=2 --block-network --import-mode=importlib"
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
 
-# PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
-[[tool.uv.index]]
-name = "pytorch-nightly"
-url = "https://download.pytorch.org/whl/nightly/cpu"
-explicit = true
 
-[[tool.uv.index]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
+[tool.uv.workspace]
+members = [
+    "lib/crewai",
+    "lib/crewai-tools",
+    "lib/devtools",
+]
+
 
 [tool.uv.sources]
-torch = [
-  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
-  { index = "pytorch", marker = "python_version < '3.13'" },
-]
-torchvision = [
-  { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
-  { index = "pytorch", marker = "python_version < '3.13'" },
-]
-
-[tool.hatch.version]
-path = "src/crewai/__init__.py"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-exclude = [
-"docs/**",
-"docs/",
-]
-
-[tool.hatch.build.targets.sdist]
-exclude = [
-"docs/**",
-"docs/",
-]
+crewai = { workspace = true }
+crewai-tools = { workspace = true }
+crewai-devtools = { workspace = true }

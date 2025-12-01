@@ -13,7 +13,7 @@ mode: "wide"
 
 Asana 연동을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI Enterprise](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 Asana 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Asana 계정 연결
 
@@ -21,11 +21,11 @@ Asana 연동을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Asana 계정 연결하기
 
-1. [CrewAI Enterprise Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **Asana**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
 4. 작업 및 프로젝트 관리를 위한 필요한 권한을 부여합니다.
-5. [계정 설정](https://app.crewai.com/crewai_plus/settings/account)에서 Enterprise Token을 복사합니다.
+5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
 
 ### 2. 필수 패키지 설치
 
@@ -33,10 +33,26 @@ Asana 연동을 사용하기 전에 다음을 확인하세요:
 uv add crewai-tools
 ```
 
+### 3. 환경 변수 설정
+
+<Note>
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+또는 `.env` 파일에 추가하세요:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
 ## 사용 가능한 작업
 
 <AccordionGroup>
-  <Accordion title="ASANA_CREATE_COMMENT">
+  <Accordion title="asana/create_comment">
     **설명:** Asana에 댓글을 생성합니다.
 
     **매개변수:**
@@ -44,7 +60,7 @@ uv add crewai-tools
     - `text` (string, 필수): 텍스트 (예: "This is a comment.").
   </Accordion>
 
-  <Accordion title="ASANA_CREATE_PROJECT">
+  <Accordion title="asana/create_project">
     **설명:** Asana에 프로젝트를 생성합니다.
 
     **매개변수:**
@@ -54,7 +70,7 @@ uv add crewai-tools
     - `notes` (string, 선택): 노트 (예: "These are things we need to purchase.").
   </Accordion>
 
-  <Accordion title="ASANA_GET_PROJECTS">
+  <Accordion title="asana/get_projects">
     **설명:** Asana의 프로젝트 목록을 가져옵니다.
 
     **매개변수:**
@@ -62,14 +78,14 @@ uv add crewai-tools
       - 옵션: `default`, `true`, `false`
   </Accordion>
 
-  <Accordion title="ASANA_GET_PROJECT_BY_ID">
+  <Accordion title="asana/get_project_by_id">
     **설명:** Asana에서 ID로 프로젝트를 가져옵니다.
 
     **매개변수:**
     - `projectFilterId` (string, 필수): 프로젝트 ID.
   </Accordion>
 
-  <Accordion title="ASANA_CREATE_TASK">
+  <Accordion title="asana/create_task">
     **설명:** Asana에 작업을 생성합니다.
 
     **매개변수:**
@@ -83,7 +99,7 @@ uv add crewai-tools
     - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
   </Accordion>
 
-  <Accordion title="ASANA_UPDATE_TASK">
+  <Accordion title="asana/update_task">
     **설명:** Asana의 작업을 업데이트합니다.
 
     **매개변수:**
@@ -98,7 +114,7 @@ uv add crewai-tools
     - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASKS">
+  <Accordion title="asana/get_tasks">
     **설명:** Asana의 작업 목록을 가져옵니다.
 
     **매개변수:**
@@ -108,21 +124,21 @@ uv add crewai-tools
     - `completedSince` (string, 선택): 이후 완료됨 - 미완료이거나 해당 시간(ISO 또는 Unix 타임스탬프) 이후에 완료된 작업만 반환합니다. (예: "2014-04-25T16:15:47-04:00").
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASKS_BY_ID">
+  <Accordion title="asana/get_tasks_by_id">
     **설명:** Asana에서 ID로 작업 목록을 가져옵니다.
 
     **매개변수:**
     - `taskId` (string, 필수): 작업 ID.
   </Accordion>
 
-  <Accordion title="ASANA_GET_TASK_BY_EXTERNAL_ID">
+  <Accordion title="asana/get_task_by_external_id">
     **설명:** Asana에서 외부 ID로 작업을 가져옵니다.
 
     **매개변수:**
     - `gid` (string, 필수): 외부 ID - 이 작업이 애플리케이션과 연동(또는 동기화)된 ID입니다.
   </Accordion>
 
-  <Accordion title="ASANA_ADD_TASK_TO_SECTION">
+  <Accordion title="asana/add_task_to_section">
     **설명:** Asana에서 섹션에 작업을 추가합니다.
 
     **매개변수:**
@@ -132,14 +148,14 @@ uv add crewai-tools
     - `afterTaskId` (string, 선택): 이후 작업 ID - 이 작업이 삽입될 섹션 내의 작업 ID입니다. 이전 작업 ID와 함께 사용할 수 없습니다. (예: "1204619611402340").
   </Accordion>
 
-  <Accordion title="ASANA_GET_TEAMS">
+  <Accordion title="asana/get_teams">
     **설명:** Asana에서 팀 목록을 가져옵니다.
 
     **매개변수:**
     - `workspace` (string, 필수): 워크스페이스 - 인증된 사용자가 볼 수 있는 이 워크스페이스 내의 팀을 반환합니다.
   </Accordion>
 
-  <Accordion title="ASANA_GET_WORKSPACES">
+  <Accordion title="asana/get_workspaces">
     **설명:** Asana에서 워크스페이스 목록을 가져옵니다.
 
     **매개변수:** 필요 없음.
@@ -152,19 +168,13 @@ uv add crewai-tools
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get enterprise tools (Asana tools will be included)
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 # Create an agent with Asana capabilities
 asana_agent = Agent(
     role="Project Manager",
     goal="Manage tasks and projects in Asana efficiently",
     backstory="An AI assistant specialized in project management and task coordination.",
-    tools=[enterprise_tools]
+    apps=['asana']
 )
 
 # Task to create a new project
@@ -186,19 +196,12 @@ crew.kickoff()
 ### 특정 Asana 도구 필터링
 
 ```python
-from crewai_tools import CrewaiEnterpriseTools
-
-# Get only specific Asana tools
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token",
-    actions_list=["asana_create_task", "asana_update_task", "asana_get_tasks"]
-)
 
 task_manager_agent = Agent(
     role="Task Manager",
     goal="Create and manage tasks efficiently",
     backstory="An AI assistant that focuses on task creation and management.",
-    tools=enterprise_tools
+    apps=['asana']
 )
 
 # Task to create and assign a task
@@ -220,17 +223,12 @@ crew.kickoff()
 
 ```python
 from crewai import Agent, Task, Crew
-from crewai_tools import CrewaiEnterpriseTools
-
-enterprise_tools = CrewaiEnterpriseTools(
-    enterprise_token="your_enterprise_token"
-)
 
 project_coordinator = Agent(
     role="Project Coordinator",
     goal="Coordinate project activities and track progress",
     backstory="An experienced project coordinator who ensures projects run smoothly.",
-    tools=[enterprise_tools]
+    apps=['asana']
 )
 
 # Complex task involving multiple Asana operations
