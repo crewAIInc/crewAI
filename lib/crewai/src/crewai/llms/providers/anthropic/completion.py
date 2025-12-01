@@ -97,10 +97,7 @@ class AnthropicCompletion(BaseLLM):
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
-
-        # Model-specific settings
-        self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+        self.supports_tools = True
 
     @property
     def stop(self) -> list[str]:
