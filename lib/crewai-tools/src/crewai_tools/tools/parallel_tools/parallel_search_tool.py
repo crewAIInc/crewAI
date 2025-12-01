@@ -1,13 +1,24 @@
+import json
 import os
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
+import warnings
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field
-import requests
+from dotenv import load_dotenv
+from pydantic import BaseModel, ConfigDict, Field
+
+
+load_dotenv()
+try:
+    from parallel import Parallel
+
+    PARALLEL_AVAILABLE = True
+except ImportError:
+    PARALLEL_AVAILABLE = False
 
 
 class ParallelSearchInput(BaseModel):
-    """Input schema for ParallelSearchTool using the Search API (v1beta).
+    """Input schema for ParallelSearchTool using the Search API.
 
     At least one of objective or search_queries is required.
     """
@@ -23,103 +34,197 @@ class ParallelSearchInput(BaseModel):
         min_length=1,
         max_length=5,
     )
-    processor: str = Field(
-        default="base",
-        description="Search processor: 'base' (fast/low cost) or 'pro' (higher quality/freshness)",
-        pattern=r"^(base|pro)$",
+
+
+class ParallelSearchTool(BaseTool):
+    """Tool that uses the Parallel Search API to perform web searches.
+
+    Attributes:
+        client: An instance of Parallel client.
+        name: The name of the tool.
+        description: A description of the tool's purpose.
+        args_schema: The schema for the tool's arguments.
+        api_key: The Parallel API key.
+        mode: Search mode ('one-shot' or 'agentic').
+        max_results: Maximum number of results to return.
+        excerpts: Excerpt configuration for result length.
+        fetch_policy: Content freshness control.
+        source_policy: Domain inclusion/exclusion policy.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    client: Any = None
+    name: str = "Parallel Web Search"
+    description: str = (
+        "A tool that performs web searches using the Parallel Search API. "
+        "Returns ranked results with compressed excerpts optimized for LLMs."
+    )
+    args_schema: type[BaseModel] = ParallelSearchInput
+    api_key: str | None = Field(
+        default_factory=lambda: os.getenv("PARALLEL_API_KEY"),
+        description="The Parallel API key. If not provided, it will be loaded from the environment variable PARALLEL_API_KEY.",
+    )
+    mode: Literal["one-shot", "agentic"] | None = Field(
+        default=None,
+        description=(
+            "Search mode: 'one-shot' (comprehensive results, default) or "
+            "'agentic' (concise, token-efficient for multi-step workflows)"
+        ),
     )
     max_results: int = Field(
         default=10,
         ge=1,
-        le=40,
-        description="Maximum number of search results to return (processor limits apply)",
+        le=20,
+        description="Maximum number of search results to return (1-20)",
     )
-    max_chars_per_result: int = Field(
-        default=6000,
-        ge=100,
-        description="Maximum characters per result excerpt (values >30000 not guaranteed)",
+    excerpts: dict[str, int] | None = Field(
+        default=None,
+        description="Excerpt configuration: {'max_chars_per_result': 10000, 'max_chars_total': 50000}",
+    )
+    fetch_policy: dict[str, int] | None = Field(
+        default=None,
+        description="Content freshness control: {'max_age_seconds': 3600}",
     )
     source_policy: dict[str, Any] | None = Field(
-        default=None, description="Optional source policy configuration"
+        default=None,
+        description="Source policy for domain inclusion/exclusion",
     )
-
-
-class ParallelSearchTool(BaseTool):
-    name: str = "Parallel Web Search Tool"
-    description: str = (
-        "Search the web using Parallel's Search API (v1beta). Returns ranked results with "
-        "compressed excerpts optimized for LLMs."
-    )
-    args_schema: type[BaseModel] = ParallelSearchInput
-
+    package_dependencies: list[str] = Field(default_factory=lambda: ["parallel-web"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
                 name="PARALLEL_API_KEY",
-                description="API key for Parallel",
+                description="API key for Parallel search service",
                 required=True,
             ),
         ]
     )
-    package_dependencies: list[str] = Field(default_factory=lambda: ["requests"])
 
-    search_url: str = "https://api.parallel.ai/v1beta/search"
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        if not PARALLEL_AVAILABLE:
+            raise ImportError(
+                "Missing optional dependency 'parallel-web'. Install with:\n"
+                "  uv add crewai-tools --extra parallel-web\n"
+                "or\n"
+                "  pip install parallel-web"
+            )
+
+        if "PARALLEL_API_KEY" not in os.environ and not kwargs.get("api_key"):
+            raise ValueError(
+                "Environment variable PARALLEL_API_KEY is required for ParallelSearchTool. "
+                "Set it with: export PARALLEL_API_KEY='your_api_key'"
+            )
+
+        self.client = Parallel(api_key=self.api_key)
 
     def _run(
         self,
         objective: str | None = None,
         search_queries: list[str] | None = None,
-        processor: str = "base",
-        max_results: int = 10,
-        max_chars_per_result: int = 6000,
-        source_policy: dict[str, Any] | None = None,
+        # Deprecated parameters for backwards compatibility
+        processor: str | None = None,
+        max_chars_per_result: int | None = None,
         **_: Any,
     ) -> str:
-        api_key = os.environ.get("PARALLEL_API_KEY")
-        if not api_key:
-            return "Error: PARALLEL_API_KEY environment variable is required"
+        """Synchronously performs a search using the Parallel API.
+
+        Args:
+            objective: Natural-language goal for the web research.
+            search_queries: Optional list of keyword queries.
+            processor: DEPRECATED - no longer used.
+            max_chars_per_result: DEPRECATED - use excerpts config instead.
+
+        Returns:
+            A JSON string containing the search results.
+        """
+        if not self.client:
+            raise ValueError(
+                "Parallel client is not initialized. Ensure 'parallel-web' is installed and API key is set."
+            )
 
         if not objective and not search_queries:
             return "Error: Provide at least one of 'objective' or 'search_queries'"
 
-        headers = {
-            "x-api-key": api_key,
-            "Content-Type": "application/json",
-        }
+        # Handle deprecated parameters
+        excerpts = self._handle_deprecated_params(processor, max_chars_per_result)
+
+        search_params = self._build_search_params(objective, search_queries, excerpts)
 
         try:
-            payload: dict[str, Any] = {
-                "processor": processor,
-                "max_results": max_results,
-                "max_chars_per_result": max_chars_per_result,
-            }
-            if objective is not None:
-                payload["objective"] = objective
-            if search_queries is not None:
-                payload["search_queries"] = search_queries
-            if source_policy is not None:
-                payload["source_policy"] = source_policy
-
-            request_timeout = 90 if processor == "pro" else 30
-            resp = requests.post(
-                self.search_url, json=payload, headers=headers, timeout=request_timeout
-            )
-            if resp.status_code >= 300:
-                return (
-                    f"Parallel Search API error: {resp.status_code} {resp.text[:200]}"
-                )
-            data = resp.json()
-            return self._format_output(data)
-        except requests.Timeout:
-            return "Parallel Search API timeout. Please try again later."
+            response = self.client.beta.search(**search_params)
+            return self._format_output(response)
         except Exception as exc:
-            return f"Unexpected error calling Parallel Search API: {exc}"
+            return f"Parallel Search API error: {exc}"
 
-    def _format_output(self, result: dict[str, Any]) -> str:
-        # Return the full JSON payload (search_id + results) as a compact JSON string
+    def _handle_deprecated_params(
+        self,
+        processor: str | None,
+        max_chars_per_result: int | None,
+    ) -> dict[str, int] | None:
+        """Handle deprecated parameters with warnings."""
+        excerpts = self.excerpts
+
+        if processor is not None:
+            warnings.warn(
+                "The 'processor' parameter is deprecated and will be ignored. "
+                "Use 'mode' instead when initializing the tool.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+
+        if max_chars_per_result is not None:
+            warnings.warn(
+                "The 'max_chars_per_result' parameter is deprecated. "
+                "Use 'excerpts={\"max_chars_per_result\": N}' when initializing the tool.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            # Map to new excerpts parameter for backwards compatibility
+            if excerpts is None:
+                excerpts = {"max_chars_per_result": max_chars_per_result}
+            elif "max_chars_per_result" not in excerpts:
+                excerpts = {**excerpts, "max_chars_per_result": max_chars_per_result}
+
+        return excerpts
+
+    def _build_search_params(
+        self,
+        objective: str | None,
+        search_queries: list[str] | None,
+        excerpts: dict[str, int] | None,
+    ) -> dict[str, Any]:
+        """Build search parameters dictionary."""
+        search_params: dict[str, Any] = {"max_results": self.max_results}
+
+        if objective is not None:
+            search_params["objective"] = objective
+        if search_queries is not None:
+            search_params["search_queries"] = search_queries
+        if self.mode is not None:
+            search_params["mode"] = self.mode
+        if excerpts is not None:
+            search_params["excerpts"] = excerpts
+        if self.fetch_policy is not None:
+            search_params["fetch_policy"] = self.fetch_policy
+        if self.source_policy is not None:
+            search_params["source_policy"] = self.source_policy
+
+        return search_params
+
+    def _format_output(self, result: Any) -> str:
+        """Format the search response as a JSON string."""
         try:
-            import json
+            # Handle SDK response object - convert to dict if needed
+            if hasattr(result, "model_dump"):
+                data = result.model_dump()
+            elif hasattr(result, "to_dict"):
+                data = result.to_dict()
+            elif hasattr(result, "__dict__"):
+                data = dict(result.__dict__)
+            else:
+                data = result
 
-            return json.dumps(result or {}, ensure_ascii=False)
+            return json.dumps(data or {}, ensure_ascii=False, default=str)
         except Exception:
             return str(result or {})
