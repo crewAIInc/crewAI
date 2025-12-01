@@ -703,6 +703,7 @@
               {
                 "group": "Observabilidade",
                 "pages": [
+                  "pt-BR/observability/tracing",
                   "pt-BR/observability/overview",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/braintrust",
@@ -1140,6 +1141,7 @@
               {
                 "group": "Observability",
                 "pages": [
+                  "ko/observability/tracing",
                   "ko/observability/overview",
                   "ko/observability/arize-phoenix",
                   "ko/observability/braintrust",
