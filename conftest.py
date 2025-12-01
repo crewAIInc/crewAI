@@ -129,6 +129,8 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
         for variant in [header_name, header_name.upper(), header_name.title()]:
             if variant in request.headers:
                 request.headers[variant] = [replacement]
+
+    request.method = request.method.upper()
     return request
 
 

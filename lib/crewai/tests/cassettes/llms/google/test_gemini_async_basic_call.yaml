@@ -11,7 +11,7 @@ interactions:
       - google-genai-sdk/1.52.0 gl-python/3.12.10
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
-    method: post
+    method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
   response:
     body:
