@@ -29,6 +29,6 @@ def create_extension_registry_from_config(
     configs = a2a_config if isinstance(a2a_config, list) else [a2a_config]
 
     for _ in configs:
-        raise NotImplementedError
+        pass
 
     return registry
