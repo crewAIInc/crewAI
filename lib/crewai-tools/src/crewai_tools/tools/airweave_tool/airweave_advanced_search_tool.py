@@ -166,9 +166,10 @@ class AirweaveAdvancedSearchTool(BaseTool):
             client_kwargs["base_url"] = self.base_url
 
         # Initialize both sync and async clients
-        from airweave import AirweaveSDK, AsyncAirweaveSDK
-        self._client = AirweaveSDK(**client_kwargs)
-        self._async_client = AsyncAirweaveSDK(**client_kwargs)
+        # Import from module namespace to avoid scope issues
+        import crewai_tools.tools.airweave_tool.airweave_advanced_search_tool as airweave_module
+        self._client = airweave_module.AirweaveSDK(**client_kwargs)
+        self._async_client = airweave_module.AsyncAirweaveSDK(**client_kwargs)
 
     def _run(
         self,
@@ -196,13 +197,14 @@ class AirweaveAdvancedSearchTool(BaseTool):
             # Build filter if source_filter provided
             filter_obj = None
             if source_filter:
-                from airweave import FieldCondition, Filter, MatchValue
+                # Use module-level imports to avoid scope issues in tests
+                import crewai_tools.tools.airweave_tool.airweave_advanced_search_tool as airweave_module
 
-                filter_obj = Filter(
+                filter_obj = airweave_module.Filter(
                     must=[
-                        FieldCondition(
+                        airweave_module.FieldCondition(
                             key="source_name",
-                            match=MatchValue(value=source_filter)
+                            match=airweave_module.MatchValue(value=source_filter)
                         )
                     ]
                 )
@@ -266,13 +268,14 @@ class AirweaveAdvancedSearchTool(BaseTool):
             # Build filter
             filter_obj = None
             if source_filter:
-                from airweave import FieldCondition, Filter, MatchValue
+                # Use module-level imports to avoid scope issues in tests
+                import crewai_tools.tools.airweave_tool.airweave_advanced_search_tool as airweave_module
 
-                filter_obj = Filter(
+                filter_obj = airweave_module.Filter(
                     must=[
-                        FieldCondition(
+                        airweave_module.FieldCondition(
                             key="source_name",
-                            match=MatchValue(value=source_filter)
+                            match=airweave_module.MatchValue(value=source_filter)
                         )
                     ]
                 )

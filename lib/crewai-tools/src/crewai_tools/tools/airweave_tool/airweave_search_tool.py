@@ -146,9 +146,10 @@ class AirweaveSearchTool(BaseTool):
             client_kwargs["base_url"] = self.base_url
 
         # Initialize both sync and async clients
-        from airweave import AirweaveSDK, AsyncAirweaveSDK
-        self._client = AirweaveSDK(**client_kwargs)
-        self._async_client = AsyncAirweaveSDK(**client_kwargs)
+        # Import from module namespace to avoid scope issues
+        import crewai_tools.tools.airweave_tool.airweave_search_tool as airweave_module
+        self._client = airweave_module.AirweaveSDK(**client_kwargs)
+        self._async_client = airweave_module.AsyncAirweaveSDK(**client_kwargs)
 
     def _run(
         self,
