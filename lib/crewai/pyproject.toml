@@ -68,6 +68,7 @@ qdrant = [
 ]
 aws = [
     "boto3~=1.40.38",
+    "aiobotocore~=2.25.2",
 ]
 watson = [
     "ibm-watsonx-ai~=1.3.39",

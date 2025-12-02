@@ -77,6 +77,9 @@ class CustomLLM(BaseLLM):
         """
         return 4096
 
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
+
 
 @pytest.mark.vcr()
 def test_custom_llm_implementation():
@@ -191,6 +194,9 @@ class JWTAuthLLM(BaseLLM):
     def get_context_window_size(self) -> int:
         """Return a default context window size."""
         return 8192
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
 
 
 def test_custom_llm_with_jwt_auth():
@@ -338,6 +344,9 @@ class TimeoutHandlingLLM(BaseLLM):
             8192, a typical context window size for modern LLMs.
         """
         return 8192
+
+    async def acall(self, messages, tools=None, callbacks=None, available_functions=None, from_task=None, from_agent=None, response_model=None):
+        raise NotImplementedError
 
 
 def test_timeout_handling_llm():
