@@ -532,9 +532,10 @@ def _delegate_to_a2a(
     task_config = task.config or {}
     context_id = task_config.get("context_id")
     task_id_config = task_config.get("task_id")
-    reference_task_ids = task_config.get("reference_task_ids")
     metadata = task_config.get("metadata")
     extensions = task_config.get("extensions")
+
+    reference_task_ids = task_config.get("reference_task_ids", [])
 
     if original_task_description is None:
         original_task_description = task.description
@@ -583,6 +584,15 @@ def _delegate_to_a2a(
                     a2a_result["status"] == "completed"
                     and agent_config.trust_remote_completion_status
                 ):
+                    if (
+                        task_id_config is not None
+                        and task_id_config not in reference_task_ids
+                    ):
+                        reference_task_ids.append(task_id_config)
+                        if task.config is None:
+                            task.config = {}
+                        task.config["reference_task_ids"] = reference_task_ids
+
                     result_text = a2a_result.get("result", "")
                     final_turn_number = turn_num + 1
                     crewai_event_bus.emit(
@@ -595,14 +605,6 @@ def _delegate_to_a2a(
                         ),
                     )
                     return cast(str, result_text)
-
-                if task_id_config is not None:
-                    if reference_task_ids is None:
-                        reference_task_ids = []
-                    if task_id_config not in reference_task_ids:
-                        reference_task_ids.append(task_id_config)
-                    if a2a_result["status"] == "completed":
-                        task_id_config = None
 
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
