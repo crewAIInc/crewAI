@@ -330,12 +330,7 @@ class Tool(BaseTool, Generic[P, R]):
 
     def _run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Execute the wrapped function."""
-        result = self.func(*args, **kwargs)
-        if _is_awaitable(result):
-            raise NotImplementedError(
-                f"{self.name} is an async function. Use arun() for async execution."
-            )
-        return result
+        return self.func(*args, **kwargs)  # type: ignore[return-value]
 
     async def arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Execute the tool asynchronously with type-safe parameters."""
