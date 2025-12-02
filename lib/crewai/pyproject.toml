@@ -38,6 +38,7 @@ dependencies = [
     "pydantic-settings~=2.10.1",
     "mcp~=1.16.0",
     "uv~=0.9.13",
+    "aiosqlite~=0.21.0",
 ]
 
 [project.urls]
