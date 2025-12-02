@@ -6,6 +6,18 @@ from typing import Any, List, Optional, Type
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+# Module-level import with availability flag
+try:
+    from airweave import AirweaveSDK, AsyncAirweaveSDK, FieldCondition, Filter, MatchValue
+    AIRWEAVE_AVAILABLE = True
+except ImportError:
+    AIRWEAVE_AVAILABLE = False
+    AirweaveSDK = Any  # type: ignore
+    AsyncAirweaveSDK = Any  # type: ignore
+    FieldCondition = Any  # type: ignore
+    Filter = Any  # type: ignore
+    MatchValue = Any  # type: ignore
+
 
 class AirweaveAdvancedSearchToolSchema(BaseModel):
     """Input schema for AirweaveAdvancedSearchTool."""
@@ -111,16 +123,24 @@ class AirweaveAdvancedSearchTool(BaseTool):
         """Initialize the advanced search tool."""
         super().__init__(**kwargs)
 
-        # Lazy import
-        try:
-            from airweave import AirweaveSDK
-        except ImportError:
-            raise ImportError(
-                "Missing required package 'airweave-sdk'. Install with:\n"
-                "  pip install airweave-sdk\n"
-                "or\n"
-                "  pip install 'crewai-tools[airweave]'"
-            )
+        # Check if package is available, offer interactive installation
+        if not AIRWEAVE_AVAILABLE:
+            import click
+            
+            if click.confirm(
+                "You are missing the 'airweave-sdk' package. Would you like to install it?"
+            ):
+                import subprocess
+                try:
+                    subprocess.run(["uv", "add", "airweave-sdk"], check=True)  # noqa: S607
+                    # Import after installation
+                    from airweave import AirweaveSDK, AsyncAirweaveSDK
+                except subprocess.CalledProcessError as e:
+                    raise ImportError("Failed to install airweave-sdk package") from e
+            else:
+                raise ImportError(
+                    "`airweave-sdk` package not found, please run `uv add airweave-sdk`"
+                ) from None
 
         # Validate API key
         api_key = os.getenv("AIRWEAVE_API_KEY")
@@ -129,14 +149,14 @@ class AirweaveAdvancedSearchTool(BaseTool):
                 "AIRWEAVE_API_KEY environment variable is required."
             )
 
-        # Get version safely
+        # Get version safely (only once)
         try:
             from importlib.metadata import version
             package_version = version("crewai-tools")
         except Exception:
             package_version = "unknown"
 
-        # Initialize client
+        # Initialize client kwargs
         client_kwargs = {
             "api_key": api_key,
             "framework_name": "crewai",
@@ -145,7 +165,10 @@ class AirweaveAdvancedSearchTool(BaseTool):
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
 
+        # Initialize both sync and async clients
+        from airweave import AirweaveSDK, AsyncAirweaveSDK
         self._client = AirweaveSDK(**client_kwargs)
+        self._async_client = AsyncAirweaveSDK(**client_kwargs)
 
     def _run(
         self,
@@ -203,14 +226,14 @@ class AirweaveAdvancedSearchTool(BaseTool):
                 if response.completion:
                     return response.completion
                 else:
-                    return "Unable to generate an answer from available data. Try rephrasing your question."
+                    return "Unable to generate an answer from available data. Try rephrasing your question or adjusting filters."
 
             # Handle raw results response
             if response.status == "no_results":
                 return "No results found for your query."
 
             if response.status == "no_relevant_results":
-                return "Search completed but no sufficiently relevant results were found. Try adjusting filters or threshold."
+                return "Search completed but no sufficiently relevant results were found. Try adjusting filters, lowering score threshold, or rephrasing your query."
 
             return self._format_results(response.results, limit, source_filter)
 
@@ -231,29 +254,6 @@ class AirweaveAdvancedSearchTool(BaseTool):
         **kwargs: Any
     ) -> str:
         """Async implementation of advanced search."""
-        # Initialize async client if needed
-        if not hasattr(self, "_async_client"):
-            from airweave import AsyncAirweaveSDK
-
-            api_key = os.getenv("AIRWEAVE_API_KEY")
-            
-            # Get version safely
-            try:
-                from importlib.metadata import version
-                package_version = version("crewai-tools")
-            except Exception:
-                package_version = "unknown"
-            
-            client_kwargs = {
-                "api_key": api_key,
-                "framework_name": "crewai",
-                "framework_version": package_version,
-            }
-            if self.base_url:
-                client_kwargs["base_url"] = self.base_url
-
-            self._async_client = AsyncAirweaveSDK(**client_kwargs)
-
         try:
             # Validate response_type
             if response_type not in ["raw", "completion"]:
@@ -296,14 +296,14 @@ class AirweaveAdvancedSearchTool(BaseTool):
                 if response.completion:
                     return response.completion
                 else:
-                    return "Unable to generate an answer from available data."
+                    return "Unable to generate an answer from available data. Try rephrasing your question or adjusting filters."
 
             # Handle raw results response
             if response.status == "no_results":
-                return "No results found."
+                return "No results found for your query."
 
             if response.status == "no_relevant_results":
-                return "Search completed but no sufficiently relevant results found."
+                return "Search completed but no sufficiently relevant results were found. Try adjusting filters, lowering score threshold, or rephrasing your query."
 
             return self._format_results(response.results, limit, source_filter)
 
@@ -354,5 +354,3 @@ class AirweaveAdvancedSearchTool(BaseTool):
                 formatted.append(f"URL: {payload['url']}")
 
         return "\n".join(formatted)
-
-
