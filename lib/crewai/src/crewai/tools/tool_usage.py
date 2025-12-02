@@ -313,7 +313,18 @@ class ToolUsage:
             tool_name=tool.name,
             attempts=self._run_attempts,
         )
-        result = self._format_result(result=result)
+
+        # For add_image tool, preserve the raw dict result for multimodal handling
+        # The result is a dict like {"role": "user", "content": [...]} that should
+        # not be stringified
+        add_image_tool = self._i18n.tools("add_image")
+        is_add_image_tool = (
+            isinstance(add_image_tool, dict)
+            and tool.name == add_image_tool.get("name", "")
+        )
+        if not is_add_image_tool:
+            result = self._format_result(result=result)
+
         data = {
             "result": result,
             "tool_name": tool.name,

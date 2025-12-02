@@ -324,14 +324,25 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Updated action or final answer.
         """
-        # Special case for add_image_tool
+        # Special case for add_image_tool - the result is already a properly
+        # formatted multimodal message dict with role and content
         add_image_tool = self._i18n.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         ):
-            self.messages.append({"role": "assistant", "content": tool_result.result})
+            # tool_result.result is a dict like {"role": "user", "content": [...]}
+            # Append it directly without wrapping
+            result = tool_result.result
+            if isinstance(result, dict) and "role" in result and "content" in result:
+                self.messages.append(result)
+            elif isinstance(result, list):
+                # If it's just the content list, wrap it with user role
+                self.messages.append({"role": "user", "content": result})
+            else:
+                # Fallback: wrap as user message
+                self.messages.append({"role": "user", "content": str(result)})
             return formatted_answer
 
         return handle_agent_action_core(

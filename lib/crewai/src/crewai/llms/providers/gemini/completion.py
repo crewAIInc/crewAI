@@ -448,6 +448,7 @@ class GeminiCompletion(BaseLLM):
         - System messages are separate system_instruction
         - Content is organized as Content objects with Parts
         - Roles are 'user' and 'model' (not 'assistant')
+        - Multimodal content with image_url must be converted to Gemini's format
 
         Args:
             messages: Input messages
@@ -465,17 +466,18 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Convert content to string if it's a list
-            if isinstance(content, list):
-                text_content = " ".join(
-                    str(item.get("text", "")) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
-            else:
-                text_content = str(content) if content else ""
-
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
+                if isinstance(content, list):
+                    text_content = " ".join(
+                        str(item.get("text", ""))
+                        if isinstance(item, dict)
+                        else str(item)
+                        for item in content
+                    )
+                else:
+                    text_content = str(content) if content else ""
+
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
@@ -484,13 +486,189 @@ class GeminiCompletion(BaseLLM):
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
 
+                # Convert content to Gemini Parts
+                parts = self._convert_content_to_parts(content)
+
                 # Create Content object
-                gemini_content = types.Content(
-                    role=gemini_role, parts=[types.Part.from_text(text=text_content)]
-                )
+                gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
         return contents, system_instruction
+
+    def _convert_content_to_parts(self, content: Any) -> list[types.Part]:
+        """Convert message content to Gemini Parts.
+
+        Handles both simple text content and multimodal content with image_url.
+
+        Args:
+            content: Message content (string or list of content items)
+
+        Returns:
+            List of Gemini Part objects
+        """
+        if not isinstance(content, list):
+            # Simple text content
+            text_content = str(content) if content else ""
+            return [types.Part.from_text(text=text_content)]
+
+        parts: list[types.Part] = []
+        for item in content:
+            if isinstance(item, dict):
+                item_type = item.get("type", "")
+                if item_type == "text":
+                    text = item.get("text", "")
+                    if text:
+                        parts.append(types.Part.from_text(text=str(text)))
+                elif item_type == "image_url":
+                    # Handle image_url format from OpenAI-compatible APIs
+                    image_url_data = item.get("image_url", {})
+                    url = image_url_data.get("url", "") if isinstance(
+                        image_url_data, dict
+                    ) else str(image_url_data)
+                    if url:
+                        image_part = self._create_image_part_from_url(url)
+                        if image_part:
+                            parts.append(image_part)
+                else:
+                    # Unknown type, convert to text
+                    parts.append(types.Part.from_text(text=str(item)))
+            else:
+                # Non-dict item, convert to text
+                parts.append(types.Part.from_text(text=str(item)))
+
+        # Ensure at least one part exists
+        if not parts:
+            parts.append(types.Part.from_text(text=""))
+
+        return parts
+
+    def _create_image_part_from_url(self, url: str) -> types.Part | None:
+        """Create a Gemini Part from an image URL.
+
+        Handles:
+        - HTTP(S) URLs: Fetches the image and converts to inline_data
+        - Data URLs: Parses and extracts base64 data
+        - Local file paths: Reads file and converts to inline_data
+
+        Args:
+            url: Image URL, data URL, or local file path
+
+        Returns:
+            Gemini Part object or None if conversion fails
+        """
+
+        try:
+            if url.startswith("data:"):
+                # Handle data URL (e.g., data:image/png;base64,...)
+                return self._parse_data_url(url)
+            if url.startswith(("http://", "https://")):
+                # Handle HTTP(S) URL - fetch and convert to inline_data
+                return self._fetch_image_from_url(url)
+            # Handle local file path
+            return self._read_local_image(url)
+        except Exception as e:
+            logging.warning(f"Failed to create image part from URL '{url}': {e}")
+            return None
+
+    def _parse_data_url(self, data_url: str) -> types.Part | None:
+        """Parse a data URL and create a Gemini Part.
+
+        Args:
+            data_url: Data URL (e.g., data:image/png;base64,...)
+
+        Returns:
+            Gemini Part object or None if parsing fails
+        """
+        import base64
+
+        try:
+            # Parse data URL: data:[<mediatype>][;base64],<data>
+            if not data_url.startswith("data:"):
+                return None
+
+            # Split header and data
+            header_end = data_url.find(",")
+            if header_end == -1:
+                return None
+
+            header = data_url[5:header_end]  # Skip "data:"
+            data = data_url[header_end + 1:]
+
+            # Parse mime type and encoding
+            parts = header.split(";")
+            mime_type = parts[0] if parts else "application/octet-stream"
+            is_base64 = "base64" in parts
+
+            if is_base64:
+                image_bytes = base64.b64decode(data)
+            else:
+                image_bytes = data.encode("utf-8")
+
+            return types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        except Exception as e:
+            logging.warning(f"Failed to parse data URL: {e}")
+            return None
+
+    def _fetch_image_from_url(self, url: str) -> types.Part | None:
+        """Fetch an image from a URL and create a Gemini Part.
+
+        Args:
+            url: HTTP(S) URL of the image
+
+        Returns:
+            Gemini Part object or None if fetching fails
+        """
+        import mimetypes
+        import urllib.request
+
+        try:
+            # Fetch the image with a timeout
+            # URL scheme is validated in _create_image_part_from_url before calling this method
+            with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310
+                image_bytes = response.read()
+                content_type = response.headers.get("Content-Type", "")
+
+                # Extract mime type from Content-Type header
+                if content_type:
+                    mime_type = content_type.split(";")[0].strip()
+                else:
+                    # Guess from URL extension
+                    mime_type, _ = mimetypes.guess_type(url)
+                    mime_type = mime_type or "image/jpeg"
+
+            return types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        except Exception as e:
+            logging.warning(f"Failed to fetch image from URL '{url}': {e}")
+            return None
+
+    def _read_local_image(self, file_path: str) -> types.Part | None:
+        """Read a local image file and create a Gemini Part.
+
+        Args:
+            file_path: Path to the local image file
+
+        Returns:
+            Gemini Part object or None if reading fails
+        """
+        import mimetypes
+        import os
+
+        try:
+            if not os.path.exists(file_path):
+                logging.warning(f"Image file not found: {file_path}")
+                return None
+
+            # Guess mime type from file extension
+            mime_type, _ = mimetypes.guess_type(file_path)
+            mime_type = mime_type or "image/jpeg"
+
+            with open(file_path, "rb") as f:
+                image_bytes = f.read()
+
+            return types.Part.from_bytes(data=image_bytes, mime_type=mime_type)
+        except Exception as e:
+            logging.warning(f"Failed to read local image '{file_path}': {e}")
+            return None
 
     def _handle_completion(
         self,
