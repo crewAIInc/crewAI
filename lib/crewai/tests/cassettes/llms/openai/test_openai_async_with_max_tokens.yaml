@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Write a very long story about a
+      dragon."}],"model":"gpt-4o-mini","max_tokens":10}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '120'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrKwgeDauQXUdKdGzgW3sp3AJtEwgUuZLYUlyCXKU1Av97
+        QfkhOW2AXHjY2VnOzO5zwhjXipeMy06Q7J1J7zv/5fbzB/H72377ae+fzPdd+HqX7bEY7g1fRgbW
+        P0HSmfVOYu8MkEZ7hKUHQRCnrop8c5PfFe/zEehRgYm01lG6wbTXVqfrbL1JsyJd3Z7YHWoJgZfs
+        R8IYY8/jG3VaBX94ybLludJDCKIFXl6aGOMeTaxwEYIOJCzx5QRKtAR2lL5Y7DQZKNmuA/ZRBGLb
+        vgbPsGFbo9BrsVg82Ac7p3tohiCiBTsYMwOEtUgiRjAKfzwhh4tUg63zWIcXVN5oq0NXeRABbZRl
+        wLbU8RE/JIw9jqEMVz6589g7qgh/wfjhKj8O5NMqZuApME5Iwkz19Zl0Na1SQEKbMAuVSyE7UBNz
+        2oAYlMYZkMxc/yvmf7OPzrVt3zJ+AqQER6Aq50FpeW14avMQD/W1tkvGo2AewD9pCRVp8HETChox
+        mOP58LAPBH3VaNuCd14fb6hxVX2zKfJspWrFk0PyFwAA//8DALc9uHlRAwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:15:36 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '383'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '398'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

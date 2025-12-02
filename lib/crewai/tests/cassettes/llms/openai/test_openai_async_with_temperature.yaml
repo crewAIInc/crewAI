@@ -1,0 +1,108 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Say the word ''test'' once"}],"model":"gpt-4o-mini","temperature":0.1}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '107'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBT+MwEIXv+RXWnBvUltBCr0iAVisth+WEUOTak8TU8XjtCbBC/e/I
+        SWnCLkhcfPA3b/zeeF4zIcBo2AhQjWTVeptfNuHuavfY7upaXnU/fv55vnn6tcT6xdxe38EsKWj7
+        iIrfVSeKWm+RDbkBq4CSMXVdrFfF2epiXZz2oCWNNslqz3lBeWucyZfzZZHP1/ni/KBuyCiMsBH3
+        mRBCvPZn8uk0vsBGzGfvNy3GKGuEzbFICAhk0w3IGE1k6RhmI1TkGF1v/TdGPpmygFUXZfLnOmsn
+        QDpHLFO+3tXDgeyPPizVPtA2/iOFyjgTmzKgjOTSm5HJQ0/3mRAPfd7uQwTwgVrPJdMO++cWxdAO
+        ximPcHlgTCztRLOafdKs1MjS2DgZFyipGtSjcpyt7LShCcgmkf/38lnvIbZx9Xfaj0Ap9Iy69AG1
+        UR/zjmUB0wp+VXYccW8YIoYno7BkgyF9g8ZKdnZYDIh/I2NbVsbVGHwww3ZUvjxb6O15ISu5hWyf
+        vQEAAP//AwDSVh+sKwMAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:15:43 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '308'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '339'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

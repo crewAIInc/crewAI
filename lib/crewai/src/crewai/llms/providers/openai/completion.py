@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from openai import APIConnectionError, NotFoundError, OpenAI
+from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
-from crewai.llms.hooks.transport import HTTPTransport
+from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -100,6 +100,14 @@ class OpenAICompletion(BaseLLM):
             client_config["http_client"] = http_client
 
         self.client = OpenAI(**client_config)
+
+        async_client_config = self._get_client_params()
+        if self.interceptor:
+            async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
+            async_http_client = httpx.AsyncClient(transport=async_transport)
+            async_client_config["http_client"] = async_http_client
+
+        self.async_client = AsyncOpenAI(**async_client_config)
 
         # Completion parameters
         self.top_p = top_p
@@ -195,6 +203,71 @@ class OpenAICompletion(BaseLLM):
                 )
 
             return self._handle_completion(
+                params=completion_params,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+
+        except Exception as e:
+            error_msg = f"OpenAI API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise
+
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Async call to OpenAI chat completion API.
+
+        Args:
+            messages: Input messages for the chat completion
+            tools: list of tool/function definitions
+            callbacks: Callback functions (not used in native implementation)
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Response model for structured output.
+
+        Returns:
+            Chat completion response or tool call result
+        """
+        try:
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            formatted_messages = self._format_messages(messages)
+
+            completion_params = self._prepare_completion_params(
+                messages=formatted_messages, tools=tools
+            )
+
+            if self.stream:
+                return await self._ahandle_streaming_completion(
+                    params=completion_params,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+
+            return await self._ahandle_completion(
                 params=completion_params,
                 available_functions=available_functions,
                 from_task=from_task,
@@ -352,10 +425,10 @@ class OpenAICompletion(BaseLLM):
 
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
-                function_name = tool_call.function.name  # type: ignore[union-attr]
+                function_name = tool_call.function.name
 
                 try:
-                    function_args = json.loads(tool_call.function.arguments)  # type: ignore[union-attr]
+                    function_args = json.loads(tool_call.function.arguments)
                 except json.JSONDecodeError as e:
                     logging.error(f"Failed to parse tool arguments: {e}")
                     function_args = {}
@@ -529,6 +602,266 @@ class OpenAICompletion(BaseLLM):
                     continue
 
                 # Check if function exists in available functions
+                if function_name not in available_functions:
+                    logging.warning(
+                        f"Function '{function_name}' not found in available functions"
+                    )
+                    continue
+
+                try:
+                    function_args = json.loads(arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse streamed tool arguments: {e}")
+                    continue
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return full_response
+
+    async def _ahandle_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming async chat completion."""
+        try:
+            if response_model:
+                parse_params = {
+                    k: v for k, v in params.items() if k != "response_format"
+                }
+                parsed_response = await self.async_client.beta.chat.completions.parse(
+                    **parse_params,
+                    response_format=response_model,
+                )
+                math_reasoning = parsed_response.choices[0].message
+
+                if math_reasoning.refusal:
+                    pass
+
+                usage = self._extract_openai_token_usage(parsed_response)
+                self._track_token_usage_internal(usage)
+
+                parsed_object = parsed_response.choices[0].message.parsed
+                if parsed_object:
+                    structured_json = parsed_object.model_dump_json()
+                    self._emit_call_completed_event(
+                        response=structured_json,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_json
+
+            response: ChatCompletion = await self.async_client.chat.completions.create(
+                **params
+            )
+
+            usage = self._extract_openai_token_usage(response)
+
+            self._track_token_usage_internal(usage)
+
+            choice: Choice = response.choices[0]
+            message = choice.message
+
+            if message.tool_calls and available_functions:
+                tool_call = message.tool_calls[0]
+                function_name = tool_call.function.name
+
+                try:
+                    function_args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse tool arguments: {e}")
+                    function_args = {}
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+            content = message.content or ""
+            content = self._apply_stop_words(content)
+
+            if self.response_format and isinstance(self.response_format, type):
+                try:
+                    structured_result = self._validate_structured_output(
+                        content, self.response_format
+                    )
+                    self._emit_call_completed_event(
+                        response=structured_result,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return structured_result
+                except ValueError as e:
+                    logging.warning(f"Structured output validation failed: {e}")
+
+            self._emit_call_completed_event(
+                response=content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+
+            if usage.get("total_tokens", 0) > 0:
+                logging.info(f"OpenAI API usage: {usage}")
+        except NotFoundError as e:
+            error_msg = f"Model {self.model} not found: {e}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise ValueError(error_msg) from e
+        except APIConnectionError as e:
+            error_msg = f"Failed to connect to OpenAI API: {e}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise ConnectionError(error_msg) from e
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
+            error_msg = f"OpenAI API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise e from e
+
+        return content
+
+    async def _ahandle_streaming_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str:
+        """Handle async streaming chat completion."""
+        full_response = ""
+        tool_calls = {}
+
+        if response_model:
+            completion_stream: AsyncIterator[
+                ChatCompletionChunk
+            ] = await self.async_client.chat.completions.create(**params)
+
+            accumulated_content = ""
+            async for chunk in completion_stream:
+                if not chunk.choices:
+                    continue
+
+                choice = chunk.choices[0]
+                delta: ChoiceDelta = choice.delta
+
+                if delta.content:
+                    accumulated_content += delta.content
+                    self._emit_stream_chunk_event(
+                        chunk=delta.content,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+            try:
+                parsed_object = response_model.model_validate_json(accumulated_content)
+                structured_json = parsed_object.model_dump_json()
+
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
+            except Exception as e:
+                logging.error(f"Failed to parse structured output from stream: {e}")
+                self._emit_call_completed_event(
+                    response=accumulated_content,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return accumulated_content
+
+        stream: AsyncIterator[
+            ChatCompletionChunk
+        ] = await self.async_client.chat.completions.create(**params)
+
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+
+            choice = chunk.choices[0]
+            chunk_delta: ChoiceDelta = choice.delta
+
+            if chunk_delta.content:
+                full_response += chunk_delta.content
+                self._emit_stream_chunk_event(
+                    chunk=chunk_delta.content,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+            if chunk_delta.tool_calls:
+                for tool_call in chunk_delta.tool_calls:
+                    call_id = tool_call.id or "default"
+                    if call_id not in tool_calls:
+                        tool_calls[call_id] = {
+                            "name": "",
+                            "arguments": "",
+                        }
+
+                    if tool_call.function and tool_call.function.name:
+                        tool_calls[call_id]["name"] = tool_call.function.name
+                    if tool_call.function and tool_call.function.arguments:
+                        tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+        if tool_calls and available_functions:
+            for call_data in tool_calls.values():
+                function_name = call_data["name"]
+                arguments = call_data["arguments"]
+
+                if not function_name or not arguments:
+                    continue
+
                 if function_name not in available_functions:
                     logging.warning(
                         f"Function '{function_name}' not found in available functions"
