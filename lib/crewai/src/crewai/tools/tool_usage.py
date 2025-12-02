@@ -320,7 +320,8 @@ class ToolUsage:
         add_image_tool = self._i18n.tools("add_image")
         is_add_image_tool = (
             isinstance(add_image_tool, dict)
-            and tool.name == add_image_tool.get("name", "")
+            and tool.name.casefold().strip()
+            == add_image_tool.get("name", "").casefold().strip()
         )
         if not is_add_image_tool:
             result = self._format_result(result=result)
