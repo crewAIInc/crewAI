@@ -533,6 +533,7 @@ class OpenAICompletion(BaseLLM):
                         chunk=delta.content,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=chunk.id if hasattr(chunk,"id") else None
                     )
 
             try:
@@ -576,6 +577,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=chunk.id if hasattr(chunk,"id") else None
                 )
 
             if chunk_delta.tool_calls:
