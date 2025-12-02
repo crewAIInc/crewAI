@@ -96,6 +96,30 @@ HEADERS_TO_FILTER = {
     "x-ratelimit-reset-requests": "X-RATELIMIT-RESET-REQUESTS-XXX",
     "x-ratelimit-reset-tokens": "X-RATELIMIT-RESET-TOKENS-XXX",
     "x-goog-api-key": "X-GOOG-API-KEY-XXX",
+    "api-key": "X-API-KEY-XXX",
+    "User-Agent": "X-USER-AGENT-XXX",
+    "apim-request-id:": "X-API-CLIENT-REQUEST-ID-XXX",
+    "azureml-model-session": "AZUREML-MODEL-SESSION-XXX",
+    "x-ms-client-request-id": "X-MS-CLIENT-REQUEST-ID-XXX",
+    "x-ms-region": "X-MS-REGION-XXX",
+    "apim-request-id": "APIM-REQUEST-ID-XXX",
+    "x-api-key": "X-API-KEY-XXX",
+    "anthropic-organization-id": "ANTHROPIC-ORGANIZATION-ID-XXX",
+    "request-id": "REQUEST-ID-XXX",
+    "anthropic-ratelimit-input-tokens-limit": "ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX",
+    "anthropic-ratelimit-input-tokens-remaining": "ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX",
+    "anthropic-ratelimit-input-tokens-reset": "ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX",
+    "anthropic-ratelimit-output-tokens-limit": "ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX",
+    "anthropic-ratelimit-output-tokens-remaining": "ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX",
+    "anthropic-ratelimit-output-tokens-reset": "ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX",
+    "anthropic-ratelimit-tokens-limit": "ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX",
+    "anthropic-ratelimit-tokens-remaining": "ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX",
+    "anthropic-ratelimit-tokens-reset": "ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX",
+    "x-amz-date": "X-AMZ-DATE-XXX",
+    "amz-sdk-invocation-id": "AMZ-SDK-INVOCATION-ID-XXX",
+    "accept-encoding": "ACCEPT-ENCODING-XXX",
+    "x-amzn-requestid": "X-AMZN-REQUESTID-XXX",
+    "x-amzn-RequestId": "X-AMZN-REQUESTID-XXX",
 }
 
 
@@ -105,6 +129,8 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
         for variant in [header_name, header_name.upper(), header_name.title()]:
             if variant in request.headers:
                 request.headers[variant] = [replacement]
+
+    request.method = request.method.upper()
     return request
 
 
@@ -158,6 +184,7 @@ def vcr_config(vcr_cassette_dir: str) -> dict[str, Any]:
         "before_record_request": _filter_request_headers,
         "before_record_response": _filter_response_headers,
         "filter_query_parameters": ["key"],
+        "match_on": ["method", "scheme", "host", "port", "path"],
     }
 
     if os.getenv("GITHUB_ACTIONS") == "true":
