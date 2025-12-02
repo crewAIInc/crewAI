@@ -44,6 +44,15 @@ class JSONKnowledgeSource(BaseFileKnowledgeSource):
         self.chunks.extend(new_chunks)
         self._save_documents()
 
+    async def aadd(self) -> None:
+        """Add JSON file content asynchronously."""
+        content_str = (
+            str(self.content) if isinstance(self.content, dict) else self.content
+        )
+        new_chunks = self._chunk_text(content_str)
+        self.chunks.extend(new_chunks)
+        await self._asave_documents()
+
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
         return [
