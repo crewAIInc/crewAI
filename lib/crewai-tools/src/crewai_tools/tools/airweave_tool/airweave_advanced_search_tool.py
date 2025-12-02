@@ -133,8 +133,23 @@ class AirweaveAdvancedSearchTool(BaseTool):
                 import subprocess
                 try:
                     subprocess.run(["uv", "add", "airweave-sdk"], check=True)  # noqa: S607
-                    # Import after installation
-                    from airweave import AirweaveSDK, AsyncAirweaveSDK
+                    # Import after installation and update module-level variables
+                    from airweave import (
+                        AirweaveSDK as _AirweaveSDK,
+                        AsyncAirweaveSDK as _AsyncAirweaveSDK,
+                        Filter as _Filter,
+                        FieldCondition as _FieldCondition,
+                        MatchValue as _MatchValue
+                    )
+                    
+                    # Update module namespace to ensure later references work
+                    import crewai_tools.tools.airweave_tool.airweave_advanced_search_tool as airweave_module
+                    airweave_module.AirweaveSDK = _AirweaveSDK
+                    airweave_module.AsyncAirweaveSDK = _AsyncAirweaveSDK
+                    airweave_module.Filter = _Filter
+                    airweave_module.FieldCondition = _FieldCondition
+                    airweave_module.MatchValue = _MatchValue
+                    airweave_module.AIRWEAVE_AVAILABLE = True
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install airweave-sdk package") from e
             else:
