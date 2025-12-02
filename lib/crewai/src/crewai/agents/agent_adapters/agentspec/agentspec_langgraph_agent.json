@@ -1,0 +1,98 @@
+{
+    "component_type": "Agent",
+    "id": "ac21cf34-ba2c-4761-9c69-7113265e4949",
+    "name": "langgraph_assistant",
+    "description": null,
+    "metadata": {},
+    "inputs": [],
+    "outputs": [],
+    "llm_config": {
+        "component_type": "VllmConfig",
+        "id": "e674a7c1-1f8a-4711-859a-06c038cf82d4",
+        "name": "/storage/models/Llama-3.1-70B-Instruct",
+        "description": null,
+        "metadata": {},
+        "default_generation_parameters": null,
+        "url": "llama70b.wayflow.oraclecorp.com",
+        "model_id": "/storage/models/Llama-3.1-70B-Instruct"
+    },
+    "system_prompt": "Use tools to solve tasks.",
+    "tools": [
+        {
+            "component_type": "ServerTool",
+            "id": "fddef689-d879-4862-838d-9ce71474860c",
+            "name": "add",
+            "description": "Adds `a` and `b`.\n\n    Args:\n        a: First int\n        b: Second int",
+            "metadata": {},
+            "inputs": [
+                {
+                    "properties": {
+                        "a": {
+                            "type": "integer"
+                        },
+                        "b": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "a",
+                        "b"
+                    ],
+                    "type": "object"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "component_type": "ServerTool",
+            "id": "0efa0cf5-16ea-4a67-9a53-9707d3cbabd4",
+            "name": "multiply",
+            "description": "Multiply `a` and `b`.\n\n    Args:\n        a: First int\n        b: Second int",
+            "metadata": {},
+            "inputs": [
+                {
+                    "properties": {
+                        "a": {
+                            "type": "integer"
+                        },
+                        "b": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "a",
+                        "b"
+                    ],
+                    "type": "object"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "component_type": "ServerTool",
+            "id": "c79081f5-a240-4846-b5eb-a956fa078182",
+            "name": "divide",
+            "description": "Divide `a` and `b`.\n\n    Args:\n        a: First int\n        b: Second int",
+            "metadata": {},
+            "inputs": [
+                {
+                    "properties": {
+                        "a": {
+                            "type": "integer"
+                        },
+                        "b": {
+                            "type": "integer"
+                        }
+                    },
+                    "required": [
+                        "a",
+                        "b"
+                    ],
+                    "type": "object"
+                }
+            ],
+            "outputs": []
+        }
+    ],
+    "agentspec_version": "25.4.1"
+}
