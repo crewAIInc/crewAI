@@ -22,6 +22,11 @@ from crewai.utilities.printer import Printer
 _printer = Printer()
 
 
+def _is_async_callable(func: Callable[..., Any]) -> bool:
+    """Check if a callable is async."""
+    return asyncio.iscoroutinefunction(func)
+
+
 class EnvVar(BaseModel):
     name: str
     description: str
@@ -55,7 +60,7 @@ class BaseTool(BaseModel, ABC):
         default=False, description="Flag to check if the description has been updated."
     )
 
-    cache_function: Callable = Field(
+    cache_function: Callable[..., bool] = Field(
         default=lambda _args=None, _result=None: True,
         description="Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.",
     )
@@ -123,6 +128,35 @@ class BaseTool(BaseModel, ABC):
 
         return result
 
+    async def arun(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute the tool asynchronously.
+
+        Args:
+            *args: Positional arguments to pass to the tool.
+            **kwargs: Keyword arguments to pass to the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
+        result = await self._arun(*args, **kwargs)
+        self.current_usage_count += 1
+        return result
+
+    async def _arun(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Async implementation of the tool. Override for async support."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement _arun. "
+            "Override _arun for async support or use run() for sync execution."
+        )
+
     def reset_usage_count(self) -> None:
         """Reset the current usage count to zero."""
         self.current_usage_count = 0
@@ -133,7 +167,17 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """Here goes the actual implementation of the tool."""
+        """Sync implementation of the tool.
+
+        Subclasses must implement this method for synchronous execution.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
 
     def to_structured_tool(self) -> CrewStructuredTool:
         """Convert this tool to a CrewStructuredTool instance."""
@@ -239,18 +283,31 @@ class BaseTool(BaseModel, ABC):
 
         if args:
             args_str = ", ".join(BaseTool._get_arg_annotations(arg) for arg in args)
-            return f"{origin.__name__}[{args_str}]"
+            return str(f"{origin.__name__}[{args_str}]")
 
-        return origin.__name__
+        return str(origin.__name__)
 
 
 class Tool(BaseTool):
-    """The function that will be executed when the tool is called."""
+    """Tool that wraps a callable function.
 
-    func: Callable
+    The function can be either synchronous or asynchronous.
+    """
+
+    func: Callable[..., Any]
 
     def _run(self, *args: Any, **kwargs: Any) -> Any:
+        """Execute the wrapped function."""
         return self.func(*args, **kwargs)
+
+    async def _arun(self, *args: Any, **kwargs: Any) -> Any:
+        """Execute the wrapped function asynchronously."""
+        if _is_async_callable(self.func):
+            return await self.func(*args, **kwargs)
+        raise NotImplementedError(
+            f"{self.name} does not have an async function. "
+            "Use run() for sync execution or provide an async function."
+        )
 
     @classmethod
     def from_langchain(cls, tool: Any) -> Tool:
@@ -312,19 +369,23 @@ def to_langchain(
 
 
 def tool(
-    *args, result_as_answer: bool = False, max_usage_count: int | None = None
-) -> Callable:
-    """
-    Decorator to create a tool from a function.
+    *args: Callable[..., Any] | str,
+    result_as_answer: bool = False,
+    max_usage_count: int | None = None,
+) -> Callable[[Callable[..., Any]], Tool] | Tool:
+    """Decorator to create a tool from a function.
 
     Args:
         *args: Positional arguments, either the function to decorate or the tool name.
         result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
         max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
+
+    Returns:
+        A Tool instance or a decorator that creates a Tool instance.
     """
 
-    def _make_with_name(tool_name: str) -> Callable:
-        def _make_tool(f: Callable) -> BaseTool:
+    def _make_with_name(tool_name: str) -> Callable[[Callable[..., Any]], Tool]:
+        def _make_tool(f: Callable[..., Any]) -> Tool:
             if f.__doc__ is None:
                 raise ValueError("Function must have a docstring")
             if f.__annotations__ is None:
