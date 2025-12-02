@@ -382,13 +382,13 @@ def test_azure_raises_error_when_endpoint_missing():
             AzureCompletion(model="gpt-4", api_key="test-key")
 
 
-def test_azure_raises_error_when_api_key_missing():
-    """Test that AzureCompletion raises ValueError when API key is missing"""
+def test_azure_raises_error_when_no_auth_provided():
+    """Test that AzureCompletion raises ValueError when no authentication is provided"""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
     # Clear environment variables
     with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="Azure API key is required"):
+        with pytest.raises(ValueError, match="Azure authentication is required"):
             AzureCompletion(model="gpt-4", endpoint="https://test.openai.azure.com")
 
 
@@ -1113,3 +1113,207 @@ def test_azure_completion_params_preparation_with_drop_params():
         params = llm._prepare_completion_params(messages)
 
         assert params.get('stop') == None
+
+
+def test_azure_ad_token_provider_authentication():
+    """
+    Test that AzureCompletion can be initialized with azure_ad_token_provider
+    for Azure AD token-based authentication instead of API keys.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Mock token provider that returns a string token
+    def mock_token_provider():
+        return "mock-azure-ad-token"
+
+    # Clear environment variables to ensure no API key is used
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            endpoint="https://test.openai.azure.com",
+            azure_ad_token_provider=mock_token_provider
+        )
+
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
+        assert completion.api_key is None
+
+
+def test_azure_ad_token_provider_with_access_token():
+    """
+    Test that azure_ad_token_provider works when it returns an AccessToken object.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion, _TokenProviderCredential
+    from azure.core.credentials import AccessToken
+
+    # Mock token provider that returns an AccessToken object
+    mock_access_token = AccessToken("mock-token-string", 1234567890)
+
+    def mock_token_provider():
+        return mock_access_token
+
+    # Test the _TokenProviderCredential wrapper
+    credential = _TokenProviderCredential(mock_token_provider)
+    token = credential.get_token("https://cognitiveservices.azure.com/.default")
+
+    assert token.token == "mock-token-string"
+    assert token.expires_on == 1234567890
+
+
+def test_azure_ad_token_provider_with_string_token():
+    """
+    Test that azure_ad_token_provider works when it returns a plain string token.
+    """
+    from crewai.llms.providers.azure.completion import _TokenProviderCredential
+
+    # Mock token provider that returns a plain string
+    def mock_token_provider():
+        return "plain-string-token"
+
+    credential = _TokenProviderCredential(mock_token_provider)
+    token = credential.get_token("https://cognitiveservices.azure.com/.default")
+
+    assert token.token == "plain-string-token"
+    # Should have a default expiry time (approximately 1 hour from now)
+    assert token.expires_on > 0
+
+
+def test_azure_credential_authentication():
+    """
+    Test that AzureCompletion can be initialized with a TokenCredential instance.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.credentials import AccessToken, TokenCredential
+
+    # Create a mock TokenCredential
+    class MockTokenCredential(TokenCredential):
+        def get_token(self, *scopes, **kwargs):
+            return AccessToken("mock-credential-token", 1234567890)
+
+    mock_credential = MockTokenCredential()
+
+    # Clear environment variables to ensure no API key is used
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            endpoint="https://test.openai.azure.com",
+            credential=mock_credential
+        )
+
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
+        assert completion.api_key is None
+
+
+def test_azure_credential_takes_precedence_over_api_key():
+    """
+    Test that credential parameter takes precedence over api_key when both are provided.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.credentials import AccessToken, TokenCredential
+
+    class MockTokenCredential(TokenCredential):
+        def get_token(self, *scopes, **kwargs):
+            return AccessToken("credential-token", 1234567890)
+
+    mock_credential = MockTokenCredential()
+
+    # Provide both credential and api_key
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            endpoint="https://test.openai.azure.com",
+            api_key="should-not-be-used",
+            credential=mock_credential
+        )
+
+        # The completion should be created successfully with the credential
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
+
+
+def test_azure_ad_token_provider_takes_precedence_over_api_key():
+    """
+    Test that azure_ad_token_provider takes precedence over api_key when both are provided.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    def mock_token_provider():
+        return "token-provider-token"
+
+    # Provide both azure_ad_token_provider and api_key
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            endpoint="https://test.openai.azure.com",
+            api_key="should-not-be-used",
+            azure_ad_token_provider=mock_token_provider
+        )
+
+        # The completion should be created successfully with the token provider
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
+
+
+def test_azure_credential_takes_precedence_over_token_provider():
+    """
+    Test that credential takes precedence over azure_ad_token_provider when both are provided.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+    from azure.core.credentials import AccessToken, TokenCredential
+
+    class MockTokenCredential(TokenCredential):
+        def get_token(self, *scopes, **kwargs):
+            return AccessToken("credential-token", 1234567890)
+
+    mock_credential = MockTokenCredential()
+
+    def mock_token_provider():
+        return "token-provider-token"
+
+    # Provide both credential and azure_ad_token_provider
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            endpoint="https://test.openai.azure.com",
+            credential=mock_credential,
+            azure_ad_token_provider=mock_token_provider
+        )
+
+        # The completion should be created successfully with the credential
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
+
+
+def test_azure_ad_token_provider_via_llm_factory():
+    """
+    Test that azure_ad_token_provider can be passed through the LLM factory class.
+    """
+    def mock_token_provider():
+        return "mock-token"
+
+    # Clear environment variables
+    with patch.dict(os.environ, {
+        "AZURE_ENDPOINT": "https://test.openai.azure.com"
+    }, clear=True):
+        llm = LLM(
+            model="azure/gpt-4",
+            azure_ad_token_provider=mock_token_provider
+        )
+
+        from crewai.llms.providers.azure.completion import AzureCompletion
+        assert isinstance(llm, AzureCompletion)
+        assert llm.api_key is None
+
+
+def test_azure_base_url_parameter_for_endpoint():
+    """
+    Test that base_url parameter can be used as an alternative to endpoint.
+    This is useful for users migrating from other providers.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Clear environment variables
+    with patch.dict(os.environ, {}, clear=True):
+        completion = AzureCompletion(
+            model="gpt-4",
+            base_url="https://test.openai.azure.com",
+            api_key="test-key"
+        )
+
+        assert completion.endpoint == "https://test.openai.azure.com/openai/deployments/gpt-4"
