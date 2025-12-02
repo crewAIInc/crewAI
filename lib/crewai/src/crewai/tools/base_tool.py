@@ -318,7 +318,15 @@ class Tool(BaseTool, Generic[P, R]):
     func: Callable[P, R | Awaitable[R]]
 
     def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Execute the tool synchronously with type-safe parameters."""
+        """Executes the tool synchronously.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
         _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self.func(*args, **kwargs)
 
@@ -329,17 +337,44 @@ class Tool(BaseTool, Generic[P, R]):
         return result  # type: ignore[return-value]
 
     def _run(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Execute the wrapped function."""
+        """Executes the wrapped function.
+
+        Args:
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            The result of the function execution.
+        """
         return self.func(*args, **kwargs)  # type: ignore[return-value]
 
     async def arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Execute the tool asynchronously with type-safe parameters."""
+        """Executes the tool asynchronously.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
         result = await self._arun(*args, **kwargs)
         self.current_usage_count += 1
         return result
 
     async def _arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
-        """Execute the wrapped function asynchronously."""
+        """Executes the wrapped function asynchronously.
+
+        Args:
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            The result of the async function execution.
+
+        Raises:
+            NotImplementedError: If the wrapped function is not async.
+        """
         result = self.func(*args, **kwargs)
         if _is_awaitable(result):
             return await result
