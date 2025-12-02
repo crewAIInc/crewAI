@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Tell me a short fact"}],"model":"gpt-4o-mini","frequency_penalty":0.5,"max_tokens":100,"presence_penalty":0.3,"temperature":0.7,"top_p":0.9}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '179'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJNa9wwEL37Vww6r8N+O9lrIBS6tKdeWoKRpbGlVNYIaZw0hP3vxdoP
+        b9oUejFm3szTe2/mrQAQVosdCGUkqz648t7Eb9V6+7nSqZPYPOyt/vJ9/2n/YFbdrZiNE9Q8oeLz
+        1I2iPjhkS/4Iq4iScWRdVNv1ZntXrTYZ6EmjG8e6wOWayt56Wy7ny3U5r8rFiVwZsgqT2MGPAgDg
+        LX9HnV7jL7GD+exc6TEl2aHYXZoARCQ3VoRMySaWnsVsAhV5Rp+lf1VMYUiYwMhnBDYREQzKyGkH
+        /EIQhj5A44g0MAEbhM46l2bwYqzDXGBjo86NCSyf2yImBmrzf0P69eZaQcR2SHJMwQ/OXQHSe2I5
+        ppi9P56Qw8Wtoy5EatIfo6K13iZTR5SJ/OgsMQWR0UMB8JhTHd4FJUKkPnDN9BPzc4vlkU5Mu5zA
+        ZXUCmVi6qb66m33AVmtkaV262opQUhnU0+S0QjloS1dAceX5bzEfcR99W9/9D/0EKIWBUdchorbq
+        veGpLeJ46f9qu2ScBYuE8dkqrNliHPegsZWDO96fSK+Jsa9b6zuMIdrjEbah3ix0c7uWrWxEcSh+
+        AwAA//8DAGYleMGSAwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:15:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '656'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '918'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

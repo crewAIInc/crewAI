@@ -1,0 +1,43 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Tell me a short fact"}]}],
+      "inferenceConfig": {"maxTokens": 100, "temperature": 0.7, "topP": 0.9}}'
+    headers:
+      Content-Length:
+      - '151'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":1360},"output":{"message":{"content":[{"text":"Here''s
+        a short fact: Honeybees can recognize human faces by learning and remembering
+        facial features, similar to how we do."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":12,"outputTokens":31,"serverToolUsage":{},"totalTokens":43}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:50:57 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
