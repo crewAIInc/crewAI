@@ -230,3 +230,67 @@ def test_max_usage_count_is_respected():
     crew.kickoff()
     assert tool.max_usage_count == 5
     assert tool.current_usage_count == 5
+
+
+def test_tool_schema_respects_default_values():
+    """Test that tool schema correctly marks optional parameters with defaults."""
+
+    class ToolWithDefaults(BaseTool):
+        name: str = "tool_with_defaults"
+        description: str = "A tool with optional parameters"
+
+        def _run(
+            self,
+            query: str,
+            similarity_threshold: float | None = None,
+            limit: int = 5,
+        ) -> str:
+            return f"{query} - {similarity_threshold} - {limit}"
+
+    tool = ToolWithDefaults()
+    schema = tool.args_schema.model_json_schema()
+
+    assert schema["required"] == ["query"]
+
+    props = schema["properties"]
+    assert "default" in props["similarity_threshold"]
+    assert props["similarity_threshold"]["default"] is None
+    assert "default" in props["limit"]
+    assert props["limit"]["default"] == 5
+
+
+def test_tool_decorator_respects_default_values():
+    """Test that @tool decorator correctly handles optional parameters with defaults."""
+
+    @tool("search_tool")
+    def search_with_defaults(
+        query: str, max_results: int = 10, sort_by: str | None = None
+    ) -> str:
+        """Search for information with optional parameters."""
+        return f"{query} - {max_results} - {sort_by}"
+
+    schema = search_with_defaults.args_schema.model_json_schema()
+
+    assert schema["required"] == ["query"]
+
+    props = schema["properties"]
+    assert "default" in props["max_results"]
+    assert props["max_results"]["default"] == 10
+    assert "default" in props["sort_by"]
+    assert props["sort_by"]["default"] is None
+
+
+def test_tool_schema_all_required_when_no_defaults():
+    """Test that all parameters are required when no defaults are provided."""
+
+    class AllRequiredTool(BaseTool):
+        name: str = "all_required"
+        description: str = "All params required"
+
+        def _run(self, param1: str, param2: int, param3: bool) -> str:
+            return f"{param1} - {param2} - {param3}"
+
+    tool = AllRequiredTool()
+    schema = tool.args_schema.model_json_schema()
+
+    assert set(schema["required"]) == {"param1", "param2", "param3"}
