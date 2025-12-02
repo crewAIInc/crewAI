@@ -1089,6 +1089,50 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
   </Tab>
 </Tabs>
 
+## Async LLM Calls
+
+CrewAI supports asynchronous LLM calls for improved performance and concurrency in your AI workflows. Async calls allow you to run multiple LLM requests concurrently without blocking, making them ideal for high-throughput applications and parallel agent operations.
+
+<Tabs>
+  <Tab title="Basic Usage">
+    Use the `acall` method for asynchronous LLM requests:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def main():
+        llm = LLM(model="openai/gpt-4o")
+
+        # Single async call
+        response = await llm.acall("What is the capital of France?")
+        print(response)
+
+    asyncio.run(main())
+    ```
+
+    The `acall` method supports all the same parameters as the synchronous `call` method, including messages, tools, and callbacks.
+  </Tab>
+
+  <Tab title="With Streaming">
+    Combine async calls with streaming for real-time concurrent responses:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def stream_async():
+        llm = LLM(model="openai/gpt-4o", stream=True)
+
+        response = await llm.acall("Write a short story about AI")
+
+        print(response)
+
+    asyncio.run(stream_async())
+    ```
+  </Tab>
+</Tabs>
+
 ## Structured LLM Calls
 
 CrewAI supports structured responses from LLM calls by allowing you to define a `response_format` using a Pydantic model. This enables the framework to automatically parse and validate the output, making it easier to integrate the response into your application without manual post-processing.
