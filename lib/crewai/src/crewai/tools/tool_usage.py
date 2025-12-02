@@ -314,6 +314,10 @@ class ToolUsage:
             attempts=self._run_attempts,
         )
 
+        # Always increment tool usage counter (this is normally done in _format_result)
+        if self.task:
+            self.task.used_tools += 1
+
         # For add_image tool, preserve the raw dict result for multimodal handling
         # The result is a dict like {"role": "user", "content": [...]} that should
         # not be stringified
@@ -323,8 +327,19 @@ class ToolUsage:
             and tool.name.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         )
-        if not is_add_image_tool:
-            result = self._format_result(result=result)
+        if is_add_image_tool:
+            # For add_image, only apply format reminder if needed (skip stringification)
+            if self._should_remember_format():
+                # Append format reminder to the text content if present
+                format_reminder = self._i18n.slice("tools").format(
+                    tools=self.tools_description, tool_names=self.tools_names
+                )
+                if isinstance(result, dict) and "content" in result:
+                    # Add format reminder as a text item in the content list
+                    if isinstance(result["content"], list):
+                        result["content"].append({"type": "text", "text": format_reminder})
+        else:
+            result = self._format_result(result=result, skip_counter=True)
 
         data = {
             "result": result,
@@ -363,8 +378,8 @@ class ToolUsage:
 
         return result
 
-    def _format_result(self, result: Any) -> str:
-        if self.task:
+    def _format_result(self, result: Any, skip_counter: bool = False) -> str:
+        if self.task and not skip_counter:
             self.task.used_tools += 1
         if self._should_remember_format():
             result = self._remember_format(result=result)
