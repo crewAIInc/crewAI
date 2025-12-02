@@ -320,25 +320,15 @@ class ToolUsage:
 
         # For add_image tool, preserve the raw dict result for multimodal handling
         # The result is a dict like {"role": "user", "content": [...]} that should
-        # not be stringified
+        # not be stringified. We skip format reminders for add_image to avoid
+        # in-place mutation of cached results.
         add_image_tool = self._i18n.tools("add_image")
         is_add_image_tool = (
             isinstance(add_image_tool, dict)
             and tool.name.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         )
-        if is_add_image_tool:
-            # For add_image, only apply format reminder if needed (skip stringification)
-            if self._should_remember_format():
-                # Append format reminder to the text content if present
-                format_reminder = self._i18n.slice("tools").format(
-                    tools=self.tools_description, tool_names=self.tools_names
-                )
-                if isinstance(result, dict) and "content" in result:
-                    # Add format reminder as a text item in the content list
-                    if isinstance(result["content"], list):
-                        result["content"].append({"type": "text", "text": format_reminder})
-        else:
+        if not is_add_image_tool:
             result = self._format_result(result=result, skip_counter=True)
 
         data = {
