@@ -95,6 +95,7 @@ a2a = [
      "a2a-sdk~=0.3.10",
      "httpx-auth~=0.23.1",
      "httpx-sse~=0.4.0",
+     "aiocache[redis,memcached]~=0.12.3",
 ]
 
 
