@@ -15,10 +15,12 @@ interactions:
       answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
       is 5 + 3? Use the calculate_sum tool."}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
       authorization:
       - AUTHORIZATION-XXX
       connection:
@@ -29,20 +31,18 @@ interactions:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -54,16 +54,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLrtMwEN33K0ZeN1UfaUuz47JAvRsEArEgV4lrTxKDYxt7clW46r8j
-        p4+kPCQ2VjRnzsmZM/bLBIApyTJgouEkWqeTN/XefHhfVQ+fH6rw6fnn9vF7Jd4+uu07czyyaWTY
-        w1cUdGXNhG2dRlLWnGHhkRNG1cV2ky52r+abdQ+0VqKOtNpRks4WSauMSpbz5TqZp8kivdAbqwQG
-        lsGXCQDAS39Go0bikWUwn14rLYbAa2TZrQmAeatjhfEQVCBuiE0HUFhDaHrvZVnm5mNju7qhDPZg
-        ECWQBS4lrIEbCSvogjI1UIMguBad5oRF6Foga/UsN69FnDq7B69l2BvXUQYvOeM5y2A9hZwd4tfq
-        lJuyLMe+PFZd4DEc02k9ArgxlnjU6xN5uiCnWwba1s7bQ/iNyiplVGgKjzxYE+cNZB3r0dME4KnP
-        uruLjzlvW0cF2W/Y/265Ss96bNjxgKaXRTCyxPWItb2y7vQKicSVDqNtMcFFg3KgDqvlnVR2BExG
-        U//p5m/a58mVqf9HfgCEQEcoC+dRKnE/8dDmMT6Bf7XdUu4Ns4D+WQksSKGPm5BY8U6f7yULPwJh
-        W1TK1OidV+fLWblit91scJ3uDks2OU1+AQAA//8DAFFf5O2rAwAA
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxY8W0Zsy3ajWxv0EbSXFm0CtAokmlxLTCiSIFdFWsP/
+        XlB+SO4D6IUQdnZGs7PkLgFgSrIcmGg4idbp9EY9hbvZsrn7cP/l0/uv77JXzx9fv31UN2/u3U82
+        iQy7eURBJ9ZU2NZpJGXNARYeOWFUna1X2frFfLVa90BrJepIqx2l2XSWtsqodH41X6ZXWTrLjvTG
+        KoGB5fAtAQDY9Wc0aiQ+sxyuJqdKiyHwGll+bgJg3upYYTwEFYgbYpMBFNYQmt57VVWF+dzYrm4o
+        h1sIje20hC4gUIMguBad5oRl6FogazWQBS4lLIEbCYtpYV6KOHV+2Xsqw61xHeWwKxgvWA7LCRRs
+        E78W+8JUVTX25XHbBR7DMZ3WI4AbY4lHvT6RhyOyP2egbe283YTfqGyrjApN6ZEHa+K8gaxjPbpP
+        AB76rLuL+JjztnVUkn3C/nfzRXbQY8OOBzQ7LoKRJa5HrPWJdaFXSiSudBhtiwkuGpQDdVgt76Sy
+        IyAZTf2nm79pHyZXpv4f+QEQAh2hLJ1HqcTlxEObx/gE/tV2Trk3zAL670pgSQp93ITELe/04V6y
+        8CMQtuVWmRq98+pwObeuvF6vVrjMrjdzluyTXwAAAP//AwAHWkpkqwMAAA==
     headers:
+      CF-RAY:
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -71,25 +73,49 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 26 Nov 2025 23:01:06 GMT
+      - Wed, 03 Dec 2025 17:24:28 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '681'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '871'
       x-openai-proxy-wasm:
       - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
@@ -108,13 +134,15 @@ interactions:
       is gathered, return the following format:\n\n```\nThought: I now know the final
       answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
       is 5 + 3? Use the calculate_sum tool."},{"role":"assistant","content":"```\nThought:
-      I need to add 5 and 3 using the calculate_sum tool.\nAction: calculate_sum\nAction
+      I should use the calculate_sum tool to add 5 and 3.\nAction: calculate_sum\nAction
       Input: {\"a\": 5, \"b\": 3}\n```\nObservation: 8"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
       authorization:
       - AUTHORIZATION-XXX
       connection:
@@ -124,24 +152,21 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=EgGuO5hgnp06dK0YvjXSfnQgeEnicZKeNb2ArIOpoyY-1764198066-1.0.1.1-jvQ_vCOhpHIWpVRS05eJx9WTVcA55hbw8Jyv8IcsdmnsHaAIRr1qvQhsS1dduaPIAHMvbdK7MsU7gI.gu3nXi8A0eoUATyo5E9cyNMrAcf4;
-        _cfuvid=Df2VHLRwnlcPiknNSDOlKAm50W8V3YC3BdrRvxuFPdw-1764198066229-0.0.1.1-604800000
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -153,15 +178,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xSwW7UMBC95yssnzdVsk3T3dwQAmlBICF6QWyVeJ1JYuqMjT2h0Gr/HTnZblIo
-        EhdLM2/e87yZeYwY46rmBeOyEyR7q+PX7Q4/06fh3Xd8+KI2sOs+0oftw82bVrxP+CowzOEbSHpi
-        XUjTWw2kDE6wdCAIgmp6nWfpdpPk+Qj0pgYdaK2lOLtI416hitfJ+ipOsjjNTvTOKAmeF+xrxBhj
-        j+MbGsUafvKCJaunTA/eixZ4cS5ijDujQ4YL75UngcRXMygNEuDYe1VVe7zpzNB2VLAdQ3PP7sJD
-        HbBGodBMoL8Ht8e3Y/RqjAq22WNVVUtVB83gRbCGg9YLQCAaEmE0o5/bE3I8O9Cmtc4c/B9U3ihU
-        visdCG8wdOvJWD6ix4ix23FSwzPz3DrTWyrJ3MH43XpzOenxeUMzmm5OIBkSes5fJunqBb2yBhJK
-        +8WsuRSyg3qmzosRQ63MAogWrv/u5iXtybnC9n/kZ0BKsAR1aR3USj53PJc5CAf8r7LzlMeGuQf3
-        Q0koSYELm6ihEYOeror7X56gLxuFLTjr1HRajS2313kOV9n2sObRMfoNAAD//wMAfN+hHWkDAAA=
+        H4sIAAAAAAAAAwAAAP//jFJNb5wwEL3zKyyfl2ghBAi3KtJKTS9VlX5I3QiMGcBZY7v20DSK9r9X
+        hs1C2lTqxdLMm/c8b2aeA0KoaGhBKO8Z8sHI8EYc3Ff7pX663Y32w82Qffv46XNUR+Yu+7GjG8/Q
+        9QNwfGFdcD0YCSi0mmFugSF41ShLkyyP0zSfgEE3ID2tMxgmF1E4CCXCeBtfhdskjJITvdeCg6MF
+        +R4QQsjz9PpGVQO/aEG2m5fMAM6xDmhxLiKEWi19hjLnhEOmkG4WkGuFoKbeq6raq7tej12PBXlP
+        lH4kB/9gD6QViknClHsEu1e7KXo3RQXJ96qqqrWqhXZ0zFtTo5QrgCmlkfnRTH7uT8jx7EDqzlhd
+        uz+otBVKuL60wJxWvluH2tAJPQaE3E+TGl+Zp8bqwWCJ+gDTd3F+OevRZUMLGuUnEDUyueQvt9Hm
+        Db2yAWRCutWsKWe8h2ahLothYyP0CghWrv/u5i3t2blQ3f/ILwDnYBCa0lhoBH/teCmz4A/4X2Xn
+        KU8NUwf2p+BQogDrN9FAy0Y5XxV1Tw5hKFuhOrDGivm0WlNeZ2kKV8l1HdPgGPwGAAD//wMAJksH
+        jGkDAAA=
     headers:
+      CF-RAY:
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -169,25 +197,47 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 26 Nov 2025 23:01:06 GMT
+      - Wed, 03 Dec 2025 17:24:29 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '427'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '442'
       x-openai-proxy-wasm:
       - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
