@@ -23,25 +23,19 @@ def long_term_memory():
 
 def test_long_term_memory_save_events(long_term_memory):
     events = defaultdict(list)
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def on_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
-        if (
-            len(events["MemorySaveStartedEvent"]) == 1
-            and len(events["MemorySaveCompletedEvent"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def on_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
-        if (
-            len(events["MemorySaveStartedEvent"]) == 1
-            and len(events["MemorySaveCompletedEvent"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            condition.notify()
 
     memory = LongTermMemoryItem(
         agent="test_agent",
@@ -53,7 +47,13 @@ def test_long_term_memory_save_events(long_term_memory):
     )
     long_term_memory.save(memory)
 
-    assert all_events_received.wait(timeout=5), "Timeout waiting for save events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemorySaveStartedEvent"]) >= 1
+            and len(events["MemorySaveCompletedEvent"]) >= 1,
+            timeout=5,
+        )
+    assert success, "Timeout waiting for save events"
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
     assert len(events["MemorySaveFailedEvent"]) == 0
@@ -98,31 +98,31 @@ def test_long_term_memory_save_events(long_term_memory):
 
 def test_long_term_memory_search_events(long_term_memory):
     events = defaultdict(list)
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(MemoryQueryStartedEvent)
     def on_search_started(source, event):
-        events["MemoryQueryStartedEvent"].append(event)
-        if (
-            len(events["MemoryQueryStartedEvent"]) == 1
-            and len(events["MemoryQueryCompletedEvent"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            events["MemoryQueryStartedEvent"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(MemoryQueryCompletedEvent)
     def on_search_completed(source, event):
-        events["MemoryQueryCompletedEvent"].append(event)
-        if (
-            len(events["MemoryQueryStartedEvent"]) == 1
-            and len(events["MemoryQueryCompletedEvent"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            events["MemoryQueryCompletedEvent"].append(event)
+            condition.notify()
 
     test_query = "test query"
 
     long_term_memory.search(test_query, latest_n=5)
 
-    assert all_events_received.wait(timeout=5), "Timeout waiting for search events"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemoryQueryStartedEvent"]) >= 1
+            and len(events["MemoryQueryCompletedEvent"]) >= 1,
+            timeout=5,
+        )
+    assert success, "Timeout waiting for search events"
     assert len(events["MemoryQueryStartedEvent"]) == 1
     assert len(events["MemoryQueryCompletedEvent"]) == 1
     assert len(events["MemoryQueryFailedEvent"]) == 0

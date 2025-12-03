@@ -564,15 +564,22 @@ def test_tool_validate_input_error_event():
         patch("json_repair.repair_json", side_effect=Exception("Failed to repair")),
     ):
         received_events = []
+        condition = threading.Condition()
 
         @crewai_event_bus.on(ToolValidateInputErrorEvent)
         def event_handler(source, event):
-            received_events.append(event)
+            with condition:
+                received_events.append(event)
+                condition.notify()
 
         # Test invalid input
         invalid_input = "invalid json {[}"
         with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
+
+        with condition:
+            if not received_events:
+                condition.wait(timeout=5)
 
         # Verify event was emitted
         assert len(received_events) == 1, "Expected one event to be emitted"

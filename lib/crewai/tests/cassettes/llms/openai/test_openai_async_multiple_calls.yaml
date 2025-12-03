@@ -1,0 +1,214 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"What is 1+1?"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '77'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJPb5wwEMXvfAprrl2ihZIl2Wu06qFSD4mqSq0iZOwB3BrbtYe22Wi/
+        e2XYXcg/KRcO85s3fm+Yx4QxUBK2DETHSfROpzed/3pd31Hx7WHv938/7b74z3vd0O5W7L7DKips
+        /RMFnVQXwvZOIylrJiw8csI4NSs3xeXmuvxYjqC3EnWUtY7Swqa9MirN13mRrss0uzqqO6sEBtiy
+        HwljjD2O3+jTSPwHW7ZenSo9hsBbhO25iTHwVscK8BBUIG4IVjMU1hCa0XrGPrCM4e+B68Dyi2WX
+        x2YIPDo1g9YLwI2xxGPS0d/9kRzOjrRtnbd1eCaFRhkVusojD9bE1wNZByM9JIzdj8mHJ2HAeds7
+        qsj+wvG5rJjGwbzvGV4dGVniei7n+eqVYZVE4kqHxeJAcNGhnJXzlvkglV2AZBH5pZfXZk+xlWnf
+        M34GQqAjlJXzKJV4mndu8xiP8a2284pHwxDQ/1ECK1Lo42+Q2PBBTycC4SEQ9lWjTIveeTXdSeOq
+        +rIoN+tM1hKSQ/IfAAD//wMA1MCJGjUDAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:15:37 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '352'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '614'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"user","content":"What is 2+2?"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '77'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBb9QwEIXv+RXWXLupdkO6WfZWVUICceBAhRCqIq89Sdw6HmNPEFDt
+        f0dOtpu0FIlLDvPNG783mcdMCDAa9gJUJ1n13uY3Xbi9vvn4ubr9+nv35aEoP7zj5n2M92Q/NbBK
+        Cjrco+In1aWi3ltkQ27CKqBkTFM31ba82r6t3uxG0JNGm2St57ykvDfO5MW6KPN1lW92J3VHRmGE
+        vfiWCSHE4/hNPp3Gn7AX69VTpccYZYuwPzcJAYFsqoCM0USWjmE1Q0WO0Y3WC3EhCoHfB2mjKC+X
+        XQGbIcrk1A3WLoB0jlimpKO/uxM5nh1Zan2gQ3whhcY4E7s6oIzk0uuRycNIj5kQd2Py4VkY8IF6
+        zzXTA47PbcppHMz7nuHuxJhY2rlcFKtXhtUaWRobF4sDJVWHelbOW5aDNrQA2SLy315emz3FNq79
+        n/EzUAo9o659QG3U87xzW8B0jP9qO694NAwRww+jsGaDIf0GjY0c7HQiEH9Fxr5ujGsx+GCmO2l8
+        fbgqq+16ow8asmP2BwAA//8DAFoTX/E1AwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:15:38 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '390'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '542'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

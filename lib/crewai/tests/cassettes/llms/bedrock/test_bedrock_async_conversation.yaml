@@ -1,0 +1,44 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "My name is Alice."}]},
+      {"role": "assistant", "content": [{"text": "Hello Alice! Nice to meet you."}]},
+      {"role": "user", "content": [{"text": "What is my name?"}]}], "inferenceConfig":
+      {}}'
+    headers:
+      Content-Length:
+      - '240'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":622},"output":{"message":{"content":[{"text":"Your
+        name is Alice."}],"role":"assistant"}},"stopReason":"end_turn","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":31,"outputTokens":8,"serverToolUsage":{},"totalTokens":39}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '330'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:51:04 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

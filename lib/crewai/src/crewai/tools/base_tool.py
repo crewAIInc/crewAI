@@ -2,9 +2,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from inspect import signature
-from typing import Any, cast, get_args, get_origin
+from typing import (
+    Any,
+    Generic,
+    ParamSpec,
+    TypeVar,
+    cast,
+    get_args,
+    get_origin,
+    overload,
+)
 
 from pydantic import (
     BaseModel,
@@ -14,12 +23,26 @@ from pydantic import (
     create_model,
     field_validator,
 )
+from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.printer import Printer
 
 
 _printer = Printer()
+
+P = ParamSpec("P")
+R = TypeVar("R", covariant=True)
+
+
+def _is_async_callable(func: Callable[..., Any]) -> bool:
+    """Check if a callable is async."""
+    return asyncio.iscoroutinefunction(func)
+
+
+def _is_awaitable(value: R | Awaitable[R]) -> TypeIs[Awaitable[R]]:
+    """Type narrowing check for awaitable values."""
+    return asyncio.iscoroutine(value) or asyncio.isfuture(value)
 
 
 class EnvVar(BaseModel):
@@ -55,7 +78,7 @@ class BaseTool(BaseModel, ABC):
         default=False, description="Flag to check if the description has been updated."
     )
 
-    cache_function: Callable = Field(
+    cache_function: Callable[..., bool] = Field(
         default=lambda _args=None, _result=None: True,
         description="Function that will be used to determine if the tool should be cached, should return a boolean. If None, the tool will be cached.",
     )
@@ -123,6 +146,35 @@ class BaseTool(BaseModel, ABC):
 
         return result
 
+    async def arun(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Execute the tool asynchronously.
+
+        Args:
+            *args: Positional arguments to pass to the tool.
+            **kwargs: Keyword arguments to pass to the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
+        result = await self._arun(*args, **kwargs)
+        self.current_usage_count += 1
+        return result
+
+    async def _arun(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """Async implementation of the tool. Override for async support."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement _arun. "
+            "Override _arun for async support or use run() for sync execution."
+        )
+
     def reset_usage_count(self) -> None:
         """Reset the current usage count to zero."""
         self.current_usage_count = 0
@@ -133,7 +185,17 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        """Here goes the actual implementation of the tool."""
+        """Sync implementation of the tool.
+
+        Subclasses must implement this method for synchronous execution.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
 
     def to_structured_tool(self) -> CrewStructuredTool:
         """Convert this tool to a CrewStructuredTool instance."""
@@ -239,21 +301,90 @@ class BaseTool(BaseModel, ABC):
 
         if args:
             args_str = ", ".join(BaseTool._get_arg_annotations(arg) for arg in args)
-            return f"{origin.__name__}[{args_str}]"
+            return str(f"{origin.__name__}[{args_str}]")
 
-        return origin.__name__
+        return str(origin.__name__)
 
 
-class Tool(BaseTool):
-    """The function that will be executed when the tool is called."""
+class Tool(BaseTool, Generic[P, R]):
+    """Tool that wraps a callable function.
 
-    func: Callable
 
-    def _run(self, *args: Any, **kwargs: Any) -> Any:
-        return self.func(*args, **kwargs)
+    Type Parameters:
+        P: ParamSpec capturing the function's parameters.
+        R: The return type of the function.
+    """
+
+    func: Callable[P, R | Awaitable[R]]
+
+    def run(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        """Executes the tool synchronously.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
+        _printer.print(f"Using Tool: {self.name}", color="cyan")
+        result = self.func(*args, **kwargs)
+
+        if asyncio.iscoroutine(result):
+            result = asyncio.run(result)
+
+        self.current_usage_count += 1
+        return result  # type: ignore[return-value]
+
+    def _run(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        """Executes the wrapped function.
+
+        Args:
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            The result of the function execution.
+        """
+        return self.func(*args, **kwargs)  # type: ignore[return-value]
+
+    async def arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        """Executes the tool asynchronously.
+
+        Args:
+            *args: Positional arguments for the tool.
+            **kwargs: Keyword arguments for the tool.
+
+        Returns:
+            The result of the tool execution.
+        """
+        result = await self._arun(*args, **kwargs)
+        self.current_usage_count += 1
+        return result
+
+    async def _arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        """Executes the wrapped function asynchronously.
+
+        Args:
+            *args: Positional arguments for the function.
+            **kwargs: Keyword arguments for the function.
+
+        Returns:
+            The result of the async function execution.
+
+        Raises:
+            NotImplementedError: If the wrapped function is not async.
+        """
+        result = self.func(*args, **kwargs)
+        if _is_awaitable(result):
+            return await result
+        raise NotImplementedError(
+            f"{self.name} does not have an async function. "
+            "Use run() for sync execution or provide an async function."
+        )
 
     @classmethod
-    def from_langchain(cls, tool: Any) -> Tool:
+    def from_langchain(cls, tool: Any) -> Tool[..., Any]:
         """Create a Tool instance from a CrewStructuredTool.
 
         This method takes a CrewStructuredTool object and converts it into a
@@ -261,10 +392,10 @@ class Tool(BaseTool):
         attribute and infers the argument schema if not explicitly provided.
 
         Args:
-            tool (Any): The CrewStructuredTool object to be converted.
+            tool: The CrewStructuredTool object to be converted.
 
         Returns:
-            Tool: A new Tool instance created from the provided CrewStructuredTool.
+            A new Tool instance created from the provided CrewStructuredTool.
 
         Raises:
             ValueError: If the provided tool does not have a callable 'func' attribute.
@@ -308,37 +439,83 @@ class Tool(BaseTool):
 def to_langchain(
     tools: list[BaseTool | CrewStructuredTool],
 ) -> list[CrewStructuredTool]:
+    """Convert a list of tools to CrewStructuredTool instances."""
     return [t.to_structured_tool() if isinstance(t, BaseTool) else t for t in tools]
 
 
+P2 = ParamSpec("P2")
+R2 = TypeVar("R2")
+
+
+@overload
+def tool(func: Callable[P2, R2], /) -> Tool[P2, R2]: ...
+
+
+@overload
 def tool(
-    *args, result_as_answer: bool = False, max_usage_count: int | None = None
-) -> Callable:
-    """
-    Decorator to create a tool from a function.
+    name: str,
+    /,
+    *,
+    result_as_answer: bool = ...,
+    max_usage_count: int | None = ...,
+) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
+
+
+@overload
+def tool(
+    *,
+    result_as_answer: bool = ...,
+    max_usage_count: int | None = ...,
+) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
+
+
+def tool(
+    *args: Callable[P2, R2] | str,
+    result_as_answer: bool = False,
+    max_usage_count: int | None = None,
+) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
+    """Decorator to create a Tool from a function.
+
+    Can be used in three ways:
+    1. @tool - decorator without arguments, uses function name
+    2. @tool("name") - decorator with custom name
+    3. @tool(result_as_answer=True) - decorator with options
 
     Args:
-        *args: Positional arguments, either the function to decorate or the tool name.
-        result_as_answer: Flag to indicate if the tool result should be used as the final agent answer.
-        max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
+        *args: Either the function to decorate or a custom tool name.
+        result_as_answer: If True, the tool result becomes the final agent answer.
+        max_usage_count: Maximum times this tool can be used. None means unlimited.
+
+    Returns:
+        A Tool instance.
+
+    Example:
+        @tool
+        def greet(name: str) -> str:
+            '''Greet someone.'''
+            return f"Hello, {name}!"
+
+        result = greet.run("World")
     """
 
-    def _make_with_name(tool_name: str) -> Callable:
-        def _make_tool(f: Callable) -> BaseTool:
+    def _make_with_name(tool_name: str) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]:
+        def _make_tool(f: Callable[P2, R2]) -> Tool[P2, R2]:
             if f.__doc__ is None:
                 raise ValueError("Function must have a docstring")
-            if f.__annotations__ is None:
+
+            func_annotations = getattr(f, "__annotations__", None)
+            if func_annotations is None:
                 raise ValueError("Function must have type annotations")
 
             class_name = "".join(tool_name.split()).title()
-            args_schema = cast(
+            tool_args_schema = cast(
                 type[PydanticBaseModel],
                 type(
                     class_name,
                     (PydanticBaseModel,),
                     {
                         "__annotations__": {
-                            k: v for k, v in f.__annotations__.items() if k != "return"
+                            k: v for k, v in func_annotations.items() if k != "return"
                         },
                     },
                 ),
@@ -348,10 +525,9 @@ def tool(
                 name=tool_name,
                 description=f.__doc__,
                 func=f,
-                args_schema=args_schema,
+                args_schema=tool_args_schema,
                 result_as_answer=result_as_answer,
                 max_usage_count=max_usage_count,
-                current_usage_count=0,
             )
 
         return _make_tool
@@ -360,4 +536,10 @@ def tool(
         return _make_with_name(args[0].__name__)(args[0])
     if len(args) == 1 and isinstance(args[0], str):
         return _make_with_name(args[0])
+    if len(args) == 0:
+
+        def decorator(f: Callable[P2, R2]) -> Tool[P2, R2]:
+            return _make_with_name(f.__name__)(f)
+
+        return decorator
     raise ValueError("Invalid arguments")
