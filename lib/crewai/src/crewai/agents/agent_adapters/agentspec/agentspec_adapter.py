@@ -10,6 +10,31 @@ from crewai.utilities.types import LLMMessage
 
 
 class AgentSpecAgentAdapter(BaseAgentAdapter):
+    """
+    Adapter that lets CrewAI import agents defined using Oracle's AgentSpec specification language.
+    (https://github.com/oracle/agent-spec.git)
+
+    This adapter wraps around the crewaiagentspecadapter which provides all required
+    conversion methods for loading an AgentSpec representation into a CrewAI Agent.
+    (https://github.com/oracle/agent-spec/tree/main/adapters/crewaiagentspecadapter)
+
+    When the conversion is done, this adapter delegates required methods to corresponding
+    methods of the underlying converted agent.
+
+    Supported features:
+    - ReAct-style agents
+    - Tools
+
+    Not currently supported:
+    - Flows
+    - Multi-agent patterns
+
+    Installation:
+    1) git clone https://github.com/oracle/agent-spec.git
+    2) cd agent-spec
+    3) pip install pyagentspec
+    4) pip install adapters/crewaiagentspecadapter
+    """
 
     _crewai_agent: CrewAIAgent = PrivateAttr()
     function_calling_llm: Any = Field(default=None)
