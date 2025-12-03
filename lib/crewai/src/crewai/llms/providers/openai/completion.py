@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any
 
 import httpx
-from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI
+from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
@@ -515,59 +516,52 @@ class OpenAICompletion(BaseLLM):
         tool_calls = {}
 
         if response_model:
-            completion_stream: Iterator[ChatCompletionChunk] = (
-                self.client.chat.completions.create(**params)
-            )
+            parse_params = {
+                k: v
+                for k, v in params.items()
+                if k not in ("response_format", "stream")
+            }
 
-            accumulated_content = ""
-            for chunk in completion_stream:
-                if not chunk.choices:
-                    continue
+            stream: ChatCompletionStream[BaseModel]
+            with self.client.beta.chat.completions.stream(
+                **parse_params, response_format=response_model
+            ) as stream:
+                for chunk in stream:
+                    if chunk.type == "content.delta":
+                        delta_content = chunk.delta
+                        if delta_content:
+                            self._emit_stream_chunk_event(
+                                chunk=delta_content,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
 
-                choice = chunk.choices[0]
-                delta: ChoiceDelta = choice.delta
+                final_completion = stream.get_final_completion()
+                if final_completion and final_completion.choices:
+                    parsed_result = final_completion.choices[0].message.parsed
+                    if parsed_result:
+                        structured_json = parsed_result.model_dump_json()
+                        self._emit_call_completed_event(
+                            response=structured_json,
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params["messages"],
+                        )
+                        return structured_json
 
-                if delta.content:
-                    accumulated_content += delta.content
-                    self._emit_stream_chunk_event(
-                        chunk=delta.content,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
+            logging.error("Failed to get parsed result from stream")
+            return ""
 
-            try:
-                parsed_object = response_model.model_validate_json(accumulated_content)
-                structured_json = parsed_object.model_dump_json()
-
-                self._emit_call_completed_event(
-                    response=structured_json,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-
-                return structured_json
-            except Exception as e:
-                logging.error(f"Failed to parse structured output from stream: {e}")
-                self._emit_call_completed_event(
-                    response=accumulated_content,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-                return accumulated_content
-
-        stream: Iterator[ChatCompletionChunk] = self.client.chat.completions.create(
-            **params
+        completion_stream: Stream[ChatCompletionChunk] = (
+            self.client.chat.completions.create(**params)
         )
 
-        for chunk in stream:
-            if not chunk.choices:
+        for completion_chunk in completion_stream:
+            if not completion_chunk.choices:
                 continue
 
-            choice = chunk.choices[0]
+            choice = completion_chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
 
             if chunk_delta.content:
