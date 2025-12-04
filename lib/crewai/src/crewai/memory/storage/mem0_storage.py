@@ -65,16 +65,40 @@ class Mem0Storage(Storage):
                 else Memory()
             )
 
-    def _create_filter_for_search(self):
+    def _create_filter_for_search(self, for_local_memory: bool = False):
         """
         Returns:
-            dict: A filter dictionary containing AND conditions for querying data.
-                - Includes user_id and agent_id if both are present.
-                - Includes user_id if only user_id is present.
-                - Includes agent_id if only agent_id is present.
+            dict: A filter dictionary for querying data.
+
+            For MemoryClient (for_local_memory=False):
+                Returns a dict with AND/OR conditions:
+                - Includes user_id and agent_id if both are present (OR).
+                - Includes user_id if only user_id is present (AND).
+                - Includes agent_id if only agent_id is present (AND).
                 - Includes run_id if memory_type is 'short_term' and
-                  mem0_run_id is present.
+                  mem0_run_id is present (AND).
+
+            For local Memory (for_local_memory=True):
+                Returns a simple dict with field-value pairs that the local
+                mem0 Memory class can convert to a valid filter expression.
+                Note: When both user_id and agent_id are present, only user_id
+                is included since local Memory doesn't support OR conditions.
         """
+        if for_local_memory:
+            filters: dict[str, Any] = {}
+            if self.memory_type == "short_term" and self.mem0_run_id:
+                filters["run_id"] = self.mem0_run_id
+            else:
+                user_id = self.config.get("user_id", "")
+                agent_id = self.config.get("agent_id", "")
+
+                if user_id:
+                    filters["user_id"] = user_id
+                if agent_id:
+                    filters["agent_id"] = agent_id
+
+            return filters
+
         filter = defaultdict(list)
 
         if self.memory_type == "short_term" and self.mem0_run_id:
@@ -176,16 +200,17 @@ class Mem0Storage(Storage):
             if self.memory_type == "short_term":
                 params["run_id"] = self.mem0_run_id
 
-        # Discard the filters for now since we create the filters
-        # automatically when the crew is created.
-
-        params["filters"] = self._create_filter_for_search()
         params["threshold"] = score_threshold
 
         if isinstance(self.memory, Memory):
+            # For local Memory, use simple dict filters instead of AND/OR format
+            params["filters"] = self._create_filter_for_search(for_local_memory=True)
             del params["metadata"], params["version"], params["output_format"]
             if params.get("run_id"):
                 del params["run_id"]
+        else:
+            # For MemoryClient, use AND/OR filter format
+            params["filters"] = self._create_filter_for_search(for_local_memory=False)
 
         results = self.memory.search(**params)
 
