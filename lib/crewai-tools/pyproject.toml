@@ -95,6 +95,9 @@ qdrant-client = [
 apify = [
     "langchain-apify>=0.1.2,<1.0.0",
 ]
+airweave = [
+    "airweave-sdk>=0.1.0",
+]
 
 databricks-sdk = [
     "databricks-sdk>=0.46.0",
