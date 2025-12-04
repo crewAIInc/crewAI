@@ -50,29 +50,72 @@ tool = WebsiteSearchTool(website='https://example.com')
 
 ## Customization Options
 
-By default, the tool uses OpenAI for both embeddings and summarization. To customize the model, you can use a config dictionary as follows:
-
+By default, the tool uses OpenAI for embeddings. To customize the embedding model, you can use a config dictionary as follows:
 
 ```python Code
 tool = WebsiteSearchTool(
     config=dict(
-        llm=dict(
-            provider="ollama", # or google, openai, anthropic, llama2, ...
+        embedding_model=dict(
+            provider="ollama",  # or openai, google-generativeai, azure, etc.
             config=dict(
-                model="llama2",
-                # temperature=0.5,
-                # top_p=1,
-                # stream=true,
-            ),
-        ),
-        embedder=dict(
-            provider="google-generativeai", # or openai, ollama, ...
-            config=dict(
-                model_name="gemini-embedding-001",
-                task_type="RETRIEVAL_DOCUMENT",
-                # title="Embeddings",
+                model_name="nomic-embed-text",
+                url="http://localhost:11434/api/embeddings",
             ),
         ),
     )
 )
 ```
+
+### Available Embedding Providers
+
+The following embedding providers are supported:
+
+- `openai` - OpenAI embeddings (default)
+- `ollama` - Ollama local embeddings
+- `google-generativeai` - Google Generative AI embeddings
+- `azure` - Azure OpenAI embeddings
+- `huggingface` - HuggingFace embeddings
+- `cohere` - Cohere embeddings
+- `voyageai` - Voyage AI embeddings
+- And more...
+
+### Example with Google Generative AI
+
+```python Code
+tool = WebsiteSearchTool(
+    config=dict(
+        embedding_model=dict(
+            provider="google-generativeai",
+            config=dict(
+                model_name="models/embedding-001",
+                task_type="RETRIEVAL_DOCUMENT",
+            ),
+        ),
+    )
+)
+```
+
+### Example with Azure OpenAI
+
+```python Code
+tool = WebsiteSearchTool(
+    config=dict(
+        embedding_model=dict(
+            provider="azure",
+            config=dict(
+                model="text-embedding-3-small",
+                api_key="your-api-key",
+                api_base="https://your-resource.openai.azure.com/",
+                api_version="2024-02-01",
+                deployment_id="your-deployment-id",
+            ),
+        ),
+    )
+)
+```
+
+<Note>
+The `llm` and `embedder` config keys from older documentation are deprecated. 
+Please use `embedding_model` instead. The `llm` key is not used by RAG tools - 
+the LLM for generation is controlled by the agent's LLM configuration.
+</Note>
