@@ -505,30 +505,43 @@ def test_openai_streaming_with_response_model():
 
     llm = LLM(model="openai/gpt-4o", stream=True)
 
-    with patch.object(llm.client.chat.completions, "create") as mock_create:
+    with patch.object(llm.client.beta.chat.completions, "stream") as mock_stream:
+        # Create mock chunks with content.delta event structure
         mock_chunk1 = MagicMock()
-        mock_chunk1.choices = [
-            MagicMock(delta=MagicMock(content='{"answer": "test", ', tool_calls=None))
-        ]
+        mock_chunk1.type = "content.delta"
+        mock_chunk1.delta = '{"answer": "test", '
 
         mock_chunk2 = MagicMock()
-        mock_chunk2.choices = [
-            MagicMock(
-                delta=MagicMock(content='"confidence": 0.95}', tool_calls=None)
-            )
-        ]
+        mock_chunk2.type = "content.delta"
+        mock_chunk2.delta = '"confidence": 0.95}'
 
-        mock_create.return_value = iter([mock_chunk1, mock_chunk2])
+        # Create mock final completion with parsed result
+        mock_parsed = TestResponse(answer="test", confidence=0.95)
+        mock_message = MagicMock()
+        mock_message.parsed = mock_parsed
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_final_completion = MagicMock()
+        mock_final_completion.choices = [mock_choice]
+
+        # Create mock stream context manager
+        mock_stream_obj = MagicMock()
+        mock_stream_obj.__enter__ = MagicMock(return_value=mock_stream_obj)
+        mock_stream_obj.__exit__ = MagicMock(return_value=None)
+        mock_stream_obj.__iter__ = MagicMock(return_value=iter([mock_chunk1, mock_chunk2]))
+        mock_stream_obj.get_final_completion = MagicMock(return_value=mock_final_completion)
+
+        mock_stream.return_value = mock_stream_obj
 
         result = llm.call("Test question", response_model=TestResponse)
 
         assert result is not None
         assert isinstance(result, str)
 
-        assert mock_create.called
-        call_kwargs = mock_create.call_args[1]
+        assert mock_stream.called
+        call_kwargs = mock_stream.call_args[1]
         assert call_kwargs["model"] == "gpt-4o"
-        assert call_kwargs["stream"] is True
+        assert call_kwargs["response_format"] == TestResponse
 
         assert "input" not in call_kwargs
         assert "text_format" not in call_kwargs

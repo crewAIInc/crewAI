@@ -237,7 +237,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
+    executor_context: CrewAgentExecutor | LiteAgent | None = None,
 ) -> str:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -727,7 +727,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | None, printer: Printer
+    executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
@@ -777,7 +777,7 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | None,
+    executor_context: CrewAgentExecutor | LiteAgent | None,
     answer: str,
     printer: Printer,
 ) -> str:

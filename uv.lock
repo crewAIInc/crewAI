@@ -113,6 +113,23 @@ wheels = [
 ]
 
 [[package]]
+name = "aiocache"
+version = "0.12.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/64/b945b8025a9d1e6e2138845f4022165d3b337f55f50984fbc6a4c0a1e355/aiocache-0.12.3.tar.gz", hash = "sha256:f528b27bf4d436b497a1d0d1a8f59a542c153ab1e37c3621713cb376d44c4713", size = 132196, upload-time = "2024-09-25T13:20:23.823Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/d7/15d67e05b235d1ed8c3ce61688fe4d84130e72af1657acadfaac3479f4cf/aiocache-0.12.3-py2.py3-none-any.whl", hash = "sha256:889086fc24710f431937b87ad3720a289f7fc31c4fd8b68e9f918b9bacd8270d", size = 28199, upload-time = "2024-09-25T13:20:22.688Z" },
+]
+
+[package.optional-dependencies]
+memcached = [
+    { name = "aiomcache" },
+]
+redis = [
+    { name = "redis" },
+]
+
+[[package]]
 name = "aiofiles"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -232,6 +249,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f1/23/b52debf471f7a1e42e362d959a3982bdcb4fe13a5d46e63d28868807a79c/aiolimiter-1.2.1.tar.gz", hash = "sha256:e02a37ea1a855d9e832252a105420ad4d15011505512a1a1d814647451b5cca9", size = 7185, upload-time = "2024-12-08T15:31:51.496Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f3/ba/df6e8e1045aebc4778d19b8a3a9bc1808adb1619ba94ca354d9ba17d86c3/aiolimiter-1.2.1-py3-none-any.whl", hash = "sha256:d3f249e9059a20badcb56b61601a83556133655c11d1eb3dd3e04ff069e5f3c7", size = 6711, upload-time = "2024-12-08T15:31:49.874Z" },
+]
+
+[[package]]
+name = "aiomcache"
+version = "0.8.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/0a/914d8df1002d88ca70679d192f6e16d113e6b5cbcc13c51008db9230025f/aiomcache-0.8.2.tar.gz", hash = "sha256:43b220d7f499a32a71871c4f457116eb23460fa216e69c1d32b81e3209e51359", size = 10640, upload-time = "2024-05-07T15:03:14.434Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a1/f8/78455f6377cbe85f335f4dbd40a807dafb72bd5fa05eb946f2ad0cec3d40/aiomcache-0.8.2-py3-none-any.whl", hash = "sha256:9d78d6b6e74e775df18b350b1cddfa96bd2f0a44d49ad27fa87759a3469cef5e", size = 10145, upload-time = "2024-05-07T15:03:12.003Z" },
 ]
 
 [[package]]
@@ -1142,6 +1171,7 @@ dependencies = [
 [package.optional-dependencies]
 a2a = [
     { name = "a2a-sdk" },
+    { name = "aiocache", extra = ["memcached", "redis"] },
     { name = "httpx-auth" },
     { name = "httpx-sse" },
 ]
@@ -1196,6 +1226,7 @@ watson = [
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=2.25.2" },
+    { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.71.0" },
     { name = "appdirs", specifier = "~=1.4.4" },
@@ -6644,6 +6675,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/5b/e0/b36010bddcf91444ff51179c076e4a09c513674a56758d7cfea4f6520e29/ratelimiter-1.2.0.post0.tar.gz", hash = "sha256:5c395dcabdbbde2e5178ef3f89b568a3066454a6ddc223b76473dac22f89b4f7", size = 9182, upload-time = "2017-12-12T00:33:38.783Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/80/2164fa1e863ad52cc8d870855fba0fbb51edd943edffd516d54b5f6f8ff8/ratelimiter-1.2.0.post0-py3-none-any.whl", hash = "sha256:a52be07bc0bb0b3674b4b304550f10c769bbb00fead3072e035904474259809f", size = 6642, upload-time = "2017-12-12T00:33:37.505Z" },
+]
+
+[[package]]
+name = "redis"
+version = "7.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "async-timeout", marker = "python_full_version < '3.11.3'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/c8/983d5c6579a411d8a99bc5823cc5712768859b5ce2c8afe1a65b37832c81/redis-7.1.0.tar.gz", hash = "sha256:b1cc3cfa5a2cb9c2ab3ba700864fb0ad75617b41f01352ce5779dabf6d5f9c3c", size = 4796669, upload-time = "2025-11-19T15:54:39.961Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/89/f0/8956f8a86b20d7bb9d6ac0187cf4cd54d8065bc9a1a09eb8011d4d326596/redis-7.1.0-py3-none-any.whl", hash = "sha256:23c52b208f92b56103e17c5d06bdc1a6c2c0b3106583985a76a18f83b265de2b", size = 354159, upload-time = "2025-11-19T15:54:38.064Z" },
 ]
 
 [[package]]

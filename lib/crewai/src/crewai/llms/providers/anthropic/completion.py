@@ -187,6 +187,9 @@ class AnthropicCompletion(BaseLLM):
                 messages
             )
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
                 formatted_messages, system_message, tools
@@ -494,7 +497,9 @@ class AnthropicCompletion(BaseLLM):
         if usage.get("total_tokens", 0) > 0:
             logging.info(f"Anthropic API usage: {usage}")
 
-        return content
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], content, from_agent
+        )
 
     def _handle_streaming_completion(
         self,
@@ -588,7 +593,9 @@ class AnthropicCompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     def _handle_tool_use_conversation(
         self,
