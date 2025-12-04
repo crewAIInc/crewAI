@@ -216,6 +216,9 @@ class AzureCompletion(BaseLLM):
             # Format messages for Azure
             formatted_messages = self._format_messages_for_azure(messages)
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
                 formatted_messages, tools, response_model
@@ -550,6 +553,10 @@ class AzureCompletion(BaseLLM):
                 messages=params["messages"],
             )
 
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
+
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
@@ -642,7 +649,9 @@ class AzureCompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     async def _ahandle_completion(
         self,
