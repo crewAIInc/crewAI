@@ -23,6 +23,8 @@ from a2a.types import (
     TextPart,
     TransportProtocol,
 )
+from aiocache import cached  # type: ignore[import-untyped]
+from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 import httpx
 from pydantic import BaseModel, Field, create_model
 
@@ -65,7 +67,7 @@ def _fetch_agent_card_cached(
         endpoint: A2A agent endpoint URL
         auth_hash: Hash of the auth object
         timeout: Request timeout
-        _ttl_hash: Time-based hash for cache invalidation (unused in body)
+        _ttl_hash: Time-based hash for cache invalidation
 
     Returns:
         Cached AgentCard
@@ -106,7 +108,18 @@ def fetch_agent_card(
         A2AClientHTTPError: If authentication fails
     """
     if use_cache:
-        auth_hash = hash((type(auth).__name__, id(auth))) if auth else 0
+        if auth:
+            auth_data = auth.model_dump_json(
+                exclude={
+                    "_access_token",
+                    "_token_expires_at",
+                    "_refresh_token",
+                    "_authorization_callback",
+                }
+            )
+            auth_hash = hash((type(auth).__name__, auth_data))
+        else:
+            auth_hash = 0
         _auth_store[auth_hash] = auth
         ttl_hash = int(time.time() // cache_ttl)
         return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
@@ -119,6 +132,26 @@ def fetch_agent_card(
         )
     finally:
         loop.close()
+
+
+@cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
+async def _fetch_agent_card_async_cached(
+    endpoint: str,
+    auth_hash: int,
+    timeout: int,
+) -> AgentCard:
+    """Cached async implementation of AgentCard fetching.
+
+    Args:
+        endpoint: A2A agent endpoint URL
+        auth_hash: Hash of the auth object
+        timeout: Request timeout in seconds
+
+    Returns:
+        Cached AgentCard object
+    """
+    auth = _auth_store.get(auth_hash)
+    return await _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
 
 
 async def _fetch_agent_card_async(
@@ -339,7 +372,22 @@ async def _execute_a2a_delegation_async(
     Returns:
         Dictionary with status, result/error, and new history
     """
-    agent_card = await _fetch_agent_card_async(endpoint, auth, timeout)
+    if auth:
+        auth_data = auth.model_dump_json(
+            exclude={
+                "_access_token",
+                "_token_expires_at",
+                "_refresh_token",
+                "_authorization_callback",
+            }
+        )
+        auth_hash = hash((type(auth).__name__, auth_data))
+    else:
+        auth_hash = 0
+    _auth_store[auth_hash] = auth
+    agent_card = await _fetch_agent_card_async_cached(
+        endpoint=endpoint, auth_hash=auth_hash, timeout=timeout
+    )
 
     validate_auth_against_agent_card(agent_card, auth)
 
@@ -556,6 +604,34 @@ async def _execute_a2a_delegation_async(
                         }
                         break
         except Exception as e:
+            if isinstance(e, A2AClientHTTPError):
+                error_msg = f"HTTP Error {e.status_code}: {e!s}"
+
+                error_message = Message(
+                    role=Role.agent,
+                    message_id=str(uuid.uuid4()),
+                    parts=[Part(root=TextPart(text=error_msg))],
+                    context_id=context_id,
+                    task_id=task_id,
+                )
+                new_messages.append(error_message)
+
+                crewai_event_bus.emit(
+                    None,
+                    A2AResponseReceivedEvent(
+                        response=error_msg,
+                        turn_number=turn_number,
+                        is_multiturn=is_multiturn,
+                        status="failed",
+                        agent_role=agent_role,
+                    ),
+                )
+                return {
+                    "status": "failed",
+                    "error": error_msg,
+                    "history": new_messages,
+                }
+
             current_exception: Exception | BaseException | None = e
             while current_exception:
                 if hasattr(current_exception, "response"):
@@ -752,4 +828,5 @@ def get_a2a_agents_and_response_model(
         Tuple of A2A agent IDs and response model
     """
     a2a_agents, agent_ids = extract_a2a_agent_ids_from_config(a2a_config=a2a_config)
+
     return a2a_agents, create_agent_response_model(agent_ids)
