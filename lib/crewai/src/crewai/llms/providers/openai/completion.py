@@ -190,6 +190,9 @@ class OpenAICompletion(BaseLLM):
 
             formatted_messages = self._format_messages(messages)
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             completion_params = self._prepare_completion_params(
                 messages=formatted_messages, tools=tools
             )
@@ -474,6 +477,10 @@ class OpenAICompletion(BaseLLM):
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"OpenAI API usage: {usage}")
+
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
@@ -629,7 +636,9 @@ class OpenAICompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     async def _ahandle_completion(
         self,
