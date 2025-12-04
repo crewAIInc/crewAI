@@ -1,0 +1,115 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Assistant. You are
+      a helpful test assistant\nYour personal goal is: Answer questions briefly\n\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"Say
+      ''Hello World'' and nothing else"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '540'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nK0Y+b6okZJuSW4VAFIq4rFQkqCLXmSQDjseynRZU7b8j
+        Z7ebFIrEJVLmzXt+b2YeEwBBrahBqEEGNVqdvqFxd331hW+2hD5scyrd5asPxe7j9edPb8UmMvju
+        O6rwxDpTPFqNgdgcYOVQBoyqeXVeVhcX1evtDIzcoo603oa0PMvTkQylRVZs06xM8/JIH5gUelHD
+        1wQA4HH+RqOmxZ+ihmzzVBnRe9mjqE9NAMKxjhUhvScfpAlis4CKTUAze98NPPVDqOEKDD+AkgZ6
+        ukeQ0McAII1/QPfNvCMjNVzOfzW8R60Zbtjpdq3rsJu8jOHMpPUKkMZwkHE4c6LbI7I/ZdDcW8d3
+        /g+q6MiQHxqH0rOJfn1gK2Z0nwDczrOansUX1vFoQxP4B87P5Vlx0BPLjlbo9ggGDlKv6nm1eUGv
+        aTFI0n41baGkGrBdqMtq5NQSr4BklfpvNy9pH5KT6f9HfgGUQhuwbazDltTzxEubw3jC/2o7TXk2
+        LDy6e1LYBEIXN9FiJyd9uCvhf/mAY9OR6dFZR4fj6mxTlFWeqarLzkWyT34DAAD//wMAP95PRmsD
+        AAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 03 Dec 2025 19:06:36 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '620'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1891'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
