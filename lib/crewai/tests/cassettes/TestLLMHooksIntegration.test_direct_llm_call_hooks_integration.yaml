@@ -1,0 +1,82 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Say hello"}],"model":"gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '74'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJNb9QwEL3nVww+b9Am7Ee7FyT2wCIQ0CJxqarItSdZg+Ox7AmwVPvf
+        KyftJv1A4uLDvHnP783MbQYgjBYbEGovWbXe5tvm6/bv5ZeDu5AmlubTzr///G778fKi+O6/iVli
+        0M0PVPzAeq2o9RbZkBtgFVAyJtVivVqUZbku3vRASxptojWe8wXlrXEmL+flIp+v8+Lsnr0nozCK
+        DVxlAAC3/Zt8Oo1/xAbms4dKizHKBsXm1AQgAtlUETJGE1k6FrMRVOQYXW99h9bSK9jRb1DSwQcY
+        CHCgDpi0PLydEgPWXZTJvOusnQDSOWKZwveWr++R48mkpcYHuolPqKI2zsR9FVBGcslQZPKiR48Z
+        wHU/jO5RPuEDtZ4rpp/Yf3c+qIlxA88xJpZ2LBdnsxe0Ko0sjY2TUQol1R71yBznLjttaAJkk8TP
+        vbykPaQ2rvkf+RFQCj2jrnxAbdTjvGNbwHSe/2o7Tbg3LCKGX0ZhxQZD2oLGWnZ2OBoRD5GxrWrj
+        Ggw+mOFyal8tV3NZr3C5PBfZMbsDAAD//wMARXm1qUcDAAA=
+    headers:
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 27 Nov 2025 05:51:54 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+    status:
+      code: 200
+      message: OK
+version: 1
