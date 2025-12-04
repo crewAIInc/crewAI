@@ -35,6 +35,14 @@ from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.crews.crew_output import CrewOutput
+from crewai.crews.utils import (
+    StreamingContext,
+    check_conditional_skip,
+    enable_agent_streaming,
+    prepare_kickoff,
+    prepare_task_execution,
+    run_for_each_async,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_listener import EventListener
 from crewai.events.listeners.tracing.trace_listener import (
@@ -47,7 +55,6 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
-    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
     CrewTestStartedEvent,
@@ -74,7 +81,7 @@ from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.base_tool import BaseTool
-from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.constants import NOT_SPECIFIED, TRAINING_DATA_FILE
 from crewai.utilities.crew.models import CrewContext
@@ -92,10 +99,8 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
-    TaskInfo,
     create_async_chunk_generator,
     create_chunk_generator,
-    create_streaming_state,
     signal_end,
     signal_error,
 )
@@ -268,7 +273,7 @@ class Crew(FlowTrackable, BaseModel):
         description="list of file paths for task execution JSON files.",
     )
     execution_logs: list[dict[str, Any]] = Field(
-        default=[],
+        default_factory=list,
         description="list of execution logs for tasks",
     )
     knowledge_sources: list[BaseKnowledgeSource] | None = Field(
@@ -404,8 +409,7 @@ class Crew(FlowTrackable, BaseModel):
                 raise PydanticCustomError(
                     "missing_manager_llm_or_manager_agent",
                     (
-                        "Attribute `manager_llm` or `manager_agent` is required "
-                        "when using hierarchical process."
+                        "Attribute `manager_llm` or `manager_agent` is required when using hierarchical process."
                     ),
                     {},
                 )
@@ -511,10 +515,9 @@ class Crew(FlowTrackable, BaseModel):
                 raise PydanticCustomError(
                     "invalid_async_conditional_task",
                     (
-                        f"Conditional Task: {task.description}, "
-                        f"cannot be executed asynchronously."
+                        "Conditional Task: {description}, cannot be executed asynchronously."
                     ),
-                    {},
+                    {"description": task.description},
                 )
         return self
 
@@ -675,21 +678,8 @@ class Crew(FlowTrackable, BaseModel):
         inputs: dict[str, Any] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         if self.stream:
-            for agent in self.agents:
-                if agent.llm is not None:
-                    agent.llm.stream = True
-
-            result_holder: list[CrewOutput] = []
-            current_task_info: TaskInfo = {
-                "index": 0,
-                "name": "",
-                "id": "",
-                "agent_role": "",
-                "agent_id": "",
-            }
-
-            state = create_streaming_state(current_task_info, result_holder)
-            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+            enable_agent_streaming(self.agents)
+            ctx = StreamingContext()
 
             def run_crew() -> None:
                 """Execute the crew and capture the result."""
@@ -697,59 +687,28 @@ class Crew(FlowTrackable, BaseModel):
                     self.stream = False
                     crew_result = self.kickoff(inputs=inputs)
                     if isinstance(crew_result, CrewOutput):
-                        result_holder.append(crew_result)
+                        ctx.result_holder.append(crew_result)
                 except Exception as exc:
-                    signal_error(state, exc)
+                    signal_error(ctx.state, exc)
                 finally:
                     self.stream = True
-                    signal_end(state)
+                    signal_end(ctx.state)
 
             streaming_output = CrewStreamingOutput(
-                sync_iterator=create_chunk_generator(state, run_crew, output_holder)
+                sync_iterator=create_chunk_generator(
+                    ctx.state, run_crew, ctx.output_holder
+                )
             )
-            output_holder.append(streaming_output)
+            ctx.output_holder.append(streaming_output)
             return streaming_output
 
-        ctx = baggage.set_baggage(
+        baggage_ctx = baggage.set_baggage(
             "crew_context", CrewContext(id=str(self.id), key=self.key)
         )
-        token = attach(ctx)
+        token = attach(baggage_ctx)
 
         try:
-            for before_callback in self.before_kickoff_callbacks:
-                if inputs is None:
-                    inputs = {}
-                inputs = before_callback(inputs)
-
-            crewai_event_bus.emit(
-                self,
-                CrewKickoffStartedEvent(crew_name=self.name, inputs=inputs),
-            )
-
-            # Starts the crew to work on its assigned tasks.
-            self._task_output_handler.reset()
-            self._logging_color = "bold_purple"
-
-            if inputs is not None:
-                self._inputs = inputs
-                self._interpolate_inputs(inputs)
-            self._set_tasks_callbacks()
-            self._set_allow_crewai_trigger_context_for_first_task()
-
-            for agent in self.agents:
-                agent.crew = self
-                agent.set_knowledge(crew_embedder=self.embedder)
-                # TODO: Create an AgentFunctionCalling protocol for future refactoring
-                if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-
-                if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
-                    agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
-
-                agent.create_agent_executor()
-
-            if self.planning:
-                self._handle_crew_planning()
+            inputs = prepare_kickoff(self, inputs)
 
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
@@ -814,42 +773,27 @@ class Crew(FlowTrackable, BaseModel):
         inputs = inputs or {}
 
         if self.stream:
-            for agent in self.agents:
-                if agent.llm is not None:
-                    agent.llm.stream = True
-
-            result_holder: list[CrewOutput] = []
-            current_task_info: TaskInfo = {
-                "index": 0,
-                "name": "",
-                "id": "",
-                "agent_role": "",
-                "agent_id": "",
-            }
-
-            state = create_streaming_state(
-                current_task_info, result_holder, use_async=True
-            )
-            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+            enable_agent_streaming(self.agents)
+            ctx = StreamingContext(use_async=True)
 
             async def run_crew() -> None:
                 try:
                     self.stream = False
                     result = await asyncio.to_thread(self.kickoff, inputs)
                     if isinstance(result, CrewOutput):
-                        result_holder.append(result)
+                        ctx.result_holder.append(result)
                 except Exception as e:
-                    signal_error(state, e, is_async=True)
+                    signal_error(ctx.state, e, is_async=True)
                 finally:
                     self.stream = True
-                    signal_end(state, is_async=True)
+                    signal_end(ctx.state, is_async=True)
 
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
-                    state, run_crew, output_holder
+                    ctx.state, run_crew, ctx.output_holder
                 )
             )
-            output_holder.append(streaming_output)
+            ctx.output_holder.append(streaming_output)
 
             return streaming_output
 
@@ -864,89 +808,207 @@ class Crew(FlowTrackable, BaseModel):
         from all crews as they arrive. After iteration, access results via .results
         (list of CrewOutput).
         """
-        crew_copies = [self.copy() for _ in inputs]
 
+        async def kickoff_fn(
+            crew: Crew, input_data: dict[str, Any]
+        ) -> CrewOutput | CrewStreamingOutput:
+            return await crew.kickoff_async(inputs=input_data)
+
+        return await run_for_each_async(self, inputs, kickoff_fn)
+
+    async def akickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> CrewOutput | CrewStreamingOutput:
+        """Native async kickoff method using async task execution throughout.
+
+        Unlike kickoff_async which wraps sync kickoff in a thread, this method
+        uses native async/await for all operations including task execution,
+        memory operations, and knowledge queries.
+        """
         if self.stream:
-            result_holder: list[list[CrewOutput]] = [[]]
-            current_task_info: TaskInfo = {
-                "index": 0,
-                "name": "",
-                "id": "",
-                "agent_role": "",
-                "agent_id": "",
-            }
+            enable_agent_streaming(self.agents)
+            ctx = StreamingContext(use_async=True)
 
-            state = create_streaming_state(
-                current_task_info, result_holder, use_async=True
-            )
-            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
-
-            async def run_all_crews() -> None:
-                """Run all crew copies and aggregate their streaming outputs."""
+            async def run_crew() -> None:
                 try:
-                    streaming_outputs: list[CrewStreamingOutput] = []
-                    for i, crew in enumerate(crew_copies):
-                        streaming = await crew.kickoff_async(inputs=inputs[i])
-                        if isinstance(streaming, CrewStreamingOutput):
-                            streaming_outputs.append(streaming)
-
-                    async def consume_stream(
-                        stream_output: CrewStreamingOutput,
-                    ) -> CrewOutput:
-                        """Consume stream chunks and forward to parent queue.
-
-                        Args:
-                            stream_output: The streaming output to consume.
-
-                        Returns:
-                            The final CrewOutput result.
-                        """
-                        async for chunk in stream_output:
-                            if state.async_queue is not None and state.loop is not None:
-                                state.loop.call_soon_threadsafe(
-                                    state.async_queue.put_nowait, chunk
-                                )
-                        return stream_output.result
-
-                    crew_results = await asyncio.gather(
-                        *[consume_stream(s) for s in streaming_outputs]
-                    )
-                    result_holder[0] = list(crew_results)
-                except Exception as e:
-                    signal_error(state, e, is_async=True)
+                    self.stream = False
+                    inner_result = await self.akickoff(inputs)
+                    if isinstance(inner_result, CrewOutput):
+                        ctx.result_holder.append(inner_result)
+                except Exception as exc:
+                    signal_error(ctx.state, exc, is_async=True)
                 finally:
-                    signal_end(state, is_async=True)
+                    self.stream = True
+                    signal_end(ctx.state, is_async=True)
 
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
-                    state, run_all_crews, output_holder
+                    ctx.state, run_crew, ctx.output_holder
                 )
             )
-
-            def set_results_wrapper(result: Any) -> None:
-                """Wrap _set_results to match _set_result signature."""
-                streaming_output._set_results(result)
-
-            streaming_output._set_result = set_results_wrapper  # type: ignore[method-assign]
-            output_holder.append(streaming_output)
+            ctx.output_holder.append(streaming_output)
 
             return streaming_output
 
-        tasks = [
-            asyncio.create_task(crew_copy.kickoff_async(inputs=input_data))
-            for crew_copy, input_data in zip(crew_copies, inputs, strict=True)
-        ]
+        baggage_ctx = baggage.set_baggage(
+            "crew_context", CrewContext(id=str(self.id), key=self.key)
+        )
+        token = attach(baggage_ctx)
 
-        results = await asyncio.gather(*tasks)
+        try:
+            inputs = prepare_kickoff(self, inputs)
 
-        total_usage_metrics = UsageMetrics()
-        for crew_copy in crew_copies:
-            if crew_copy.usage_metrics:
-                total_usage_metrics.add_usage_metrics(crew_copy.usage_metrics)
-        self.usage_metrics = total_usage_metrics
+            if self.process == Process.sequential:
+                result = await self._arun_sequential_process()
+            elif self.process == Process.hierarchical:
+                result = await self._arun_hierarchical_process()
+            else:
+                raise NotImplementedError(
+                    f"The process '{self.process}' is not implemented yet."
+                )
 
-        self._task_output_handler.reset()
-        return list(results)
+            for after_callback in self.after_kickoff_callbacks:
+                result = after_callback(result)
+
+            self.usage_metrics = self.calculate_usage_metrics()
+
+            return result
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+            )
+            raise
+        finally:
+            detach(token)
+
+    async def akickoff_for_each(
+        self, inputs: list[dict[str, Any]]
+    ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
+        """Native async execution of the Crew's workflow for each input.
+
+        Uses native async throughout rather than thread-based async.
+        If stream=True, returns a single CrewStreamingOutput that yields chunks
+        from all crews as they arrive.
+        """
+
+        async def kickoff_fn(
+            crew: Crew, input_data: dict[str, Any]
+        ) -> CrewOutput | CrewStreamingOutput:
+            return await crew.akickoff(inputs=input_data)
+
+        return await run_for_each_async(self, inputs, kickoff_fn)
+
+    async def _arun_sequential_process(self) -> CrewOutput:
+        """Executes tasks sequentially using native async and returns the final output."""
+        return await self._aexecute_tasks(self.tasks)
+
+    async def _arun_hierarchical_process(self) -> CrewOutput:
+        """Creates and assigns a manager agent to complete the tasks using native async."""
+        self._create_manager_agent()
+        return await self._aexecute_tasks(self.tasks)
+
+    async def _aexecute_tasks(
+        self,
+        tasks: list[Task],
+        start_index: int | None = 0,
+        was_replayed: bool = False,
+    ) -> CrewOutput:
+        """Executes tasks using native async and returns the final output.
+
+        Args:
+            tasks: List of tasks to execute
+            start_index: Index to start execution from (for replay)
+            was_replayed: Whether this is a replayed execution
+
+        Returns:
+            CrewOutput: Final output of the crew
+        """
+        task_outputs: list[TaskOutput] = []
+        pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]] = []
+        last_sync_output: TaskOutput | None = None
+
+        for task_index, task in enumerate(tasks):
+            exec_data, task_outputs, last_sync_output = prepare_task_execution(
+                self, task, task_index, start_index, task_outputs, last_sync_output
+            )
+            if exec_data.should_skip:
+                continue
+
+            if isinstance(task, ConditionalTask):
+                skipped_task_output = await self._ahandle_conditional_task(
+                    task, task_outputs, pending_tasks, task_index, was_replayed
+                )
+                if skipped_task_output:
+                    task_outputs.append(skipped_task_output)
+                    continue
+
+            if task.async_execution:
+                context = self._get_context(
+                    task, [last_sync_output] if last_sync_output else []
+                )
+                async_task = asyncio.create_task(
+                    task.aexecute_sync(
+                        agent=exec_data.agent,
+                        context=context,
+                        tools=exec_data.tools,
+                    )
+                )
+                pending_tasks.append((task, async_task, task_index))
+            else:
+                if pending_tasks:
+                    task_outputs = await self._aprocess_async_tasks(
+                        pending_tasks, was_replayed
+                    )
+                    pending_tasks.clear()
+
+                context = self._get_context(task, task_outputs)
+                task_output = await task.aexecute_sync(
+                    agent=exec_data.agent,
+                    context=context,
+                    tools=exec_data.tools,
+                )
+                task_outputs.append(task_output)
+                self._process_task_result(task, task_output)
+                self._store_execution_log(task, task_output, task_index, was_replayed)
+
+        if pending_tasks:
+            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+
+        return self._create_crew_output(task_outputs)
+
+    async def _ahandle_conditional_task(
+        self,
+        task: ConditionalTask,
+        task_outputs: list[TaskOutput],
+        pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]],
+        task_index: int,
+        was_replayed: bool,
+    ) -> TaskOutput | None:
+        """Handle conditional task evaluation using native async."""
+        if pending_tasks:
+            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            pending_tasks.clear()
+
+        return check_conditional_skip(
+            self, task, task_outputs, task_index, was_replayed
+        )
+
+    async def _aprocess_async_tasks(
+        self,
+        pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]],
+        was_replayed: bool = False,
+    ) -> list[TaskOutput]:
+        """Process pending async tasks and return their outputs."""
+        task_outputs: list[TaskOutput] = []
+        for future_task, async_task, task_index in pending_tasks:
+            task_output = await async_task
+            task_outputs.append(task_output)
+            self._process_task_result(future_task, task_output)
+            self._store_execution_log(
+                future_task, task_output, task_index, was_replayed
+            )
+        return task_outputs
 
     def _handle_crew_planning(self) -> None:
         """Handles the Crew planning."""
@@ -1048,33 +1110,11 @@ class Crew(FlowTrackable, BaseModel):
         last_sync_output: TaskOutput | None = None
 
         for task_index, task in enumerate(tasks):
-            if start_index is not None and task_index < start_index:
-                if task.output:
-                    if task.async_execution:
-                        task_outputs.append(task.output)
-                    else:
-                        task_outputs = [task.output]
-                        last_sync_output = task.output
-                continue
-
-            agent_to_use = self._get_agent_to_use(task)
-            if agent_to_use is None:
-                raise ValueError(
-                    f"No agent available for task: {task.description}. "
-                    f"Ensure that either the task has an assigned agent "
-                    f"or a manager agent is provided."
-                )
-
-            # Determine which tools to use - task tools take precedence over agent tools
-            tools_for_task = task.tools or agent_to_use.tools or []
-            # Prepare tools and ensure they're compatible with task execution
-            tools_for_task = self._prepare_tools(
-                agent_to_use,
-                task,
-                tools_for_task,
+            exec_data, task_outputs, last_sync_output = prepare_task_execution(
+                self, task, task_index, start_index, task_outputs, last_sync_output
             )
-
-            self._log_task_start(task, agent_to_use.role)
+            if exec_data.should_skip:
+                continue
 
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
@@ -1089,9 +1129,9 @@ class Crew(FlowTrackable, BaseModel):
                     task, [last_sync_output] if last_sync_output else []
                 )
                 future = task.execute_async(
-                    agent=agent_to_use,
+                    agent=exec_data.agent,
                     context=context,
-                    tools=tools_for_task,
+                    tools=exec_data.tools,
                 )
                 futures.append((task, future, task_index))
             else:
@@ -1101,9 +1141,9 @@ class Crew(FlowTrackable, BaseModel):
 
                 context = self._get_context(task, task_outputs)
                 task_output = task.execute_sync(
-                    agent=agent_to_use,
+                    agent=exec_data.agent,
                     context=context,
-                    tools=tools_for_task,
+                    tools=exec_data.tools,
                 )
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
@@ -1126,19 +1166,9 @@ class Crew(FlowTrackable, BaseModel):
             task_outputs = self._process_async_tasks(futures, was_replayed)
             futures.clear()
 
-        previous_output = task_outputs[-1] if task_outputs else None
-        if previous_output is not None and not task.should_execute(previous_output):
-            self._logger.log(
-                "debug",
-                f"Skipping conditional task: {task.description}",
-                color="yellow",
-            )
-            skipped_task_output = task.get_skipped_task_output()
-
-            if not was_replayed:
-                self._store_execution_log(task, skipped_task_output, task_index)
-            return skipped_task_output
-        return None
+        return check_conditional_skip(
+            self, task, task_outputs, task_index, was_replayed
+        )
 
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: list[BaseTool]
@@ -1302,7 +1332,8 @@ class Crew(FlowTrackable, BaseModel):
                 )
         return tools
 
-    def _get_context(self, task: Task, task_outputs: list[TaskOutput]) -> str:
+    @staticmethod
+    def _get_context(task: Task, task_outputs: list[TaskOutput]) -> str:
         if not task.context:
             return ""
 
@@ -1371,7 +1402,8 @@ class Crew(FlowTrackable, BaseModel):
             )
         return task_outputs
 
-    def _find_task_index(self, task_id: str, stored_outputs: list[Any]) -> int | None:
+    @staticmethod
+    def _find_task_index(task_id: str, stored_outputs: list[Any]) -> int | None:
         return next(
             (
                 index
@@ -1449,7 +1481,7 @@ class Crew(FlowTrackable, BaseModel):
 
         Returns a set of all discovered placeholder names.
         """
-        placeholder_pattern = re.compile(r"\{(.+?)\}")
+        placeholder_pattern = re.compile(r"\{(.+?)}")
         required_inputs: set[str] = set()
 
         # Scan tasks for inputs
@@ -1697,6 +1729,32 @@ class Crew(FlowTrackable, BaseModel):
             self._logger.log("error", error_msg)
             raise RuntimeError(error_msg) from e
 
+    def _reset_memory_system(
+        self, system: Any, name: str, reset_fn: Callable[[Any], Any]
+    ) -> None:
+        """Reset a single memory system.
+
+        Args:
+            system: The memory system instance to reset.
+            name: Display name of the memory system for logging.
+            reset_fn: Function to call to reset the system.
+
+        Raises:
+            RuntimeError: If the reset operation fails.
+        """
+        try:
+            reset_fn(system)
+            self._logger.log(
+                "info",
+                f"[Crew ({self.name if self.name else self.id})] "
+                f"{name} memory has been reset",
+            )
+        except Exception as e:
+            raise RuntimeError(
+                f"[Crew ({self.name if self.name else self.id})] "
+                f"Failed to reset {name} memory: {e!s}"
+            ) from e
+
     def _reset_all_memories(self) -> None:
         """Reset all available memory systems."""
         memory_systems = self._get_memory_systems()
@@ -1704,21 +1762,10 @@ class Crew(FlowTrackable, BaseModel):
         for config in memory_systems.values():
             if (system := config.get("system")) is not None:
                 name = config.get("name")
-                try:
-                    reset_fn: Callable[[Any], Any] = cast(
-                        Callable[[Any], Any], config.get("reset")
-                    )
-                    reset_fn(system)
-                    self._logger.log(
-                        "info",
-                        f"[Crew ({self.name if self.name else self.id})] "
-                        f"{name} memory has been reset",
-                    )
-                except Exception as e:
-                    raise RuntimeError(
-                        f"[Crew ({self.name if self.name else self.id})] "
-                        f"Failed to reset {name} memory: {e!s}"
-                    ) from e
+                reset_fn: Callable[[Any], Any] = cast(
+                    Callable[[Any], Any], config.get("reset")
+                )
+                self._reset_memory_system(system, name, reset_fn)
 
     def _reset_specific_memory(self, memory_type: str) -> None:
         """Reset a specific memory system.
@@ -1737,21 +1784,8 @@ class Crew(FlowTrackable, BaseModel):
         if system is None:
             raise RuntimeError(f"{name} memory system is not initialized")
 
-        try:
-            reset_fn: Callable[[Any], Any] = cast(
-                Callable[[Any], Any], config.get("reset")
-            )
-            reset_fn(system)
-            self._logger.log(
-                "info",
-                f"[Crew ({self.name if self.name else self.id})] "
-                f"{name} memory has been reset",
-            )
-        except Exception as e:
-            raise RuntimeError(
-                f"[Crew ({self.name if self.name else self.id})] "
-                f"Failed to reset {name} memory: {e!s}"
-            ) from e
+        reset_fn: Callable[[Any], Any] = cast(Callable[[Any], Any], config.get("reset"))
+        self._reset_memory_system(system, name, reset_fn)
 
     def _get_memory_systems(self) -> dict[str, Any]:
         """Get all available memory systems with their configuration.
@@ -1839,7 +1873,8 @@ class Crew(FlowTrackable, BaseModel):
         ):
             self.tasks[0].allow_crewai_trigger_context = True
 
-    def _show_tracing_disabled_message(self) -> None:
+    @staticmethod
+    def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
         from crewai.events.listeners.tracing.utils import has_user_declined_tracing
 
