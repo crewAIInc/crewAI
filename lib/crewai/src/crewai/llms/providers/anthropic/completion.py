@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
-from crewai.llms.hooks.transport import HTTPTransport
+from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
 
 try:
-    from anthropic import Anthropic
+    from anthropic import Anthropic, AsyncAnthropic
     from anthropic.types import Message
     from anthropic.types.tool_use_block import ToolUseBlock
     import httpx
@@ -84,15 +84,20 @@ class AnthropicCompletion(BaseLLM):
 
         self.client = Anthropic(**self._get_client_params())
 
+        async_client_params = self._get_client_params()
+        if self.interceptor:
+            async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
+            async_http_client = httpx.AsyncClient(transport=async_transport)
+            async_client_params["http_client"] = async_http_client
+
+        self.async_client = AsyncAnthropic(**async_client_params)
+
         # Store completion parameters
         self.max_tokens = max_tokens
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
-
-        # Model-specific settings
-        self.is_claude_3 = "claude-3" in model.lower()
-        self.supports_tools = self.is_claude_3  # Claude 3+ supports tool use
+        self.supports_tools = True
 
     @property
     def stop(self) -> list[str]:
@@ -198,6 +203,72 @@ class AnthropicCompletion(BaseLLM):
                 )
 
             return self._handle_completion(
+                completion_params,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
+            )
+
+        except Exception as e:
+            error_msg = f"Anthropic API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise
+
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Async call to Anthropic messages API.
+
+        Args:
+            messages: Input messages for the chat completion
+            tools: List of tool/function definitions
+            callbacks: Callback functions (not used in native implementation)
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Chat completion response or tool call result
+        """
+        try:
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            formatted_messages, system_message = self._format_messages_for_anthropic(
+                messages
+            )
+
+            completion_params = self._prepare_completion_params(
+                formatted_messages, system_message, tools
+            )
+
+            if self.stream:
+                return await self._ahandle_streaming_completion(
+                    completion_params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
+                )
+
+            return await self._ahandle_completion(
                 completion_params,
                 available_functions,
                 from_task,
@@ -546,7 +617,7 @@ class AnthropicCompletion(BaseLLM):
             # Execute the tool
             result = self._handle_tool_execution(
                 function_name=function_name,
-                function_args=function_args,  # type: ignore
+                function_args=function_args,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -622,6 +693,275 @@ class AnthropicCompletion(BaseLLM):
 
             logging.error(f"Tool follow-up conversation failed: {e}")
             # Fallback: return the first tool result if follow-up fails
+            if tool_results:
+                return tool_results[0]["content"]
+            raise e
+
+    async def _ahandle_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming async message completion."""
+        if response_model:
+            structured_tool = {
+                "name": "structured_output",
+                "description": "Returns structured data according to the schema",
+                "input_schema": response_model.model_json_schema(),
+            }
+
+            params["tools"] = [structured_tool]
+            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+
+        try:
+            response: Message = await self.async_client.messages.create(**params)
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+            raise e from e
+
+        usage = self._extract_anthropic_token_usage(response)
+        self._track_token_usage_internal(usage)
+
+        if response_model and response.content:
+            tool_uses = [
+                block for block in response.content if isinstance(block, ToolUseBlock)
+            ]
+            if tool_uses and tool_uses[0].name == "structured_output":
+                structured_data = tool_uses[0].input
+                structured_json = json.dumps(structured_data)
+
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
+
+        if response.content and available_functions:
+            tool_uses = [
+                block for block in response.content if isinstance(block, ToolUseBlock)
+            ]
+
+            if tool_uses:
+                return await self._ahandle_tool_use_conversation(
+                    response,
+                    tool_uses,
+                    params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                )
+
+        content = ""
+        if response.content:
+            for content_block in response.content:
+                if hasattr(content_block, "text"):
+                    content += content_block.text
+
+        content = self._apply_stop_words(content)
+
+        self._emit_call_completed_event(
+            response=content,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        if usage.get("total_tokens", 0) > 0:
+            logging.info(f"Anthropic API usage: {usage}")
+
+        return content
+
+    async def _ahandle_streaming_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str:
+        """Handle async streaming message completion."""
+        if response_model:
+            structured_tool = {
+                "name": "structured_output",
+                "description": "Returns structured data according to the schema",
+                "input_schema": response_model.model_json_schema(),
+            }
+
+            params["tools"] = [structured_tool]
+            params["tool_choice"] = {"type": "tool", "name": "structured_output"}
+
+        full_response = ""
+
+        stream_params = {k: v for k, v in params.items() if k != "stream"}
+
+        async with self.async_client.messages.stream(**stream_params) as stream:
+            async for event in stream:
+                if hasattr(event, "delta") and hasattr(event.delta, "text"):
+                    text_delta = event.delta.text
+                    full_response += text_delta
+                    self._emit_stream_chunk_event(
+                        chunk=text_delta,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+            final_message: Message = await stream.get_final_message()
+
+        usage = self._extract_anthropic_token_usage(final_message)
+        self._track_token_usage_internal(usage)
+
+        if response_model and final_message.content:
+            tool_uses = [
+                block
+                for block in final_message.content
+                if isinstance(block, ToolUseBlock)
+            ]
+            if tool_uses and tool_uses[0].name == "structured_output":
+                structured_data = tool_uses[0].input
+                structured_json = json.dumps(structured_data)
+
+                self._emit_call_completed_event(
+                    response=structured_json,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+
+                return structured_json
+
+        if final_message.content and available_functions:
+            tool_uses = [
+                block
+                for block in final_message.content
+                if isinstance(block, ToolUseBlock)
+            ]
+
+            if tool_uses:
+                return await self._ahandle_tool_use_conversation(
+                    final_message,
+                    tool_uses,
+                    params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                )
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return full_response
+
+    async def _ahandle_tool_use_conversation(
+        self,
+        initial_response: Message,
+        tool_uses: list[ToolUseBlock],
+        params: dict[str, Any],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Handle the complete async tool use conversation flow.
+
+        This implements the proper Anthropic tool use pattern:
+        1. Claude requests tool use
+        2. We execute the tools
+        3. We send tool results back to Claude
+        4. Claude processes results and generates final response
+        """
+        tool_results = []
+
+        for tool_use in tool_uses:
+            function_name = tool_use.name
+            function_args = tool_use.input
+
+            result = self._handle_tool_execution(
+                function_name=function_name,
+                function_args=function_args,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": str(result)
+                if result is not None
+                else "Tool execution completed",
+            }
+            tool_results.append(tool_result)
+
+        follow_up_params = params.copy()
+
+        assistant_message = {"role": "assistant", "content": initial_response.content}
+
+        user_message = {"role": "user", "content": tool_results}
+
+        follow_up_params["messages"] = params["messages"] + [
+            assistant_message,
+            user_message,
+        ]
+
+        try:
+            final_response: Message = await self.async_client.messages.create(
+                **follow_up_params
+            )
+
+            follow_up_usage = self._extract_anthropic_token_usage(final_response)
+            self._track_token_usage_internal(follow_up_usage)
+
+            final_content = ""
+            if final_response.content:
+                for content_block in final_response.content:
+                    if hasattr(content_block, "text"):
+                        final_content += content_block.text
+
+            final_content = self._apply_stop_words(final_content)
+
+            self._emit_call_completed_event(
+                response=final_content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=follow_up_params["messages"],
+            )
+
+            total_usage = {
+                "input_tokens": follow_up_usage.get("input_tokens", 0),
+                "output_tokens": follow_up_usage.get("output_tokens", 0),
+                "total_tokens": follow_up_usage.get("total_tokens", 0),
+            }
+
+            if total_usage.get("total_tokens", 0) > 0:
+                logging.info(f"Anthropic API tool conversation usage: {total_usage}")
+
+            return final_content
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded in tool follow-up: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
+            logging.error(f"Tool follow-up conversation failed: {e}")
             if tool_results:
                 return tool_results[0]["content"]
             raise e

@@ -242,17 +242,17 @@ def get_llm_response(
     """Call the LLM and return the response, handling any invalid responses.
 
     Args:
-        llm: The LLM instance to call
-        messages: The messages to send to the LLM
-        callbacks: List of callbacks for the LLM call
-        printer: Printer instance for output
-        from_task: Optional task context for the LLM call
-        from_agent: Optional agent context for the LLM call
-        response_model: Optional Pydantic model for structured outputs
-        executor_context: Optional executor context for hook invocation
+        llm: The LLM instance to call.
+        messages: The messages to send to the LLM.
+        callbacks: List of callbacks for the LLM call.
+        printer: Printer instance for output.
+        from_task: Optional task context for the LLM call.
+        from_agent: Optional agent context for the LLM call.
+        response_model: Optional Pydantic model for structured outputs.
+        executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string
+        The response from the LLM as a string.
 
     Raises:
         Exception: If an error occurs.
@@ -266,6 +266,60 @@ def get_llm_response(
 
     try:
         answer = llm.call(
+            messages,
+            callbacks=callbacks,
+            from_task=from_task,
+            from_agent=from_agent,  # type: ignore[arg-type]
+            response_model=response_model,
+        )
+    except Exception as e:
+        raise e
+    if not answer:
+        printer.print(
+            content="Received None or empty response from LLM call.",
+            color="red",
+        )
+        raise ValueError("Invalid response from LLM call - None or empty.")
+
+    return _setup_after_llm_call_hooks(executor_context, answer, printer)
+
+
+async def aget_llm_response(
+    llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    callbacks: list[TokenCalcHandler],
+    printer: Printer,
+    from_task: Task | None = None,
+    from_agent: Agent | LiteAgent | None = None,
+    response_model: type[BaseModel] | None = None,
+    executor_context: CrewAgentExecutor | None = None,
+) -> str:
+    """Call the LLM asynchronously and return the response.
+
+    Args:
+        llm: The LLM instance to call.
+        messages: The messages to send to the LLM.
+        callbacks: List of callbacks for the LLM call.
+        printer: Printer instance for output.
+        from_task: Optional task context for the LLM call.
+        from_agent: Optional agent context for the LLM call.
+        response_model: Optional Pydantic model for structured outputs.
+        executor_context: Optional executor context for hook invocation.
+
+    Returns:
+        The response from the LLM as a string.
+
+    Raises:
+        Exception: If an error occurs.
+        ValueError: If the response is None or empty.
+    """
+    if executor_context is not None:
+        if not _setup_before_llm_call_hooks(executor_context, printer):
+            raise ValueError("LLM call blocked by before_llm_call hook")
+        messages = executor_context.messages
+
+    try:
+        answer = await llm.acall(
             messages,
             callbacks=callbacks,
             from_task=from_task,
