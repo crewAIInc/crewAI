@@ -496,3 +496,97 @@ class TestToolHooksIntegration:
         clear_all_tool_call_hooks()
         hooks = get_before_tool_call_hooks()
         assert len(hooks) == 0
+
+    @pytest.mark.vcr()
+    def test_lite_agent_hooks_integration_with_real_tool(self):
+        """Test that LiteAgent executes before/after tool call hooks with real tool calls."""
+        import os
+        from crewai.lite_agent import LiteAgent
+        from crewai.tools import tool
+
+        # Skip if no API key available
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set - skipping real tool test")
+
+        # Track hook invocations
+        hook_calls = {"before": [], "after": []}
+
+        # Create a simple test tool
+        @tool("calculate_sum")
+        def calculate_sum(a: int, b: int) -> int:
+            """Add two numbers together."""
+            return a + b
+
+        def before_tool_call_hook(context: ToolCallHookContext) -> bool:
+            """Log and verify before hook execution."""
+            print(f"\n[BEFORE HOOK] Tool: {context.tool_name}")
+            print(f"[BEFORE HOOK] Tool input: {context.tool_input}")
+            print(f"[BEFORE HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+            print(f"[BEFORE HOOK] Task: {context.task}")
+            print(f"[BEFORE HOOK] Crew: {context.crew}")
+
+            # Track the call
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": context.tool_input,
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+            })
+
+            return True  # Allow execution
+
+        def after_tool_call_hook(context: ToolCallHookContext) -> str | None:
+            """Log and verify after hook execution."""
+            print(f"\n[AFTER HOOK] Tool: {context.tool_name}")
+            print(f"[AFTER HOOK] Tool result: {context.tool_result}")
+            print(f"[AFTER HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+
+            # Track the call
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_result": context.tool_result is not None,
+            })
+
+            return None  # Don't modify result
+
+        # Register hooks
+        register_before_tool_call_hook(before_tool_call_hook)
+        register_after_tool_call_hook(after_tool_call_hook)
+
+        try:
+            # Create LiteAgent with the tool
+            lite_agent = LiteAgent(
+                role="Calculator Assistant",
+                goal="Help with math calculations",
+                backstory="You are a helpful calculator assistant",
+                tools=[calculate_sum],
+                verbose=True,
+            )
+
+            # Execute with a prompt that should trigger tool usage
+            result = lite_agent.kickoff("What is 5 + 3? Use the calculate_sum tool.")
+
+            # Verify hooks were called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+
+            # Verify context had correct attributes for LiteAgent (used in flows)
+            # LiteAgent doesn't have task/crew context, unlike agents in CrewBase
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "calculate_sum", "Tool name should be 'calculate_sum'"
+            assert "a" in before_call["tool_input"], "Tool input should have 'a' parameter"
+            assert "b" in before_call["tool_input"], "Tool input should have 'b' parameter"
+
+            # Verify after hook received result
+            after_call = hook_calls["after"][0]
+            assert after_call["has_result"] is True, "After hook should have tool result"
+            assert after_call["tool_name"] == "calculate_sum", "Tool name should match"
+            # The result should contain the sum (8)
+            assert "8" in str(after_call["tool_result"]), "Tool result should contain the sum"
+
+        finally:
+            # Clean up hooks
+            unregister_before_tool_call_hook(before_tool_call_hook)
+            unregister_after_tool_call_hook(after_tool_call_hook)
