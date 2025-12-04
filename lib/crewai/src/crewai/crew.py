@@ -327,7 +327,7 @@ class Crew(FlowTrackable, BaseModel):
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
         self._cache_handler = CacheHandler()
-        event_listener = EventListener()  # type: ignore[no-untyped-call]
+        event_listener = EventListener()
 
         # Determine and set tracing state once for this execution
         tracing_enabled = should_enable_tracing(override=self.tracing)
@@ -348,12 +348,12 @@ class Crew(FlowTrackable, BaseModel):
         return self
 
     def _initialize_default_memories(self) -> None:
-        self._long_term_memory = self._long_term_memory or LongTermMemory()  # type: ignore[no-untyped-call]
-        self._short_term_memory = self._short_term_memory or ShortTermMemory(  # type: ignore[no-untyped-call]
+        self._long_term_memory = self._long_term_memory or LongTermMemory()
+        self._short_term_memory = self._short_term_memory or ShortTermMemory(
             crew=self,
             embedder_config=self.embedder,
         )
-        self._entity_memory = self.entity_memory or EntityMemory(  # type: ignore[no-untyped-call]
+        self._entity_memory = self.entity_memory or EntityMemory(
             crew=self, embedder_config=self.embedder
         )
 
@@ -1427,6 +1427,16 @@ class Crew(FlowTrackable, BaseModel):
         """Query the crew's knowledge base for relevant information."""
         if self.knowledge:
             return self.knowledge.query(
+                query, results_limit=results_limit, score_threshold=score_threshold
+            )
+        return None
+
+    async def aquery_knowledge(
+        self, query: list[str], results_limit: int = 3, score_threshold: float = 0.35
+    ) -> list[SearchResult] | None:
+        """Query the crew's knowledge base for relevant information asynchronously."""
+        if self.knowledge:
+            return await self.knowledge.aquery(
                 query, results_limit=results_limit, score_threshold=score_threshold
             )
         return None
