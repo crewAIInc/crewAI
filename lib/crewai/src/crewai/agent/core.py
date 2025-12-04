@@ -23,6 +23,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
+from crewai.multimodal import Image, MultipartContent
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -212,6 +213,10 @@ class Agent(BaseAgent):
     a2a: list[A2AConfig] | A2AConfig | None = Field(
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+    )
+    multipart_context: list[str | Image] | MultipartContent | None = Field(
+        default=None,
+        description="Multimodal context for the agent. Can be a list of text strings and Image objects, or a MultipartContent instance. This content is added to the agent's system prompt.",
     )
 
     @model_validator(mode="before")

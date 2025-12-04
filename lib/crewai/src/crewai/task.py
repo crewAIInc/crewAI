@@ -37,6 +37,7 @@ from crewai.events.types.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.multimodal import Image, MultipartContent
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -190,6 +191,10 @@ class Task(BaseModel):
     allow_crewai_trigger_context: bool | None = Field(
         default=None,
         description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
+    )
+    multipart_context: list[str | Image] | MultipartContent | None = Field(
+        default=None,
+        description="Multimodal context for the task. Can be a list of text strings and Image objects, or a MultipartContent instance. This content is added to the task's context.",
     )
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrails: list[GuardrailCallable] = PrivateAttr(
