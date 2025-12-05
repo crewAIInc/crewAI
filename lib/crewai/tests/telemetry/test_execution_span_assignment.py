@@ -6,6 +6,7 @@ import threading
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_listener import EventListener
 from crewai.telemetry import Telemetry
 
@@ -19,12 +20,20 @@ def cleanup_singletons():
     os.environ["CREWAI_DISABLE_TELEMETRY"] = "false"
     os.environ["OTEL_SDK_DISABLED"] = "false"
 
+    with crewai_event_bus._rwlock.w_locked():
+        crewai_event_bus._sync_handlers.clear()
+        crewai_event_bus._async_handlers.clear()
+
     Telemetry._instance = None
     EventListener._instance = None
     if hasattr(Telemetry, "_lock"):
         Telemetry._lock = threading.Lock()
 
     yield
+
+    with crewai_event_bus._rwlock.w_locked():
+        crewai_event_bus._sync_handlers.clear()
+        crewai_event_bus._async_handlers.clear()
 
     if original_telemetry is not None:
         os.environ["CREWAI_DISABLE_TELEMETRY"] = original_telemetry

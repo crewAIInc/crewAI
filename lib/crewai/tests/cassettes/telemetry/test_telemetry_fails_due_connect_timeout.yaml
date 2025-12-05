@@ -50,14 +50,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNb9swDL37VxA6x4NjZHHi29qhWHffpVthMDJts5UlVZLbDUX++yDn
-        w87aArsYMB8f9d4jXxMAwbUoQcgOg+ytSq8fvn43xaAKt7vp8elxR5sfd23zDa/UnROLyDC7B5Lh
-        xPokTW8VBTb6AEtHGChOXRbr1Wa73G7zEehNTSrSWhvSlUl71pzmWb5KsyJdbo7szrAkL0r4mQAA
-        vI7fqFPX9FuUkC1OlZ68x5ZEeW4CEM6oWBHoPfuAOojFBEqjA+lR+i1o8wISNbT8TIDQRtmA2r+Q
-        A/ilb1ijgi/jfwkdz+c4agaP0YselJoBqLUJGLMYHdwfkf1ZszKtdWbn/6GKhjX7rnKE3uiozwdj
-        xYjuE4D7MZvhwq6wzvQ2VME80vjccn3MRkwrmaH5EQwmoJrVixNwMa+qKSArP0tXSJQd1RN1WgUO
-        NZsZkMxcv1Xz3uyDc9bt/4yfACnJBqor66hmeel4anMUL/ajtnPKo2DhyT2zpCowubiJmhoc1OGO
-        hP/jA/VVw7olZx0fjqmx1edsm62bHFGKZJ/8BQAA//8DAB0ARVFaAwAA
+        H4sIAAAAAAAAA4xSXYvbMBB8969Y9BwXO6T2xW9NIRAofWgL5WgPo5PW9l5lSZXkXNsj/73I+bBz
+        7cG9GLyzs5qZ3acEgJFkFTDR8SB6q9L3D9sd/dlt9O3XD8puPt7an1m5cZ/kl+3+M1tEhrl/QBHO
+        rDfC9FZhIKOPsHDIA8apeVmsbtbrIl+OQG8kqkhrbUhXJu1JU7rMlqs0K9P85sTuDAn0rIJvCQDA
+        0/iNOrXEX6yCbHGu9Og9b5FVlyYA5oyKFca9Jx+4DmwxgcLogHqUvgNtHkFwDS3tETi0UTZw7R/R
+        AXzXW9Jcwbvxv4KO5nMcNoPn0YselJoBXGsTeMxidHB3Qg4Xzcq01pl7/4zKGtLku9oh90ZHfT4Y
+        y0b0kADcjdkMV3aZdaa3oQ7mB47P5cUpGzatZIYuT2AwgatZvTwDV/NqiYGT8rN0meCiQzlRp1Xw
+        QZKZAcnM9b9q/jf76Jx0+5rxEyAE2oCytg4liWvHU5vDeLEvtV1SHgUzj25PAutA6OImJDZ8UMc7
+        Yv63D9jXDekWnXV0PKbG1pxnpVgX+duCJYfkLwAAAP//AwAltW9nWgMAAA==
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 04 Dec 2025 23:46:33 GMT
+      - Fri, 05 Dec 2025 01:53:33 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -88,13 +88,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '447'
+      - '713'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '467'
+      - '953'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

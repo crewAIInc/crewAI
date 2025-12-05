@@ -50,14 +50,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJdb9QwEHzPr1j8fEFJSK+9vCG+C0JCPCGooj1nk3NxvK7tXEHV/ffK
-        Se+SQpF4iZSdnfHM7t4lAEI1ogIhdxhkb3X66vr1JedY3ry7+bov3wxNV3zMPsnLb9vPXzqxigze
-        XpMMR9Zzyb3VFBSbCZaOMFBUzc/X5cUm32yKEei5IR1pnQ1pyWmvjEqLrCjT7DzNLx7YO1aSvKjg
-        ewIAcDd+o0/T0C9RQbY6VnryHjsS1akJQDjWsSLQe+UDmiBWMyjZBDKj9Q9g+BYkGujUngChi7YB
-        jb8lB/DDvFUGNbwc/yt4T1rzs6WWo3bwGPOYQesFgMZwwDiPMcXVA3I4+dbcWcdb/wdVtMoov6sd
-        oWcTPfrAVozoIQG4GuczPIosrOPehjrwTxqfy89eTHpiXssCPYKBA+pFfb1ePaFXNxRQab+YsJAo
-        d9TM1HkdODSKF0CySP23m6e0p+TKdP8jPwNSkg3U1NZRo+TjxHObo3i1/2o7TXk0LDy5vZJUB0Uu
-        bqKhFgc93ZLwv32gvm6V6chZp6aDam19lm2ydVsgSpEcknsAAAD//wMAWo4fzV4DAAA=
+        H4sIAAAAAAAAAwAAAP//jFLBjtMwEL3nKwafG5R2226aGyCtKEIgbghYRbPOJPHW8Vi20wWt+u/I
+        ybbJwiJxiZR5857fm5nHBECoShQgZItBdlan7+5vPq2p3nD+pT18vvr49usxOzT7bx/2h7wTi8jg
+        u3uS4cx6LbmzmoJiM8LSEQaKqsvr7Trf7fJ8NQAdV6QjrbEhXXPaKaPSVbZap9l1usyf2C0rSV4U
+        8D0BAHgcvtGnqeinKCBbnCsdeY8NieLSBCAc61gR6L3yAU0QiwmUbAKZwfoeDD+ARAONOhIgNNE2
+        oPEP5AB+mBtlUMOb4b+A96Q1v5prOap7jzGP6bWeAWgMB4zzGFLcPiGni2/NjXV85/+giloZ5dvS
+        EXo20aMPbMWAnhKA22E+/bPIwjrubCgDH2h4brm5GvXEtJYZegYDB9Sz+na7eEGvrCig0n42YSFR
+        tlRN1Gkd2FeKZ0AyS/23m5e0x+TKNP8jPwFSkg1UldZRpeTzxFObo3i1/2q7THkwLDy5o5JUBkUu
+        bqKiGns93pLwv3ygrqyVachZp8aDqm25yXbZtl4hSpGckt8AAAD//wMAIxrdql4DAAA=
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 04 Dec 2025 23:46:32 GMT
+      - Fri, 05 Dec 2025 01:58:02 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -88,13 +88,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '499'
+      - '358'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1503'
+      - '372'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
