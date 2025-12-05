@@ -423,7 +423,7 @@ task_generate_report = Task(
 
 # Use in CrewAI
 crew = Crew(
-    agents=[code_helper_agent, link_finder_agent, reporter_agent],
+    agents=[code_helper_agent, code_reviewer_agent, link_finder_agent, reporter_agent],
     tasks=[task_write_code, task_review_code, task_find_links, task_generate_report],
     verbose=True,
 )
