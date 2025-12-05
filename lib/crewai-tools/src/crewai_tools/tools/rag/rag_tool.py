@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, Literal, cast
+import warnings
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
@@ -131,9 +132,16 @@ class RagTool(BaseTool):
     @field_validator("config", mode="before")
     @classmethod
     def _validate_config(cls, value: Any) -> Any:
-        """Validate config with improved error messages for embedding providers."""
+        """Validate config with improved error messages for embedding providers.
+
+        Also provides backward compatibility for the legacy config format that used
+        'llm' and 'embedder' keys instead of 'embedding_model' and 'vectordb'.
+        """
         if not isinstance(value, dict):
             return value
+
+        # Handle backward compatibility for legacy config format
+        value = cls._normalize_legacy_config(value)
 
         embedding_model = value.get("embedding_model")
         if embedding_model:
@@ -143,6 +151,45 @@ class RagTool(BaseTool):
                 raise
 
         return value
+
+    @classmethod
+    def _normalize_legacy_config(cls, config: dict[str, Any]) -> dict[str, Any]:
+        """Normalize legacy config format to the current format.
+
+        The legacy format used 'llm' and 'embedder' keys, while the current format
+        uses 'embedding_model' and 'vectordb' keys.
+
+        Args:
+            config: The configuration dictionary to normalize.
+
+        Returns:
+            A normalized configuration dictionary using the current format.
+        """
+        normalized = dict(config)
+
+        # Handle legacy 'embedder' key -> 'embedding_model'
+        if "embedder" in normalized and "embedding_model" not in normalized:
+            warnings.warn(
+                "The 'embedder' config key is deprecated. "
+                "Please use 'embedding_model' instead. "
+                "Example: config={'embedding_model': {'provider': 'ollama', 'config': {...}}}",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            normalized["embedding_model"] = normalized.pop("embedder")
+
+        # Handle legacy 'llm' key - this is not used in RAG tools
+        if "llm" in normalized:
+            warnings.warn(
+                "The 'llm' config key is not used by RAG tools and will be ignored. "
+                "The LLM for generation is controlled by the agent's LLM configuration, "
+                "not the tool configuration.",
+                DeprecationWarning,
+                stacklevel=4,
+            )
+            normalized.pop("llm")
+
+        return normalized
 
     @model_validator(mode="after")
     def _ensure_adapter(self) -> Self:
