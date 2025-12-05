@@ -1631,7 +1631,7 @@ class Agent(BaseAgent):
                     from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
                     multimodal_tools = [AddImageTool()]
-                except Exception:
+                except ImportError:
                     multimodal_tools = []
 
             for tool in multimodal_tools:
