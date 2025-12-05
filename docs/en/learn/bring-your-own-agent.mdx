@@ -322,6 +322,8 @@ By implementing these methods, your `MyCustomConverterAdapter` ensures that stru
 We provide out of the box adapters for the following frameworks:
 1. LangGraph
 2. OpenAI Agents
+3. [AgentSpec](https://github.com/oracle/agent-spec)
+   - AgentSpec is a framework-agnostic declarative language for defining agentic systems. It defines building blocks for standalone agents and structured agentic workflows as well as common ways of composing them into multi-agent systems.
 
 ## Kicking off a crew with adapted agents:
 
@@ -331,14 +333,16 @@ import os
 from typing import List
 
 from crewai_tools import SerperDevTool
-from src.crewai import Agent, Crew, Task
+from crewai import Agent, Crew, Task
 from langchain_openai import ChatOpenAI
+from pyagentspec.agent import Agent
+from pyagentspec.llms import OpenAiConfig
+from pyagentspec.serialization import AgentSpecSerializer
 from pydantic import BaseModel
 
-from crewai.agents.agent_adapters.langgraph.langgraph_adapter import (
-    LangGraphAgentAdapter,
-)
+from crewai.agents.agent_adapters.langgraph.langgraph_adapter import LangGraphAgentAdapter
 from crewai.agents.agent_adapters.openai_agents.openai_adapter import OpenAIAgentAdapter
+from crewai.agents.agent_adapters.agentspec.agentspec_adapter import AgentSpecAgentAdapter
 
 # CrewAI Agent
 code_helper_agent = Agent(
@@ -348,6 +352,18 @@ code_helper_agent = Agent(
     allow_delegation=False,
     verbose=True,
 )
+
+# AgentSpec Agent Adapter
+code_reviewer_agent = AgentSpecAgentAdapter(
+    agentspec_agent_json=AgentSpecSerializer().to_json(
+        Agent(
+            name="Code Reviewer",
+            system_prompt="""You are an experienced programmer who performs thorough code review. Given a code snippet, suggest helpful improvements.""",
+            llm_config=OpenAiConfig(name="openai-gpt-4o", model_id="gpt-4o"),
+        )
+    )
+)
+
 # OpenAI Agent Adapter
 link_finder_agent = OpenAIAgentAdapter(
     role="Link Finder",
@@ -373,13 +389,20 @@ class Code(BaseModel):
     code: str
 
 
-task = Task(
+task_write_code = Task(
     description="Give an answer to the coding question: {task}",
     expected_output="A thorough answer to the coding question: {task}",
     agent=code_helper_agent,
     output_json=Code,
 )
-task2 = Task(
+
+task_review_code = Task(
+    description="Provide thorough helpful review for the generated code",
+    expected_output="A thorough review for the generated code",
+    agent=code_reviewer_agent,
+)
+
+task_find_links = Task(
     description="Find links to resources that can help with coding tasks. Use the serper tool to find resources that can help.",
     expected_output="A list of links to resources that can help with coding tasks",
     agent=link_finder_agent,
@@ -391,16 +414,17 @@ class Report(BaseModel):
     links: List[str]
 
 
-task3 = Task(
+task_generate_report = Task(
     description="Report the results of the tasks.",
     expected_output="A report of the results of the tasks. this is the code produced and then the links to the resources that can help with the coding task.",
     agent=reporter_agent,
     output_json=Report,
 )
+
 # Use in CrewAI
 crew = Crew(
     agents=[code_helper_agent, link_finder_agent, reporter_agent],
-    tasks=[task, task2, task3],
+    tasks=[task_write_code, task_review_code, task_find_links, task_generate_report],
     verbose=True,
 )
 
