@@ -1603,8 +1603,8 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        # Mirror the tooling behaviour from the synchronous kickoff so that
-        # async kickoff has the same platform/MCP/multimodal tools available.
+        # Start from the agent's configured tools (if any),
+        # but avoid mutating self.tools so repeated calls don't accumulate tools.
         tools_for_run = list(self.tools or [])
 
         # Add platform app tools (if configured)
@@ -1631,7 +1631,7 @@ class Agent(BaseAgent):
                     from crewai.tools.agent_tools.add_image_tool import AddImageTool
 
                     multimodal_tools = [AddImageTool()]
-                except ImportError:
+                except Exception:
                     multimodal_tools = []
 
             for tool in multimodal_tools:
@@ -1640,6 +1640,7 @@ class Agent(BaseAgent):
                     existing_types.add(type(tool))
 
         lite_agent = LiteAgent(
+            id=self.id,
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
