@@ -1528,14 +1528,41 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        # Start from the agent's configured tools (if any),
+        # but avoid mutating self.tools so repeated calls don't accumulate tools.
+        tools_for_run = list(self.tools or [])
+
+        # Add platform app tools (if configured)
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
-            if platform_tools and self.tools is not None:
-                self.tools.extend(platform_tools)
+            if platform_tools:
+                tools_for_run.extend(platform_tools)
+
+        # Add MCP tools (if configured)
         if self.mcps:
             mcps = self.get_mcp_tools(self.mcps)
-            if mcps and self.tools is not None:
-                self.tools.extend(mcps)
+            if mcps:
+                tools_for_run.extend(mcps)
+
+        # Add multimodal tools (e.g. AddImageTool) when multimodal=True,
+        # without duplicating tool *types* across runs.
+        if getattr(self, "multimodal", False):
+            existing_types = {type(t) for t in tools_for_run}
+
+            if hasattr(self, "get_multimodal_tools"):
+                multimodal_tools = self.get_multimodal_tools() or []
+            else:
+                try:
+                    from crewai.tools.agent_tools.add_image_tool import AddImageTool
+
+                    multimodal_tools = [AddImageTool()]
+                except ImportError:
+                    multimodal_tools = []
+
+            for tool in multimodal_tools:
+                if type(tool) not in existing_types:
+                    tools_for_run.append(tool)
+                    existing_types.add(type(tool))
 
         lite_agent = LiteAgent(
             id=self.id,
@@ -1543,7 +1570,7 @@ class Agent(BaseAgent):
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=tools_for_run,
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
@@ -1576,12 +1603,48 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        # Mirror the tooling behaviour from the synchronous kickoff so that
+        # async kickoff has the same platform/MCP/multimodal tools available.
+        tools_for_run = list(self.tools or [])
+
+        # Add platform app tools (if configured)
+        if self.apps:
+            platform_tools = self.get_platform_tools(self.apps)
+            if platform_tools:
+                tools_for_run.extend(platform_tools)
+
+        # Add MCP tools (if configured)
+        if self.mcps:
+            mcps = self.get_mcp_tools(self.mcps)
+            if mcps:
+                tools_for_run.extend(mcps)
+
+        # Add multimodal tools (e.g. AddImageTool) when multimodal=True,
+        # without duplicating tool *types* across runs.
+        if getattr(self, "multimodal", False):
+            existing_types = {type(t) for t in tools_for_run}
+
+            if hasattr(self, "get_multimodal_tools"):
+                multimodal_tools = self.get_multimodal_tools() or []
+            else:
+                try:
+                    from crewai.tools.agent_tools.add_image_tool import AddImageTool
+
+                    multimodal_tools = [AddImageTool()]
+                except ImportError:
+                    multimodal_tools = []
+
+            for tool in multimodal_tools:
+                if type(tool) not in existing_types:
+                    tools_for_run.append(tool)
+                    existing_types.add(type(tool))
+
         lite_agent = LiteAgent(
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
             llm=self.llm,
-            tools=self.tools or [],
+            tools=tools_for_run,
             max_iterations=self.max_iter,
             max_execution_time=self.max_execution_time,
             respect_context_window=self.respect_context_window,
