@@ -362,7 +362,11 @@ def test_save_method_with_memory_client(
 
 
 def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
-    """Test search method for different memory types"""
+    """Test search method for local Memory (OSS).
+
+    Local Memory expects simple dict filters like {"run_id": "my_run_id"}
+    instead of {"AND": [{"run_id": "my_run_id"}]}.
+    """
     mem0_storage, _, _ = mem0_storage_with_mocked_config
     mock_results = {
         "results": [
@@ -374,11 +378,12 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
 
     results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
+    # Local Memory uses simple dict filters instead of AND format
     mem0_storage.memory.search.assert_called_once_with(
         query="test query",
         limit=5,
         user_id="test_user",
-        filters={"AND": [{"run_id": "my_run_id"}]},
+        filters={"run_id": "my_run_id"},
         threshold=0.5,
     )
 
@@ -446,6 +451,11 @@ def test_save_memory_using_agent_entity(mock_mem0_memory_client):
 
 
 def test_search_method_with_agent_entity():
+    """Test search with local Memory using agent_id only.
+
+    Local Memory expects simple dict filters like {"agent_id": "agent-123"}
+    instead of {"AND": [{"agent_id": "agent-123"}]}.
+    """
     config = {
         "agent_id": "agent-123",
     }
@@ -464,10 +474,11 @@ def test_search_method_with_agent_entity():
         mem0_storage.memory.search = MagicMock(return_value=mock_results)
         results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
+        # Local Memory uses simple dict filters instead of AND/OR format
         mem0_storage.memory.search.assert_called_once_with(
             query="test query",
             limit=5,
-            filters={"AND": [{"agent_id": "agent-123"}]},
+            filters={"agent_id": "agent-123"},
             threshold=0.5,
         )
 
@@ -476,6 +487,11 @@ def test_search_method_with_agent_entity():
 
 
 def test_search_method_with_agent_id_and_user_id():
+    """Test search with local Memory using both agent_id and user_id.
+
+    Local Memory expects simple dict filters like {"user_id": "user-123", "agent_id": "agent-123"}
+    instead of {"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]}.
+    """
     mock_memory = MagicMock(spec=Memory)
     mock_results = {
         "results": [
@@ -492,13 +508,112 @@ def test_search_method_with_agent_id_and_user_id():
         mem0_storage.memory.search = MagicMock(return_value=mock_results)
         results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
 
+        # Local Memory uses simple dict filters instead of OR format
         mem0_storage.memory.search.assert_called_once_with(
             query="test query",
             limit=5,
             user_id="user-123",
-            filters={"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]},
+            filters={"user_id": "user-123", "agent_id": "agent-123"},
             threshold=0.5,
         )
 
         assert len(results) == 2
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_user_id_only_local_memory():
+    """Test search with local Memory using user_id only.
+
+    This test covers the issue reported in GitHub issue #4030 where using
+    external memory with mem0 and valkey/redis fails with:
+    'Invalid filter expression: @AND:{[{'user_id': 'bob'}]} @user_id:{bob}'
+
+    Local Memory expects simple dict filters like {"user_id": "bob"}
+    instead of {"AND": [{"user_id": "bob"}]}.
+    """
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+            {"score": 0.4, "memory": "Result 2"},
+        ]
+    }
+
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(
+            type="external", config={"user_id": "bob"}
+        )
+
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # Local Memory uses simple dict filters instead of AND format
+        # This fixes the issue where {"AND": [{"user_id": "bob"}]} was being
+        # incorrectly converted to "@AND:{[{'user_id': 'bob'}]} @user_id:{bob}"
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id="bob",
+            filters={"user_id": "bob"},
+            threshold=0.5,
+        )
+
+        assert len(results) == 2
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_local_mem0_config():
+    """Test search with local Memory using local_mem0_config.
+
+    This test simulates the exact scenario from GitHub issue #4030 where
+    external memory is configured with local_mem0_config for valkey/redis.
+    """
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    local_config = {
+        "vector_store": {
+            "provider": "valkey",
+            "config": {
+                "collection_name": "mem0test1",
+                "valkey_url": "valkey://localhost:6380",
+                "embedding_model_dims": 1024,
+                "index_type": "hnsw"
+            }
+        },
+        "llm": {
+            "provider": "mock_llm",
+            "config": {"model": "mock-model"}
+        },
+        "embedder": {
+            "provider": "mock_embedder",
+            "config": {"model": "mock-model"}
+        }
+    }
+
+    config = {
+        "user_id": "bob",
+        "local_mem0_config": local_config
+    }
+
+    with patch.object(Memory, "from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # Verify that filters use simple dict format for local Memory
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id="bob",
+            filters={"user_id": "bob"},
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
         assert results[0]["content"] == "Result 1"
