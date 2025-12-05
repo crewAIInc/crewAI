@@ -197,10 +197,15 @@ def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any]
             inputs = {}
         inputs = before_callback(inputs)
 
-    crewai_event_bus.emit(
+    future = crewai_event_bus.emit(
         crew,
         CrewKickoffStartedEvent(crew_name=crew.name, inputs=inputs),
     )
+    if future is not None:
+        try:
+            future.result()
+        except Exception:  # noqa: S110
+            pass
 
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"

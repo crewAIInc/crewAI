@@ -1,13 +1,13 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are agent. You are a helpful
-      assistant that just says hi\nYour personal goal is: Just say hi\nTo give my
-      best complete final answer to the task respond using the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task:
-      Just say hi\n\nThis is the expected criteria for your final answer: hi\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
+      agent\nYour personal goal is: say hello\nTo give my best complete final answer
+      to the task respond using the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
+      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
       This is VERY important to you, use the tools available and give your best Final
       Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
@@ -22,7 +22,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '795'
+      - '770'
       content-type:
       - application/json
       host:
@@ -50,14 +50,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNb9swDL37VxA6x4NjZHHi29qhWHffpVthMDJts5UlVZLbDUX++yDn
-        w87aArsYMB8f9d4jXxMAwbUoQcgOg+ytSq8fvn43xaAKt7vp8elxR5sfd23zDa/UnROLyDC7B5Lh
-        xPokTW8VBTb6AEtHGChOXRbr1Wa73G7zEehNTSrSWhvSlUl71pzmWb5KsyJdbo7szrAkL0r4mQAA
-        vI7fqFPX9FuUkC1OlZ68x5ZEeW4CEM6oWBHoPfuAOojFBEqjA+lR+i1o8wISNbT8TIDQRtmA2r+Q
-        A/ilb1ijgi/jfwkdz+c4agaP0YselJoBqLUJGLMYHdwfkf1ZszKtdWbn/6GKhjX7rnKE3uiozwdj
-        xYjuE4D7MZvhwq6wzvQ2VME80vjccn3MRkwrmaH5EQwmoJrVixNwMa+qKSArP0tXSJQd1RN1WgUO
-        NZsZkMxcv1Xz3uyDc9bt/4yfACnJBqor66hmeel4anMUL/ajtnPKo2DhyT2zpCowubiJmhoc1OGO
-        hP/jA/VVw7olZx0fjqmx1edsm62bHFGKZJ/8BQAA//8DAB0ARVFaAwAA
+        H4sIAAAAAAAAAwAAAP//jFJdb9QwEHzPr1j8fEFJSK+9vCG+C0JCPCGooj1nk3NxvK7tXEHV/ffK
+        Se+SQpF4iZSdnfHM7t4lAEI1ogIhdxhkb3X66vr1JedY3ry7+bov3wxNV3zMPsnLb9vPXzqxigze
+        XpMMR9Zzyb3VFBSbCZaOMFBUzc/X5cUm32yKEei5IR1pnQ1pyWmvjEqLrCjT7DzNLx7YO1aSvKjg
+        ewIAcDd+o0/T0C9RQbY6VnryHjsS1akJQDjWsSLQe+UDmiBWMyjZBDKj9Q9g+BYkGujUngChi7YB
+        jb8lB/DDvFUGNbwc/yt4T1rzs6WWo3bwGPOYQesFgMZwwDiPMcXVA3I4+dbcWcdb/wdVtMoov6sd
+        oWcTPfrAVozoIQG4GuczPIosrOPehjrwTxqfy89eTHpiXssCPYKBA+pFfb1ePaFXNxRQab+YsJAo
+        d9TM1HkdODSKF0CySP23m6e0p+TKdP8jPwNSkg3U1NZRo+TjxHObo3i1/2o7TXk0LDy5vZJUB0Uu
+        bqKhFgc93ZLwv32gvm6V6chZp6aDam19lm2ydVsgSpEcknsAAAD//wMAWo4fzV4DAAA=
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 04 Dec 2025 23:46:33 GMT
+      - Thu, 04 Dec 2025 23:46:32 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -88,13 +88,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '447'
+      - '499'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '467'
+      - '1503'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

@@ -44,20 +44,20 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA4xSy27bMBC86yu2PFuFX5EN3YICRXPNoQ+0gbAiVzIbikuQlOM08L8XlGNLSVMg
-        FwHa2RnO7O5TBiC0EiUIucMoO2fyT/r7Hl2/+tr/2H87PN7Ut+b2vl+qwx/XBTFLDK5/k4xn1kfJ
-        nTMUNdsTLD1hpKS62BTrzWq53RYD0LEik2iti/ma805bnS/ny3U+3+SL7TN7x1pSECX8zAAAnoZv
-        8mkVHUQJ89m50lEI2JIoL00AwrNJFYEh6BDRRjEbQck2kh2s34DlB5BoodV7AoQ22Qa04YE8wC/7
-        WVs0cD38l/CFjOEPUy1PTR8w5bG9MRMAreWIaR5Dirtn5Hjxbbh1nuvwiioabXXYVZ4wsE0eQ2Qn
-        BvSYAdwN8+lfRBbOc+diFfmehucWV6uTnhjXMkHPYOSIZlIvitkbepWiiNqEyYSFRLkjNVLHdWCv
-        NE+AbJL6XzdvaZ+Sa9u+R34EpCQXSVXOk9LyZeKxzVO62v+1XaY8GBaB/F5LqqImnzahqMHenG5J
-        hMcQqasabVvyzuvTQTWuqq/Wm2K+ULUS2TH7CwAA//8DAGmhXMleAwAA
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kzid4yFpEyfxbdhQtN1hwAYMWLfCUCTaUSeTgiS3HYr8
+        +yC7id2tA3YxYD6+p/dIPmUAwmhRglB7GVXrbP7+7sO1+Xrtlxcfv+ni6nG9Of8cd19uiC7DJzFL
+        DN7doYpH1lvFrbMYDdMAK48yYlJdrIvlZrvYbooeaFmjTbTGxXzJeWvI5Gfzs2U+X+eLzTN7z0Zh
+        ECV8zwAAnvpv8kkaH0UJ89mx0mIIskFRnpoAhGebKkKGYEKUFMVsBBVTROqtXwHxAyhJ0Jh7BAlN
+        sg2SwgN6gB90YUhaeNf/l3CJ1vKbqZbHugsy5aHO2gkgiTjKNI8+xe0zcjj5ttw4z7vwB1XUhkzY
+        Vx5lYEoeQ2QnevSQAdz28+leRBbOc+tiFfkn9s8tVueDnhjXMkGPYOQo7aReFLNX9CqNURobJhMW
+        Sqo96pE6rkN22vAEyCap/3bzmvaQ3FDzP/IjoBS6iLpyHrVRLxOPbR7T1f6r7TTl3rAI6O+Nwioa
+        9GkTGmvZ2eGWRPgVIrZVbahB77wZDqp21aqYy7rA1WorskP2GwAA//8DALwQ8ZBeAwAA
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 03 Dec 2025 03:34:46 GMT
+      - Thu, 04 Dec 2025 23:46:26 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -88,13 +88,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '374'
+      - '421'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '551'
+      - '446'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

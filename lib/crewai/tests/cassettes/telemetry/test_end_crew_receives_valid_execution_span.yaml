@@ -1,76 +1,5 @@
 interactions:
 - request:
-    body: '{"trace_id": "c9f33962-8a07-4c04-b75b-8cfbba719e74", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "1.6.1", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-12-03T03:34:44.167070+00:00"},
-      "ephemeral_trace_id": "c9f33962-8a07-4c04-b75b-8cfbba719e74"}'
-    headers:
-      Accept:
-      - '*/*'
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '488'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - X-USER-AGENT-XXX
-      X-Crewai-Version:
-      - 1.6.1
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
-  response:
-    body:
-      string: '{"id":"70559b8e-1749-450b-bcb6-0313bd7696b4","ephemeral_trace_id":"c9f33962-8a07-4c04-b75b-8cfbba719e74","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.6.1","privacy_level":"standard"},"created_at":"2025-12-03T03:34:44.571Z","updated_at":"2025-12-03T03:34:44.571Z","access_code":"TRACE-5eebb669b6","user_identifier":null}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '515'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Wed, 03 Dec 2025 03:34:44 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - CSP-FILTERED
-      etag:
-      - ETAG-XXX
-      expires:
-      - '0'
-      permissions-policy:
-      - PERMISSIONS-POLICY-XXX
-      pragma:
-      - no-cache
-      referrer-policy:
-      - REFERRER-POLICY-XXX
-      strict-transport-security:
-      - STS-XXX
-      vary:
-      - Accept
-      x-content-type-options:
-      - X-CONTENT-TYPE-XXX
-      x-frame-options:
-      - X-FRAME-OPTIONS-XXX
-      x-permitted-cross-domain-policies:
-      - X-PERMITTED-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-      x-runtime:
-      - X-RUNTIME-XXX
-      x-xss-protection:
-      - X-XSS-PROTECTION-XXX
-    status:
-      code: 201
-      message: Created
-- request:
     body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
       agent\nYour personal goal is: say hello\nTo give my best complete final answer
       to the task respond using the exact following format:\n\nThought: I now can
@@ -115,20 +44,20 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNb9QwEL3nVww+b9Dudr+aG1SqQAUBF0DQKprak8TgeCzb2RZV+98r
-        Zz+SliJxiZR5857fm5mHDEBoJQoQssEoW2fyC/19++PrxYfI6y/nHz/fX31SV5befjOXjbJikhh8
-        +4tkPLJeS26doaj5AEtPGCmpztarxfpsvtkse6BlRSbRahfzBeettjqfT+eLfLrOZ5sDu2EtKYgC
-        fmYAAA/9N/m0iu5FAdPJsdJSCFiTKE5NAMKzSRWBIegQ0UYxGUDJNpLtrb8Hy3cg0UKttwQIdbIN
-        aMMdeYBre6ktGnjT/xfwjozhV2MtT1UXMOWxnTEjAK3liGkefYqbA7I7+TZcO8+34RlVVNrq0JSe
-        MLBNHkNkJ3p0lwHc9PPpnkQWznPrYhn5N/XPzZZnez0xrGWEHsHIEc2ovlpNXtArFUXUJowmLCTK
-        htRAHdaBndI8ArJR6r/dvKS9T65t/T/yAyAluUiqdJ6Ulk8TD22e0tX+q+005d6wCOS3WlIZNfm0
-        CUUVdmZ/SyL8CZHastK2Ju+83h9U5crl9Hy6quaIUmS77BEAAP//AwAYxRZhXgMAAA==
+        H4sIAAAAAAAAAwAAAP//jFJdj9MwEHzPr1j83KDmaJM2bwh04kMcLwidCqdoz96kPhzbsp0r6NT/
+        juxcmxwcEi+RsrMzntndhwyAScFqYHyPgfdW5W/u3n6Qrfi0q9YVP/RXX6+/XF99/LwrfLm7ZIvI
+        MLd3xMOJ9ZKb3ioK0ugR5o4wUFQtqnK12RbbTZmA3ghSkdbZkK9M3kst84vlxSpfVnmxeWTvjeTk
+        WQ3fMgCAh/SNPrWgn6yG5eJU6cl77IjV5yYA5oyKFYbeSx9QB7aYQG50IJ2svwdtDsBRQyfvCRC6
+        aBtQ+wM5gO/6UmpU8Dr91/COlDIv5lqO2sFjzKMHpWYAam0CxnmkFDePyPHsW5nOOnPr/6CyVmrp
+        940j9EZHjz4YyxJ6zABu0nyGJ5GZdaa3oQnmB6XnivWrUY9Na5mhJzCYgGpWL8vFM3qNoIBS+dmE
+        GUe+JzFRp3XgIKSZAdks9d9untMek0vd/Y/8BHBONpBorCMh+dPEU5ujeLX/ajtPORlmnty95NQE
+        SS5uQlCLgxpviflfPlDftFJ35KyT40G1tkFcVnxbFuuSZcfsNwAAAP//AwAaSBVQXgMAAA==
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -139,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 03 Dec 2025 03:34:45 GMT
+      - Thu, 04 Dec 2025 23:46:27 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -159,13 +88,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '425'
+      - '831'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '568'
+      - '1012'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
