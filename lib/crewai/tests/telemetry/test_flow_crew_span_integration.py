@@ -12,6 +12,44 @@ from crewai.flow.flow import Flow, listen, start
 from crewai.telemetry import Telemetry
 
 
+class SimpleState(BaseModel):
+  """Simple state for flow testing."""
+
+  result: str = ""
+
+
+class SampleFlow(Flow[SimpleState]):
+    @start()
+    def run_crew(self):
+      """Run a crew inside the flow."""
+      agent = Agent(
+        role="test agent",
+        goal="say hello",
+        backstory="a friendly agent",
+        llm="gpt-4o-mini",
+      )
+      task = Task(
+        description="Say hello",
+        expected_output="hello",
+        agent=agent,
+      )
+      crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        share_crew=True,
+      )
+
+      result = crew.kickoff()
+
+      assert crew._execution_span is not None, (
+        "crew._execution_span should be set after kickoff even when "
+        "crew runs inside a flow method"
+      )
+
+      self.state.result = str(result.raw)
+      return self.state.result
+
+
 @pytest.fixture(autouse=True)
 def enable_telemetry_for_tests():
     """Enable telemetry for these tests and reset singletons."""
@@ -55,13 +93,8 @@ def enable_telemetry_for_tests():
         os.environ.pop("OTEL_SDK_DISABLED", None)
 
 
-class SimpleState(BaseModel):
-    """Simple state for flow testing."""
 
-    result: str = ""
-
-
-@pytest.mark.vcr()
+@pytest.mark.vcr
 def test_crew_execution_span_in_flow_with_share_crew():
     """Test that crew._execution_span is properly set when crew runs inside a flow.
 
@@ -70,44 +103,45 @@ def test_crew_execution_span_in_flow_with_share_crew():
     errors.
     """
 
-    class TestFlow(Flow[SimpleState]):
-        @start()
-        def run_crew(self):
-            """Run a crew inside the flow."""
-            agent = Agent(
-                role="test agent",
-                goal="say hello",
-                backstory="a friendly agent",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task],
-                share_crew=True,
-            )
-
-            result = crew.kickoff()
-
-            assert crew._execution_span is not None, (
-                "crew._execution_span should be set after kickoff even when "
-                "crew runs inside a flow method"
-            )
-
-            self.state.result = str(result.raw)
-            return self.state.result
-
-    flow = TestFlow()
+    flow = SampleFlow()
     flow.kickoff()
 
     assert flow.state.result != ""
 
 
-@pytest.mark.vcr()
+
+class SampleTestFlowNotSet(Flow[SimpleState]):
+    @start()
+    def run_crew(self):
+        """Run a crew inside the flow without sharing."""
+        agent = Agent(
+            role="test agent",
+            goal="say hello",
+            backstory="a friendly agent",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="Say hello",
+            expected_output="hello",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            share_crew=False,
+        )
+
+        result = crew.kickoff()
+
+        assert (
+            not hasattr(crew, "_execution_span") or crew._execution_span is None
+        ), "crew._execution_span should be None when share_crew=False"
+
+        self.state.result = str(result.raw)
+        return self.state.result
+
+
+@pytest.mark.vcr
 def test_crew_execution_span_not_set_in_flow_without_share_crew():
     """Test that crew._execution_span is None when share_crew=False in flow.
 
@@ -115,43 +149,68 @@ def test_crew_execution_span_not_set_in_flow_without_share_crew():
     no execution span is created.
     """
 
-    class TestFlow(Flow[SimpleState]):
-        @start()
-        def run_crew(self):
-            """Run a crew inside the flow without sharing."""
-            agent = Agent(
-                role="test agent",
-                goal="say hello",
-                backstory="a friendly agent",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Say hello",
-                expected_output="hello",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task],
-                share_crew=False,
-            )
-
-            result = crew.kickoff()
-
-            assert (
-                not hasattr(crew, "_execution_span") or crew._execution_span is None
-            ), "crew._execution_span should be None when share_crew=False"
-
-            self.state.result = str(result.raw)
-            return self.state.result
-
-    flow = TestFlow()
+    flow = SampleTestFlowNotSet()
     flow.kickoff()
 
     assert flow.state.result != ""
 
 
-@pytest.mark.vcr()
+
+class SampleMultiCrewFlow(Flow[SimpleState]):
+    @start()
+    def first_crew(self):
+        """Run first crew."""
+        agent = Agent(
+            role="first agent",
+            goal="first task",
+            backstory="first agent",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="First task",
+            expected_output="first result",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            share_crew=True,
+        )
+
+        result = crew.kickoff()
+
+        assert crew._execution_span is not None
+        return str(result.raw)
+
+    @listen(first_crew)
+    def second_crew(self, first_result: str):
+        """Run second crew."""
+        agent = Agent(
+            role="second agent",
+            goal="second task",
+            backstory="second agent",
+            llm="gpt-4o-mini",
+        )
+        task = Task(
+            description="Second task",
+            expected_output="second result",
+            agent=agent,
+        )
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            share_crew=True,
+        )
+
+        result = crew.kickoff()
+
+        assert crew._execution_span is not None
+
+        self.state.result = f"{first_result} + {result.raw}"
+        return self.state.result
+
+
+@pytest.mark.vcr
 def test_multiple_crews_in_flow_span_lifecycle():
     """Test that multiple crews in a flow each get proper execution spans.
 
@@ -159,60 +218,7 @@ def test_multiple_crews_in_flow_span_lifecycle():
     flow methods, each crew gets its own execution span properly assigned and closed.
     """
 
-    class MultiCrewFlow(Flow[SimpleState]):
-        @start()
-        def first_crew(self):
-            """Run first crew."""
-            agent = Agent(
-                role="first agent",
-                goal="first task",
-                backstory="first agent",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="First task",
-                expected_output="first result",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task],
-                share_crew=True,
-            )
-
-            result = crew.kickoff()
-
-            assert crew._execution_span is not None
-            return str(result.raw)
-
-        @listen(first_crew)
-        def second_crew(self, first_result: str):
-            """Run second crew."""
-            agent = Agent(
-                role="second agent",
-                goal="second task",
-                backstory="second agent",
-                llm="gpt-4o-mini",
-            )
-            task = Task(
-                description="Second task",
-                expected_output="second result",
-                agent=agent,
-            )
-            crew = Crew(
-                agents=[agent],
-                tasks=[task],
-                share_crew=True,
-            )
-
-            result = crew.kickoff()
-
-            assert crew._execution_span is not None
-
-            self.state.result = f"{first_result} + {result.raw}"
-            return self.state.result
-
-    flow = MultiCrewFlow()
+    flow = SampleMultiCrewFlow()
     flow.kickoff()
 
     assert flow.state.result != ""
