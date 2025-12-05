@@ -79,6 +79,7 @@ class RPMController(BaseModel):
             self._current_rpm = 0
             if not self._shutdown_flag:
                 self._timer = threading.Timer(60.0, self._reset_request_count)
+                self._timer.daemon = True
                 self._timer.start()
 
         if self._lock:
