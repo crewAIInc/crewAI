@@ -1197,9 +1197,36 @@ class LLM(BaseLLM):
             )
             return text_response
 
-        # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
+        # --- 6) If there is no text response, no available functions, but there are tool calls,
+        # convert tool calls to a string representation instead of returning raw list
         if tool_calls and not available_functions and not text_response:
-            return tool_calls
+            try:
+                formatted_calls = []
+                for call in tool_calls:
+                    fn = getattr(call, "function", None)
+                    name = getattr(fn, "name", None) if fn else None
+                    args = getattr(fn, "arguments", None) if fn else None
+                    formatted_calls.append(
+                        f"Tool: {name or 'unknown'}\n"
+                        f"Arguments: {args or '{}'}"
+                    )
+                text_response = "\n\n".join(formatted_calls)
+            except Exception:
+                text_response = str(tool_calls)
+
+            logging.warning(
+                "Model returned tool_calls but no available_functions were provided. "
+                "Returning a string representation of the tool calls."
+            )
+
+            self._handle_emit_call_events(
+                response=text_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return text_response
 
         # --- 7) Handle tool calls if present
         tool_result = self._handle_tool_call(
@@ -1315,8 +1342,35 @@ class LLM(BaseLLM):
             )
             return text_response
 
+        # Convert tool calls to string representation when no available_functions
         if tool_calls and not available_functions and not text_response:
-            return tool_calls
+            try:
+                formatted_calls = []
+                for call in tool_calls:
+                    fn = getattr(call, "function", None)
+                    name = getattr(fn, "name", None) if fn else None
+                    args = getattr(fn, "arguments", None) if fn else None
+                    formatted_calls.append(
+                        f"Tool: {name or 'unknown'}\n"
+                        f"Arguments: {args or '{}'}"
+                    )
+                text_response = "\n\n".join(formatted_calls)
+            except Exception:
+                text_response = str(tool_calls)
+
+            logging.warning(
+                "Model returned tool_calls but no available_functions were provided. "
+                "Returning a string representation of the tool calls."
+            )
+
+            self._handle_emit_call_events(
+                response=text_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return text_response
 
         tool_result = self._handle_tool_call(
             tool_calls, available_functions, from_task, from_agent

@@ -877,3 +877,171 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+
+def test_tool_calls_without_available_functions_returns_string():
+    """Test that tool_calls without available_functions returns a string representation.
+
+    This tests the fix for GitHub issue #4036 where Ollama models with native
+    function calling would return a list of tool calls instead of a string,
+    causing "'list' object has no attribute 'rstrip'" error.
+    """
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("litellm.completion") as mock_completion:
+        # Create a mock tool call object
+        mock_function = MagicMock()
+        mock_function.name = "get_weather"
+        mock_function.arguments = '{"location": "San Francisco"}'
+
+        mock_tool_call = MagicMock()
+        mock_tool_call.function = mock_function
+
+        # Create mock response with tool_calls but no content
+        mock_message = MagicMock()
+        mock_message.content = None  # No text content
+        mock_message.tool_calls = [mock_tool_call]
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 10,
+            "total_tokens": 20,
+        }
+
+        mock_completion.return_value = mock_response
+
+        # Call without available_functions - should return string, not list
+        result = llm.call("What's the weather in San Francisco?")
+
+        # Result should be a string, not a list
+        assert isinstance(result, str), f"Expected str, got {type(result).__name__}"
+
+        # The string should contain the tool name and arguments
+        assert "get_weather" in result
+        assert "San Francisco" in result
+
+
+def test_tool_calls_without_available_functions_multiple_calls():
+    """Test that multiple tool_calls without available_functions returns a formatted string."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("litellm.completion") as mock_completion:
+        # Create mock tool calls
+        mock_function1 = MagicMock()
+        mock_function1.name = "get_weather"
+        mock_function1.arguments = '{"location": "San Francisco"}'
+
+        mock_function2 = MagicMock()
+        mock_function2.name = "get_time"
+        mock_function2.arguments = '{"timezone": "PST"}'
+
+        mock_tool_call1 = MagicMock()
+        mock_tool_call1.function = mock_function1
+
+        mock_tool_call2 = MagicMock()
+        mock_tool_call2.function = mock_function2
+
+        # Create mock response with multiple tool_calls but no content
+        mock_message = MagicMock()
+        mock_message.content = None
+        mock_message.tool_calls = [mock_tool_call1, mock_tool_call2]
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 10,
+            "total_tokens": 20,
+        }
+
+        mock_completion.return_value = mock_response
+
+        result = llm.call("What's the weather and time?")
+
+        assert isinstance(result, str)
+        assert "get_weather" in result
+        assert "get_time" in result
+        assert "San Francisco" in result
+        assert "PST" in result
+
+
+def test_tool_calls_with_text_response_returns_text():
+    """Test that when both tool_calls and text content exist, text is returned."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("litellm.completion") as mock_completion:
+        mock_function = MagicMock()
+        mock_function.name = "get_weather"
+        mock_function.arguments = '{"location": "San Francisco"}'
+
+        mock_tool_call = MagicMock()
+        mock_tool_call.function = mock_function
+
+        # Create mock response with both tool_calls AND text content
+        mock_message = MagicMock()
+        mock_message.content = "Here is the weather information"
+        mock_message.tool_calls = [mock_tool_call]
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 10,
+            "total_tokens": 20,
+        }
+
+        mock_completion.return_value = mock_response
+
+        result = llm.call("What's the weather?")
+
+        # When text content exists, it should be returned
+        assert isinstance(result, str)
+        assert result == "Here is the weather information"
+
+
+@pytest.mark.asyncio
+async def test_async_tool_calls_without_available_functions_returns_string():
+    """Test that async tool_calls without available_functions returns a string."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    with patch("litellm.acompletion") as mock_acompletion:
+        mock_function = MagicMock()
+        mock_function.name = "search_database"
+        mock_function.arguments = '{"query": "test"}'
+
+        mock_tool_call = MagicMock()
+        mock_tool_call.function = mock_function
+
+        mock_message = MagicMock()
+        mock_message.content = None
+        mock_message.tool_calls = [mock_tool_call]
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 10,
+            "total_tokens": 20,
+        }
+
+        mock_acompletion.return_value = mock_response
+
+        result = await llm.acall("Search for test")
+
+        assert isinstance(result, str)
+        assert "search_database" in result
+        assert "test" in result
