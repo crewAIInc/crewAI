@@ -63,10 +63,6 @@ crew = Crew(
 | **Guardrails** _(optional)_       | `guardrails`       | `Optional[List[Callable] | List[str]]` | List of guardrails to validate task output before proceeding to next task.                                      |
 | **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`     | Maximum number of retries when guardrail validation fails. Defaults to 3.                                         |
 
-<Note type="warning" title="Deprecated: max_retries">
-  The task attribute `max_retries` is deprecated and will be removed in v1.0.0.
-  Use `guardrail_max_retries` instead to control retry attempts when a guardrail fails.
-</Note>
 
 ## Creating Tasks
 

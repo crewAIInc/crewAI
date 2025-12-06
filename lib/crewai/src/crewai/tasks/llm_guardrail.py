@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from crewai.agent import Agent
+from crewai.agent.core import Agent
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
@@ -38,7 +38,9 @@ class LLMGuardrail:
 
         self.llm: BaseLLM = llm
 
-    def _validate_output(self, task_output: TaskOutput) -> LiteAgentOutput:
+    def _validate_output(
+        self, task_output: TaskOutput | LiteAgentOutput
+    ) -> LiteAgentOutput:
         agent = Agent(
             role="Guardrail Agent",
             goal="Validate the output of the task",
@@ -64,18 +66,17 @@ class LLMGuardrail:
 
         return agent.kickoff(query, response_format=LLMGuardrailResult)
 
-    def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
+    def __call__(self, task_output: TaskOutput | LiteAgentOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.
 
         Args:
-            task_output (TaskOutput): The output to be validated.
+            task_output: The output to be validated.
 
         Returns:
-            Tuple[bool, Any]: A tuple containing:
+            A tuple containing:
                 - bool: True if validation passed, False otherwise
                 - Any: The validation result or error message
         """
-
         try:
             result = self._validate_output(task_output)
             if not isinstance(result.pydantic, LLMGuardrailResult):
