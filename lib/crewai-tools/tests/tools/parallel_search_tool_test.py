@@ -95,3 +95,26 @@ def test_requires_objective_or_queries(monkeypatch, mock_parallel_client):
 
     assert "Error" in result
     assert "objective" in result.lower() or "search_queries" in result.lower()
+
+
+@pytest.mark.skipif(not PARALLEL_AVAILABLE, reason="parallel-web not installed")
+def test_runtime_parameter_override(monkeypatch, mock_parallel_client):
+    """Test that max_results and source_policy can be overridden at runtime."""
+    monkeypatch.setenv("PARALLEL_API_KEY", "test-key")
+
+    with patch(
+        "crewai_tools.tools.parallel_tools.parallel_search_tool.Parallel",
+        return_value=mock_parallel_client,
+    ):
+        tool = ParallelSearchTool(
+            max_results=10, source_policy={"include": ["init.com"]}
+        )
+        tool.run(
+            objective="test query",
+            max_results=5,
+            source_policy={"include": ["runtime.com"]},
+        )
+
+    call_kwargs = mock_parallel_client.beta.search.call_args.kwargs
+    assert call_kwargs["max_results"] == 5
+    assert call_kwargs["source_policy"] == {"include": ["runtime.com"]}

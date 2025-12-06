@@ -34,6 +34,16 @@ class ParallelSearchInput(BaseModel):
         min_length=1,
         max_length=5,
     )
+    max_results: int | None = Field(
+        default=None,
+        ge=1,
+        le=20,
+        description="Maximum number of search results to return (1-20). If not provided, uses tool default.",
+    )
+    source_policy: dict[str, Any] | None = Field(
+        default=None,
+        description="Source policy for domain inclusion/exclusion. Example: {'include': ['example.com']} or {'exclude': ['spam.com']}",
+    )
 
 
 class ParallelSearchTool(BaseTool):
@@ -122,6 +132,8 @@ class ParallelSearchTool(BaseTool):
         self,
         objective: str | None = None,
         search_queries: list[str] | None = None,
+        max_results: int | None = None,
+        source_policy: dict[str, Any] | None = None,
         # Deprecated parameters for backwards compatibility
         processor: str | None = None,
         max_chars_per_result: int | None = None,
@@ -132,6 +144,8 @@ class ParallelSearchTool(BaseTool):
         Args:
             objective: Natural-language goal for the web research.
             search_queries: Optional list of keyword queries.
+            max_results: Maximum results to return. Overrides init value if provided.
+            source_policy: Domain inclusion/exclusion policy. Overrides init value if provided.
             processor: DEPRECATED - no longer used.
             max_chars_per_result: DEPRECATED - use excerpts config instead.
 
@@ -149,7 +163,21 @@ class ParallelSearchTool(BaseTool):
         # Handle deprecated parameters
         excerpts = self._handle_deprecated_params(processor, max_chars_per_result)
 
-        search_params = self._build_search_params(objective, search_queries, excerpts)
+        # Use runtime values if provided, otherwise fall back to init values
+        effective_max_results = (
+            max_results if max_results is not None else self.max_results
+        )
+        effective_source_policy = (
+            source_policy if source_policy is not None else self.source_policy
+        )
+
+        search_params = self._build_search_params(
+            objective,
+            search_queries,
+            excerpts,
+            effective_max_results,
+            effective_source_policy,
+        )
 
         try:
             response = self.client.beta.search(**search_params)
@@ -193,9 +221,11 @@ class ParallelSearchTool(BaseTool):
         objective: str | None,
         search_queries: list[str] | None,
         excerpts: dict[str, int] | None,
+        max_results: int,
+        source_policy: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """Build search parameters dictionary."""
-        search_params: dict[str, Any] = {"max_results": self.max_results}
+        search_params: dict[str, Any] = {"max_results": max_results}
 
         if objective is not None:
             search_params["objective"] = objective
@@ -207,8 +237,8 @@ class ParallelSearchTool(BaseTool):
             search_params["excerpts"] = excerpts
         if self.fetch_policy is not None:
             search_params["fetch_policy"] = self.fetch_policy
-        if self.source_policy is not None:
-            search_params["source_policy"] = self.source_policy
+        if source_policy is not None:
+            search_params["source_policy"] = source_policy
 
         return search_params
 

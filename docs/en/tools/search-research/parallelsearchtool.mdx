@@ -84,9 +84,11 @@ When calling `run()`, pass these parameters:
 |-----------|------|----------|-------------|
 | `objective` | str | At least one required | Natural-language research goal (<= 5000 chars) |
 | `search_queries` | list[str] | At least one required | Up to 5 keyword queries (each <= 200 chars) |
+| `max_results` | int | No | Override the default max results for this search (1-20) |
+| `source_policy` | dict | No | Override the default source policy for this search |
 
 <Note>
-At least one of `objective` or `search_queries` is required.
+At least one of `objective` or `search_queries` is required. The `max_results` and `source_policy` parameters can be set at initialization (as defaults) or overridden per-search at runtime.
 </Note>
 
 ## Advanced Usage
@@ -111,19 +113,27 @@ agent_with_custom_tool = Agent(
 
 ### Domain Filtering
 
-Restrict searches to specific domains:
+Restrict searches to specific domains. You can set defaults at initialization or override per-search:
 
 ```python
+# Set default source policy at initialization
 parallel_tool = ParallelSearchTool(
     max_results=5,
     source_policy={
         "allow": {"domains": ["un.org", "who.int"]},
-        # "deny": {"domains": ["example.com"]},  # optional
     }
 )
 
+# Use the default source policy
 result = parallel_tool.run(
     objective="When was the United Nations established?"
+)
+
+# Override source policy for a specific search
+result = parallel_tool.run(
+    objective="Latest WHO health guidelines",
+    source_policy={"allow": {"domains": ["who.int"]}},
+    max_results=3  # Also override max_results for this search
 )
 ```
 
