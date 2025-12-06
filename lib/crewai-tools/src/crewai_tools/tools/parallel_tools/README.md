@@ -45,9 +45,12 @@ Pass these when calling `run()`:
 |-----------|------|----------|-------------|
 | `objective` | str | One of these | Natural-language research goal (<= 5000 chars) |
 | `search_queries` | list[str] | required | Up to 5 keyword queries (each <= 200 chars) |
+| `max_results` | int | No | Override the default max results for this search (1-20) |
+| `source_policy` | dict | No | Override the default source policy for this search |
 
 Notes:
 - At least one of `objective` or `search_queries` is required.
+- `max_results` and `source_policy` can be set at initialization (as defaults) or overridden per-search at runtime.
 - API is in beta; default rate limit is 600 RPM. Contact support@parallel.ai for production capacity.
 
 ## Direct usage
@@ -75,6 +78,7 @@ print(resp_json)  # => {"search_id": ..., "results": [{"url", "title", "excerpts
 ```python
 from crewai_tools import ParallelSearchTool
 
+# Set defaults at initialization
 tool = ParallelSearchTool(
     max_results=5,
     excerpts={"max_chars_per_result": 5000},
@@ -84,8 +88,16 @@ tool = ParallelSearchTool(
     },
 )
 
+# Use the default source policy
 resp_json = tool.run(
     objective="When was the United Nations established?",
+)
+
+# Override source_policy and max_results for a specific search
+resp_json = tool.run(
+    objective="Latest WHO health guidelines",
+    source_policy={"allow": {"domains": ["who.int"]}},
+    max_results=3,
 )
 ```
 
