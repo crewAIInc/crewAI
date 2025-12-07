@@ -10,7 +10,7 @@ from crewai_tools.tools.brightdata_tool import (
 from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
     BrowserbaseLoadTool,
 )
-from crewai_tools.tools.cloro_dev_tool.cloro_dev_tool import CloroDevTool
+from crewai_tools.tools.cloro_tool.cloro_tool import CloroTool
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
 )

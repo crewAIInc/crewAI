@@ -1,6 +1,15 @@
-# CloroDevTool
+---
+title: CloroTool
+description: Use the `CloroTool` to scrape AI models using the cloro API.
+icon: flask
+mode: "wide"
+---
 
-Use the `CloroDevTool` to search the web or query AI models using the cloro API.
+# `CloroTool`
+
+## Description
+
+Use the `CloroTool` to scrape AI models using the cloro API. Supports engines: google, chatgpt, gemini, copilot, perplexity, aimode.
 
 ## Installation
 
@@ -8,13 +17,19 @@ Use the `CloroDevTool` to search the web or query AI models using the cloro API.
 pip install 'crewai[tools]'
 ```
 
+## Environment Variables
+
+- `CLORO_API_KEY` (required)
+
+Get the credentials by creating a [cloro account](https://dashboard.cloro.dev).
+
 ## Example
 
-```python
-from crewai_tools import CloroDevTool
+```python Code
+from crewai_tools import CloroTool
 
 # make sure CLORO_API_KEY variable is set
-tool = CloroDevTool()
+tool = CloroTool()
 
 result = tool.run(search_query="latest news about AI agents")
 
@@ -29,8 +44,6 @@ print(result)
 - `device` (str, optional): The device type for Google search results (`desktop` or `mobile`). Defaults to "desktop".
 - `pages` (int, optional): The number of pages to retrieve for Google search results. Defaults to 1.
 - `save_file` (bool, optional): Whether to save the search results to a file. Defaults to `False`.
-
-Get the credentials by creating a [cloro account](https://dashboard.cloro.dev).
 
 ## Response Format
 
@@ -59,11 +72,11 @@ The tool returns a structured dictionary containing different fields depending o
 
 Check out the cloro [documentation](https://docs.cloro.dev/api-reference/introduction) to get the full list of parameters.
 
-```python
-from crewai_tools import CloroDevTool
+```python Code
+from crewai_tools import CloroTool
 
 # make sure CLORO_API_KEY variable is set
-tool = CloroDevTool(
+tool = CloroTool(
     engine="chatgpt",
     country="BR",
     save_file=True

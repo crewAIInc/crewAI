@@ -56,7 +56,7 @@ class CloroDevToolSchema(BaseModel):
     )
 
 
-class CloroDevTool(BaseTool):
+class CloroTool(BaseTool):
     name: str = "Search/Query with Cloro"
     description: str = (
         "A tool that can be used to search the internet or query LLMs using cloro API. "

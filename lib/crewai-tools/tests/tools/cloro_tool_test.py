@@ -1,7 +1,7 @@
 import os
 import pytest
 from unittest.mock import patch, MagicMock
-from crewai_tools.tools.cloro_dev_tool.cloro_dev_tool import CloroDevTool
+from crewai_tools.tools.cloro_tool.cloro_tool import CloroTool
 
 @pytest.fixture(autouse=True)
 def mock_cloro_api_key():
@@ -10,7 +10,7 @@ def mock_cloro_api_key():
 
 @patch("requests.post")
 def test_cloro_tool_google_search(mock_post):
-    tool = CloroDevTool(engine="google")
+    tool = CloroTool(engine="google")
     mock_response = {
         "success": True,
         "result": {
@@ -44,7 +44,7 @@ def test_cloro_tool_google_search(mock_post):
 
 @patch("requests.post")
 def test_cloro_tool_chatgpt_query(mock_post):
-    tool = CloroDevTool(engine="chatgpt")
+    tool = CloroTool(engine="chatgpt")
     mock_response = {
         "success": True,
         "result": {
@@ -73,7 +73,7 @@ def test_cloro_tool_chatgpt_query(mock_post):
 
 @patch("requests.post")
 def test_cloro_tool_gemini_query(mock_post):
-    tool = CloroDevTool(engine="gemini")
+    tool = CloroTool(engine="gemini")
     mock_response = {
         "success": True,
         "result": {
@@ -91,7 +91,7 @@ def test_cloro_tool_gemini_query(mock_post):
 
 @patch("requests.post")
 def test_cloro_tool_copilot_query(mock_post):
-    tool = CloroDevTool(engine="copilot")
+    tool = CloroTool(engine="copilot")
     mock_response = {
         "success": True,
         "result": {
@@ -111,7 +111,7 @@ def test_cloro_tool_copilot_query(mock_post):
 
 @patch("requests.post")
 def test_cloro_tool_perplexity_query(mock_post):
-    tool = CloroDevTool(engine="perplexity")
+    tool = CloroTool(engine="perplexity")
     mock_response = {
         "success": True,
         "result": {
@@ -136,7 +136,7 @@ def test_cloro_tool_perplexity_query(mock_post):
 
 @patch("requests.post")
 def test_cloro_tool_aimode_query(mock_post):
-    tool = CloroDevTool(engine="aimode")
+    tool = CloroTool(engine="aimode")
     mock_response = {
         "success": True,
         "result": {
@@ -153,7 +153,7 @@ def test_cloro_tool_aimode_query(mock_post):
 
 @patch("requests.post")
 def test_api_error_handling(mock_post):
-    tool = CloroDevTool()
+    tool = CloroTool()
     mock_post.side_effect = Exception("API Error")
 
     with pytest.raises(Exception) as exc_info:
@@ -162,7 +162,7 @@ def test_api_error_handling(mock_post):
 
 @patch("requests.post")
 def test_unsuccessful_response(mock_post):
-    tool = CloroDevTool()
+    tool = CloroTool()
     mock_response = {"success": False}
     mock_post.return_value.json.return_value = mock_response
     mock_post.return_value.status_code = 200
