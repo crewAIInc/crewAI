@@ -49,7 +49,8 @@ def test_cloro_tool_chatgpt_query(mock_post):
         "success": True,
         "result": {
             "text": "ChatGPT response",
-            "markdown": "**ChatGPT response**"
+            "markdown": "**ChatGPT response**",
+            "shoppingCards": [{"title": "Product 1", "price": "$10"}]
         }
     }
     mock_post.return_value.json.return_value = mock_response
@@ -59,6 +60,10 @@ def test_cloro_tool_chatgpt_query(mock_post):
 
     assert "text" in result
     assert result["text"] == "ChatGPT response"
+    
+    # Verify rich content processing (camelCase normalization)
+    assert "shopping_cards" in result
+    assert result["shopping_cards"][0]["title"] == "Product 1"
     
     # Check payload
     called_payload = mock_post.call_args.kwargs["json"]
@@ -111,6 +116,8 @@ def test_cloro_tool_perplexity_query(mock_post):
         "success": True,
         "result": {
             "text": "Perplexity response",
+            "shopping_cards": [{"title": "Product 2", "price": "$20"}],
+            "related_queries": ["query 1", "query 2"]
         }
     }
     mock_post.return_value.json.return_value = mock_response
@@ -119,6 +126,12 @@ def test_cloro_tool_perplexity_query(mock_post):
     result = tool.run(search_query="perplexity prompt")
 
     assert "text" in result
+    
+    # Verify rich content processing (snake_case)
+    assert "shopping_cards" in result
+    assert result["shopping_cards"][0]["title"] == "Product 2"
+    assert "related_queries" in result
+    assert len(result["related_queries"]) == 2
 
 
 @patch("requests.post")

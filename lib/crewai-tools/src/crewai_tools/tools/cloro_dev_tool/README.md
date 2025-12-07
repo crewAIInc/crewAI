@@ -37,15 +37,23 @@ Get the credentials by creating a [cloro account](https://dashboard.cloro.dev).
 The tool returns a structured dictionary containing different fields depending on the selected engine.
 
 ### Google Engine
+
 - `organic`: List of organic search results with title, link, snippet, etc.
 - `peopleAlsoAsk`: List of related questions.
 - `relatedSearches`: List of related search queries.
-- `knowledgeGraph`: Knowledge graph data (if available).
 - `ai_overview`: Google AI Overview data (if available).
 
-### LLM Engines (ChatGPT, Gemini, etc.)
+### LLM Engines (ChatGPT, Perplexity, Gemini, etc.)
+
 - `text`: The main response text from the model.
 - `sources`: List of sources cited by the model (if available).
+- `shopping_cards`: List of product/shopping cards with prices and offers (if available).
+- `hotels`: List of hotel results (if available).
+- `places`: List of places/locations (if available).
+- `videos`: List of video results (if available).
+- `images`: List of image results (if available).
+- `related_queries`: List of related follow-up queries (if available).
+- `entities`: List of extracted entities (if available).
 
 ## Advanced example
 
