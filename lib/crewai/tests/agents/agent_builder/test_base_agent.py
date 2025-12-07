@@ -25,6 +25,14 @@ class MockAgent(BaseAgent):
     def get_mcp_tools(self, mcps: list[str]) -> list[BaseTool]:
         return []
 
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
+    ) -> str:
+        return ""
+
     def get_output_converter(
         self, llm: Any, text: str, model: type[BaseModel] | None, instructions: str
     ): ...

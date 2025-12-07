@@ -1,67 +1,139 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are dog Researcher. You
-      have a lot of experience with dog.\nYour personal goal is: Express hot takes
-      on dog.\nTo give my best complete final answer to the task use the exact following
+    body: '{"trace_id": "d5ec6f38-30b2-4e17-887d-e7d0248e3fed", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.6.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-12-04T23:47:30.793619+00:00"},
+      "ephemeral_trace_id": "d5ec6f38-30b2-4e17-887d-e7d0248e3fed"}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"4bee6d74-5395-45e2-9f17-f940a1943b82","ephemeral_trace_id":"d5ec6f38-30b2-4e17-887d-e7d0248e3fed","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.6.1","privacy_level":"standard"},"created_at":"2025-12-04T23:47:31.162Z","updated_at":"2025-12-04T23:47:31.162Z","access_code":"TRACE-12d9bb5095","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 04 Dec 2025 23:47:31 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are dog Researcher. You have
+      a lot of experience with dog.\nYour personal goal is: Express hot takes on dog.\nTo
+      give my best complete final answer to the task respond using the exact following
       format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
       answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give me an analysis around dog.\n\nThis is the expect
-      criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an analysis around dog.\n\nThis is the expected criteria for your
+      final answer: 1 bullet point about dog that''s under 15 words.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '869'
+      - '877'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7bIbwKtSySEMp582RrtU2FVg02i\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214188,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer\\nFinal
-      Answer: Dogs provide unmatched companionship, loyalty, and mental health benefits
-      to humans.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNdj5swEHznV6z8HCKg5ON4axtdVfW1UlW1J7QxC2zO2NQ2l0Sn/PcK
+        yAWuvUp9AbGzM56dNc8BgOBCZCBkjV42rQo/HnZfVJM0tv70YbVNv919j3/dH/ard11HO7HoGWZ/
+        IOlfWEtpmlaRZ6NHWFpCT71qvFmn27skWsUD0JiCVE+rWh+myzhsWHOYRMkqjNIwTq/02rAkJzL4
+        EQAAPA/P3qgu6CQyiBYvlYacw4pEdmsCENaoviLQOXYetReLCZRGe9KD96+16araZ/AZtDmCRA0V
+        PxEgVP0AgNodyf7U96xRwfvhK4OdqRygJai5qtUZnJGMClBzg8otgE4179mzrkCZMyp/BtQFjBmd
+        +nfTaZbYxwXukZVycGRfQ901qN1ybtZS2TnsE9OdUjMAtTZ+kBhiergil1swylStNXv3B1WUrNnV
+        uSV0RvchOG9aMaCXAOBhWED3KlPRWtO0PvfmkYbj4s161BPT4ic02V5BbzyqWT1KF2/o5QV5ZOVm
+        KxQSZU3FRJ32jV3BZgYEs6n/dvOW9jg56+p/5CdASmo9FXlrqWD5euKpzVL/X/yr7ZbyYFg4sk8s
+        KfdMtt9EQSV2aryswp2dpyYvWVdkW8vjjS3bPEk3cSQ3ZbQWwSX4DQAA//8DAKsf5S3AAwAA
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c85f2c4ba9d1cf3-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -69,206 +141,331 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:43:08 GMT
+      - Thu, 04 Dec 2025 23:47:31 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '435'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999792'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_1d04327983ecc2a9f9b05663aa0d79e3
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are cat Researcher. You
-      have a lot of experience with cat.\nYour personal goal is: Express hot takes
-      on cat.\nTo give my best complete final answer to the task use the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Give me an analysis around cat.\n\nThis is the expect
-      criteria for your final answer: 1 bullet point about cat that''s under 15 words.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '869'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7bJl5NVFu01JySZoERsS4Xprgoh\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214189,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Cats use their whiskers to navigate and sense their environment.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 175,\n    \"completion_tokens\":
-      25,\n    \"total_tokens\": 200,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
       - DYNAMIC
-      CF-RAY:
-      - 8c85f2c929091cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:43:09 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '392'
+      - '479'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '494'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999792'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_391ff0be4656028d45391f5188830d00
-    http_version: HTTP/1.1
-    status_code: 200
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are apple Researcher.
-      You have a lot of experience with apple.\nYour personal goal is: Express hot
-      takes on apple.\nTo give my best complete final answer to the task use the exact
-      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
-      final answer must be the great and the most complete as possible, it must be
-      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
-      "user", "content": "\nCurrent Task: Give me an analysis around apple.\n\nThis
-      is the expect criteria for your final answer: 1 bullet point about apple that''s
+    body: '{"events": [{"event_id": "5e97f2b7-ace3-48ae-8b2e-f7f4e9f9ccbc", "timestamp":
+      "2025-12-04T23:47:30.790274+00:00", "type": "crew_kickoff_started", "event_data":
+      {"timestamp": "2025-12-04T23:47:30.790274+00:00", "type": "crew_kickoff_started",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "inputs": {"topic": "dog"}}}, {"event_id": "81384c44-01db-49a4-9bf9-fc51651bed67",
+      "timestamp": "2025-12-04T23:47:31.230290+00:00", "type": "agent_execution_started",
+      "event_data": {"agent_role": "dog Researcher", "agent_goal": "Express hot takes
+      on dog.", "agent_backstory": "You have a lot of experience with dog."}}, {"event_id":
+      "50794bea-1087-472d-b17d-b5976871d66d", "timestamp": "2025-12-04T23:47:31.230672+00:00",
+      "type": "llm_call_started", "event_data": {"timestamp": "2025-12-04T23:47:31.230672+00:00",
+      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
+      "fingerprint_metadata": null, "task_id": "ae1dad85-546b-460f-b2a0-57492fa7e600",
+      "task_name": "Give me an analysis around dog.", "agent_id": "02c26688-3697-4cfb-8ea8-24dcd198d805",
+      "agent_role": "dog Researcher", "from_task": null, "from_agent": null, "model":
+      "gpt-4.1-mini", "messages": [{"role": "system", "content": "You are dog Researcher.
+      You have a lot of experience with dog.\nYour personal goal is: Express hot takes
+      on dog.\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
+      {"role": "user", "content": "\nCurrent Task: Give me an analysis around dog.\n\nThis
+      is the expected criteria for your final answer: 1 bullet point about dog that''s
       under 15 words.\nyou MUST return the actual complete content as the final answer,
       not a summary.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o"}'
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
+      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
+      object at 0x1125bdeb0>"], "available_functions": null}}, {"event_id": "367b4fbe-e596-4ea6-8614-aa7aa16b6ade",
+      "timestamp": "2025-12-04T23:47:31.978553+00:00", "type": "llm_call_completed",
+      "event_data": {"timestamp": "2025-12-04T23:47:31.978553+00:00", "type": "llm_call_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "ae1dad85-546b-460f-b2a0-57492fa7e600", "task_name": "Give me an
+      analysis around dog.", "agent_id": "02c26688-3697-4cfb-8ea8-24dcd198d805", "agent_role":
+      "dog Researcher", "from_task": null, "from_agent": null, "messages": [{"role":
+      "system", "content": "You are dog Researcher. You have a lot of experience with
+      dog.\nYour personal goal is: Express hot takes on dog.\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Give me an analysis around dog.\n\nThis is the expected criteria for your
+      final answer: 1 bullet point about dog that''s under 15 words.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}], "response": "Thought: I now can give
+      a great answer\nFinal Answer: Dogs are highly social animals, exhibiting loyalty
+      and complex communication skills with humans.", "call_type": "<LLMCallType.LLM_CALL:
+      ''llm_call''>", "model": "gpt-4.1-mini"}}, {"event_id": "035d26b2-73f0-4f07-a5d5-7fb105d9923e",
+      "timestamp": "2025-12-04T23:47:31.978637+00:00", "type": "agent_execution_completed",
+      "event_data": {"agent_role": "dog Researcher", "agent_goal": "Express hot takes
+      on dog.", "agent_backstory": "You have a lot of experience with dog."}}, {"event_id":
+      "86b61b8e-4449-4e50-9018-3754ca99c1ff", "timestamp": "2025-12-04T23:47:31.978899+00:00",
+      "type": "task_completed", "event_data": {"task_description": "Give me an analysis
+      around dog.", "task_name": "Give me an analysis around dog.", "task_id": "ae1dad85-546b-460f-b2a0-57492fa7e600",
+      "output_raw": "Dogs are highly social animals, exhibiting loyalty and complex
+      communication skills with humans.", "output_format": "OutputFormat.RAW", "agent_role":
+      "dog Researcher"}}, {"event_id": "68390d6c-b3ea-487d-a181-552ee455ba42", "timestamp":
+      "2025-12-04T23:47:31.979954+00:00", "type": "crew_kickoff_completed", "event_data":
+      {"timestamp": "2025-12-04T23:47:31.979954+00:00", "type": "crew_kickoff_completed",
+      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
+      "crew", "crew": null, "output": {"description": "Give me an analysis around
+      dog.", "name": "Give me an analysis around dog.", "expected_output": "1 bullet
+      point about dog that''s under 15 words.", "summary": "Give me an analysis around
+      dog....", "raw": "Dogs are highly social animals, exhibiting loyalty and complex
+      communication skills with humans.", "pydantic": null, "json_dict": null, "agent":
+      "dog Researcher", "output_format": "raw", "messages": [{"role": "''system''",
+      "content": "''You are dog Researcher. You have a lot of experience with dog.\\nYour
+      personal goal is: Express hot takes on dog.\\nTo give my best complete final
+      answer to the task respond using the exact following format:\\n\\nThought: I
+      now can give a great answer\\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\\n\\nI MUST
+      use these formats, my job depends on it!''"}, {"role": "''user''", "content":
+      "\"\\nCurrent Task: Give me an analysis around dog.\\n\\nThis is the expected
+      criteria for your final answer: 1 bullet point about dog that''s under 15 words.\\nyou
+      MUST return the actual complete content as the final answer, not a summary.\\n\\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\\n\\nThought:\""}, {"role": "''assistant''",
+      "content": "''Thought: I now can give a great answer\\nFinal Answer: Dogs are
+      highly social animals, exhibiting loyalty and complex communication skills with
+      humans.''"}]}, "total_tokens": 204}}], "batch_metadata": {"events_count": 7,
+      "batch_sequence": 1, "is_final_batch": false}}'
     headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '6741'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/d5ec6f38-30b2-4e17-887d-e7d0248e3fed/events
+  response:
+    body:
+      string: '{"events_created":7,"ephemeral_trace_batch_id":"4bee6d74-5395-45e2-9f17-f940a1943b82"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '86'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 04 Dec 2025 23:47:32 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1549, "final_event_count": 7}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/d5ec6f38-30b2-4e17-887d-e7d0248e3fed/finalize
+  response:
+    body:
+      string: '{"id":"4bee6d74-5395-45e2-9f17-f940a1943b82","ephemeral_trace_id":"d5ec6f38-30b2-4e17-887d-e7d0248e3fed","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1549,"crewai_version":"1.6.1","total_events":7,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.6.1","crew_fingerprint":null},"created_at":"2025-12-04T23:47:31.162Z","updated_at":"2025-12-04T23:47:32.635Z","access_code":"TRACE-12d9bb5095","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '517'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 04 Dec 2025 23:47:32 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are cat Researcher. You have
+      a lot of experience with cat.\nYour personal goal is: Express hot takes on cat.\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an analysis around cat.\n\nThis is the expected criteria for your
+      final answer: 1 bullet point about cat that''s under 15 words.\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '879'
+      - '877'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7bJkCnV31effdFbXTgcnWPd5Dyw\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214189,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer.\\nFinal
-      Answer: Apples are nature\u2019s most versatile, nutritious, and globally beloved
-      fruit.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 27,\n    \"total_tokens\": 202,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_a5d11b2ef2\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxY8S4as+FHr1joI0BQIcuitDQSaXEt0qSVDUnbcIP9e
+        UHYsJU2BXghoZ2c0O0s+JwBMSVYCEw0PorU6W++uv7VPcnm/+3Jzn1/d3q1/3z0eb+fXjXpULI0M
+        s9mhCK+siTCt1RiUoRMsHPKAUXW6XMw+rYp8XvRAayTqSKttyGaTadYqUlmRF/Msn2XT2ZneGCXQ
+        sxJ+JAAAz/0ZjZLEJ1ZCnr5WWvSe18jKSxMAc0bHCuPeKx84BZYOoDAUkHrv3xvT1U0o4SuQOYDg
+        BLXaI3Co4wDAyR/Q/aQbRVzD5/6rhDUPHrhDiG4skkQKKYjOKdP5FDhJsM7slUTA1sRQuIaYECdl
+        yDfKQjDQcjqCORA6Pxnbc7jtPI8ZUaf1COBEJvAo1wfzcEZeLlFoU1tnNv4dlW0VKd9UDrk3FMf2
+        wVjWoy8JwEMfefcmRWadaW2ogvmF/e+my8VJjw2rHtBieQaDCVyP6vlV+oFeJTFwpf1oaUxw0aAc
+        qMOGeSeVGQHJaOq/3XykfZpcUf0/8gMgBNqAsrIOpRJvJx7aHMaX8K+2S8q9YebR7ZXAKih0cRMS
+        t7zTp+vJ/NEHbKutohqddep0R7e2Wi0XC5zPVpuCJS/JHwAAAP//AwAvydeEsgMAAA==
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c85f2cd7e851cf3-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -276,37 +473,234 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:43:10 GMT
+      - Thu, 04 Dec 2025 23:47:32 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '548'
+      - '606'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '623'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999791'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_155f408adcb3974190e624d81a3ae6af
-    http_version: HTTP/1.1
-    status_code: 200
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "51c0b144-5cf1-483f-9728-1d01fd72c1a2", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.6.1", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-12-04T23:47:32.777660+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '434'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Version:
+      - 1.6.1
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 04 Dec 2025 23:47:33 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"messages":[{"role":"system","content":"You are apple Researcher. You
+      have a lot of experience with apple.\nYour personal goal is: Express hot takes
+      on apple.\nTo give my best complete final answer to the task respond using the
+      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
+      Your final answer must be the great and the most complete as possible, it must
+      be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
+      Task: Give me an analysis around apple.\n\nThis is the expected criteria for
+      your final answer: 1 bullet point about apple that''s under 15 words.\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '887'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNdi9swEHz3r1j0HIfEzUfjt7srB+VeWii00B5GkdayrvJKSHLSuyP/
+        vchO4uTaQl8M3tkZz86uXzMApiUrgYmGR9E6k989fXhoO1V8/eaK2/mLuv90R7Qvdp8fbk3NJolh
+        t08o4ok1FbZ1BqO2NMDCI4+YVOfr1eL9ppgtix5orUSTaMrFfDGd560mnRezYpnPFvl8caQ3VgsM
+        rITvGQDAa/9MRkniL1bCbHKqtBgCV8jKcxMA89akCuMh6BA5RTYZQWEpIvXevzS2U00s4SOQ3YPg
+        BErvEDioNABwCnv0P+heEzdw07+VcOOcQfC4s6ZLI+sXlODQB5u6IoqGrLHqGfY6NtAF9HntNZI0
+        zyAxaEUTCMhbgyEAChueQ8R2ApwkaCK740kVDHKJPjTaTS/te6y7wFOG1BlzAXAiG3tqH9zjETmc
+        ozJWOW+34Q2V1Zp0aCqPPFhKsYRoHevRQwbw2K+ku0qZOW9bF6tof2L/ufl6Neix8RRG9N1xXyza
+        yM1YL2Yn1pVeJTFybcLFUpngokE5UscL4J3U9gLILqb+083ftIfJNan/kR8BIdBFlJXzKLW4nnhs
+        85j+lH+1nVPuDbOAfqcFVlGjT5uQWPPODOfLhjupak0KvfN6uOHaVZv1aoXLxWZbsOyQ/QYAAP//
+        AwA3dwIK0gMAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 04 Dec 2025 23:47:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '550'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '562'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1
