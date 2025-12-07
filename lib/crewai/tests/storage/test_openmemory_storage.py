@@ -204,12 +204,25 @@ def test_openmemory_storage_different_memory_types():
 
 
 def test_openmemory_import_error():
-    with patch.dict("sys.modules", {"openmemory": None}):
-        with patch(
-            "crewai.memory.storage.openmemory_storage.OpenMemory",
-            side_effect=ImportError("No module named 'openmemory'"),
-        ):
-            pass
+    import sys
+    import importlib
+
+    original_modules = sys.modules.copy()
+    sys.modules["openmemory"] = None  # type: ignore[assignment]
+
+    try:
+        if "crewai.memory.storage.openmemory_storage" in sys.modules:
+            del sys.modules["crewai.memory.storage.openmemory_storage"]
+
+        with pytest.raises(ImportError, match="OpenMemory is not installed"):
+            from crewai.memory.storage import openmemory_storage
+
+            importlib.reload(openmemory_storage)
+            openmemory_storage.OpenMemoryStorage(
+                type="external", config={"path": "/tmp/test.sqlite"}
+            )
+    finally:
+        sys.modules.update(original_modules)
 
 
 def test_external_memory_openmemory_provider():
