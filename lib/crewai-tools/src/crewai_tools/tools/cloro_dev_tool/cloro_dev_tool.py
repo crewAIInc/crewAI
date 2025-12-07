@@ -89,10 +89,6 @@ class CloroDevTool(BaseTool):
         super().__init__(**kwargs)
         if api_key:
             self.api_key = api_key
-        
-        # Validation
-        if not self.api_key and not os.environ.get("CLORO_API_KEY"):
-            pass
 
     def _get_api_key(self) -> str:
         if self.api_key:
@@ -124,7 +120,7 @@ class CloroDevTool(BaseTool):
             payload["prompt"] = query
 
         if self.engine in ["chatgpt", "gemini", "copilot", "perplexity", "aimode"]:
-             payload["include"] = {"markdown": True}
+            payload["include"] = {"markdown": True}
 
         headers = {
             "Authorization": f"Bearer {self._get_api_key()}",
@@ -156,7 +152,7 @@ class CloroDevTool(BaseTool):
         api_response = self._make_api_request(search_query)
 
         if not api_response.get("success"):
-             raise ValueError(f"cloro API returned unsuccessful response: {api_response}")
+            raise ValueError(f"cloro API returned unsuccessful response: {api_response}")
         
         result = api_response.get("result", {})
         formatted_results: FormattedResults = {} # type: ignore
