@@ -191,7 +191,7 @@ __all__ = [
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",
     "BrowserbaseLoadTool",
-    "CloroDevTool",
+    "CloroTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
     "CodeInterpreterTool",

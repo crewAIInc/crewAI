@@ -172,7 +172,7 @@ def test_unsuccessful_response(mock_post):
     assert "cloro API returned unsuccessful response" in str(exc_info.value)
 
 def test_save_file():
-    tool = CloroDevTool(save_file=True)
+    tool = CloroTool(save_file=True)
     
     with patch("requests.post") as mock_post, \
          patch("builtins.open", new_callable=MagicMock) as mock_open:
