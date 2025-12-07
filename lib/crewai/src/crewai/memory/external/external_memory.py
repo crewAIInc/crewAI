@@ -20,6 +20,7 @@ from crewai.rag.embeddings.types import ProviderSpec
 
 if TYPE_CHECKING:
     from crewai.memory.storage.mem0_storage import Mem0Storage
+    from crewai.memory.storage.openmemory_storage import OpenMemoryStorage
 
 
 class ExternalMemory(Memory):
@@ -33,9 +34,18 @@ class ExternalMemory(Memory):
         return Mem0Storage(type="external", crew=crew, config=config)  # type: ignore[no-untyped-call]
 
     @staticmethod
+    def _configure_openmemory(
+        crew: Any, config: dict[str, Any]
+    ) -> OpenMemoryStorage:
+        from crewai.memory.storage.openmemory_storage import OpenMemoryStorage
+
+        return OpenMemoryStorage(type="external", crew=crew, config=config)
+
+    @staticmethod
     def external_supported_storages() -> dict[str, Any]:
         return {
             "mem0": ExternalMemory._configure_mem0,
+            "openmemory": ExternalMemory._configure_openmemory,
         }
 
     @staticmethod
