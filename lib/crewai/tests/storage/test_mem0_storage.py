@@ -384,6 +384,49 @@ def test_search_method_with_memory_oss(mem0_storage_with_mocked_config):
 
     assert len(results) == 2
     assert results[0]["content"] == "Result 1"
+    
+def test_search_method_with_memory_oss_with_valkey():
+    """Test search method with Valkey provider - filters should be flattened"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+            {"score": 0.4, "memory": "Result 2"},
+        ]
+    }
+
+    config = {
+        "user_id": "test_user",
+        "run_id": "my_run_id",
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "valkey",
+                "config": {
+                    "valkey_url": "valkey://localhost:6379",
+                    "collection_name": "test_collection",
+                    "embedding_model_dims": 1536,
+                },
+            },
+        },
+    }
+
+    with patch("mem0.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="short_term", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # For Valkey with a single AND condition, the filter should be flattened
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id="test_user",
+            filters={"run_id": "my_run_id"},  # Flattened from {"AND": [{"run_id": "my_run_id"}]}
+            threshold=0.5,
+        )
+
+        assert len(results) == 2
+        assert results[0]["content"] == "Result 1"
 
 
 def test_search_method_with_memory_client(
@@ -501,4 +544,125 @@ def test_search_method_with_agent_id_and_user_id():
         )
 
         assert len(results) == 2
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_redis_provider():
+    """Test search method with Redis provider - filters should be flattened"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    config = {
+        "agent_id": "agent-123",
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "redis",
+                "config": {
+                    "redis_url": "redis://localhost:6379",
+                    "collection_name": "test_collection",
+                    "embedding_model_dims": 1536,
+                },
+            },
+        },
+    }
+
+    with patch("mem0.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # For Redis with a single AND condition, the filter should be flattened
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            filters={"agent_id": "agent-123"},  # Flattened from {"AND": [{"agent_id": "agent-123"}]}
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_valkey_and_or_filters():
+    """Test search method with Valkey and OR filters - should NOT be flattened for multiple conditions"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    config = {
+        "agent_id": "agent-123",
+        "user_id": "user-123",
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "valkey",
+                "config": {
+                    "valkey_url": "valkey://localhost:6379",
+                    "collection_name": "test_collection",
+                    "embedding_model_dims": 1536,
+                },
+            },
+        },
+    }
+
+    with patch("mem0.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # For Valkey with OR filters containing multiple conditions, keep the structure
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            user_id="user-123",
+            filters={"OR": [{"user_id": "user-123"}, {"agent_id": "agent-123"}]},
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_non_valkey_redis_provider():
+    """Test search method with non-Valkey/Redis provider - filters should NOT be flattened"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    config = {
+        "agent_id": "agent-123",
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "qdrant",
+                "config": {"host": "localhost", "port": 6333},
+            },
+        },
+    }
+
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # For non-Valkey/Redis providers, keep the AND structure
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            filters={"AND": [{"agent_id": "agent-123"}]},
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
         assert results[0]["content"] == "Result 1"
