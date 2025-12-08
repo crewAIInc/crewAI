@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from anthropic.types import ThinkingBlock
 from pydantic import BaseModel
@@ -31,6 +31,11 @@ except ImportError:
     ) from None
 
 
+class AnthropicThinkingConfig(BaseModel):
+    type: Literal["enabled", "disabled"]
+    budget_tokens: int | None = None
+
+
 class AnthropicCompletion(BaseLLM):
     """Anthropic native completion implementation.
 
@@ -52,7 +57,7 @@ class AnthropicCompletion(BaseLLM):
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
-        thinking: dict[str, Any] | None = None,
+        thinking: AnthropicThinkingConfig | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -332,7 +337,10 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
 
         if self.thinking:
-            params["thinking"] = self.thinking
+            if isinstance(self.thinking, AnthropicThinkingConfig):
+                params["thinking"] = self.thinking.model_dump()
+            else:
+                params["thinking"] = self.thinking
 
         return params
 
