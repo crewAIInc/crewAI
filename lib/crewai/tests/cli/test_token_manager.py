@@ -155,7 +155,7 @@ class TestAtomicFileOperations(unittest.TestCase):
 
     def tearDown(self) -> None:
         """Clean up temp directory."""
-        TokenManager._get_secure_storage_path = self.original_get_path
+        TokenManager._get_secure_storage_path = staticmethod(self.original_get_path)
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
