@@ -100,3 +100,22 @@ def on_signal(func: T) -> T:
     for event_type in SIGNAL_EVENT_TYPES:
         crewai_event_bus.on(event_type)(func)
     return func
+
+
+def _register_default_system_signal_handlers() -> None:
+    """Register default signal handlers that emit events to the event bus.
+
+    This function is called at module import time to ensure signal events
+    are always available, regardless of telemetry settings. It bridges OS
+    signals to the CrewAI event bus so that @on_signal handlers work.
+    """
+    from crewai.events.signal_manager import system_signal_manager
+
+    system_signal_manager.register_signal(signal.SIGTERM, SigTermEvent, shutdown=True)
+    system_signal_manager.register_signal(signal.SIGINT, SigIntEvent, shutdown=True)
+    system_signal_manager.register_signal(signal.SIGHUP, SigHupEvent, shutdown=False)
+    system_signal_manager.register_signal(signal.SIGTSTP, SigTStpEvent, shutdown=False)
+    system_signal_manager.register_signal(signal.SIGCONT, SigContEvent, shutdown=False)
+
+
+_register_default_system_signal_handlers()

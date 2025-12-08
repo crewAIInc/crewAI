@@ -16,7 +16,6 @@ import json
 import logging
 import os
 import platform
-import signal
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -35,11 +34,9 @@ from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.system_events import (
-    SigContEvent,
-    SigHupEvent,
     SigIntEvent,
-    SigTStpEvent,
     SigTermEvent,
+    SignalEvent,
 )
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
@@ -131,7 +128,7 @@ class Telemetry:
             )
 
             self.provider.add_span_processor(processor)
-            self._register_shutdown_handlers()
+            self._register_telemetry_shutdown_handlers()
             self.ready = True
         except Exception as e:
             if isinstance(
@@ -166,55 +163,24 @@ class Telemetry:
                 self.ready = False
                 self.trace_set = False
 
-    def _register_shutdown_handlers(self) -> None:
-        """Register handlers for graceful shutdown on process exit and signals."""
+    def _register_telemetry_shutdown_handlers(self) -> None:
+        """Register handlers for graceful telemetry shutdown on process exit and signals.
+
+        This method registers:
+        1. An atexit handler for normal process exit
+        2. Event bus handlers for SIGTERM and SIGINT to flush telemetry before shutdown
+
+        Note: The actual OS signal handlers are registered by SystemSignalManager
+        (via system_events module import), which emits events to the event bus.
+        Telemetry subscribes to these events to perform cleanup.
+        """
         atexit.register(self._shutdown)
 
-        self._original_handlers: dict[int, Any] = {}
+        def _on_shutdown_signal(source: object, event: SignalEvent) -> None:
+            self._shutdown()
 
-        self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
-
-    def _register_signal_handler(
-        self,
-        sig: signal.Signals,
-        event_class: type,
-        shutdown: bool = False,
-    ) -> None:
-        """Register a signal handler that emits an event.
-
-        Args:
-            sig: The signal to handle.
-            event_class: The event class to instantiate and emit.
-            shutdown: Whether to trigger shutdown on this signal.
-        """
-        try:
-            original_handler = signal.getsignal(sig)
-            self._original_handlers[sig] = original_handler
-
-            def handler(signum: int, frame: Any) -> None:
-                crewai_event_bus.emit(self, event_class())
-
-                if shutdown:
-                    self._shutdown()
-
-                if original_handler not in (signal.SIG_DFL, signal.SIG_IGN, None):
-                    if callable(original_handler):
-                        original_handler(signum, frame)
-                elif shutdown:
-                    raise SystemExit(0)
-
-            signal.signal(sig, handler)
-        except ValueError as e:
-            logger.warning(
-                f"Cannot register {sig.name} handler: not running in main thread",
-                exc_info=e,
-            )
-        except OSError as e:
-            logger.warning(f"Cannot register {sig.name} handler: {e}", exc_info=e)
+        crewai_event_bus.on(SigTermEvent)(_on_shutdown_signal)
+        crewai_event_bus.on(SigIntEvent)(_on_shutdown_signal)
 
     def _shutdown(self) -> None:
         """Flush and shutdown the telemetry provider on process exit.
