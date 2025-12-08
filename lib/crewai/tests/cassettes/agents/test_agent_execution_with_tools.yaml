@@ -1,0 +1,253 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool
+      Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'':
+      {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when
+      you need to multiply two numbers together.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [multiplier], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1411'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxA6J0HiuE3j25AORbHThu60FLYi0bZaWdQkuktR5L8P
+        dj6cbh2wiw/v8T2Rj/TbCEAYLTIQqpasGm8n66db3iXlTfr1mW6T7y8/2+V6drf7Rp/v1l/EuFPQ
+        9gkVn1RTRY23yIbcgVYBJWPnOl9epzerNFkseqIhjbaTVZ4n6XQ+aYwzk2SWXE1m6WSeHuU1GYVR
+        ZPBjBADw1n+7Rp3GnchgNj4hDcYoKxTZuQhABLIdImSMJrJ0LMYDqcgxur73oig27qGmtqo5gweC
+        0jgNXCMEjK1loBIWwKbBCOkY7sEhamCCprVsvH3ta/kXgWubLYY43bhPqoshO5UYDCcM7p1vOYO3
+        jShNiJwfRBuRwWIMGxFRkdMXaLrfuKIoLpsPWLZRdgm61toLQjpHLLtn+tgej8z+HJSlygfaxj+k
+        ojTOxDoPKCO5LpTI5EXP7kcAj/1C2ncZCx+o8ZwzPWP/XLJKD35iOISBTa+OJBNLO+CLxWr8gV+u
+        kaWx8WKlQklVox6kw/5lqw1dEKOLqf/u5iPvw+TGVf9jPxBKoWfUuQ+ojXo/8VAWsPtP/lV2Trlv
+        WEQML0ZhzgZDtwmNpWzt4XhFfI2MTV4aV2HwwRwuuPR5ki7nM7UsZ9ditB/9BgAA//8DANNY3aLQ
+        AwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '759'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '774'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal\nYou ONLY have access to the following tools, and
+      should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool
+      Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'':
+      {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when
+      you need to multiply two numbers together.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [multiplier], just the name, exactly as
+      it''s written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent
+      Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer:
+      The result of the multiplication.\nyou MUST return the actual complete content
+      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
+      use the tools available and give your best Final Answer, your job depends on
+      it!\n\nThought:"},{"role":"assistant","content":"```\nThought: To find the result
+      of 3 times 4, I need to multiply the two numbers.\nAction: multiplier\nAction
+      Input: {\"first_number\": 3, \"second_number\": 4}\n```\nObservation: 12"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1628'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nK0Y+b6okG3ZLbgiEKBeoRE9slbjOJHHXsY09oVTV/juy
+        t7tJoUhcLNlv3vN7M/OUADDZsgqYGDiJ0ar0/f0HerzZ5z++7j9/KpDWX5zAa7y5JnU1sFVgmLt7
+        FHRiXQgzWoUkjT7CwiEnDKr5dlNevi2LdRmB0bSoAq23lJYXeTpKLdMiK96kWZnm5TN9MFKgZxV8
+        TwAAnuIZjOoWf7EKstXpZUTveY+sOhcBMGdUeGHce+mJa2KrGRRGE+rovWmanf42mKkfqIIr0OYB
+        9uGgAaGTmivg2j+g2+mP8fYu3irIi51ummYp67CbPA/Z9KTUAuBaG+KhNzHQ7TNyOEdQprfO3Pk/
+        qKyTWvqhdsi90cGuJ2NZRA8JwG1s1fQiPbPOjJZqMnuM363Ly6Mem0c0o/kJJENcLVibzeoVvbpF
+        4lL5RbOZ4GLAdqbOk+FTK80CSBap/3bzmvYxudT9/8jPgBBoCdvaOmyleJl4LnMYNvhfZecuR8PM
+        o/spBdYk0YVJtNjxSR3XivlHTzjWndQ9Ouvkcbc6WxflNs/Etss2LDkkvwEAAP//AwDmDvh6agMA
+        AA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:54 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '350'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '361'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,478 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: First Agent\nThe input to this tool should be the coworker, the task
+      you want them to do, and ALL necessary context to execute the task, they know
+      nothing about the task, so share absolutely everything you know, don''t reference
+      things but instead explain them.\nTool Name: Ask question to coworker\nTool
+      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
+      of the following coworkers: First Agent\nThe input to this tool should be the
+      coworker, the question you have for them, and ALL necessary context to ask the
+      question properly, they know nothing about the question, so share absolutely
+      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [Delegate
+      work to coworker, Ask question to coworker], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent
+      Task: Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2883'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFRNb+M2EL37Vwx46UU2Etexs77tdtFiUaDoIZeiXhg0OZJmTQ9VcujE
+        CPLfC9Ky5LTJYi+CwDfz5s3n8wRAkVVrUKbVYg6dm/7y7bPUaJ9+/y3u5g3LQrdNSo+fPnV/0F5V
+        2cPvvqGRi9fM+EPnUMjzGTYBtWBmvV0tF/cfFvPbuwIcvEWX3ZpOpgs/nd/MF9Ob++nNsndsPRmM
+        ag1/TwAAnss3S2SLT2oNN9Xl5YAx6gbVejACUMG7/KJ0jBRFs6hqBI1nQS6qH1qfmlbW8OChC95g
+        jCAtAjEJaQdWiwbNNoNHsgiaB0yzdqdIsYIvwIgWxINFh40WLCSi4z4/5v+ADo+aBYx/9GGPoQL9
+        OlQfnrgpAS/s8EjOQcB/EgWEVrONU8+QSeCRpC0cWeYMfqUQJaspLu9KKWbwsUGWqs+rBHWuwIxZ
+        hg4nKHV6kiLHomhycbbhDX80ucNr+HyJUMSIH3K7mMAX7pKs4XmjsoCNWsNG/dmX+VWJxUOHofbh
+        8FaFwddDmhFltlEVbFQv78z60CI0XjugeFbCNhn5HlnfUTuwwl8+DY18dxiwrskQsrhTKQzWNRqh
+        I7pTBfikD8S5mns8QadFMHCsQAKyjVVxII7UtJKptYDRDDuExqFmtDPIedTepAix9cnZDHqGxBZD
+        HuTSqkstfooQJSQjKWAFZJGF6lO2iNQw1WTyxB11IL1z2Mf3SdxZo+bTkJvfRQxHnbt2UVbCE5em
+        1ClIi6EfAxzHc+hF3/nSjKsJ26iX69ULWKeo8+Zzcu4K0MxezuHz0n/tkZdhzZ1vuuB38T+uqiam
+        2G4D6ug5r3QU36mCvkwAvpZzkl5dCNUFf+hkK36PJdzydn7mU+MBG9Hb5V2PihftRmC1WlVvEG77
+        Xbm6SMpo06IdXcfzpZMlfwVMrtL+v5y3uM+pEzc/Qj8CxmAnaLddQEvmdcqjWcB84N8zG8pcBKs8
+        QmRwK4Qht8JirZM7314VT1HwsK2JGwxdoPMBrrvt/c93dwuzvF+hmrxM/gUAAP//AwCCh8UBiQYA
+        AA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:38 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2695'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2710'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are First Agent. First backstory\nYour
+      personal goal is: First goal\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: Process initial data
+      to perform an initial analysis of the dataset.\n\nThis is the expected criteria
+      for your final answer: Your best answer to your coworker asking you this, accounting
+      for the context shared.\nyou MUST return the actual complete content as the
+      final answer, not a summary.\n\nThis is the context you''re working with:\nThe
+      goal is to conduct an initial analysis of the provided dataset. You need to
+      process the initial data efficiently and effectively, examining key patterns,
+      trends, and insights that can be gleaned. The focus should be on understanding
+      the data''s structure, identifying significant variables, and outlining any
+      initial observations that could inform further detailed analysis.\n\nBegin!
+      This is VERY important to you, use the tools available and give your best Final
+      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1333'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFZNbxw3DL37VxBzaQusF7FrJ7F7ahu0yKUoUKNo0QQGR+LMMNZIY5Ha
+        9SbIfy+omf1w2gK97IcoUo+PfJQ+nQE07JtbaNyA6sYpnP/44Y3yn1dv/hja7mO8vvmwebx+zEV/
+        xocbbVbmkdoP5HTvtXZpnAIppzibXSZUsqgXr15evb65urx4XQ1j8hTMrZ/0/Gp9cT5y5PPLF5fX
+        5y+uzi+uFvchsSNpbuGvMwCAT/XTgEZPT80tvFjtV0YSwZ6a28MmgCanYCsNirAoxhn0YnQpKsWK
+        /W5IpR/0Ft5CTFtwGKHnDQFCbwkARtlSfhd/4ogBvq//buEuAXUdOeUNhR1MOTkSAR0IOLIyBvCo
+        CF3KgPGwhhHDTlhWsCWQIZXgQRSzQrsDHVI2LGEH9IRGSuxrRIskpF8JiObitGRaw93AAhw3KWxI
+        AEVIZO8Qy9hShtRBJpeyl1Vd1t1EYqsbzIxtIIGvHSr1KbPDsDI/Wn56VDI3etJvVoDRgxvIPdgJ
+        ltPI82kpA0eXonFMUWGDoZCs4QfqOcKWdQBP4jJPxpTlqizKTkCKGwAFRsK4gpE81+/kqR5wgHIE
+        +x10mR4LRbcDl0pUqTtPMjjda5BbFHY1FcgYewIp44iZSYA7wGkK7Gz7Gn5nKRj44ynlM/yBRVOf
+        cZQVtOlpCklltUTP4AbMKrVrBgoTPBZ2D2EH7CkqdzvwLJq5LaYLWUEqGpjyEmFCVcpR1u/iu/gL
+        Penq4GhAHmh3UiodrBszgaOoGQNoglTyoadg1qPRzAIuF8cYlj4xfC2BT5Gs08jKhGpnuJQzBazw
+        KqbDv4EngZZ0SxRPYBT5wg1G1GxSXYG4mtDCkdUmRTullkxnf08TRV975xh2bs01vF10klqhvFlQ
+        LToZuB8C94NJsipu5Ggtp5midfi+oYRQUsTAuluBC0W08l2FmEYMTAv7FqbW+bHU3cAiZU90JPKA
+        3udFVi11KRN4oomOnNfC/TY31UeqETuu2S1hpsQGMQFHpUxSOecolocYpimZbiznYTclHUhobusu
+        hZC252VaQeAH+rIRRHOKfdjN9SI7QjH3pNZiLo01yWnCbBT1OZVpPnnOuMKaSTnGXdq9Hw7qrnuN
+        ieo7TkXniotmEx3TTMBdskK7UDzZoKlzaa7jMhfN3QpaBxXYVCzR11AYQJQmg09RSqZnFVlBiZ6y
+        jW8PbDobMKNTyvMQmet40JqNEo59VwJ06DTlhasthwB9YU8wzkVU5EAeyOScUVPezXrM5HmW0EFV
+        Y9osQ2+L2a/h10wTZlvCmjULQaYpZTU2PcrQJsx+ZrPWs+p4z8ihPey8mutAGHQAW3dYQW9rv7dU
+        J1FLorDFnVHk0jiWaNtm2wGkJhutDzSkYHwZkud2wnF9egFm6oqg3cKxhHBiwBjTXOV69b5fLJ8P
+        l21I/ZRTK1+4Nh1HluE+V/XZxSqapqZaP58BvK+Xenl2Tzcm4knvNT1QPe7yernUm+Nj4mj99sXF
+        YtWkGI6G6+u94VnA+7nOcvIuaBy6gfzR9fiIwOI5nRjOTtL+J5x/iz2nzrH/P+GPBudoUvL3++Y7
+        Tfm4LZMN9//adqC5Am5Ma+zoXpmylcJThyUszzbZidJ439lczlPm+RnUTfc3r16+pOurm/ayOft8
+        9jcAAAD//wMAMyvjHxUKAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:42 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3697'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3713'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible.\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
+      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
+      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
+      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
+      ''str''}}\nTool Description: Delegate a specific task to one of the following
+      coworkers: First Agent\nThe input to this tool should be the coworker, the task
+      you want them to do, and ALL necessary context to execute the task, they know
+      nothing about the task, so share absolutely everything you know, don''t reference
+      things but instead explain them.\nTool Name: Ask question to coworker\nTool
+      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
+      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
+      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
+      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
+      of the following coworkers: First Agent\nThe input to this tool should be the
+      coworker, the question you have for them, and ALL necessary context to ask the
+      question properly, they know nothing about the question, so share absolutely
+      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [Delegate
+      work to coworker, Ask question to coworker], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent
+      Task: Process initial data\n\nThis is the expected criteria for your final answer:
+      Initial analysis\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"Thought:
+      To process the initial data and provide an initial analysis, I need to delegate
+      the task to the relevant coworker, as the initial processing and analysis will
+      require hands-on work with the data. First, I will delegate the task to the
+      First Agent, providing all the necessary context and details.\n\nAction: Delegate
+      work to coworker\nAction Input: {\"task\": \"Process initial data to perform
+      an initial analysis of the dataset.\", \"context\": \"The goal is to conduct
+      an initial analysis of the provided dataset. You need to process the initial
+      data efficiently and effectively, examining key patterns, trends, and insights
+      that can be gleaned. The focus should be on understanding the data''s structure,
+      identifying significant variables, and outlining any initial observations that
+      could inform further detailed analysis.\", \"coworker\": \"First Agent\"}\nObservation:
+      To effectively process the initial data for an initial analysis, we should start
+      by thoroughly examining the dataset''s structure. This involves assessing the
+      number of records, the types of variables (categorical, numerical, dates, text),
+      and checking for missing or inconsistent values. Begin with descriptive statistics
+      such as mean, median, mode for numerical variables; frequency counts for categorical
+      variables; and basic date range summaries if applicable. Visualizing the data
+      with histograms, boxplots, and bar charts can help quickly identify distributions,
+      outliers, and patterns.\n\nNext, identifying key variables that are central
+      to our analysis objective is crucial. This can be done by evaluating correlations
+      and relationships between variables using correlation matrices, scatterplots,
+      or contingency tables depending on variable types. Initial observations should
+      highlight any prominent trends, such as seasonality, clusters, or anomalies,
+      and any data quality issues that need addressing before deeper analysis.\n\nSummarize
+      any findings that point to interesting insights or potential hypotheses for
+      follow-up, like variables that strongly relate to target outcomes, apparent
+      grouping in data points, or variables with high missing data needing imputation
+      strategies.\n\nTo conclude, this initial processing serves as a foundational
+      step to ensure data quality, understand its characteristics, and identify meaningful
+      factors that will guide more detailed exploratory and predictive analysis moving
+      forward. Preparing a concise report or dashboard with these key initial findings
+      and data health indicators would be the best way to communicate the analysis
+      to stakeholders or the analysis team."}],"model":"gpt-4o"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '5516'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFbBbhw3DL37K4i5tAXGC9txYsc9NQ2KBC2CAnXbQxMYXIkzw1gjTUTK
+        63WQfy+oGe+u0xboZe0RRerxkY/S5yOAhn1zBY0bUN04heMfP77W8eHVnz8/5MvX69/fcLl8uH/3
+        y+nLN/LyomnNI60/ktNHr5VL4xRIOcXZ7DKhkkU9vXhxfvny/OzsrBrG5CmYWz/p8Xk6Pjs5Oz8+
+        uTw+ebE4DokdSXMFfx0BAHyuvwYxerpvruCkfVwZSQR7aq52mwCanIKtNCjCohi1afdGl6JSrKiv
+        h1T6Qa/gLcS0gVv70YGg44gBMMqG8vv4U/36oX5dwXUC6jpyyncUtjDl5EikunFkZQzgURG6lAHj
+        bg0jhq2wtLAhkCGV4EEUs8J6CzqkbEjCFugeR44c+xrRIgnpNwKiuTgtmVZwPbAAx7sU7kgARUjk
+        0SGWcU0ZUgeZXMpe2rqs24nEVu8wM64DCXzrUKlPmR2G1vxo+dejkrnRvX7XAkYPbiB3aydYTiPP
+        p6UMHF2KxjBFhTsMhWQFr6jnCBvWATyJyzwZU5arsig7ASluABQYCWMLI3muf5OnesAOyh7s99Bl
+        +lQoui24VKJK3XmQweFeg7xGYVdTgYyxJ5AyjpiZBLgDnKbAzrav4A+WgoEfDimf4Q8smvqMo7Sw
+        TvdTSCrtEj2DGzCrgMMIA4UJPhV2t2EL7Ckqd1vwLJp5XUwP0kIqGpjyEmFCVcpRVu/j+/iO7rXd
+        ORqQW9oelEoHVMBM4ChqxgCaIJW86ymYdWg0s4DLxTGGpU8M35rAp0jWaWRlQrUzXMqZAlZ4FdPu
+        a+BJYE26IYoHMIp85QYjajahtiCuJrRwZLVJ0U6pJdPZ39NE0dfe2YedW3MFbxedpLVQvltQLToZ
+        uB8C94MCxqq4kaO1nGaK1uGPDSWEkiIG1m0LLhTRyncVYhoxMC3sW5ha50+l7gYWKY9ERyIP6H1e
+        ZLWmLmUCTzTRnvNauN/mpnqgGrHjmt0SZkpsEBNwVMoklXOOYnmIYZqS6cZyHrZT0oGE5rbuUghp
+        c1ymFgLf0teNIJpT7MN2rhfZEYq5J7UWc2msSU4TZqOoz6lM88lzxhXWTMo+7tLu/bBTd91rTFTf
+        cSo6V1w0m+iYZgKukxXaheLJBk2dS3Mdl7lo7lbQOqjApmKJvobCAKI0GXyKUjI9qUgLJXrKNrw9
+        sOlswIxOKc9DZK7jTms2Sjj2XQnQodOUF642HAL0hT3BOBdRkQN5IJNzRk15O+sxk+dZQjtVjelu
+        GXobzH4Fv2aaMNsS1qxZCDJNKaux6VGGdcLsZzZrPauOHxnZtYedV3MdCIMOYOsOK+hN7fc11Um0
+        JlHY4NYocmkcS7Rts20HUpON1lsaUjC+DMlTO+G4Orz+MnVF0G7fWEI4MGCMaa5yvXg/LJYvu6s2
+        pH7KaS1fuTYdR5bhJlf12bUqmqamWr8cAXyoV3p5cks3JuJJbzTdUj3u9OTidA7Y7F8Re/Ozk+XG
+        bzQphgO/Zzu/JyFv5krLwbugcegG8nvf/SMCi+d0YDg6SPyfeP4t9pw8x/7/hN8bnKNJyd88tt9h
+        zvttmWy8/9e2HdEVcGNqY0c3ypStGJ46LGF+ATWyFaXxprPJnKfM8zOom24unz1/fu5eXF5Qc/Tl
+        6G8AAAD//wMAzkwrRQ8KAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:44 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1879'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1893'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

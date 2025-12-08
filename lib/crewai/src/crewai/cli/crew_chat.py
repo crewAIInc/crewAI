@@ -14,7 +14,8 @@ import tomli
 from crewai.cli.utils import read_toml
 from crewai.cli.version import get_crewai_version
 from crewai.crew import Crew
-from crewai.llm import LLM, BaseLLM
+from crewai.llm import LLM
+from crewai.llms.base_llm import BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
@@ -27,7 +28,7 @@ MIN_REQUIRED_VERSION: Final[Literal["0.98.0"]] = "0.98.0"
 
 
 def check_conversational_crews_version(
-    crewai_version: str, pyproject_data: dict
+    crewai_version: str, pyproject_data: dict[str, Any]
 ) -> bool:
     """
     Check if the installed crewAI version supports conversational crews.
@@ -53,7 +54,7 @@ def check_conversational_crews_version(
     return True
 
 
-def run_chat():
+def run_chat() -> None:
     """
     Runs an interactive chat loop using the Crew's chat LLM with function calling.
     Incorporates crew_name, crew_description, and input fields to build a tool schema.
@@ -101,7 +102,7 @@ def run_chat():
 
     click.secho(f"Assistant: {introductory_message}\n", fg="green")
 
-    messages = [
+    messages: list[LLMMessage] = [
         {"role": "system", "content": system_message},
         {"role": "assistant", "content": introductory_message},
     ]
@@ -113,7 +114,7 @@ def run_chat():
     chat_loop(chat_llm, messages, crew_tool_schema, available_functions)
 
 
-def show_loading(event: threading.Event):
+def show_loading(event: threading.Event) -> None:
     """Display animated loading dots while processing."""
     while not event.is_set():
         _printer.print(".", end="")
@@ -162,23 +163,23 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
     )
 
 
-def create_tool_function(crew: Crew, messages: list[dict[str, str]]) -> Any:
+def create_tool_function(crew: Crew, messages: list[LLMMessage]) -> Any:
     """Creates a wrapper function for running the crew tool with messages."""
 
-    def run_crew_tool_with_messages(**kwargs):
+    def run_crew_tool_with_messages(**kwargs: Any) -> str:
         return run_crew_tool(crew, messages, **kwargs)
 
     return run_crew_tool_with_messages
 
 
-def flush_input():
+def flush_input() -> None:
     """Flush any pending input from the user."""
     if platform.system() == "Windows":
         # Windows platform
         import msvcrt
 
-        while msvcrt.kbhit():
-            msvcrt.getch()
+        while msvcrt.kbhit():  # type: ignore[attr-defined]
+            msvcrt.getch()  # type: ignore[attr-defined]
     else:
         # Unix-like platforms (Linux, macOS)
         import termios
@@ -186,7 +187,12 @@ def flush_input():
         termios.tcflush(sys.stdin, termios.TCIFLUSH)
 
 
-def chat_loop(chat_llm, messages, crew_tool_schema, available_functions):
+def chat_loop(
+    chat_llm: LLM | BaseLLM,
+    messages: list[LLMMessage],
+    crew_tool_schema: dict[str, Any],
+    available_functions: dict[str, Any],
+) -> None:
     """Main chat loop for interacting with the user."""
     while True:
         try:
@@ -225,7 +231,7 @@ def get_user_input() -> str:
 
 def handle_user_input(
     user_input: str,
-    chat_llm: LLM,
+    chat_llm: LLM | BaseLLM,
     messages: list[LLMMessage],
     crew_tool_schema: dict[str, Any],
     available_functions: dict[str, Any],
@@ -255,7 +261,7 @@ def handle_user_input(
     click.secho(f"\nAssistant: {final_response}\n", fg="green")
 
 
-def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
+def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict[str, Any]:
     """
     Dynamically build a Littellm 'function' schema for the given crew.
 
@@ -286,7 +292,7 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict:
     }
 
 
-def run_crew_tool(crew: Crew, messages: list[dict[str, str]], **kwargs):
+def run_crew_tool(crew: Crew, messages: list[LLMMessage], **kwargs: Any) -> str:
     """
     Runs the crew using crew.kickoff(inputs=kwargs) and returns the output.
 
@@ -372,7 +378,9 @@ def load_crew_and_name() -> tuple[Crew, str]:
     return crew_instance, crew_class_name
 
 
-def generate_crew_chat_inputs(crew: Crew, crew_name: str, chat_llm) -> ChatInputs:
+def generate_crew_chat_inputs(
+    crew: Crew, crew_name: str, chat_llm: LLM | BaseLLM
+) -> ChatInputs:
     """
     Generates the ChatInputs required for the crew by analyzing the tasks and agents.
 
@@ -410,23 +418,12 @@ def fetch_required_inputs(crew: Crew) -> set[str]:
     Returns:
         Set[str]: A set of placeholder names.
     """
-    placeholder_pattern = re.compile(r"\{(.+?)}")
-    required_inputs: set[str] = set()
-
-    # Scan tasks
-    for task in crew.tasks:
-        text = f"{task.description or ''} {task.expected_output or ''}"
-        required_inputs.update(placeholder_pattern.findall(text))
-
-    # Scan agents
-    for agent in crew.agents:
-        text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
-        required_inputs.update(placeholder_pattern.findall(text))
-
-    return required_inputs
+    return crew.fetch_inputs()
 
 
-def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) -> str:
+def generate_input_description_with_ai(
+    input_name: str, crew: Crew, chat_llm: LLM | BaseLLM
+) -> str:
     """
     Generates an input description using AI based on the context of the crew.
 
@@ -484,10 +481,10 @@ def generate_input_description_with_ai(input_name: str, crew: Crew, chat_llm) ->
         f"{context}"
     )
     response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
-    return response.strip()
+    return str(response).strip()
 
 
-def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
+def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> str:
     """
     Generates a brief description of the crew using AI.
 
@@ -534,4 +531,4 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm) -> str:
         f"{context}"
     )
     response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
-    return response.strip()
+    return str(response).strip()

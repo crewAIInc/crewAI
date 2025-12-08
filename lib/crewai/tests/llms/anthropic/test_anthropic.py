@@ -691,7 +691,7 @@ def test_anthropic_stop_sequences_sync():
     assert llm.stop == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+@pytest.mark.vcr()
 def test_anthropic_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Anthropic API."""
     llm = LLM(model="anthropic/claude-3-5-haiku-20241022")

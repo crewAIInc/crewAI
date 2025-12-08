@@ -6,8 +6,10 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
+from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
@@ -23,9 +25,13 @@ try:
     from azure.ai.inference import (
         ChatCompletionsClient,
     )
+    from azure.ai.inference.aio import (
+        ChatCompletionsClient as AsyncChatCompletionsClient,
+    )
     from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
+        JsonSchemaFormat,
         StreamingChatCompletionsUpdate,
     )
     from azure.core.credentials import (
@@ -133,6 +139,8 @@ class AzureCompletion(BaseLLM):
 
         self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
 
+        self.async_client = AsyncChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
@@ -208,6 +216,9 @@ class AzureCompletion(BaseLLM):
             # Format messages for Azure
             formatted_messages = self._format_messages_for_azure(messages)
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
                 formatted_messages, tools, response_model
@@ -224,6 +235,88 @@ class AzureCompletion(BaseLLM):
                 )
 
             return self._handle_completion(
+                completion_params,
+                available_functions,
+                from_task,
+                from_agent,
+                response_model,
+            )
+
+        except HttpResponseError as e:
+            if e.status_code == 401:
+                error_msg = "Azure authentication failed. Check your API key."
+            elif e.status_code == 404:
+                error_msg = (
+                    f"Azure endpoint not found. Check endpoint URL: {self.endpoint}"
+                )
+            elif e.status_code == 429:
+                error_msg = "Azure API rate limit exceeded. Please retry later."
+            else:
+                error_msg = f"Azure API HTTP error: {e.status_code} - {e.message}"
+
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise
+        except Exception as e:
+            error_msg = f"Azure API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise
+
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Call Azure AI Inference chat completions API asynchronously.
+
+        Args:
+            messages: Input messages for the chat completion
+            tools: List of tool/function definitions
+            callbacks: Callback functions (not used in native implementation)
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Chat completion response or tool call result
+        """
+        try:
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            formatted_messages = self._format_messages_for_azure(messages)
+
+            completion_params = self._prepare_completion_params(
+                formatted_messages, tools, response_model
+            )
+
+            if self.stream:
+                return await self._ahandle_streaming_completion(
+                    completion_params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    response_model,
+                )
+
+            return await self._ahandle_completion(
                 completion_params,
                 available_functions,
                 from_task,
@@ -278,13 +371,16 @@ class AzureCompletion(BaseLLM):
         }
 
         if response_model and self.is_openai_model:
-            params["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": response_model.__name__,
-                    "schema": response_model.model_json_schema(),
-                },
-            }
+            model_description = generate_model_description(response_model)
+            json_schema_info = model_description["json_schema"]
+            json_schema_name = json_schema_info["name"]
+
+            params["response_format"] = JsonSchemaFormat(
+                name=json_schema_name,
+                schema=json_schema_info["schema"],
+                description=f"Schema for {json_schema_name}",
+                strict=json_schema_info["strict"],
+            )
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
@@ -311,8 +407,8 @@ class AzureCompletion(BaseLLM):
             params["tool_choice"] = "auto"
 
         additional_params = self.additional_params
-        additional_drop_params = additional_params.get('additional_drop_params')
-        drop_params = additional_params.get('drop_params')
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
 
         if drop_params and isinstance(additional_drop_params, list):
             for drop_param in additional_drop_params:
@@ -457,6 +553,10 @@ class AzureCompletion(BaseLLM):
                 messages=params["messages"],
             )
 
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
+
         except Exception as e:
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
@@ -549,6 +649,172 @@ class AzureCompletion(BaseLLM):
             messages=params["messages"],
         )
 
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
+
+    async def _ahandle_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming chat completion asynchronously."""
+        try:
+            response: ChatCompletions = await self.async_client.complete(**params)
+
+            if not response.choices:
+                raise ValueError("No choices returned from Azure API")
+
+            choice = response.choices[0]
+            message = choice.message
+
+            usage = self._extract_azure_token_usage(response)
+            self._track_token_usage_internal(usage)
+
+            if response_model and self.is_openai_model:
+                content = message.content or ""
+                try:
+                    structured_data = response_model.model_validate_json(content)
+                    structured_json = structured_data.model_dump_json()
+
+                    self._emit_call_completed_event(
+                        response=structured_json,
+                        call_type=LLMCallType.LLM_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+
+                    return structured_json
+                except Exception as e:
+                    error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
+                    logging.error(error_msg)
+                    raise ValueError(error_msg) from e
+
+            if message.tool_calls and available_functions:
+                tool_call = message.tool_calls[0]  # Handle first tool call
+                if isinstance(tool_call, ChatCompletionsToolCall):
+                    function_name = tool_call.function.name
+
+                    try:
+                        function_args = json.loads(tool_call.function.arguments)
+                    except json.JSONDecodeError as e:
+                        logging.error(f"Failed to parse tool arguments: {e}")
+                        function_args = {}
+
+                    result = self._handle_tool_execution(
+                        function_name=function_name,
+                        function_args=function_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+                    if result is not None:
+                        return result
+
+            content = message.content or ""
+
+            content = self._apply_stop_words(content)
+
+            self._emit_call_completed_event(
+                response=content,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+
+            error_msg = f"Azure API call failed: {e!s}"
+            logging.error(error_msg)
+            self._emit_call_failed_event(
+                error=error_msg, from_task=from_task, from_agent=from_agent
+            )
+            raise e
+
+        return content
+
+    async def _ahandle_streaming_completion(
+        self,
+        params: dict[str, Any],
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str:
+        """Handle streaming chat completion asynchronously."""
+        full_response = ""
+        tool_calls = {}
+
+        stream = await self.async_client.complete(**params)
+        async for update in stream:
+            if isinstance(update, StreamingChatCompletionsUpdate):
+                if update.choices:
+                    choice = update.choices[0]
+                    if choice.delta and choice.delta.content:
+                        content_delta = choice.delta.content
+                        full_response += content_delta
+                        self._emit_stream_chunk_event(
+                            chunk=content_delta,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        )
+
+                    if choice.delta and choice.delta.tool_calls:
+                        for tool_call in choice.delta.tool_calls:
+                            call_id = tool_call.id or "default"
+                            if call_id not in tool_calls:
+                                tool_calls[call_id] = {
+                                    "name": "",
+                                    "arguments": "",
+                                }
+
+                            if tool_call.function and tool_call.function.name:
+                                tool_calls[call_id]["name"] = tool_call.function.name
+                            if tool_call.function and tool_call.function.arguments:
+                                tool_calls[call_id]["arguments"] += (
+                                    tool_call.function.arguments
+                                )
+
+        if tool_calls and available_functions:
+            for call_data in tool_calls.values():
+                function_name = call_data["name"]
+
+                try:
+                    function_args = json.loads(call_data["arguments"])
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse streamed tool arguments: {e}")
+                    continue
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        full_response = self._apply_stop_words(full_response)
+
+        self._emit_call_completed_event(
+            response=full_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
         return full_response
 
     def supports_function_calling(self) -> bool:
@@ -604,3 +870,20 @@ class AzureCompletion(BaseLLM):
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
         return {"total_tokens": 0}
+
+    async def aclose(self) -> None:
+        """Close the async client and clean up resources.
+
+        This ensures proper cleanup of the underlying aiohttp session
+        to avoid unclosed connector warnings.
+        """
+        if hasattr(self.async_client, "close"):
+            await self.async_client.close()
+
+    async def __aenter__(self) -> Self:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Async context manager exit."""
+        await self.aclose()

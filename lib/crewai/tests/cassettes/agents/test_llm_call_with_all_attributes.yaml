@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"user","content":"Say ''Hello, World!'' and then say
+      STOP"}],"model":"gpt-3.5-turbo","frequency_penalty":0.1,"max_tokens":50,"presence_penalty":0.1,"temperature":0.7}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '185'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJBb9swDIXv/hUqz06RZEmz5bgNwy7dhrVFgG6FoUi0rUwWBYkeWhT5
+        74WUNHa3DtjFB3589HsUHwshwGhYC1CtZNV5O/mw+xh3l+9vL3eBF98XX67b+pO52XTYT8MDlElB
+        2x0qfladK+q8RTbkDlgFlIxp6mx1sXj7bjFbrjLoSKNNssbz5M35csJ92NJkOpsvj8qWjMIIa/Gj
+        EEKIx/xNHp3Ge1iLaflc6TBG2SCsT01CQCCbKiBjNJGlYygHqMgxumz7M1pLpdhQsPrsp7u6/vpt
+        3Bmw7qNMTl1v7QhI54hlSpo93h3J/uTKUuMDbeMfUqiNM7GtAspILjmITB4y3RdC3OX0/YtA4AN1
+        niumX5h/N1sdxsGw7wEuj4yJpR3K83n5yrBKI0tj42h5oKRqUQ/KYdOy14ZGoBhF/tvLa7MPsY1r
+        /mf8AJRCz6grH1Ab9TLv0BYwHeO/2k4rzoYhYvhtFFZsMKRn0FjL3h7OBOJDZOyq2rgGgw8m30p6
+        xmJfPAEAAP//AwAaFwMSKgMAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:22:37 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '176'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '206'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -197,7 +197,7 @@ def test_run_does_not_call_asyncio_run_for_sync_tools():
         assert sync_result == "Processed test synchronously"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_max_usage_count_is_respected():
     class IteratingTool(BaseTool):
         name: str = "iterating_tool"

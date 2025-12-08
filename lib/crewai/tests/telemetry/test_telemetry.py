@@ -19,7 +19,6 @@ def cleanup_telemetry():
         Telemetry._lock = threading.Lock()
 
 
-@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -33,13 +32,19 @@ def cleanup_telemetry():
 )
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
-    with patch.dict(os.environ, {env_var: value}):
+    # Clear all telemetry-related env vars first, then set only the one being tested
+    env_overrides = {
+        "OTEL_SDK_DISABLED": "false",
+        "CREWAI_DISABLE_TELEMETRY": "false",
+        "CREWAI_DISABLE_TRACKING": "false",
+        env_var: value,
+    }
+    with patch.dict(os.environ, env_overrides):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
             assert telemetry.ready is expected_ready
 
 
-@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -48,34 +53,39 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-@pytest.mark.telemetry
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
     side_effect=Exception("Test exception"),
 )
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
     error = Exception("Test exception")
     export_mock.side_effect = error
 
-    tracer = trace.get_tracer(__name__)
-    with tracer.start_as_current_span("test-span"):
-        agent = Agent(
-            role="agent",
-            llm="gpt-4o-mini",
-            goal="Just say hi",
-            backstory="You are a helpful assistant that just says hi",
-        )
-        task = Task(
-            description="Just say hi",
-            expected_output="hi",
-            agent=agent,
-        )
-        crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
-        crew.kickoff()
+    with patch.dict(
+        os.environ, {"CREWAI_DISABLE_TELEMETRY": "false", "OTEL_SDK_DISABLED": "false"}
+    ):
+        telemetry = Telemetry()
+        telemetry.set_tracer()
 
-    trace.get_tracer_provider().force_flush()
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("test-span"):
+            agent = Agent(
+                role="agent",
+                llm="gpt-4o-mini",
+                goal="Just say hi",
+                backstory="You are a helpful assistant that just says hi",
+            )
+            task = Task(
+                description="Just say hi",
+                expected_output="hi",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
+            crew.kickoff()
+
+        trace.get_tracer_provider().force_flush()
 
     assert export_mock.called
     assert logger_mock.call_count == export_mock.call_count

@@ -57,7 +57,12 @@ if TYPE_CHECKING:
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
-    from litellm.types.utils import ChatCompletionDeltaToolCall, Choices, ModelResponse
+    from litellm.types.utils import (
+        ChatCompletionDeltaToolCall,
+        Choices,
+        Function,
+        ModelResponse,
+    )
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
@@ -73,7 +78,12 @@ try:
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
     )
-    from litellm.types.utils import ChatCompletionDeltaToolCall, Choices, ModelResponse
+    from litellm.types.utils import (
+        ChatCompletionDeltaToolCall,
+        Choices,
+        Function,
+        ModelResponse,
+    )
     from litellm.utils import supports_response_schema
 
     LITELLM_AVAILABLE = True
@@ -84,6 +94,7 @@ except ImportError:
     ContextWindowExceededError = Exception  # type: ignore
     get_supported_openai_params = None  # type: ignore
     ChatCompletionDeltaToolCall = None  # type: ignore
+    Function = None  # type: ignore
     ModelResponse = None  # type: ignore
     supports_response_schema = None  # type: ignore
     CustomLogger = None  # type: ignore
@@ -407,37 +418,92 @@ class LLM(BaseLLM):
         return instance
 
     @classmethod
+    def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
+        """Check if a model name matches provider-specific patterns.
+
+        This allows supporting models that aren't in the hardcoded constants list,
+        including "latest" versions and new models that follow provider naming conventions.
+
+        Args:
+            model: The model name to check
+            provider: The provider to check against (canonical name)
+
+        Returns:
+            True if the model matches the provider's naming pattern, False otherwise
+        """
+        model_lower = model.lower()
+
+        if provider == "openai":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
+            )
+
+        if provider == "anthropic" or provider == "claude":
+            return any(
+                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+            )
+
+        if provider == "gemini" or provider == "google":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gemini-", "gemma-", "learnlm-"]
+            )
+
+        if provider == "bedrock":
+            return "." in model_lower
+
+        if provider == "azure":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
+            )
+
+        return False
+
+    @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
-        """Validate if a model name exists in the provider's constants.
+        """Validate if a model name exists in the provider's constants or matches provider patterns.
+
+        This method first checks the hardcoded constants list for known models.
+        If not found, it falls back to pattern matching to support new models,
+        "latest" versions, and models that follow provider naming conventions.
 
         Args:
             model: The model name to validate
             provider: The provider to check against (canonical name)
 
         Returns:
-            True if the model exists in the provider's constants, False otherwise
+            True if the model exists in constants or matches provider patterns, False otherwise
         """
-        if provider == "openai":
-            return model in OPENAI_MODELS
+        if provider == "openai" and model in OPENAI_MODELS:
+            return True
 
-        if provider == "anthropic" or provider == "claude":
-            return model in ANTHROPIC_MODELS
+        if (
+            provider == "anthropic" or provider == "claude"
+        ) and model in ANTHROPIC_MODELS:
+            return True
 
-        if provider == "gemini":
-            return model in GEMINI_MODELS
+        if (provider == "gemini" or provider == "google") and model in GEMINI_MODELS:
+            return True
 
-        if provider == "bedrock":
-            return model in BEDROCK_MODELS
+        if provider == "bedrock" and model in BEDROCK_MODELS:
+            return True
 
         if provider == "azure":
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
-        return False
+        # Fallback to pattern matching for models not in constants
+        return cls._matches_provider_pattern(model, provider)
 
     @classmethod
     def _infer_provider_from_model(cls, model: str) -> str:
         """Infer the provider from the model name.
+
+        This method first checks the hardcoded constants list for known models.
+        If not found, it uses pattern matching to infer the provider from model name patterns.
+        This allows supporting new models and "latest" versions without hardcoding.
 
         Args:
             model: The model name without provider prefix
@@ -445,7 +511,6 @@ class LLM(BaseLLM):
         Returns:
             The inferred provider name, defaults to "openai"
         """
-
         if model in OPENAI_MODELS:
             return "openai"
 
@@ -556,7 +621,9 @@ class LLM(BaseLLM):
         self.callbacks = callbacks
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
-        self.additional_params = kwargs
+        self.additional_params = {
+            k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
+        }
         self.is_anthropic = self._is_anthropic_model(model)
         self.stream = stream
         self.interceptor = interceptor
@@ -1150,6 +1217,281 @@ class LLM(BaseLLM):
         )
         return text_response
 
+    async def _ahandle_non_streaming_response(
+        self,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle an async non-streaming response from the LLM.
+
+        Args:
+            params: Parameters for the completion call
+            callbacks: Optional list of callback functions
+            available_functions: Dict of available functions
+            from_task: Optional Task that invoked the LLM
+            from_agent: Optional Agent that invoked the LLM
+            response_model: Optional Response model
+
+        Returns:
+            str: The response text
+        """
+        if response_model and self.is_litellm:
+            from crewai.utilities.internal_instructor import InternalInstructor
+
+            messages = params.get("messages", [])
+            if not messages:
+                raise ValueError("Messages are required when using response_model")
+
+            combined_content = "\n\n".join(
+                f"{msg['role'].upper()}: {msg['content']}" for msg in messages
+            )
+
+            instructor_instance = InternalInstructor(
+                content=combined_content,
+                model=response_model,
+                llm=self,
+            )
+            result = instructor_instance.to_pydantic()
+            structured_response = result.model_dump_json()
+            self._handle_emit_call_events(
+                response=structured_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return structured_response
+
+        try:
+            if response_model:
+                params["response_model"] = response_model
+            response = await litellm.acompletion(**params)
+
+        except ContextWindowExceededError as e:
+            raise LLMContextLengthExceededError(str(e)) from e
+
+        if response_model is not None:
+            if isinstance(response, BaseModel):
+                structured_response = response.model_dump_json()
+                self._handle_emit_call_events(
+                    response=structured_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return structured_response
+
+        response_message = cast(Choices, cast(ModelResponse, response).choices)[
+            0
+        ].message
+        text_response = response_message.content or ""
+
+        if callbacks and len(callbacks) > 0:
+            for callback in callbacks:
+                if hasattr(callback, "log_success_event"):
+                    usage_info = getattr(response, "usage", None)
+                    if usage_info:
+                        callback.log_success_event(
+                            kwargs=params,
+                            response_obj={"usage": usage_info},
+                            start_time=0,
+                            end_time=0,
+                        )
+
+        tool_calls = getattr(response_message, "tool_calls", [])
+
+        if (not tool_calls or not available_functions) and text_response:
+            self._handle_emit_call_events(
+                response=text_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return text_response
+
+        if tool_calls and not available_functions and not text_response:
+            return tool_calls
+
+        tool_result = self._handle_tool_call(
+            tool_calls, available_functions, from_task, from_agent
+        )
+        if tool_result is not None:
+            return tool_result
+
+        self._handle_emit_call_events(
+            response=text_response,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+        return text_response
+
+    async def _ahandle_streaming_response(
+        self,
+        params: dict[str, Any],
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> Any:
+        """Handle an async streaming response from the LLM.
+
+        Args:
+            params: Parameters for the completion call
+            callbacks: Optional list of callback functions
+            available_functions: Dict of available functions
+            from_task: Optional task object
+            from_agent: Optional agent object
+            response_model: Optional response model
+
+        Returns:
+            str: The complete response text
+        """
+        full_response = ""
+        chunk_count = 0
+        usage_info = None
+
+        accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
+            AccumulatedToolArgs
+        )
+
+        params["stream"] = True
+        params["stream_options"] = {"include_usage": True}
+
+        try:
+            async for chunk in await litellm.acompletion(**params):
+                chunk_count += 1
+                chunk_content = None
+
+                try:
+                    choices = None
+                    if isinstance(chunk, dict) and "choices" in chunk:
+                        choices = chunk["choices"]
+                    elif hasattr(chunk, "choices"):
+                        if not isinstance(chunk.choices, type):
+                            choices = chunk.choices
+
+                    if hasattr(chunk, "usage") and chunk.usage is not None:
+                        usage_info = chunk.usage
+
+                    if choices and len(choices) > 0:
+                        first_choice = choices[0]
+                        delta = None
+
+                        if isinstance(first_choice, dict):
+                            delta = first_choice.get("delta", {})
+                        elif hasattr(first_choice, "delta"):
+                            delta = first_choice.delta
+
+                        if delta:
+                            if isinstance(delta, dict):
+                                chunk_content = delta.get("content")
+                            elif hasattr(delta, "content"):
+                                chunk_content = delta.content
+
+                            tool_calls: list[ChatCompletionDeltaToolCall] | None = None
+                            if isinstance(delta, dict):
+                                tool_calls = delta.get("tool_calls")
+                            elif hasattr(delta, "tool_calls"):
+                                tool_calls = delta.tool_calls
+
+                            if tool_calls:
+                                for tool_call in tool_calls:
+                                    idx = tool_call.index
+                                    if tool_call.function:
+                                        if tool_call.function.name:
+                                            accumulated_tool_args[
+                                                idx
+                                            ].function.name = tool_call.function.name
+                                        if tool_call.function.arguments:
+                                            accumulated_tool_args[
+                                                idx
+                                            ].function.arguments += (
+                                                tool_call.function.arguments
+                                            )
+
+                except (AttributeError, KeyError, IndexError, TypeError):
+                    pass
+
+                if chunk_content:
+                    full_response += chunk_content
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMStreamChunkEvent(
+                            chunk=chunk_content,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        ),
+                    )
+
+            if callbacks and len(callbacks) > 0 and usage_info:
+                for callback in callbacks:
+                    if hasattr(callback, "log_success_event"):
+                        callback.log_success_event(
+                            kwargs=params,
+                            response_obj={"usage": usage_info},
+                            start_time=0,
+                            end_time=0,
+                        )
+
+            if accumulated_tool_args and available_functions:
+                # Convert accumulated tool args to ChatCompletionDeltaToolCall objects
+                tool_calls_list: list[ChatCompletionDeltaToolCall] = [
+                    ChatCompletionDeltaToolCall(
+                        index=idx,
+                        function=Function(
+                            name=tool_arg.function.name,
+                            arguments=tool_arg.function.arguments,
+                        ),
+                    )
+                    for idx, tool_arg in accumulated_tool_args.items()
+                    if tool_arg.function.name
+                ]
+
+                if tool_calls_list:
+                    result = self._handle_streaming_tool_calls(
+                        tool_calls=tool_calls_list,
+                        accumulated_tool_args=accumulated_tool_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+                    if result is not None:
+                        return result
+
+            self._handle_emit_call_events(
+                response=full_response,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("messages"),
+            )
+            return full_response
+
+        except ContextWindowExceededError as e:
+            raise LLMContextLengthExceededError(str(e)) from e
+        except Exception:
+            if chunk_count == 0:
+                raise
+            if full_response:
+                self._handle_emit_call_events(
+                    response=full_response,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params.get("messages"),
+                )
+                return full_response
+            raise
+
     def _handle_tool_call(
         self,
         tool_calls: list[Any],
@@ -1300,6 +1642,10 @@ class LLM(BaseLLM):
                 if message.get("role") == "system":
                     msg_role: Literal["assistant"] = "assistant"
                     message["role"] = msg_role
+
+        if not self._invoke_before_llm_call_hooks(messages, from_agent):
+            raise ValueError("LLM call blocked by before_llm_call hook")
+
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
@@ -1309,7 +1655,16 @@ class LLM(BaseLLM):
                 params = self._prepare_completion_params(messages, tools)
                 # --- 7) Make the completion call and handle response
                 if self.stream:
-                    return self._handle_streaming_response(
+                    result = self._handle_streaming_response(
+                        params=params,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+                else:
+                    result = self._handle_non_streaming_response(
                         params=params,
                         callbacks=callbacks,
                         available_functions=available_functions,
@@ -1318,14 +1673,12 @@ class LLM(BaseLLM):
                         response_model=response_model,
                     )
 
-                return self._handle_non_streaming_response(
-                    params=params,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
+                if isinstance(result, str):
+                    result = self._invoke_after_llm_call_hooks(
+                        messages, result, from_agent
+                    )
+
+                return result
             except LLMContextLengthExceededError:
                 # Re-raise LLMContextLengthExceededError as it should be handled
                 # by the CrewAgentExecutor._invoke_loop method, which can then decide
@@ -1350,6 +1703,128 @@ class LLM(BaseLLM):
                     logging.info("Retrying LLM call without the unsupported 'stop'")
 
                     return self.call(
+                        messages,
+                        tools=tools,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                crewai_event_bus.emit(
+                    self,
+                    event=LLMCallFailedEvent(
+                        error=str(e), from_task=from_task, from_agent=from_agent
+                    ),
+                )
+                raise
+
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Async high-level LLM call method.
+
+        Args:
+            messages: Input messages for the LLM.
+                     Can be a string or list of message dictionaries.
+                     If string, it will be converted to a single user message.
+                     If list, each dict must have 'role' and 'content' keys.
+            tools: Optional list of tool schemas for function calling.
+                  Each tool should define its name, description, and parameters.
+            callbacks: Optional list of callback functions to be executed
+                      during and after the LLM call.
+            available_functions: Optional dict mapping function names to callables
+                               that can be invoked by the LLM.
+            from_task: Optional Task that invoked the LLM
+            from_agent: Optional Agent that invoked the LLM
+            response_model: Optional Model that contains a pydantic response model.
+
+        Returns:
+            Union[str, Any]: Either a text response from the LLM (str) or
+                           the result of a tool function call (Any).
+
+        Raises:
+            TypeError: If messages format is invalid
+            ValueError: If response format is not supported
+            LLMContextLengthExceededError: If input exceeds model's context limit
+        """
+        crewai_event_bus.emit(
+            self,
+            event=LLMCallStartedEvent(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                model=self.model,
+            ),
+        )
+
+        self._validate_call_params()
+
+        if isinstance(messages, str):
+            messages = [{"role": "user", "content": messages}]
+
+        if "o1" in self.model.lower():
+            for message in messages:
+                if message.get("role") == "system":
+                    msg_role: Literal["assistant"] = "assistant"
+                    message["role"] = msg_role
+
+        with suppress_warnings():
+            if callbacks and len(callbacks) > 0:
+                self.set_callbacks(callbacks)
+            try:
+                params = self._prepare_completion_params(messages, tools)
+
+                if self.stream:
+                    return await self._ahandle_streaming_response(
+                        params=params,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                return await self._ahandle_non_streaming_response(
+                    params=params,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
+            except LLMContextLengthExceededError:
+                raise
+            except Exception as e:
+                unsupported_stop = "Unsupported parameter" in str(
+                    e
+                ) and "'stop'" in str(e)
+
+                if unsupported_stop:
+                    if (
+                        "additional_drop_params" in self.additional_params
+                        and isinstance(
+                            self.additional_params["additional_drop_params"], list
+                        )
+                    ):
+                        self.additional_params["additional_drop_params"].append("stop")
+                    else:
+                        self.additional_params = {"additional_drop_params": ["stop"]}
+
+                    logging.info("Retrying LLM call without the unsupported 'stop'")
+
+                    return await self.acall(
                         messages,
                         tools=tools,
                         callbacks=callbacks,
@@ -1699,12 +2174,14 @@ class LLM(BaseLLM):
             max_tokens=self.max_tokens,
             presence_penalty=self.presence_penalty,
             frequency_penalty=self.frequency_penalty,
-            logit_bias=copy.deepcopy(self.logit_bias, memo)
-            if self.logit_bias
-            else None,
-            response_format=copy.deepcopy(self.response_format, memo)
-            if self.response_format
-            else None,
+            logit_bias=(
+                copy.deepcopy(self.logit_bias, memo) if self.logit_bias else None
+            ),
+            response_format=(
+                copy.deepcopy(self.response_format, memo)
+                if self.response_format
+                else None
+            ),
             seed=self.seed,
             logprobs=self.logprobs,
             top_logprobs=self.top_logprobs,

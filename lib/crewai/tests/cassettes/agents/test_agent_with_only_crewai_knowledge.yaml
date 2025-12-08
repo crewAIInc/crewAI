@@ -1,0 +1,236 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user
+      query so that it is optimized for retrieval from a vector database. Consider
+      how the query will be used to find relevant documents, and aim to make it more
+      specific and context-aware. \n\n Do not include any other text than the rewritten
+      query, especially any preamble or postamble and only add expected output format
+      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
+      task and to retrieve the most relevant information. \n\n There will be some
+      extra context provided that might need to be removed such as expected_output
+      formats structured_outputs and other instructions."},{"role":"user","content":"The
+      original query is: What is Vidit''s favorite color?\n\nThis is the expected
+      criteria for your final answer: Vidit''s favorite color.\nyou MUST return the
+      actual complete content as the final answer, not a summary.."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '950'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJBbtswELzrFQQvvViFrCiR41vRHlugQYFeikCgyZW8NsVlyVXgIvDf
+        C0qOpbQp0AsPnJ3hzHCfMyEkGrkVUu8V697b/OPh01De2s8fbh9Ox12MD1+Op/uuOvwsvtI3uUoM
+        2h1A8wvrvabeW2AkN8E6gGJIquv6rtrcV+XNZgR6MmATrfOcV5T36DAvi7LKizpfby7sPaGGKLfi
+        RyaEEM/jmXw6Aye5FcXq5aaHGFUHcnsdEkIGsulGqhgxsnIsVzOoyTG40fp3NMjvomjVEwVkEJos
+        heVwgHaIKhl2g7ULQDlHrFLg0ebjBTlfjVnqfKBd/IMqW3QY900AFcklE5HJyxE9Z0I8jgUMrzJJ
+        H6j33DAdYXxuXd9MenLufUarC8bEyi5J9eoNucYAK7Rx0aDUSu/BzNS5bjUYpAWQLUL/beYt7Sk4
+        uu5/5GdAa/AMpvEBDOrXgeexAGkr/zV2LXk0LCOEJ9TQMEJIH2GgVYOddkXGX5Ghb1p0HQQfcFqY
+        1jequitMDeWultk5+w0AAP//AwDalskCPgMAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:59 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '679'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '695'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Information Agent. You
+      have access to specific knowledge sources.\nYour personal goal is: Provide information
+      based on knowledge sources\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: What is Vidit''s
+      favorite color?\n\nThis is the expected criteria for your final answer: Vidit''s
+      favorite color.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '884'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxa89GIFfsGxfQtapPCxRZBD20CgqZW8CcVlyZXjIvC/
+        F5RfSpoCuQjgzs5wZpd6yQAUlWoJymy0mMbb/PPjl3Zy577ap+93u98rJ/e4+7b6sbg101rUIDF4
+        /YhGTqwrw423KMTuAJuAWjCpjq5n0/liOp4sOqDhEm2i1V7yKecNOcrHw/E0H17no/mRvWEyGNUS
+        fmYAAC/dN/l0Je7UEoaDU6XBGHWNanluAlCBbaooHSNF0e7g+QgadoKus74Cx89gtIOatgga6mQb
+        tIvPGAB+uVty2sJNd17CPZUknyJUesuBBMGw5QAUYW1bvOpfErBqo05BXWttD9DOseg0qC7ewxHZ
+        nwNZrn3gdXxDVRU5ipsioI7skvko7FWH7jOAh25w7atZKB+48VIIP2F33Wg2P+ipy7566AkUFm37
+        9dngHb2iRNFkY2/0ymizwfJCvexJtyVxD8h6qf918572ITm5+iPyF8AY9IJl4QOWZF4nvrQFTM/5
+        f23nKXeGVcSwJYOFEIa0iRIr3drjjxH/RMGmqMjVGHygw0urfDEaVZPheFHN1irbZ38BAAD//wMA
+        /lBAm3cDAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:59 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '495'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '508'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
