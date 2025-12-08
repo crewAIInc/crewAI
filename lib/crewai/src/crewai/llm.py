@@ -67,6 +67,7 @@ if TYPE_CHECKING:
 
     from crewai.agent.core import Agent
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -585,6 +586,7 @@ class LLM(BaseLLM):
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
+        thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
