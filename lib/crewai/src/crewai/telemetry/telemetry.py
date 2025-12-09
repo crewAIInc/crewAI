@@ -392,8 +392,7 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
-                if inputs:
-                    self._add_attribute(span, "crew_inputs", json.dumps(inputs))
+                self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             else:
                 self._add_attribute(
                     span,
@@ -705,8 +704,8 @@ class Telemetry:
             self._add_attribute(span, "iterations", str(iterations))
             self._add_attribute(span, "model_name", model_name)
 
-            if crew.share_crew and inputs:
-                self._add_attribute(span, "inputs", json.dumps(inputs))
+            if crew.share_crew:
+                self._add_attribute(span, "inputs", json.dumps(inputs or {}))
 
             close_span(span)
 
@@ -811,8 +810,7 @@ class Telemetry:
             add_crew_attributes(
                 span, crew, self._add_attribute, include_fingerprint=False
             )
-            if inputs:
-                self._add_attribute(span, "crew_inputs", json.dumps(inputs))
+            self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             self._add_attribute(
                 span,
                 "crew_agents",
