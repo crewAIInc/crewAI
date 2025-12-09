@@ -93,10 +93,11 @@ class Mem0Storage(Storage):
 
         # Flatten filter for vector stores that don't support AND/OR structure
         # (e.g., Valkey, Redis). If there's only one condition, return it directly.
-        vector_store_config = self.config.get("local_mem0_config", {}).get(
-            "vector_store", {}
-        )
-        provider = vector_store_config.get("provider", "")
+        local_mem0_config = self.config.get("local_mem0_config")
+        vector_store_config = {}
+        if local_mem0_config and isinstance(local_mem0_config, dict):
+            vector_store_config = local_mem0_config.get("vector_store") or {}
+        provider = vector_store_config.get("provider", "") if isinstance(vector_store_config, dict) else ""
 
         if provider in {"valkey", "redis"}:
             if len(filter.get("AND", [])) == 1 and "OR" not in filter:

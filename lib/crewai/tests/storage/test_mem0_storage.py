@@ -666,3 +666,73 @@ def test_search_method_with_non_valkey_redis_provider():
 
         assert len(results) == 1
         assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_none_local_mem0_config():
+    """Test that search handles None values in local_mem0_config without raising AttributeError"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    # Test with local_mem0_config explicitly set to None
+    config = {
+        "agent_id": "agent-123",
+        "local_mem0_config": None,
+    }
+
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        # This should not raise AttributeError
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            filters={"AND": [{"agent_id": "agent-123"}]},
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_none_vector_store():
+    """Test that search handles None values in vector_store without raising AttributeError"""
+    mock_memory = MagicMock(spec=Memory)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    # Test with vector_store explicitly set to None in config
+    # This simulates YAML: local_mem0_config: { vector_store: } or JSON: "vector_store": null
+    config = {
+        "agent_id": "agent-123",
+        "local_mem0_config": {
+            "vector_store": None,
+        },
+    }
+
+    # Mock Memory initialization to bypass validation
+    with patch("mem0.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        # This should not raise AttributeError when accessing vector_store config
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            filters={"AND": [{"agent_id": "agent-123"}]},
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
