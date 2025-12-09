@@ -1,76 +1,7 @@
 interactions:
 - request:
-    body: '{"trace_id": "1703c4e0-d3be-411c-85e7-48018c2df384", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-07T01:58:22.260309+00:00"}}'
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
     headers:
-      Accept:
-      - '*/*'
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '434'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - X-USER-AGENT-XXX
-      X-Crewai-Version:
-      - 1.3.0
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
-  response:
-    body:
-      string: '{"error":"bad_credentials","message":"Bad credentials"}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '55'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Fri, 07 Nov 2025 01:58:22 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - CSP-FILTERED
-      expires:
-      - '0'
-      permissions-policy:
-      - PERMISSIONS-POLICY-XXX
-      pragma:
-      - no-cache
-      referrer-policy:
-      - REFERRER-POLICY-XXX
-      strict-transport-security:
-      - STS-XXX
-      vary:
-      - Accept
-      x-content-type-options:
-      - X-CONTENT-TYPE-XXX
-      x-frame-options:
-      - X-FRAME-OPTIONS-XXX
-      x-permitted-cross-domain-policies:
-      - X-PERMITTED-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-      x-runtime:
-      - X-RUNTIME-XXX
-      x-xss-protection:
-      - X-XSS-PROTECTION-XXX
-    status:
-      code: 401
-      message: Unauthorized
-- request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
-      word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
-    headers:
-      User-Agent:
-      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
@@ -80,117 +11,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '182'
+      - '168'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-stainless-arch:
-      - X-STAINLESS-ARCH-XXX
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - X-STAINLESS-OS-XXX
-      x-stainless-package-version:
-      - 0.71.0
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-      x-stainless-timeout:
-      - NOT_GIVEN
-    method: POST
-    uri: https://api.anthropic.com/v1/messages
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBdS8QwEEX/y31Ope26u5J3dwWfBH0SCTEZtmHTpCYTXSn979LF4hc+
-        DdxzZgbuiD5a8pAwXhdL1apaV512x1K1dXvZ1G0LAWch0eeDqpvN1f3q7bTPz91tc/ewLcfr/Xaz
-        gwC/DzRblLM+EARS9HOgc3aZdWAImBiYAkM+jovPdJrJeUjckPfxAtOTQOY4qEQ6xwAJClZxSQGf
-        INNLoWAIMhTvBcr5qRzhwlBYcTxSyJBNK2C06UiZRJpdDOqnUC88kbb/sWV3vk9DRz0l7dW6/+t/
-        0ab7TSeBWPh7tBbIlF6dIcWOEiTmoqxOFtP0AQAA//8DAM5WvkqaAQAA
-    headers:
-      CF-RAY:
-      - CF-RAY-XXX
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 07 Nov 2025 01:58:22 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Robots-Tag:
-      - none
-      anthropic-organization-id:
-      - ANTHROPIC-ORGANIZATION-ID-XXX
-      anthropic-ratelimit-input-tokens-limit:
-      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
-      anthropic-ratelimit-input-tokens-remaining:
-      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
-      anthropic-ratelimit-input-tokens-reset:
-      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
-      anthropic-ratelimit-output-tokens-limit:
-      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
-      anthropic-ratelimit-output-tokens-remaining:
-      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
-      anthropic-ratelimit-output-tokens-reset:
-      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
-      anthropic-ratelimit-requests-limit:
-      - '4000'
-      anthropic-ratelimit-requests-remaining:
-      - '3999'
-      anthropic-ratelimit-requests-reset:
-      - '2025-11-07T01:58:22Z'
-      anthropic-ratelimit-tokens-limit:
-      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
-      anthropic-ratelimit-tokens-remaining:
-      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
-      anthropic-ratelimit-tokens-reset:
-      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
-      cf-cache-status:
-      - DYNAMIC
-      request-id:
-      - REQUEST-ID-XXX
-      retry-after:
-      - '41'
-      strict-transport-security:
-      - STS-XXX
-      x-envoy-upstream-service-time:
-      - '390'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
-      word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
-    headers:
-      User-Agent:
+      user-agent:
       - X-USER-AGENT-XXX
-      accept:
-      - application/json
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      anthropic-version:
-      - '2023-06-01'
-      connection:
-      - keep-alive
-      content-length:
-      - '182'
-      content-type:
-      - application/json
-      host:
-      - api.anthropic.com
-      x-api-key:
-      - X-API-KEY-XXX
       x-stainless-arch:
       - X-STAINLESS-ARCH-XXX
       x-stainless-async:
@@ -214,11 +41,17 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAA3SQ3UrEMBCFn8VznUJb7SJ5gr2UvRCsSAjJ7Da2TbrJRFxK3126WPzDq4HzfTMD
-        Z8YYLA2QMIPOlorboik67fpc1GV9V5V1DQFnITGmkyqr+9Qe7e78+HRpjw87v3ev7aHqIcCXiVaL
-        UtIngkAMwxrolFxi7RkCJngmz5DP8+Yzva/kOiT27gbLi0DiMKlIOgUPCfJWcY4enyDROZM3BOnz
-        MAjk60c5w/kps+LQk0+QVS1gtOlImUiaXfDqp1BuPJK2/7Ftd71PU0cjRT2oZvzrf9Gq+00XgZD5
-        e9QIJIpvzpBiRxESa0tWR4tl+QAAAP//AwD8cXPFlwEAAA==
+        H4sIAAAAAAAAAwAAAP//dJLdb6JAFMX/FXJfxRYRaiXpgyBWRUWL1W03GzKFW5gCMzoz+NHG/31j
+        s6b7kX26N/d37nk55wMqnmIJDiQlqVNsSs4YqqbVtJumYdpG1+yCDjQFByqZxUbLfrrnbbbmviff
+        CkymnYQVaw90UMcNnlUoJckQdBC8PB+IlFQqwhTokHCmkClwvn9c9CqnrKAsOztcVgeWOZUalRrR
+        JK02JWpEUJVXqGiibWuUinJ2pZkNU8NtTUqpWVegg6QZI6oWZ19fSdcrnkZennlB0ZuJ0MLOIjy6
+        qvHNvB08B5Pd8n3GF/1VtFxNh24/DFTKDGNxrKXqNKrAnRxfa9MO5tNxa3egHd9dmWxNl3u339tG
+        9iiaR362t7j0/OzAR8FBDSzik/7sbbBqlf25mppe+3kYRaN9+PDipTvSLY1FL+nMn94X7nZ/W6yv
+        3f6Lz/aLyEvUMN+LxwVVue8+d6zVhJuV1XhI6oEf2kExOzbE22sg0+MAxxNx2/W4Ox6HlXcUUk4H
+        vcZ4yPq9Sfry3l0ak32xnOQh3gyvw0Pa8zPf9GxXLML8cOD123o93QwiI9i6nYA/3vf8OzjpX3ng
+        4ZzU53DA1Bqaqd1pFpx+6CAV38QCieQMHECWxqoWDH4BidsaWYLgsLosdag/e+B8AGWbWsWKF8gk
+        OFZbh4QkOcaJQHIOMv5TYFy4QJL+j11+z/64ybFCQcrYrv7Vf9FW/jc96cBr9fupfaODRLGjCcaK
+        ogAHzuVNiUjhdPoJAAD//wMAg2mrwC8DAAA=
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -229,7 +62,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 08 Dec 2025 23:16:53 GMT
+      - Mon, 08 Dec 2025 23:16:49 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -255,7 +88,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '49'
       anthropic-ratelimit-requests-reset:
-      - '2025-12-08T23:16:53Z'
+      - '2025-12-08T23:16:48Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -267,11 +100,123 @@ interactions:
       request-id:
       - REQUEST-ID-XXX
       retry-after:
-      - '8'
+      - '12'
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '787'
+      - '2856'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"},{"role":"assistant","content":[{"type":"thinking","thinking":"This
+      is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgw4osCEgxoIKxtF4aEaDNjFV1lDPtM2C3ZHSSIwORbCdva9l0QAc7PYzQBqw8kW/BDbEnwQSCctHhwrUQithEBZ74VLo2m4+RcuFEO5KkNy+rjfKsdyFeJLr89CoBJJOmCyrssMFA+JHnDALdbz9T0LwkTLhOe6H/OxdAEgE2C5BrQOhxxoujWWMpFS0KqB7KoUGAE="},{"type":"text","text":"2
+      + 2 = 4"}]},{"role":"user","content":"Now what is 3+3?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '681'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//dJNbb6M6FIX/CvJraHMloUjnIQ3kMmlC0twgp0eRC65xDDbxBWiq/PcR
+        1enMnDOaJ2+vb+0tS3v5A2Q8RilwQJRCHaM7yRlD6q53Z911Wh2r9dB5ACYgMXBAJvGp1W7bBTnn
+        4TYQx7au1CoYL577Z2AC9Z6j2oWkhBgBEwie1gKUkkgFmQImiDhTiCng/P3x5VcJYZQwXE/4Kh2w
+        TZChJRIGkQaUtWhkyFDciGAa6RQqZHSNhtG9f2Ev7LMy/jL69WWbEPnZZUglIMGJeuOihCI2oCAq
+        yZAikXHRSCrC2T0wgSSYQaVF/RiPl6MRDWejBI/m9HFdFAPfb0yOdNmerfc9Ee6myaaa+ZDCp7Et
+        bD9/L9tRZ5i6h1Ased8uWb7GXFTBDodb9O73vP3+mDM3X1yJUmz62qcevo4vawpVY0Xd89i1OYau
+        HwyHVdWa0zXlj15ejWbl7Im/40vTf+Zv8/BirXfNRXXsjTw6ecKKe24yvdi+aqy+Na1goi2LQuEd
+        usXy29YuxoQ8zNnzfBc2r738cPQyP2FMb9rhBq0C5R47MztIBslGXadYD9iqd5i/Tjaj4fUabPYB
+        brx2znKnhVxG8nieoIjuznNKS68bHIdnSp8a7fWbJmG5aJ6FG8aTbnYY0NLdqsmisdTTnPD+Opk9
+        uOW+wj2sg2ZYbK3eqhjIhb3NCrfCj+Bm/gwBqup4fB4O+LFPcPvHBFLx/CQQlJwBByAWn5QWDPwL
+        JLpoxCIEHKbT1AT6M3zOByAs1+qkOEVMAqc/MEEEowSdIoFgvfrTfw2tLy4QjP/Evnrr+ShPUIYE
+        TE9W9rv/J20n/6c3E3CtfpWsrgkkEgWJ0EkRJIAD6h8TQxGD2+07AAAA//8DADmgnx6kAwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:52 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:51Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '9'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2431'
     status:
       code: 200
       message: OK
