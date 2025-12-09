@@ -8,8 +8,6 @@ interactions:
     headers:
       Accept:
       - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
       Connection:
       - keep-alive
       Content-Length:
@@ -17,9 +15,11 @@ interactions:
       Content-Type:
       - application/json
       User-Agent:
-      - CrewAI-CLI/1.3.0
+      - X-USER-AGENT-XXX
       X-Crewai-Version:
       - 1.3.0
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
     method: POST
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
   response:
@@ -37,61 +37,31 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - CSP-FILTERED
       expires:
       - '0'
       permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
+      - PERMISSIONS-POLICY-XXX
       pragma:
       - no-cache
       referrer-policy:
-      - strict-origin-when-cross-origin
+      - REFERRER-POLICY-XXX
       strict-transport-security:
-      - max-age=63072000; includeSubDomains
+      - STS-XXX
       vary:
       - Accept
       x-content-type-options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       x-frame-options:
-      - SAMEORIGIN
+      - X-FRAME-OPTIONS-XXX
       x-permitted-cross-domain-policies:
-      - none
+      - X-PERMITTED-XXX
       x-request-id:
-      - 4124c4ce-02cf-4d08-9b0b-8983c2e9da6e
+      - X-REQUEST-ID-XXX
       x-runtime:
-      - '0.073764'
+      - X-RUNTIME-XXX
       x-xss-protection:
-      - 1; mode=block
+      - X-XSS-PROTECTION-XXX
     status:
       code: 401
       message: Unauthorized
@@ -99,10 +69,12 @@ interactions:
     body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
       word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
       anthropic-version:
       - '2023-06-01'
       connection:
@@ -113,16 +85,14 @@ interactions:
       - application/json
       host:
       - api.anthropic.com
-      user-agent:
-      - Anthropic/Python 0.71.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
       - 0.71.0
       x-stainless-retry-count:
@@ -145,7 +115,7 @@ interactions:
         0ab7TSeBWPh7tBbIlF6dIcWOEiTmoqxOFtP0AQAA//8DAM5WvkqaAQAA
     headers:
       CF-RAY:
-      - 99a939a5a931556e-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -161,19 +131,19 @@ interactions:
       X-Robots-Tag:
       - none
       anthropic-organization-id:
-      - SCRUBBED-ORG-ID
+      - ANTHROPIC-ORGANIZATION-ID-XXX
       anthropic-ratelimit-input-tokens-limit:
-      - '400000'
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-input-tokens-remaining:
-      - '400000'
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
       anthropic-ratelimit-input-tokens-reset:
-      - '2025-11-07T01:58:22Z'
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
       anthropic-ratelimit-output-tokens-limit:
-      - '80000'
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-output-tokens-remaining:
-      - '80000'
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
       anthropic-ratelimit-output-tokens-reset:
-      - '2025-11-07T01:58:22Z'
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
       anthropic-ratelimit-requests-limit:
       - '4000'
       anthropic-ratelimit-requests-remaining:
@@ -181,21 +151,127 @@ interactions:
       anthropic-ratelimit-requests-reset:
       - '2025-11-07T01:58:22Z'
       anthropic-ratelimit-tokens-limit:
-      - '480000'
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
-      - '480000'
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
       anthropic-ratelimit-tokens-reset:
-      - '2025-11-07T01:58:22Z'
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
       cf-cache-status:
       - DYNAMIC
       request-id:
-      - req_011CUshbL7CEVoner91hUvxL
+      - REQUEST-ID-XXX
       retry-after:
       - '41'
       strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       x-envoy-upstream-service-time:
       - '390'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
+      word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '182'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3SQ3UrEMBCFn8VznUJb7SJ5gr2UvRCsSAjJ7Da2TbrJRFxK3126WPzDq4HzfTMD
+        Z8YYLA2QMIPOlorboik67fpc1GV9V5V1DQFnITGmkyqr+9Qe7e78+HRpjw87v3ev7aHqIcCXiVaL
+        UtIngkAMwxrolFxi7RkCJngmz5DP8+Yzva/kOiT27gbLi0DiMKlIOgUPCfJWcY4enyDROZM3BOnz
+        MAjk60c5w/kps+LQk0+QVS1gtOlImUiaXfDqp1BuPJK2/7Ftd71PU0cjRT2oZvzrf9Gq+00XgZD5
+        e9QIJIpvzpBiRxESa0tWR4tl+QAAAP//AwD8cXPFlwEAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:53 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:53Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '8'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '787'
     status:
       code: 200
       message: OK

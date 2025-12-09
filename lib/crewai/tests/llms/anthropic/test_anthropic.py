@@ -12,8 +12,11 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_anthropic_api_key():
-    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+    """Automatically mock ANTHROPIC_API_KEY for all tests in this module if not already set."""
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+    else:
         yield
 
 
@@ -63,6 +66,7 @@ def test_anthropic_tool_use_conversation_flow():
     with patch.object(completion.client.messages, 'create') as mock_create:
         # Mock initial response with tool use - need to properly mock ToolUseBlock
         mock_tool_use = Mock(spec=ToolUseBlock)
+        mock_tool_use.type = "tool_use"
         mock_tool_use.id = "tool_123"
         mock_tool_use.name = "get_weather"
         mock_tool_use.input = {"location": "San Francisco"}
@@ -75,6 +79,7 @@ def test_anthropic_tool_use_conversation_flow():
 
         # Mock final response after tool result - properly mock text content
         mock_text_block = Mock()
+        mock_text_block.type = "text"
         # Set the text attribute as a string, not another Mock
         mock_text_block.configure_mock(text="Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature.")
 
@@ -698,3 +703,167 @@ def test_anthropic_stop_sequences_sent_to_api():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking():
+    """Test that thinking is properly handled and thinking params are passed to messages.create"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    original_create = llm.client.messages.create
+    captured_params = {}
+
+    def capture_and_call(**kwargs):
+        captured_params.update(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        result = llm.call("What is the weather in Tokyo?")
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+        assert "thinking" in captured_params
+        assert captured_params["thinking"] == {"type": "enabled", "budget_tokens": 5000}
+
+        assert captured_params["model"] == "claude-sonnet-4-5"
+        assert captured_params["max_tokens"] == 10000
+        assert "messages" in captured_params
+        assert len(captured_params["messages"]) > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking_blocks_preserved_across_turns():
+    """Test that thinking blocks are stored and included in subsequent API calls across turns"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    # Capture all messages.create calls to verify thinking blocks are included
+    original_create = llm.client.messages.create
+    captured_calls = []
+
+    def capture_and_call(**kwargs):
+        captured_calls.append(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        # First call - establishes context and generates thinking blocks
+        messages = [{"role": "user", "content": "What is 2+2?"}]
+        first_result = llm.call(messages)
+
+        # Verify first call completed
+        assert first_result is not None
+        assert isinstance(first_result, str)
+        assert len(first_result) > 0
+
+        # Verify thinking blocks were stored after first response
+        assert len(llm.previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
+        first_thinking = llm.previous_thinking_blocks[0]
+        assert first_thinking["type"] == "thinking"
+        assert "thinking" in first_thinking
+        assert "signature" in first_thinking
+
+        # Store the thinking block content for comparison
+        stored_thinking_content = first_thinking["thinking"]
+        stored_signature = first_thinking["signature"]
+
+        # Second call - should include thinking blocks from first call
+        messages.append({"role": "assistant", "content": first_result})
+        messages.append({"role": "user", "content": "Now what is 3+3?"})
+        second_result = llm.call(messages)
+
+        # Verify second call completed
+        assert second_result is not None
+        assert isinstance(second_result, str)
+
+        # Verify at least 2 API calls were made
+        assert len(captured_calls) >= 2, f"Expected at least 2 API calls, got {len(captured_calls)}"
+
+        # Verify second call includes thinking blocks in assistant message
+        second_call_messages = captured_calls[1]["messages"]
+
+        # Should have: user message + assistant message (with thinking blocks) + follow-up user message
+        assert len(second_call_messages) >= 2
+
+        # Find the assistant message in the second call
+        assistant_message = None
+        for msg in second_call_messages:
+            if msg["role"] == "assistant" and isinstance(msg.get("content"), list):
+                assistant_message = msg
+                break
+
+        assert assistant_message is not None, "Assistant message with list content not found in second call"
+        assert isinstance(assistant_message["content"], list)
+
+        # Verify thinking block is included in assistant message content
+        thinking_found = False
+        for block in assistant_message["content"]:
+            if isinstance(block, dict) and block.get("type") == "thinking":
+                thinking_found = True
+                assert "thinking" in block
+                assert "signature" in block
+                # Verify it matches what was stored from the first call
+                assert block["thinking"] == stored_thinking_content
+                assert block["signature"] == stored_signature
+                break
+
+        assert thinking_found, "Thinking block not found in assistant message content in second call"
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_function_calling():
+    """Test that function calling is properly handled"""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather in a given location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"],
+                        "description": "The unit of temperature"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        "What is the weather in Tokyo? Use the get_weather tool.",
+        tools=tools,
+        available_functions={"get_weather": get_weather}
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+    # Verify the response includes information about Tokyo's weather
+    assert "tokyo" in result.lower() or "72" in result

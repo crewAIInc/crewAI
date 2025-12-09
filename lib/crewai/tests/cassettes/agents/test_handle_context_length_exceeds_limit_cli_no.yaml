@@ -1,66 +1,67 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are test role. test backstory\nYour
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
       personal goal is: test goal\nTo give my best complete final answer to the task
-      use the exact following format:\n\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!"}, {"role": "user", "content": "\nCurrent Task: The final answer is 42.
-      But don''t give it yet, instead keep using the `get_final_answer` tool.\n\nThis
-      is the expect criteria for your final answer: The final answer\nyou MUST return
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"},{"role":"user","content":"\nCurrent Task: The final answer
+      is 42. But don''t give it yet, instead keep using the `get_final_answer` tool.\n\nThis
+      is the expected criteria for your final answer: The final answer\nyou MUST return
       the actual complete content as the final answer, not a summary.\n\nBegin! This
       is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '856'
+      - '864'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.7
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WQgeRji8yTBnXAEFqPG7mdRX7M\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213886,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: The final answer is 42.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      175,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 195,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFLBbpwwEL3zFSOfl2hZsWyXW9qmVY+VemobIWMGmNTYlj0kbaP998qw
+        WUibSL0gMW/e83sz85gACGpECUL1ktXgdPru7n34emzlWyJ3Q7/J559dkdc3bD7WKDaRYes7VPzE
+        ulJ2cBqZrJlh5VEyRtXsUORvjnmWHyZgsA3qSOscp/lVlg5kKN1td/t0m6dZfqb3lhQGUcK3BADg
+        cfpGo6bBn6KE7eapMmAIskNRXpoAhLc6VoQMgQJLw2KzgMoaRjN5/9Lbseu5hE9g7AMoaaCjewQJ
+        XQwA0oQH9N/NBzJSw/X0V0K+W8t5bMcgYyYzar0CpDGWZZzJFOT2jJwu1rXtnLd1+IsqWjIU+sqj
+        DNZEm4GtExN6SgBupxGNz1IL5+3guGL7A6fnskMx64llNSt0fwbZstSr+jHbvKBXNciSdFgNWSip
+        emwW6rIROTZkV0CySv2vm5e05+Rkuv+RXwCl0DE2lfPYkHqeeGnzGC/3tbbLlCfDIqC/J4UVE/q4
+        iQZbOer5nET4FRiHqiXToXee5ptqXXU8FAXu82O9E8kp+QMAAP//AwB0ysWcYgMAAA==
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 8c85eb6099b11cf3-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -68,37 +69,50 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 24 Sep 2024 21:38:06 GMT
+      - Fri, 05 Dec 2025 00:22:28 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '309'
+      - '315'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '329'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999796'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_cbc755853b8dcf3ec0ce3b4c9ddbdbb9
-    http_version: HTTP/1.1
-    status_code: 200
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -2,27 +2,24 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 
 try:
-    from docling.datamodel.base_models import (  # type: ignore[import-not-found]
-        InputFormat,
-    )
-    from docling.document_converter import (  # type: ignore[import-not-found]
-        DocumentConverter,
-    )
-    from docling.exceptions import ConversionError  # type: ignore[import-not-found]
-    from docling_core.transforms.chunker.hierarchical_chunker import (  # type: ignore[import-not-found]
-        HierarchicalChunker,
-    )
-    from docling_core.types.doc.document import (  # type: ignore[import-not-found]
-        DoclingDocument,
-    )
+    from docling.datamodel.base_models import InputFormat
+    from docling.document_converter import DocumentConverter
+    from docling.exceptions import ConversionError
+    from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+    from docling_core.types.doc.document import DoclingDocument
 
     DOCLING_AVAILABLE = True
 except ImportError:
     DOCLING_AVAILABLE = False
+    # Provide type stubs for when docling is not available
+    if TYPE_CHECKING:
+        from docling.document_converter import DocumentConverter
+        from docling_core.types.doc.document import DoclingDocument
 
 from pydantic import Field
 
@@ -32,11 +29,13 @@ from crewai.utilities.logger import Logger
 
 
 class CrewDoclingSource(BaseKnowledgeSource):
-    """Default Source class for converting documents to markdown or json
-    This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without any additional dependencies and follows the docling package as the source of truth.
+    """Default Source class for converting documents to markdown or json.
+
+    This will auto support PDF, DOCX, and TXT, XLSX, Images, and HTML files without
+    any additional dependencies and follows the docling package as the source of truth.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         if not DOCLING_AVAILABLE:
             raise ImportError(
                 "The docling package is required to use CrewDoclingSource. "
@@ -66,7 +65,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         )
     )
 
-    def model_post_init(self, _) -> None:
+    def model_post_init(self, _: Any) -> None:
         if self.file_path:
             self._logger.log(
                 "warning",
@@ -98,6 +97,15 @@ class CrewDoclingSource(BaseKnowledgeSource):
             new_chunks_iterable = self._chunk_doc(doc)
             self.chunks.extend(list(new_chunks_iterable))
         self._save_documents()
+
+    async def aadd(self) -> None:
+        """Add docling content asynchronously."""
+        if self.content is None:
+            return
+        for doc in self.content:
+            new_chunks_iterable = self._chunk_doc(doc)
+            self.chunks.extend(list(new_chunks_iterable))
+        await self._asave_documents()
 
     def _convert_source_to_docling_documents(self) -> list[DoclingDocument]:
         conv_results_iter = self.document_converter.convert_all(self.safe_file_paths)

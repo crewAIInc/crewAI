@@ -39,12 +39,32 @@ class BaseKnowledgeSource(BaseModel, ABC):
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
         ]
 
-    def _save_documents(self):
-        """
-        Save the documents to the storage.
+    def _save_documents(self) -> None:
+        """Save the documents to the storage.
+
         This method should be called after the chunks and embeddings are generated.
+
+        Raises:
+            ValueError: If no storage is configured.
         """
         if self.storage:
             self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")
+
+    @abstractmethod
+    async def aadd(self) -> None:
+        """Process content, chunk it, compute embeddings, and save them asynchronously."""
+
+    async def _asave_documents(self) -> None:
+        """Save the documents to the storage asynchronously.
+
+        This method should be called after the chunks and embeddings are generated.
+
+        Raises:
+            ValueError: If no storage is configured.
+        """
+        if self.storage:
+            await self.storage.asave(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")

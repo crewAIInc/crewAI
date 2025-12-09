@@ -1,0 +1,220 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather
+      in Tokyo? Use the get_weather tool."}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"name":"get_weather","description":"Get
+      the current weather in a given location","input_schema":{"type":"object","properties":{"location":{"type":"string","description":"The
+      city and state, e.g. San Francisco, CA"},"unit":{"type":"string","enum":["celsius","fahrenheit"],"description":"The
+      unit of temperature"}},"required":["location"]}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '509'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//dJBBS8NAEIX/isx5A0k0he5NhR60FRG9KLKsmzGJ3eyku7O1JeS/SyLV
+        qnic9703j5keWirRggRjdSwxCeQccnKWFEme5kU6z+cgoClBQhsqlWYXp6+rl+a8NrvIzfbuMqti
+        tnkEAbzvcHRhCLpCEODJjoIOoQmsHYMAQ47RMcin/uBnIqtiwEPLOEeVZuf0sFjla7pZhkUw17Pd
+        m1veEghwuh1zFbJ6R801+jHqusgge7BkNDfkQMI9rfckTq50px0Mw7OAwNQpjzpM/Kh5AgE3EZ1B
+        kC5aKyBOd8j+c7liWqMLIGd5KsBoU6MyHqcy9dPxxT3q8j92yI4F2NXYotdWFe1f/zfN6t90EECR
+        j6WiEBDQbxuDihv0IGH8fql9CcPwAQAA//8DAI8uRSjwAQAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:56 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:54Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '5'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2925'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"What
+      is the weather in Tokyo? Use the get_weather tool.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01AoUFM2koNLsFscK6xjnLPo\",\"name\":\"get_weather\",\"input\":{\"location\":\"Tokyo,
+      Japan\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_01AoUFM2koNLsFscK6xjnLPo\",\"content\":\"The
+      weather in Tokyo, Japan is sunny and 72\xB0F\"}]}],\"model\":\"claude-sonnet-4-5\",\"stream\":false,\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get
+      the current weather in a given location\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The
+      city and state, e.g. San Francisco, CA\"},\"unit\":{\"type\":\"string\",\"enum\":[\"celsius\",\"fahrenheit\"],\"description\":\"The
+      unit of temperature\"}},\"required\":[\"location\"]}}]}"
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '814'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA3SQ3UoDMRBGXyXMlcKubGOrNreiiHdC70RCTIZu2t3Jmky0a9l36jP0yWSLxT+8
+        GvjOGWb4ttAGhw0osI3JDssUiJDLaTkrZSVn1VzOoQDvQEGblrqaTN9bvlmt7qYPmytif++e1+cX
+        CAVw3+FoYUpmOQYxNGNgUvKJDTEUYAMxEoN63B59xs1IDkPBokbxhoZrjMKTWIR1H4RPwuYYkbjp
+        RcpEvTDkxKXc727Fiem6GDa+NYxNL6Tc765Pz2B4KiBx6HREkwKBAiSnOUeCT5DwJSNZBEW5aQrI
+        h7fVFjx1mTWHNVICdVlNCrDG1qhtRMM+kP5pVEce0bj/2HF3PIBdjS1G0+hZ+9f/opP6Nx0KCJm/
+        R1IWkDC+eouaPUZQMJbtTHQwDB8AAAD//wMAkp8os98BAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:59 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:58Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '1'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2878'
+    status:
+      code: 200
+      message: OK
+version: 1

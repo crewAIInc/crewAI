@@ -312,8 +312,13 @@ class BedrockCompletion(BaseLLM):
 
             # Format messages for Converse API
             formatted_messages, system_message = self._format_messages_for_converse(
-                messages  # type: ignore[arg-type]
+                messages
             )
+
+            if not self._invoke_before_llm_call_hooks(
+                cast(list[LLMMessage], formatted_messages), from_agent
+            ):
+                raise ValueError("LLM call blocked by before_llm_call hook")
 
             # Prepare request body
             body: BedrockConverseRequestBody = {
@@ -356,11 +361,19 @@ class BedrockCompletion(BaseLLM):
 
             if self.stream:
                 return self._handle_streaming_converse(
-                    formatted_messages, body, available_functions, from_task, from_agent
+                    cast(list[LLMMessage], formatted_messages),
+                    body,
+                    available_functions,
+                    from_task,
+                    from_agent,
                 )
 
             return self._handle_converse(
-                formatted_messages, body, available_functions, from_task, from_agent
+                cast(list[LLMMessage], formatted_messages),
+                body,
+                available_functions,
+                from_task,
+                from_agent,
             )
 
         except Exception as e:
@@ -481,7 +494,7 @@ class BedrockCompletion(BaseLLM):
 
     def _handle_converse(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
@@ -605,7 +618,11 @@ class BedrockCompletion(BaseLLM):
                 messages=messages,
             )
 
-            return text_content
+            return self._invoke_after_llm_call_hooks(
+                messages,
+                text_content,
+                from_agent,
+            )
 
         except ClientError as e:
             # Handle all AWS ClientError exceptions as per documentation
@@ -662,7 +679,7 @@ class BedrockCompletion(BaseLLM):
 
     def _handle_streaming_converse(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1149,16 +1166,25 @@ class BedrockCompletion(BaseLLM):
             messages=messages,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            messages,
+            full_response,
+            from_agent,
+        )
 
     def _format_messages_for_converse(
-        self, messages: str | list[dict[str, str]]
+        self, messages: str | list[LLMMessage]
     ) -> tuple[list[dict[str, Any]], str | None]:
-        """Format messages for Converse API following AWS documentation."""
-        # Use base class formatting first
-        formatted_messages = self._format_messages(messages)  # type: ignore[arg-type]
+        """Format messages for Converse API following AWS documentation.
 
-        converse_messages = []
+        Note: Returns dict[str, Any] instead of LLMMessage because Bedrock uses
+        a different content structure: {"role": str, "content": [{"text": str}]}
+        rather than the standard {"role": str, "content": str}.
+        """
+        # Use base class formatting first
+        formatted_messages = self._format_messages(messages)
+
+        converse_messages: list[dict[str, Any]] = []
         system_message: str | None = None
 
         for message in formatted_messages:
