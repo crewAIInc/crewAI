@@ -247,7 +247,7 @@ class BedrockCompletion(BaseLLM):
         self.top_p = top_p
         self.top_k = top_k
         self.stream = stream
-        self.stop_sequences = stop_sequences or []
+        self.stop_sequences = stop_sequences
 
         # Store advanced features (optional)
         self.guardrail_config = guardrail_config
