@@ -267,7 +267,7 @@ class BedrockCompletion(BaseLLM):
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
-        return list(self.stop_sequences)
+        return [] if self.stop_sequences is None else list(self.stop_sequences)
 
     @stop.setter
     def stop(self, value: Sequence[str] | str | None) -> None:
