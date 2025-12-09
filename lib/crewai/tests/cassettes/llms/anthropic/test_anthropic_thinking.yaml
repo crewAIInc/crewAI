@@ -1,0 +1,126 @@
+interactions:
+- request:
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather
+      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '185'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        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
+        0mgZxR33sPSMz89/AwAA//8DAHYWWLc6CAAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 08 Dec 2025 23:16:46 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '50'
+      anthropic-ratelimit-requests-remaining:
+      - '49'
+      anthropic-ratelimit-requests-reset:
+      - '2025-12-08T23:16:42Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '18'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '5323'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -31,7 +31,7 @@ def tool_command():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Mock the secure storage path to use the temp directory
         with patch.object(
-            TokenManager, "get_secure_storage_path", return_value=Path(temp_dir)
+            TokenManager, "_get_secure_storage_path", return_value=Path(temp_dir)
         ):
             TokenManager().save_tokens(
                 "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()

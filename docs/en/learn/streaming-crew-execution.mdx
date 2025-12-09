@@ -95,7 +95,11 @@ print(f"Final result: {streaming.result.raw}")
 
 ## Asynchronous Streaming
 
-For async applications, use `kickoff_async()` with async iteration:
+For async applications, you can use either `akickoff()` (native async) or `kickoff_async()` (thread-based) with async iteration:
+
+### Native Async with `akickoff()`
+
+The `akickoff()` method provides true native async execution throughout the entire chain:
 
 ```python Code
 import asyncio
@@ -107,7 +111,35 @@ async def stream_crew():
         stream=True
     )
 
-    # Start async streaming
+    # Start native async streaming
+    streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+    # Async iteration over chunks
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+
+    # Access final result
+    result = streaming.result
+    print(f"\n\nFinal output: {result.raw}")
+
+asyncio.run(stream_crew())
+```
+
+### Thread-Based Async with `kickoff_async()`
+
+For simpler async integration or backward compatibility:
+
+```python Code
+import asyncio
+
+async def stream_crew():
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        stream=True
+    )
+
+    # Start thread-based async streaming
     streaming = await crew.kickoff_async(inputs={"topic": "AI"})
 
     # Async iteration over chunks
@@ -120,6 +152,10 @@ async def stream_crew():
 
 asyncio.run(stream_crew())
 ```
+
+<Note>
+For high-concurrency workloads, `akickoff()` is recommended as it uses native async for task execution, memory operations, and knowledge retrieval. See the [Kickoff Crew Asynchronously](/en/learn/kickoff-async) guide for more details.
+</Note>
 
 ## Streaming with kickoff_for_each
 

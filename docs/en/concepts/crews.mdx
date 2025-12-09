@@ -307,12 +307,27 @@ print(result)
 
 ### Different Ways to Kick Off a Crew
 
-Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, and `kickoff_for_each_async()`.
+Once your crew is assembled, initiate the workflow with the appropriate kickoff method. CrewAI provides several methods for better control over the kickoff process.
+
+#### Synchronous Methods
 
 - `kickoff()`: Starts the execution process according to the defined process flow.
 - `kickoff_for_each()`: Executes tasks sequentially for each provided input event or item in the collection.
-- `kickoff_async()`: Initiates the workflow asynchronously.
-- `kickoff_for_each_async()`: Executes tasks concurrently for each provided input event or item, leveraging asynchronous processing.
+
+#### Asynchronous Methods
+
+CrewAI offers two approaches for async execution:
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `akickoff()` | Native async | True async/await throughout the entire execution chain |
+| `akickoff_for_each()` | Native async | Native async execution for each input in a list |
+| `kickoff_async()` | Thread-based | Wraps synchronous execution in `asyncio.to_thread` |
+| `kickoff_for_each_async()` | Thread-based | Thread-based async for each input in a list |
+
+<Note>
+For high-concurrency workloads, `akickoff()` and `akickoff_for_each()` are recommended as they use native async for task execution, memory operations, and knowledge retrieval.
+</Note>
 
 ```python Code
 # Start the crew's task execution
@@ -325,19 +340,30 @@ results = my_crew.kickoff_for_each(inputs=inputs_array)
 for result in results:
     print(result)
 
-# Example of using kickoff_async
+# Example of using native async with akickoff
+inputs = {'topic': 'AI in healthcare'}
+async_result = await my_crew.akickoff(inputs=inputs)
+print(async_result)
+
+# Example of using native async with akickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = await my_crew.akickoff_for_each(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+
+# Example of using thread-based kickoff_async
 inputs = {'topic': 'AI in healthcare'}
 async_result = await my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
-# Example of using kickoff_for_each_async
+# Example of using thread-based kickoff_for_each_async
 inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
 async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```
 
-These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs.
+These methods provide flexibility in how you manage and execute tasks within your crew, allowing for both synchronous and asynchronous workflows tailored to your needs. For detailed async examples, see the [Kickoff Crew Asynchronously](/en/learn/kickoff-async) guide.
 
 ### Streaming Crew Execution
 
