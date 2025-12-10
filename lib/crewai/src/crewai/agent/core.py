@@ -802,47 +802,6 @@ class Agent(BaseAgent):
                 )
             )
 
-    def _update_executor_parameters(
-        self,
-        task: Task | None,
-        tools: list,
-        raw_tools: list[BaseTool],
-        prompt: dict,
-        stop_words: list[str],
-        rpm_limit_fn: Callable | None,
-    ) -> None:
-        """Update executor parameters without recreating instance.
-
-        Args:
-            task: Task to execute.
-            tools: Parsed tools.
-            raw_tools: Original tools.
-            prompt: Generated prompt.
-            stop_words: Stop words list.
-            rpm_limit_fn: RPM limit callback function.
-        """
-        self.agent_executor.task = task
-        self.agent_executor.tools = tools
-        self.agent_executor.original_tools = raw_tools
-        self.agent_executor.prompt = prompt
-        self.agent_executor.stop = stop_words
-        self.agent_executor.tools_names = get_tool_names(tools)
-        self.agent_executor.tools_description = render_text_description_and_args(tools)
-        self.agent_executor.response_model = task.response_model if task else None
-
-        self.agent_executor.tools_handler = self.tools_handler
-        self.agent_executor.request_within_rpm_limit = rpm_limit_fn
-
-        if self.agent_executor.llm:
-            existing_stop = getattr(self.agent_executor.llm, "stop", [])
-            self.agent_executor.llm.stop = list(
-                set(
-                    existing_stop + stop_words
-                    if isinstance(existing_stop, list)
-                    else stop_words
-                )
-            )
-
     def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
