@@ -55,7 +55,6 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
-    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestFailedEvent,
     CrewTestStartedEvent,
@@ -709,37 +708,6 @@ class Crew(FlowTrackable, BaseModel):
         token = attach(baggage_ctx)
 
         try:
-            inputs = prepare_kickoff(self, inputs)
-
-            crewai_event_bus.emit(
-                self,
-                CrewKickoffStartedEvent(crew_name=self.name, inputs=inputs),
-            )
-
-            # Starts the crew to work on its assigned tasks.
-            self._task_output_handler.reset()
-            self._logging_color = "bold_purple"
-
-            if inputs is not None:
-                self._inputs = inputs
-                self._interpolate_inputs(inputs)
-            self._set_tasks_callbacks()
-            self._set_allow_crewai_trigger_context_for_first_task()
-
-            for agent in self.agents:
-                agent.crew = self
-                agent.set_knowledge(crew_embedder=self.embedder)
-                # TODO: Create an AgentFunctionCalling protocol for future refactoring
-                if not agent.function_calling_llm:  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-                    agent.function_calling_llm = self.function_calling_llm  # type: ignore # "BaseAgent" has no attribute "function_calling_llm"
-
-                if not agent.step_callback:  # type: ignore # "BaseAgent" has no attribute "step_callback"
-                    agent.step_callback = self.step_callback  # type: ignore # "BaseAgent" has no attribute "step_callback"
-
-                # agent.create_agent_executor() # TODO: properly remove this or not
-
-            if self.planning:
-                self._handle_crew_planning()
             inputs = prepare_kickoff(self, inputs)
 
             if self.process == Process.sequential:

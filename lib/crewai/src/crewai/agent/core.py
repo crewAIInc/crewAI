@@ -33,9 +33,8 @@ from crewai.agent.utils import (
 )
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
-
-# from crewai.agents.crew_agent_executor import CrewAgentExecutor
-# from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
+from crewai.agents.crew_agent_executor import CrewAgentExecutor
+from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
@@ -223,10 +222,10 @@ class Agent(BaseAgent):
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
     )
-    # agent_executor_class: CrewAgentExecutorFlow | CrewAgentExecutor = Field(
-    #     default=CrewAgentExecutor,
-    #     description="Class to use for the agent executor.",
-    # )
+    agent_executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
+        default=CrewAgentExecutor,
+        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use CrewAgentExecutorFlow.",
+    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
@@ -741,10 +740,8 @@ class Agent(BaseAgent):
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
-            from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
-
-            self.agent_executor = CrewAgentExecutorFlow(
-                llm=self.llm,
+            self.agent_executor = self.agent_executor_class(
+                llm=cast(BaseLLM, self.llm),
                 task=task,
                 agent=self,
                 crew=self.crew,
