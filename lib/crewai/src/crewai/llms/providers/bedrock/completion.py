@@ -1301,6 +1301,15 @@ class BedrockCompletion(BaseLLM):
             # top_k is supported by Claude models
             config["topK"] = int(self.top_k)
 
+        # Handle drop_params to remove unsupported parameters for certain models
+        additional_params = getattr(self, "additional_params", {}) or {}
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
+
+        if drop_params and isinstance(additional_drop_params, list):
+            for key in additional_drop_params:
+                config.pop(key, None)  # type: ignore[misc]
+
         return config
 
     def _handle_client_error(self, e: ClientError) -> str:

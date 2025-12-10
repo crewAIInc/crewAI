@@ -789,3 +789,154 @@ def test_bedrock_stop_sequences_sent_to_api():
         assert "inferenceConfig" in call_kwargs
         assert "stopSequences" in call_kwargs["inferenceConfig"]
         assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]
+
+
+def test_bedrock_drop_params_removes_stop_sequences():
+    """Test that drop_params with additional_drop_params removes stopSequences from inference config.
+
+    This tests the fix for GitHub issue #4046 where certain Bedrock models
+    don't support the stopSequences field.
+    """
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        stop_sequences=["\nObservation:", "\nThought:"],
+        drop_params=True,
+        additional_drop_params=["stopSequences"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+
+    # Get the inference config
+    config = llm._get_inference_config()
+
+    # Verify stopSequences is NOT in the config when drop_params is enabled
+    assert "stopSequences" not in config
+
+
+def test_bedrock_drop_params_preserves_other_params():
+    """Test that drop_params only removes specified parameters, not others."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        temperature=0.7,
+        max_tokens=1000,
+        top_p=0.9,
+        stop_sequences=["\nObservation:"],
+        drop_params=True,
+        additional_drop_params=["stopSequences"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+
+    # Get the inference config
+    config = llm._get_inference_config()
+
+    # Verify stopSequences is removed
+    assert "stopSequences" not in config
+
+    # Verify other parameters are preserved
+    assert "temperature" in config
+    assert config["temperature"] == 0.7
+    assert "maxTokens" in config
+    assert config["maxTokens"] == 1000
+    assert "topP" in config
+    assert config["topP"] == 0.9
+
+
+def test_bedrock_without_drop_params_keeps_stop_sequences():
+    """Test that without drop_params, stopSequences is included in inference config."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        stop_sequences=["\nObservation:", "\nThought:"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+
+    # Get the inference config
+    config = llm._get_inference_config()
+
+    # Verify stopSequences IS in the config when drop_params is not set
+    assert "stopSequences" in config
+    assert config["stopSequences"] == ["\nObservation:", "\nThought:"]
+
+
+def test_bedrock_drop_params_false_keeps_stop_sequences():
+    """Test that with drop_params=False, stopSequences is included even with additional_drop_params."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        stop_sequences=["\nObservation:"],
+        drop_params=False,
+        additional_drop_params=["stopSequences"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+
+    # Get the inference config
+    config = llm._get_inference_config()
+
+    # Verify stopSequences IS in the config when drop_params is False
+    assert "stopSequences" in config
+    assert config["stopSequences"] == ["\nObservation:"]
+
+
+def test_bedrock_drop_params_multiple_params():
+    """Test that drop_params can remove multiple parameters."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        temperature=0.7,
+        top_p=0.9,
+        stop_sequences=["\nObservation:"],
+        drop_params=True,
+        additional_drop_params=["stopSequences", "topP"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+
+    # Get the inference config
+    config = llm._get_inference_config()
+
+    # Verify both stopSequences and topP are removed
+    assert "stopSequences" not in config
+    assert "topP" not in config
+
+    # Verify temperature is preserved
+    assert "temperature" in config
+    assert config["temperature"] == 0.7
+
+
+def test_bedrock_drop_params_api_call():
+    """Test that drop_params affects the actual API call parameters."""
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        stop_sequences=["\nObservation:"],
+        drop_params=True,
+        additional_drop_params=["stopSequences"],
+    )
+
+    # Patch the API call to capture parameters without making real call
+    with patch.object(llm.client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Hello'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Say hello")
+
+        # Verify stopSequences is NOT in the inference config sent to the API
+        call_kwargs = mock_converse.call_args[1]
+        assert "inferenceConfig" in call_kwargs
+        assert "stopSequences" not in call_kwargs["inferenceConfig"]
