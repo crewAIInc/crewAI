@@ -1,0 +1,486 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1119'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxY8W0Zsy3ajWxv0EbSXFm0CtAokmlxLTCiSIFdFWsP/
+        XlB+SO4D6IUQdnZGs7PkLgFgSrIcmGg4idbp9EY9hbvZsrn7cP/l0/uv77JXzx9fv31UN2/u3U82
+        iQy7eURBJ9ZU2NZpJGXNARYeOWFUna1X2frFfLVa90BrJepIqx2l2XSWtsqodH41X6ZXWTrLjvTG
+        KoGB5fAtAQDY9Wc0aiQ+sxyuJqdKiyHwGll+bgJg3upYYTwEFYgbYpMBFNYQmt57VVWF+dzYrm4o
+        h1sIje20hC4gUIMguBad5oRl6FogazWQBS4lLIEbCYtpYV6KOHV+2Xsqw61xHeWwKxgvWA7LCRRs
+        E78W+8JUVTX25XHbBR7DMZ3WI4AbY4lHvT6RhyOyP2egbe283YTfqGyrjApN6ZEHa+K8gaxjPbpP
+        AB76rLuL+JjztnVUkn3C/nfzRXbQY8OOBzQ7LoKRJa5HrPWJdaFXSiSudBhtiwkuGpQDdVgt76Sy
+        IyAZTf2nm79pHyZXpv4f+QEQAh2hLJ1HqcTlxEObx/gE/tV2Trk3zAL670pgSQp93ITELe/04V6y
+        8CMQtuVWmRq98+pwObeuvF6vVrjMrjdzluyTXwAAAP//AwAHWkpkqwMAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 03 Dec 2025 17:24:28 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '681'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '871'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."},{"role":"assistant","content":"```\nThought:
+      I should use the calculate_sum tool to add 5 and 3.\nAction: calculate_sum\nAction
+      Input: {\"a\": 5, \"b\": 3}\n```\nObservation: 8"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1298'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jFJNb5wwEL3zKyyfl2ghBAi3KtJKTS9VlX5I3QiMGcBZY7v20DSK9r9X
+        hs1C2lTqxdLMm/c8b2aeA0KoaGhBKO8Z8sHI8EYc3Ff7pX663Y32w82Qffv46XNUR+Yu+7GjG8/Q
+        9QNwfGFdcD0YCSi0mmFugSF41ShLkyyP0zSfgEE3ID2tMxgmF1E4CCXCeBtfhdskjJITvdeCg6MF
+        +R4QQsjz9PpGVQO/aEG2m5fMAM6xDmhxLiKEWi19hjLnhEOmkG4WkGuFoKbeq6raq7tej12PBXlP
+        lH4kB/9gD6QViknClHsEu1e7KXo3RQXJ96qqqrWqhXZ0zFtTo5QrgCmlkfnRTH7uT8jx7EDqzlhd
+        uz+otBVKuL60wJxWvluH2tAJPQaE3E+TGl+Zp8bqwWCJ+gDTd3F+OevRZUMLGuUnEDUyueQvt9Hm
+        Db2yAWRCutWsKWe8h2ahLothYyP0CghWrv/u5i3t2blQ3f/ILwDnYBCa0lhoBH/teCmz4A/4X2Xn
+        KU8NUwf2p+BQogDrN9FAy0Y5XxV1Tw5hKFuhOrDGivm0WlNeZ2kKV8l1HdPgGPwGAAD//wMAJksH
+        jGkDAAA=
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 03 Dec 2025 17:24:29 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '427'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '442'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1119'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJLLbtswEEX3+ooB15bhh2zH2iXtJovuYqAPBRJNjiU6FEmQo7ap4X8v
+        JDmW3KZAN1rMmXs1c4enCIApyVJgouIkaqfjD6r+fFf9+KJ2u6/qeO92H1/mrw+ffj25h+OWTVqF
+        3R9R0JtqKmztNJKypsfCIydsXeebdbK5286Wsw7UVqJuZaWjOJnO41oZFS9mi1U8S+J5cpFXVgkM
+        LIVvEQDAqfu2gxqJP1kKnVlXqTEEXiJLr00AzFvdVhgPQQXihthkgMIaQtPNXhRFZp4q25QVpfAI
+        BlECWeBSwgq4kbCEJihTAlUIgmvRaE6Yh6YGslZPM3Mv2q3TW/hWhkfjGkrhlDGesXQ1ydg+Y+ny
+        nJmiKMZDeTw0gbfJmEbrEeDGWOKtWRfH84WcrwFoWzpv9+EPKTsoo0KVe+TBmnbZQNaxjp4jgOcu
+        6OYmO+a8rR3lZF+w+91imfR+bDjwQJebCyRLXI9Um/nkHb9cInGlw+hUTHBRoRykw115I5UdgWi0
+        9d/TvOfdb65M+T/2AxACHaHMnUepxO3GQ5vH9v3/q+2acjcwC+i/K4E5KfTtJSQeeKP7R8nCayCs
+        84MyJXrnVf8yDy7fbtZrXCXb/YJF5+g3AAAA//8DANrSB6yoAwAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 03 Dec 2025 19:10:33 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2329'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2349'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator Assistant.
+      You are a helpful calculator assistant\nYour personal goal is: Help with math
+      calculations\n\nYou ONLY have access to the following tools, and should NEVER
+      make up tools that are not listed here:\n\nTool Name: calculate_sum\nTool Arguments:
+      {''a'': {''description'': None, ''type'': ''int''}, ''b'': {''description'':
+      None, ''type'': ''int''}}\nTool Description: Add two numbers together.\n\nIMPORTANT:
+      Use the following format in your response:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, only one name of [calculate_sum],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What
+      is 5 + 3? Use the calculate_sum tool."},{"role":"assistant","content":"```\nThought:
+      I need to add 5 and 3 using the calculate_sum tool.\nAction: calculate_sum\nAction
+      Input: {\"a\":5,\"b\":3}\n```\nObservation: 8"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1295'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//jJJNb9QwEIbv+RWWz5tqN81+5QaVQHDi0AOIrRKvPUncOmNjTyhQ7X9H
+        zn4kS0HiYsl+5h3POzMvCWNcK14wLltBsnMmvdPd57f+yzKovc/cR/z23ohfn+69yJX1fBYVdv8I
+        ks6qG2k7Z4C0xSOWHgRBzLpYr/L1Zju/vR1AZxWYKGscpfnNIu006jSbZ8t0nqeL/CRvrZYQeMG+
+        Jowx9jKcsVBU8IMXbD47v3QQgmiAF5cgxri3Jr5wEYIOJJD4bITSIgEOtVdVtcP71vZNSwX7wNA+
+        s6d4UAus1igMExiewe/w3XB7M9wKttlhVVXTrB7qPohoDXtjJkAgWhKxNYOfhxM5XBwY2zhv9+EP
+        Ka816tCWHkSwGKsNZB0f6CFh7GHoVH9lnjtvO0cl2ScYvss2p07xcUIjXWxOkCwJM1Ftz+AqX6mA
+        hDZh0msuhWxBjdJxMKJX2k5AMnH9upq/5T4619j8T/oRSAmOQJXOg9Ly2vEY5iEu8L/CLl0eCuYB
+        /HctoSQNPk5CQS16c9wqHn4Ggq6sNTbgndfH1apduV2vVrDMt/uMJ4fkNwAAAP//AwCRC7shaQMA
+        AA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 03 Dec 2025 19:10:35 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1647'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1694'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

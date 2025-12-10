@@ -51,6 +51,15 @@ class ConcreteAgentAdapter(BaseAgentAdapter):
         # Dummy implementation for MCP tools
         return []
 
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: str | None = None,
+        tools: list[Any] | None = None,
+    ) -> str:
+        # Dummy async implementation
+        return "Task executed"
+
 
 def test_base_agent_adapter_initialization():
     """Test initialization of the concrete agent adapter."""

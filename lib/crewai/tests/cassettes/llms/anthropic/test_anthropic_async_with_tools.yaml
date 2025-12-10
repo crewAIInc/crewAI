@@ -1,0 +1,106 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What''s the weather
+      in San Francisco?"}],"model":"claude-sonnet-4-0","stream":false,"tools":[{"name":"get_weather","description":"Get
+      the current weather for a location","input_schema":{"type":"object","properties":{"location":{"type":"string","description":"The
+      city and state, e.g. San Francisco, CA"}},"required":["location"]}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '388'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.75.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//dJFLSyQxFIX/SjgbN2mp6odidiot2CroqLgYhhBT166iU0mb3PiYpv67
+        VDmNOuIq5H7n5AvJBm2oyEHBOpMrGqXgPfFoOhoX41kxK6eQaCootGmpi/Jo/8Kf/zqaXezP8+Fk
+        vrj9y0/tBBL8uqY+RSmZJUEiBtcPTEpNYuMZEjZ4Js9QvzfbPNNLT4ZF4XTHOWFrsivBNQmbYyTP
+        4pkM1xRF48W18eIkGm+bZIN4CFG8hryLTn6cGILTOdH23v0+66KcTPjuxt6Vq+fz8RlXi6v7S1Pf
+        QsKbtu8tifU/UV/168xQG7hgDTfBQ+GLW4rjQ3TdH4nEYa0jmTSEPukHkOgxk7cE5bNzEnl4HrV5
+        N2gOK/IJalqUEtbYmrSNNBj110Sx5ZFM9RPbdnsBrWtqKRqnZ+33/Act6/9pJxEyfx7tHUgkik+N
+        Jc0NRSj0n1qZWKHr3gAAAP//AwBJY3XJRQIAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 11:36:45 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '16'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '1491'
+    status:
+      code: 200
+      message: OK
+version: 1

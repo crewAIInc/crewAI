@@ -1,101 +1,5 @@
 interactions:
 - request:
-    body: '{"trace_id": "bf042234-54a3-4fc0-857d-1ae5585a174e", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-06T16:05:14.776800+00:00"}}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate, zstd
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '434'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/1.3.0
-      X-Crewai-Version:
-      - 1.3.0
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
-  response:
-    body:
-      string: '{"error":"bad_credentials","message":"Bad credentials"}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '55'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Thu, 06 Nov 2025 16:05:15 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
-      expires:
-      - '0'
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      pragma:
-      - no-cache
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      strict-transport-security:
-      - max-age=63072000; includeSubDomains
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 9e528076-59a8-4c21-a999-2367937321ed
-      x-runtime:
-      - '0.070063'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 401
-      message: Unauthorized
-- request:
     body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
       personal goal is: test goal\nTo give my best complete final answer to the task
       respond using the exact following format:\n\nThought: I now can give a great
@@ -109,10 +13,14 @@ interactions:
       alphabet.\n\nBegin! This is VERY important to you, use the tools available and
       give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-3.5-turbo"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
@@ -121,44 +29,41 @@ interactions:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBbtswDL37Kwidk6BOmgbLbRgwYLdtCLAVaxHIEm2rkUVVopOmRf59
-        kJLG6dYBuxgwH9/z4yP9UgAIo8UShGolq87b8afbXTfbr74/89erb2o/axY0f7x1RkX+8VOMEoOq
-        B1T8ypoo6rxFNuSOsAooGZNqubiZXl/Py3KegY402kRrPI9nk/mY+1DR+Kqczk/MlozCKJbwqwAA
-        eMnP5NFpfBJLuBq9VjqMUTYolucmABHIpoqQMZrI0rEYDaAix+iy7S/QO40htWjgFoFl3EB62Rlr
-        wQdSiBqYoDFbzB0VRobaOGlBurjDMLlzd+5zLnzMhSWsWoTH3qgNVIF2Dmp6goe+8xFoiyHLWPm8
-        B03NBFatiRAxeVIIyZw0LgJuMezBIjMGoDqTpPWtrJAnl+MErPsoU5yut/YCkM4Ry7SOHOT9CTmc
-        o7PU+EBV/IMqauNMbNcBZSSXYopMXmT0UADc5xX1b1IXPlDnec20wfy58kN51BPDVQzo7OYEMrG0
-        Q306XYze0VtrZGlsvFiyUFK1qAfqcBGy14YugOJi6r/dvKd9nNy45n/kB0Ap9Ix67QNqo95OPLQF
-        TD/Nv9rOKWfDImLYGoVrNhjSJjTWsrfHcxZxHxm7dW1cg8EHk286bbI4FL8BAAD//wMAHFSnRdID
-        AAA=
+        H4sIAAAAAAAAAwAAAP//jFPLbtswELzrKxY824atJG3iW9GiRZueihz6SCCsqZVEh+Ky5MqOHeTf
+        C8oP2X0AvQggZ2d3doZ6zgCUKdUclG5QdOvt+O3ynUT8Ov38aVpuv2+n+e36lr58+FbjdjVTo8Tg
+        xZK0HFgTza23JIbdDtaBUCh1nb1+dXl9c5nn1z3Qckk20Wov44vJ1Vi6sODxdJZf7ZkNG01RzeFH
+        BgDw3H+TRlfSk5rDdHS4aSlGrEnNj0UAKrBNNwpjNFHQiRoNoGYn5HrZH8HxGjQ6qM2KAKFOkgFd
+        XFO4d/fuvXFo4U1/nsNdQ/CzM/oRFoHXDip+gmXX+gi8ogDSEFjcbqDkegJ3jYkQKc3SBGkoGheB
+        VhQ2YEmEAnDVk9D6Bhckk1OZgaouYrLJddaeAOgcCyabe4Me9sjL0RLLtQ+8iL9RVWWciU0RCCO7
+        tH4U9qpHXzKAh9767sxN5QO3XgrhR+rHzW5mu35qSHtAL/a5KGFBO9zn+YF11q8oSdDYeBKe0qgb
+        KgfqkDR2peETIDvZ+k81f+u929y4+n/aD4DW5IXKwgcqjT7feCgLlH6Gf5UdXe4Fq0hhZTQVYiik
+        JEqqsLO7Z6riJgq1RWVcTcEH07/VlGT2kv0CAAD//wMAzT38o6oDAAA=
     headers:
       CF-RAY:
-      - 99a5d4d0bb8f7327-EWR
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Encoding:
@@ -166,53 +71,49 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 06 Nov 2025 16:05:16 GMT
+      - Fri, 05 Dec 2025 00:23:49 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Thu, 06-Nov-25 16:35:16 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - user-REDACTED
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '836'
+      - '506'
       openai-project:
-      - proj_REDACTED
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '983'
+      - '559'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '200000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '199785'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 8.64s
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 64ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_c302b31f8f804399ae05fc424215303a
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
