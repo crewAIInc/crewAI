@@ -34,7 +34,6 @@ from crewai.agent.utils import (
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
-from crewai.agents.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
@@ -45,6 +44,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent import LiteAgent

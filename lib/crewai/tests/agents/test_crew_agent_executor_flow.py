@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crewai.agents.crew_agent_executor_flow import (
+from crewai.experimental.crew_agent_executor_flow import (
     AgentReActState,
     CrewAgentExecutorFlow,
 )
@@ -233,7 +233,7 @@ class TestCrewAgentExecutorFlow:
             AgentFinish(thought="thinking", output="test", text="final")
         )
 
-    @patch("crewai.agents.crew_agent_executor_flow.handle_output_parser_exception")
+    @patch("crewai.experimental.crew_agent_executor_flow.handle_output_parser_exception")
     def test_recover_from_parser_error(
         self, mock_handle_exception, mock_dependencies
     ):
@@ -252,7 +252,7 @@ class TestCrewAgentExecutorFlow:
         assert executor.state.iterations == initial_iterations + 1
         mock_handle_exception.assert_called_once()
 
-    @patch("crewai.agents.crew_agent_executor_flow.handle_context_length")
+    @patch("crewai.experimental.crew_agent_executor_flow.handle_context_length")
     def test_recover_from_context_length(
         self, mock_handle_context, mock_dependencies
     ):
@@ -321,8 +321,8 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.agents.crew_agent_executor_flow.get_llm_response")
-    @patch("crewai.agents.crew_agent_executor_flow.enforce_rpm_limit")
+    @patch("crewai.experimental.crew_agent_executor_flow.get_llm_response")
+    @patch("crewai.experimental.crew_agent_executor_flow.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
     ):
@@ -338,9 +338,9 @@ class TestFlowErrorHandling:
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.agents.crew_agent_executor_flow.get_llm_response")
-    @patch("crewai.agents.crew_agent_executor_flow.enforce_rpm_limit")
-    @patch("crewai.agents.crew_agent_executor_flow.is_context_length_exceeded")
+    @patch("crewai.experimental.crew_agent_executor_flow.get_llm_response")
+    @patch("crewai.experimental.crew_agent_executor_flow.enforce_rpm_limit")
+    @patch("crewai.experimental.crew_agent_executor_flow.is_context_length_exceeded")
     def test_call_llm_context_error(
         self,
         mock_is_context_exceeded,
