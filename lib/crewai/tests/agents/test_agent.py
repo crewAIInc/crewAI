@@ -1178,6 +1178,7 @@ def test_system_and_prompt_template():
 
 {{ .Response }}<|eot_id|>""",
     )
+    agent.create_agent_executor()
 
     expected_prompt = """<|start_header_id|>system<|end_header_id|>
 
@@ -1442,6 +1443,8 @@ def test_agent_max_retry_limit():
         human_input=True,
     )
 
+    agent.create_agent_executor(task=task)
+
     error_message = "Error happening while sending prompt to model."
     with patch.object(
         CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
@@ -1503,9 +1506,8 @@ def test_agent_with_custom_stop_words():
     )
 
     assert isinstance(agent.llm, BaseLLM)
-    assert set(agent.llm.stop) == set([*stop_words, "\nObservation:"])
+    assert set(agent.llm.stop) == set(stop_words)
     assert all(word in agent.llm.stop for word in stop_words)
-    assert "\nObservation:" in agent.llm.stop
 
 
 def test_agent_with_callbacks():
@@ -1629,6 +1631,8 @@ def test_handle_context_length_exceeds_limit_cli_no():
     )
     task = Task(description="test task", agent=agent, expected_output="test output")
 
+    agent.create_agent_executor(task=task)
+
     with patch.object(
         CrewAgentExecutor, "invoke", wraps=agent.agent_executor.invoke
     ) as private_mock:
@@ -1679,8 +1683,8 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
     # assert agent.llm.n == 1
-    assert set(agent.llm.stop) == set(["STOP", "END", "\nObservation:"])
-    assert all(word in agent.llm.stop for word in ["STOP", "END", "\nObservation:"])
+    assert set(agent.llm.stop) == set(["STOP", "END"])
+    assert all(word in agent.llm.stop for word in ["STOP", "END"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1
