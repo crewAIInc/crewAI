@@ -297,6 +297,7 @@ class OpenAICompletion(BaseLLM):
         }
         if self.stream:
             params["stream"] = self.stream
+            params["stream_options"] = {"include_usage": True}
 
         params.update(self.additional_params)
 
@@ -545,6 +546,9 @@ class OpenAICompletion(BaseLLM):
 
                 final_completion = stream.get_final_completion()
                 if final_completion and final_completion.choices:
+                    usage = self._extract_openai_token_usage(final_completion)
+                    self._track_token_usage_internal(usage)
+
                     parsed_result = final_completion.choices[0].message.parsed
                     if parsed_result:
                         structured_json = parsed_result.model_dump_json()
@@ -564,7 +568,11 @@ class OpenAICompletion(BaseLLM):
             self.client.chat.completions.create(**params)
         )
 
+        usage_data: dict[str, Any] | None = None
         for completion_chunk in completion_stream:
+            if completion_chunk.usage is not None:
+                usage_data = self._extract_chunk_token_usage(completion_chunk)
+
             if not completion_chunk.choices:
                 continue
 
@@ -592,6 +600,9 @@ class OpenAICompletion(BaseLLM):
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
@@ -785,7 +796,11 @@ class OpenAICompletion(BaseLLM):
             ] = await self.async_client.chat.completions.create(**params)
 
             accumulated_content = ""
+            usage_data: dict[str, Any] | None = None
             async for chunk in completion_stream:
+                if chunk.usage is not None:
+                    usage_data = self._extract_chunk_token_usage(chunk)
+
                 if not chunk.choices:
                     continue
 
@@ -799,6 +814,9 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+            if usage_data:
+                self._track_token_usage_internal(usage_data)
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
@@ -828,7 +846,11 @@ class OpenAICompletion(BaseLLM):
             ChatCompletionChunk
         ] = await self.async_client.chat.completions.create(**params)
 
+        usage_data = None
         async for chunk in stream:
+            if chunk.usage is not None:
+                usage_data = self._extract_chunk_token_usage(chunk)
+
             if not chunk.choices:
                 continue
 
@@ -856,6 +878,9 @@ class OpenAICompletion(BaseLLM):
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
@@ -948,6 +973,19 @@ class OpenAICompletion(BaseLLM):
         """Extract token usage from OpenAI ChatCompletion response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
+            return {
+                "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                "completion_tokens": getattr(usage, "completion_tokens", 0),
+                "total_tokens": getattr(usage, "total_tokens", 0),
+            }
+        return {"total_tokens": 0}
+
+    def _extract_chunk_token_usage(
+        self, chunk: ChatCompletionChunk
+    ) -> dict[str, Any]:
+        """Extract token usage from OpenAI ChatCompletionChunk (streaming response)."""
+        if hasattr(chunk, "usage") and chunk.usage:
+            usage = chunk.usage
             return {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),

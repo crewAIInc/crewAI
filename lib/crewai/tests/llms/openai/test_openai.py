@@ -592,3 +592,133 @@ def test_openai_response_format_none():
 
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+def test_openai_streaming_tracks_token_usage():
+    """
+    Test that streaming mode correctly tracks token usage.
+    This test verifies the fix for issue #4056 where token usage was always 0
+    when using streaming mode.
+    """
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    # Create mock chunks with usage in the final chunk
+    mock_chunk1 = MagicMock()
+    mock_chunk1.choices = [MagicMock()]
+    mock_chunk1.choices[0].delta = MagicMock()
+    mock_chunk1.choices[0].delta.content = "Hello "
+    mock_chunk1.choices[0].delta.tool_calls = None
+    mock_chunk1.usage = None
+
+    mock_chunk2 = MagicMock()
+    mock_chunk2.choices = [MagicMock()]
+    mock_chunk2.choices[0].delta = MagicMock()
+    mock_chunk2.choices[0].delta.content = "World!"
+    mock_chunk2.choices[0].delta.tool_calls = None
+    mock_chunk2.usage = None
+
+    # Final chunk with usage information (when stream_options={"include_usage": True})
+    mock_chunk3 = MagicMock()
+    mock_chunk3.choices = []
+    mock_chunk3.usage = MagicMock()
+    mock_chunk3.usage.prompt_tokens = 10
+    mock_chunk3.usage.completion_tokens = 20
+    mock_chunk3.usage.total_tokens = 30
+
+    mock_stream = MagicMock()
+    mock_stream.__iter__ = MagicMock(return_value=iter([mock_chunk1, mock_chunk2, mock_chunk3]))
+
+    with patch.object(llm.client.chat.completions, "create", return_value=mock_stream):
+        result = llm.call("Hello")
+
+        assert result == "Hello World!"
+
+        # Verify token usage was tracked
+        usage = llm.get_token_usage_summary()
+        assert usage.prompt_tokens == 10
+        assert usage.completion_tokens == 20
+        assert usage.total_tokens == 30
+        assert usage.successful_requests == 1
+
+
+def test_openai_streaming_with_response_model_tracks_token_usage():
+    """
+    Test that streaming with response_model correctly tracks token usage.
+    This test verifies the fix for issue #4056 where token usage was always 0
+    when using streaming mode with response_model.
+    """
+    from pydantic import BaseModel
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+
+        answer: str
+        confidence: float
+
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    with patch.object(llm.client.beta.chat.completions, "stream") as mock_stream:
+        # Create mock chunks with content.delta event structure
+        mock_chunk1 = MagicMock()
+        mock_chunk1.type = "content.delta"
+        mock_chunk1.delta = '{"answer": "test", '
+
+        mock_chunk2 = MagicMock()
+        mock_chunk2.type = "content.delta"
+        mock_chunk2.delta = '"confidence": 0.95}'
+
+        # Create mock final completion with parsed result and usage
+        mock_parsed = TestResponse(answer="test", confidence=0.95)
+        mock_message = MagicMock()
+        mock_message.parsed = mock_parsed
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_final_completion = MagicMock()
+        mock_final_completion.choices = [mock_choice]
+        mock_final_completion.usage = MagicMock()
+        mock_final_completion.usage.prompt_tokens = 15
+        mock_final_completion.usage.completion_tokens = 25
+        mock_final_completion.usage.total_tokens = 40
+
+        # Create mock stream context manager
+        mock_stream_obj = MagicMock()
+        mock_stream_obj.__enter__ = MagicMock(return_value=mock_stream_obj)
+        mock_stream_obj.__exit__ = MagicMock(return_value=None)
+        mock_stream_obj.__iter__ = MagicMock(return_value=iter([mock_chunk1, mock_chunk2]))
+        mock_stream_obj.get_final_completion = MagicMock(return_value=mock_final_completion)
+
+        mock_stream.return_value = mock_stream_obj
+
+        result = llm.call("Test question", response_model=TestResponse)
+
+        assert result is not None
+
+        # Verify token usage was tracked
+        usage = llm.get_token_usage_summary()
+        assert usage.prompt_tokens == 15
+        assert usage.completion_tokens == 25
+        assert usage.total_tokens == 40
+        assert usage.successful_requests == 1
+
+
+def test_openai_streaming_params_include_usage():
+    """
+    Test that streaming mode includes stream_options with include_usage=True.
+    This ensures the OpenAI API will return usage information in the final chunk.
+    """
+    llm = LLM(model="openai/gpt-4o", stream=True)
+
+    with patch.object(llm.client.chat.completions, "create") as mock_create:
+        mock_stream = MagicMock()
+        mock_stream.__iter__ = MagicMock(return_value=iter([]))
+        mock_create.return_value = mock_stream
+
+        try:
+            llm.call("Hello")
+        except Exception:
+            pass  # We just want to check the call parameters
+
+        # Verify stream_options was included in the API call
+        call_kwargs = mock_create.call_args[1]
+        assert call_kwargs.get("stream") is True
+        assert call_kwargs.get("stream_options") == {"include_usage": True}
