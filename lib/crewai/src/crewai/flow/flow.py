@@ -1035,6 +1035,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
         finally:
             detach(flow_token)
 
+    async def akickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
+        """Native async method to start the flow execution. Alias for kickoff_async.
+
+
+        Args:
+            inputs: Optional dictionary containing input values and/or a state ID for restoration.
+
+        Returns:
+            The final output from the flow, which is the result of the last executed method.
+        """
+        return await self.kickoff_async(inputs)
+
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
 

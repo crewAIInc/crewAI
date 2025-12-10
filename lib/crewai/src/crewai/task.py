@@ -497,6 +497,107 @@ class Task(BaseModel):
         result = self._execute_core(agent, context, tools)
         future.set_result(result)
 
+    async def aexecute_sync(
+        self,
+        agent: BaseAgent | None = None,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
+    ) -> TaskOutput:
+        """Execute the task asynchronously using native async/await."""
+        return await self._aexecute_core(agent, context, tools)
+
+    async def _aexecute_core(
+        self,
+        agent: BaseAgent | None,
+        context: str | None,
+        tools: list[Any] | None,
+    ) -> TaskOutput:
+        """Run the core execution logic of the task asynchronously."""
+        try:
+            agent = agent or self.agent
+            self.agent = agent
+            if not agent:
+                raise Exception(
+                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                )
+
+            self.start_time = datetime.datetime.now()
+
+            self.prompt_context = context
+            tools = tools or self.tools or []
+
+            self.processed_by_agents.add(agent.role)
+            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            result = await agent.aexecute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+
+            if not self._guardrails and not self._guardrail:
+                pydantic_output, json_output = self._export_output(result)
+            else:
+                pydantic_output, json_output = None, None
+
+            task_output = TaskOutput(
+                name=self.name or self.description,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+                messages=agent.last_messages,  # type: ignore[attr-defined]
+            )
+
+            if self._guardrails:
+                for idx, guardrail in enumerate(self._guardrails):
+                    task_output = await self._ainvoke_guardrail_function(
+                        task_output=task_output,
+                        agent=agent,
+                        tools=tools,
+                        guardrail=guardrail,
+                        guardrail_index=idx,
+                    )
+
+            if self._guardrail:
+                task_output = await self._ainvoke_guardrail_function(
+                    task_output=task_output,
+                    agent=agent,
+                    tools=tools,
+                    guardrail=self._guardrail,
+                )
+
+            self.output = task_output
+            self.end_time = datetime.datetime.now()
+
+            if self.callback:
+                self.callback(self.output)
+
+            crew = self.agent.crew  # type: ignore[union-attr]
+            if crew and crew.task_callback and crew.task_callback != self.callback:
+                crew.task_callback(self.output)
+
+            if self.output_file:
+                content = (
+                    json_output
+                    if json_output
+                    else (
+                        pydantic_output.model_dump_json() if pydantic_output else result
+                    )
+                )
+                self._save_file(content)
+            crewai_event_bus.emit(
+                self,
+                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+            )
+            return task_output
+        except Exception as e:
+            self.end_time = datetime.datetime.now()
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            raise e  # Re-raise the exception after emitting the event
+
     def _execute_core(
         self,
         agent: BaseAgent | None,
@@ -539,7 +640,7 @@ class Task(BaseModel):
                 json_dict=json_output,
                 agent=agent.role,
                 output_format=self._get_output_format(),
-                messages=agent.last_messages,
+                messages=agent.last_messages,  # type: ignore[attr-defined]
             )
 
             if self._guardrails:
@@ -950,7 +1051,103 @@ Follow these guidelines:
                 json_dict=json_output,
                 agent=agent.role,
                 output_format=self._get_output_format(),
-                messages=agent.last_messages,
+                messages=agent.last_messages,  # type: ignore[attr-defined]
+            )
+
+        return task_output
+
+    async def _ainvoke_guardrail_function(
+        self,
+        task_output: TaskOutput,
+        agent: BaseAgent,
+        tools: list[BaseTool],
+        guardrail: GuardrailCallable | None,
+        guardrail_index: int | None = None,
+    ) -> TaskOutput:
+        """Invoke the guardrail function asynchronously."""
+        if not guardrail:
+            return task_output
+
+        if guardrail_index is not None:
+            current_retry_count = self._guardrail_retry_counts.get(guardrail_index, 0)
+        else:
+            current_retry_count = self.retry_count
+
+        max_attempts = self.guardrail_max_retries + 1
+
+        for attempt in range(max_attempts):
+            guardrail_result = process_guardrail(
+                output=task_output,
+                guardrail=guardrail,
+                retry_count=current_retry_count,
+                event_source=self,
+                from_task=self,
+                from_agent=agent,
+            )
+
+            if guardrail_result.success:
+                if guardrail_result.result is None:
+                    raise Exception(
+                        "Task guardrail returned None as result. This is not allowed."
+                    )
+
+                if isinstance(guardrail_result.result, str):
+                    task_output.raw = guardrail_result.result
+                    pydantic_output, json_output = self._export_output(
+                        guardrail_result.result
+                    )
+                    task_output.pydantic = pydantic_output
+                    task_output.json_dict = json_output
+                elif isinstance(guardrail_result.result, TaskOutput):
+                    task_output = guardrail_result.result
+
+                return task_output
+
+            if attempt >= self.guardrail_max_retries:
+                guardrail_name = (
+                    f"guardrail {guardrail_index}"
+                    if guardrail_index is not None
+                    else "guardrail"
+                )
+                raise Exception(
+                    f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
+                    f"Last error: {guardrail_result.error}"
+                )
+
+            if guardrail_index is not None:
+                current_retry_count += 1
+                self._guardrail_retry_counts[guardrail_index] = current_retry_count
+            else:
+                self.retry_count += 1
+                current_retry_count = self.retry_count
+
+            context = self.i18n.errors("validation_error").format(
+                guardrail_result_error=guardrail_result.error,
+                task_output=task_output.raw,
+            )
+            printer = Printer()
+            printer.print(
+                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                color="yellow",
+            )
+
+            result = await agent.aexecute_task(
+                task=self,
+                context=context,
+                tools=tools,
+            )
+
+            pydantic_output, json_output = self._export_output(result)
+            task_output = TaskOutput(
+                name=self.name or self.description,
+                description=self.description,
+                expected_output=self.expected_output,
+                raw=result,
+                pydantic=pydantic_output,
+                json_dict=json_output,
+                agent=agent.role,
+                output_format=self._get_output_format(),
+                messages=agent.last_messages,  # type: ignore[attr-defined]
             )
 
         return task_output

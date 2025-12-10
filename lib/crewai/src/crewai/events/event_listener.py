@@ -140,7 +140,9 @@ class EventListener(BaseEventListener):
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
             with self._crew_tree_lock:
                 self.formatter.create_crew_tree(event.crew_name or "Crew", source.id)
-                self._telemetry.crew_execution_span(source, event.inputs)
+                source._execution_span = self._telemetry.crew_execution_span(
+                    source, event.inputs
+                )
                 self._crew_tree_lock.notify_all()
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)

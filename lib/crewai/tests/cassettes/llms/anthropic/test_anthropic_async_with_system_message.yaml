@@ -1,0 +1,202 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You
+      are a helpful assistant."}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '156'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.75.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//dJBdS8QwEEX/SrmvZqHttggBXxZkffJBRESREJNhm7VNajIRdel/ly6u
+        X4tPA/ecmYG7wxAs9ZAwvc6WFil4T7xoFnVZt2VbNRBwFhJD2qiyurwYV9vl7dVN+35+d908bten
+        brWGAL+NNFuUkt4QBGLo50Cn5BJrzxAwwTN5hrzfHXym15nsh0RdnBR1cVY0mB4EEodRRdIpeEiQ
+        t4pz9PgEiZ4zeUOQPve9QN7/lTs4P2ZWHJ7IJ8i6FDDadKRMJM0uePVb+OKRtP2PHXbn+zR2NFDU
+        vWqHY/+bVt1fOgmEzD+jaimQKL44Q4odRUjMZVkdLabpAwAA//8DAJXQ8cKdAQAA
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:05:55 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '6'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '3195'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You
+      are a helpful assistant."}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '156'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - async:asyncio
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.75.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAwAAAP//dJDLasMwEEV/xdxtZbBdeyPoIpu2dNduSxFCGhITe6RIoz4I/vfi0PRJ
+        VwP3nJmBe8QcPE3QcJMtnuocmEnqvu6abmiGtofC6KEx561p2k33ch1vStzEu+Gwf9jc93SbPBTk
+        LdJqUc52S1BIYVoDm/OYxbJAwQUWYoF+PJ59odeVnIZGV11UXXVV9VieFLKEaBLZHBgaxN5ISYwP
+        kOlQiB1Bc5kmhXL6q48YORYxEvbEGbprFJx1OzIukZUxsPkpfPJE1v/HzrvrfYo7minZyQzzX/+L
+        trvfdFEIRb5H7aVCpvQ8OjIyUoLGWpa3yWNZ3gEAAP//AwAKNgjwnQEAAA==
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 06:07:35 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      retry-after:
+      - '26'
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2929'
+    status:
+      code: 200
+      message: OK
+version: 1

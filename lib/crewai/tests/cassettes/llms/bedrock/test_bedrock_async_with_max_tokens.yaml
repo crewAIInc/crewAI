@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "Write a very long
+      story about a dragon."}]}], "inferenceConfig": {"maxTokens": 10}}'
+    headers:
+      Content-Length:
+      - '136'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":966},"output":{"message":{"content":[{"text":"Here''s
+        a long story about a dragon:"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":16,"outputTokens":10,"serverToolUsage":{},"totalTokens":26}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '239'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:50:58 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

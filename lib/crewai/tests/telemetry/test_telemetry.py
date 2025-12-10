@@ -19,7 +19,6 @@ def cleanup_telemetry():
         Telemetry._lock = threading.Lock()
 
 
-@pytest.mark.telemetry
 @pytest.mark.parametrize(
     "env_var,value,expected_ready",
     [
@@ -33,13 +32,19 @@ def cleanup_telemetry():
 )
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
-    with patch.dict(os.environ, {env_var: value}):
+    # Clear all telemetry-related env vars first, then set only the one being tested
+    env_overrides = {
+        "OTEL_SDK_DISABLED": "false",
+        "CREWAI_DISABLE_TELEMETRY": "false",
+        "CREWAI_DISABLE_TRACKING": "false",
+        env_var: value,
+    }
+    with patch.dict(os.environ, env_overrides):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
             assert telemetry.ready is expected_ready
 
 
-@pytest.mark.telemetry
 def test_telemetry_enabled_by_default():
     """Test that telemetry is enabled by default."""
     with patch.dict(os.environ, {}, clear=True):
@@ -48,7 +53,6 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-@pytest.mark.telemetry
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
