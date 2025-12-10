@@ -3,6 +3,7 @@
 import pytest
 import tiktoken
 
+from crewai import Agent, Task, Crew
 from crewai.llm import LLM
 from crewai.llms.providers.gemini.completion import GeminiCompletion
 
@@ -112,3 +113,33 @@ async def test_gemini_async_with_parameters():
 
     assert result is not None
     assert isinstance(result, str)
+
+
+@pytest.mark.vcr()
+@pytest.mark.asyncio
+async def test_google_async_streaming_returns_usage_metrics():
+    """
+    Test that Google Gemini async streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of Canada",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="gemini/gemini-2.0-flash-exp", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of Canada?",
+        expected_output="The capital of Canada",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = await crew.kickoff_async()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1
