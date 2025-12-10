@@ -61,6 +61,7 @@ openpyxl = [
     "openpyxl~=3.1.5",
 ]
 mem0 = ["mem0ai~=0.1.94"]
+openmemory = ["openmemory-py>=1.0.0"]
 docling = [
     "docling~=2.63.0",
 ]
