@@ -24,12 +24,25 @@ class TestSignalType:
     """Tests for SignalType enum."""
 
     def test_signal_type_values(self) -> None:
-        """Verify SignalType maps to correct signal numbers."""
+        """Verify SignalType maps to correct signal numbers when available."""
         assert SignalType.SIGTERM == signal.SIGTERM
         assert SignalType.SIGINT == signal.SIGINT
-        assert SignalType.SIGHUP == signal.SIGHUP
-        assert SignalType.SIGTSTP == signal.SIGTSTP
-        assert SignalType.SIGCONT == signal.SIGCONT
+
+        # These signals are not available on Windows, so only check if present
+        if hasattr(signal, "SIGHUP"):
+            assert SignalType.SIGHUP == signal.SIGHUP
+        if hasattr(signal, "SIGTSTP"):
+            assert SignalType.SIGTSTP == signal.SIGTSTP
+        if hasattr(signal, "SIGCONT"):
+            assert SignalType.SIGCONT == signal.SIGCONT
+
+    def test_signal_type_enum_members_always_exist(self) -> None:
+        """Verify all SignalType enum members exist regardless of platform."""
+        assert hasattr(SignalType, "SIGTERM")
+        assert hasattr(SignalType, "SIGINT")
+        assert hasattr(SignalType, "SIGHUP")
+        assert hasattr(SignalType, "SIGTSTP")
+        assert hasattr(SignalType, "SIGCONT")
 
 
 class TestSignalEvents:
@@ -195,3 +208,70 @@ class TestSignalEventSerialization:
         assert isinstance(restored, SigTermEvent)
         assert restored.reason == original.reason
         assert restored.type == original.type
+
+
+class TestWindowsCompatibility:
+    """Tests for Windows compatibility (signals not available on Windows)."""
+
+    def test_system_events_imports_when_optional_signals_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """system_events should import even if some signals are missing (Windows-like).
+
+        This is a regression test for GitHub issue #4062.
+        """
+        import importlib
+
+        import crewai.events.types.system_events as system_events_module
+
+        # Simulate a Windows-like signal module by removing optional signals
+        monkeypatch.delattr(signal, "SIGHUP", raising=False)
+        monkeypatch.delattr(signal, "SIGTSTP", raising=False)
+        monkeypatch.delattr(signal, "SIGCONT", raising=False)
+
+        # Reload after patching so class definitions see the modified signal module
+        reloaded = importlib.reload(system_events_module)
+
+        # Import should succeed and enum members should exist
+        assert hasattr(reloaded.SignalType, "SIGHUP")
+        assert hasattr(reloaded.SignalType, "SIGTSTP")
+        assert hasattr(reloaded.SignalType, "SIGCONT")
+
+        # Event classes should still be importable
+        assert hasattr(reloaded, "SigHupEvent")
+        assert hasattr(reloaded, "SigTStpEvent")
+        assert hasattr(reloaded, "SigContEvent")
+
+        # Fallback values should be negative (to avoid conflicts with real signals)
+        assert reloaded.SignalType.SIGHUP < 0
+        assert reloaded.SignalType.SIGTSTP < 0
+        assert reloaded.SignalType.SIGCONT < 0
+
+    def test_signal_events_can_be_created_when_signals_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Signal events should be creatable even when signals are missing.
+
+        This is a regression test for GitHub issue #4062.
+        """
+        import importlib
+
+        import crewai.events.types.system_events as system_events_module
+
+        # Simulate a Windows-like signal module
+        monkeypatch.delattr(signal, "SIGHUP", raising=False)
+        monkeypatch.delattr(signal, "SIGTSTP", raising=False)
+        monkeypatch.delattr(signal, "SIGCONT", raising=False)
+
+        # Reload after patching
+        reloaded = importlib.reload(system_events_module)
+
+        # Events should be creatable
+        hup_event = reloaded.SigHupEvent()
+        assert hup_event.type == "SIGHUP"
+
+        tstp_event = reloaded.SigTStpEvent()
+        assert tstp_event.type == "SIGTSTP"
+
+        cont_event = reloaded.SigContEvent()
+        assert cont_event.type == "SIGCONT"

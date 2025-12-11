@@ -172,11 +172,21 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        # Always-supported signals on all platforms
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
+
+        # Optional signals (not available on Windows)
+        optional_signals: list[tuple[str, type, bool]] = [
+            ("SIGHUP", SigHupEvent, False),
+            ("SIGTSTP", SigTStpEvent, False),
+            ("SIGCONT", SigContEvent, False),
+        ]
+
+        for sig_name, event_class, shutdown in optional_signals:
+            sig = getattr(signal, sig_name, None)
+            if sig is not None:
+                self._register_signal_handler(sig, event_class, shutdown=shutdown)
 
     def _register_signal_handler(
         self,

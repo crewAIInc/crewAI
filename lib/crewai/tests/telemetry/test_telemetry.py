@@ -1,4 +1,5 @@
 import os
+import signal
 import threading
 from unittest.mock import patch
 
@@ -121,3 +122,36 @@ def test_telemetry_singleton_pattern():
         thread.join()
 
     assert all(instance is telemetry1 for instance in instances)
+
+
+def test_telemetry_register_shutdown_handlers_with_missing_optional_signals(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Telemetry shouldn't fail when optional signals are missing (Windows-like).
+
+    This is a regression test for GitHub issue #4062.
+    """
+    import importlib
+
+    from crewai.telemetry import telemetry as telemetry_module
+
+    # Disable telemetry to avoid real OTLP setup
+    monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
+
+    # Simulate a Windows-like signal module by removing optional signals
+    monkeypatch.delattr(signal, "SIGHUP", raising=False)
+    monkeypatch.delattr(signal, "SIGTSTP", raising=False)
+    monkeypatch.delattr(signal, "SIGCONT", raising=False)
+
+    # Reload after patching so the module sees the modified signal module
+    reloaded = importlib.reload(telemetry_module)
+
+    # Reset the singleton to allow a new instance
+    reloaded.Telemetry._instance = None
+    reloaded.Telemetry._lock = threading.Lock()
+
+    # This should not raise an error even with missing signals
+    telemetry = reloaded.Telemetry()
+
+    # Telemetry should be disabled (due to env var), but import should succeed
+    assert telemetry.ready is False

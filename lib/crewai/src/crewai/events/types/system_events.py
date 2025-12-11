@@ -14,14 +14,25 @@ from pydantic import Field, TypeAdapter
 from crewai.events.base_events import BaseEvent
 
 
+# Fallback values for signals not available on Windows.
+# These are negative to avoid conflicts with real signal numbers.
+_FALLBACK_SIGHUP = -1
+_FALLBACK_SIGTSTP = -2
+_FALLBACK_SIGCONT = -3
+
+
 class SignalType(IntEnum):
-    """Enumeration of supported system signals."""
+    """Enumeration of supported system signals.
+
+    Note: SIGHUP, SIGTSTP, and SIGCONT are not available on Windows.
+    On Windows, these will use fallback negative values.
+    """
 
     SIGTERM = signal.SIGTERM
     SIGINT = signal.SIGINT
-    SIGHUP = signal.SIGHUP
-    SIGTSTP = signal.SIGTSTP
-    SIGCONT = signal.SIGCONT
+    SIGHUP = getattr(signal, "SIGHUP", _FALLBACK_SIGHUP)
+    SIGTSTP = getattr(signal, "SIGTSTP", _FALLBACK_SIGTSTP)
+    SIGCONT = getattr(signal, "SIGCONT", _FALLBACK_SIGCONT)
 
 
 class SigTermEvent(BaseEvent):
