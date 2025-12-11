@@ -1,14 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You
-      are an expert at gathering and organizing information. You carefully collect
-      details and present them in a structured way.\nYour personal goal is: Gather
-      information about the best soccer players\n\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players
-      in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -48,43 +40,16 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        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
-        AMMI9CsaDwAA
+      string: "{\n  \"id\": \"chatcmpl-BgulXtE9b55rAoKvxYrLvGVb0WjxR\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567683,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: The following is a structured overview of the current top 10 soccer players in the world based on their performances, achievements, and overall impact on the game as of October 2023:\\n\\n1. **Lionel Messi** (Inter Miami)\\n   - **Position**: Forward\\n   - **Country**: Argentina\\n   - **Achievements**: 7 Ballon d'Or awards, multiple UEFA Champions League titles, leading Argentina to 2021 Copa América and 2022 FIFA World Cup victory.\\n\\n2. **Kylian Mbappé** (Paris Saint-Germain)\\n   - **Position**: Forward\\n   - **Country**: France\\n   - **Achievements**: FIFA World Cup winner in 2018, numerous Ligue 1 titles, known for his speed,\
+        \ dribbling, and goal-scoring prowess.\\n\\n3. **Erling Haaland** (Manchester City)\\n   - **Position**: Forward\\n   - **Country**: Norway\\n   - **Achievements**: Fastest player to reach numerous goals in UEFA Champions League, playing a crucial role in Manchester City's treble-winning season in 2022-2023.\\n\\n4. **Kevin De Bruyne** (Manchester City)\\n   - **Position**: Midfielder\\n   - **Country**: Belgium\\n   - **Achievements**: Key playmaker for Manchester City, multiple Premier League titles, and known for his exceptional vision and passing ability.\\n\\n5. **Cristiano Ronaldo** (Al-Nassr)\\n   - **Position**: Forward\\n   - **Country**: Portugal\\n   - **Achievements**: 5 Ballon d'Or awards, all-time leading goal scorer in the UEFA Champions League, winner of multiple league titles in England, Spain, and Italy.\\n\\n6. **Neymar Jr.** (Al-Hilal)\\n   - **Position**: Forward\\n   - **Country**: Brazil\\n   - **Achievements**: Known for his flair and skill, he has won Ligue\
+        \ 1 titles and played a vital role in Brazil's national team success, including winning the Copa America.\\n\\n7. **Robert Lewandowski** (Barcelona)\\n   - **Position**: Forward\\n   - **Country**: Poland\\n   - **Achievements**: Renowned for goal-scoring ability, won the FIFA Best Men's Player award in 2020 and 2021, contributing heavily to Bayern Munich's successes before moving to Barcelona.\\n\\n8. **Luka Modrić** (Real Madrid)\\n   - **Position**: Midfielder\\n   - **Country**: Croatia\\n   - **Achievements**: 2018 Ballon d'Or winner, instrumental in Real Madrid's Champions League triumphs and leading Croatia to the finals of the 2018 World Cup.\\n\\n9. **Mohamed Salah** (Liverpool)\\n   - **Position**: Forward\\n   - **Country**: Egypt\\n   - **Achievements**: Key player for Liverpool, helping them win the Premier League and UEFA Champions League titles, and multiple Golden Boot awards in the Premier League.\\n\\n10. **Vinícius Júnior** (Real Madrid)\\n    - **Position**: Forward\\\
+        n    - **Country**: Brazil\\n    - **Achievements**: Rising star known for his agility and skill, played a pivotal role in Real Madrid's Champions League victory in the 2021-2022 season.\\n\\nThese players have consistently delivered extraordinary performances on the field and hold significant influence within the world of soccer, contributing to their teams' successes and garnering individual accolades.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\": 732,\n    \"total_tokens\": 854,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_62a23a81ef\"\n}\n"
     headers:
       CF-RAY:
       - 94d9be627c40f260-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -92,11 +57,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=qYkxv9nLxeWAtPBvECxNw8fLnoBHLorJdRI8.xVEVEA-1749567725-1.0.1.1-75sp4gwHGJocK1MFkSgRcB4xJUiCwz31VRD4LAmQGEmfYB0BMQZ5sgWS8e_UMbjCaEhaPNO88q5XdbLOCWA85_rO0vYTb4hp6tmIiaerhsM;
-        path=/; expires=Tue, 10-Jun-25 15:32:05 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=HRKCwkyTqSXpCj9_i_T5lDtlr_INA290o0b3k.26oi8-1749567725794-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=qYkxv9nLxeWAtPBvECxNw8fLnoBHLorJdRI8.xVEVEA-1749567725-1.0.1.1-75sp4gwHGJocK1MFkSgRcB4xJUiCwz31VRD4LAmQGEmfYB0BMQZ5sgWS8e_UMbjCaEhaPNO88q5XdbLOCWA85_rO0vYTb4hp6tmIiaerhsM; path=/; expires=Tue, 10-Jun-25 15:32:05 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=HRKCwkyTqSXpCj9_i_T5lDtlr_INA290o0b3k.26oi8-1749567725794-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -135,12 +97,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "fbb3b338-4b22-42e7-a467-e405b8667d4b", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
-      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
-      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
-      "2025-09-23T20:51:44.355743+00:00"}}'
+    body: '{"trace_id": "fbb3b338-4b22-42e7-a467-e405b8667d4b", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:51:44.355743+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -167,18 +124,7 @@ interactions:
       cache-control:
       - no-cache
       content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
       content-type:
       - application/json; charset=utf-8
       permissions-policy:
@@ -186,9 +132,7 @@ interactions:
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=0.09, sql.active_record;dur=3.90, cache_generate.active_support;dur=3.94,
-        cache_write.active_support;dur=0.30, cache_read_multi.active_support;dur=0.13,
-        start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.46
+      - cache_read.active_support;dur=0.09, sql.active_record;dur=3.90, cache_generate.active_support;dur=3.94, cache_write.active_support;dur=0.30, cache_read_multi.active_support;dur=0.13, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.46
       vary:
       - Accept
       x-content-type-options:

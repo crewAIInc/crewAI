@@ -40,25 +40,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJJbj6JAEIX/CqlXcBYRvJDMg3hXcJzVZS6bDelAIS1NI3SjMhP/+4bJ
-        mtlL9qkq9Z06L+e8Q5ZHyMCGkJEqwpbIOUfZMltWy9ANSx8YA9CARmBDJvaB3u4f1kXqmPlrvvR4
-        bJXhjPgHAhrI+oiNCoUgewQNypw1ByIEFZJwCRqEOZfIJdjf3296mVCeUr5vHG6rDbuECoUKhSiC
-        ZkeGCimpTDKUNFSKCoWkOb9TDNVQsKgIE4p5BxoIuudEVmXjO5HCGaUvi1GyH63S4bp8MLH3+FA7
-        Un02+tPXlXvava3zx7G/3fne3Bk/rGTEdf2xroTsqdnKceu4MqzVxlu2Txfamzi+wZ/o7uyMh8XW
-        Wmw328n+re7HQ8PR1fPQWnS445HxzBlZbvW6e/Gn5y9fu2W9OO85O0cTGlvr5dOa0faCvYzbh03/
-        sLSQMevLud1zlt8G7i5Vaxx1J3PuRjKLfS9i4bQbs1W6nsre2J+5SVTIPHGeLxezyJz+YrU69rzB
-        UFW9tt6J5Xanmt5hM68HmPiX43qiP81JTsL5crjR3W6x8NLTQZI4RDyQlI3dDpkNJ/dw1T7zwEuT
-        1MewwVBUxVDuFROuPzQQMj8GJRKRc7ABeRTIquTwCwgsKuQhgs0rxjSoPnpgvwPlx0oGMk+RC7DN
-        jgYhCRMMwhJJE2Twp0C/8RJJ9D92+2388ZhghiVhgZX9q/+k7eRvetUgr+Tvp05XA4HliYYYSIol
-        2NCUNyJlBNfrTwAAAP//AwD5LVCFLwMAAA==
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_018jNqkB4oZoJMnf5rcGaVja","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"This is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgzy8fA2B0+wA5I3nBMaDGBC5LuZTYVFw/R6ryIwgnlwdEif5NJWNli1IlYD1jP8jJ5ell5/w17BJU9LTk+yeC6EHnLdtmfVMdlcF6flKkNFt7DVGLhdqtohBXxx4qmB8IKKp7M9A++M103ftST+4MjPHy9ehVxpNE0WHaoacHJAP0L6qIMkvjtafceejaklDL3aGAE="},{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":36,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9a4bfbbe0e3b26b0-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -109,9 +96,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"},{"role":"assistant","content":[{"type":"thinking","thinking":"This
-      is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgzy8fA2B0+wA5I3nBMaDGBC5LuZTYVFw/R6ryIwgnlwdEif5NJWNli1IlYD1jP8jJ5ell5/w17BJU9LTk+yeC6EHnLdtmfVMdlcF6flKkNFt7DVGLhdqtohBXxx4qmB8IKKp7M9A++M103ftST+4MjPHy9ehVxpNE0WHaoacHJAP0L6qIMkvjtafceejaklDL3aGAE="},{"type":"text","text":"2
-      + 2 = 4"}]},{"role":"user","content":"Now what is 3+3?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is 2+2?"},{"role":"assistant","content":[{"type":"thinking","thinking":"This is a simple arithmetic question. 2+2 equals 4.","signature":"EtsBCkYIChgCKkANrO4e7QOyBt+X28FZKLvTzNoQDVSTVMHBDOKtdn00Qyust7+mKBLyfu25KPMJ1vxi7EBV2nWiTwBDAqS5ISPSEgzy8fA2B0+wA5I3nBMaDGBC5LuZTYVFw/R6ryIwgnlwdEif5NJWNli1IlYD1jP8jJ5ell5/w17BJU9LTk+yeC6EHnLdtmfVMdlcF6flKkNFt7DVGLhdqtohBXxx4qmB8IKKp7M9A++M103ftST+4MjPHy9ehVxpNE0WHaoacHJAP0L6qIMkvjtafceejaklDL3aGAE="},{"type":"text","text":"2 + 2 = 4"}]},{"role":"user","content":"Now what is 3+3?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
     headers:
       accept:
       - application/json
@@ -151,25 +136,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJJbc6JAEIX/CtWvwURQUajKAyJe4jUGEd3aokYYYQQGZIYIpvzvW6TW
-        zV5qn7qrv9PnoU9/QJL6OAYNvBgVPm6wlFLMG+1GpyE35U5TlVUQgfigQcICtynZg93JKmUrP676
-        RqRcncXr69QCEXiV4VqFGUMBBhHyNK4HiDHCOKIcRPBSyjHloH37uOt5SGhEaFA73FsNrJAwgTAB
-        CYzniAQhP6b5BeW+gHLCwwRz4gnnAjNOUvootIQHoSU8C8ojiMBIQBEv8trdLMy+Ee0mRhgY08gI
-        9Y01WlOyUZFMl14fIV5J64dSyTpWheyNtLyO+PRQIUXfT9vKcdsbt9DSsQeDUElOUknG22wgq6dg
-        G7wtV/tqli2cuRlc5Hn/Ye4508nQGPOu1UMDw5A27y1HovHTm9l2SjK5TJq0v8/R1hm3PX2SssQJ
-        omsvvRpnc9gcGvP4YNtqudKV1L6envbtWVZZzswazgev2ctwx6ZR5G+qve33jd1ZL9F40euG0bmX
-        RM1DNl322Vtw6q6k97EtKX7lqNZMduyhWarkOsbt6cqXuvEmLC7labY4X4/Julr3DnpyGnkv567p
-        B3pRViPdfIab+JUOLuvcPosGv84Mt+8iMJ5mbo4RSylogKnv8iKn8BMwfC4w9TBotIhjEYrPr9A+
-        gNCs4C5PI0wZaEpXBA95IXa9HKM6TfdPQfPOc4z8/7H7bu2PsxAnOEex20n+1X9RKfyb3kRIC/77
-        qKWKwHD+TjzscoJz0KB+ZR/lPtxuPwAAAP//AwBO51LgPQMAAA==
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01VDYjTx2TrfPBCk6zXNQQKT","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"This is a straightforward arithmetic question. 3 + 3 = 6.","signature":"EuEBCkYIChgCKkChAUTGRniU9a2nOcBaaty1R+x6p5TyaVU1OzGtKbya6AZK46fW8H3aOXVDDh6mj1xiHWpD29jgWgSOPZyLpNXMEgw2MB+McXKIFCHt7T8aDCC1Uv3X1nl/SE4XxiIwI0nBZraWXH4cAIosmXgkz8ozCqEF0FCMlbVV9xPA6oVzj/Z4LpyTXLTFMDQpJFYsKkkdUyZVdBCYqAxaHN87hkq8mk0bpKOBsSgj7P1vHV16dyX9TL2XVFEx9izHe4KPd17lUhuwxjLNqzfmRyR8bAmjGcJq7EdgAuxyGAE="},{"type":"text","text":"3 + 3 = 6"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":67,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":39,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9a4bfbd00b1426b0-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

@@ -129,8 +129,6 @@ interactions:
       - 8c85f2b7c92f1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

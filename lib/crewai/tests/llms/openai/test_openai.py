@@ -592,3 +592,32 @@ def test_openai_response_format_none():
 
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+@pytest.mark.vcr()
+def test_openai_streaming_returns_usage_metrics():
+    """
+    Test that OpenAI streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of France",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="gpt-4o-mini", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The capital of France",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1
