@@ -15,7 +15,7 @@ dev = [
     "pytest==8.4.2",
     "pytest-asyncio==1.3.0",
     "pytest-subprocess==1.5.3",
-    "vcrpy==7.0.0", # pinned, less versions break pytest-recording
+    "vcrpy==8.1.0", # pinned, less versions break pytest-recording
     "pytest-recording==0.13.4",
     "pytest-randomly==4.0.1",
     "pytest-timeout==2.4.0",
