@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
-from inspect import signature
+from inspect import Parameter, signature
 import json
 from typing import (
     Any,
@@ -108,6 +108,8 @@ class BaseTool(BaseModel, ABC):
         for param_name, param in run_sig.parameters.items():
             if param_name in ("self", "return"):
                 continue
+            if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
+                continue
 
             annotation = param.annotation if param.annotation != param.empty else Any
 
@@ -120,6 +122,8 @@ class BaseTool(BaseModel, ABC):
             arun_sig = signature(cls._arun)
             for param_name, param in arun_sig.parameters.items():
                 if param_name in ("self", "return"):
+                    continue
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
                 annotation = (
@@ -246,6 +250,8 @@ class BaseTool(BaseModel, ABC):
             for name, param in func_signature.parameters.items():
                 if name == "self":
                     continue
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
+                    continue
                 param_annotation = (
                     param.annotation if param.annotation != param.empty else Any
                 )
@@ -274,6 +280,8 @@ class BaseTool(BaseModel, ABC):
 
             for param_name, param in run_sig.parameters.items():
                 if param_name in ("self", "return"):
+                    continue
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
                 annotation = (
@@ -405,6 +413,8 @@ class Tool(BaseTool, Generic[P, R]):
             for name, param in func_signature.parameters.items():
                 if name == "self":
                     continue
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
+                    continue
                 param_annotation = (
                     param.annotation if param.annotation != param.empty else Any
                 )
@@ -501,6 +511,8 @@ def tool(
 
             for param_name, param in func_sig.parameters.items():
                 if param_name == "return":
+                    continue
+                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
                     continue
 
                 annotation = (
