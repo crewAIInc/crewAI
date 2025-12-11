@@ -494,7 +494,11 @@ class Task(BaseModel):
         future: Future[TaskOutput],
     ) -> None:
         """Execute the task asynchronously with context handling."""
-        result = self._execute_core(agent, context, tools)
+        try:
+            result = self._execute_core(agent, context, tools)
+        except Exception as e:
+            future.set_exception(e)
+            return
         future.set_result(result)
 
     async def aexecute_sync(

@@ -384,3 +384,93 @@ class TestAsyncTaskOutput:
         assert result.expected_output == "Test expected"
         assert result.raw == "Test result"
         assert result.agent == "Test Agent"
+
+
+class TestThreadedAsyncExecution:
+    """Tests for threaded async task execution (execute_async with Future)."""
+
+    @patch("crewai.Agent.execute_task")
+    def test_execute_async_basic(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Test basic threaded async task execution."""
+        mock_execute.return_value = "Async task result"
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        future = task.execute_async()
+        result = future.result(timeout=5)
+
+        assert result is not None
+        assert isinstance(result, TaskOutput)
+        assert result.raw == "Async task result"
+        assert result.agent == "Test Agent"
+        mock_execute.assert_called_once()
+
+    @patch("crewai.Agent.execute_task")
+    def test_execute_async_exception_completes_future(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Test that execute_async properly completes the Future when an exception occurs.
+
+        This is a regression test for GitHub issue #4072 where an async task that
+        errors would keep its thread alive because the Future was never completed.
+        """
+        mock_execute.side_effect = ValueError("Something happened here")
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        future = task.execute_async()
+
+        with pytest.raises(ValueError) as exc_info:
+            future.result(timeout=5)
+
+        assert "Something happened here" in str(exc_info.value)
+
+    @patch("crewai.Agent.execute_task")
+    def test_execute_async_exception_sets_end_time(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Test that execute_async sets end_time even when an exception occurs."""
+        mock_execute.side_effect = RuntimeError("Test error")
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        future = task.execute_async()
+
+        with pytest.raises(RuntimeError):
+            future.result(timeout=5)
+
+        assert task.end_time is not None
+
+    @patch("crewai.Agent.execute_task")
+    def test_execute_async_exception_does_not_hang(
+        self, mock_execute: MagicMock, test_agent: Agent
+    ) -> None:
+        """Test that execute_async does not hang when an exception occurs.
+
+        This test verifies that the Future is properly completed with an exception,
+        allowing future.result() to return immediately instead of blocking forever.
+        """
+        mock_execute.side_effect = Exception("Task execution failed")
+        task = Task(
+            description="Test task description",
+            expected_output="Test expected output",
+            agent=test_agent,
+        )
+
+        future = task.execute_async()
+
+        with pytest.raises(Exception) as exc_info:
+            future.result(timeout=1)
+
+        assert "Task execution failed" in str(exc_info.value)
