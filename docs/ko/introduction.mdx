@@ -7,109 +7,89 @@ mode: "wide"
 
 # CrewAI란 무엇인가?
 
-**CrewAI는 LangChain이나 기타 agent 프레임워크에 의존하지 않고, 완전히 독립적으로 처음부터 스크래치로 개발된 가볍고 매우 빠른 Python 프레임워크입니다.**
+**CrewAI는 자율 AI agent를 조직하고 복잡한 workflow를 구축하기 위한 최고의 오픈 소스 프레임워크입니다.**
 
-CrewAI는 고수준의 간편함과 정밀한 저수준 제어를 모두 제공하여, 어떤 시나리오에도 맞춤화된 자율 AI agent를 만드는 데 이상적입니다:
+**Crews**의 협업 지능과 **Flows**의 정밀한 제어를 결합하여 개발자가 프로덕션 수준의 멀티 에이전트 시스템을 구축할 수 있도록 지원합니다.
 
-- **[CrewAI Crews](/ko/guides/crews/first-crew)**: 자율성과 협업 지능을 극대화하여, 각 agent가 특정 역할, 도구, 목표를 가진 AI 팀을 만들 수 있습니다.
-- **[CrewAI Flows](/ko/guides/flows/first-flow)**: 이벤트 기반의 세밀한 제어와 단일 LLM 호출을 통한 정확한 작업 orchestration을 지원하며, Crews와 네이티브로 통합됩니다.
+- **[CrewAI Flows](/ko/guides/flows/first-flow)**: AI 애플리케이션의 중추(Backbone)입니다. Flows를 사용하면 상태를 관리하고 실행을 제어하는 구조화된 이벤트 기반 workflow를 만들 수 있습니다. AI agent가 작업할 수 있는 기반을 제공합니다.
+- **[CrewAI Crews](/ko/guides/crews/first-crew)**: Flow 내의 작업 단위입니다. Crews는 Flow가 위임한 특정 작업을 해결하기 위해 협력하는 자율 agent 팀입니다.
 
-10만 명이 넘는 개발자가 커뮤니티 과정을 통해 인증을 받았으며, CrewAI는 기업용 AI 자동화의 표준으로 빠르게 자리잡고 있습니다.
+10만 명이 넘는 개발자가 커뮤니티 과정을 통해 인증을 받았으며, CrewAI는 기업용 AI 자동화의 표준입니다.
 
-## Crew의 작동 방식
+## CrewAI 아키텍처
 
-<Note>
-  회사가 비즈니스 목표를 달성하기 위해 여러 부서(영업, 엔지니어링, 마케팅 등)가 리더십 아래에서 함께 일하는 것처럼, CrewAI는 복잡한 작업을 달성하기 위해 전문화된 역할의 AI agent들이 협력하는 조직을 만들 수 있도록 도와줍니다.
-</Note>
+CrewAI의 아키텍처는 자율성과 제어의 균형을 맞추도록 설계되었습니다.
 
-<Frame caption="CrewAI Framework Overview">
-  <img src="/images/crews.png" alt="CrewAI Framework Overview" />
-</Frame>
-
-| 구성 요소 | 설명 | 주요 특징 |
-|:----------|:----:|:----------|
-| **Crew** | 최상위 조직 | • AI agent 팀 관리<br/>• workflow 감독<br/>• 협업 보장<br/>• 결과 전달 |
-| **AI agents** | 전문 팀원 | • 특정 역할 보유(Researcher, Writer 등)<br/>• 지정된 도구 사용<br/>• 작업 위임 가능<br/>• 자율적 의사결정 가능 |
-| **Process** | workflow 관리 시스템 | • 협업 패턴 정의<br/>• 작업 할당 제어<br/>• 상호작용 관리<br/>• 효율적 실행 보장 |
-| **Task** | 개별 할당 | • 명확한 목표 보유<br/>• 특정 도구 사용<br/>• 더 큰 프로세스에 기여<br/>• 실행 가능한 결과 도출 |
-
-### 전체 구조의 동작 방식
-
-1. **Crew**가 전체 운영을 조직합니다
-2. **AI agents**가 자신들의 전문 작업을 수행합니다
-3. **Process**가 원활한 협업을 보장합니다
-4. **Tasks**가 완료되어 목표를 달성합니다
-
-## 주요 기능
-
-<CardGroup cols={2}>
-  <Card title="역할 기반 agent" icon="users">
-    Researcher, Analyst, Writer 등 다양한 역할과 전문성, 목표를 가진 agent를 생성할 수 있습니다
-  </Card>
-  <Card title="유연한 도구" icon="screwdriver-wrench">
-    agent에게 외부 서비스 및 데이터 소스와 상호작용할 수 있는 맞춤형 도구와 API를 제공합니다
-  </Card>
-  <Card title="지능형 협업" icon="people-arrows">
-    agent들이 함께 작업하며, 인사이트를 공유하고 작업을 조율하여 복잡한 목표를 달성합니다
-  </Card>
-  <Card title="작업 관리" icon="list-check">
-    순차적 또는 병렬 workflow를 정의할 수 있으며, agent가 작업 의존성을 자동으로 처리합니다
-  </Card>
-</CardGroup>
-
-## Flow의 작동 원리
+### 1. Flows: 중추 (Backbone)
 
 <Note>
-  Crew가 자율 협업에 탁월하다면, Flow는 구조화된 자동화를 제공하여 workflow 실행에 대한 세밀한 제어를 제공합니다. Flow는 조건부 로직, 반복문, 동적 상태 관리를 정확하게 처리하면서 작업이 신뢰성 있게, 안전하게, 효율적으로 실행되도록 보장합니다. Flow는 Crew와 원활하게 통합되어 높은 자율성과 엄격한 제어의 균형을 이룰 수 있게 해줍니다.
+  Flow를 애플리케이션의 "관리자" 또는 "프로세스 정의"라고 생각하세요. 단계, 로직, 그리고 시스템 내에서 데이터가 이동하는 방식을 정의합니다.
 </Note>
 
 <Frame caption="CrewAI Framework Overview">
   <img src="/images/flows.png" alt="CrewAI Framework Overview" />
 </Frame>
 
-| 구성 요소 | 설명 | 주요 기능 |
-|:----------|:-----------:|:------------|
-| **Flow** | 구조화된 workflow orchestration | • 실행 경로 관리<br/>• 상태 전환 처리<br/>• 작업 순서 제어<br/>• 신뢰성 있는 실행 보장 |
-| **Events** | workflow 액션 트리거 | • 특정 프로세스 시작<br/>• 동적 응답 가능<br/>• 조건부 분기 지원<br/>• 실시간 적응 허용 |
-| **States** | workflow 실행 컨텍스트 | • 실행 데이터 유지<br/>• 데이터 영속성 지원<br/>• 재개 가능성 보장<br/>• 실행 무결성 확보 |
-| **Crew Support** | workflow 자동화 강화 | • 필요할 때 agency 삽입<br/>• 구조화된 workflow 보완<br/>• 자동화와 인텔리전스의 균형<br/>• 적응적 의사결정 지원 |
+Flows의 기능:
+- **상태 관리**: 단계 및 실행 전반에 걸쳐 데이터를 유지합니다.
+- **이벤트 기반 실행**: 이벤트 또는 외부 입력을 기반으로 작업을 트리거합니다.
+- **제어 흐름**: 조건부 로직, 반복문, 분기를 사용합니다.
 
-### 주요 기능
+### 2. Crews: 지능 (Intelligence)
+
+<Note>
+  Crews는 힘든 일을 처리하는 "팀"입니다. Flow 내에서 창의성과 협업이 필요한 복잡한 문제를 해결하기 위해 Crew를 트리거할 수 있습니다.
+</Note>
+
+<Frame caption="CrewAI Framework Overview">
+  <img src="/images/crews.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+Crews의 기능:
+- **역할 수행 Agent**: 특정 목표와 도구를 가진 전문 agent입니다.
+- **자율 협업**: agent들이 협력하여 작업을 해결합니다.
+- **작업 위임**: agent의 능력에 따라 작업이 할당되고 실행됩니다.
+
+## 전체 작동 방식
+
+1.  **Flow**가 이벤트를 트리거하거나 프로세스를 시작합니다.
+2.  **Flow**가 상태를 관리하고 다음에 무엇을 할지 결정합니다.
+3.  **Flow**가 복잡한 작업을 **Crew**에게 위임합니다.
+4.  **Crew**의 agent들이 협력하여 작업을 완료합니다.
+5.  **Crew**가 결과를 **Flow**에 반환합니다.
+6.  **Flow**가 결과를 바탕으로 실행을 계속합니다.
+
+## 주요 기능
 
 <CardGroup cols={2}>
-  <Card title="이벤트 기반 orchestration" icon="bolt">
-    이벤트에 동적으로 반응하여 정밀한 실행 경로를 정의합니다
+  <Card title="프로덕션 등급 Flows" icon="arrow-progress">
+    장기 실행 프로세스와 복잡한 로직을 처리할 수 있는 신뢰할 수 있고 상태를 유지하는 workflow를 구축합니다.
   </Card>
-  <Card title="세밀한 제어" icon="sliders">
-    workflow 상태와 조건부 실행을 안전하고 효율적으로 관리합니다
+  <Card title="자율 Crews" icon="users">
+    높은 수준의 목표를 달성하기 위해 계획하고, 실행하고, 협력할 수 있는 agent 팀을 배포합니다.
   </Card>
-  <Card title="네이티브 Crew 통합" icon="puzzle-piece">
-    Crews와 손쉽게 결합하여 자율성과 지능을 강화합니다
+  <Card title="유연한 도구" icon="screwdriver-wrench">
+     agent를 모든 API, 데이터베이스 또는 로컬 도구에 연결합니다.
   </Card>
-  <Card title="결정론적 실행" icon="route">
-    명시적 제어 흐름과 오류 처리로 예측 가능한 결과를 보장합니다
+  <Card title="엔터프라이즈 보안" icon="lock">
+    엔터프라이즈 배포를 위한 보안 및 규정 준수를 고려하여 설계되었습니다.
   </Card>
 </CardGroup>
 
-## Crew와 Flow를 언제 사용할까
+## Crews vs Flows 사용 시기
 
-<Note>
-  [Crew](/ko/guides/crews/first-crew)와 [Flow](/ko/guides/flows/first-flow)를 언제 사용할지 이해하는 것은 CrewAI의 잠재력을 애플리케이션에서 극대화하는 데 핵심적입니다.
-</Note>
+**짧은 답변: 둘 다 사용하세요.**
 
-| 사용 사례 | 권장 접근 방식 | 이유 |
-|:---------|:---------------------|:-----|
-| **개방형 연구** | [Crew](/ko/guides/crews/first-crew) | 창의적 사고, 탐색, 적응이 필요한 작업에 적합 |
-| **콘텐츠 생성** | [Crew](/ko/guides/crews/first-crew) | 기사, 보고서, 마케팅 자료 등 협업형 생성에 적합 |
-| **의사결정 workflow** | [Flow](/ko/guides/flows/first-flow) | 예측 가능하고 감사 가능한 의사결정 경로 및 정밀 제어가 필요할 때 |
-| **API orchestration** | [Flow](/ko/guides/flows/first-flow) | 특정 순서로 여러 외부 서비스에 신뢰성 있게 통합할 때 |
-| **하이브리드 애플리케이션** | 혼합 접근 방식 | [Flow](/ko/guides/flows/first-flow)로 전체 프로세스를 orchestration하고, [Crew](/ko/guides/crews/first-crew)로 복잡한 하위 작업을 처리 |
+모든 프로덕션 애플리케이션의 경우, **Flow로 시작하세요**.
 
-### 의사결정 프레임워크
+- 애플리케이션의 전체 구조, 상태, 로직을 정의하려면 **Flow를 사용하세요**.
+- 자율성이 필요한 특정하고 복잡한 작업을 수행하기 위해 agent 팀이 필요할 때 Flow 단계 내에서 **Crew를 사용하세요**.
 
-- **[Crews](/ko/guides/crews/first-crew)를 선택할 때:** 자율적인 문제 해결, 창의적 협업 또는 탐구적 작업이 필요할 때
-- **[Flows](/ko/guides/flows/first-flow)를 선택할 때:** 결정론적 결과, 감사 가능성, 또는 실행에 대한 정밀한 제어가 필요할 때
-- **둘 다 결합할 때:** 애플리케이션에 구조화된 프로세스와 자율적 지능이 모두 필요할 때
+| 사용 사례 | 아키텍처 |
+| :--- | :--- |
+| **간단한 자동화** | Python 작업이 포함된 단일 Flow |
+| **복잡한 연구** | 상태를 관리하는 Flow -> 연구를 수행하는 Crew |
+| **애플리케이션 백엔드** | API 요청을 처리하는 Flow -> 콘텐츠를 생성하는 Crew -> DB에 저장하는 Flow |
 
 ## CrewAI를 선택해야 하는 이유?
 
@@ -124,18 +104,18 @@ CrewAI는 고수준의 간편함과 정밀한 저수준 제어를 모두 제공�
 
 <CardGroup cols={2}>
   <Card
-    title="첫 번째 Crew 만들기"
-    icon="users-gear"
-    href="/ko/guides/crews/first-crew"
-  >
-    복잡한 문제를 함께 해결하는 협업 AI 팀을 단계별로 만드는 튜토리얼입니다.
-  </Card>
-  <Card
     title="첫 번째 Flow 만들기"
     icon="diagram-project"
     href="/ko/guides/flows/first-flow"
   >
     실행을 정밀하게 제어할 수 있는 구조화된, 이벤트 기반 workflow를 만드는 방법을 배워보세요.
+  </Card>
+  <Card
+    title="첫 번째 Crew 만들기"
+    icon="users-gear"
+    href="/ko/guides/crews/first-crew"
+  >
+    복잡한 문제를 함께 해결하는 협업 AI 팀을 단계별로 만드는 튜토리얼입니다.
   </Card>
 </CardGroup>
 
