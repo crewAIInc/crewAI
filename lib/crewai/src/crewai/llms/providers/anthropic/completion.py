@@ -679,6 +679,49 @@ class AnthropicCompletion(BaseLLM):
             params["messages"], full_response, from_agent
         )
 
+    def _execute_tools_and_collect_results(
+        self,
+        tool_uses: list[ToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute tools and collect results in Anthropic format.
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            List of tool result dictionaries in Anthropic format
+        """
+        tool_results = []
+
+        for tool_use in tool_uses:
+            function_name = tool_use.name
+            function_args = tool_use.input
+
+            result = self._handle_tool_execution(
+                function_name=function_name,
+                function_args=cast(dict[str, Any], function_args),
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": str(result)
+                if result is not None
+                else "Tool execution completed",
+            }
+            tool_results.append(tool_result)
+
+        return tool_results
+
     def _handle_tool_use_conversation(
         self,
         initial_response: Message,
@@ -696,33 +739,10 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        # Execute all requested tools and collect results
-        tool_results = []
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            # Execute the tool
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=cast(dict[str, Any], function_args),
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            # Create tool result in Anthropic format
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
-
-        # Prepare follow-up conversation with tool results
         follow_up_params = params.copy()
 
         # Add Claude's tool use response to conversation
@@ -810,7 +830,7 @@ class AnthropicCompletion(BaseLLM):
             logging.error(f"Tool follow-up conversation failed: {e}")
             # Fallback: return the first tool result if follow-up fails
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     async def _ahandle_completion(
@@ -1003,28 +1023,9 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        tool_results = []
-
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=cast(dict[str, Any], function_args),
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
         follow_up_params = params.copy()
 
@@ -1079,7 +1080,7 @@ class AnthropicCompletion(BaseLLM):
 
             logging.error(f"Tool follow-up conversation failed: {e}")
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     def supports_function_calling(self) -> bool:

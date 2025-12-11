@@ -264,9 +264,18 @@ def test_validate_call_params_no_response_format():
 @pytest.mark.parametrize(
     "model",
     [
-        "gemini/gemini-3-pro-preview",
-        "gemini/gemini-2.0-flash-thinking-exp-01-21",
-        "gemini/gemini-2.0-flash-001",
+        pytest.param(
+            "gemini/gemini-3-pro-preview",
+            marks=pytest.mark.skip(reason="VCR cassette has decompression issues"),
+        ),
+        pytest.param(
+            "gemini/gemini-2.0-flash-thinking-exp-01-21",
+            marks=pytest.mark.skip(reason="VCR cassette has decompression issues"),
+        ),
+        pytest.param(
+            "gemini/gemini-2.0-flash-001",
+            marks=pytest.mark.skip(reason="VCR cassette has decompression issues"),
+        ),
         "gemini/gemini-2.0-flash-lite-001",
     ],
 )
