@@ -41,7 +41,7 @@ class BaseConverterAdapter(ABC):
         """
         self.agent_adapter = agent_adapter
         self._output_format: Literal["json", "pydantic"] | None = None
-        self._schema: str | None = None
+        self._schema: dict[str, Any] | None = None
 
     @abstractmethod
     def configure_structured_output(self, task: Task) -> None:
