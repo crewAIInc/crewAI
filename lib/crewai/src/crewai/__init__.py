@@ -3,19 +3,6 @@ from typing import Any
 import urllib.request
 import warnings
 
-from crewai.agent.core import Agent
-from crewai.crew import Crew
-from crewai.crews.crew_output import CrewOutput
-from crewai.flow.flow import Flow
-from crewai.knowledge.knowledge import Knowledge
-from crewai.llm import LLM
-from crewai.llms.base_llm import BaseLLM
-from crewai.process import Process
-from crewai.task import Task
-from crewai.tasks.llm_guardrail import LLMGuardrail
-from crewai.tasks.task_output import TaskOutput
-from crewai.telemetry.telemetry import Telemetry
-
 
 def _suppress_pydantic_deprecation_warnings() -> None:
     """Suppress Pydantic deprecation warnings using targeted monkey patch."""
@@ -48,6 +35,8 @@ def _track_install() -> None:
     """Track package installation/first-use via Scarf analytics."""
     global _telemetry_submitted
 
+    from crewai.telemetry.telemetry import Telemetry
+
     if _telemetry_submitted or Telemetry._is_telemetry_disabled():
         return
 
@@ -65,12 +54,15 @@ def _track_install() -> None:
 
 def _track_install_async() -> None:
     """Track installation in background thread to avoid blocking imports."""
+    from crewai.telemetry.telemetry import Telemetry
+
     if not Telemetry._is_telemetry_disabled():
         thread = threading.Thread(target=_track_install, daemon=True)
         thread.start()
 
 
 _track_install_async()
+
 __all__ = [
     "LLM",
     "Agent",
@@ -85,3 +77,51 @@ __all__ = [
     "TaskOutput",
     "__version__",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "Agent":
+        from crewai.agent.core import Agent
+
+        return Agent
+    if name == "Crew":
+        from crewai.crew import Crew
+
+        return Crew
+    if name == "CrewOutput":
+        from crewai.crews.crew_output import CrewOutput
+
+        return CrewOutput
+    if name == "Flow":
+        from crewai.flow.flow import Flow
+
+        return Flow
+    if name == "Knowledge":
+        from crewai.knowledge.knowledge import Knowledge
+
+        return Knowledge
+    if name == "LLM":
+        from crewai.llm import LLM
+
+        return LLM
+    if name == "BaseLLM":
+        from crewai.llms.base_llm import BaseLLM
+
+        return BaseLLM
+    if name == "Process":
+        from crewai.process import Process
+
+        return Process
+    if name == "Task":
+        from crewai.task import Task
+
+        return Task
+    if name == "LLMGuardrail":
+        from crewai.tasks.llm_guardrail import LLMGuardrail
+
+        return LLMGuardrail
+    if name == "TaskOutput":
+        from crewai.tasks.task_output import TaskOutput
+
+        return TaskOutput
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
