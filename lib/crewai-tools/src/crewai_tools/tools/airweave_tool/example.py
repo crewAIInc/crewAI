@@ -16,9 +16,12 @@ Prerequisites:
 
 import os
 from pathlib import Path
+
+from crewai import Agent, Crew, Task
 from dotenv import load_dotenv
-from crewai import Agent, Task, Crew
+
 from crewai_tools import AirweaveSearchTool
+
 
 # Load environment variables from .env file
 # Try to find .env in parent directories
@@ -40,14 +43,14 @@ print()
 
 def example_basic_search():
     """Basic example: Simple search without answer generation."""
-    
+
     print("="*60)
     print("Example 1: Basic Search")
     print("="*60)
-    
+
     # Initialize the tool
     airweave_search = AirweaveSearchTool()
-    
+
     # Create a research agent
     researcher = Agent(
         role='Research Analyst',
@@ -56,7 +59,7 @@ def example_basic_search():
         tools=[airweave_search],
         verbose=True
     )
-    
+
     # Create a search task - using env variable for collection
     search_task = Task(
         description=f"""
@@ -71,14 +74,14 @@ def example_basic_search():
         agent=researcher,
         expected_output='Summary of available information'
     )
-    
+
     # Create and run the crew
     crew = Crew(
         agents=[researcher],
         tasks=[search_task],
         verbose=True
     )
-    
+
     result = crew.kickoff()
     print("\n📊 Result:")
     print(result)
@@ -86,17 +89,17 @@ def example_basic_search():
 
 def example_with_answer_generation():
     """Advanced example: Search with AI-powered answer generation."""
-    
+
     print("\n" + "="*60)
     print("Example 2: Search with Answer Generation")
     print("="*60)
-    
+
     # Initialize with custom settings
     airweave_search = AirweaveSearchTool(
         max_content_length_per_result=2000,  # Longer content per result
         timeout=90  # Longer timeout
     )
-    
+
     # Create a specialized analyst
     data_analyst = Agent(
         role='Senior Data Analyst',
@@ -105,7 +108,7 @@ def example_with_answer_generation():
         tools=[airweave_search],
         verbose=True
     )
-    
+
     # Advanced search task - using env variable
     analysis_task = Task(
         description=f"""
@@ -129,13 +132,13 @@ def example_with_answer_generation():
         agent=data_analyst,
         expected_output='Comprehensive analysis with AI-generated insights and recommendations'
     )
-    
+
     crew = Crew(
         agents=[data_analyst],
         tasks=[analysis_task],
         verbose=True
     )
-    
+
     result = crew.kickoff()
     print("\n📊 Result:")
     print(result)
@@ -143,13 +146,13 @@ def example_with_answer_generation():
 
 def example_comprehensive_research():
     """Example: Comprehensive research of available data."""
-    
+
     print("\n" + "="*60)
     print("Example 3: Comprehensive Research")
     print("="*60)
-    
+
     airweave_search = AirweaveSearchTool()
-    
+
     # Create researcher
     researcher = Agent(
         role='Comprehensive Researcher',
@@ -158,7 +161,7 @@ def example_comprehensive_research():
         tools=[airweave_search],
         verbose=True
     )
-    
+
     # Research task - using env variable
     research_task = Task(
         description=f"""
@@ -184,13 +187,13 @@ def example_comprehensive_research():
         agent=researcher,
         expected_output='Comprehensive report of available data and insights'
     )
-    
+
     crew = Crew(
         agents=[researcher],
         tasks=[research_task],
         verbose=True
     )
-    
+
     result = crew.kickoff()
     print("\n📊 Result:")
     print(result)
@@ -198,13 +201,13 @@ def example_comprehensive_research():
 
 def example_with_memory():
     """Example: Using Airweave search with CrewAI memory."""
-    
+
     print("\n" + "="*60)
     print("Example 4: Search with Memory")
     print("="*60)
-    
+
     airweave_search = AirweaveSearchTool()
-    
+
     # Agent with memory enabled
     knowledge_agent = Agent(
         role='Knowledge Manager',
@@ -214,7 +217,7 @@ def example_with_memory():
         memory=True,  # Enable CrewAI memory
         verbose=True
     )
-    
+
     # First task - using env variable
     task1 = Task(
         description=f"""
@@ -225,7 +228,7 @@ def example_with_memory():
         agent=knowledge_agent,
         expected_output='Summary of available information'
     )
-    
+
     # Second task - using env variable
     task2 = Task(
         description=f"""
@@ -236,13 +239,13 @@ def example_with_memory():
         agent=knowledge_agent,
         expected_output='Analysis connecting information from both searches'
     )
-    
+
     crew = Crew(
         agents=[knowledge_agent],
         tasks=[task1, task2],
         verbose=True
     )
-    
+
     result = crew.kickoff()
     print("\n📊 Result:")
     print(result)
@@ -250,13 +253,13 @@ def example_with_memory():
 
 def example_error_handling():
     """Example: Demonstrating graceful error handling."""
-    
+
     print("\n" + "="*60)
     print("Example 5: Error Handling")
     print("="*60)
-    
+
     airweave_search = AirweaveSearchTool()
-    
+
     agent = Agent(
         role='Robust Researcher',
         goal='Handle search operations gracefully',
@@ -264,7 +267,7 @@ def example_error_handling():
         tools=[airweave_search],
         verbose=True
     )
-    
+
     # Using env variable
     task = Task(
         description=f"""
@@ -275,13 +278,13 @@ def example_error_handling():
         agent=agent,
         expected_output='Search results or error handling report'
     )
-    
+
     crew = Crew(
         agents=[agent],
         tasks=[task],
         verbose=True
     )
-    
+
     try:
         result = crew.kickoff()
         print("\n📊 Result:")
@@ -308,10 +311,10 @@ Prerequisites:
   3. Install: pip install 'crewai[tools]' airweave-sdk python-dotenv
   4. Have Airweave collections with synced data
     """)
-    
+
     # Choose which example to run
     import sys
-    
+
     if len(sys.argv) > 1:
         example_num = sys.argv[1]
         if example_num == "1":
@@ -335,7 +338,7 @@ Prerequisites:
         print("  python example.py 4  # With memory")
         print("  python example.py 5  # Error handling")
         print("\nOr uncomment one of the examples below to run it directly.")
-        
+
         # Uncomment the example you want to run:
         # example_basic_search()
         # example_with_answer_generation()
