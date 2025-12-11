@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -677,16 +678,38 @@ class GeminiCompletion(BaseLLM):
         if chunk.candidates:
             candidate = chunk.candidates[0]
             if candidate.content and candidate.content.parts:
-                for part in candidate.content.parts:
+                for idx, part in enumerate(candidate.content.parts):
                     if hasattr(part, "function_call") and part.function_call:
                         call_id = part.function_call.name or "default"
+                        args_dict = (
+                            dict(part.function_call.args)
+                            if part.function_call.args
+                            else {}
+                        )
+                        args_json = json.dumps(args_dict)
+
                         if call_id not in function_calls:
                             function_calls[call_id] = {
                                 "name": part.function_call.name,
-                                "args": dict(part.function_call.args)
-                                if part.function_call.args
-                                else {},
+                                "args": args_dict,
+                                "index": idx,
                             }
+
+                        self._emit_stream_chunk_event(
+                            chunk=args_json,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": call_id,
+                                "function": {
+                                    "name": part.function_call.name or "",
+                                    "arguments": args_json,
+                                },
+                                "type": "function",
+                                "index": function_calls[call_id]["index"],
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
 
         return full_response, function_calls, usage_data
 
