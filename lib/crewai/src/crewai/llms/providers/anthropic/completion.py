@@ -706,7 +706,7 @@ class AnthropicCompletion(BaseLLM):
             # Execute the tool
             result = self._handle_tool_execution(
                 function_name=function_name,
-                function_args=function_args,
+                function_args=cast(dict[str, Any], function_args),
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -1011,7 +1011,7 @@ class AnthropicCompletion(BaseLLM):
 
             result = self._handle_tool_execution(
                 function_name=function_name,
-                function_args=function_args,
+                function_args=cast(dict[str, Any], function_args),
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -1115,7 +1115,8 @@ class AnthropicCompletion(BaseLLM):
         # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_anthropic_token_usage(self, response: Message) -> dict[str, Any]:
+    @staticmethod
+    def _extract_anthropic_token_usage(response: Message) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
