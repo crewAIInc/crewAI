@@ -10,7 +10,6 @@ from typing import (
     Generic,
     ParamSpec,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -103,20 +102,36 @@ class BaseTool(BaseModel, ABC):
         if v != cls._ArgsSchemaPlaceholder:
             return v
 
-        return cast(
-            type[PydanticBaseModel],
-            type(
-                f"{cls.__name__}Schema",
-                (PydanticBaseModel,),
-                {
-                    "__annotations__": {
-                        k: v
-                        for k, v in cls._run.__annotations__.items()
-                        if k != "return"
-                    },
-                },
-            ),
-        )
+        run_sig = signature(cls._run)
+        fields: dict[str, Any] = {}
+
+        for param_name, param in run_sig.parameters.items():
+            if param_name in ("self", "return"):
+                continue
+
+            annotation = param.annotation if param.annotation != param.empty else Any
+
+            if param.default is param.empty:
+                fields[param_name] = (annotation, ...)
+            else:
+                fields[param_name] = (annotation, param.default)
+
+        if not fields:
+            arun_sig = signature(cls._arun)
+            for param_name, param in arun_sig.parameters.items():
+                if param_name in ("self", "return"):
+                    continue
+
+                annotation = (
+                    param.annotation if param.annotation != param.empty else Any
+                )
+
+                if param.default is param.empty:
+                    fields[param_name] = (annotation, ...)
+                else:
+                    fields[param_name] = (annotation, param.default)
+
+        return create_model(f"{cls.__name__}Schema", **fields)
 
     @field_validator("max_usage_count", mode="before")
     @classmethod
@@ -226,24 +241,21 @@ class BaseTool(BaseModel, ABC):
         args_schema = getattr(tool, "args_schema", None)
 
         if args_schema is None:
-            # Infer args_schema from the function signature if not provided
             func_signature = signature(tool.func)
-            annotations = func_signature.parameters
-            args_fields: dict[str, Any] = {}
-            for name, param in annotations.items():
-                if name != "self":
-                    param_annotation = (
-                        param.annotation if param.annotation != param.empty else Any
-                    )
-                    field_info = Field(
-                        default=...,
-                        description="",
-                    )
-                    args_fields[name] = (param_annotation, field_info)
-            if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+            fields: dict[str, Any] = {}
+            for name, param in func_signature.parameters.items():
+                if name == "self":
+                    continue
+                param_annotation = (
+                    param.annotation if param.annotation != param.empty else Any
+                )
+                if param.default is param.empty:
+                    fields[name] = (param_annotation, ...)
+                else:
+                    fields[name] = (param_annotation, param.default)
+            if fields:
+                args_schema = create_model(f"{tool.name}Input", **fields)
             else:
-                # Create a default schema with no fields if no parameters are found
                 args_schema = create_model(
                     f"{tool.name}Input", __base__=PydanticBaseModel
                 )
@@ -257,20 +269,24 @@ class BaseTool(BaseModel, ABC):
 
     def _set_args_schema(self) -> None:
         if self.args_schema is None:
-            class_name = f"{self.__class__.__name__}Schema"
-            self.args_schema = cast(
-                type[PydanticBaseModel],
-                type(
-                    class_name,
-                    (PydanticBaseModel,),
-                    {
-                        "__annotations__": {
-                            k: v
-                            for k, v in self._run.__annotations__.items()
-                            if k != "return"
-                        },
-                    },
-                ),
+            run_sig = signature(self._run)
+            fields: dict[str, Any] = {}
+
+            for param_name, param in run_sig.parameters.items():
+                if param_name in ("self", "return"):
+                    continue
+
+                annotation = (
+                    param.annotation if param.annotation != param.empty else Any
+                )
+
+                if param.default is param.empty:
+                    fields[param_name] = (annotation, ...)
+                else:
+                    fields[param_name] = (annotation, param.default)
+
+            self.args_schema = create_model(
+                f"{self.__class__.__name__}Schema", **fields
             )
 
     def _generate_description(self) -> None:
@@ -384,24 +400,21 @@ class Tool(BaseTool, Generic[P, R]):
         args_schema = getattr(tool, "args_schema", None)
 
         if args_schema is None:
-            # Infer args_schema from the function signature if not provided
             func_signature = signature(tool.func)
-            annotations = func_signature.parameters
-            args_fields: dict[str, Any] = {}
-            for name, param in annotations.items():
-                if name != "self":
-                    param_annotation = (
-                        param.annotation if param.annotation != param.empty else Any
-                    )
-                    field_info = Field(
-                        default=...,
-                        description="",
-                    )
-                    args_fields[name] = (param_annotation, field_info)
-            if args_fields:
-                args_schema = create_model(f"{tool.name}Input", **args_fields)
+            fields: dict[str, Any] = {}
+            for name, param in func_signature.parameters.items():
+                if name == "self":
+                    continue
+                param_annotation = (
+                    param.annotation if param.annotation != param.empty else Any
+                )
+                if param.default is param.empty:
+                    fields[name] = (param_annotation, ...)
+                else:
+                    fields[name] = (param_annotation, param.default)
+            if fields:
+                args_schema = create_model(f"{tool.name}Input", **fields)
             else:
-                # Create a default schema with no fields if no parameters are found
                 args_schema = create_model(
                     f"{tool.name}Input", __base__=PydanticBaseModel
                 )
@@ -480,32 +493,36 @@ def tool(
         def _make_tool(f: Callable[P2, R2]) -> Tool[P2, R2]:
             if f.__doc__ is None:
                 raise ValueError("Function must have a docstring")
-
-            func_annotations = getattr(f, "__annotations__", None)
-            if func_annotations is None:
+            if f.__annotations__ is None:
                 raise ValueError("Function must have type annotations")
 
+            func_sig = signature(f)
+            fields: dict[str, Any] = {}
+
+            for param_name, param in func_sig.parameters.items():
+                if param_name == "return":
+                    continue
+
+                annotation = (
+                    param.annotation if param.annotation != param.empty else Any
+                )
+
+                if param.default is param.empty:
+                    fields[param_name] = (annotation, ...)
+                else:
+                    fields[param_name] = (annotation, param.default)
+
             class_name = "".join(tool_name.split()).title()
-            tool_args_schema = cast(
-                type[PydanticBaseModel],
-                type(
-                    class_name,
-                    (PydanticBaseModel,),
-                    {
-                        "__annotations__": {
-                            k: v for k, v in func_annotations.items() if k != "return"
-                        },
-                    },
-                ),
-            )
+            args_schema = create_model(class_name, **fields)
 
             return Tool(
                 name=tool_name,
                 description=f.__doc__,
                 func=f,
-                args_schema=tool_args_schema,
+                args_schema=args_schema,
                 result_as_answer=result_as_answer,
                 max_usage_count=max_usage_count,
+                current_usage_count=0,
             )
 
         return _make_tool
