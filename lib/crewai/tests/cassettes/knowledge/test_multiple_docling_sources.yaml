@@ -1857,8 +1857,6 @@ interactions:
       - max-age=600
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Length:
       - '47949'
       Content-Type:
@@ -3279,8 +3277,6 @@ interactions:
       - max-age=600
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Length:
       - '33305'
       Content-Type:

@@ -100,6 +100,36 @@ class TestEmbeddingFactory:
         )
 
     @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
+    def test_build_embedder_huggingface(self, mock_import):
+        """Test building HuggingFace embedder."""
+        mock_provider_class = MagicMock()
+        mock_provider_instance = MagicMock()
+        mock_embedding_function = MagicMock()
+
+        mock_import.return_value = mock_provider_class
+        mock_provider_class.return_value = mock_provider_instance
+        mock_provider_instance.embedding_callable.return_value = mock_embedding_function
+
+        config = {
+            "provider": "huggingface",
+            "config": {
+                "api_key": "hf-test-key",
+                "model": "sentence-transformers/all-MiniLM-L6-v2",
+            },
+        }
+
+        build_embedder(config)
+
+        mock_import.assert_called_once_with(
+            "crewai.rag.embeddings.providers.huggingface.huggingface_provider.HuggingFaceProvider"
+        )
+        mock_provider_class.assert_called_once()
+
+        call_kwargs = mock_provider_class.call_args.kwargs
+        assert call_kwargs["api_key"] == "hf-test-key"
+        assert call_kwargs["model"] == "sentence-transformers/all-MiniLM-L6-v2"
+
+    @patch("crewai.rag.embeddings.factory.import_and_validate_definition")
     def test_build_embedder_cohere(self, mock_import):
         """Test building Cohere embedder."""
         mock_provider_class = MagicMock()

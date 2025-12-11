@@ -1,0 +1,53 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Say the word ''test'' once"}], "role":
+      "user"}], "generationConfig": {"temperature": 0.1}}'
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.52.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Test\",\n            \"thoughtSignature\":
+        \"EswDCskDAXLI2nwfgOUguqJVjh+Kph8BTi55recWVrGhP1HtU3yZPiUY+Hkduy95XluHk7iuvRMYx8ghtnNreGkDs85mjUnxZ+BGR78BAevHszR/9wARWYT2jf2RMAenQw46R1TXuQfaRW+h7BYAbEI76VcxI0fJt13zz5b9UPj6ciM4es2hKxHGMGst/BuAD6XR0JqQ5bw5izPwnD2i+xQ64DQKt+tXnVkpJYmyYnNP68Nf/mZYFprbJYrsbhBLsxHgnUEGD/qmVJSz2zCAIUN+8lZ3xzPX3/Dp4Rau8LBj0kCDTvmk133OTeWQGs11rT3DOxpy/PmbUZ5+LFMe3t9Pf45Dx9WvHndcd8YZ8xFXGICVi45RzOc1z+j4XYG84SXU3fJoG30W4OLA239Y3oqjjXCRIUJWScIe2mBe8dK0qnnDFIyHUzZkT44woGB9O5LCeVC8JVnUrs+zEU4xqIpDG1m+wFe/flpMLQ5OX7wIJ/4qxWLDLslu/VL+Uf31Dx09tmPdR92gPfaMWU3YSk9LRlTMoPMrRzQBG8wnq5lxVHcNbblYSSR+VE/vR74dzOHHlYMBRp8eTZGTlZiP8zhUUq6TgyKoO608obBFMQ==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        8,\n    \"candidatesTokenCount\": 1,\n    \"totalTokenCount\": 113,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 104\n  },\n  \"modelVersion\": \"gemini-3-pro-preview\",\n
+        \ \"responseId\": \"kzgtacSlO_fc_uMPp-69kQM\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 01 Dec 2025 06:41:23 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2450
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

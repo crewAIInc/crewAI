@@ -74,8 +74,6 @@ interactions:
       - 91187efd98829e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -207,8 +205,6 @@ interactions:
       - 91187f05197b9e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -349,8 +345,6 @@ interactions:
       - 91187f098ead9e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -506,8 +500,6 @@ interactions:
       - 91187f0e0bd19e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -779,8 +771,6 @@ interactions:
       - 91187f13fb279e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -961,8 +951,6 @@ interactions:
       - 91187f1b3b1e9e74-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

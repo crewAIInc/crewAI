@@ -129,6 +129,12 @@ class RAGStorage(BaseRAGStorage):
         return f"{base_path}/{file_name}"
 
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
+        """Save a value to storage.
+
+        Args:
+            value: The value to save.
+            metadata: Metadata to associate with the value.
+        """
         try:
             client = self._get_client()
             collection_name = (
@@ -167,6 +173,51 @@ class RAGStorage(BaseRAGStorage):
                 f"Error during {self.type} save: {e!s}\n{traceback.format_exc()}"
             )
 
+    async def asave(self, value: Any, metadata: dict[str, Any]) -> None:
+        """Save a value to storage asynchronously.
+
+        Args:
+            value: The value to save.
+            metadata: Metadata to associate with the value.
+        """
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"memory_{self.type}_{self.agents}"
+                if self.agents
+                else f"memory_{self.type}"
+            )
+            await client.aget_or_create_collection(collection_name=collection_name)
+
+            document: BaseRecord = {"content": value}
+            if metadata:
+                document["metadata"] = metadata
+
+            batch_size = None
+            if (
+                self.embedder_config
+                and isinstance(self.embedder_config, dict)
+                and "config" in self.embedder_config
+            ):
+                nested_config = self.embedder_config["config"]
+                if isinstance(nested_config, dict):
+                    batch_size = nested_config.get("batch_size")
+
+            if batch_size is not None:
+                await client.aadd_documents(
+                    collection_name=collection_name,
+                    documents=[document],
+                    batch_size=cast(int, batch_size),
+                )
+            else:
+                await client.aadd_documents(
+                    collection_name=collection_name, documents=[document]
+                )
+        except Exception as e:
+            logging.error(
+                f"Error during {self.type} async save: {e!s}\n{traceback.format_exc()}"
+            )
+
     def search(
         self,
         query: str,
@@ -174,6 +225,17 @@ class RAGStorage(BaseRAGStorage):
         filter: dict[str, Any] | None = None,
         score_threshold: float = 0.6,
     ) -> list[Any]:
+        """Search for matching entries in storage.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of results to return.
+            filter: Optional metadata filter.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            List of matching entries.
+        """
         try:
             client = self._get_client()
             collection_name = (
@@ -191,6 +253,44 @@ class RAGStorage(BaseRAGStorage):
         except Exception as e:
             logging.error(
                 f"Error during {self.type} search: {e!s}\n{traceback.format_exc()}"
+            )
+            return []
+
+    async def asearch(
+        self,
+        query: str,
+        limit: int = 5,
+        filter: dict[str, Any] | None = None,
+        score_threshold: float = 0.6,
+    ) -> list[Any]:
+        """Search for matching entries in storage asynchronously.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of results to return.
+            filter: Optional metadata filter.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            List of matching entries.
+        """
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"memory_{self.type}_{self.agents}"
+                if self.agents
+                else f"memory_{self.type}"
+            )
+            return await client.asearch(
+                collection_name=collection_name,
+                query=query,
+                limit=limit,
+                metadata_filter=filter,
+                score_threshold=score_threshold,
+            )
+        except Exception as e:
+            logging.error(
+                f"Error during {self.type} async search: {e!s}\n{traceback.format_exc()}"
             )
             return []
 

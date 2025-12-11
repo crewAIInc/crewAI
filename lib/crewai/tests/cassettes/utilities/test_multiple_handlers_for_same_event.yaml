@@ -68,8 +68,6 @@ interactions:
       - 91067d3ddc68fa16-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
