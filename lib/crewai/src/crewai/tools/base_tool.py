@@ -4,14 +4,13 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
 from inspect import signature
+import json
 from typing import (
     Any,
     Generic,
     ParamSpec,
     TypeVar,
     cast,
-    get_args,
-    get_origin,
     overload,
 )
 
@@ -27,6 +26,7 @@ from typing_extensions import TypeIs
 
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.printer import Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 
 
 _printer = Printer()
@@ -274,36 +274,14 @@ class BaseTool(BaseModel, ABC):
             )
 
     def _generate_description(self) -> None:
-        args_schema = {
-            name: {
-                "description": field.description,
-                "type": BaseTool._get_arg_annotations(field.annotation),
-            }
-            for name, field in self.args_schema.model_fields.items()
-        }
-
-        self.description = f"Tool Name: {self.name}\nTool Arguments: {args_schema}\nTool Description: {self.description}"
-
-    @staticmethod
-    def _get_arg_annotations(annotation: type[Any] | None) -> str:
-        if annotation is None:
-            return "None"
-
-        origin = get_origin(annotation)
-        args = get_args(annotation)
-
-        if origin is None:
-            return (
-                annotation.__name__
-                if hasattr(annotation, "__name__")
-                else str(annotation)
-            )
-
-        if args:
-            args_str = ", ".join(BaseTool._get_arg_annotations(arg) for arg in args)
-            return str(f"{origin.__name__}[{args_str}]")
-
-        return str(origin.__name__)
+        """Generate the tool description with a JSON schema for arguments."""
+        schema = generate_model_description(self.args_schema)
+        args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
+        self.description = (
+            f"Tool Name: {self.name}\n"
+            f"Tool Arguments: {args_json}\n"
+            f"Tool Description: {self.description}"
+        )
 
 
 class Tool(BaseTool, Generic[P, R]):
