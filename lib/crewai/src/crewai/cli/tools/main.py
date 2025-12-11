@@ -1,4 +1,5 @@
 import base64
+from json import JSONDecodeError
 import os
 from pathlib import Path
 import subprocess
@@ -165,10 +166,16 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 "Authentication failed. Verify if the currently active organization can access the tool repository, and run 'crewai login' again.",
                 style="bold red",
             )
-            console.print(
-                f"[{login_response.status_code} error - {login_response.json().get('message', 'Unknown error')}]",
-                style="bold red italic",
-            )
+            try:
+                console.print(
+                    f"[{login_response.status_code} error - {login_response.json().get('message', 'Unknown error')}]",
+                    style="bold red italic",
+                )
+            except JSONDecodeError:
+                console.print(
+                    f"[{login_response.status_code} error - Unknown error - Invalid JSON response]",
+                    style="bold red italic",
+                )
             raise SystemExit
 
         login_response_json = login_response.json()
