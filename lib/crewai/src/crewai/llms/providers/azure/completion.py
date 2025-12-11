@@ -129,7 +129,10 @@ class AzureCompletion(BaseLLM):
             model=model, temperature=temperature, stop=stop or [], **kwargs
         )
 
-        self.api_key = api_key or os.getenv("AZURE_API_KEY")
+        explicit_api_key = api_key
+        env_api_key = os.getenv("AZURE_API_KEY")
+        # Preserve attribute for backwards compatibility, but keep distinction between explicit vs env API key
+        self.api_key = explicit_api_key or env_api_key
         self.endpoint = (
             endpoint
             or os.getenv("AZURE_ENDPOINT")
@@ -145,14 +148,14 @@ class AzureCompletion(BaseLLM):
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
 
-        # Resolve credential: explicit credential -> default -> api key -> env AZURE_AD_TOKEN -> env AZURE_API_KEY
+        # Resolve credential: explicit credential -> default -> explicit api_key -> AZURE_AD_TOKEN -> AZURE_API_KEY env
         self._credential: TokenCredential | None = None
         if credential is not None:
             self._credential = credential
         elif use_default_credential:
             self._credential = DefaultAzureCredential()
-        elif self.api_key:
-            self._credential = AzureKeyCredential(self.api_key)
+        elif explicit_api_key:
+            self._credential = AzureKeyCredential(explicit_api_key)
         else:
             az_ad_token = os.getenv("AZURE_AD_TOKEN")
             if az_ad_token:
@@ -162,7 +165,6 @@ class AzureCompletion(BaseLLM):
 
                 self._credential = _StaticToken()
             else:
-                env_api_key = os.getenv("AZURE_API_KEY")
                 if env_api_key:
                     self._credential = AzureKeyCredential(env_api_key)
                 else:
