@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from collections.abc import Awaitable, Callable
 from inspect import signature
+import json
 from typing import (
     Any,
     Generic,
@@ -282,7 +283,8 @@ class BaseTool(BaseModel, ABC):
             for name, field in self.args_schema.model_fields.items()
         }
 
-        self.description = f"Tool Name: {self.name}\nTool Arguments: {args_schema}\nTool Description: {self.description}"
+        args_schema_json = json.dumps(args_schema)
+        self.description = f"Tool Name: {self.name}\nTool Arguments: {args_schema_json}\nTool Description: {self.description}"
 
     @staticmethod
     def _get_arg_annotations(annotation: type[Any] | None) -> str:

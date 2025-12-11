@@ -1,4 +1,5 @@
 import asyncio
+import json
 from typing import Callable
 from unittest.mock import patch
 
@@ -19,7 +20,7 @@ def test_creating_a_tool_using_annotation():
     assert my_tool.name == "Name of my tool"
     assert (
         my_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
+        == 'Tool Name: Name of my tool\nTool Arguments: {"question": {"description": null, "type": "str"}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it.'
     )
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
@@ -33,7 +34,7 @@ def test_creating_a_tool_using_annotation():
 
     assert (
         converted_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
+        == 'Tool Name: Name of my tool\nTool Arguments: {"question": {"description": null, "type": "str"}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it.'
     )
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
@@ -58,7 +59,7 @@ def test_creating_a_tool_using_baseclass():
 
     assert (
         my_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
+        == 'Tool Name: Name of my tool\nTool Arguments: {"question": {"description": null, "type": "str"}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it.'
     )
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
@@ -70,7 +71,7 @@ def test_creating_a_tool_using_baseclass():
 
     assert (
         converted_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
+        == 'Tool Name: Name of my tool\nTool Arguments: {"question": {"description": null, "type": "str"}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it.'
     )
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
@@ -230,3 +231,55 @@ def test_max_usage_count_is_respected():
     crew.kickoff()
     assert tool.max_usage_count == 5
     assert tool.current_usage_count == 5
+
+
+def test_tool_description_uses_valid_json_for_arguments():
+    """Test that tool arguments in description are formatted as valid JSON.
+
+    This test verifies the fix for GitHub issue #4064 where tool arguments
+    were displayed using Python's string representation (single quotes, None)
+    instead of proper JSON (double quotes, null).
+    """
+
+    class FileWriterTool(BaseTool):
+        name: str = "File Writer Tool"
+        description: str = "A tool to write content to a specified file."
+
+        def _run(
+            self,
+            filename: str,
+            directory: str | None,
+            overwrite: bool | str,
+            content: str,
+        ) -> str:
+            return "ok"
+
+    tool = FileWriterTool()
+    desc = tool.description
+
+    # Ensure the basic sections are present
+    assert desc.startswith("Tool Name: File Writer Tool")
+    assert "Tool Arguments:" in desc
+    assert "Tool Description: A tool to write content to a specified file." in desc
+
+    # Extract the JSON substring between "Tool Arguments: " and "\nTool Description:"
+    start = desc.index("Tool Arguments: ") + len("Tool Arguments: ")
+    end = desc.index("\nTool Description:")
+    args_json = desc[start:end]
+
+    # This must be valid JSON (previously would fail due to single quotes and None)
+    parsed = json.loads(args_json)
+
+    # Verify the expected structure
+    assert "filename" in parsed
+    assert parsed["filename"]["type"] == "str"
+    assert parsed["filename"]["description"] is None
+
+    assert "directory" in parsed
+    assert parsed["directory"]["description"] is None
+    # Type should contain Union or similar for str | None
+    assert "str" in parsed["directory"]["type"]
+
+    assert "overwrite" in parsed
+    assert "content" in parsed
+    assert parsed["content"]["type"] == "str"
