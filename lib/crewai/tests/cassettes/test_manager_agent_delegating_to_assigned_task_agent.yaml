@@ -166,8 +166,6 @@ interactions:
       - 8c85ee46ce271cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -305,8 +303,6 @@ interactions:
       - 8c85ee5809ea1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -614,8 +610,6 @@ interactions:
       - 8c85ee784bd11cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -795,8 +789,6 @@ interactions:
       - 8c85eeee3f7a1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -990,8 +982,6 @@ interactions:
       - 8c85eefafac11cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1161,8 +1151,6 @@ interactions:
       - 8c85ef09ef831cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1418,8 +1406,6 @@ interactions:
       - 8c85ef325d6b1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1617,8 +1603,6 @@ interactions:
       - 8c85ef4b4e7a1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -2012,8 +1996,6 @@ interactions:
       - 8c85ef926b591cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

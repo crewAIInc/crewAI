@@ -1,8 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in French"}],"model":"claude-sonnet-4-0","stream":false,"tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Returns
-      structured data according to the schema","input_schema":{"description":"Response
-      model for greeting test.","properties":{"greeting":{"title":"Greeting","type":"string"},"language":{"title":"Language","type":"string"}},"required":["greeting","language"],"title":"GreetingResponse","type":"object"}}]}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in French"}],"model":"claude-sonnet-4-0","stream":false,"tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Returns structured data according to the schema","input_schema":{"description":"Response model for greeting test.","properties":{"greeting":{"title":"Greeting","type":"string"},"language":{"title":"Language","type":"string"}},"required":["greeting","language"],"title":"GreetingResponse","type":"object"}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -44,20 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBNT8MwDIb/i8+Z1JZViBxXBAeEhIDDJISiLDFtttQp+dg0Vf3vKJsK
-        GoiTZT+v/doeoXcaLXBQViaNi+CIMC6Wi6qo6qIul8DAaODQh1YU5Xq7X1fUdK7cUUpqczi0zXAA
-        BvE4YFZhCLJFYOCdzQUZgglRUgQGylFEisDfxlkfnbMiBZxdcp5EUd74j6fnl9t+tblujs2rvn/c
-        1/4BGJDsc1+IPqmYPGrhUhxSHm8oRz5C6xGjoRY4rBxtXfLAwEpqU16Nw51HUh1M0zuDEN0gPMrg
-        6HKdEwj4mZAUAqdkLYN0Oo6PZy8R3Q4pAF9eVQyUVB0K5VFG40hcKoqZe5T6Pzb3ZgMcOuzRSyvq
-        /q/+h5bdbzoxOL/ku1RfMQjo90ahiAb96X+StPQapukLAAD//wMAoHQshQMCAAA=
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01XjvX2nCho1knuucbwwgCpw","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_019rfPRSDmBb7CyCTdGMv5rK","name":"structured_output","input":{"greeting":"Bonjour","language":"French"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":432,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

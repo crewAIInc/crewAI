@@ -701,6 +701,7 @@ def test_gemini_stop_sequences_sent_to_api():
 
 
 @pytest.mark.vcr()
+@pytest.mark.skip(reason="VCR cannot replay SSE streaming responses")
 def test_google_streaming_returns_usage_metrics():
     """
     Test that Google Gemini streaming calls return proper token usage metrics.

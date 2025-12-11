@@ -1,15 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -49,22 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kzid48FJk9TxbR0WdDvsMGCnrTBYmbbVyqImyem2Iv8+
-        yG5id+2AXQyYj+/pPZKPCYBQlShAyBaD7KxO39/tP28OaHP++sVtP/z+QZ/U1eH+etfKq71YRAbf
-        3pEMJ9ZbyZ3VFBSbEZaOMFBUXV5u1/lul+cXA9BxRTrSGhvSNaedMipdZat1ml2my/yJ3bKS5EUB
-        3xIAgMfhG32ain6KArLFqdKR99iQKM5NAMKxjhWB3isf0ASxmEDJJpAZrH8Eww8g0UCjDgQITbQN
-        aPwDOYDvZq8Mang3/BdwTVrzm7mWo7r3GPOYXusZgMZwwDiPIcXNE3I8+9bcWMe3/i+qqJVRvi0d
-        oWcTPfrAVgzoMQG4GebTP4ssrOPOhjLwPQ3PLTcXo56Y1jJDT2DggHpW324Xr+iVFQVU2s8mLCTK
-        lqqJOq0D+0rxDEhmqV+6eU17TK5M8z/yEyAl2UBVaR1VSj5PPLU5ilf7r7bzlAfDwpM7KEllUOTi
-        JiqqsdfjLQn/ywfqylqZhpx1ajyo2pabbJdt6xWiFMkx+QMAAP//AwBGoldFXgMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjFN5vap8oURr6EzqeJiBvkH9hcBF\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764899883,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -115,16 +96,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -164,22 +136,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLRbtQwEHzPVyx+vqBcuObae0OVDiohAUIIIaiirbNJXByvsZ2WUt2/
-        V/a1l5S2Ei+RsrMzntnd2wxAqEZsQMgegxyszk8vP39/9/Hb2e+tof5v9+VmHNe2/Nrxh9NPW7GI
-        DL64JBkeWK8lD1ZTUGz2sHSEgaLqcl2tTlblcVUkYOCGdKR1NuQrzgdlVF4W5Sov1vny+J7ds5Lk
-        xQZ+ZAAAt+kbfZqG/ogNJK1UGch77EhsDk0AwrGOFYHeKx/QBLGYQMkmkEnWz8DwNUg00KkrAoQu
-        2gY0/pocwE+zVQY1vE3/G3hPWvOruZajdvQY85hR6xmAxnDAOI+U4vwe2R18a+6s4wv/D1W0yijf
-        147Qs4kefWArErrLAM7TfMZHkYV1PNhQB/5F6bnl0Zu9npjWMkMfwMAB9axeVYtn9OqGAirtZxMW
-        EmVPzUSd1oFjo3gGZLPUT908p71Prkz3P/ITICXZQE1tHTVKPk48tTmKV/tS22HKybDw5K6UpDoo
-        cnETDbU46v0tCX/jAw11q0xHzjq1P6jW1kfFSVG1JaIU2S67AwAA//8DAPL0xgZeAwAA
+      string: "{\n  \"id\": \"chatcmpl-CjQYGOWIqFnehzgSyuu7p2UgoLCPF\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764942860,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -230,16 +192,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -279,22 +232,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBattAEL3rK6Z7tors2o6tWwi07qEuBAqFNojxaiRNutpddldOQ/C/
-        l5ViS2lTyEWgefPevjczTwmA4FLkIGSDQbZWpTf3t5svze7bYbf/lNVfbx8z993W14qP+70Us8gw
-        h3uS4cx6L01rFQU2eoClIwwUVedX6+V2ucq2mx5oTUkq0mob0qVJW9acLrLFMs2u0vnmmd0YluRF
-        Dj8SAICn/ht96pJ+ixyy2bnSkvdYk8gvTQDCGRUrAr1nH1AHMRtBaXQg3Vv/DNo8gEQNNR8JEOpo
-        G1D7B3IAP/VH1qjguv/PYUdKmXdTLUdV5zHm0Z1SEwC1NgHjPPoUd8/I6eJbmdo6c/B/UUXFmn1T
-        OEJvdPTog7GiR08JwF0/n+5FZGGdaW0ogvlF/XPz1YdBT4xrmaBnMJiAalJfr2ev6BUlBWTlJxMW
-        EmVD5Ugd14FdyWYCJJPU/7p5TXtIzrp+i/wISEk2UFlYRyXLl4nHNkfxav/Xdplyb1h4ckeWVAQm
-        FzdRUoWdGm5J+EcfqC0q1jU563g4qMoWq2ybrasFohTJKfkDAAD//wMAxcMz314DAAA=
+      string: "{\n  \"id\": \"chatcmpl-CjR8MhHUbHNG0gORy0rXpgAlivNNc\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945098,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -606,16 +549,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -655,22 +589,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJdb9swDHz3r+D0HA92mjh13vaBYSuGAhv2UGArDFamHaWyKEhyu63I
-        fy9kN7G7dcBeDJjHO92RfEgAhKrFFoTcYZCd1em7/deSLt9enBVZ8fvLVXmbfXv/eX/J+VW5vBCL
-        yOCbPclwZL2W3FlNQbEZYekIA0XVfFOsytU635wPQMc16UhrbUhXnHbKqHSZLVdptknz8yf2jpUk
-        L7bwPQEAeBi+0aep6afYQrY4VjryHlsS21MTgHCsY0Wg98oHNEEsJlCyCWQG65/A8D1INNCqOwKE
-        NtoGNP6eHMAP80EZ1PBm+N/CR9KaX821HDW9x5jH9FrPADSGA8Z5DCmun5DDybfm1jq+8X9QRaOM
-        8rvKEXo20aMPbMWAHhKA62E+/bPIwjrubKgC39LwXL4+G/XEtJYZegQDB9SzelEsXtCragqotJ9N
-        WEiUO6on6rQO7GvFMyCZpf7bzUvaY3Jl2v+RnwApyQaqK+uoVvJ54qnNUbzaf7WdpjwYFp7cnZJU
-        BUUubqKmBns93pLwv3ygrmqUaclZp8aDamy1zsqsaJaIUiSH5BEAAP//AwCZM4ohXgMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjR9eNBJ3606zQX9k0TDLjNo1X92J\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945178,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -721,16 +645,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -770,22 +685,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nKwafNyhZNinNrQKqVsClAi5QRbP2JHHr2JbtbFuq/Xfk
-        pLtJoUi9RMq8ec/vzcxjAsCkYBUw3mHgvVXph5ur8/yb7D4/lPe3Pz5dfd9tvwhXFEP/9fdHtooM
-        s70hHg6st9z0VlGQRk8wd4SBomp+Um5ON0WR5yPQG0Eq0lob0o1Je6llus7WmzQ7SfP3T+zOSE6e
-        VfAzAQB4HL/RpxZ0zyrIVodKT95jS6w6NgEwZ1SsMPRe+oA6sNUMcqMD6dH6JWhzBxw1tHJHgNBG
-        24Da35ED+KXPpUYFZ+N/BReklHmz1HLUDB5jHj0otQBQaxMwzmNMcf2E7I++lWmtM1v/F5U1Ukvf
-        1Y7QGx09+mAsG9F9AnA9zmd4FplZZ3ob6mBuaXwuL95NemxeywI9gMEEVIt6Wa5e0KsFBZTKLybM
-        OPKOxEyd14GDkGYBJIvU/7p5SXtKLnX7GvkZ4JxsIFFbR0Ly54nnNkfxav/XdpzyaJh5cjvJqQ6S
-        XNyEoAYHNd0S8w8+UF83UrfkrJPTQTW2LrLTrGzWiJwl++QPAAAA//8DAOwHnDVeAwAA
+      string: "{\n  \"id\": \"chatcmpl-CjRF1TihKy6xkVERUvbLdr55umMzD\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945511,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -836,16 +741,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -885,22 +781,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBctMwEL37KxadYyYOiUNyAzoFCgemHKHj2UprR0XWCklOy3Ty74zs
-        JnZpO8PFM9637+m93b3PAIRWYgtC7jDK1pn8w83lR6X4cnN3Vnz7/r7UX7+E32fx/MLsL9Zilhh8
-        fUMyHlmvJbfOUNRsB1h6wkhJtViXy81yVRZFD7SsyCRa42K+5LzVVueL+WKZz9d58faBvWMtKYgt
-        /MgAAO77b/JpFd2JLcxnx0pLIWBDYntqAhCeTaoIDEGHiDaK2QhKtpFsb/0zWL4FiRYavSdAaJJt
-        QBtuyQP8tOfaooF3/f8WPpEx/Gqq5anuAqY8tjNmAqC1HDHNo09x9YAcTr4NN87zdfiHKmptddhV
-        njCwTR5DZCd69JABXPXz6R5FFs5z62IV+Rf1zxWrN4OeGNcyQY9g5IhmUi/L2TN6laKI2oTJhIVE
-        uSM1Usd1YKc0T4Bskvqpm+e0h+TaNv8jPwJSkoukKudJafk48djmKV3tS22nKfeGRSC/15KqqMmn
-        TSiqsTPDLYnwJ0Rqq1rbhrzzejio2lWr+WZe1gtEKbJD9hcAAP//AwC2u3QBXgMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjRGddoR9xD1PSB6iLKsqDtFJlvJ7\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764945611,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -951,16 +837,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly
-      agent\nYour personal goal is: say hello\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say
-      hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
-      return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test agent. a friendly agent\nYour personal goal is: say hello\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -1000,22 +877,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nKwafNyi7TdPu3mBFBRegFSegiqb2JOvieCzbaaHV/jty
-        0t2kUCQukTJv3vN7M/OYAQitxAaE3GGUnTP59vbq4+W6tOorXV08cDz/HD5tL3H75d3DWy0WicE3
-        tyTjgfVacucMRc12hKUnjJRUl2dVuS6r4mQ1AB0rMonWupiXnHfa6nxVrMq8OMuX50/sHWtJQWzg
-        WwYA8Dh8k0+r6KfYQLE4VDoKAVsSm2MTgPBsUkVgCDpEtFEsJlCyjWQH6x/A8j1ItNDqOwKENtkG
-        tOGePMB3e6EtGngz/G/gPRnDr+Zanpo+YMpje2NmAFrLEdM8hhTXT8j+6Ntw6zzfhD+ootFWh13t
-        CQPb5DFEdmJA9xnA9TCf/llk4Tx3LtaRf9Dw3PL0ZNQT01pm6AGMHNHM6lW1eEGvVhRRmzCbsJAo
-        d6Qm6rQO7JXmGZDNUv/t5iXtMbm27f/IT4CU5CKp2nlSWj5PPLV5Slf7r7bjlAfDIpC/05LqqMmn
-        TShqsDfjLYnwK0Tq6kbblrzzejyoxtWnxbqomhWiFNk++w0AAP//AwDUaYv4XgMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjRNQ94ndZeRFzot8PsOCQaCTEzBi\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764946032,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 166,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

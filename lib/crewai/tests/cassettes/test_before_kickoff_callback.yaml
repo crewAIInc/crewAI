@@ -664,8 +664,6 @@ interactions:
       - 901f80a64cc6bd25-ATL
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -775,8 +773,6 @@ interactions:
       - 925e4749af02f227-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
