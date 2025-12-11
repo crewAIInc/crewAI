@@ -73,8 +73,6 @@ interactions:
       - 929224621caa15b4-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -206,8 +204,6 @@ interactions:
       - 9292246a3c7c15b4-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -358,8 +354,6 @@ interactions:
       - 92922476092e15b4-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -484,8 +478,6 @@ interactions:
       - 9292247d48ac15b4-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

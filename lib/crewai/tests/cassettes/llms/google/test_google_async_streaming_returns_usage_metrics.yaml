@@ -1,0 +1,74 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: What is the capital
+      of Canada?\n\nThis is the expected criteria for your final answer: The capital
+      of Canada\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Research Assistant.
+      You are a helpful research assistant.\nYour personal goal is: Find information
+      about the capital of Canada\nTo give my best complete final answer to the task
+      respond using the exact following format:\n\nThought: I now can give a great
+      answer\nFinal Answer: Your final answer must be the great and the most complete
+      as possible, it must be outcome described.\n\nI MUST use these formats, my job
+      depends on it!"}], "role": "user"}, "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '955'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:streamGenerateContent?alt=sse
+  response:
+    body:
+      string: "data: {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \"The\"}],\"role\":
+        \"model\"}}],\"usageMetadata\": {\"promptTokenCount\": 165,\"totalTokenCount\":
+        165,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\": 165}]},\"modelVersion\":
+        \"gemini-2.0-flash-exp\",\"responseId\": \"s-s5aZrOHoOvgLUPpteaqAQ\"}\r\n\r\ndata:
+        {\"candidates\": [{\"content\": {\"parts\": [{\"text\": \" capital of Canada
+        is Ottawa.\\nFinal Answer: Ottawa\\n\"}],\"role\": \"model\"},\"finishReason\":
+        \"STOP\"}],\"usageMetadata\": {\"promptTokenCount\": 163,\"candidatesTokenCount\":
+        13,\"totalTokenCount\": 176,\"promptTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        163}],\"candidatesTokensDetails\": [{\"modality\": \"TEXT\",\"tokenCount\":
+        13}]},\"modelVersion\": \"gemini-2.0-flash-exp\",\"responseId\": \"s-s5aZrOHoOvgLUPpteaqAQ\"}\r\n\r\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Disposition:
+      - attachment
+      Content-Type:
+      - text/event-stream
+      Date:
+      - Wed, 10 Dec 2025 21:52:51 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=308
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

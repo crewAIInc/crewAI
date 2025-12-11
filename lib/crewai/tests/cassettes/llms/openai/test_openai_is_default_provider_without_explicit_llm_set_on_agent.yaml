@@ -1,17 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Research Assistant.
-      You are a helpful research assistant.\nYour personal goal is: Find information
-      about the population of Tokyo\nTo give my best complete final answer to the
-      task respond using the exact following format:\n\nThought: I now can give a
-      great answer\nFinal Answer: Your final answer must be the great and the most
-      complete as possible, it must be outcome described.\n\nI MUST use these formats,
-      my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Find information
-      about the population of Tokyo\n\nThis is the expected criteria for your final
-      answer: The population of Tokyo is 10 million\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stream": false}'
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant. You are a helpful research assistant.\nYour personal goal is: Find information about the population of Tokyo\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Find information about the population of Tokyo\n\nThis is the expected criteria for your final answer: The population of Tokyo is 10 million\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stream": false}'
     headers:
       accept:
       - application/json
@@ -49,28 +38,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA4xUTY8bNwy9+1cQcx4vbK+93vXNDdompyJF0Bb5gEFrODPMSqJASXa8wf73QmN7
-        7W1ToJcBxMdHvscR9X0EUHFTraAyPSbjgh2/ef9+8eanj7M/lr8vzduv+eHP/c9/rZ8+2vXTnKu6
-        MGT7lUw6s26MuGApsfgjbJQwUak6Xd5N5tPZ/exuAJw0ZAutC2k8l7Fjz+PZZDYfT5bj6f2J3Qsb
-        itUKPo0AAL4P36LTN/StWsGkPkccxYgdVauXJIBKxZZIhTFyTOhTVV9AIz6RH6S/Ay97MOih4x0B
-        QldkA/q4JwX47H9hjxbWw3kF6wjSgjuAxZgghwYTAXv4zSTZksJsMrutIfUEQUK2WMZRGB/k8SDA
-        ETAElW/sMJE9wHQOjq0tSYEk2KFWYRvySdECKmEN+54tDfFfh6Hqqd76jJoe2BubG4oQs6pk37Dv
-        ICi1ZFJWijX0GAEhJuw60gF9JVF2pHC7PAuqweFjyeI0dHYS05EhOYKjpBLEckI/iDwL34va5gY+
-        FA+cDlfeUyTblhEoedl7aqAVLWHY8VbRJzDZFqk1NLwjjQRkxIs71IC+gcid55ZNyeysbNEC+9Zm
-        8oaODa/8tNwV0+DwAK3NJuXyo5pMkAR2qFxMtGiSaJmY6QEjOO50oNeQdYuen06n0r4hJ51i6NlA
-        UvJNrGGbE3TkSdHaQ10mpeSQfQTxVKyXiVjUjsplKSUBu86Ko2OfeDJiDzfX11OpzRHLivhs7RWA
-        3ks6MstifDkhzy+rYKULKtv4D2rVsufYb5Qwii/XPiYJ1YA+jwC+DCuXX21RFVRcSJskjzS0my5v
-        j/Wqy6ZfobPFCU2S0F6A2cN9/YOCm4YSso1XW1sZND01F+plxTE3LFfA6Mr2v+X8qPbROvvu/5S/
-        AMZQSNRsglLD5rXlS5pSeQn/K+1lzIPgKpLu2NAmMWn5FQ21mO3xfariISZym5Z9RxqUj49UGzaL
-        uwm2d7RYPFSj59HfAAAA//8DAB8kWOqyBQAA
+      string: "{\n  \"id\": \"chatcmpl-CQQ5CBZ2V7R7cHju9WwEXAzZlAz4i\",\n  \"object\": \"chat.completion\",\n  \"created\": 1760412826,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: As of my last update in October 2023, the population of Tokyo is approximately 14 million people in the central area, while the Greater Tokyo Area, which includes surrounding prefectures, has a staggering population of over 37 million, making it the most populous metropolitan area in the world. The city of Tokyo itself is renowned for its vibrant culture, diverse economy, and significant global influence. The population figures may fluctuate due to various factors such as migration, urbanization, and demographic trends, but generally, it remains one of the largest urban agglomerations globally.\",\n        \"refusal\": null,\n        \"annotations\"\
+        : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\": 125,\n    \"total_tokens\": 298,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 98e404605874fad2-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -78,11 +52,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=o5Vy5q.qstP73vjTrIb7GX6EjMltWq26Vk1ctm8rrcQ-1760412828-1.0.1.1-6PmDQhWH5.60C02WBN9ENJiBEZ0hYXY1YJ6TKxTAflRETSCaMVA2j1.xE2KPFpUrsSsmbkopxQ1p2NYmLzuRy08dingIYyz5HZGz8ghl.nM;
-        path=/; expires=Tue, 14-Oct-25 04:03:48 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=TkrzMwZH3VZy7i4ED_kVxlx4MUrHeXnluoFfmeqTT2w-1760412828927-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=o5Vy5q.qstP73vjTrIb7GX6EjMltWq26Vk1ctm8rrcQ-1760412828-1.0.1.1-6PmDQhWH5.60C02WBN9ENJiBEZ0hYXY1YJ6TKxTAflRETSCaMVA2j1.xE2KPFpUrsSsmbkopxQ1p2NYmLzuRy08dingIYyz5HZGz8ghl.nM; path=/; expires=Tue, 14-Oct-25 04:03:48 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=TkrzMwZH3VZy7i4ED_kVxlx4MUrHeXnluoFfmeqTT2w-1760412828927-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

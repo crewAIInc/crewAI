@@ -1,16 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to
-      the world\n\nThis is the expected criteria for your final answer: hello world\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop":
-      ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -50,22 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJNj9MwEL3nV4x8blC/0nRzA8QKuCBxQFrBKnLtSeLF8Vi2s11Y9b8j
-        O90m5UPiEinz5j2/NzPPGQBTklXARMeD6K3O33588/nm/d27T5sv6wdp1OGu/9l1T9tbWzQlW0QG
-        HR5QhBfWK0G91RgUmREWDnnAqLoqi/1uv19vVgnoSaKOtNaGfEt5r4zK18v1Nl+W+Wp/ZnekBHpW
-        wdcMAOA5faNPI/GJVbBcvFR69J63yKpLEwBzpGOFce+VD9wEtphAQSagSdY/gKEjCG6gVY8IHNpo
-        G7jxR3QA38ytMlzD6/RfQYdaExzJaTkXdNgMnsdQZtB6BnBjKPA4lBTl/oycLuY1tdbRwf9GZY0y
-        yne1Q+7JRKM+kGUJPWUA92lIw1VuZh31NtSBvmN6blWUox6bdjNDN2cwUOB6Vi/Po73WqyUGrrSf
-        jZkJLjqUE3XaCR+kohmQzVL/6eZv2mNyZdr/kZ8AIdAGlLV1KJW4Tjy1OYyn+6+2y5STYebRPSqB
-        dVDo4iYkNnzQ40Ex/8MH7OtGmRaddWq8qsbWxW7Jmx0WxQ3LTtkvAAAA//8DAIkIBqtjAwAA
+      string: "{\n  \"id\": \"chatcmpl-CJBR9HYEO3V2jdnibYmzhhx4Fp5f7\",\n  \"object\": \"chat.completion\",\n  \"created\": 1758688231,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 983f8c061b6ec487-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -73,11 +53,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=JDjpnzx5y8PJaJDQcCeX6MeBt8BOGuL79pd.ca5mqvE-1758688232-1.0.1.1-5VN5hj5LzEZFfkotBaZ_dbUITo_YB7RLsFOlQc.0MdSZOsz7WhNkH.s7H700L12Yi8nHGW44BgIwCF3uWx1w4PRBqrb1IVH3FkeV.QwCTaA;
-        path=/; expires=Wed, 24-Sep-25 05:00:32 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=b5n8BZZDRtHA4TrxQ1RDeEdtQBzhstjP6u21LYM8L94-1758688232142-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=JDjpnzx5y8PJaJDQcCeX6MeBt8BOGuL79pd.ca5mqvE-1758688232-1.0.1.1-5VN5hj5LzEZFfkotBaZ_dbUITo_YB7RLsFOlQc.0MdSZOsz7WhNkH.s7H700L12Yi8nHGW44BgIwCF3uWx1w4PRBqrb1IVH3FkeV.QwCTaA; path=/; expires=Wed, 24-Sep-25 05:00:32 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=b5n8BZZDRtHA4TrxQ1RDeEdtQBzhstjP6u21LYM8L94-1758688232142-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -154,11 +131,7 @@ interactions:
       code: 401
       message: Unauthorized
 - request:
-    body: '{"trace_id": "06e1250e-6d88-4c64-abe5-deabde573ae1", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T04:50:23.219835+00:00"}}'
+    body: '{"trace_id": "06e1250e-6d88-4c64-abe5-deabde573ae1", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T04:50:23.219835+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -187,18 +160,7 @@ interactions:
       cache-control:
       - no-cache
       content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
       content-type:
       - application/json; charset=utf-8
       permissions-policy:
@@ -206,9 +168,7 @@ interactions:
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=0.37, sql.active_record;dur=30.81, cache_generate.active_support;dur=29.14,
-        cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.19,
-        start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.74
+      - cache_read.active_support;dur=0.37, sql.active_record;dur=30.81, cache_generate.active_support;dur=29.14, cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.19, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.74
       vary:
       - Accept
       x-content-type-options:
@@ -256,18 +216,7 @@ interactions:
       cache-control:
       - no-cache
       content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
       content-type:
       - application/json; charset=utf-8
       permissions-policy:
@@ -275,9 +224,7 @@ interactions:
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=0.06, sql.active_record;dur=3.86, cache_generate.active_support;dur=4.28,
-        cache_write.active_support;dur=0.15, cache_read_multi.active_support;dur=0.12,
-        start_processing.action_controller;dur=0.00, process_action.action_controller;dur=1.70
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=3.86, cache_generate.active_support;dur=4.28, cache_write.active_support;dur=0.15, cache_read_multi.active_support;dur=0.12, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=1.70
       vary:
       - Accept
       x-content-type-options:
@@ -296,11 +243,7 @@ interactions:
       code: 401
       message: Unauthorized
 - request:
-    body: '{"trace_id": "e7ec4d48-cd70-436b-932e-45b2252284ec", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0a2", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-02T22:35:42.329267+00:00"}}'
+    body: '{"trace_id": "e7ec4d48-cd70-436b-932e-45b2252284ec", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0a2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-02T22:35:42.329267+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -333,37 +276,9 @@ interactions:
       cache-control:
       - no-cache
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       permissions-policy:
       - camera=(), microphone=(self), geolocation=()
       referrer-policy:

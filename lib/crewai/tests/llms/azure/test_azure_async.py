@@ -3,6 +3,7 @@
 import pytest
 import tiktoken
 
+from crewai import Agent, Task, Crew
 from crewai.llm import LLM
 
 
@@ -114,3 +115,33 @@ async def test_azure_async_conversation():
 
     assert result is not None
     assert isinstance(result, str)
+
+
+@pytest.mark.vcr()
+@pytest.mark.asyncio
+async def test_azure_async_streaming_returns_usage_metrics():
+    """
+    Test that Azure async streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of Germany",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="azure/gpt-4o-mini", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of Germany?",
+        expected_output="The capital of Germany",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = await crew.kickoff_async()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1

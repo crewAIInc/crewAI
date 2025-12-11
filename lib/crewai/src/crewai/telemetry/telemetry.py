@@ -174,9 +174,12 @@ class Telemetry:
 
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
+        if hasattr(signal, "SIGHUP"):
+            self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
+        if hasattr(signal, "SIGTSTP"):
+            self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
+        if hasattr(signal, "SIGCONT"):
+            self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
 
     def _register_signal_handler(
         self,

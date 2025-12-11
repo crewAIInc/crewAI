@@ -76,8 +76,6 @@ interactions:
       - 90cbd2ceaf3ead5e-ATL
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

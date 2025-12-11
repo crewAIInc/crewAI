@@ -63,8 +63,6 @@ interactions:
       - 90cd37a83f5f176a-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -202,8 +200,6 @@ interactions:
       - 90cd37aec8c8176a-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

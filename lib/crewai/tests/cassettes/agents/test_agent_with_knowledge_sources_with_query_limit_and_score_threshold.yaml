@@ -42,123 +42,13 @@ interactions:
     uri: https://api.openai.com/v1/embeddings
   response:
     body:
-      string: !!binary |
-        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
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\": \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\
+        \n    }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\": 12,\n    \"total_tokens\": 12\n  }\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -213,18 +103,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user
-      query so that it is optimized for retrieval from a vector database. Consider
-      how the query will be used to find relevant documents, and aim to make it more
-      specific and context-aware. \n\n Do not include any other text than the rewritten
-      query, especially any preamble or postamble and only add expected output format
-      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
-      task and to retrieve the most relevant information. \n\n There will be some
-      extra context provided that might need to be removed such as expected_output
-      formats structured_outputs and other instructions."},{"role":"user","content":"The
-      original query is: What is Brandon''s favorite color?\n\nThis is the expected
-      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
-      the actual complete content as the final answer, not a summary.."}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user query so that it is optimized for retrieval from a vector database. Consider how the query will be used to find relevant documents, and aim to make it more specific and context-aware. \n\n Do not include any other text than the rewritten query, especially any preamble or postamble and only add expected output format if its relevant to the rewritten query. \n\n Focus on the key words of the intended task and to retrieve the most relevant information. \n\n There will be some extra context provided that might need to be removed such as expected_output formats structured_outputs and other instructions."},{"role":"user","content":"The original query is: What is Brandon''s favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite color.\nyou MUST return the actual complete content as the final answer, not a summary.."}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -264,22 +143,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA4xSu27cMBDs9RXENm5OgeTTPXJlHMRpAgQpUiQwBIpcSbQpLkGujATG/XtA3fkk
-        xw6QhgVnZzgz3KdMCDAaDgJUL1kN3uY39x9j23w28vvXYn/7w3b9jf4yfvqmtutbC6vEoOYeFT+z
-        3ikavEU25E6wCigZk2q521b791W5WU/AQBptonWe84rywTiTXxfXVV7s8nJ/ZvdkFEY4iJ+ZEEI8
-        TWfy6TT+goMoVs83A8YoO4TDZUgICGTTDcgYTWTpGFYzqMgxusn6hyCdJncVRSsfKRhGochSWI4H
-        bMcok2U3WrsApHPEMkWejN6dkePFmqXOB2riX1RojTOxrwPKSC7ZiEweJvSYCXE3VTC+SAU+0OC5
-        ZnrA6blytz7pwdz8jG7OGBNLuyTtV2/I1RpZGhsXHYKSqkc9U+fC5agNLYBsEfq1mbe0T8GN6/5H
-        fgaUQs+oax9QG/Uy8DwWMO3lv8YuJU+GIWJ4NAprNhjSR2hs5WhP2wLxd2Qc6ta4DoMP5rQyra+b
-        TbXbFqVuNGTH7A8AAAD//wMAf/WJY0ADAAA=
+      string: "{\n  \"id\": \"chatcmpl-CjDsfbHiaVP08GZlghCdMuFRc63Gl\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894153,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Brandon's favorite color\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 178,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_b547601dbd\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -330,17 +199,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Information Agent. You
-      have access to specific knowledge sources.\nYour personal goal is: Provide information
-      based on knowledge sources\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"},{"role":"user","content":"\nCurrent Task: What is Brandon''s
-      favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s
-      favorite color.\nyou MUST return the actual complete content as the final answer,
-      not a summary.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Information Agent. You have access to specific knowledge sources.\nYour personal goal is: Provide information based on knowledge sources\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: What is Brandon''s favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite color.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -382,24 +241,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxC67JIUsZN+5dZtGND1sMt22oqAlmibrSwKkpwsLfrf
-        BzlpnXYdsIsB8/FRj3zk4wRAsVErULrFpDtvZ5/uPsfGV4WN594/LNL3xc1Xf1P8WFzHhwc1zQyp
-        7kinZ9aJls5bSixuD+tAmChXLc7PlheXy+J0OQCdGLKZ1vg0W8qsY8ezcl4uZ/PzWXFxYLfCmqJa
-        wc8JAMDj8M06naHfagXz6XOkoxixIbV6SQJQQWyOKIyRY0KX1HQEtbhEbpB+DU62oNFBwxsChCbL
-        BnRxSwHgl/vCDi1cDf8ruAYj4CRBizlba4oRkkD0pLlmDZ5ClMwwlJBtBKykT8DO8IZNjzZC7+zA
-        amkHGAh8X1nWdge4QbZYWQIJsGVDdgf3TrbuBK4iSA3dDizGBL03mAjYwTedpKIA5bxcTEd1mQXb
-        FhN8DOiMuA8RatxI4ESgxUoAjifHIwlU9xGzLa639ghA5yRhtnUw4/aAPL2M30rjg1TxDVXV7Di2
-        60AYxeVRxyReDejTBOB2sLl/5ZzyQTqf1knuaXiuOLvY11Pjdo3o6eIAJklox3hZFtN36q0Plhwt
-        itKoWzIjddwq7A3LETA56vpvNe/V3nfOrvmf8iOgNflEZu0DGdavOx7TAuXj+1fay5QHwSpS2LCm
-        dWIK2QlDNfZ2fxIq7mKibl2zayj4wPu7qP26KOrFvLyszyo1eZr8AQAA//8DANI71J4lBAAA
+      string: "{\n  \"id\": \"chatcmpl-CjDsgpb1ls7ppz3tT3KJpK1U3Iszz\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894154,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: I do not have access to specific personal details about individuals unless they are publicly available or widely known. As of my last update in October 2023, I do not know what Brandon's favorite color is.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 168,\n    \"completion_tokens\": 53,\n    \"total_tokens\": 221,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n\
+        \      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_11f3029f6b\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

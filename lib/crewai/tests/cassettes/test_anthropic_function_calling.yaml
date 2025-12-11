@@ -1,10 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather
-      in Tokyo? Use the get_weather tool."}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"name":"get_weather","description":"Get
-      the current weather in a given location","input_schema":{"type":"object","properties":{"location":{"type":"string","description":"The
-      city and state, e.g. San Francisco, CA"},"unit":{"type":"string","enum":["celsius","fahrenheit"],"description":"The
-      unit of temperature"}},"required":["location"]}}]}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather in Tokyo? Use the get_weather tool."}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"name":"get_weather","description":"Get the current weather in a given location","input_schema":{"type":"object","properties":{"location":{"type":"string","description":"The city and state, e.g. San Francisco, CA"},"unit":{"type":"string","enum":["celsius","fahrenheit"],"description":"The unit of temperature"}},"required":["location"]}}]}'
     headers:
       accept:
       - application/json
@@ -44,20 +40,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQzU7DMBCE32XPjpQEUqhviCKkcmn5qVQhZBlnSaI6drDXlDbKuyMHFQqI4843
-        s6PdHlpbogYOSstQYuKtMUjJaVIkeZoX6TSfAoOmBA6tr0SaPSwXLrt7uZ6vFup9ttpfLCd0WwED
-        2nUYXei9rBAYOKujIL1vPElDwEBZQ2gI+GN/8JO1WgSPh5Y4B5FmV/a52p5Xs9nkBqv1fJ81u/Xl
-        GTAwso25CklsUVKNLkZNFwh4D9oqSY01wOHebnYWhuGJgSfbCYfSj+CocgQeXwMahcBN0JpBGA/g
-        /edWQXaDxgOf5CkDJVWNQjkcW8RPxxd3KMv/2CEbC7CrsUUntSjav/5vmtW/6cDABjqWihMGHt1b
-        o1BQgw44xLeX0pUwDB8AAAD//wMA6heqv+kBAAA=
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01UQPr1SfGJVPcxDVzAQ6tRg","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01Eobgw8gDD6KegYJz1iyYC7","name":"get_weather","input":{"location":"Tokyo"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":620,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9a4c0d75ba3d6800-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -108,12 +96,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: "{\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"What
-      is the weather in Tokyo? Use the get_weather tool.\"},{\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01Eobgw8gDD6KegYJz1iyYC7\",\"name\":\"get_weather\",\"input\":{\"location\":\"Tokyo\"}}]},{\"role\":\"user\",\"content\":[{\"type\":\"tool_result\",\"tool_use_id\":\"toolu_01Eobgw8gDD6KegYJz1iyYC7\",\"content\":\"The
-      weather in Tokyo is sunny and 72\xB0F\"}]}],\"model\":\"claude-sonnet-4-5\",\"stream\":false,\"tools\":[{\"name\":\"get_weather\",\"description\":\"Get
-      the current weather in a given location\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\",\"description\":\"The
-      city and state, e.g. San Francisco, CA\"},\"unit\":{\"type\":\"string\",\"enum\":[\"celsius\",\"fahrenheit\"],\"description\":\"The
-      unit of temperature\"}},\"required\":[\"location\"]}}]}"
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather in Tokyo? Use the get_weather tool."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01Eobgw8gDD6KegYJz1iyYC7","name":"get_weather","input":{"location":"Tokyo"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01Eobgw8gDD6KegYJz1iyYC7","content":"The weather in Tokyo is sunny and 72°F"}]}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"name":"get_weather","description":"Get the current weather in a given location","input_schema":{"type":"object","properties":{"location":{"type":"string","description":"The city and state, e.g. San Francisco, CA"},"unit":{"type":"string","enum":["celsius","fahrenheit"],"description":"The unit of temperature"}},"required":["location"]}}]}'
     headers:
       accept:
       - application/json
@@ -153,20 +136,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQTWrDMBBGryJm1YJcHNE0RMsGktLu2mxKKUZYQ6zGHjnSqIkJvlPOkJMVh4b+
-        0dXA994ww7eHxlusQUNZm2Qxi54IObvOxpnK1TifqilIcBY0NHFV5KO5fWsebv32WW0XT/d3oxnu
-        HhcbkMBdi4OFMZoVgoTg6yEwMbrIhhgklJ4YiUG/7M8+424gp6FhWaHYouEKg3Akln7deeGiKFMI
-        SFx3IiaiThiyYqKOh7m4MG0b/M41hrHuhFLHw+zyCvpXCZF9WwQ00RNoQLIFp0DwCSJuElKJoCnV
-        tYR0elvvwVGbuGC/Roqgb6YTCaUpKyzKgIadp+KnkZ95QGP/Y+fd4QC2FTYYTF2Mm7/+Fx1Vv2kv
-        wSf+HiklIWJ4dyUW7DCAhqFsa4KFvv8AAAD//wMANWIHid8BAAA=
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01FdjmKBowY2wGSJH1CexRGq","type":"message","role":"assistant","content":[{"type":"text","text":"The weather in Tokyo is currently sunny and 72°F (approximately 22°C)."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":697,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":22,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9a4c0d886f9e6800-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

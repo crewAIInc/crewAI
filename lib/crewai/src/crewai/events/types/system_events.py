@@ -19,9 +19,9 @@ class SignalType(IntEnum):
 
     SIGTERM = signal.SIGTERM
     SIGINT = signal.SIGINT
-    SIGHUP = signal.SIGHUP
-    SIGTSTP = signal.SIGTSTP
-    SIGCONT = signal.SIGCONT
+    SIGHUP = getattr(signal, "SIGHUP", 1)
+    SIGTSTP = getattr(signal, "SIGTSTP", 20)
+    SIGCONT = getattr(signal, "SIGCONT", 18)
 
 
 class SigTermEvent(BaseEvent):

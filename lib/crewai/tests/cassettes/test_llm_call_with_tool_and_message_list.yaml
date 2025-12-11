@@ -62,8 +62,6 @@ interactions:
       - 906173d229b905f6-IAD
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

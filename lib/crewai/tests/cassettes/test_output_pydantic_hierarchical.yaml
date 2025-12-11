@@ -1,49 +1,9 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Scorer\nThe input to this tool should be the coworker, the task you
-      want them to do, and ALL necessary context to execute the task, they know nothing
-      about the task, so share absolutely everything you know, don''t reference things
-      but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments:
-      {''question'': {''description'': ''The question to ask'', ''type'': ''str''},
-      ''context'': {''description'': ''The context for the question'', ''type'': ''str''},
-      ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'':
-      ''str''}}\nTool Description: Ask a specific question to one of the following
-      coworkers: Scorer\nThe input to this tool should be the coworker, the question
-      you have for them, and ALL necessary context to ask the question properly, they
-      know nothing about the question, so share absolutely everything you know, don''t
-      reference things but instead explain them.\n\nIMPORTANT: Use the following format
-      in your response:\n\n```\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple JSON object, enclosed in curly braces, using \"
-      to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
-      all necessary information is gathered, return the following format:\n\n```\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n```"},{"role":"user","content":"\nCurrent Task: Give me an integer
-      score between 1-5 for the following title: ''The impact of AI in the future
-      of work''\n\nThis is the expected criteria for your final answer: The score
-      of the title.\nyou MUST return the actual complete content as the final answer,
-      not a summary.\nEnsure your final answer strictly adheres to the following OpenAPI
-      schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\":
-      \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
-      not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: Scorer\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: Scorer\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: Give me an integer score between 1-5 for the following title: ''The impact of AI in the future of work''\n\nThis is the expected criteria for your final answer: The score of the title.\nyou MUST return the actual complete content as the final answer, not a summary.\nEnsure your final answer strictly adheres to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -81,26 +41,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA5RUTW/bMAy951cQuvTiFE6aNplvwQYMwb4OKwYMcxEoEm1rkUVDotN2Rf77IDuJ
-        07UDtoth8JHvPdKkn0YAwmiRgVCVZFU3dvz2e5nOZzgpftWqnPtq86WoJ5/lkr59+PRRJLGCNj9R
-        8bHqUlHdWGRDroeVR8kYWSfzm+nVIr25etMBNWm0saxseDyj8TSdzsbpYpzeHAorMgqDyODHCADg
-        qXtGi07jg8ggTY6RGkOQJYrslAQgPNkYETIEE1g6FskAKnKMrnN9W1FbVpzBChyiBibQaLGUjMAV
-        AsuwBSogKPLGlX3MsEW4uK0QTN1IxTFhuQLjOrhoufUYY/fktxeRMoa/KvLoE7ivCEwAj6EhF8zG
-        IhTkAXfStpKjRmhV1QmHS8hd7pYqDjSDd0djkTfSKopv6I8psHJNyxk85SKW5yLLxXuzQ5AOjGMs
-        0XeNIGyQ7xEdTMbXnfr/t3WZiyTvJ/nAndLtiSNU1FoNG+zVNGxkQA3kQFnpDT8m4NHiTjqFCUin
-        O3ceAx/FDrxR7aV2V7FcHR0cZhAt9DPOxf78a3ss2iDjsrnW2jNAOkcs4+C6Pbs7IPvTZlkqG0+b
-        8EepKIwzoVp7lIFc3KLA1IgO3Y8A7roNbp8tpWg81Q2vmbbYyc1ns55PDDczoJN0cUCZWNoBWFxP
-        k1cI1xpZGhvOjkAoqSrUQ+lwMbLVhs6A0VnbL+28xt23blz5L/QDoBQ2jHrdeNRGPW95SPMY/yl/
-        SzuNuTMsAvqdUbhmgz5+Co2FbG1/7iI8BsZ6XRhXom+86W++aNZyvlioa4lFKkb70W8AAAD//wMA
-        pMkkSfwEAAA=
+      string: "{\n  \"id\": \"chatcmpl-CYg074e1fzmcg7rhbOfm1NaAoVKML\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762380639,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I need to delegate the task of scoring the title 'The impact of AI in the future of work' to the Scorer, who is responsible for evaluating such tasks. \\n\\nAction: Delegate work to coworker\\nAction Input: {\\\"task\\\":\\\"Give an integer score between 1-5 for the title 'The impact of AI in the future of work'.\\\",\\\"context\\\":\\\"The title should be scored based on clarity, relevance, and interest in the context of the future of work and AI.\\\",\\\"coworker\\\":\\\"Scorer\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 744,\n    \"completion_tokens\"\
+        : 108,\n    \"total_tokens\": 852,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_a788c5aef0\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -108,11 +55,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Wed, 05-Nov-25 22:40:42 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:40:42 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -155,20 +99,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert
-      scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
-      Task: Give an integer score between 1-5 for the title ''The impact of AI in
-      the future of work''.\n\nThis is the expected criteria for your final answer:
-      Your best answer to your coworker asking you this, accounting for the context
-      shared.\nyou MUST return the actual complete content as the final answer, not
-      a summary.\n\nThis is the context you''re working with:\nThe title should be
-      scored based on clarity, relevance, and interest in the context of the future
-      of work and AI.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Scorer. You''re an expert scorer, specialized in scoring titles.\nYour personal goal is: Score the title\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Give an integer score between 1-5 for the title ''The impact of AI in the future of work''.\n\nThis is the expected criteria for your final answer: Your best answer to your coworker asking you this, accounting for the context shared.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe title should be scored based on clarity, relevance, and interest in the context of the future of work and AI.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
       accept:
       - application/json
@@ -206,28 +138,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//nFRNb+M2EL37Vwx4lg3bcT7gW9APxJcWu1hg0W4WBk2NpGmoGYIc2esu
-        8t8L0nHktClQ9CII8zhPb97o8fsEwFBt1mBcZ9X1wU9/+K2d3z/9+Ht8+HOx+fX2pw+CV/efP26Y
-        fnm4NlXukN0f6PTcNXPSB49KwifYRbSKmXVxe7O8upvfrJYF6KVGn9vaoNPVbDHtiWm6nC+vp/PV
-        dLF6ae+EHCazhi8TAIDv5ZmFco3fzBrm1bnSY0q2RbN+PQRgovhcMTYlSmpZTTWCTliRi/ZPnQxt
-        p2v41CEoqUd4NPmd+mCdgjRwvwFi0A6hGXSImGsHiU+PBiiB82hjBTVFdOqPENHj3rKCSulRCeRe
-        aCzX7/BUpe7pCf0xd+0QiBUjJiVuc8Uy2KEmZIfghB1GxhoOpB10csjMB/IeiBs/lEOZNnjrMM1g
-        o5AG54iLPCe8x2MqMpKTgOXjaSjLhN6qYizMMijYfkftQHqcwYMccI+xAlJwMvg6y0ye2i6z9hIR
-        kFvbZsUSIQV01JDL6pE7m0Wdh4JmiNphnD3yI/9MbD3cczpgXMMGDoU7uUyo/2clFlaQtUsD12X4
-        cUfn1ZwMv/C4AmwadEr7vAJb1xFTKt6/LtAqdLmrmJ402jx5I/FgYw3ecjvYFivYDfrGIepDlP15
-        WfZkVH1k2+ef4sKn0EWbXta9E0l6shN7ZJ1d/rsRmyHZHCAevL8ALLOozQEsqfn6gjy/5sRLG6Ls
-        0t9aTUNMqdtGtEk4ZyKpBFPQ5wnA15LH4U3ETIjSB92qPGH53HJ5e+Iz4z0woourM6qi1o/A1c2q
-        eodwW6Na8uki0sZZ12E9to75z9GQC2ByMfY/5bzHfRqduP0v9CPgHAbFehsi1uTejjwei5ij9W/H
-        Xm0ugk3CuCeHWyWMeRU1Nnbwp8vLpGNS7LcNcYsxRDrdYE3Yrtzy7nrR3N0szeR58hcAAAD//wMA
-        yAb6DNAFAAA=
+      string: "{\n  \"id\": \"chatcmpl-CYg0AkDZrHz1IO7EQoe3AWRIniNH5\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762380642,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: The title \\\"The impact of AI in the future of work\\\" is clear, directly relevant to the topic of AI and the future of work, and likely to be interesting to an audience concerned with how AI will influence workplaces. It succinctly conveys the scope and subject matter without ambiguity. However, it could be slightly more engaging or specific to enhance interest further.\\n\\nFinal Answer: I would score the title \\\"The impact of AI in the future of work\\\" a 4 out of 5. It is clear, relevant, and interesting, effectively addressing the topic at hand with straightforward language, but it could be improved with a more dynamic or specific phrasing to boost engagement.\",\n    \
+        \    \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 227,\n    \"completion_tokens\": 137,\n    \"total_tokens\": 364,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_4c2851f862\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -235,11 +152,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Wed, 05-Nov-25 22:40:44 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:40:44 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -282,60 +196,11 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
-      a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Scorer\nThe input to this tool should be the coworker, the task you
-      want them to do, and ALL necessary context to execute the task, they know nothing
-      about the task, so share absolutely everything you know, don''t reference things
-      but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments:
-      {''question'': {''description'': ''The question to ask'', ''type'': ''str''},
-      ''context'': {''description'': ''The context for the question'', ''type'': ''str''},
-      ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'':
-      ''str''}}\nTool Description: Ask a specific question to one of the following
-      coworkers: Scorer\nThe input to this tool should be the coworker, the question
-      you have for them, and ALL necessary context to ask the question properly, they
-      know nothing about the question, so share absolutely everything you know, don''t
-      reference things but instead explain them.\n\nIMPORTANT: Use the following format
-      in your response:\n\n```\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [Delegate work to coworker, Ask question
-      to coworker], just the name, exactly as it''s written.\nAction Input: the input
-      to the action, just a simple JSON object, enclosed in curly braces, using \"
-      to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
-      all necessary information is gathered, return the following format:\n\n```\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n```"},{"role":"user","content":"\nCurrent Task: Give me an integer
-      score between 1-5 for the following title: ''The impact of AI in the future
-      of work''\n\nThis is the expected criteria for your final answer: The score
-      of the title.\nyou MUST return the actual complete content as the final answer,
-      not a summary.\nEnsure your final answer strictly adheres to the following OpenAPI
-      schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\": \"Score\",\n      \"type\":
-      \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\":
-      \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo
-      not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"Thought:
-      I need to delegate the task of scoring the title ''The impact of AI in the future
-      of work'' to the Scorer, who is responsible for evaluating such tasks. \n\nAction:
-      Delegate work to coworker\nAction Input: {\"task\":\"Give an integer score between
-      1-5 for the title ''The impact of AI in the future of work''.\",\"context\":\"The
-      title should be scored based on clarity, relevance, and interest in the context
-      of the future of work and AI.\",\"coworker\":\"Scorer\"}\nObservation: I would
-      score the title \"The impact of AI in the future of work\" a 4 out of 5. It
-      is clear, relevant, and interesting, effectively addressing the topic at hand
-      with straightforward language, but it could be improved with a more dynamic
-      or specific phrasing to boost engagement."}],"model":"gpt-4o"}'
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: Scorer\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: Scorer\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: Give me an integer score between 1-5 for the following title: ''The impact of AI in the future of work''\n\nThis is the expected criteria for your final answer: The score of the title.\nyou MUST return the actual complete content as the final answer, not a summary.\nEnsure your final answer strictly adheres to the following OpenAPI schema: {\n  \"properties\": {\n    \"score\": {\n      \"title\":
+      \"Score\",\n      \"type\": \"integer\"\n    }\n  },\n  \"required\": [\n    \"score\"\n  ],\n  \"title\": \"ScoreOutput\",\n  \"type\": \"object\",\n  \"additionalProperties\": false\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"Thought: I need to delegate the task of scoring the title ''The impact of AI in the future of work'' to the Scorer, who is responsible for evaluating such tasks. \n\nAction: Delegate work to coworker\nAction Input: {\"task\":\"Give an integer score between 1-5 for the title ''The impact of AI in the future of work''.\",\"context\":\"The title should be scored based on clarity, relevance, and interest in the context of the future of work and AI.\",\"coworker\":\"Scorer\"}\nObservation: I would
+      score the title \"The impact of AI in the future of work\" a 4 out of 5. It is clear, relevant, and interesting, effectively addressing the topic at hand with straightforward language, but it could be improved with a more dynamic or specific phrasing to boost engagement."}],"model":"gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -348,8 +213,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED;
-        _cfuvid=REDACTED
+      - __cf_bm=REDACTED; _cfuvid=REDACTED
       host:
       - api.openai.com
       user-agent:
@@ -376,22 +240,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJda9wwEHz3rxD7fFd8l/tw/BYKpYVSSD9SSi8YRV7b6slaVVo3Kcf9
-        9yL7cnbaBPoikGZnNLO7h0QI0CXkAlQjWbXOzF9/q9O36+X1jfNfbj6+f5CVC/bn9tPm6/7DNcwi
-        g+5+oOJH1itFrTPImuwAK4+SMaoutpvlRZZuVpc90FKJJtJqx/MVzZfpcjVPs3m6OREb0goD5OJ7
-        IoQQh/6MFm2JD5CLdPb40mIIskbIz0VCgCcTX0CGoANLyzAbQUWW0fauPzfU1Q3n4p2wdC/28eAG
-        RaWtNELacI9+Z9/0t6v+lovDDoIijzvIV8eprseqCzLGsp0xE0BaSyxjW/pEtyfkeM5gqHae7sJf
-        VKi01aEpPMpANvoNTA569JgIcdv3qnsSH5yn1nHBtMf+u8tFNujBOJ0RXWxPIBNLM2FdrGfP6BUl
-        stQmTLoNSqoGy5E6jkZ2paYJkExS/+vmOe0hubb1/8iPgFLoGMvCeSy1epp4LPMYl/elsnOXe8MQ
-        0P/SCgvW6OMkSqxkZ4a9gvA7MLZFpW2N3nk9LFflCrnNMrWWWKWQHJM/AAAA//8DAJjmLpVlAwAA
+      string: "{\n  \"id\": \"chatcmpl-CYg0H52QVprUVRLxafpsnq7S6WkNQ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762380649,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal Answer: {\\\"score\\\":4}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 918,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 935,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_a788c5aef0\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

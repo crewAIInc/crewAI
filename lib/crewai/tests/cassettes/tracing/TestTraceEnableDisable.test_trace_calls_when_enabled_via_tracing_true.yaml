@@ -1,11 +1,6 @@
 interactions:
 - request:
-    body: '{"trace_id": "REDACTED_TRACE_ID", "execution_type": "crew", "user_identifier":
-      null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name":
-      null, "crewai_version": "1.4.1", "privacy_level": "standard"}, "execution_metadata":
-      {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count":
-      0, "execution_started_at": "2025-11-15T20:00:40.213233+00:00"}, "ephemeral_trace_id":
-      "REDACTED_EPHEMERAL_ID"}'
+    body: '{"trace_id": "REDACTED_TRACE_ID", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.4.1", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-15T20:00:40.213233+00:00"}, "ephemeral_trace_id": "REDACTED_EPHEMERAL_ID"}'
     headers:
       Accept:
       - '*/*'
@@ -27,8 +22,7 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
   response:
     body:
-      string: '{"id":"REDACTED_UUID","ephemeral_trace_id": "REDACTED_EPHEMERAL_ID","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.4.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.4.1","privacy_level":"standard"},"created_at":"2025-11-15T20:00:40.347Z","updated_at":"2025-11-15T20:00:40.347Z","access_code":
-        "REDACTED_ACCESS_CODE","user_identifier":null}'
+      string: '{"id":"REDACTED_UUID","ephemeral_trace_id": "REDACTED_EPHEMERAL_ID","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.4.1","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.4.1","privacy_level":"standard"},"created_at":"2025-11-15T20:00:40.347Z","updated_at":"2025-11-15T20:00:40.347Z","access_code": "REDACTED_ACCESS_CODE","user_identifier":null}'
     headers:
       Connection:
       - keep-alive
@@ -41,37 +35,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       etag:
       - W/"1dad6ea33b1bd62ea816884d05ca0842"
       expires:
@@ -102,16 +68,7 @@ interactions:
       code: 201
       message: Created
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis
-      is the expected criteria for your final answer: hello\nyou MUST return the actual
-      complete content as the final answer, not a summary.\n\nBegin! This is VERY
-      important to you, use the tools available and give your best Final Answer, your
-      job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -149,22 +106,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrKxY8W4XlV1zfggBtekt76yMQVtRKoktxCZJKWgT+94KU
-        YyltCuQiQDs7w5ndfcoAhKrFAYTsMMje6vxGfjzykXdfzZe7z7eh54Jub77dvZf9vqjEIjK4OpIM
-        z6x3knurKSg2IywdYaCoWlzt1qv1br9ZJqDnmnSktTbkG857ZVS+Wq42+fIqL/ZndsdKkhcH+J4B
-        ADylb/RpavolDpC0UqUn77Elcbg0AQjHOlYEeq98QBPEYgIlm0AmWf8Ehh9BooFWPRAgtNE2oPGP
-        5AB+mA/KoIbr9H+AjrTmuZSjZvAY45hB6xmAxnDAOI4U4v6MnC62NbfWceX/oopGGeW70hF6NtGi
-        D2xFQk8ZwH0az/AisbCOexvKwD8pPVds16OemLYyQ1dnMHBAPavvtotX9MqaAirtZwMWEmVH9USd
-        toFDrXgGZLPU/7p5TXtMrkz7FvkJkJJsoLq0jmolXyae2hzFo/1f22XKybDw5B6UpDIocnETNTU4
-        6PGUhP/tA/Vlo0xLzjo13lNjy21RV/sNNliJ7JT9AQAA//8DANqYTe5dAwAA
+      string: "{\n  \"id\": \"chatcmpl-CcGjojo6YnRPQHtmo1eHCZP9cm81b\",\n  \"object\": \"chat.completion\",\n  \"created\": 1763236840,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: hello\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 165,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_51db84afab\"\n}\n"
     headers:
       CF-RAY:
       - 99f1560c3f5d4809-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -172,11 +119,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=h.tA2Rq1WhYqakfMp30WNbqx91S5jvXxlyjIW8bMhHY-1763236841-1.0.1.1-V.a.LzWhmsyvoXIFirG2pejIlbZ7BiLfwdlv6dDF.QddisjnkoYsgBPhVnxl.GwDFVDKymer1bQK_6vSoHBaQIcV4MJ7YayMl9lLs0.UcFM;
-        path=/; expires=Sat, 15-Nov-25 20:30:41 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=8Td_UnVGEcigZt.Nhy9rEFpaW9pgP0QJpdzFdEoktJk-1763236841097-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=h.tA2Rq1WhYqakfMp30WNbqx91S5jvXxlyjIW8bMhHY-1763236841-1.0.1.1-V.a.LzWhmsyvoXIFirG2pejIlbZ7BiLfwdlv6dDF.QddisjnkoYsgBPhVnxl.GwDFVDKymer1bQK_6vSoHBaQIcV4MJ7YayMl9lLs0.UcFM; path=/; expires=Sat, 15-Nov-25 20:30:41 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=8Td_UnVGEcigZt.Nhy9rEFpaW9pgP0QJpdzFdEoktJk-1763236841097-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -225,74 +169,12 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"events": [{"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.210936+00:00",
-      "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-11-15T20:00:40.210936+00:00",
-      "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null,
-      "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
-      null, "agent_role": null, "crew_name": "crew", "crew": null, "inputs": null}},
-      {"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.213519+00:00",
-      "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent",
-      "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id":
-      "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.213671+00:00", "type":
-      "llm_call_started", "event_data": {"timestamp": "2025-11-15T20:00:40.213671+00:00",
-      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
-      "fingerprint_metadata": null, "task_id": "REDACTED_TASK_ID", "task_name": "Say
-      hello", "agent_id": "REDACTED_AGENT_ID", "agent_role": "Test Agent", "from_task":
-      null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system",
-      "content": "You are Test Agent. Test backstory\nYour personal goal is: Test
-      goal\nTo give my best complete final answer to the task respond using the exact
-      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
-      final answer must be the great and the most complete as possible, it must be
-      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
-      "user", "content": "\nCurrent Task: Say hello\n\nThis is the expected criteria
-      for your final answer: hello\nyou MUST return the actual complete content as
-      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
-      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
-      object at 0x108cbb5f0>"], "available_functions": null}}, {"event_id": "REDACTED_EVENT_ID",
-      "timestamp": "2025-11-15T20:00:41.117164+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-11-15T20:00:41.117164+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "REDACTED_TASK_ID", "task_name": "Say hello", "agent_id": "REDACTED_AGENT_ID",
-      "agent_role": "Test Agent", "from_task": null, "from_agent": null, "messages":
-      [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal
-      goal is: Test goal\nTo give my best complete final answer to the task respond
-      using the exact following format:\n\nThought: I now can give a great answer\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\n\nI MUST use these formats, my job depends on
-      it!"}, {"role": "user", "content": "\nCurrent Task: Say hello\n\nThis is the
-      expected criteria for your final answer: hello\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer:
-      hello", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}},
-      {"event_id": "1d32853b-04dd-49f1-9b0b-fca92a82ea0f", "timestamp": "2025-11-15T20:00:41.117412+00:00",
-      "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent",
-      "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id":
-      "3af2dbb3-6117-4df1-9dc8-3b4cbc1bb689", "timestamp": "2025-11-15T20:00:41.117869+00:00",
-      "type": "task_completed", "event_data": {"task_description": "Say hello", "task_name":
-      "Say hello", "task_id": "REDACTED_TASK_ID", "output_raw": "hello", "output_format":
-      "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "REDACTED_EVENT_ID",
-      "timestamp": "2025-11-15T20:00:41.119050+00:00", "type": "crew_kickoff_completed",
-      "event_data": {"timestamp": "2025-11-15T20:00:41.119050+00:00", "type": "crew_kickoff_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "output": {"description": "Say hello", "name": "Say hello",
-      "expected_output": "hello", "summary": "Say hello...", "raw": "hello", "pydantic":
-      null, "json_dict": null, "agent": "Test Agent", "output_format": "raw", "messages":
-      [{"role": "''system''", "content": "''You are Test Agent. Test backstory\\nYour
-      personal goal is: Test goal\\nTo give my best complete final answer to the task
-      respond using the exact following format:\\n\\nThought: I now can give a great
-      answer\\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\\n\\nI MUST use these formats, my
-      job depends on it!''"}, {"role": "''user''", "content": "''\\nCurrent Task:
-      Say hello\\n\\nThis is the expected criteria for your final answer: hello\\nyou
-      MUST return the actual complete content as the final answer, not a summary.\\n\\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\\n\\nThought:''"}, {"role": "''assistant''",
-      "content": "''I now can give a great answer  \\nFinal Answer: hello''"}]}, "total_tokens":
-      165}}], "batch_metadata": {"events_count": 7, "batch_sequence": 1, "is_final_batch":
-      false}}'
+    body: '{"events": [{"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.210936+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-11-15T20:00:40.210936+00:00", "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.213519+00:00", "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:40.213671+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-11-15T20:00:40.213671+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "REDACTED_TASK_ID", "task_name": "Say hello",
+      "agent_id": "REDACTED_AGENT_ID", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x108cbb5f0>"], "available_functions":
+      null}}, {"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:41.117164+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-11-15T20:00:41.117164+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "REDACTED_TASK_ID", "task_name": "Say hello", "agent_id": "REDACTED_AGENT_ID", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST
+      return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer: hello", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "1d32853b-04dd-49f1-9b0b-fca92a82ea0f", "timestamp": "2025-11-15T20:00:41.117412+00:00", "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "3af2dbb3-6117-4df1-9dc8-3b4cbc1bb689", "timestamp": "2025-11-15T20:00:41.117869+00:00", "type": "task_completed", "event_data": {"task_description": "Say hello", "task_name": "Say hello", "task_id": "REDACTED_TASK_ID", "output_raw": "hello", "output_format": "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "REDACTED_EVENT_ID", "timestamp": "2025-11-15T20:00:41.119050+00:00",
+      "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-11-15T20:00:41.119050+00:00", "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "output": {"description": "Say hello", "name": "Say hello", "expected_output": "hello", "summary": "Say hello...", "raw": "hello", "pydantic": null, "json_dict": null, "agent": "Test Agent", "output_format": "raw", "messages": [{"role": "''system''", "content": "''You are Test Agent. Test backstory\\nYour personal goal is: Test goal\\nTo give my best complete final answer to the task respond using the exact following format:\\n\\nThought: I now can give a great answer\\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\\n\\nI MUST use these formats, my job depends on it!''"}, {"role": "''user''", "content":
+      "''\\nCurrent Task: Say hello\\n\\nThis is the expected criteria for your final answer: hello\\nyou MUST return the actual complete content as the final answer, not a summary.\\n\\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\\n\\nThought:''"}, {"role": "''assistant''", "content": "''I now can give a great answer  \\nFinal Answer: hello''"}]}, "total_tokens": 165}}], "batch_metadata": {"events_count": 7, "batch_sequence": 1, "is_final_batch": false}}'
     headers:
       Accept:
       - '*/*'
@@ -327,37 +209,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       etag:
       - W/"e539cd458f6386627ec23f6f6a46a996"
       expires:
@@ -410,8 +264,7 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/REDACTED_UUID/finalize
   response:
     body:
-      string: '{"id":"REDACTED_UUID","ephemeral_trace_id": "REDACTED_EPHEMERAL_ID","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1070,"crewai_version":"1.4.1","total_events":7,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.4.1","crew_fingerprint":null},"created_at":"2025-11-15T20:00:40.347Z","updated_at":"2025-11-15T20:00:41.423Z","access_code":
-        "REDACTED_ACCESS_CODE","user_identifier":null}'
+      string: '{"id":"REDACTED_UUID","ephemeral_trace_id": "REDACTED_EPHEMERAL_ID","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1070,"crewai_version":"1.4.1","total_events":7,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.4.1","crew_fingerprint":null},"created_at":"2025-11-15T20:00:40.347Z","updated_at":"2025-11-15T20:00:41.423Z","access_code": "REDACTED_ACCESS_CODE","user_identifier":null}'
     headers:
       Connection:
       - keep-alive
@@ -424,37 +277,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       etag:
       - W/"de9bcb107d0382f1b309276d8fc39196"
       expires:
@@ -553,79 +378,12 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"events": [{"event_id": "6a66ce15-fdb3-490b-a09b-7724817d0116", "timestamp":
-      "2025-11-15T20:15:51.057965+00:00", "type": "crew_kickoff_started", "event_data":
-      {"timestamp": "2025-11-15T20:15:51.057965+00:00", "type": "crew_kickoff_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "inputs": null}}, {"event_id": "15f2b75b-c7bb-48d1-8f61-faec2736da5d",
-      "timestamp": "2025-11-15T20:15:51.059954+00:00", "type": "task_started", "event_data":
-      {"task_description": "Say hello", "expected_output": "hello", "task_name": "Say
-      hello", "context": "", "agent_role": "Test Agent", "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61"}},
-      {"event_id": "eb90a87c-523c-40d6-b996-01706cbf8844", "timestamp": "2025-11-15T20:15:51.061205+00:00",
-      "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent",
-      "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id":
-      "862c2b07-d82a-4f02-9c99-519292679a87", "timestamp": "2025-11-15T20:15:51.061443+00:00",
-      "type": "llm_call_started", "event_data": {"timestamp": "2025-11-15T20:15:51.061443+00:00",
-      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
-      "fingerprint_metadata": null, "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61",
-      "task_name": "Say hello", "agent_id": "82ee52ae-9eba-4648-877b-8cf2fc1624ae",
-      "agent_role": "Test Agent", "from_task": null, "from_agent": null, "model":
-      "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent.
-      Test backstory\nYour personal goal is: Test goal\nTo give my best complete final
-      answer to the task respond using the exact following format:\n\nThought: I now
-      can give a great answer\nFinal Answer: Your final answer must be the great and
-      the most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      Say hello\n\nThis is the expected criteria for your final answer: hello\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks":
-      ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x10d617f50>"],
-      "available_functions": null}}, {"event_id": "fff5720d-9167-48cf-9196-9ee96f765688",
-      "timestamp": "2025-11-15T20:15:51.175710+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-11-15T20:15:51.175710+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61", "task_name": "Say hello",
-      "agent_id": "82ee52ae-9eba-4648-877b-8cf2fc1624ae", "agent_role": "Test Agent",
-      "from_task": null, "from_agent": null, "messages": [{"role": "system", "content":
-      "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give
-      my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Say hello\n\nThis is the expected criteria for your
-      final answer: hello\nyou MUST return the actual complete content as the final
-      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
-      available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "response": "I now can give a great answer  \nFinal Answer: hello", "call_type":
-      "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id":
-      "1ce38e05-20f8-4f6b-b303-720dbcbb73b2", "timestamp": "2025-11-15T20:15:51.175899+00:00",
-      "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent",
-      "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id":
-      "dca0b4dd-dcfe-4002-9251-56cde6855f33", "timestamp": "2025-11-15T20:15:51.176016+00:00",
-      "type": "task_completed", "event_data": {"task_description": "Say hello", "task_name":
-      "Say hello", "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61", "output_raw":
-      "hello", "output_format": "OutputFormat.RAW", "agent_role": "Test Agent"}},
-      {"event_id": "7e3993e7-e729-43a9-af63-b1429d0d2abc", "timestamp": "2025-11-15T20:15:51.177161+00:00",
-      "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-11-15T20:15:51.177161+00:00",
-      "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type":
-      null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
-      null, "agent_role": null, "crew_name": "crew", "crew": null, "output": {"description":
-      "Say hello", "name": "Say hello", "expected_output": "hello", "summary": "Say
-      hello...", "raw": "hello", "pydantic": null, "json_dict": null, "agent": "Test
-      Agent", "output_format": "raw", "messages": [{"role": "''system''", "content":
-      "''You are Test Agent. Test backstory\\nYour personal goal is: Test goal\\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\\n\\nThought: I now can give a great answer\\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\\n\\nI MUST use these formats, my job depends on it!''"}, {"role":
-      "''user''", "content": "''\\nCurrent Task: Say hello\\n\\nThis is the expected
-      criteria for your final answer: hello\\nyou MUST return the actual complete
-      content as the final answer, not a summary.\\n\\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\\n\\nThought:''"}, {"role": "''assistant''", "content": "''I now can
-      give a great answer  \\nFinal Answer: hello''"}]}, "total_tokens": 165}}], "batch_metadata":
+    body: '{"events": [{"event_id": "6a66ce15-fdb3-490b-a09b-7724817d0116", "timestamp": "2025-11-15T20:15:51.057965+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-11-15T20:15:51.057965+00:00", "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "15f2b75b-c7bb-48d1-8f61-faec2736da5d", "timestamp": "2025-11-15T20:15:51.059954+00:00", "type": "task_started", "event_data": {"task_description": "Say hello", "expected_output": "hello", "task_name": "Say hello", "context": "", "agent_role": "Test Agent", "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61"}}, {"event_id": "eb90a87c-523c-40d6-b996-01706cbf8844", "timestamp": "2025-11-15T20:15:51.061205+00:00", "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory":
+      "Test backstory"}}, {"event_id": "862c2b07-d82a-4f02-9c99-519292679a87", "timestamp": "2025-11-15T20:15:51.061443+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-11-15T20:15:51.061443+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61", "task_name": "Say hello", "agent_id": "82ee52ae-9eba-4648-877b-8cf2fc1624ae", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x10d617f50>"], "available_functions": null}}, {"event_id": "fff5720d-9167-48cf-9196-9ee96f765688", "timestamp": "2025-11-15T20:15:51.175710+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-11-15T20:15:51.175710+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61", "task_name": "Say hello", "agent_id": "82ee52ae-9eba-4648-877b-8cf2fc1624ae", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system", "content": "You are Test
+      Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello\n\nThis is the expected criteria for your final answer: hello\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer: hello", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "1ce38e05-20f8-4f6b-b303-720dbcbb73b2", "timestamp": "2025-11-15T20:15:51.175899+00:00", "type": "agent_execution_completed", "event_data":
+      {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "dca0b4dd-dcfe-4002-9251-56cde6855f33", "timestamp": "2025-11-15T20:15:51.176016+00:00", "type": "task_completed", "event_data": {"task_description": "Say hello", "task_name": "Say hello", "task_id": "bbb08fd7-2580-43a8-bc71-5e0c08c7cc61", "output_raw": "hello", "output_format": "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "7e3993e7-e729-43a9-af63-b1429d0d2abc", "timestamp": "2025-11-15T20:15:51.177161+00:00", "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-11-15T20:15:51.177161+00:00", "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "output": {"description": "Say hello", "name": "Say hello", "expected_output": "hello", "summary": "Say hello...", "raw": "hello", "pydantic":
+      null, "json_dict": null, "agent": "Test Agent", "output_format": "raw", "messages": [{"role": "''system''", "content": "''You are Test Agent. Test backstory\\nYour personal goal is: Test goal\\nTo give my best complete final answer to the task respond using the exact following format:\\n\\nThought: I now can give a great answer\\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\\n\\nI MUST use these formats, my job depends on it!''"}, {"role": "''user''", "content": "''\\nCurrent Task: Say hello\\n\\nThis is the expected criteria for your final answer: hello\\nyou MUST return the actual complete content as the final answer, not a summary.\\n\\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\\n\\nThought:''"}, {"role": "''assistant''", "content": "''I now can give a great answer  \\nFinal Answer: hello''"}]}, "total_tokens": 165}}], "batch_metadata":
       {"events_count": 8, "batch_sequence": 1, "is_final_batch": false}}'
     headers:
       Accept:
@@ -648,8 +406,7 @@ interactions:
     uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/REDACTED_EPHEMERAL_ID/events
   response:
     body:
-      string: '{"error":"Couldn''t find EphemeralTraceBatch with [WHERE \"ephemeral_trace_batches\".\"ephemeral_trace_id\"
-        = $1]","message":"Trace batch not found"}'
+      string: '{"error":"Couldn''t find EphemeralTraceBatch with [WHERE \"ephemeral_trace_batches\".\"ephemeral_trace_id\" = $1]","message":"Trace batch not found"}'
     headers:
       Connection:
       - keep-alive
@@ -662,37 +419,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       expires:
       - '0'
       permissions-policy:
@@ -756,37 +485,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       expires:
       - '0'
       permissions-policy:

@@ -1244,8 +1244,6 @@ interactions:
       - 915a787b998d7ae0-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

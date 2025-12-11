@@ -1,19 +1,7 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
-      are a helpful research assistant who can search for information about the population
-      of Tokyo.\nYour personal goal is: Find information about the population of Tokyo\n\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: search_web\nTool Arguments: {''query'': {''description'':
-      None, ''type'': ''str''}}\nTool Description: Search the web for information
-      about a topic.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [search_web], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple JSON object, enclosed in curly braces,
-      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
-      all necessary information is gathered, return the following format:\n\n```\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n```"},{"role":"user","content":"What is the population of Tokyo?"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You are a helpful research assistant who can search for information about the population of Tokyo.\nYour personal goal is: Find information about the population of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search the web for information about a topic.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [search_web], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now
+      know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What is the population of Tokyo?"}],"model":"gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -51,24 +39,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJM9b9swEIZ3/YoDZzvwd2xtRTI0HZolcIcqkGnqJLGheCx5Suoa/u+F
-        5A/JTQp00XDPva/ui/sIQOhMxCBUKVlVzgzv5Lf7fDtbmcfRV1M9/l5/Wa/N6/r+7fNydycGjYK2
-        P1DxWXWjqHIGWZM9YuVRMjau49vFZDleLVbzFlSUoWlkhePhjIaVtno4GU1mw9HtcLw8qUvSCoOI
-        4XsEALBvv02dNsNfIobR4BypMARZoIgvSQDCk2kiQoagA0vLYtBBRZbRtqVvNpvEPpVUFyXH8AAW
-        MQMmCCi9KiEnD1wiGMkYGLTNyVeyaRI8FtJn2hZtgiNXmyOgHJ7oZUc3if2kmkh8ckvfcHuOwYN1
-        NcewT8TPGv0uEXEiVO09Wv7IDCajyTQRh8RuNpt+Lx7zOshmnrY2pgektcStSTvF5xM5XOZmqHCe
-        tuEvqci11aFMPcpAtplRYHKipYcI4LndT301cuE8VY5TphdsfzeZnvYjurPo6HR5gkwsTU+1OIMr
-        vzRDltqE3oaFkqrErJN25yDrTFMPRL2u31fzkfexc22L/7HvgFLoGLPUecy0uu64S/PYvJp/pV2m
-        3BYsAvpXrTBljb7ZRIa5rM3xlkXYBcYqzbUt0Duvjwedu3S+GMl8gfP5SkSH6A8AAAD//wMAJGbR
-        +94DAAA=
+      string: "{\n  \"id\": \"chatcmpl-CaWDfb49lO0NlmOzVJVVlvVDwH8yC\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762819695,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need to search for the latest information regarding the population of Tokyo.\\nAction: search_web\\nAction Input: {\\\"query\\\":\\\"current population of Tokyo 2023\\\"}\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 230,\n    \"completion_tokens\": 38,\n    \"total_tokens\": 268,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 99c98dd3ddb9ce6c-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -76,11 +53,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=6maCeRS26vR_uzqYdtL7RXY7kzGdvLhWcE2RP2PnZS0-1762819696-1.0.1.1-72zCZZVBiGDdwPDvETKS_fUA4DYCLVyVHDYW2qpSxxAUuWKNPLxQQ1PpeI7YuB9v.y1e3oapeuV5mBjcP4c9_ZbH.ZI14TUNOexPUB6yCaQ;
-        path=/; expires=Tue, 11-Nov-25 00:38:16 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=a.XOUFuP.5IthR7ITJrIWIZSWWAkmHU._pM9.qhCnhM-1762819696364-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=6maCeRS26vR_uzqYdtL7RXY7kzGdvLhWcE2RP2PnZS0-1762819696-1.0.1.1-72zCZZVBiGDdwPDvETKS_fUA4DYCLVyVHDYW2qpSxxAUuWKNPLxQQ1PpeI7YuB9v.y1e3oapeuV5mBjcP4c9_ZbH.ZI14TUNOexPUB6yCaQ; path=/; expires=Tue, 11-Nov-25 00:38:16 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=a.XOUFuP.5IthR7ITJrIWIZSWWAkmHU._pM9.qhCnhM-1762819696364-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -129,24 +103,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
-      are a helpful research assistant who can search for information about the population
-      of Tokyo.\nYour personal goal is: Find information about the population of Tokyo\n\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: search_web\nTool Arguments: {''query'': {''description'':
-      None, ''type'': ''str''}}\nTool Description: Search the web for information
-      about a topic.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [search_web], just the name, exactly as it''s written.\nAction Input:
-      the input to the action, just a simple JSON object, enclosed in curly braces,
-      using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
-      all necessary information is gathered, return the following format:\n\n```\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n```"},{"role":"user","content":"What is the population of Tokyo?"},{"role":"assistant","content":"```\nThought:
-      I need to search for the latest information regarding the population of Tokyo.\nAction:
-      search_web\nAction Input: {\"query\":\"current population of Tokyo 2023\"}\n```\nObservation:
-      Tokyo''s population in 2023 was approximately 21 million people in the city
-      proper, and 37 million in the greater metropolitan area."}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You are a helpful research assistant who can search for information about the population of Tokyo.\nYour personal goal is: Find information about the population of Tokyo\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search the web for information about a topic.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [search_web], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now
+      know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"What is the population of Tokyo?"},{"role":"assistant","content":"```\nThought: I need to search for the latest information regarding the population of Tokyo.\nAction: search_web\nAction Input: {\"query\":\"current population of Tokyo 2023\"}\n```\nObservation: Tokyo''s population in 2023 was approximately 21 million people in the city proper, and 37 million in the greater metropolitan area."}],"model":"gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -159,8 +117,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=6maCeRS26vR_uzqYdtL7RXY7kzGdvLhWcE2RP2PnZS0-1762819696-1.0.1.1-72zCZZVBiGDdwPDvETKS_fUA4DYCLVyVHDYW2qpSxxAUuWKNPLxQQ1PpeI7YuB9v.y1e3oapeuV5mBjcP4c9_ZbH.ZI14TUNOexPUB6yCaQ;
-        _cfuvid=a.XOUFuP.5IthR7ITJrIWIZSWWAkmHU._pM9.qhCnhM-1762819696364-0.0.1.1-604800000
+      - __cf_bm=6maCeRS26vR_uzqYdtL7RXY7kzGdvLhWcE2RP2PnZS0-1762819696-1.0.1.1-72zCZZVBiGDdwPDvETKS_fUA4DYCLVyVHDYW2qpSxxAUuWKNPLxQQ1PpeI7YuB9v.y1e3oapeuV5mBjcP4c9_ZbH.ZI14TUNOexPUB6yCaQ; _cfuvid=a.XOUFuP.5IthR7ITJrIWIZSWWAkmHU._pM9.qhCnhM-1762819696364-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -187,24 +144,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPLbtswELz7KxY8W4Es+RHr1ifgQw8F3OZQBxJDrSTWFJcgqSRG4H8v
-        KD+kNCnQCwFyZpazs+TLBIDJkmXARMO9aI2KPvG7z81d8mWf4E/cxN9+PK5SvfkYf08Pe8+mQUEP
-        v1H4i+pGUGsUekn6BAuL3GOoOlstk9vZerle9UBLJaogq42P5hS1UssoiZN5FK+i2e1Z3ZAU6FgG
-        vyYAAC/9GnzqEp9ZBvH0ctKic7xGll1JAMySCieMOyed5/rk+QwK0h51b70oip3eNtTVjc9gA5qe
-        YB8W3yBUUnMFXLsntDv9td996HcZbBsEQ6ZTPLQMVMGW9gcCqSGJkxSkA26MpWfZco/qAMkMWqlU
-        IBskozBQwy1C+gMYSwYtcF1CuroSz4y6j9JCi96SISU918At8pudLopi3JrFqnM8xKs7pUYA15p8
-        77UP9f6MHK8xKqqNpQf3l5RVUkvX5Ba5Ix0ic54M69HjBOC+H1f3agLMWGqNzz3tsb8ujdNTPTa8
-        kgGdX0BPnquRar6cvlMvL9Fzqdxo4Exw0WA5SIfXwbtS0giYjLp+6+a92qfOpa7/p/wACIHGY5kb
-        i6UUrzseaBbDJ/oX7Zpyb5g5tI9SYO4l2jCJEiveqfN3dAfnsc0rqWu0xsrT+65MvljGvFriYrFm
-        k+PkDwAAAP//AwDgLjwY7QMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CaWDhW2Ek2eVeI0MUv73nIB0Q3ykt\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762819697,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal Answer: The population of Tokyo in 2023 is approximately 21 million people in the city proper and 37 million in the greater metropolitan area.\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 303,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 346,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"\
+        rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 99c98dde7fc9ce6c-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

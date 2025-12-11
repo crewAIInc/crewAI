@@ -1,43 +1,8 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a
-      specific task to one of the following coworkers: Researcher\nThe input to this
-      tool should be the coworker, the task you want them to do, and ALL necessary
-      context to execute the task, they know nothing about the task, so share absolute
-      everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
-      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
-      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
-      coworkers: Researcher\nThe input to this tool should be the coworker, the question
-      you have for them, and ALL necessary context to ask the question properly, they
-      know nothing about the question, so share absolute everything you know, don''t
-      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
-      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
-      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
-      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
-      format:\n\nThought: you should always think about what to do\nAction: the action
-      to take, only one name of [Delegate work to coworker, Ask question to coworker],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria
-      for your final answer: Howdy!\nyou MUST return the actual complete content as
-      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
-      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o"}'
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a specific task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'':
+      ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following format:\n\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all necessary information is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -50,8 +15,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -75,18 +39,8 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cCDhcGe826aJEs22GQ3mDsfDsN\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214244,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: To complete the task, I need
-      to ask the researcher to say \\\"Howdy!\\\" I will use the \\\"Ask question
-      to coworker\\\" tool to instruct the researcher accordingly.\\n\\nAction: Ask
-      question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you please say
-      hi?\\\", \\\"context\\\": \\\"The expected greeting is: Howdy!\\\", \\\"coworker\\\":
-      \\\"Researcher\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      642,\n    \"completion_tokens\": 78,\n    \"total_tokens\": 720,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cCDhcGe826aJEs22GQ3mDsfDsN\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214244,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: To complete the task, I need to ask the researcher to say \\\"Howdy!\\\" I will use the \\\"Ask question to coworker\\\" tool to instruct the researcher accordingly.\\n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you please say hi?\\\", \\\"context\\\": \\\"The expected greeting is: Howdy!\\\", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\": 78,\n    \"total_tokens\": 720,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+      : \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -94,8 +48,6 @@ interactions:
       - 8c85f4244b1a1cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -270,19 +222,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      love to sey howdy.\nYour personal goal is: Be super empathetic.\nTo give my
-      best complete final answer to the task use the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: Can you please say hi?\n\nThis is the expect criteria for your final answer:
-      Your best answer to your coworker asking you this, accounting for the context
-      shared.\nyou MUST return the actual complete content as the final answer, not
-      a summary.\n\nThis is the context you''re working with:\nThe expected greeting
-      is: Howdy!\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o"}'
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re love to sey howdy.\nYour personal goal is: Be super empathetic.\nTo give my best complete final answer to the task use the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Can you please say hi?\n\nThis is the expect criteria for your final answer: Your best answer to your coworker asking you this, accounting for the context shared.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe expected greeting is: Howdy!\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -295,8 +235,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -320,15 +259,7 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cEYSMG7ZRHFgtiueRTVpSuWaJT\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214246,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Howdy!\\n\\nThought: I now can give a
-      great answer\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 191,\n    \"completion_tokens\": 18,\n
-      \   \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cEYSMG7ZRHFgtiueRTVpSuWaJT\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214246,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Howdy!\\n\\nThought: I now can give a great answer\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 191,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -336,8 +267,6 @@ interactions:
       - 8c85f42fec891cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -375,49 +304,10 @@ interactions:
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context:
-      str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a
-      specific task to one of the following coworkers: Researcher\nThe input to this
-      tool should be the coworker, the task you want them to do, and ALL necessary
-      context to execute the task, they know nothing about the task, so share absolute
-      everything you know, don''t reference things but instead explain them.\nTool
-      Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'':
-      {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'',
-      ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool
-      Name: Ask question to coworker(question: str, context: str, coworker: Optional[str]
-      = None, **kwargs)\nTool Description: Ask a specific question to one of the following
-      coworkers: Researcher\nThe input to this tool should be the coworker, the question
-      you have for them, and ALL necessary context to ask the question properly, they
-      know nothing about the question, so share absolute everything you know, don''t
-      reference things but instead explain them.\nTool Arguments: {''question'': {''title'':
-      ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'':
-      ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''},
-      ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following
-      format:\n\nThought: you should always think about what to do\nAction: the action
-      to take, only one name of [Delegate work to coworker, Ask question to coworker],
-      just the name, exactly as it''s written.\nAction Input: the input to the action,
-      just a simple python dictionary, enclosed in curly braces, using \" to wrap
-      keys and values.\nObservation: the result of the action\n\nOnce all necessary
-      information is gathered:\n\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n"}, {"role": "user", "content":
-      "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria
-      for your final answer: Howdy!\nyou MUST return the actual complete content as
-      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
-      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "assistant", "content": "Thought: To complete the task, I need to ask
-      the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\"
-      tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction
-      Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected
-      greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}],
-      "model": "gpt-4o"}'
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a specific task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task,
+      so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'':
+      ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following format:\n\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all necessary information is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant",
+      "content": "Thought: To complete the task, I need to ask the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\" tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -430,8 +320,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g;
-        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -455,14 +344,7 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cFqi2W0uV3SlrqWLWdfmWau08H\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214247,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal
-      Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      729,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 744,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    content: "{\n  \"id\": \"chatcmpl-AB7cFqi2W0uV3SlrqWLWdfmWau08H\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214247,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 729,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 744,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -470,8 +352,6 @@ interactions:
       - 8c85f4357d061cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -509,49 +389,10 @@ interactions:
     http_version: HTTP/1.1
     status_code: 200
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You
-      are a seasoned manager with a knack for getting the best out of your team.\nYou
-      are also known for your ability to delegate work to the right people, and to
-      ask the right questions to get the best out of your team.\nEven though you don''t
-      perform tasks by yourself, you have a lot of experience in the field, which
-      allows you to properly evaluate the work of your team members.\nYour personal
-      goal is: Manage the team to complete the task in the best way possible.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments:
-      {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'':
-      {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'':
-      {''description'': ''The role/name of the coworker to delegate to'', ''type'':
-      ''str''}}\nTool Description: Delegate a specific task to one of the following
-      coworkers: Researcher\nThe input to this tool should be the coworker, the task
-      you want them to do, and ALL necessary context to execute the task, they know
-      nothing about the task, so share absolutely everything you know, don''t reference
-      things but instead explain them.\nTool Name: Ask question to coworker\nTool
-      Arguments: {''question'': {''description'': ''The question to ask'', ''type'':
-      ''str''}, ''context'': {''description'': ''The context for the question'', ''type'':
-      ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to
-      ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one
-      of the following coworkers: Researcher\nThe input to this tool should be the
-      coworker, the question you have for them, and ALL necessary context to ask the
-      question properly, they know nothing about the question, so share absolutely
-      everything you know, don''t reference things but instead explain them.\n\nIMPORTANT:
-      Use the following format in your response:\n\n```\nThought: you should always
-      think about what to do\nAction: the action to take, only one name of [Delegate
-      work to coworker, Ask question to coworker], just the name, exactly as it''s
-      written.\nAction Input: the input to the action, just a simple JSON object,
-      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
-      result of the action\n```\n\nOnce all necessary information is gathered, return
-      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
-      the final answer to the original input question\n```"}, {"role": "user", "content":
-      "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expected criteria
-      for your final answer: Howdy!\nyou MUST return the actual complete content as
-      the final answer, not a summary.\n\nBegin! This is VERY important to you, use
-      the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},
-      {"role": "assistant", "content": "Thought: To complete the task, I need to ask
-      the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\"
-      tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction
-      Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected
-      greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific
+      task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expected criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To complete
+      the task, I need to ask the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\" tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -593,22 +434,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJdj9MwEHzPr1j83KL0Ky15A6SKQ7oHdCAh4BS5ziYxdWxjbyjl1P9+
-        stNrcnAn3Ysle3bGM7t7lwAwWbIcmGg4idaq6fvN7nrb/LrObm72/su3d8dP9uux83+3/mr5kU0C
-        w+x+oqAH1mthWquQpNE9LBxywqA6W6+yWZbNs0UEWlOiCrTa0nRppvN0vpymm2manYmNkQI9y+F7
-        AgBwF89gUZf4h+WQTh5eWvSe18jySxEAc0aFF8a9l564JjYZQGE0oY6uPzemqxvK4Qq0OcA+HNQg
-        VFJzBVz7AzqAH3ob72/jPYcP5lAeX40lHVad5yGR7pQaAVxrQzx0JIa5PSOni31lauvMzv9DZZXU
-        0jeFQ+6NDlY9GcsiekoAbmObukfJmXWmtVSQ2WP8bp3Oez02DGZAZ6szSIa4GrFm68kTekWJxKXy
-        o0YzwUWD5UAdpsK7UpoRkIxS/+/mKe0+udT1S+QHQAi0hGVhHZZSPE48lDkMe/tc2aXL0TDz6H5L
-        gQVJdGESJVa8U/1KMX/0hG1RSV2js072e1XZYpO+WWWrxULsWHJK7gEAAP//AwAfm3tPYAMAAA==
+      string: "{\n  \"id\": \"chatcmpl-C8bMFhqM6SSksUZByQpXyuszFsI4J\",\n  \"object\": \"chat.completion\",\n  \"created\": 1756166263,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer  \\nFinal Answer: Howdy!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 702,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 717,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_80956533cb\"\n}\n"
     headers:
       CF-RAY:
       - 974f08878cb7239e-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -616,11 +447,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=veVLwO9uj9FvIBC_v55vfVlSdU8NHY.wdBapmpmtHn4-1756166263-1.0.1.1-LJ9bNXe6v06jg_mjVZp8vfvLT.9Hf8xUHOf2FempuntDnL5ogQXRuJvIJipz1trGr96_3WUCWlsexhQlkdtveEH6NbFMrm__Y61khA_IyPM;
-        path=/; expires=Tue, 26-Aug-25 00:27:43 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=miqmxIsNDZtXvrtcyhpeSI3TjT_zcUas9Enn6gGtIsI-1756166263603-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=veVLwO9uj9FvIBC_v55vfVlSdU8NHY.wdBapmpmtHn4-1756166263-1.0.1.1-LJ9bNXe6v06jg_mjVZp8vfvLT.9Hf8xUHOf2FempuntDnL5ogQXRuJvIJipz1trGr96_3WUCWlsexhQlkdtveEH6NbFMrm__Y61khA_IyPM; path=/; expires=Tue, 26-Aug-25 00:27:43 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=miqmxIsNDZtXvrtcyhpeSI3TjT_zcUas9Enn6gGtIsI-1756166263603-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

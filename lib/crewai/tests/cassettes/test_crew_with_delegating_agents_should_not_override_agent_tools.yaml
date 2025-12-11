@@ -78,8 +78,6 @@ interactions:
       - 8f62802d0b3f00d5-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -214,8 +212,6 @@ interactions:
       - 8f6280352b9400d5-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -437,8 +433,6 @@ interactions:
       - 8f62803eed8100d5-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
