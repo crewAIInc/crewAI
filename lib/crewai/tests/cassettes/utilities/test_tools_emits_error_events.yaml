@@ -74,8 +74,6 @@ interactions:
       - 9293394e29cff96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -222,8 +220,6 @@ interactions:
       - 92933955dbdcf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -391,8 +387,6 @@ interactions:
       - 9293395a59d3f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -651,8 +645,6 @@ interactions:
       - 9293396019a2f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -871,8 +863,6 @@ interactions:
       - 92933965e97cf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1117,8 +1107,6 @@ interactions:
       - 9293396b98c9f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1388,8 +1376,6 @@ interactions:
       - 92933970ef9df96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -1684,8 +1670,6 @@ interactions:
       - 92933978f9f4f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -2047,8 +2031,6 @@ interactions:
       - 9293397e3850f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -2401,8 +2383,6 @@ interactions:
       - 929339872d3ff96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -2780,8 +2760,6 @@ interactions:
       - 929339942fb0f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -3224,8 +3202,6 @@ interactions:
       - 9293399bd9d3f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -3659,8 +3635,6 @@ interactions:
       - 929339a45d75f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -4122,8 +4096,6 @@ interactions:
       - 929339b3ef9cf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -4651,8 +4623,6 @@ interactions:
       - 929339b9ae78f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -5169,8 +5139,6 @@ interactions:
       - 929339c919f9f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -5754,8 +5722,6 @@ interactions:
       - 929339ce889cf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -6330,8 +6296,6 @@ interactions:
       - 929339e3c99ff96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -6937,8 +6901,6 @@ interactions:
       - 929339ea18dff96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -7613,8 +7575,6 @@ interactions:
       - 929339f6f9c9f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -8278,8 +8238,6 @@ interactions:
       - 92933a0dda9cf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -9008,8 +8966,6 @@ interactions:
       - 92933a19fb8ef96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -9736,8 +9692,6 @@ interactions:
       - 92933a2c3cc8f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -10523,8 +10477,6 @@ interactions:
       - 92933a39ed31f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -11307,8 +11259,6 @@ interactions:
       - 92933a42893ef96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -12141,8 +12091,6 @@ interactions:
       - 92933a528fedf96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -13011,8 +12959,6 @@ interactions:
       - 92933a5e6819f96b-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

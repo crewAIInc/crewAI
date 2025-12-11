@@ -1,1116 +1,297 @@
 interactions:
 - request:
-    body: '{"input": ["Brandon''s favorite color is red and he likes Mexican food."],
-      "model": "text-embedding-3-small", "encoding_format": "base64"}'
+    body: '{"input":["Brandon''s favorite color is red and he likes Mexican food."],"model":"text-embedding-3-small","encoding_format":"base64"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '137'
+      - '132'
       content-type:
       - application/json
+      cookie:
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.68.2
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/embeddings
   response:
     body:
-      string: !!binary |
-        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
+      string: "{\n  \"object\": \"list\",\n  \"data\": [\n    {\n      \"object\": \"embedding\",\n      \"index\": 0,\n      \"embedding\": \"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\"\
+        \n    }\n  ],\n  \"model\": \"text-embedding-3-small\",\n  \"usage\": {\n    \"prompt_tokens\": 12,\n    \"total_tokens\": 12\n  }\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 93bd57189acf15be-SJC
+      - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
-      - Wed, 07 May 2025 02:38:16 GMT
+      - Fri, 05 Dec 2025 00:23:46 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - __cf_bm=VGdrMAj2834vuX5RC6lPbHVNwWHXnBmqLb0kAhiGO4g-1746585496-1.0.1.1-kvgkEGO9fI9sasCfJjizGBG4k82_KhCRbH8CEyFrjJatzMoxhM0Z3suJO_hFFH13Wyi2wThiM9QSPvH3dddjfC7hC_tscxijZwiGqtCVnnE;
-        path=/; expires=Wed, 07-May-25 03:08:16 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=sAoMYVxAaEFBkQttcKO7GlBZ5NlUNUIaJomZ05pGlCs-1746585496569-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-allow-origin:
       - '*'
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
       openai-model:
       - text-embedding-3-small
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '69'
+      - '86'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       via:
-      - envoy-router-7d545f8f56-jx5wk
+      - envoy-router-5f84cd56b-wk25s
       x-envoy-upstream-service-time:
-      - '52'
+      - '106'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '10000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '9999986'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_73f3f0d371e3c19b16c7a6d7cc45d3ee
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "Your goal is to rewrite the
-      user query so that it is optimized for retrieval from a vector database. Consider
-      how the query will be used to find relevant documents, and aim to make it more
-      specific and context-aware. \n\n Do not include any other text than the rewritten
-      query, especially any preamble or postamble and only add expected output format
-      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
-      task and to retrieve the most relevant information. \n\n There will be some
-      extra context provided that might need to be removed such as expected_output
-      formats structured_outputs and other instructions."}, {"role": "user", "content":
-      "The original query is: What is Brandon''s favorite color?\n\nThis is the expected
-      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
-      the actual complete content as the final answer, not a summary.."}], "model":
-      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages":[{"role":"system","content":"Your goal is to rewrite the user query so that it is optimized for retrieval from a vector database. Consider how the query will be used to find relevant documents, and aim to make it more specific and context-aware. \n\n Do not include any other text than the rewritten query, especially any preamble or postamble and only add expected output format if its relevant to the rewritten query. \n\n Focus on the key words of the intended task and to retrieve the most relevant information. \n\n There will be some extra context provided that might need to be removed such as expected_output formats structured_outputs and other instructions."},{"role":"user","content":"The original query is: What is Brandon''s favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite color.\nyou MUST return the actual complete content as the final answer, not a summary.."}],"model":"gpt-4o-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '992'
+      - '954'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA4xSy27bMBC86yuIvfRiFbKs+HVLUKBFL0YPRosWgcCQK5kNxSXItZEi8L8XlBxL
-        aVOgFx44O8OZ4T5nQoDRsBWgDpJV521+t989PX78tF/fnr5X+w/fdgv6WnxuWruzX25hlhj08BMV
-        v7DeK+q8RTbkBlgFlIxJdb6qljfrm2qz7IGONNpEaz3nFeWdcSYvi7LKi1U+X1/YBzIKI2zFj0wI
-        IZ77M/l0Gp9gK4rZy02HMcoWYXsdEgIC2XQDMkYTWTqG2Qgqcoyut34XpNPk3kXRyBMFwygUWQrT
-        8YDNMcpk2R2tnQDSOWKZIvdG7y/I+WrNUusDPcQ/qNAYZ+KhDigjuWQjMnno0XMmxH1fwfFVKvCB
-        Os810yP2z81Xi0EPxuZHdHnBmFjaKWkze0Ou1sjS2DjpEJRUB9QjdSxcHrWhCZBNQv9t5i3tIbhx
-        7f/Ij4BS6Bl17QNqo14HHscCpr3819i15N4wRAwno7BmgyF9hMZGHu2wLRB/RcauboxrMfhghpVp
-        fF0sNuW6LItNAdk5+w0AAP//AwDAmd1xQAMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjDtqJ34sifQSlSp63Ro0nfk7k4n5\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894226,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Brandon's favorite color\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\": 5,\n    \"total_tokens\": 178,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_a460d7e2b7\"\n}\n"
     headers:
-      CF-Cache-Status:
-      - DYNAMIC
       CF-RAY:
-      - 93bd571a5a7267e2-SJC
+      - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
-      - Wed, 07 May 2025 02:38:17 GMT
+      - Fri, 05 Dec 2025 00:23:47 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=62_LRbzx15KBnTorpnulb_ZMoUJCYXHWEnTXVApNOr4-1746585497-1.0.1.1-KqnrR_1Udr1SzCiZW4umsNj1gQgcKOjAPf24HsqotTebuxO48nvo8g_X5O7Mng9tGurC0otvvkjYjsSWuRaddXculJnfdeGq5W3hJhxI21k;
-        path=/; expires=Wed, 07-May-25 03:08:17 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=LPWfk79PGAoGrMHseblqRazN9H8qdBY0BP50Y1Bp5wI-1746585497006-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '183'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '187'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149999783'
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_50fa35cb9ba592c55aacf7ddded877ac
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Information Agent.
-      You have access to specific knowledge sources.\nYour personal goal is: Provide
-      information based on knowledge sources\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      What is Brandon''s favorite color?\n\nThis is the expected criteria for your
-      final answer: Brandon''s favorite color.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '926'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=62_LRbzx15KBnTorpnulb_ZMoUJCYXHWEnTXVApNOr4-1746585497-1.0.1.1-KqnrR_1Udr1SzCiZW4umsNj1gQgcKOjAPf24HsqotTebuxO48nvo8g_X5O7Mng9tGurC0otvvkjYjsSWuRaddXculJnfdeGq5W3hJhxI21k;
-        _cfuvid=LPWfk79PGAoGrMHseblqRazN9H8qdBY0BP50Y1Bp5wI-1746585497006-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.68.2
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.68.2
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNNb9swDL3nVxC67JIMSZo0aW4ttmI77bIO3UdhMBLtcJVJQZKTBkX/
-        +2CnrdOuA3YxYD4+8lGPvB8AGHZmBcZuMNs6+NHF1Zc7Xycnp/Rhdv3x2/fL82r+9Tr/uDrxn8yw
-        Zej6N9n8xHpvtQ6eMqscYBsJM7VVJ4vZ6Xw5n50tOqBWR76lVSGPZjqqWXg0HU9no/FiNFk+sjfK
-        lpJZwc8BAMB99211iqM7s4Lx8ClSU0pYkVk9JwGYqL6NGEyJU0bJZtiDViWTdNI/g+gOLApUvCVA
-        qFrZgJJ2FAF+ySULejjv/ldwEVGcyrsEJW41ciaw6jUCJxDNEJq1Z+v3cCu6E9AIuEX2uPYELGC1
-        rlU60JOrCJI20VIaAiYIFJO2zUKkkiKJpQSeb+lVrwQYCfI+sEXv9xAibzEToLhukC3GPezYkd8D
-        1ioVsDjesmvQJ9hx3mhzpDRtMJIDllJjja1/74/fKlLZJGz9ksb7IwBFNHf5nUs3j8jDsy9eqxB1
-        nV5RTcnCaVNEwqTSepCyBtOhDwOAm87/5oWlJkStQy6y3lLXbnK6PNQz/dr16GzxCGbN6Pv4dDIf
-        vlGvcJSRfTraIGPRbsj11H7dsHGsR8DgaOq/1bxV+zA5S/U/5XvAWgqZXBEiObYvJ+7TIrVX+a+0
-        51fuBJtEccuWiswUWyccldj4w62YtE+Z6qJkqSiGyIeDKUMxPjmbLqfT8dnYDB4GfwAAAP//AwA/
-        0jeHPgQAAA==
-    headers:
-      CF-RAY:
-      - 93bd571c9cf367e2-SJC
-      Connection:
-      - keep-alive
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json
-      Date:
-      - Wed, 07 May 2025 02:38:18 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '785'
+      - '276'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
       x-envoy-upstream-service-time:
-      - '931'
+      - '291'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999802'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_9bf7c8e011b2b1a8e8546b68c82384a7
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "fca13628-cc6b-42d6-a771-7cc93be5e905", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T20:21:05.726731+00:00"},
-      "ephemeral_trace_id": "fca13628-cc6b-42d6-a771-7cc93be5e905"}'
+    body: '{"messages":[{"role":"system","content":"You are Information Agent. You have access to specific knowledge sources.\nYour personal goal is: Provide information based on knowledge sources\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: What is Brandon''s favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite color.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '490'
-      Content-Type:
-      - application/json
       User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Version:
-      - 0.193.2
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '888'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
     method: POST
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches
+    uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: '{"id":"001d2d1a-0e54-432b-82bd-cc662dea9e73","ephemeral_trace_id":"fca13628-cc6b-42d6-a771-7cc93be5e905","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-23T20:21:05.953Z","updated_at":"2025-09-23T20:21:05.953Z","access_code":"TRACE-8111622134","user_identifier":null}'
+      string: "{\n  \"id\": \"chatcmpl-CjDtrYVUxTMIJB8nbkKdm4kfgmqTb\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894227,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Brandon's favorite color is not specified in the available knowledge sources. To obtain this information, one would need to refer directly to Brandon or a reliable source conveying his personal preferences.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 168,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 214,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\":\
+        \ 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_50906f2aac\"\n}\n"
     headers:
-      Content-Length:
-      - '519'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"e0ca4fb6829473f0764c77531c407def"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.78, sql.active_record;dur=146.33, cache_generate.active_support;dur=133.92,
-        cache_write.active_support;dur=0.42, cache_read_multi.active_support;dur=0.43,
-        start_processing.action_controller;dur=0.01, start_transaction.active_record;dur=0.00,
-        transaction.active_record;dur=9.99, process_action.action_controller;dur=18.55
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - bb3a4e16-fbe8-4054-87d1-d3f1b6d55bd4
-      x-runtime:
-      - '0.223581'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 201
-      message: Created
-- request:
-    body: '{"events": [{"event_id": "f1f52ba8-e44c-4a8a-a0f6-e8f7125e936a", "timestamp":
-      "2025-09-23T20:21:05.964314+00:00", "type": "crew_kickoff_started", "event_data":
-      {"timestamp": "2025-09-23T20:21:05.725929+00:00", "type": "crew_kickoff_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "inputs": null}}, {"event_id": "c75aa25d-6428-419d-8942-db0bd1b2793b",
-      "timestamp": "2025-09-23T20:21:06.064905+00:00", "type": "task_started", "event_data":
-      {"task_description": "What is Brandon''s favorite color?", "expected_output":
-      "Brandon''s favorite color.", "task_name": "What is Brandon''s favorite color?",
-      "context": "", "agent_role": "Information Agent", "task_id": "5c465fd3-ed74-4151-8fb3-84a4120d637a"}},
-      {"event_id": "02516d04-a1b6-48ca-bebb-95c40b527a5d", "timestamp": "2025-09-23T20:21:06.065107+00:00",
-      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-23T20:21:06.065089+00:00",
-      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
-      "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
-      null, "agent_role": null, "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
-      "messages": [{"role": "system", "content": "Your goal is to rewrite the user
-      query so that it is optimized for retrieval from a vector database. Consider
-      how the query will be used to find relevant documents, and aim to make it more
-      specific and context-aware. \n\n Do not include any other text than the rewritten
-      query, especially any preamble or postamble and only add expected output format
-      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
-      task and to retrieve the most relevant information. \n\n There will be some
-      extra context provided that might need to be removed such as expected_output
-      formats structured_outputs and other instructions."}, {"role": "user", "content":
-      "The original query is: What is Brandon''s favorite color?\n\nThis is the expected
-      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
-      the actual complete content as the final answer, not a summary.."}], "tools":
-      null, "callbacks": null, "available_functions": null}}, {"event_id": "f969ac56-bc50-43aa-a7fa-de57fb06b64b",
-      "timestamp": "2025-09-23T20:21:06.067364+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-09-23T20:21:06.067113+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "messages": [{"role": "system", "content": "Your goal
-      is to rewrite the user query so that it is optimized for retrieval from a vector
-      database. Consider how the query will be used to find relevant documents, and
-      aim to make it more specific and context-aware. \n\n Do not include any other
-      text than the rewritten query, especially any preamble or postamble and only
-      add expected output format if its relevant to the rewritten query. \n\n Focus
-      on the key words of the intended task and to retrieve the most relevant information.
-      \n\n There will be some extra context provided that might need to be removed
-      such as expected_output formats structured_outputs and other instructions."},
-      {"role": "user", "content": "The original query is: What is Brandon''s favorite
-      color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite
-      color.\nyou MUST return the actual complete content as the final answer, not
-      a summary.."}], "response": "Brandon''s favorite color", "call_type": "<LLMCallType.LLM_CALL:
-      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "649cdaae-6182-40fb-9331-09bf24774dc7",
-      "timestamp": "2025-09-23T20:21:06.068132+00:00", "type": "agent_execution_started",
-      "event_data": {"agent_role": "Information Agent", "agent_goal": "Provide information
-      based on knowledge sources", "agent_backstory": "You have access to specific
-      knowledge sources."}}, {"event_id": "fde80ed7-fcc5-4dc4-b5e7-c18e5c914020",
-      "timestamp": "2025-09-23T20:21:06.068208+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-09-23T20:21:06.068196+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "5c465fd3-ed74-4151-8fb3-84a4120d637a", "task_name": "What is Brandon''s
-      favorite color?", "agent_id": null, "agent_role": null, "from_task": null, "from_agent":
-      null, "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You
-      are Information Agent. You have access to specific knowledge sources.\nYour
-      personal goal is: Provide information based on knowledge sources\nTo give my
-      best complete final answer to the task respond using the exact following format:\n\nThought:
-      I now can give a great answer\nFinal Answer: Your final answer must be the great
-      and the most complete as possible, it must be outcome described.\n\nI MUST use
-      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
-      Task: What is Brandon''s favorite color?\n\nThis is the expected criteria for
-      your final answer: Brandon''s favorite color.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
-      object at 0x139c6bf80>"], "available_functions": null}}, {"event_id": "84202a4f-f5d5-486e-8cd3-e335c6f3b0a0",
-      "timestamp": "2025-09-23T20:21:06.068991+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-09-23T20:21:06.068977+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "5c465fd3-ed74-4151-8fb3-84a4120d637a", "task_name": "What is Brandon''s
-      favorite color?", "agent_id": null, "agent_role": null, "from_task": null, "from_agent":
-      null, "messages": [{"role": "system", "content": "You are Information Agent.
-      You have access to specific knowledge sources.\nYour personal goal is: Provide
-      information based on knowledge sources\nTo give my best complete final answer
-      to the task respond using the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      What is Brandon''s favorite color?\n\nThis is the expected criteria for your
-      final answer: Brandon''s favorite color.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer:
-      Brandon''s favorite color is not publicly known or available in common knowledge
-      sources, as personal preferences like favorite colors are typically private
-      and can vary widely among individuals without publicly shared information.",
-      "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}},
-      {"event_id": "eea7601d-e36c-448e-ad6a-bb236c3b625a", "timestamp": "2025-09-23T20:21:06.069107+00:00",
-      "type": "agent_execution_completed", "event_data": {"agent_role": "Information
-      Agent", "agent_goal": "Provide information based on knowledge sources", "agent_backstory":
-      "You have access to specific knowledge sources."}}, {"event_id": "9a5da9c9-8c3f-482d-970a-037929c88780",
-      "timestamp": "2025-09-23T20:21:06.069175+00:00", "type": "task_completed", "event_data":
-      {"task_description": "What is Brandon''s favorite color?", "task_name": "What
-      is Brandon''s favorite color?", "task_id": "5c465fd3-ed74-4151-8fb3-84a4120d637a",
-      "output_raw": "Brandon''s favorite color is not publicly known or available
-      in common knowledge sources, as personal preferences like favorite colors are
-      typically private and can vary widely among individuals without publicly shared
-      information.", "output_format": "OutputFormat.RAW", "agent_role": "Information
-      Agent"}}, {"event_id": "18fdc397-9df9-46d9-88c8-aaedd1cfccb3", "timestamp":
-      "2025-09-23T20:21:06.069986+00:00", "type": "crew_kickoff_completed", "event_data":
-      {"timestamp": "2025-09-23T20:21:06.069968+00:00", "type": "crew_kickoff_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "output": {"description": "What is Brandon''s favorite
-      color?", "name": "What is Brandon''s favorite color?", "expected_output": "Brandon''s
-      favorite color.", "summary": "What is Brandon''s favorite color?...", "raw":
-      "Brandon''s favorite color is not publicly known or available in common knowledge
-      sources, as personal preferences like favorite colors are typically private
-      and can vary widely among individuals without publicly shared information.",
-      "pydantic": null, "json_dict": null, "agent": "Information Agent", "output_format":
-      "raw"}, "total_tokens": 394}}], "batch_metadata": {"events_count": 10, "batch_sequence":
-      1, "is_final_batch": false}}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
+      CF-RAY:
+      - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Length:
-      - '9354'
       Content-Type:
       - application/json
-      User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Version:
-      - 0.193.2
-    method: POST
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/fca13628-cc6b-42d6-a771-7cc93be5e905/events
-  response:
-    body:
-      string: '{"events_created":10,"ephemeral_trace_batch_id":"001d2d1a-0e54-432b-82bd-cc662dea9e73"}'
-    headers:
-      Content-Length:
-      - '87'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"8eb664e6bdf2e30d8da5d87edfb70e81"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.06, sql.active_record;dur=23.19, cache_generate.active_support;dur=1.87,
-        cache_write.active_support;dur=0.12, cache_read_multi.active_support;dur=0.07,
-        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.05,
-        start_transaction.active_record;dur=0.00, transaction.active_record;dur=74.12,
-        process_action.action_controller;dur=81.94
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
+      Date:
+      - Fri, 05 Dec 2025 00:23:48 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '872'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '884'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - 33c54013-e5cf-4d93-a666-f16d60d519fe
-      x-runtime:
-      - '0.127232'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"status": "completed", "duration_ms": 480, "final_event_count": 10}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '68'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Version:
-      - 0.193.2
-    method: PATCH
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/ephemeral/batches/fca13628-cc6b-42d6-a771-7cc93be5e905/finalize
-  response:
-    body:
-      string: '{"id":"001d2d1a-0e54-432b-82bd-cc662dea9e73","ephemeral_trace_id":"fca13628-cc6b-42d6-a771-7cc93be5e905","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":480,"crewai_version":"0.193.2","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-23T20:21:05.953Z","updated_at":"2025-09-23T20:21:06.245Z","access_code":"TRACE-8111622134","user_identifier":null}'
-    headers:
-      Content-Length:
-      - '521'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"b2724edbb5cda44a4c57fe3f822f9efb"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.04, sql.active_record;dur=6.68, cache_generate.active_support;dur=2.31,
-        cache_write.active_support;dur=0.12, cache_read_multi.active_support;dur=0.06,
-        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.03,
-        unpermitted_parameters.action_controller;dur=0.00, start_transaction.active_record;dur=0.00,
-        transaction.active_record;dur=1.41, process_action.action_controller;dur=6.43
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 4b1532f1-362f-4a90-ad0c-55eae7754f02
-      x-runtime:
-      - '0.033030'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"trace_id": "7b434273-c30b-41e7-9af8-e8a06112b6d7", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T06:03:49.674045+00:00"}}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '428'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Organization-Id:
-      - d3a3d10c-35db-423f-a7a4-c026030ba64d
-      X-Crewai-Version:
-      - 0.193.2
-    method: POST
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
-  response:
-    body:
-      string: '{"id":"8c2a5749-ba2a-47b9-a5dd-04cbca343737","trace_id":"7b434273-c30b-41e7-9af8-e8a06112b6d7","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"0.193.2","privacy_level":"standard","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"0.193.2","privacy_level":"standard"},"created_at":"2025-09-24T06:03:50.773Z","updated_at":"2025-09-24T06:03:50.773Z"}'
-    headers:
-      Content-Length:
-      - '480'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"affef92e3726c21ff4c0314c97b2b317"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.10, sql.active_record;dur=76.35, cache_generate.active_support;dur=32.57,
-        cache_write.active_support;dur=0.60, cache_read_multi.active_support;dur=0.48,
-        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.31,
-        feature_operation.flipper;dur=0.04, start_transaction.active_record;dur=0.01,
-        transaction.active_record;dur=16.31, process_action.action_controller;dur=936.89
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 24baf8ea-b01e-4cf5-97a1-8a673250ad80
-      x-runtime:
-      - '1.100314'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 201
-      message: Created
-- request:
-    body: '{"events": [{"event_id": "a88e7bc8-5dce-4e04-b6b5-304ee17193e6", "timestamp":
-      "2025-09-24T06:03:50.788403+00:00", "type": "crew_kickoff_started", "event_data":
-      {"timestamp": "2025-09-24T06:03:49.673039+00:00", "type": "crew_kickoff_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "inputs": null}}, {"event_id": "aa21aad9-6734-4e31-9124-3a0e4dcee2b1",
-      "timestamp": "2025-09-24T06:03:51.007306+00:00", "type": "task_started", "event_data":
-      {"task_description": "What is Brandon''s favorite color?", "expected_output":
-      "Brandon''s favorite color.", "task_name": "What is Brandon''s favorite color?",
-      "context": "", "agent_role": "Information Agent", "task_id": "30ecb0b9-6050-4dba-9380-7babbb8697d7"}},
-      {"event_id": "f9c91e09-b077-41c9-a8e6-c8cd1c4c6528", "timestamp": "2025-09-24T06:03:51.007529+00:00",
-      "type": "llm_call_started", "event_data": {"timestamp": "2025-09-24T06:03:51.007472+00:00",
-      "type": "llm_call_started", "source_fingerprint": null, "source_type": null,
-      "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id":
-      null, "agent_role": null, "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
-      "messages": [{"role": "system", "content": "Your goal is to rewrite the user
-      query so that it is optimized for retrieval from a vector database. Consider
-      how the query will be used to find relevant documents, and aim to make it more
-      specific and context-aware. \n\n Do not include any other text than the rewritten
-      query, especially any preamble or postamble and only add expected output format
-      if its relevant to the rewritten query. \n\n Focus on the key words of the intended
-      task and to retrieve the most relevant information. \n\n There will be some
-      extra context provided that might need to be removed such as expected_output
-      formats structured_outputs and other instructions."}, {"role": "user", "content":
-      "The original query is: What is Brandon''s favorite color?\n\nThis is the expected
-      criteria for your final answer: Brandon''s favorite color.\nyou MUST return
-      the actual complete content as the final answer, not a summary.."}], "tools":
-      null, "callbacks": null, "available_functions": null}}, {"event_id": "f491b036-a303-4b66-a2f4-72fd69254050",
-      "timestamp": "2025-09-24T06:03:51.041059+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-09-24T06:03:51.040894+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "from_task":
-      null, "from_agent": null, "messages": [{"role": "system", "content": "Your goal
-      is to rewrite the user query so that it is optimized for retrieval from a vector
-      database. Consider how the query will be used to find relevant documents, and
-      aim to make it more specific and context-aware. \n\n Do not include any other
-      text than the rewritten query, especially any preamble or postamble and only
-      add expected output format if its relevant to the rewritten query. \n\n Focus
-      on the key words of the intended task and to retrieve the most relevant information.
-      \n\n There will be some extra context provided that might need to be removed
-      such as expected_output formats structured_outputs and other instructions."},
-      {"role": "user", "content": "The original query is: What is Brandon''s favorite
-      color?\n\nThis is the expected criteria for your final answer: Brandon''s favorite
-      color.\nyou MUST return the actual complete content as the final answer, not
-      a summary.."}], "response": "Brandon''s favorite color", "call_type": "<LLMCallType.LLM_CALL:
-      ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "4b37cce8-63b6-41fe-b0c6-8d21b2fe5a6e",
-      "timestamp": "2025-09-24T06:03:51.042246+00:00", "type": "agent_execution_started",
-      "event_data": {"agent_role": "Information Agent", "agent_goal": "Provide information
-      based on knowledge sources", "agent_backstory": "You have access to specific
-      knowledge sources."}}, {"event_id": "9b180189-02ab-487e-b53e-70b08c1ade5f",
-      "timestamp": "2025-09-24T06:03:51.042369+00:00", "type": "llm_call_started",
-      "event_data": {"timestamp": "2025-09-24T06:03:51.042351+00:00", "type": "llm_call_started",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "30ecb0b9-6050-4dba-9380-7babbb8697d7", "task_name": "What is Brandon''s
-      favorite color?", "agent_id": "7a5ced08-5fbf-495c-9460-907d047db86c", "agent_role":
-      "Information Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini",
-      "messages": [{"role": "system", "content": "You are Information Agent. You have
-      access to specific knowledge sources.\nYour personal goal is: Provide information
-      based on knowledge sources\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"}, {"role": "user", "content": "\nCurrent Task: What is Brandon''s
-      favorite color?\n\nThis is the expected criteria for your final answer: Brandon''s
-      favorite color.\nyou MUST return the actual complete content as the final answer,
-      not a summary.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools":
-      null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler
-      object at 0x11e64cce0>"], "available_functions": null}}, {"event_id": "f7e0287a-30bf-4a26-a4ba-7b04a03cae04",
-      "timestamp": "2025-09-24T06:03:51.043305+00:00", "type": "llm_call_completed",
-      "event_data": {"timestamp": "2025-09-24T06:03:51.043289+00:00", "type": "llm_call_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": "30ecb0b9-6050-4dba-9380-7babbb8697d7", "task_name": "What is Brandon''s
-      favorite color?", "agent_id": "7a5ced08-5fbf-495c-9460-907d047db86c", "agent_role":
-      "Information Agent", "from_task": null, "from_agent": null, "messages": [{"role":
-      "system", "content": "You are Information Agent. You have access to specific
-      knowledge sources.\nYour personal goal is: Provide information based on knowledge
-      sources\nTo give my best complete final answer to the task respond using the
-      exact following format:\n\nThought: I now can give a great answer\nFinal Answer:
-      Your final answer must be the great and the most complete as possible, it must
-      be outcome described.\n\nI MUST use these formats, my job depends on it!"},
-      {"role": "user", "content": "\nCurrent Task: What is Brandon''s favorite color?\n\nThis
-      is the expected criteria for your final answer: Brandon''s favorite color.\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nBegin!
-      This is VERY important to you, use the tools available and give your best Final
-      Answer, your job depends on it!\n\nThought:"}], "response": "I now can give
-      a great answer  \nFinal Answer: Brandon''s favorite color is not publicly known
-      or available in common knowledge sources, as personal preferences like favorite
-      colors are typically private and can vary widely among individuals without publicly
-      shared information.", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model":
-      "gpt-4o-mini"}}, {"event_id": "9152def6-ce8e-4aae-8eb1-a8a456ac504f", "timestamp":
-      "2025-09-24T06:03:51.043525+00:00", "type": "agent_execution_completed", "event_data":
-      {"agent_role": "Information Agent", "agent_goal": "Provide information based
-      on knowledge sources", "agent_backstory": "You have access to specific knowledge
-      sources."}}, {"event_id": "daa96e3d-92f7-4fe8-b16e-f37052c2db6a", "timestamp":
-      "2025-09-24T06:03:51.043615+00:00", "type": "task_completed", "event_data":
-      {"task_description": "What is Brandon''s favorite color?", "task_name": "What
-      is Brandon''s favorite color?", "task_id": "30ecb0b9-6050-4dba-9380-7babbb8697d7",
-      "output_raw": "Brandon''s favorite color is not publicly known or available
-      in common knowledge sources, as personal preferences like favorite colors are
-      typically private and can vary widely among individuals without publicly shared
-      information.", "output_format": "OutputFormat.RAW", "agent_role": "Information
-      Agent"}}, {"event_id": "b28f29f9-e2ec-4f75-a660-7329e2716792", "timestamp":
-      "2025-09-24T06:03:51.044687+00:00", "type": "crew_kickoff_completed", "event_data":
-      {"timestamp": "2025-09-24T06:03:51.044664+00:00", "type": "crew_kickoff_completed",
-      "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
-      "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name":
-      "crew", "crew": null, "output": {"description": "What is Brandon''s favorite
-      color?", "name": "What is Brandon''s favorite color?", "expected_output": "Brandon''s
-      favorite color.", "summary": "What is Brandon''s favorite color?...", "raw":
-      "Brandon''s favorite color is not publicly known or available in common knowledge
-      sources, as personal preferences like favorite colors are typically private
-      and can vary widely among individuals without publicly shared information.",
-      "pydantic": null, "json_dict": null, "agent": "Information Agent", "output_format":
-      "raw"}, "total_tokens": 394}}], "batch_metadata": {"events_count": 10, "batch_sequence":
-      1, "is_final_batch": false}}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '9452'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Organization-Id:
-      - d3a3d10c-35db-423f-a7a4-c026030ba64d
-      X-Crewai-Version:
-      - 0.193.2
-    method: POST
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/7b434273-c30b-41e7-9af8-e8a06112b6d7/events
-  response:
-    body:
-      string: '{"events_created":10,"trace_batch_id":"8c2a5749-ba2a-47b9-a5dd-04cbca343737"}'
-    headers:
-      Content-Length:
-      - '77'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"5b5049fe52232a6ea0a61d9d51d10646"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.05, sql.active_record;dur=55.74, cache_generate.active_support;dur=4.85,
-        cache_write.active_support;dur=0.87, cache_read_multi.active_support;dur=0.77,
-        start_processing.action_controller;dur=0.01, instantiation.active_record;dur=0.49,
-        start_transaction.active_record;dur=0.00, transaction.active_record;dur=71.42,
-        process_action.action_controller;dur=723.61
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 93834675-b84a-40aa-a2dc-554318bba381
-      x-runtime:
-      - '0.797735'
-      x-xss-protection:
-      - 1; mode=block
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"status": "completed", "duration_ms": 2174, "final_event_count": 10}'
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '69'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - CrewAI-CLI/0.193.2
-      X-Crewai-Organization-Id:
-      - d3a3d10c-35db-423f-a7a4-c026030ba64d
-      X-Crewai-Version:
-      - 0.193.2
-    method: PATCH
-    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/7b434273-c30b-41e7-9af8-e8a06112b6d7/finalize
-  response:
-    body:
-      string: '{"id":"8c2a5749-ba2a-47b9-a5dd-04cbca343737","trace_id":"7b434273-c30b-41e7-9af8-e8a06112b6d7","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":2174,"crewai_version":"0.193.2","privacy_level":"standard","total_events":10,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"0.193.2","crew_fingerprint":null},"created_at":"2025-09-24T06:03:50.773Z","updated_at":"2025-09-24T06:03:52.221Z"}'
-    headers:
-      Content-Length:
-      - '483'
-      cache-control:
-      - max-age=0, private, must-revalidate
-      content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
-      content-type:
-      - application/json; charset=utf-8
-      etag:
-      - W/"eddac8e5dea3d4bebea0214257d4ec28"
-      permissions-policy:
-      - camera=(), microphone=(self), geolocation=()
-      referrer-policy:
-      - strict-origin-when-cross-origin
-      server-timing:
-      - cache_read.active_support;dur=0.03, sql.active_record;dur=19.54, cache_generate.active_support;dur=1.76,
-        cache_write.active_support;dur=0.08, cache_read_multi.active_support;dur=0.06,
-        start_processing.action_controller;dur=0.00, instantiation.active_record;dur=0.73,
-        unpermitted_parameters.action_controller;dur=0.01, start_transaction.active_record;dur=0.00,
-        transaction.active_record;dur=5.96, process_action.action_controller;dur=353.00
-      vary:
-      - Accept
-      x-content-type-options:
-      - nosniff
-      x-frame-options:
-      - SAMEORIGIN
-      x-permitted-cross-domain-policies:
-      - none
-      x-request-id:
-      - 9d657263-dd0c-453d-88d6-cdf2387cb718
-      x-runtime:
-      - '0.372790'
-      x-xss-protection:
-      - 1; mode=block
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

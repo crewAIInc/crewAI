@@ -59,8 +59,6 @@ interactions:
       - 90615dc63b805cb1-RDU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

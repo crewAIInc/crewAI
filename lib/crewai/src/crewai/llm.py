@@ -67,6 +67,7 @@ if TYPE_CHECKING:
 
     from crewai.agent.core import Agent
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -585,6 +586,7 @@ class LLM(BaseLLM):
         reasoning_effort: Literal["none", "low", "medium", "high"] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
+        thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
@@ -1642,6 +1644,10 @@ class LLM(BaseLLM):
                 if message.get("role") == "system":
                     msg_role: Literal["assistant"] = "assistant"
                     message["role"] = msg_role
+
+        if not self._invoke_before_llm_call_hooks(messages, from_agent):
+            raise ValueError("LLM call blocked by before_llm_call hook")
+
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
@@ -1651,7 +1657,16 @@ class LLM(BaseLLM):
                 params = self._prepare_completion_params(messages, tools)
                 # --- 7) Make the completion call and handle response
                 if self.stream:
-                    return self._handle_streaming_response(
+                    result = self._handle_streaming_response(
+                        params=params,
+                        callbacks=callbacks,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+                else:
+                    result = self._handle_non_streaming_response(
                         params=params,
                         callbacks=callbacks,
                         available_functions=available_functions,
@@ -1660,14 +1675,12 @@ class LLM(BaseLLM):
                         response_model=response_model,
                     )
 
-                return self._handle_non_streaming_response(
-                    params=params,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
+                if isinstance(result, str):
+                    result = self._invoke_after_llm_call_hooks(
+                        messages, result, from_agent
+                    )
+
+                return result
             except LLMContextLengthExceededError:
                 # Re-raise LLMContextLengthExceededError as it should be handled
                 # by the CrewAgentExecutor._invoke_loop method, which can then decide

@@ -137,8 +137,6 @@ interactions:
       - 926907d79dcff1e7-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -327,8 +325,6 @@ interactions:
       - 926907e45f33f1e7-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

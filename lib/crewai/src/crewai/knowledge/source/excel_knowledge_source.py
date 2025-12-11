@@ -1,4 +1,6 @@
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -26,7 +28,10 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
-    def validate_file_path(cls, v, info):  # noqa: N805
+    @classmethod
+    def validate_file_path(
+        cls, v: Path | list[Path] | str | list[str] | None, info: Any
+    ) -> Path | list[Path] | str | list[str] | None:
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
         if (
@@ -69,7 +74,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
         return [self.convert_to_path(path) for path in path_list]
 
-    def validate_content(self):
+    def validate_content(self) -> None:
         """Validate the paths."""
         for path in self.safe_file_paths:
             if not path.exists():
@@ -86,7 +91,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
                     color="red",
                 )
 
-    def model_post_init(self, _) -> None:
+    def model_post_init(self, _: Any) -> None:
         if self.file_path:
             self._logger.log(
                 "warning",
@@ -128,12 +133,12 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         """Convert a path to a Path object."""
         return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
 
-    def _import_dependencies(self):
+    def _import_dependencies(self) -> ModuleType:
         """Dynamically import dependencies."""
         try:
-            import pandas as pd  # type: ignore[import-untyped,import-not-found]
+            import pandas as pd  # type: ignore[import-untyped]
 
-            return pd
+            return pd  # type: ignore[no-any-return]
         except ImportError as e:
             missing_package = str(e).split()[-1]
             raise ImportError(
@@ -158,6 +163,20 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
         self._save_documents()
+
+    async def aadd(self) -> None:
+        """Add Excel file content asynchronously."""
+        content_str = ""
+        for value in self.content.values():
+            if isinstance(value, dict):
+                for sheet_value in value.values():
+                    content_str += str(sheet_value) + "\n"
+            else:
+                content_str += str(value) + "\n"
+
+        new_chunks = self._chunk_text(content_str)
+        self.chunks.extend(new_chunks)
+        await self._asave_documents()
 
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
