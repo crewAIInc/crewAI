@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from pydantic import BaseModel
@@ -17,6 +18,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from azure.core.credentials import AccessToken, TokenCredential
+
     from crewai.llms.hooks.base import BaseInterceptor
 
 
@@ -49,6 +52,39 @@ except ImportError:
     raise ImportError(
         'Azure AI Inference native provider not available, to install: uv add "crewai[azure-ai-inference]"'
     ) from None
+
+
+class _StaticTokenCredential:
+    """A simple TokenCredential implementation for static Azure AD tokens.
+
+    This class wraps a static token string and provides it as a TokenCredential
+    that can be used with Azure SDK clients. The token is assumed to be valid
+    and the user is responsible for token rotation.
+    """
+
+    def __init__(self, token: str) -> None:
+        """Initialize with a static token.
+
+        Args:
+            token: The Azure AD bearer token string.
+        """
+        self._token = token
+
+    def get_token(
+        self, *scopes: str, **kwargs: Any
+    ) -> AccessToken:
+        """Get the static token as an AccessToken.
+
+        Args:
+            *scopes: Token scopes (ignored for static tokens).
+            **kwargs: Additional arguments (ignored).
+
+        Returns:
+            AccessToken with the static token and a far-future expiry.
+        """
+        from azure.core.credentials import AccessToken
+
+        return AccessToken(self._token, int(time.time()) + 3600)
 
 
 class AzureCompletionParams(TypedDict, total=False):
@@ -92,6 +128,9 @@ class AzureCompletion(BaseLLM):
         stop: list[str] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        credential: TokenCredential | None = None,
+        azure_ad_token: str | None = None,
+        use_default_credential: bool = False,
         **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
@@ -111,7 +150,36 @@ class AzureCompletion(BaseLLM):
             stop: Stop sequences
             stream: Enable streaming responses
             interceptor: HTTP interceptor (not yet supported for Azure).
+            credential: Azure TokenCredential for Azure AD authentication (e.g.,
+                DefaultAzureCredential, ManagedIdentityCredential). Takes precedence
+                over other authentication methods.
+            azure_ad_token: Static Azure AD token string (defaults to AZURE_AD_TOKEN
+                env var). Use this for scenarios where you have a pre-fetched token.
+            use_default_credential: If True, automatically use DefaultAzureCredential
+                for Azure AD authentication. Requires azure-identity package.
             **kwargs: Additional parameters
+
+        Authentication Priority:
+            1. credential parameter (explicit TokenCredential)
+            2. azure_ad_token parameter or AZURE_AD_TOKEN env var
+            3. api_key parameter or AZURE_API_KEY env var
+            4. use_default_credential=True (DefaultAzureCredential)
+
+        Example:
+            # Using API key (existing behavior)
+            llm = LLM(model="azure/gpt-4", api_key="...", endpoint="...")
+
+            # Using Azure AD token from environment
+            os.environ["AZURE_AD_TOKEN"] = token_provider()
+            llm = LLM(model="azure/gpt-4", endpoint="...")
+
+            # Using DefaultAzureCredential (Managed Identity, Azure CLI, etc.)
+            llm = LLM(model="azure/gpt-4", endpoint="...", use_default_credential=True)
+
+            # Using explicit TokenCredential
+            from azure.identity import ManagedIdentityCredential
+            llm = LLM(model="azure/gpt-4", endpoint="...",
+                      credential=ManagedIdentityCredential())
         """
         if interceptor is not None:
             raise NotImplementedError(
@@ -124,6 +192,9 @@ class AzureCompletion(BaseLLM):
         )
 
         self.api_key = api_key or os.getenv("AZURE_API_KEY")
+        self.azure_ad_token = azure_ad_token or os.getenv("AZURE_AD_TOKEN")
+        self._explicit_credential = credential
+        self.use_default_credential = use_default_credential
         self.endpoint = (
             endpoint
             or os.getenv("AZURE_ENDPOINT")
@@ -134,10 +205,6 @@ class AzureCompletion(BaseLLM):
         self.timeout = timeout
         self.max_retries = max_retries
 
-        if not self.api_key:
-            raise ValueError(
-                "Azure API key is required. Set AZURE_API_KEY environment variable or pass api_key parameter."
-            )
         if not self.endpoint:
             raise ValueError(
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
@@ -146,19 +213,22 @@ class AzureCompletion(BaseLLM):
         # Validate and potentially fix Azure OpenAI endpoint URL
         self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
 
+        # Select credential based on priority
+        selected_credential = self._select_credential()
+
         # Build client kwargs
-        client_kwargs = {
+        client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
-            "credential": AzureKeyCredential(self.api_key),
+            "credential": selected_credential,
         }
 
         # Add api_version if specified (primarily for Azure OpenAI endpoints)
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
 
-        self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+        self.client = ChatCompletionsClient(**client_kwargs)
 
-        self.async_client = AsyncChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+        self.async_client = AsyncChatCompletionsClient(**client_kwargs)
 
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
@@ -173,6 +243,47 @@ class AzureCompletion(BaseLLM):
         self.is_azure_openai_endpoint = (
             "openai.azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
+        )
+
+    def _select_credential(self) -> AzureKeyCredential | TokenCredential:
+        """Select the appropriate credential based on configuration priority.
+
+        Priority order:
+            1. Explicit credential parameter (TokenCredential)
+            2. azure_ad_token parameter or AZURE_AD_TOKEN env var
+            3. api_key parameter or AZURE_API_KEY env var
+            4. use_default_credential=True (DefaultAzureCredential)
+
+        Returns:
+            The selected credential for Azure authentication.
+
+        Raises:
+            ValueError: If no valid credentials are configured.
+        """
+        if self._explicit_credential is not None:
+            return self._explicit_credential
+
+        if self.azure_ad_token:
+            return _StaticTokenCredential(self.azure_ad_token)
+
+        if self.api_key:
+            return AzureKeyCredential(self.api_key)
+
+        if self.use_default_credential:
+            try:
+                from azure.identity import DefaultAzureCredential
+
+                return DefaultAzureCredential()
+            except ImportError:
+                raise ImportError(
+                    "azure-identity package is required for use_default_credential=True. "
+                    'Install it with: uv add "azure-identity"'
+                ) from None
+
+        raise ValueError(
+            "Azure credentials are required. Provide one of: "
+            "api_key / AZURE_API_KEY, azure_ad_token / AZURE_AD_TOKEN, "
+            "a TokenCredential via 'credential', or set use_default_credential=True."
         )
 
     @staticmethod
