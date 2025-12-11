@@ -84,7 +84,7 @@ bedrock = [
     "boto3~=1.40.45",
 ]
 google-genai = [
-    "google-genai~=1.2.0",
+    "google-genai~=1.49.0",
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",

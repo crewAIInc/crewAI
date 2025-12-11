@@ -136,6 +136,10 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
 
 def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
     """Filter sensitive headers from response before recording."""
+    # Remove Content-Encoding to prevent decompression issues on replay
+    for encoding_header in ["Content-Encoding", "content-encoding"]:
+        response["headers"].pop(encoding_header, None)
+
     for header_name, replacement in HEADERS_TO_FILTER.items():
         for variant in [header_name, header_name.upper(), header_name.title()]:
             if variant in response["headers"]:

@@ -1,12 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Assistant. You are
-      a helpful test assistant\nYour personal goal is: Answer questions briefly\n\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"Say
-      ''Hello World'' and nothing else"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Assistant. You are a helpful test assistant\nYour personal goal is: Answer questions briefly\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"Say ''Hello World'' and nothing else"}],"model":"gpt-4.1-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -46,23 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtQwEL3nK0Y+b6okZJuSW4VAFIq4rFQkqCLXmSQDjseynRZU7b8j
-        Z7ebFIrEJVLmzXt+b2YeEwBBrahBqEEGNVqdvqFxd331hW+2hD5scyrd5asPxe7j9edPb8UmMvju
-        O6rwxDpTPFqNgdgcYOVQBoyqeXVeVhcX1evtDIzcoo603oa0PMvTkQylRVZs06xM8/JIH5gUelHD
-        1wQA4HH+RqOmxZ+ihmzzVBnRe9mjqE9NAMKxjhUhvScfpAlis4CKTUAze98NPPVDqOEKDD+AkgZ6
-        ukeQ0McAII1/QPfNvCMjNVzOfzW8R60Zbtjpdq3rsJu8jOHMpPUKkMZwkHE4c6LbI7I/ZdDcW8d3
-        /g+q6MiQHxqH0rOJfn1gK2Z0nwDczrOansUX1vFoQxP4B87P5Vlx0BPLjlbo9ggGDlKv6nm1eUGv
-        aTFI0n41baGkGrBdqMtq5NQSr4BklfpvNy9pH5KT6f9HfgGUQhuwbazDltTzxEubw3jC/2o7TXk2
-        LDy6e1LYBEIXN9FiJyd9uCvhf/mAY9OR6dFZR4fj6mxTlFWeqarLzkWyT34DAAD//wMAP95PRmsD
-        AAA=
+      string: "{\n  \"id\": \"chatcmpl-CimTLIXoW5iest51i4rA3J2TKLOME\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764788795,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: Hello World\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 102,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 117,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_24710c7f06\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
