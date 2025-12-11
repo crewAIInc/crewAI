@@ -130,10 +130,15 @@ def test_telemetry_register_shutdown_handlers_with_missing_optional_signals(
     """Telemetry shouldn't fail when optional signals are missing (Windows-like).
 
     This is a regression test for GitHub issue #4062.
-    """
-    import importlib
 
-    from crewai.telemetry import telemetry as telemetry_module
+    Note: This test uses an isolated module loading approach to avoid
+    polluting the canonical telemetry module which other tests depend on.
+    """
+    import importlib.util
+    import pathlib
+    import sys
+
+    from crewai.telemetry import telemetry as orig_telemetry_module
 
     # Disable telemetry to avoid real OTLP setup
     monkeypatch.setenv("CREWAI_DISABLE_TELEMETRY", "true")
@@ -143,15 +148,28 @@ def test_telemetry_register_shutdown_handlers_with_missing_optional_signals(
     monkeypatch.delattr(signal, "SIGTSTP", raising=False)
     monkeypatch.delattr(signal, "SIGCONT", raising=False)
 
-    # Reload after patching so the module sees the modified signal module
-    reloaded = importlib.reload(telemetry_module)
+    # Load an isolated copy of the telemetry module under a different name
+    path = pathlib.Path(orig_telemetry_module.__file__)
+    spec = importlib.util.spec_from_file_location(
+        "crewai.telemetry.telemetry_isolated", path
+    )
+    assert spec is not None
+    assert spec.loader is not None
 
-    # Reset the singleton to allow a new instance
-    reloaded.Telemetry._instance = None
-    reloaded.Telemetry._lock = threading.Lock()
+    isolated_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = isolated_module
+    try:
+        spec.loader.exec_module(isolated_module)
 
-    # This should not raise an error even with missing signals
-    telemetry = reloaded.Telemetry()
+        # Reset the singleton to allow a new instance
+        isolated_module.Telemetry._instance = None
+        isolated_module.Telemetry._lock = threading.Lock()
 
-    # Telemetry should be disabled (due to env var), but import should succeed
-    assert telemetry.ready is False
+        # This should not raise an error even with missing signals
+        telemetry = isolated_module.Telemetry()
+
+        # Telemetry should be disabled (due to env var), but import should succeed
+        assert telemetry.ready is False
+    finally:
+        # Clean up to avoid polluting sys.modules
+        del sys.modules[spec.name]

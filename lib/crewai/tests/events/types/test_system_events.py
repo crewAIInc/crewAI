@@ -210,6 +210,42 @@ class TestSignalEventSerialization:
         assert restored.type == original.type
 
 
+def _load_isolated_system_events_module(monkeypatch: pytest.MonkeyPatch):
+    """Load an isolated copy of system_events module with missing signals.
+
+    This avoids reloading the canonical module which would break other tests
+    that depend on the original class references.
+    """
+    import importlib.util
+    import pathlib
+    import sys
+
+    import crewai.events.types.system_events as orig_module
+
+    # Simulate Windows by removing optional signals
+    monkeypatch.delattr(signal, "SIGHUP", raising=False)
+    monkeypatch.delattr(signal, "SIGTSTP", raising=False)
+    monkeypatch.delattr(signal, "SIGCONT", raising=False)
+
+    # Load an isolated copy of the module under a different name
+    path = pathlib.Path(orig_module.__file__)
+    spec = importlib.util.spec_from_file_location(
+        "crewai.events.types.system_events_isolated", path
+    )
+    assert spec is not None
+    assert spec.loader is not None
+
+    isolated_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = isolated_module
+    try:
+        spec.loader.exec_module(isolated_module)
+    finally:
+        # Clean up to avoid polluting sys.modules
+        del sys.modules[spec.name]
+
+    return isolated_module
+
+
 class TestWindowsCompatibility:
     """Tests for Windows compatibility (signals not available on Windows)."""
 
@@ -220,32 +256,22 @@ class TestWindowsCompatibility:
 
         This is a regression test for GitHub issue #4062.
         """
-        import importlib
-
-        import crewai.events.types.system_events as system_events_module
-
-        # Simulate a Windows-like signal module by removing optional signals
-        monkeypatch.delattr(signal, "SIGHUP", raising=False)
-        monkeypatch.delattr(signal, "SIGTSTP", raising=False)
-        monkeypatch.delattr(signal, "SIGCONT", raising=False)
-
-        # Reload after patching so class definitions see the modified signal module
-        reloaded = importlib.reload(system_events_module)
+        isolated = _load_isolated_system_events_module(monkeypatch)
 
         # Import should succeed and enum members should exist
-        assert hasattr(reloaded.SignalType, "SIGHUP")
-        assert hasattr(reloaded.SignalType, "SIGTSTP")
-        assert hasattr(reloaded.SignalType, "SIGCONT")
+        assert hasattr(isolated.SignalType, "SIGHUP")
+        assert hasattr(isolated.SignalType, "SIGTSTP")
+        assert hasattr(isolated.SignalType, "SIGCONT")
 
         # Event classes should still be importable
-        assert hasattr(reloaded, "SigHupEvent")
-        assert hasattr(reloaded, "SigTStpEvent")
-        assert hasattr(reloaded, "SigContEvent")
+        assert hasattr(isolated, "SigHupEvent")
+        assert hasattr(isolated, "SigTStpEvent")
+        assert hasattr(isolated, "SigContEvent")
 
         # Fallback values should be negative (to avoid conflicts with real signals)
-        assert reloaded.SignalType.SIGHUP < 0
-        assert reloaded.SignalType.SIGTSTP < 0
-        assert reloaded.SignalType.SIGCONT < 0
+        assert isolated.SignalType.SIGHUP < 0
+        assert isolated.SignalType.SIGTSTP < 0
+        assert isolated.SignalType.SIGCONT < 0
 
     def test_signal_events_can_be_created_when_signals_missing(
         self, monkeypatch: pytest.MonkeyPatch
@@ -254,24 +280,14 @@ class TestWindowsCompatibility:
 
         This is a regression test for GitHub issue #4062.
         """
-        import importlib
-
-        import crewai.events.types.system_events as system_events_module
-
-        # Simulate a Windows-like signal module
-        monkeypatch.delattr(signal, "SIGHUP", raising=False)
-        monkeypatch.delattr(signal, "SIGTSTP", raising=False)
-        monkeypatch.delattr(signal, "SIGCONT", raising=False)
-
-        # Reload after patching
-        reloaded = importlib.reload(system_events_module)
+        isolated = _load_isolated_system_events_module(monkeypatch)
 
         # Events should be creatable
-        hup_event = reloaded.SigHupEvent()
+        hup_event = isolated.SigHupEvent()
         assert hup_event.type == "SIGHUP"
 
-        tstp_event = reloaded.SigTStpEvent()
+        tstp_event = isolated.SigTStpEvent()
         assert tstp_event.type == "SIGTSTP"
 
-        cont_event = reloaded.SigContEvent()
+        cont_event = isolated.SigContEvent()
         assert cont_event.type == "SIGCONT"
