@@ -698,3 +698,33 @@ def test_gemini_stop_sequences_sent_to_api():
         assert hasattr(config, 'stop_sequences') or 'stop_sequences' in config.__dict__
         if hasattr(config, 'stop_sequences'):
             assert config.stop_sequences == ["\nObservation:", "\nThought:"]
+
+
+@pytest.mark.vcr()
+@pytest.mark.skip(reason="VCR cannot replay SSE streaming responses")
+def test_google_streaming_returns_usage_metrics():
+    """
+    Test that Google Gemini streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of Japan",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="gemini/gemini-2.0-flash-exp", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of Japan?",
+        expected_output="The capital of Japan",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1

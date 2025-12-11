@@ -42,19 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQTUvDQBCG/0p4r24hqa2HBQ8iiiBCBfUisiy7QxtMZuPOrLSU/HdJsUgVTwPz
-        PPPBu0efInWwCJ0vkWaSmElni9m8ni/rZbOAQRth0cva1c3V/eolXq/87epRLoaHm7B9ftrdwUB3
-        A00Wifg1wSCnbmp4kVbUs8IgJFZihX3dH32l7UQOxaKpzqqmuqzmGN8MRNPgMnlJDAvi6LRkxjcQ
-        +ijEgWC5dJ1BOdy1e7Q8FHWa3okFtlkYBB825EImr21idyrUR57Jx//YcXbaT8OGesq+c8v+r/9D
-        m81vOhqkoiffnRsI5c82kNOWMiymsKLPEeP4BQAA//8DAAkpexydAQAA
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01AKPVdCPaFPQs6pMEcxUTyH","type":"message","role":"assistant","content":[{"type":"text","text":"1 + 1 = 2"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":13,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -141,19 +134,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQTUvEMBCG/0p5r2ahre0l4EUPXjyIrCCIhJAM27DtpCYTWVn636WLi6ziaWCe
-        Zz54j5iipxEabrTF0yZHZpJNt2nrtq/7poNC8NCY8s7UTX/b3w2BD/4pvtw/Pm/dw3TYWijI50yr
-        RTnbHUEhxXFt2JxDFssCBRdZiAX69Xj2hQ4rORWNtrqq2uqm6rC8KWSJs0lkc2RoEHsjJTG+Qab3
-        QuwImss4KpTTXX1E4LmIkbgnztBNp+CsG8i4RFZCZHMp1GeeyPr/2Hl23U/zQBMlO5p++uv/0Gb4
-        TReFWOTiu2uFTOkjODISKEFjDcvb5LEsXwAAAP//AwDa2+/dnQEAAA==
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_015B5ChinxdRoXGPUTcLmxTa","type":"message","role":"assistant","content":[{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":13,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -240,19 +226,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBNS8QwEIb/yvJezUKztJeAF8XVi0cPKhJCMrbFdtJNJrK69L9LFxdZ
-        xdPAPM988B4wxkADDPzgSqB1jswk63q9qTZN1egaCn2AwZhbW+nt9un+avf5+lCnm9C2d41cP97u
-        oSAfEy0W5exagkKKw9JwOfdZHAsUfGQhFpjnw8kX2i/kWAz0hV5drjaYXxSyxMkmcjkyDIiDlZIY
-        3yDTrhB7guEyDArleNUc0PNUxEp8I84wulbwzndkfSInfWR7LlQnnsiF/9hpdtlPU0cjJTfYZvzr
-        /1Dd/aazQixy9p1WyJTee09WekowWKIKLgXM8xcAAAD//wMApv4OQJsBAAA=
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01FFZMBqzfU4rEdggH5tCYGx","type":"message","role":"assistant","content":[{"type":"text","text":"1+1 = 2"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":11,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -339,19 +318,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBNS8QwEIb/SnmvZqGt3VUCHtYPFNSbFxUJIRm2xXZSk4koS/+7dHGR
-        VTwNzPPMB+8WQ/DUQ8P1NntapMBMsmgWdVkvy2XVQKHz0BjSxpRV9Xiyulpf3zyE+8vbVXUXTp/O
-        1xdQkM+RZotSshuCQgz93LApdUksCxRcYCEW6Oft3hf6mMmuaNTFUVEXZ0WD6UUhSRhNJJsCQ4PY
-        G8mR8Q0SvWViR9Cc+14h7+7qLToesxgJr8QJumoUnHUtGRfJShfYHArlnkey/j+2n53309jSQNH2
-        Zjn89X9o1f6mk0LIcvDdsUKi+N45MtJRhMYclrfRY5q+AAAA//8DAIkh+sidAQAA
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_011Y76EAGHToMDK61Lo8ZBAC","type":"message","role":"assistant","content":[{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":13,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

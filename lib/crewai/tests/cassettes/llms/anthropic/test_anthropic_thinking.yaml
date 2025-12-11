@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather
-      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
     headers:
       accept:
       - application/json
@@ -41,39 +40,13 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        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
-        0mgZxR33sPSMz89/AwAA//8DAHYWWLc6CAAA
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01Ged4AFM7p6Az1EJwCupJgN","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"The user is asking about the current weather in Tokyo. However, I don''t have access to real-time information, including current weather data. My knowledge was last updated in April 2024, and I cannot browse the internet or access live weather services.\n\nI should let the user know that I cannot provide current weather information and suggest how they could find this information themselves.","signature":"ErAECkYIChgCKkARlc1jMnFpY90f5dF4HEfZoRXOHn40AvF41rtOlyk1YjT2ekk5lwSKy5CoXaRkNa3ZbAnovMN6Qn1zGdp+aL3xEgyN7xr0O1qknyiEY9oaDNbekyF2Hjrg5YPO/CIwfnR0HRKZLDsaoekhW7AQLBTlR/SVHooc2M4THNxfHj2LD3B/6QDFg+2yEms30JyhKpcDcHPgZqwvor8Hsl22v70u1UxYvsKYS84LpMKVnnR3eoYvrP90s2g11eoybDPl/NUisMrYx/pSL5AG57qIvREYMcPz4r3VmGmE6+FUOzqMVWQRYmXQ1zaSzdNpr5ELAXPQGON33DyPbOtm8yqzw1j0X0qEvW/FwGgsN049hZSZdZsPLIvxQz1dW83cVK7ncHAJzUHVvmnwOgZyW9DW4cBZprnUM45wzxOuprfPl4mV2rXN9bm9Wpl+4G/kzhYabOECMP07aj7m+qvSXDIo2elMPMHPKx8VixFwIetJC2vi2Sa1tFO9g3xIInItWBQUZytwOp/HaPO/AqoXWDoAR3HVqgPHkzoEhiIpuwwWYOxh7ShtYUCpiUtj3Dzg0yF1lQrdMiN6EbTS1hrj1wcwysZMI0iUursu/N+lh2ujIrZOGNzre5hojSURYwucdGGoQtB65eHnMstCdOH2ht8m881mJ8l7tDHNfnlUD1wsrkT2s99d1Fb5brj/yxiKD9JheDL/xsICEUko6uw+4Getixj8jdwEsY4caVoYAQ=="},{"type":"text","text":"I
+        don''t have access to real-time weather information. To get the current weather in Tokyo, you could:\n\n1. **Search online**: Google \"Tokyo weather\" for immediate results\n2. **Weather websites/apps**: Check weather.com, AccuWeather, or Weather Underground\n3. **Local sources**: The Japan Meteorological Agency (jma.go.jp) provides official forecasts\n\nIs there anything else about Tokyo I can help you with, such as general climate information or what weather to expect during different seasons?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":199,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
