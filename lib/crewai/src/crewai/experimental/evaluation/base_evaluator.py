@@ -1,15 +1,20 @@
+from __future__ import annotations
+
 import abc
 import enum
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.llm import BaseLLM
 from crewai.task import Task
 from crewai.utilities.llm_utils import create_llm
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class MetricCategory(enum.Enum):
