@@ -521,7 +521,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str:
         """Handle streaming chat completion."""
         full_response = ""
-        tool_calls = {}
+        tool_calls: dict[str, dict[str, Any]] = {}
 
         if response_model:
             parse_params = {
@@ -592,16 +592,36 @@ class OpenAICompletion(BaseLLM):
             if chunk_delta.tool_calls:
                 for tool_call in chunk_delta.tool_calls:
                     call_id = tool_call.id or "default"
+                    tool_index = tool_call.index if tool_call.index is not None else 0
                     if call_id not in tool_calls:
                         tool_calls[call_id] = {
                             "name": "",
                             "arguments": "",
+                            "index": tool_index,
                         }
 
                     if tool_call.function and tool_call.function.name:
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": call_id,
+                            "function": {
+                                "name": tool_calls[call_id]["name"],
+                                "arguments": tool_calls[call_id]["arguments"],
+                            },
+                            "type": "function",
+                            "index": tool_calls[call_id]["index"],
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                    )
 
         self._track_token_usage_internal(usage_data)
 
@@ -789,7 +809,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str:
         """Handle async streaming chat completion."""
         full_response = ""
-        tool_calls = {}
+        tool_calls: dict[str, dict[str, Any]] = {}
 
         if response_model:
             completion_stream: AsyncIterator[
@@ -871,16 +891,36 @@ class OpenAICompletion(BaseLLM):
             if chunk_delta.tool_calls:
                 for tool_call in chunk_delta.tool_calls:
                     call_id = tool_call.id or "default"
+                    tool_index = tool_call.index if tool_call.index is not None else 0
                     if call_id not in tool_calls:
                         tool_calls[call_id] = {
                             "name": "",
                             "arguments": "",
+                            "index": tool_index,
                         }
 
                     if tool_call.function and tool_call.function.name:
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": call_id,
+                            "function": {
+                                "name": tool_calls[call_id]["name"],
+                                "arguments": tool_calls[call_id]["arguments"],
+                            },
+                            "type": "function",
+                            "index": tool_calls[call_id]["index"],
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                    )
 
         self._track_token_usage_internal(usage_data)
 

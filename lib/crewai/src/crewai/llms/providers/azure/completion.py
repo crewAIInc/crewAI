@@ -674,7 +674,7 @@ class AzureCompletion(BaseLLM):
         self,
         update: StreamingChatCompletionsUpdate,
         full_response: str,
-        tool_calls: dict[str, dict[str, str]],
+        tool_calls: dict[str, dict[str, Any]],
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
@@ -702,12 +702,13 @@ class AzureCompletion(BaseLLM):
                 )
 
             if choice.delta and choice.delta.tool_calls:
-                for tool_call in choice.delta.tool_calls:
+                for idx, tool_call in enumerate(choice.delta.tool_calls):
                     call_id = tool_call.id or "default"
                     if call_id not in tool_calls:
                         tool_calls[call_id] = {
                             "name": "",
                             "arguments": "",
+                            "index": idx,
                         }
 
                     if tool_call.function and tool_call.function.name:
@@ -715,12 +716,30 @@ class AzureCompletion(BaseLLM):
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
 
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": call_id,
+                            "function": {
+                                "name": tool_calls[call_id]["name"],
+                                "arguments": tool_calls[call_id]["arguments"],
+                            },
+                            "type": "function",
+                            "index": tool_calls[call_id]["index"],
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                    )
+
         return full_response
 
     def _finalize_streaming_response(
         self,
         full_response: str,
-        tool_calls: dict[str, dict[str, str]],
+        tool_calls: dict[str, dict[str, Any]],
         usage_data: dict[str, int],
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
