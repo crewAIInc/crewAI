@@ -187,6 +187,97 @@ You can also deploy your crews directly through the CrewAI AOP web interface by 
 
 </Steps>
 
+## Option 3: Redeploy Using API (CI/CD Integration)
+
+For automated deployments in CI/CD pipelines, you can use the CrewAI API to trigger redeployments of existing crews. This is particularly useful for GitHub Actions, Jenkins, or other automation workflows.
+
+<Steps>
+  <Step title="Get Your Personal Access Token">
+
+    Navigate to your CrewAI AOP account settings to generate an API token:
+
+    1. Go to [app.crewai.com](https://app.crewai.com)
+    2. Click on **Settings** → **Account** → **Personal Access Token**
+    3. Generate a new token and copy it securely
+    4. Store this token as a secret in your CI/CD system
+
+  </Step>
+
+  <Step title="Find Your Automation UUID">
+
+    Locate the unique identifier for your deployed crew:
+
+    1. Go to **Automations** in your CrewAI AOP dashboard
+    2. Select your existing automation/crew
+    3. Click on **Additional Details**
+    4. Copy the **UUID** - this identifies your specific crew deployment
+
+  </Step>
+
+  <Step title="Trigger Redeployment via API">
+
+    Use the Deploy API endpoint to trigger a redeployment:
+
+    ```bash
+    curl -i -X POST \
+         -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \
+         https://app.crewai.com/crewai_plus/api/v1/crews/YOUR-AUTOMATION-UUID/deploy
+
+    # HTTP/2 200
+    # content-type: application/json
+    #
+    # {
+    #   "uuid": "your-automation-uuid",
+    #   "status": "Deploy Enqueued",
+    #   "public_url": "https://your-crew-deployment.crewai.com",
+    #   "token": "your-bearer-token"
+    # }
+    ```
+
+    <Info>
+    If your automation was first created connected to Git, the API will automatically pull the latest changes from your repository before redeploying.
+    </Info>
+
+
+  </Step>
+
+  <Step title="GitHub Actions Integration Example">
+
+    Here's a GitHub Actions workflow with more complex deployment triggers:
+
+    ```yaml
+    name: Deploy CrewAI Automation
+
+    on:
+      push:
+        branches: [ main ]
+      pull_request:
+        types: [ labeled ]
+      release:
+        types: [ published ]
+
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) ||
+          (github.event_name == 'release')
+        steps:
+          - name: Trigger CrewAI Redeployment
+            run: |
+              curl -X POST \
+                   -H "Authorization: Bearer ${{ secrets.CREWAI_PAT }}" \
+                   https://app.crewai.com/crewai_plus/api/v1/crews/${{ secrets.CREWAI_AUTOMATION_UUID }}/deploy
+    ```
+
+    <Tip>
+    Add `CREWAI_PAT` and `CREWAI_AUTOMATION_UUID` as repository secrets. For PR deployments, add a "deploy" label to trigger the workflow.
+    </Tip>
+
+    </Step>
+  </Steps>
+
 ## ⚠️ Environment Variable Security Requirements
 
 <Warning>
