@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from langchain.tools import tool
+from crewai.tools import tool
 
 class AgentUtilityTools:
     """
@@ -9,7 +9,7 @@ class AgentUtilityTools:
     """
 
     @tool("Generate Unique ID")
-    def generate_id(tool_input=None):
+    def generate_id(tool_input: str = None) -> str:
         """
         Generates a unique Version 4 UUID. 
         Useful for tagging tasks, creating transaction IDs, or tracking agent actions.
@@ -18,7 +18,7 @@ class AgentUtilityTools:
         return str(uuid.uuid4())
 
     @tool("Get Current Time")
-    def get_current_time(tool_input=None):
+    def get_current_time(tool_input: str = None) -> str:
         """
         Returns the current system date and time.
         Useful for agents that need to schedule events, check deadlines, 
