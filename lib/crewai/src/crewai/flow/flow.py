@@ -70,7 +70,16 @@ from crewai.flow.utils import (
     is_simple_flow_condition,
 )
 from crewai.flow.visualization import build_flow_structure, render_interactive
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.printer import Printer, PrinterColor
+from crewai.utilities.streaming import (
+    TaskInfo,
+    create_async_chunk_generator,
+    create_chunk_generator,
+    create_streaming_state,
+    signal_end,
+    signal_error,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -456,6 +465,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     initial_state: type[T] | T | None = None
     name: str | None = None
     tracing: bool | None = None
+    stream: bool = False
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -822,20 +832,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
-    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
+    def kickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=False
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = self.kickoff(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e)
+                finally:
+                    self.stream = True
+                    signal_end(state)
+
+            streaming_output = FlowStreamingOutput(
+                sync_iterator=create_chunk_generator(state, run_flow, output_holder)
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
 
         async def _run_flow() -> Any:
             return await self.kickoff_async(inputs)
 
         return asyncio.run(_run_flow())
 
-    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
+    async def kickoff_async(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution asynchronously.
 
@@ -850,6 +896,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = await self.kickoff_async(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    self.stream = True
+                    signal_end(state, is_async=True)
+
+            streaming_output = FlowStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_flow, output_holder
+                )
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
+
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         flow_token = attach(ctx)
 
@@ -927,6 +1008,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -949,6 +1031,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return final_output
         finally:
             detach(flow_token)
+
+    async def akickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
+        """Native async method to start the flow execution. Alias for kickoff_async.
+
+
+        Args:
+            inputs: Optional dictionary containing input values and/or a state ID for restoration.
+
+        Returns:
+            The final output from the flow, which is the result of the last executed method.
+        """
+        return await self.kickoff_async(inputs)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
@@ -1028,6 +1124,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
@@ -1035,7 +1132,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -1053,13 +1150,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                     result=result,
                 ),
             )
@@ -1080,6 +1178,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             raise e
+
+    def _copy_and_serialize_state(self) -> dict[str, Any]:
+        state_copy = self._copy_state()
+        if isinstance(state_copy, BaseModel):
+            try:
+                return state_copy.model_dump(mode="json")
+            except Exception:
+                return state_copy.model_dump()
+        else:
+            return state_copy
 
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any

@@ -1,0 +1,61 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the capital of France?"}], "role":
+      "user"}], "generationConfig": {}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '111'
+      Content-Type:
+      - application/json
+      user-agent:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-client:
+      - google-genai-sdk/1.2.0 gl-python/3.12.9
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"The capital of France is **Paris**.\",\n
+        \           \"thoughtSignature\": \"ErYDCrMDAXLI2nxqP91JUT+ukOUiDfsRxJMh6wlKuN3qt7oHYxuFdQN2p6cbogULRi6Ucri5UsdVdc8y3/RaOMRs1gWnh8SGeb81k1PcI+vSZZ3Cl6pyD8Ajn39AZ1YaFFrLan4cpIbliO1Goj8FjW2TF2z4zOXdg52a0hrvi6V4cjfNLCLQazKJ7r4J/P8LOHEQQMdsDte7eD+0p1bPZfNNlTKLeHV9PowZbiGl1UtSVX6Cy7wow6VYMJ4es+PfuOISZe77ksiY8GTkx6fICce9hyIlFNRvU9xwaxwliaK6EXLIcGdXLkfjyGN11+3YwXMxmIQ8g62l0s/GwzmLmjz42aihAHP33YMgmP1L5rY+o0pStwQwavFh9XVKWHrZEJfVCWE615N0dikgWNN/bpICELBPajzlZ5BSR0e9Hm0unbFOwQt54FWPCHfAD1UT+g5pDrqM28mG94BjCmwS0OmsSaI1gl612zk3Q+ZL8UYfNzeiPVFkgTRmbgLXOJqMiC0aBLrLR4cvIiS/Kc5CDttfu6EXMWoXqRGCt1FI7pNjfG9I/QGRVk/KqIauTLauGcEEeGPsB7h5\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        8,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 106,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 8\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 90\n  },\n  \"modelVersion\": \"gemini-3-pro-preview\",\n
+        \ \"responseId\": \"xFIrafrxEOag_uMP_ayUwA0\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 29 Nov 2025 20:08:36 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2675
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -4,7 +4,7 @@ from crewai_tools.tools.firecrawl_crawl_website_tool.firecrawl_crawl_website_too
     FirecrawlCrawlWebsiteTool,
 )
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_firecrawl_crawl_tool_integration():
     tool = FirecrawlCrawlWebsiteTool(config={
         "limit": 2,

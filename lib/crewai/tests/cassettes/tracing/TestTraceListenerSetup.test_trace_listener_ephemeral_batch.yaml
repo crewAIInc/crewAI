@@ -1,0 +1,307 @@
+interactions:
+- request:
+    body: '{"trace_id": "8356baf7-abbe-446a-9668-a63d501765d0", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.6.0", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-29T03:12:24.775214+00:00"}, "ephemeral_trace_id": "8356baf7-abbe-446a-9668-a63d501765d0"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.6.0
+      X-Crewai-Version:
+      - 1.6.0
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"f8dfcffd-d0ef-4ca2-afad-9eff37f8c9d9","ephemeral_trace_id":"8356baf7-abbe-446a-9668-a63d501765d0","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.6.0","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.6.0","privacy_level":"standard"},"created_at":"2025-11-29T03:12:25.077Z","updated_at":"2025-11-29T03:12:25.077Z","access_code":"TRACE-4fc2c6b913","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 29 Nov 2025 03:12:25 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '787'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Ch5flaLDqIqyRdYlrrvZ3Pu6emSal\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764385945,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Sat, 29 Nov 2025 03:12:26 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '443'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '655'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"events": [{"event_id": "e73c85bb-b00f-46be-b07f-cfbd398e24d9", "timestamp": "2025-11-29T03:12:24.774266+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-11-29T03:12:24.774266+00:00", "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "8d1cdbd9-17a6-499b-a0f7-66daad11da4f", "timestamp": "2025-11-29T03:12:24.776776+00:00", "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "8d7964bd-5e3a-4089-a792-8c63b5b3df8a", "timestamp": "2025-11-29T03:12:24.776973+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-11-29T03:12:24.776973+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null,
+      "task_id": "2b5b469c-61f1-4439-bb50-1bb59a539305", "task_name": "Say hello to the world", "agent_id": "589d6b85-044a-4df7-b0b9-e4aafeb642a9", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+      "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x10f2ac5f0>"], "available_functions": null}}, {"event_id": "3d4ec456-f3e3-4dc5-93a1-ac42a5baa307", "timestamp": "2025-11-29T03:12:26.197379+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-11-29T03:12:26.197379+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "2b5b469c-61f1-4439-bb50-1bb59a539305", "task_name": "Say hello to the world", "agent_id": "589d6b85-044a-4df7-b0b9-e4aafeb642a9", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it
+      must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer: hello world", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "b3621b9b-6034-4ed7-8ea8-435a6359e733", "timestamp": "2025-11-29T03:12:26.197544+00:00", "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "d0802db5-cb55-4913-ad79-deed426b286b", "timestamp": "2025-11-29T03:12:26.197674+00:00", "type": "task_completed", "event_data": {"task_description":
+      "Say hello to the world", "task_name": "Say hello to the world", "task_id": "2b5b469c-61f1-4439-bb50-1bb59a539305", "output_raw": "hello world", "output_format": "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "5dd064ff-f773-4fca-b3d9-624dde505177", "timestamp": "2025-11-29T03:12:26.199670+00:00", "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-11-29T03:12:26.199670+00:00", "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "output": {"description": "Say hello to the world", "name": "Say hello to the world", "expected_output": "hello world", "summary": "Say hello to the world...", "raw": "hello world", "pydantic": null, "json_dict": null, "agent": "Test Agent", "output_format": "raw", "messages": [{"role": "''system''", "content": "''You are Test Agent. Test backstory\\nYour personal
+      goal is: Test goal\\nTo give my best complete final answer to the task respond using the exact following format:\\n\\nThought: I now can give a great answer\\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\\n\\nI MUST use these formats, my job depends on it!''"}, {"role": "''user''", "content": "''\\nCurrent Task: Say hello to the world\\n\\nThis is the expected criteria for your final answer: hello world\\nyou MUST return the actual complete content as the final answer, not a summary.\\n\\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\\n\\nThought:''"}, {"role": "''assistant''", "content": "''I now can give a great answer  \\nFinal Answer: hello world''"}]}, "total_tokens": 170}}], "batch_metadata": {"events_count": 7, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5901'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.6.0
+      X-Crewai-Version:
+      - 1.6.0
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/8356baf7-abbe-446a-9668-a63d501765d0/events
+  response:
+    body:
+      string: '{"events_created":7,"ephemeral_trace_batch_id":"f8dfcffd-d0ef-4ca2-afad-9eff37f8c9d9"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '86'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 29 Nov 2025 03:12:26 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 1752, "final_event_count": 7}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.6.0
+      X-Crewai-Version:
+      - 1.6.0
+      authorization:
+      - AUTHORIZATION-XXX
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/8356baf7-abbe-446a-9668-a63d501765d0/finalize
+  response:
+    body:
+      string: '{"id":"f8dfcffd-d0ef-4ca2-afad-9eff37f8c9d9","ephemeral_trace_id":"8356baf7-abbe-446a-9668-a63d501765d0","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":1752,"crewai_version":"1.6.0","total_events":7,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.6.0","crew_fingerprint":null},"created_at":"2025-11-29T03:12:25.077Z","updated_at":"2025-11-29T03:12:26.848Z","access_code":"TRACE-4fc2c6b913","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '517'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Sat, 29 Nov 2025 03:12:26 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -1,0 +1,305 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '825'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CJBR9HYEO3V2jdnibYmzhhx4Fp5f7\",\n  \"object\": \"chat.completion\",\n  \"created\": 1758688231,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: hello world\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - 983f8c061b6ec487-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 24 Sep 2025 04:30:32 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=JDjpnzx5y8PJaJDQcCeX6MeBt8BOGuL79pd.ca5mqvE-1758688232-1.0.1.1-5VN5hj5LzEZFfkotBaZ_dbUITo_YB7RLsFOlQc.0MdSZOsz7WhNkH.s7H700L12Yi8nHGW44BgIwCF3uWx1w4PRBqrb1IVH3FkeV.QwCTaA; path=/; expires=Wed, 24-Sep-25 05:00:32 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=b5n8BZZDRtHA4TrxQ1RDeEdtQBzhstjP6u21LYM8L94-1758688232142-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '535'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '562'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999830'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_af61ab9d53bf400baf30c5bc5a7e2102
+    status:
+      code: 200
+      message: OK
+- request:
+    body: null
+    headers:
+      Connection:
+      - close
+      Host:
+      - api.scarf.sh
+      User-Agent:
+      - CrewAI-Python/0.193.2
+    method: GET
+    uri: https://api.scarf.sh/v2/packages/CrewAI/crewai/docs/00f2dad1-8334-4a39-934e-003b2e1146db
+  response:
+    body:
+      string: ''
+    headers:
+      Connection:
+      - close
+      Date:
+      - Wed, 24 Sep 2025 04:47:59 GMT
+      Strict-Transport-Security:
+      - max-age=15724800; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+      x-scarf-request-id:
+      - 4158376f-cb1c-46fe-a14c-dee366b955e2
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"trace_id": "06e1250e-6d88-4c64-abe5-deabde573ae1", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-24T04:50:23.219835+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Content-Length:
+      - '55'
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.37, sql.active_record;dur=30.81, cache_generate.active_support;dur=29.14, cache_write.active_support;dur=0.14, cache_read_multi.active_support;dur=0.19, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.74
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 2420790e-9669-4235-851c-468185b6ef40
+      x-runtime:
+      - '0.102516'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"status": "failed", "failure_reason": "Error sending events to backend"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '73'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Organization-Id:
+      - d3a3d10c-35db-423f-a7a4-c026030ba64d
+      X-Crewai-Version:
+      - 0.193.2
+    method: PATCH
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches/None
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Content-Length:
+      - '55'
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.06, sql.active_record;dur=3.86, cache_generate.active_support;dur=4.28, cache_write.active_support;dur=0.15, cache_read_multi.active_support;dur=0.12, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=1.70
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 1750d141-c48f-47f1-b8b4-130195437d22
+      x-runtime:
+      - '0.043849'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"trace_id": "e7ec4d48-cd70-436b-932e-45b2252284ec", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0a2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-02T22:35:42.329267+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '428'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '55'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:42 GMT
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 9db7bedc-a65b-4dca-ad3a-34b70101a37a
+      x-runtime:
+      - '0.029103'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

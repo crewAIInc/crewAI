@@ -1,0 +1,134 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Tell me a short fact"}], "stream":
+      false, "frequency_penalty": 0.5, "max_tokens": 100, "presence_penalty": 0.3,
+      "temperature": 0.7, "top_p": 0.9}'
+    headers:
+      Accept:
+      - application/json
+      Content-Length:
+      - '188'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"Honey
+        never spoils. Archaeologists have found pots of honey in ancient Egyptian
+        tombs that are over 3,000 years old and still perfectly edible.","refusal":null,"role":"assistant"}}],"created":1764567852,"id":"chatcmpl-ChqzkjWzsgk3Yk7YabNlSOIcjCnVy","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_efad92c60b","usage":{"completion_tokens":32,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":12,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":44}}
+
+        '
+    headers:
+      Content-Length:
+      - '1354'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 05:44:12 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Tell me a short fact"}], "stream":
+      false, "frequency_penalty": 0.5, "max_tokens": 100, "presence_penalty": 0.3,
+      "temperature": 0.7, "top_p": 0.9}'
+    headers:
+      Accept:
+      - application/json
+      Content-Length:
+      - '188'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-08-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"Honey
+        never spoils. Archaeologists have found pots of honey in ancient Egyptian
+        tombs that are over 3,000 years old and still perfectly edible.","refusal":null,"role":"assistant"}}],"created":1765404241,"id":"chatcmpl-ClMZtj2FVeluctJFRtVTW1As7ouHl","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_efad92c60b","usage":{"completion_tokens":32,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":12,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":44}}
+
+        '
+    headers:
+      Content-Length:
+      - '1354'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 10 Dec 2025 22:04:01 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

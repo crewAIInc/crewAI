@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi\n\nThis is the expect criteria for your
+      final answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '836'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=gsNyCo_jrDOolzf8SXHDaxQQrEgdR3jgv4OAH8MziDE-1739291824699-0.0.1.1-604800000;
+        __cf_bm=cRijYuylMGzRGxv3udQL5PhHOR5mRN_9_eLLwevlM_o-1739299455-1.0.1.1-Fszr_Msw0B1.IBMkiunP.VF2ilul1YGZZV8TqMcO3Q2SHvSlqfgm9NHgns1bJrm0wWRvHiCE7wdZfUAOx7T3Lg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AzpWx6pctOvzu6xsbyg0XfSAc0q9V\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739299455,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 91067d3ddc68fa16-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 11 Feb 2025 18:44:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '703'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999810'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_89222c00e4608e8557a135e91b223556
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

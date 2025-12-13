@@ -1,0 +1,609 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1452'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K61UxbPXZl2Q3VL3Tbnr0TiwNDk\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623253,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need to call the iterating tool the first time.\\nAction: iterating_tool\\nAction Input: {\\\"input_text\\\": \\\"First iteration\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 299,\n    \"completion_tokens\": 35,\n    \"total_tokens\": 334,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3f72effa6897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:35 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; path=/; expires=Tue, 19-Aug-25 17:37:35 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '2564'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2751'
+      x-ratelimit-limit-project-tokens:
+      - '30000000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-tokens:
+      - '29999674'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999674'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d654df1116aa42ca8ee7d10b4b424303
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "```\nThought: I need to call the iterating tool the first time.\nAction: iterating_tool\nAction Input: {\"input_text\": \"First iteration\"}\nObservation: Iteration 0: First iteration"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1673'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K64phcuD8CKD2C8SEHiwqyhb6Bc\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623256,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have completed the first iteration and need to proceed to the second one.\\nAction: iterating_tool\\nAction Input: {\\\"input_text\\\": \\\"Second iteration\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 345,\n    \"completion_tokens\": 38,\n    \"total_tokens\": 383,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3f84cf146897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:38 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1900'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2551'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999629'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_f4181fe581264993ac5c6deba4f1c287
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "```\nThought: I need to call the iterating tool the first time.\nAction: iterating_tool\nAction Input: {\"input_text\": \"First iteration\"}\nObservation: Iteration 0: First iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the first iteration and need to proceed to the second one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Second iteration\"}\nObservation: Iteration 0: Second iteration"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1922'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K66xHjsRB8kkHFcgfdjMd9IX2uY\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623258,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have completed the second iteration and need to proceed to the third one.\\nAction: iterating_tool\\nAction Input: {\\\"input_text\\\": \\\"Third iteration\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 394,\n    \"completion_tokens\": 38,\n    \"total_tokens\": 432,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3f958e746897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:39 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '890'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '906'
+      x-ratelimit-limit-project-tokens:
+      - '30000000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-tokens:
+      - '29999577'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999577'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b3632e88268747218e4cc4cc08d87bca
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "```\nThought: I need to call the iterating tool the first time.\nAction: iterating_tool\nAction Input: {\"input_text\": \"First iteration\"}\nObservation: Iteration 0: First iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the first iteration and need to proceed to the second one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Second iteration\"}\nObservation: Iteration 0: Second iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the second iteration and need to proceed
+      to the third one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Third iteration\"}\nObservation: Iteration 0: Third iteration\n\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}],
+      "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3018'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K67orXjH62DU9H4yrj3X9efoVpa\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623259,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have completed the third iteration and need to proceed to the fourth one.\\nAction: iterating_tool\\nAction Input: {\\\"input_text\\\": \\\"Fourth iteration\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 626,\n    \"completion_tokens\": 38,\n    \"total_tokens\": 664,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3f9bbef86897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:40 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1182'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1208'
+      x-ratelimit-limit-project-tokens:
+      - '30000000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-tokens:
+      - '29999320'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999320'
+      x-ratelimit-reset-project-tokens:
+      - 1ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_7fc641fabc634f29ae085ef176071402
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "```\nThought: I need to call the iterating tool the first time.\nAction: iterating_tool\nAction Input: {\"input_text\": \"First iteration\"}\nObservation: Iteration 0: First iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the first iteration and need to proceed to the second one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Second iteration\"}\nObservation: Iteration 0: Second iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the second iteration and need to proceed
+      to the third one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Third iteration\"}\nObservation: Iteration 0: Third iteration\n\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "assistant", "content": "```\nThought: I have completed the third iteration and need to proceed to the fourth one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Fourth iteration\"}\nObservation: Iteration 0: Fourth iteration"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3267'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K68aSui6NMSWBf6Li2RsRatPE0o\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623260,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have completed the fourth iteration and need to proceed to the fifth one.\\nAction: iterating_tool\\nAction Input: {\\\"input_text\\\": \\\"Fifth iteration\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 675,\n    \"completion_tokens\": 39,\n    \"total_tokens\": 714,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3fa3ea2f6897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:41 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '780'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '878'
+      x-ratelimit-limit-project-tokens:
+      - '30000000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-tokens:
+      - '29999268'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999268'
+      x-ratelimit-reset-project-tokens:
+      - 1ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_603a6c645bac468888838d21c64db11f
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Iterating Agent. You are an agent that iterates a given number of times\nYour personal goal is: Call the iterating tool 5 times\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
+      answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Call the iterating tool 5 times\n\nThis is the expected criteria for your final answer: A list of the iterations\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "```\nThought: I need to call the iterating tool the first time.\nAction: iterating_tool\nAction Input: {\"input_text\": \"First iteration\"}\nObservation: Iteration 0: First iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the first iteration and need to proceed to the second one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Second iteration\"}\nObservation: Iteration 0: Second iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the second iteration and need to proceed
+      to the third one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Third iteration\"}\nObservation: Iteration 0: Third iteration\n\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: iterating_tool\nTool Arguments: {''input_text'': {''description'': None, ''type'': ''str''}}\nTool Description: A tool that iterates a given number of times\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [iterating_tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "assistant", "content": "```\nThought: I have completed the third iteration and need to proceed to the fourth one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Fourth iteration\"}\nObservation: Iteration 0: Fourth iteration"}, {"role": "assistant", "content": "```\nThought: I have completed the fourth iteration and need to proceed to the fifth one.\nAction: iterating_tool\nAction Input: {\"input_text\": \"Fifth iteration\"}\nObservation: Iteration 0: Fifth iteration"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '3514'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=6OZC5kPO9TEmVSACP2sSOZK9ZEZ5I4T_VUlfmzsoY9Y-1755623255-1.0.1.1-ek3SaNBOhXmCg7K3J7LIsE0aCrnK5YfSumHDT6nc8Df1Zh3bzMLHLDqTUwtqiG8SwxiIFXeGP4.Vt2sx9b3FCkxoyrqNpgrBL5DAffAGHm8; _cfuvid=R_H7SrOF3QFEWePZfvxzuyKWZAt5ulsNbP28.6DC9wM-1755623255760-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-C6K6A3TaJ7woqKq8S71FN6mZLvLko\",\n  \"object\": \"chat.completion\",\n  \"created\": 1755623262,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I have completed all 5 iterations.\\nFinal Answer: [\\\"Iteration 0: First iteration\\\", \\\"Iteration 0: Second iteration\\\", \\\"Iteration 0: Third iteration\\\", \\\"Iteration 0: Fourth iteration\\\", \\\"Iteration 0: Fifth iteration\\\"]\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 725,\n    \"completion_tokens\": 56,\n    \"total_tokens\": 781,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_46bff0e0c8\"\n}\n"
+    headers:
+      CF-RAY:
+      - 971b3faa6ba46897-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 19 Aug 2025 17:07:43 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1392'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1841'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999217'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 1ms
+      x-request-id:
+      - req_19dc255cec9d4763be7d5f597c80e936
+    status:
+      code: 200
+      message: OK
+version: 1

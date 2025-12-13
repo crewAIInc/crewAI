@@ -83,7 +83,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
-        apps: List of enterprise applications that the agent can access through CrewAI AMP Tools.
+        apps: List of enterprise applications that the agent can access through CrewAI AOP Tools.
 
     Methods:
         execute_task(task: Any, context: str | None = None, tools: list[BaseTool] | None = None) -> str:
@@ -265,7 +265,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not mcps:
             return mcps
 
-        validated_mcps = []
+        validated_mcps: list[str | MCPServerConfig] = []
         for mcp in mcps:
             if isinstance(mcp, str):
                 if mcp.startswith(("https://", "crewai-amp:")):
@@ -346,6 +346,15 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools: list[BaseTool] | None = None,
     ) -> str:
         pass
+
+    @abstractmethod
+    async def aexecute_task(
+        self,
+        task: Any,
+        context: str | None = None,
+        tools: list[BaseTool] | None = None,
+    ) -> str:
+        """Execute a task asynchronously."""
 
     @abstractmethod
     def create_agent_executor(self, tools: list[BaseTool] | None = None) -> None:

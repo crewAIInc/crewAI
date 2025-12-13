@@ -1,0 +1,106 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"Please convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int,\n    address: Address\n    {\n        street: str,\n        city: str,\n        zip_code: str\n    }\n}\n```"},{"role":"user","content":"Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1066'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CWXQ0I6HSfFT8aD0BNmWFEHk3CkiX\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761870992,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n    \\\"name\\\": \\\"John Doe\\\",\\n    \\\"age\\\": 30,\\n    \\\"address\\\": {\\n        \\\"street\\\": \\\"123 Main St\\\",\\n        \\\"city\\\": \\\"Anytown\\\",\\n        \\\"zip_code\\\": \\\"12345\\\"\\n    }\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 209,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 260,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - 996f14274966b937-MXP
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 31 Oct 2025 00:36:33 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=Ky4svfN6lhcQM6_crJFh23VuIuexOT5hNS6bhEbr7Qw-1761870993-1.0.1.1-p4Z6TA9wRLlEmiM83sZcdaHZbTds.ZzUr2lEGCtUkU2kP2WdalMAAsExqn9B0k9Okf1SUq3vKTfFK2UC4a8NtjDpRaLru0DDiJJbp9VFOfQ; path=/; expires=Fri, 31-Oct-25 01:06:33 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=vvK_iahsZb8gVwsnRdmPfAjYUYT08lth_CtAEZuGCGY-1761870993906-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1204'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1228'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999912'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999912'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3b02f6f421da97eaa6d99999c3ca29cc
+    status:
+      code: 200
+      message: OK
+version: 1

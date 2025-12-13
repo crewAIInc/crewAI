@@ -73,6 +73,7 @@ CLI_SETTINGS_KEYS = [
     "oauth2_audience",
     "oauth2_client_id",
     "oauth2_domain",
+    "oauth2_extra",
 ]
 
 # Default values for CLI settings
@@ -82,6 +83,7 @@ DEFAULT_CLI_SETTINGS = {
     "oauth2_audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
     "oauth2_client_id": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID,
     "oauth2_domain": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN,
+    "oauth2_extra": {},
 }
 
 # Readonly settings - cannot be set by the user
@@ -101,7 +103,7 @@ HIDDEN_SETTINGS_KEYS = [
 class Settings(BaseModel):
     enterprise_base_url: str | None = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
-        description="Base URL of the CrewAI AMP instance",
+        description="Base URL of the CrewAI AOP instance",
     )
     tool_repository_username: str | None = Field(
         None, description="Username for interacting with the Tool Repository"
