@@ -1011,7 +1011,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     llm = LLM(
         model="openai/premium",  # Tier-based model name
-        api_key="your-api-key",  # Or set AIBADGR_API_KEY
+        api_key="your-api-key",  # Can also use AIBADGR_API_KEY env var
         base_url="https://aibadgr.com/api/v1"
     )
     ```
@@ -1044,11 +1044,11 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     **Advanced Model Names:**
     
-    For power users, specific model names are also supported and automatically mapped:
-    - `phi-3-mini` (maps to basic tier)
-    - `mistral-7b` (maps to normal tier)
-    - `llama3-8b-instruct` (maps to premium tier)
-    - OpenAI model names are accepted and mapped automatically
+    For power users, AI Badgr's API supports specific model names that it maps internally to tiers:
+    - `phi-3-mini` (mapped to basic tier by AI Badgr)
+    - `mistral-7b` (mapped to normal tier by AI Badgr)
+    - `llama3-8b-instruct` (mapped to premium tier by AI Badgr)
+    - OpenAI model names are also accepted and mapped by AI Badgr's API
 
     <Info>
       AI Badgr features:
