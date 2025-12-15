@@ -183,7 +183,8 @@
                       "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                       "en/tools/web-scraping/firecrawlscrapewebsitetool",
                       "en/tools/web-scraping/oxylabsscraperstool",
-                      "en/tools/web-scraping/brightdata-tools"
+                      "en/tools/web-scraping/brightdata-tools",
+                      "en/tools/web-scraping/tzafonloadtool"
                     ]
                   },
                   {
@@ -354,9 +355,7 @@
               },
               {
                 "group": "Manage",
-                "pages": [
-                  "en/enterprise/features/rbac"
-                ]
+                "pages": ["en/enterprise/features/rbac"]
               },
               {
                 "group": "Integration Docs",
@@ -781,9 +780,7 @@
               },
               {
                 "group": "Gerenciar",
-                "pages": [
-                  "pt-BR/enterprise/features/rbac"
-                ]
+                "pages": ["pt-BR/enterprise/features/rbac"]
               },
               {
                 "group": "Documentação de Integração",
@@ -1217,9 +1214,7 @@
               },
               {
                 "group": "관리",
-                "pages": [
-                  "ko/enterprise/features/rbac"
-                ]
+                "pages": ["ko/enterprise/features/rbac"]
               },
               {
                 "group": "통합 문서",
