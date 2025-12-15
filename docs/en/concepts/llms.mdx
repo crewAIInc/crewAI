@@ -1001,8 +1001,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     # Required
     AIBADGR_API_KEY=<your-api-key>
 
-    # Optional - custom base URL
-    AIBADGR_BASE_URL=https://aibadgr.com/api/v1
+    # Optional - defaults to https://aibadgr.com/api/v1
+    AIBADGR_BASE_URL=<custom-base-url>
     ```
 
     **Basic Usage:**
@@ -1019,11 +1019,16 @@ In this section, you'll find detailed examples that help you select, configure, 
     **Advanced Configuration:**
     ```python Code
     from crewai import LLM
+    import os
+
+    # Using environment variables (recommended)
+    os.environ["AIBADGR_API_KEY"] = "your-api-key"
+    os.environ["AIBADGR_BASE_URL"] = "https://aibadgr.com/api/v1"
 
     llm = LLM(
         model="openai/premium",
-        api_key="your-api-key",
-        base_url="https://aibadgr.com/api/v1",
+        api_key=os.getenv("AIBADGR_API_KEY"),
+        base_url=os.getenv("AIBADGR_BASE_URL"),
         temperature=0.7,
         max_tokens=4000,
         timeout=60.0
@@ -1032,7 +1037,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     **Supported Environment Variables:**
     - `AIBADGR_API_KEY`: Your AI Badgr API key (required)
-    - `AIBADGR_BASE_URL`: Custom base URL (optional, defaults to https://aibadgr.com/api/v1)
+    - `AIBADGR_BASE_URL`: Base URL for AI Badgr API (optional, defaults to https://aibadgr.com/api/v1)
 
     **Supported Models (Tier-based naming):**
 
