@@ -996,13 +996,19 @@ In this section, you'll find detailed examples that help you select, configure, 
   <Accordion title="AI Badgr (Budget/Utility, OpenAI-compatible)">
     AI Badgr provides OpenAI-compatible API access with tier-based model naming for budget-conscious projects.
 
-    Set the following environment variables in your `.env` file:
+    **Environment Variables (Two Options):**
+    
+    Option 1 - OpenAI-compatible (use with existing OpenAI env vars):
     ```toml Code
-    # Required
-    AIBADGR_API_KEY=<your-api-key>
+    OPENAI_API_KEY=<your-aibadgr-api-key>
+    OPENAI_API_BASE=https://aibadgr.com/api/v1
+    OPENAI_MODEL_NAME=openai/premium
+    ```
 
-    # Optional - defaults to https://aibadgr.com/api/v1
-    AIBADGR_BASE_URL=<custom-base-url>
+    Option 2 - Provider-specific:
+    ```toml Code
+    AIBADGR_API_KEY=<your-api-key>
+    AIBADGR_BASE_URL=https://aibadgr.com/api/v1
     ```
 
     **Basic Usage:**
@@ -1011,7 +1017,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     llm = LLM(
         model="openai/premium",  # Tier-based model name
-        api_key="your-api-key",  # Can also use AIBADGR_API_KEY env var
+        api_key="your-api-key",
         base_url="https://aibadgr.com/api/v1"
     )
     ```
@@ -1019,16 +1025,11 @@ In this section, you'll find detailed examples that help you select, configure, 
     **Advanced Configuration:**
     ```python Code
     from crewai import LLM
-    import os
-
-    # Using environment variables (recommended)
-    os.environ["AIBADGR_API_KEY"] = "your-api-key"
-    os.environ["AIBADGR_BASE_URL"] = "https://aibadgr.com/api/v1"
 
     llm = LLM(
         model="openai/premium",
-        api_key=os.getenv("AIBADGR_API_KEY"),
-        base_url=os.getenv("AIBADGR_BASE_URL"),
+        api_key="your-api-key",
+        base_url="https://aibadgr.com/api/v1",
         temperature=0.7,
         max_tokens=4000,
         timeout=60.0
@@ -1036,8 +1037,8 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
 
     **Supported Environment Variables:**
-    - `AIBADGR_API_KEY`: Your AI Badgr API key (required)
-    - `AIBADGR_BASE_URL`: Base URL for AI Badgr API (optional, defaults to https://aibadgr.com/api/v1)
+    - OpenAI-compatible: `OPENAI_API_KEY`, `OPENAI_API_BASE` (for seamless integration)
+    - Provider-specific: `AIBADGR_API_KEY`, `AIBADGR_BASE_URL` (alternative option)
 
     **Supported Models (Tier-based naming):**
 
