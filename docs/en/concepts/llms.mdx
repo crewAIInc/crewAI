@@ -996,19 +996,13 @@ In this section, you'll find detailed examples that help you select, configure, 
   <Accordion title="AI Badgr (Budget/Utility, OpenAI-compatible)">
     AI Badgr provides OpenAI-compatible API access with tier-based model naming for budget-conscious projects.
 
-    **Environment Variables (Two Options):**
+    **Environment Variables:**
     
-    Option 1 - OpenAI-compatible (use with existing OpenAI env vars):
+    Since AI Badgr is OpenAI-compatible, use the standard OpenAI environment variables:
     ```toml Code
     OPENAI_API_KEY=<your-aibadgr-api-key>
     OPENAI_API_BASE=https://aibadgr.com/api/v1
     OPENAI_MODEL_NAME=openai/premium
-    ```
-
-    Option 2 - Provider-specific:
-    ```toml Code
-    AIBADGR_API_KEY=<your-api-key>
-    AIBADGR_BASE_URL=https://aibadgr.com/api/v1
     ```
 
     **Basic Usage:**
@@ -1037,8 +1031,9 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
 
     **Supported Environment Variables:**
-    - OpenAI-compatible: `OPENAI_API_KEY`, `OPENAI_API_BASE` (for seamless integration)
-    - Provider-specific: `AIBADGR_API_KEY`, `AIBADGR_BASE_URL` (alternative option)
+    - `OPENAI_API_KEY`: Your AI Badgr API key (required)
+    - `OPENAI_API_BASE`: Base URL (set to `https://aibadgr.com/api/v1`)
+    - `OPENAI_MODEL_NAME`: Model to use (recommended: `openai/premium`)
 
     **Supported Models (Tier-based naming):**
 
@@ -1050,11 +1045,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     **Advanced Model Names:**
     
-    For power users, AI Badgr's API supports specific model names that it maps internally to tiers:
-    - `phi-3-mini` (mapped to basic tier by AI Badgr)
-    - `mistral-7b` (mapped to normal tier by AI Badgr)
-    - `llama3-8b-instruct` (mapped to premium tier by AI Badgr)
-    - OpenAI model names are also accepted and mapped by AI Badgr's API
+    For power users, AI Badgr may support additional model names. Refer to AI Badgr's documentation for the complete list of supported models and their tier mappings.
 
     <Info>
       AI Badgr features:
