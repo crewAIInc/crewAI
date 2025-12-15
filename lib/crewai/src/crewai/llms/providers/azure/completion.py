@@ -9,10 +9,10 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
-from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
