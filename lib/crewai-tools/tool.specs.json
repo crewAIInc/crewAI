@@ -941,6 +941,119 @@
       }
     },
     {
+      "description": "A tool that scrape the user interface LLMs using cloro API. Support Google, ChatGPT, Gemini, Copilot, Perplexity and AI Mode engines",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for cloro",
+          "name": "CLORO_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Prompt with cloro",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": ["name", "description"],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "CloroTool - A tool for scraping LLMs via the cloro API.\n\nAttributes:\n    name (str): Tool name.\n    description (str): Tool description.\n    args_schema (Type[BaseModel]): Pydantic schema for input arguments.\n    api_key (Optional[str]): cloro API key.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "country": {
+            "default": "US",
+            "title": "Country",
+            "type": "string"
+          },
+          "device": {
+            "default": "desktop",
+            "title": "Device",
+            "type": "string"
+          },
+          "engine": {
+            "default": "google",
+            "enum": [
+              "google",
+              "chatgpt",
+              "gemini",
+              "copilot",
+              "perplexity",
+              "aimode"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "pages": {
+            "default": 1,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          }
+        },
+        "title": "CloroTool",
+        "type": "object"
+      },
+      "name": "CloroTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for CloroDevTool.",
+        "properties": {
+          "search_query": {
+            "description": "Mandatory query/prompt you want to use to search/query the model",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": ["search_query"],
+        "title": "CloroDevToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a CSV's content.",
       "env_vars": [],
       "humanized_name": "Search a CSV's content",
