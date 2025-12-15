@@ -1,16 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are dog Researcher. You have
-      a lot of experience with dog.\nYour personal goal is: Express hot takes on dog.\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent
-      Task: Give me an analysis around dog.\n\nThis is the expected criteria for your
-      final answer: 1 bullet point about dog that''s under 15 words.\nyou MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are dog Researcher. You have a lot of experience with dog.\nYour personal goal is: Express hot takes on dog.\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Give me an analysis around dog.\n\nThis is the expected criteria for your final answer: 1 bullet point about dog that''s under 15 words.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -50,23 +40,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJNPb5tAEMXvfIrRno2FXfyPW9W0StocWjU9VG2E1ssAkyyzaHeJY0X+
-        7tFix5A2lXpBYn/zHjNvlqcIQFAhMhCqll41rY4/3F184Y/XN/7zZfH1W3K5vvp+nyi9/lnur3+I
-        SVCY7R0q/6KaKtO0Gj0ZPmJlUXoMrrPVMl1v5sniXQ8aU6AOsqr1cTqdxQ0xxfNkvoiTNJ6lJ3lt
-        SKETGfyKAACe+mdolAt8FBkkk5eTBp2TFYrsXAQgrNHhREjnyHnJXkwGqAx75L73m9p0Ve0zuAI2
-        O1CSoaIHBAlVGAAkux3a3/yJWGp4379lcGEqB9Ii1FTVeg/OKJIaJFMjtZsAPirUmrgCYlCmaTom
-        JUM4ILmAreEiwB35Guqukeym4/4slp2TISTutB4ByWx879Mnc3sih3MW2lStNVv3h1SUxOTq3KJ0
-        hsPczptW9PQQAdz2mXevYhStNU3rc2/usf/cbLU8+olh1wOdr0/QGy/16DxJJ2/45QV6SdqNtiaU
-        VDUWg3RYsewKMiMQjab+u5u3vI+TE1f/Yz8ApbD1WOStxYLU64mHMovhV/hX2TnlvmHh0D6QwtwT
-        2rCJAkvZ6eP9FG7vPDZ5SVyhbS0dL2nZ5pvVcomLdLOdi+gQPQMAAP//AwAoU9xnswMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CjDKnELTtJHdPQ0H8ISk0cl8YfyLU\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764892053,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: Dogs are highly social animals, excelling in communication and bonding with humans.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 176,\n    \"completion_tokens\": 28,\n    \"total_tokens\": 204,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_9766e549b2\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

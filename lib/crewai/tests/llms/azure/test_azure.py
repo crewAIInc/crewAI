@@ -10,9 +10,9 @@ from crewai.agent import Agent
 from crewai.task import Task
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def mock_azure_credentials():
-    """Automatically mock Azure credentials for all tests in this module."""
+    """Mock Azure credentials for tests that need them."""
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
         "AZURE_ENDPOINT": "https://test.openai.azure.com"
@@ -20,6 +20,7 @@ def mock_azure_credentials():
         yield
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_is_used_when_azure_provider():
     """
     Test that AzureCompletion from completion.py is used when LLM uses provider 'azure'
@@ -31,6 +32,7 @@ def test_azure_completion_is_used_when_azure_provider():
     assert llm.model == "gpt-4"
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_is_used_when_azure_openai_provider():
     """
     Test that AzureCompletion is used when provider is 'azure_openai'
@@ -101,6 +103,7 @@ def test_azure_tool_use_conversation_flow():
         assert mock_complete.called
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Azure provider
@@ -189,6 +192,7 @@ def test_azure_specific_parameters():
     assert llm.api_version == "2024-02-01"
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_call():
     """
     Test that AzureCompletion call method works
@@ -203,6 +207,7 @@ def test_azure_completion_call():
         mock_call.assert_called_once_with("Hello, how are you?")
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_called_during_crew_execution():
     """
     Test that AzureCompletion.call is actually invoked when running a crew
@@ -235,6 +240,7 @@ def test_azure_completion_called_during_crew_execution():
         assert "14 million" in str(result)
 
 
+@pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_call_arguments():
     """
     Test that AzureCompletion.call is invoked with correct arguments
@@ -661,38 +667,17 @@ def test_azure_http_error_handling():
             llm.call("Hello")
 
 
+@pytest.mark.vcr()
 def test_azure_streaming_completion():
     """
     Test that streaming completions work properly
     """
-    from crewai.llms.providers.azure.completion import AzureCompletion
-    from azure.ai.inference.models import StreamingChatCompletionsUpdate
+    llm = LLM(model="azure/gpt-4o-mini", stream=True)
+    result = llm.call("Say hello")
 
-    llm = LLM(model="azure/gpt-4", stream=True)
-
-    # Mock streaming response
-    with patch.object(llm.client, 'complete') as mock_complete:
-        # Create mock streaming updates with proper type
-        mock_updates = []
-        for chunk in ["Hello", " ", "world", "!"]:
-            mock_delta = MagicMock()
-            mock_delta.content = chunk
-            mock_delta.tool_calls = None
-
-            mock_choice = MagicMock()
-            mock_choice.delta = mock_delta
-
-            # Create mock update as StreamingChatCompletionsUpdate instance
-            mock_update = MagicMock(spec=StreamingChatCompletionsUpdate)
-            mock_update.choices = [mock_choice]
-            mock_updates.append(mock_update)
-
-        mock_complete.return_value = iter(mock_updates)
-
-        result = llm.call("Say hello")
-
-        # Verify the full response was assembled
-        assert result == "Hello world!"
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
 
 
 def test_azure_api_version_default():
@@ -1113,3 +1098,32 @@ def test_azure_completion_params_preparation_with_drop_params():
         params = llm._prepare_completion_params(messages)
 
         assert params.get('stop') == None
+
+
+@pytest.mark.vcr()
+def test_azure_streaming_returns_usage_metrics():
+    """
+    Test that Azure streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of Spain",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="azure/gpt-4o-mini", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of Spain?",
+        expected_output="The capital of Spain",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1

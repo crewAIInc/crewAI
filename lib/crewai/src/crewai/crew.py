@@ -1017,10 +1017,26 @@ class Crew(FlowTrackable, BaseModel):
             tasks=self.tasks, planning_agent_llm=self.planning_llm
         )._handle_crew_planning()
 
-        for task, step_plan in zip(
-            self.tasks, result.list_of_plans_per_task, strict=False
-        ):
-            task.description += step_plan.plan
+        plan_map: dict[int, str] = {}
+        for step_plan in result.list_of_plans_per_task:
+            if step_plan.task_number in plan_map:
+                self._logger.log(
+                    "warning",
+                    f"Duplicate plan for Task Number {step_plan.task_number}, "
+                    "using the first plan",
+                )
+            else:
+                plan_map[step_plan.task_number] = step_plan.plan
+
+        for idx, task in enumerate(self.tasks):
+            task_number = idx + 1
+            if task_number in plan_map:
+                task.description += plan_map[task_number]
+            else:
+                self._logger.log(
+                    "warning",
+                    f"No plan found for Task Number {task_number}",
+                )
 
     def _store_execution_log(
         self,

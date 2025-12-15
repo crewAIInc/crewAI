@@ -40,17 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA0yOQQ6DMBAD77zCyrn0Abyj9xCRbYkUdmmyQUWIv1faHsrRY1v20QGAo1KkuAGH
-        SUML1Rpe5Aa4x0xYJFLGyMI9fVJVYu2NjYhCFSwKMyAFuzREMTaHjRCmiWqFCpLe3e0/ovtqC4m3
-        kFP0hd6Nqvrfn0twDSUsbgC3nC94kmh9e+JZ1D+lcXSWOLuz+wIAAP//AwDwJ9T24AAAAA==
+      string: "{\n    \"error\": {\n        \"message\": \"The model `non-existent-model` does not exist or you do not have access to it.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\": \"model_not_found\"\n    }\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json; charset=utf-8
       Date:

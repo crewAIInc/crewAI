@@ -18,10 +18,10 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
-from crewai.utilities.converter import generate_model_description
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
@@ -297,6 +297,7 @@ class OpenAICompletion(BaseLLM):
         }
         if self.stream:
             params["stream"] = self.stream
+            params["stream_options"] = {"include_usage": True}
 
         params.update(self.additional_params)
 
@@ -544,18 +545,21 @@ class OpenAICompletion(BaseLLM):
                             )
 
                 final_completion = stream.get_final_completion()
-                if final_completion and final_completion.choices:
-                    parsed_result = final_completion.choices[0].message.parsed
-                    if parsed_result:
-                        structured_json = parsed_result.model_dump_json()
-                        self._emit_call_completed_event(
-                            response=structured_json,
-                            call_type=LLMCallType.LLM_CALL,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            messages=params["messages"],
-                        )
-                        return structured_json
+                if final_completion:
+                    usage = self._extract_openai_token_usage(final_completion)
+                    self._track_token_usage_internal(usage)
+                    if final_completion.choices:
+                        parsed_result = final_completion.choices[0].message.parsed
+                        if parsed_result:
+                            structured_json = parsed_result.model_dump_json()
+                            self._emit_call_completed_event(
+                                response=structured_json,
+                                call_type=LLMCallType.LLM_CALL,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                messages=params["messages"],
+                            )
+                            return structured_json
 
             logging.error("Failed to get parsed result from stream")
             return ""
@@ -564,7 +568,13 @@ class OpenAICompletion(BaseLLM):
             self.client.chat.completions.create(**params)
         )
 
+        usage_data = {"total_tokens": 0}
+
         for completion_chunk in completion_stream:
+            if hasattr(completion_chunk, "usage") and completion_chunk.usage:
+                usage_data = self._extract_openai_token_usage(completion_chunk)
+                continue
+
             if not completion_chunk.choices:
                 continue
 
@@ -592,6 +602,8 @@ class OpenAICompletion(BaseLLM):
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+        self._track_token_usage_internal(usage_data)
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
@@ -785,7 +797,12 @@ class OpenAICompletion(BaseLLM):
             ] = await self.async_client.chat.completions.create(**params)
 
             accumulated_content = ""
+            usage_data = {"total_tokens": 0}
             async for chunk in completion_stream:
+                if hasattr(chunk, "usage") and chunk.usage:
+                    usage_data = self._extract_openai_token_usage(chunk)
+                    continue
+
                 if not chunk.choices:
                     continue
 
@@ -799,6 +816,8 @@ class OpenAICompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+            self._track_token_usage_internal(usage_data)
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
@@ -828,7 +847,13 @@ class OpenAICompletion(BaseLLM):
             ChatCompletionChunk
         ] = await self.async_client.chat.completions.create(**params)
 
+        usage_data = {"total_tokens": 0}
+
         async for chunk in stream:
+            if hasattr(chunk, "usage") and chunk.usage:
+                usage_data = self._extract_openai_token_usage(chunk)
+                continue
+
             if not chunk.choices:
                 continue
 
@@ -856,6 +881,8 @@ class OpenAICompletion(BaseLLM):
                         tool_calls[call_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
                         tool_calls[call_id]["arguments"] += tool_call.function.arguments
+
+        self._track_token_usage_internal(usage_data)
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
@@ -944,8 +971,10 @@ class OpenAICompletion(BaseLLM):
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_openai_token_usage(self, response: ChatCompletion) -> dict[str, Any]:
-        """Extract token usage from OpenAI ChatCompletion response."""
+    def _extract_openai_token_usage(
+        self, response: ChatCompletion | ChatCompletionChunk
+    ) -> dict[str, Any]:
+        """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             return {

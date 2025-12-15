@@ -16,7 +16,6 @@ from crewai.utilities.converter import (
     handle_partial_json,
     validate_model,
 )
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from pydantic import BaseModel
 import pytest
 

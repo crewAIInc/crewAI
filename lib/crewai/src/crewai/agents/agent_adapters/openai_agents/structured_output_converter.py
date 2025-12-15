@@ -4,6 +4,7 @@ This module contains the OpenAIConverterAdapter class that handles structured
 output conversion for OpenAI agents, supporting JSON and Pydantic model formats.
 """
 
+import json
 from typing import Any
 
 from crewai.agents.agent_adapters.base_converter_adapter import BaseConverterAdapter
@@ -61,7 +62,7 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         output_schema: str = (
             get_i18n()
             .slice("formatted_task_instructions")
-            .format(output_format=self._schema)
+            .format(output_format=json.dumps(self._schema, indent=2))
         )
 
         return f"{base_prompt}\n\n{output_schema}"

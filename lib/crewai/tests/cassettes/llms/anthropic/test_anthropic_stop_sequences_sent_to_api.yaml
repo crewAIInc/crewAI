@@ -1,10 +1,6 @@
 interactions:
 - request:
-    body: '{"trace_id": "1703c4e0-d3be-411c-85e7-48018c2df384", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-07T01:58:22.260309+00:00"}}'
+    body: '{"trace_id": "1703c4e0-d3be-411c-85e7-48018c2df384", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-07T01:58:22.260309+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -66,8 +62,7 @@ interactions:
       code: 401
       message: Unauthorized
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
-      word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -107,19 +102,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBdS8QwEEX/y31Ope26u5J3dwWfBH0SCTEZtmHTpCYTXSn979LF4hc+
-        DdxzZgbuiD5a8pAwXhdL1apaV512x1K1dXvZ1G0LAWch0eeDqpvN1f3q7bTPz91tc/ewLcfr/Xaz
-        gwC/DzRblLM+EARS9HOgc3aZdWAImBiYAkM+jovPdJrJeUjckPfxAtOTQOY4qEQ6xwAJClZxSQGf
-        INNLoWAIMhTvBcr5qRzhwlBYcTxSyJBNK2C06UiZRJpdDOqnUC88kbb/sWV3vk9DRz0l7dW6/+t/
-        0ab7TSeBWPh7tBbIlF6dIcWOEiTmoqxOFtP0AQAA//8DAM5WvkqaAQAA
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_0168T3wxGsbhK1QU7ukEG76F","type":"message","role":"assistant","content":[{"type":"text","text":"Hello."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":5,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -170,8 +158,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one
-      word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in one word"}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:","\nThought:"],"stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -213,19 +200,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQ3UrEMBCFn8VznUJb7SJ5gr2UvRCsSAjJ7Da2TbrJRFxK3126WPzDq4HzfTMD
-        Z8YYLA2QMIPOlorboik67fpc1GV9V5V1DQFnITGmkyqr+9Qe7e78+HRpjw87v3ev7aHqIcCXiVaL
-        UtIngkAMwxrolFxi7RkCJngmz5DP8+Yzva/kOiT27gbLi0DiMKlIOgUPCfJWcY4enyDROZM3BOnz
-        MAjk60c5w/kps+LQk0+QVS1gtOlImUiaXfDqp1BuPJK2/7Ftd71PU0cjRT2oZvzrf9Gq+00XgZD5
-        e9QIJIpvzpBiRxESa0tWR4tl+QAAAP//AwD8cXPFlwEAAA==
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_018sZfd6qVYyZfP6nHijZR1k","type":"message","role":"assistant","content":[{"type":"text","text":"Hi!"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":12,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":5,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

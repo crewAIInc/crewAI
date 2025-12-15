@@ -174,22 +174,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are plants Senior Data
-      Researcher\n. You''re a seasoned researcher with a knack for uncovering the
-      latest developments in plants. Known for your ability to find the most relevant
-      information and present it in a clear and concise manner.\n\nYour personal goal
-      is: Uncover cutting-edge developments in plants\n\nTo give my best complete
-      final answer to the task use the exact following format:\n\nThought: I now can
-      give a great answer\nFinal Answer: Your final answer must be the great and the
-      most complete as possible, it must be outcome described.\n\nI MUST use these
-      formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task:
-      Conduct a thorough research about plants Make sure you find any interesting
-      and relevant information given the current year is 2024.\n\n\nThis is the expect
-      criteria for your final answer: A list with 10 bullet points of the most relevant
-      information about plants\n\nyou MUST return the actual complete content as the
-      final answer, not a summary.\n\nBegin! This is VERY important to you, use the
-      tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
-      "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+    body: '{"messages": [{"role": "system", "content": "You are plants Senior Data Researcher\n. You''re a seasoned researcher with a knack for uncovering the latest developments in plants. Known for your ability to find the most relevant information and present it in a clear and concise manner.\n\nYour personal goal is: Uncover cutting-edge developments in plants\n\nTo give my best complete final answer to the task use the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Conduct a thorough research about plants Make sure you find any interesting and relevant information given the current year is 2024.\n\n\nThis is the expect criteria for your final answer: A list with 10 bullet points of the most relevant information about plants\n\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -229,39 +215,10 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        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
-        IimVsFkOAAA=
+      string: "{\n  \"id\": \"chatcmpl-AUma7wbtyWMROvEawogOSS1Wl6ygZ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1731899951,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer Final Answer: \\n\\n1. **Vertical Farming Advancements**: In 2024, vertical farming is set to revolutionize how we grow plants by maximizing space and resource efficiency. New technologies allow for urban agriculture with minimal ecological impact, using hydroponics and aeroponics to cultivate fresh produce in city environments.\\n\\n2. **CRISPR and Plant Genetics**: CRISPR technology has advanced significantly, enabling precise genome editing in plants. This allows for the development of crops that are more resistant to diseases, pests, and climate change, potentially increasing yield and food security worldwide.\\n\\n3. **Biodiversity Conservation**: Efforts\
+        \ to conserve plant biodiversity have gained traction, with initiatives focusing on seed banks and botanical gardens. These efforts aim to preserve the genetic diversity necessary for ecological resilience in the face of changing environmental conditions.\\n\\n4. **Carbon Sequestration Research**: Plants' role in carbon capture is being harnessed more effectively, with research focused on enhancing the carbon-sequestering abilities of trees and soil through improved plant varieties and land management practices.\\n\\n5. **Phytoremediation Technologies**: Innovative use of plants to clean up polluted environments, known as phytoremediation, has advanced. Researchers are developing plants specifically engineered to absorb heavy metals and other toxins from the soil and water, aiding in environmental restoration.\\n\\n6. **Synthetic Botany**: This emerging field involves redesigning plant biological processes to create new functionalities such as biofuels, pharmaceuticals, and other\
+        \ valuable compounds. This interdisciplinary approach opens new avenues for plant-based technology.\\n\\n7. **Climate-Resilient Crops**: With climate change posing significant threats to agriculture, developing crops that can withstand extreme weather conditions such as drought and floods is a top priority. 2024 sees breakthroughs in engineering crops that maintain productivity under these stressors.\\n\\n8. **Algae Farming Innovations**: Algae are increasingly used in various industries due to their efficiency in photosynthesis and rapid growth. Innovations in algae farming are contributing to biofuel production, carbon capture, and sustainable aquaculture feeds.\\n\\n9. **Edible Plant Packaging**: The trend towards sustainability in reducing plastic waste has led to innovations in plant-based, edible packaging. These biodegradable solutions are making headway in food safety, reducing waste, and providing a more sustainable packaging alternative.\\n\\n10. **Forest Restoration Projects**:\
+        \ Large-scale reforestation efforts are underway globally to combat deforestation and habitat loss. These projects integrate traditional knowledge with modern practices to restore ecosystems, promote biodiversity, and mitigate climate impacts.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 227,\n    \"completion_tokens\": 520,\n    \"total_tokens\": 747,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_45cf54deae\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -269,8 +226,6 @@ interactions:
       - 8e44d146eed6a423-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -278,9 +233,7 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=TExeV_B53ShoY.Ag2_Czvi.2L9gx.ekuTvv6twEsyZs-1731899965-1.0.1.1-TI1CwjC1TYPFLagqlZnBGPwghLqfQ14IMBF7MxpAfc1ZVDU6ahhzFq9sUtZDpajNRPyefUF9MUCXzF8vfGAyPw;
-        path=/; expires=Mon, 18-Nov-24 03:49:25 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
+      - __cf_bm=TExeV_B53ShoY.Ag2_Czvi.2L9gx.ekuTvv6twEsyZs-1731899965-1.0.1.1-TI1CwjC1TYPFLagqlZnBGPwghLqfQ14IMBF7MxpAfc1ZVDU6ahhzFq9sUtZDpajNRPyefUF9MUCXzF8vfGAyPw; path=/; expires=Mon, 18-Nov-24 03:49:25 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -351,60 +304,11 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are plants Reporting Analyst\n.
-      You''re a meticulous analyst with a keen eye for detail. You''re known for your
-      ability to turn complex data into clear and concise reports, making it easy
-      for others to understand and act on the information you provide.\n\nYour personal
-      goal is: Create detailed reports based on plants data analysis and research
-      findings\n\nTo give my best complete final answer to the task use the exact
-      following format:\n\nThought: I now can give a great answer\nFinal Answer: Your
-      final answer must be the great and the most complete as possible, it must be
-      outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role":
-      "user", "content": "\nCurrent Task: Review the context you got and expand each
-      topic into a full section for a report. Make sure the report is detailed and
-      contains any and all relevant information.\n\n\nThis is the expect criteria
-      for your final answer: A fully fledge reports with the mains topics, each with
-      a full section of information. Formatted as markdown without ''```''\n\nyou
-      MUST return the actual complete content as the final answer, not a summary.\n\nThis
-      is the context you''re working with:\n1. **Vertical Farming Advancements**:
-      In 2024, vertical farming is set to revolutionize how we grow plants by maximizing
-      space and resource efficiency. New technologies allow for urban agriculture
-      with minimal ecological impact, using hydroponics and aeroponics to cultivate
-      fresh produce in city environments.\n\n2. **CRISPR and Plant Genetics**: CRISPR
-      technology has advanced significantly, enabling precise genome editing in plants.
-      This allows for the development of crops that are more resistant to diseases,
-      pests, and climate change, potentially increasing yield and food security worldwide.\n\n3.
-      **Biodiversity Conservation**: Efforts to conserve plant biodiversity have gained
-      traction, with initiatives focusing on seed banks and botanical gardens. These
-      efforts aim to preserve the genetic diversity necessary for ecological resilience
-      in the face of changing environmental conditions.\n\n4. **Carbon Sequestration
-      Research**: Plants'' role in carbon capture is being harnessed more effectively,
-      with research focused on enhancing the carbon-sequestering abilities of trees
-      and soil through improved plant varieties and land management practices.\n\n5.
-      **Phytoremediation Technologies**: Innovative use of plants to clean up polluted
-      environments, known as phytoremediation, has advanced. Researchers are developing
-      plants specifically engineered to absorb heavy metals and other toxins from
-      the soil and water, aiding in environmental restoration.\n\n6. **Synthetic Botany**:
-      This emerging field involves redesigning plant biological processes to create
-      new functionalities such as biofuels, pharmaceuticals, and other valuable compounds.
-      This interdisciplinary approach opens new avenues for plant-based technology.\n\n7.
-      **Climate-Resilient Crops**: With climate change posing significant threats
-      to agriculture, developing crops that can withstand extreme weather conditions
-      such as drought and floods is a top priority. 2024 sees breakthroughs in engineering
-      crops that maintain productivity under these stressors.\n\n8. **Algae Farming
-      Innovations**: Algae are increasingly used in various industries due to their
-      efficiency in photosynthesis and rapid growth. Innovations in algae farming
-      are contributing to biofuel production, carbon capture, and sustainable aquaculture
-      feeds.\n\n9. **Edible Plant Packaging**: The trend towards sustainability in
-      reducing plastic waste has led to innovations in plant-based, edible packaging.
-      These biodegradable solutions are making headway in food safety, reducing waste,
-      and providing a more sustainable packaging alternative.\n\n10. **Forest Restoration
-      Projects**: Large-scale reforestation efforts are underway globally to combat
-      deforestation and habitat loss. These projects integrate traditional knowledge
-      with modern practices to restore ecosystems, promote biodiversity, and mitigate
-      climate impacts.\n\nBegin! This is VERY important to you, use the tools available
-      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
-      "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
+    body: '{"messages": [{"role": "system", "content": "You are plants Reporting Analyst\n. You''re a meticulous analyst with a keen eye for detail. You''re known for your ability to turn complex data into clear and concise reports, making it easy for others to understand and act on the information you provide.\n\nYour personal goal is: Create detailed reports based on plants data analysis and research findings\n\nTo give my best complete final answer to the task use the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Review the context you got and expand each topic into a full section for a report. Make sure the report is detailed and contains any and all relevant information.\n\n\nThis is the expect criteria for your final answer: A fully fledge reports with
+      the mains topics, each with a full section of information. Formatted as markdown without ''```''\n\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\n1. **Vertical Farming Advancements**: In 2024, vertical farming is set to revolutionize how we grow plants by maximizing space and resource efficiency. New technologies allow for urban agriculture with minimal ecological impact, using hydroponics and aeroponics to cultivate fresh produce in city environments.\n\n2. **CRISPR and Plant Genetics**: CRISPR technology has advanced significantly, enabling precise genome editing in plants. This allows for the development of crops that are more resistant to diseases, pests, and climate change, potentially increasing yield and food security worldwide.\n\n3. **Biodiversity Conservation**: Efforts to conserve plant biodiversity have gained traction, with initiatives focusing on seed banks and botanical gardens. These efforts
+      aim to preserve the genetic diversity necessary for ecological resilience in the face of changing environmental conditions.\n\n4. **Carbon Sequestration Research**: Plants'' role in carbon capture is being harnessed more effectively, with research focused on enhancing the carbon-sequestering abilities of trees and soil through improved plant varieties and land management practices.\n\n5. **Phytoremediation Technologies**: Innovative use of plants to clean up polluted environments, known as phytoremediation, has advanced. Researchers are developing plants specifically engineered to absorb heavy metals and other toxins from the soil and water, aiding in environmental restoration.\n\n6. **Synthetic Botany**: This emerging field involves redesigning plant biological processes to create new functionalities such as biofuels, pharmaceuticals, and other valuable compounds. This interdisciplinary approach opens new avenues for plant-based technology.\n\n7. **Climate-Resilient Crops**: With
+      climate change posing significant threats to agriculture, developing crops that can withstand extreme weather conditions such as drought and floods is a top priority. 2024 sees breakthroughs in engineering crops that maintain productivity under these stressors.\n\n8. **Algae Farming Innovations**: Algae are increasingly used in various industries due to their efficiency in photosynthesis and rapid growth. Innovations in algae farming are contributing to biofuel production, carbon capture, and sustainable aquaculture feeds.\n\n9. **Edible Plant Packaging**: The trend towards sustainability in reducing plastic waste has led to innovations in plant-based, edible packaging. These biodegradable solutions are making headway in food safety, reducing waste, and providing a more sustainable packaging alternative.\n\n10. **Forest Restoration Projects**: Large-scale reforestation efforts are underway globally to combat deforestation and habitat loss. These projects integrate traditional knowledge
+      with modern practices to restore ecosystems, promote biodiversity, and mitigate climate impacts.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stop": ["\nObservation:"], "stream": false}'
     headers:
       accept:
       - application/json
@@ -417,8 +321,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - _cfuvid=74kaPOoAcp8YRSA0XocQ1FFNksu9V0_KiWdQfo7wQuQ-1731827382509-0.0.1.1-604800000;
-        __cf_bm=TExeV_B53ShoY.Ag2_Czvi.2L9gx.ekuTvv6twEsyZs-1731899965-1.0.1.1-TI1CwjC1TYPFLagqlZnBGPwghLqfQ14IMBF7MxpAfc1ZVDU6ahhzFq9sUtZDpajNRPyefUF9MUCXzF8vfGAyPw
+      - _cfuvid=74kaPOoAcp8YRSA0XocQ1FFNksu9V0_KiWdQfo7wQuQ-1731827382509-0.0.1.1-604800000; __cf_bm=TExeV_B53ShoY.Ag2_Czvi.2L9gx.ekuTvv6twEsyZs-1731899965-1.0.1.1-TI1CwjC1TYPFLagqlZnBGPwghLqfQ14IMBF7MxpAfc1ZVDU6ahhzFq9sUtZDpajNRPyefUF9MUCXzF8vfGAyPw
       host:
       - api.openai.com
       user-agent:
@@ -445,75 +348,16 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        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
-        75799uz/AAAA//8DAD3tznO2JQAA
+      string: "{\n  \"id\": \"chatcmpl-AUmaLpAABDTP3BKkKiS2moymgHfVk\",\n  \"object\": \"chat.completion\",\n  \"created\": 1731899965,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\n\\nFinal Answer:\\n\\n# Report on Plant Innovations and Environmental Initiatives 2024\\n\\n## 1. Vertical Farming Advancements\\n\\nIn 2024, vertical farming is poised to transform urban agriculture by optimizing space and increasing resource efficiency. This agricultural method involves growing plants in vertically stacked layers, often integrated into other structures such as skyscrapers or used as a part of urban landscaping. The technology leverages hydroponics, which involves growing plants without soil using mineral nutrient solutions, and aeroponics, where plants are grown in an air or mist environment without soil. These advancements facilitate\
+        \ the cultivation of fresh produce within city environments with minimal ecological impact.\\n\\nKey benefits include the reduction of transportation costs and emissions, as produce can be grown closer to consumers. Furthermore, vertical farming allows for year-round cultivation despite climate conditions, ensuring consistent food supply. Innovative control systems in vertical farms help to regulate climate, light, and nutrient levels, resulting in better yields and resource efficiency. As a result, vertical farming is emerging as a crucial solution to the challenges posed by urbanization and climate change.\\n\\n## 2. CRISPR and Plant Genetics\\n\\nThe application of CRISPR technology in plant genetics has progressed significantly, enabling precise genome editing to enhance crop resilience. This technology allows scientists to modify plant genomes with unprecedented accuracy, fostering the development of crops that are more resistant to diseases, pests, and adverse climate conditions.\
+        \ These modifications have the potential to increase yield and ensure food security worldwide.\\n\\nCRISPR technology supports the rapid development of plants that can adapt to various environmental stresses, enhancing their ability to withstand droughts or flooding. Additionally, CRISPR-modified crops can reduce the need for chemical pesticides and fertilizers, contributing to more sustainable agricultural practices. This precision in genetic engineering promises breakthroughs that could fundamentally change the way we cultivate food in response to global challenges.\\n\\n## 3. Biodiversity Conservation\\n\\nEfforts to conserve plant biodiversity are gaining momentum, focusing on preserving the genetic diversity necessary for ecological resilience. This is essential in an era of rapidly changing environmental conditions. Initiatives such as seed banks and botanical gardens play a pivotal role in these conservation efforts.\\n\\nSeed banks preserve the genetic material of various\
+        \ plant species, ensuring the availability of diverse genetic resources for future breeding programs or restoration projects. Botanical gardens are also crucial, serving as living repositories of plant diversity and offering educational opportunities for the public. These efforts help safeguard against the loss of plant species, which could have far-reaching effects on ecosystems and agriculture.\\n\\n## 4. Carbon Sequestration Research\\n\\nRecent research highlights plants’ pivotal role in capturing carbon, contributing to the mitigation of climate change. Efforts are focused on enhancing the carbon-sequestering abilities of trees and enhancing soil retention through improved plant varieties and land management practices. These approaches aim to maximize the natural process by which plants absorb atmospheric CO2 during photosynthesis and store it as carbon in biomass and soil.\\n\\nTechniques to boost these processes include selecting and breeding plant species with high carbon\
+        \ storage capabilities and implementing sustainable land management practices to maintain or restore soil health. These advancements contribute to reducing atmospheric carbon levels, aligning with global efforts to address climate change.\\n\\n## 5. Phytoremediation Technologies\\n\\nPhytoremediation is an innovative approach using plants to clean contaminated environments, such as soil and water affected by pollutants like heavy metals and toxins. Recent advancements in this technology involve engineering plants specifically designed to absorb or immobilize these harmful substances, thereby aiding in environmental restoration.\\n\\nThis method offers a cost-effective and environmentally friendly alternative to traditional cleanup methods. As research progresses, phytoremediation technologies are being refined to enhance the efficiency and expand the range of contaminants that plants can remediate. These developments hold great promise for rehabilitating polluted areas and restoring\
+        \ ecosystems to a healthier state.\\n\\n## 6. Synthetic Botany\\n\\nThe emerging field of synthetic botany involves redesigning plant biological processes to create new functionalities and applications. This interdisciplinary science seeks to develop plants that can produce biofuels, pharmaceuticals, and other valuable compounds, broadening the scope of plant-based technology.\\n\\nBy modifying plant metabolism and pathways, researchers can optimize the production of bioactive compounds or generate entirely new substances that plants don’t naturally produce. This approach could revolutionize various industries, creating sustainable alternatives to fossil fuels and advancing the development of natural products. The potential applications of synthetic botany are vast, potentially leading to significant economic and environmental benefits.\\n\\n## 7. Climate-Resilient Crops\\n\\nAs climate change continues to pose serious threats to agriculture worldwide, the development of climate-resilient\
+        \ crops is a top priority. Scientific breakthroughs in 2024 are making it possible to engineer crops capable of withstanding extreme weather conditions such as droughts and floods while maintaining productivity.\\n\\nThese innovations involve breeding new varieties or using genetic modification techniques like CRISPR to enhance crop tolerance to abiotic stresses. The goal is to ensure stable food supplies despite an increasingly erratic climate. These climate-resilient crops are critical for safeguarding agriculture and food security in vulnerable regions and serve as a key strategy in adapting to climate change impacts.\\n\\n## 8. Algae Farming Innovations\\n\\nAlgae farming is gaining attention due to its potential in various industries, including biofuel production, carbon capture, and sustainable aquaculture feeds. Algae are highly efficient at photosynthesis and can grow rapidly, making them an ideal sustainable resource.\\n\\nAdvancements in algae farming technologies have\
+        \ improved cultivation methods, maximizing yield and efficiency. These innovations are helping to reduce the carbon footprint of biofuel production and provide alternative feed sources for aquaculture, reducing reliance on traditional fishmeal. The multifaceted utility of algae presents a sustainable option for future industrial applications and plays a critical role in promoting a circular, bio-based economy.\\n\\n## 9. Edible Plant Packaging\\n\\nThe movement toward sustainable packaging solutions has led to innovations in plant-based, edible packaging. Such packaging is biodegradable, reducing plastic waste and mitigating environmental pollution. The development of plant-based films that can wrap food products or other goods offers a direct replacement for conventional plastics.\\n\\nEdible packaging not only reduces waste but also maintains food safety standards. Made from materials like seaweed, rice, or other plant derivatives, these packaging solutions can be consumed along\
+        \ with the product, aligning with sustainability objectives while catering to eco-conscious consumers. The adoption of edible packaging is expanding and could significantly impact how industries approach packaging.\\n\\n## 10. Forest Restoration Projects\\n\\nGlobal initiatives for large-scale reforestation aim to combat deforestation and habitat loss while promoting biodiversity and climate mitigation. These projects often integrate traditional ecological knowledge with modern scientific practices to restore and rejuvenate forest ecosystems.\\n\\nRestoration projects focus on planting native species, enhancing biodiversity, and enhancing ecological functions such as water filtration and carbon storage. They also engage local communities, fostering sustainable livelihoods and ensuring project sustainability. Such reforestation efforts are seen as vital components in the fight against climate change and are increasingly supported by governments and NGOs worldwide.\\n\\nThis report\
+        \ details the diverse innovations and initiatives in plant science and environmental management, highlighting the critical role that plants play in addressing global challenges. As these advancements evolve, they promise to contribute significantly to sustainable development and ecological resilience.\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 767,\n    \"completion_tokens\": 1443,\n    \"total_tokens\": 2210,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_143bb8492c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -521,8 +365,6 @@ interactions:
       - 8e44d19eed83a423-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

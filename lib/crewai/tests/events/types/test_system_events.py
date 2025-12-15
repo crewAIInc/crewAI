@@ -27,9 +27,9 @@ class TestSignalType:
         """Verify SignalType maps to correct signal numbers."""
         assert SignalType.SIGTERM == signal.SIGTERM
         assert SignalType.SIGINT == signal.SIGINT
-        assert SignalType.SIGHUP == signal.SIGHUP
-        assert SignalType.SIGTSTP == signal.SIGTSTP
-        assert SignalType.SIGCONT == signal.SIGCONT
+        assert SignalType.SIGHUP == getattr(signal, "SIGHUP", 1)
+        assert SignalType.SIGTSTP == getattr(signal, "SIGTSTP", 20)
+        assert SignalType.SIGCONT == getattr(signal, "SIGCONT", 18)
 
 
 class TestSignalEvents:

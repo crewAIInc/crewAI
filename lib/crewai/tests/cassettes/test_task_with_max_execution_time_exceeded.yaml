@@ -1,27 +1,7 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "\nCurrent Task: Give
-      me a list of 5 interesting ideas to explore for an article, what makes them
-      unique and interesting.\n\nThis is the expected criteria for your final answer:
-      Bullet point list of 5 interesting ideas.\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}]}], "system_instruction": {"parts": [{"text": "You are
-      Researcher. You''re an expert researcher, specialized in technology, software
-      engineering, AI and startups. You work as a freelancer and are now working on
-      doing research and analysis for a new customer.\nYour personal goal is: Make
-      the best research and analysis on content about AI and AI agents. Use the tool
-      provided to you.\nYou ONLY have access to the following tools, and should NEVER
-      make up tools that are not listed here:\n\nTool Name: what amazing tool\nTool
-      Arguments: {}\nTool Description: My tool\n\nIMPORTANT: Use the following format
-      in your response:\n\n```\nThought: you should always think about what to do\nAction:
-      the action to take, only one name of [what amazing tool], just the name, exactly
-      as it''s written.\nAction Input: the input to the action, just a simple JSON
-      object, enclosed in curly braces, using \" to wrap keys and values.\nObservation:
-      the result of the action\n```\n\nOnce all necessary information is gathered,
-      return the following format:\n\n```\nThought: I now know the final answer\nFinal
-      Answer: the final answer to the original input question\n```"}]}, "generationConfig":
-      {"temperature": 0.7, "stop_sequences": ["\nObservation:"]}}'
+    body: '{"contents": [{"role": "user", "parts": [{"text": "\nCurrent Task: Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.\n\nThis is the expected criteria for your final answer: Bullet point list of 5 interesting ideas.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}]}], "system_instruction": {"parts": [{"text": "You are Researcher. You''re an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on doing research and analysis for a new customer.\nYour personal goal is: Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: what
+      amazing tool\nTool Arguments: {}\nTool Description: My tool\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [what amazing tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}]}, "generationConfig": {"temperature": 0.7, "stop_sequences": ["\nObservation:"]}}'
     headers:
       accept:
       - '*/*'
@@ -41,20 +21,11 @@ interactions:
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAC/61STWvbQBC961cMe+klFnJUy8S30JZiaGloTQlEOaylibRktavujtKkxv+9s3Lk
-        rE2PFUha9r2Z9+ZjlwCISppa1ZLQixXc8Q3AbvwGzBpCQwxMV3zZS0dv3MOzi85MIXwOQWLT2qFp
-        aQVrMIg1kIUGDTpWA1Wj9PBgHUgDnFJVGkFu7UBwvea7evwxnXwKsH6nNQwegVp+rdUhV4u6hw5h
-        66Qynqzr0tKU5roiZc0KfreSQHbyjzLNGDNBsDb9wK52pfg1oHsp2WspPk/OFqC4bIeeQuA/feJz
-        r60L8LnXC6ZWgw8QC40WOvmIHlBW7ZgMBqNYdgyLhNJS7EXUxv3xfH/x1nxnNYbOdrZGPdH3E0E8
-        KKN8+50dWxNoPzbfbsQRlU/NF9v0zm7D/GZZml1dLoti8X4+X+RFvszzPJmkR1ExeK7qK5LkBZHH
-        NRCcoutpYx/RfLDDuCB5nh10ooU6IRTLV5wsSX0aezVhUWL/kWWVjjctWkKuX2pFL+OWfbrdiKhH
-        dOZr6lISNfPc5X9SK5anYsnrcA7z+onOq8NgGux4VLN5uphxzbMsuxTJPvkLk2fgU5EDAAA=
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\": [\n          {\n            \"text\": \"Thought: I need to generate ideas for an article about AI and AI agents.  I'll use the tool to help me brainstorm.\\n\\nAction: what amazing tool\\nAction Input: {\\\"query\\\": \\\"Generate 5 interesting ideas for an article exploring AI and AI agents, focusing on what makes each idea unique and interesting.\\\"}\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.092766541153637333\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 330,\n    \"candidatesTokenCount\": 67,\n    \"totalTokenCount\": 397,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 330\n      }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 67\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-1.5-pro-002\"\
+        \n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json; charset=UTF-8
       Date:
@@ -79,27 +50,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re
-      an expert researcher, specialized in technology, software engineering, AI and
-      startups. You work as a freelancer and are now working on doing research and
-      analysis for a new customer.\nYour personal goal is: Make the best research
-      and analysis on content about AI and AI agents. Use the tool provided to you.\nYou
-      ONLY have access to the following tools, and should NEVER make up tools that
-      are not listed here:\n\nTool Name: what amazing tool\nTool Arguments: {}\nTool
-      Description: My tool\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought:
-      you should always think about what to do\nAction: the action to take, only one
-      name of [what amazing tool], just the name, exactly as it''s written.\nAction
-      Input: the input to the action, just a simple JSON object, enclosed in curly
-      braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce
-      all necessary information is gathered, return the following format:\n\n```\nThought:
-      I now know the final answer\nFinal Answer: the final answer to the original
-      input question\n```"}, {"role": "user", "content": "\nCurrent Task: Give me
-      a list of 5 interesting ideas to explore for an article, what makes them unique
-      and interesting.\n\nThis is the expected criteria for your final answer: Bullet
-      point list of 5 interesting ideas.\nyou MUST return the actual complete content
-      as the final answer, not a summary.\n\nBegin! This is VERY important to you,
-      use the tools available and give your best Final Answer, your job depends on
-      it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and are now working on doing research and analysis for a new customer.\nYour personal goal is: Make the best research and analysis on content about AI and AI agents. Use the tool provided to you.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: what amazing tool\nTool Arguments: {}\nTool Description: My tool\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [what amazing tool], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Give me a list of 5 interesting ideas to explore for an article, what makes them unique and interesting.\n\nThis is the expected criteria for your final answer: Bullet point list of 5 interesting ideas.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -141,24 +93,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJNPb9swDMXv+RSELrskRZukSZNbBxRbUWwYdhmwtTAYiba5ypQn0f2z
-        It+9kNPW6dYBu9iAfnzP5BP9MAIw7MwajK1RbdP6yfvvG7r79PnDxYK/LPni5uO35uxstfp6fTvz
-        1oyzImx+ktVn1YENTetJOcgO20iolF2PlvPlyfR4NZ/1oAmOfJZVrU7mYdKw8GR6OJ1PDpeTo5Mn
-        dR3YUjJr+DECAHjon7lPcXRn1nA4fj5pKCWsyKxfigBMDD6fGEyJk6KoGQ/QBlGSvvVzECIHGqAi
-        oYhKgOA5KYQSWJQiJWWpAKOy9QTsCBNE8nm4rDs9BxTXvyoSTWMog+1S1gQBrYkjdMK/OhJKqa+N
-        5OkGxRKwgAaH9+8SKNlagg8VW/TgUVyy2NLBpVzKqc25ruG2RgVs8Hd21xA8wDOEc2k7XcPDFmB/
-        1khllzDnLZ33ewBFgmKW9ilfPZHtS64+VG0Mm/SH1JQsnOoiEqYgOcOkoTU93Y4Arvr7615diWlj
-        aFotNFxT/7nZdLHzM8PaDHR+9AQ1KPo91WI5fsOvcKTIPu1tgLFoa3KDdFgX7ByHPTDam/rvbt7y
-        3k3OUv2P/QCspVbJFW0kx/b1xENZpPxX/avsJeW+YZMo3rClQplivglHJXZ+t+sm3SelpihZKopt
-        5N3Cl21xPKfNfOMWq5kZbUePAAAA//8DALOFcXD+AwAA
+      string: "{\n  \"id\": \"chatcmpl-BZbexMNGK6iP7iKvHWmEE99Rkw3lc\",\n  \"object\": \"chat.completion\",\n  \"created\": 1747825943,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I need to generate a list of interesting article ideas related to AI and AI agents, focusing on their uniqueness and relevance in today's technological landscape.\\n\\nAction: what amazing tool  \\nAction Input: {}  \",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 326,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 367,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_54eb4bd693\"\n}\n"
     headers:
       CF-RAY:
       - 9433a372ec1069e6-LAS
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -166,11 +107,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=SC.7rKr584CqggyyZVMEQ5_zFD.g4Q5djrKS1Kg2ifs-1747825944-1.0.1.1-M3vY0AX_JtRWZBGWsq8v4VWUTYLoQRB5_X2WbagS7emC73L80mIv3OUlMwPOwh7ag8LdkVtbkQ_hpAdM9kVJ_wyV7mhTNCoCPLE._sZWMeI;
-        path=/; expires=Wed, 21-May-25 11:42:24 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=LMbhtXYRu2foKMlmDSxZF0LlpAWtafPdjq_4PWulGz0-1747825944424-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=SC.7rKr584CqggyyZVMEQ5_zFD.g4Q5djrKS1Kg2ifs-1747825944-1.0.1.1-M3vY0AX_JtRWZBGWsq8v4VWUTYLoQRB5_X2WbagS7emC73L80mIv3OUlMwPOwh7ag8LdkVtbkQ_hpAdM9kVJ_wyV7mhTNCoCPLE._sZWMeI; path=/; expires=Wed, 21-May-25 11:42:24 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=LMbhtXYRu2foKMlmDSxZF0LlpAWtafPdjq_4PWulGz0-1747825944424-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -209,11 +147,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "22b47496-d65c-4781-846f-5493606a51cc", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T23:31:51.004551+00:00"}}'
+    body: '{"trace_id": "22b47496-d65c-4781-846f-5493606a51cc", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T23:31:51.004551+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -246,37 +180,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       expires:
       - '0'
       permissions-policy:

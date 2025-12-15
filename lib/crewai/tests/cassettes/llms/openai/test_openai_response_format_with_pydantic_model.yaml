@@ -1,10 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"user","content":"What is the capital of France? Be
-      concise."}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"name":"AnswerResponse","strict":true,"schema":{"description":"Response
-      model with structured fields.","properties":{"answer":{"description":"The answer
-      to the question","title":"Answer","type":"string"},"confidence":{"description":"Confidence
-      score between 0 and 1","title":"Confidence","type":"number"}},"required":["answer","confidence"],"title":"AnswerResponse","type":"object","additionalProperties":false}}}}'
+    body: '{"messages":[{"role":"user","content":"What is the capital of France? Be concise."}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"name":"AnswerResponse","strict":true,"schema":{"description":"Response model with structured fields.","properties":{"answer":{"description":"The answer to the question","title":"Answer","type":"string"},"confidence":{"description":"Confidence score between 0 and 1","title":"Confidence","type":"number"}},"required":["answer","confidence"],"title":"AnswerResponse","type":"object","additionalProperties":false}}}}'
     headers:
       accept:
       - application/json
@@ -42,22 +38,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLLbtswELzrK4g9SwFtyA/pmKCH9pRbUVSBwJArmTVFElyqbWr43wvK
-        jqW0KdALDzs7w5ndPWWMgVZQM5AHEeXgTfHQfemO1f0H8cK73fDp82b/iz6uH4+WnC0hTwz3/A1l
-        fGXdSTd4g1E7e4FlQBExqa5225Kv+W5bTsDgFJpE630sSles+bos+L7g2yvx4LREgpp9zRhj7DS9
-        yaJV+BNqxvPXyoBEokeob02MQXAmVUAQaYrCRshnUDob0U6uTw0ISz8wNFA38CiCpgbyJrV0WqGV
-        2EDN76rqvBQI2I0kkn87GrMAhLUuipR/sv50Rc43s8b1Prhn+oMKnbaaDm1AQc4mYxSdhwk9Z4w9
-        TUMZ3+QEH9zgYxvdEafvqvIiB/MWZnC1uoLRRWEWdb7J35FrFUahDS2mClLIA6qZOq9AjEq7BZAt
-        Qv/t5j3tS3Bt+/+RnwEp0UdUrQ+otHybeG4LmI70X223IU+GgTB81xLbqDGkRSjsxGgu9wP0QhGH
-        ttO2x+CDvhxR51tZ7ZFvpFjtIDtnvwEAAP//AwAvoKedTQMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CfYfk9BEay0f7mJW58zsI2Pknson4\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764020764,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"answer\\\":\\\"Paris\\\",\\\"confidence\\\":0.99}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 94,\n    \"completion_tokens\": 11,\n    \"total_tokens\": 105,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_c98e05ca17\"\n}\n"
     headers:
       CF-RAY:
       - 9a3c18cf7fe04253-EWR
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

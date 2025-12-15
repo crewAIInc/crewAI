@@ -1,15 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
-      personal goal is: Test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"},{"role":"user","content":"\nCurrent Task: Test task\n\nThis
-      is the expected criteria for your final answer: test output\nyou MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Test task\n\nThis is the expected criteria for your final answer: test output\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
     headers:
       accept:
       - application/json
@@ -47,28 +38,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTBjhs3DL37K4i59DI2bHe9m/rWBCmQFkWLdlEgbQODK3FmlNWQU5Hj
-        2A323wNpvGtvs4deBiM9PurxUdTnGUAVfLWFynVorh/i/I376X3bxHd//LJa/eZXt4F/bOjPn39d
-        /v72zb9VnRly95GcPbIWTvohkgXhCXaJ0ChnXd1cf7verDbr6wL04ilmWjvY/ErmfeAwXy/XV/Pl
-        zXz16sTuJDjSagt/zQAAPpdv1smeDtUWlvXjTk+q2FK1fQoCqJLEvFOhalBDtqo+g07YiIv0d8Dy
-        CRwytGFPgNBm2YCsnygB/M0/BMYI35f1Fm47AjoM5Iw8uBSMUkBoJIF1BE2JPXGDggkMSfbBE2R3
-        EnXEmo8J3EjqMZsFwoWrY7ETEsVsW+bmbSM1MNT7Bdx2QSGwi6On/DP3NFgHyBiPGrTOVNojG9AB
-        cy+0BiaX3UlH8GhYA7IHFwlTriIiFwkK1qGBQ6P0eG6x6GAgzSRBRhtGWxQDMPSn6oh1TDTRaU/p
-        CKjZnELL6lHvc6iTPaVcVCdJxraLx6xWx2iBWwiTA72oATUNOSutYH/2qayLrYOohrtIC3h9hEbc
-        qDnFZKJOPgsTm9Zft0Q7GaMHFgPheISeyCbzB3KhCZc9vRsNMKoAHRyRP3V98qsGT72wWsJSgIuY
-        gh1rGBK5oEH45PQ0EsSkJ4/R+0SqpE/2fKOQ6J8xJOqz6ucXJR4Xl/c2UTMq5tnhMcYLAJnlpC1P
-        zIcT8vA0I1HaIcmd/odaNYGDdrtEqMJ5HtRkqAr6MAP4UGZxfDZe1ZCkH2xnck/luNXmaspXnZ+A
-        C3T16oSaGMYzsL5Z1y8k3HkyDFEvxrly6DryZ+p59nH0QS6A2UXZX8t5KfdUeuD2/6Q/A87RYOR3
-        QyIf3POSz2GJPpan4uWwJ5uL4Eop7YOjnQVKuRWeGhzj9HBVelSjftcEbikNKUyvVzPsNtdLbK5p
-        s/mumj3MvgAAAP//AwAmD0HmywUAAA==
+      string: "{\n  \"id\": \"chatcmpl-CcKYgflIVO11Rd1TinJfeZMP0SECz\",\n  \"object\": \"chat.completion\",\n  \"created\": 1763251526,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: The expected criteria for the final answer is to provide comprehensive information on the subject related to the test task. This includes in-depth analysis, relevant examples, necessary data, and clear explanations that cater to the context of test output. The aim is to ensure that every aspect of the task is covered thoroughly, resulting in the most effective and informative answer possible. By focusing on these components, the final answer should not only meet the specified criteria but also exceed expectations, demonstrating clarity, precision, and completeness that addresses the task's requirements comprehensively.\",\n        \"refusal\"\
+        : null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 154,\n    \"completion_tokens\": 118,\n    \"total_tokens\": 272,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 99f2bc8f6f4dfab6-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -76,11 +52,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Sun, 16-Nov-25 00:35:27 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=REDACTED; path=/; expires=Sun, 16-Nov-25 00:35:27 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

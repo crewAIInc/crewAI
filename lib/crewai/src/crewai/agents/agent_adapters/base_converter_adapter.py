@@ -5,10 +5,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 import json
 import re
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
-from crewai.utilities.converter import generate_model_description
-
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 
 
 if TYPE_CHECKING:
@@ -42,7 +41,7 @@ class BaseConverterAdapter(ABC):
         """
         self.agent_adapter = agent_adapter
         self._output_format: Literal["json", "pydantic"] | None = None
-        self._schema: str | None = None
+        self._schema: dict[str, Any] | None = None
 
     @abstractmethod
     def configure_structured_output(self, task: Task) -> None:
@@ -129,7 +128,7 @@ class BaseConverterAdapter(ABC):
     @staticmethod
     def _configure_format_from_task(
         task: Task,
-    ) -> tuple[Literal["json", "pydantic"] | None, str | None]:
+    ) -> tuple[Literal["json", "pydantic"] | None, dict[str, Any] | None]:
         """Determine output format and schema from task requirements.
 
         This is a helper method that examines the task's output requirements

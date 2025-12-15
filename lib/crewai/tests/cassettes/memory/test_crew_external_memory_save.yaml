@@ -47,8 +47,6 @@ interactions:
       - 929ab3937d457e01-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -151,8 +149,6 @@ interactions:
       - 929ab3965ba47dfb-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -344,8 +340,6 @@ interactions:
       - 929ab399fe8d7dee-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -453,8 +447,6 @@ interactions:
       - 929ab3a78f7f7e01-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -607,8 +599,6 @@ interactions:
       - 929ab3ab8cf37dee-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

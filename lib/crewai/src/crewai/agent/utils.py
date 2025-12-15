@@ -16,7 +16,7 @@ from crewai.events.types.knowledge_events import (
     KnowledgeSearchQueryFailedEvent,
 )
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
-from crewai.utilities.converter import generate_model_description
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 
 
 if TYPE_CHECKING:

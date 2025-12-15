@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"My name is Alice."},{"role":"assistant","content":"Hello
-      Alice! Nice to meet you."},{"role":"user","content":"What is my name?"}],"model":"claude-sonnet-4-0","stream":false}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"My name is Alice."},{"role":"assistant","content":"Hello Alice! Nice to meet you."},{"role":"user","content":"What is my name?"}],"model":"claude-sonnet-4-0","stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -43,19 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBbSwMxEIX/SjnPqez2Apq3vqv4oIKKhJAM3WB2siaTYi3732WLxRs+
-        DZzvm2E4B/TJU4SGi7Z6mpfETDJfzRfNYt2s2xUUgodGX7amaW+X7dXd+83qMd9vNmlfLy/y7rqD
-        guwHmiwqxW4JCjnFKbClhCKWBQousRAL9NPh5Au9TeQ4NB5SzTO2Pc1CmW1icHSG8VmhSBpMJlsS
-        Q4PYG6mZ8QkKvVZiR9BcY1Soxw/0AYGHKkbSC3GBXrYKzrqOjMtkJSQ2P4XmxDNZ/x877U73aeio
-        p2yjWfd//S/adr/pqJCqfI/OFQrlXXBkJFCGxtSat9ljHD8AAAD//wMAr8g7PaYBAAA=
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01T31MUzP4ZrVAAoyuL9rvNh","type":"message","role":"assistant","content":[{"type":"text","text":"Your name is Alice."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":31,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":8,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -100,8 +92,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"My name is Alice."},{"role":"assistant","content":"Hello
-      Alice! Nice to meet you."},{"role":"user","content":"What is my name?"}],"model":"claude-sonnet-4-0","stream":false}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"My name is Alice."},{"role":"assistant","content":"Hello Alice! Nice to meet you."},{"role":"user","content":"What is my name?"}],"model":"claude-sonnet-4-0","stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -143,20 +134,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBLa8MwDID/itHZHUnXsM63nrfjVjbGMMYWjZkjZ5ZcVkr++0hp2Yud
-        hPR9eqAjDDlgAgM+uRpwwZkIZbFaLJtl13TtCjTEAAYG3tmmXT3ddfdr3qJ7GLebtS/5Nh4eQYMc
-        RpwtZHY7BA0lp7ngmCOLIwENPpMgCZiX48UX/JjJKRh4zrUocgOqyGqToketHKtDrkpyCmoGNKdF
-        jQX3MVdW541XML1qYMmjLeg4ExhAClZqITgDxveK5BEM1ZQ01NOp5giRxipW8hsSg7luNXjne7S+
-        oJOYyf4Umgsv6MJ/7NI7z8exxwGLS7Yb/vpftO1/00lDrvK91N5oYCz76NFKxAIG5v8GVwJM0ycA
-        AAD//wMAqvdgpNABAAA=
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_014XK5L8sVeaTpVA8cro9iyU","type":"message","role":"assistant","content":[{"type":"text","text":"Your name is Alice, as you told me in your previous message."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":31,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":17,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
