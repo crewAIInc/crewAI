@@ -992,6 +992,73 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Good balance of speed and quality
     </Info>
   </Accordion>
+
+  <Accordion title="AI Badgr (Budget/Utility, OpenAI-compatible)">
+    AI Badgr provides OpenAI-compatible API access with tier-based model naming for budget-conscious projects.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    # Required
+    AIBADGR_API_KEY=<your-api-key>
+
+    # Optional - custom base URL
+    AIBADGR_BASE_URL=https://aibadgr.com/api/v1
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/premium",  # Tier-based model name
+        api_key="your-api-key",  # Or set AIBADGR_API_KEY
+        base_url="https://aibadgr.com/api/v1"
+    )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/premium",
+        api_key="your-api-key",
+        base_url="https://aibadgr.com/api/v1",
+        temperature=0.7,
+        max_tokens=4000,
+        timeout=60.0
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `AIBADGR_API_KEY`: Your AI Badgr API key (required)
+    - `AIBADGR_BASE_URL`: Custom base URL (optional, defaults to https://aibadgr.com/api/v1)
+
+    **Supported Models (Tier-based naming):**
+
+    | Model    | Best For                                      |
+    |----------|-----------------------------------------------|
+    | basic    | Simple tasks, low-cost operations             |
+    | normal   | General-purpose tasks, balanced performance   |
+    | premium  | Complex reasoning, high-quality outputs       |
+
+    **Advanced Model Names:**
+    
+    For power users, specific model names are also supported and automatically mapped:
+    - `phi-3-mini` (maps to basic tier)
+    - `mistral-7b` (maps to normal tier)
+    - `llama3-8b-instruct` (maps to premium tier)
+    - OpenAI model names are accepted and mapped automatically
+
+    <Info>
+      AI Badgr features:
+      - Budget/Utility tier provider
+      - OpenAI-compatible API
+      - Tier-based model naming (basic, normal, premium)
+      - Cost-effective for development and testing
+      - Compatible with all CrewAI LLM features
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
