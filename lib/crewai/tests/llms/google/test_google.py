@@ -768,8 +768,11 @@ def test_gemini_function_call_without_text_returns_action_format():
 
         mock_generate.return_value = mock_response
 
+        # Pass tools to simulate real scenario where tools are configured
+        # This sets self.tools in the completion object
+        tools = [{"name": "search_tool", "description": "Search for information"}]
         messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
-        result = completion.call(messages=messages)
+        result = completion.call(messages=messages, tools=tools)
 
         assert result is not None
         assert result != ""
@@ -817,8 +820,10 @@ def test_gemini_function_call_with_text_returns_text():
 
         mock_generate.return_value = mock_response
 
+        # Pass tools to simulate real scenario where tools are configured
+        tools = [{"name": "search_tool", "description": "Search for information"}]
         messages = [{"role": "user", "content": "What's the weather?"}]
-        result = completion.call(messages=messages)
+        result = completion.call(messages=messages, tools=tools)
 
         assert result is not None
         assert result != ""
@@ -866,9 +871,12 @@ def test_gemini_function_call_with_available_functions_executes_tool():
 
         mock_generate.return_value = mock_response
 
+        # Pass tools to simulate real scenario where tools are configured
+        tools = [{"name": "search_tool", "description": "Search for information"}]
         messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
         result = completion.call(
             messages=messages,
+            tools=tools,
             available_functions=available_functions
         )
 
@@ -910,8 +918,10 @@ def test_gemini_streaming_function_call_without_text_returns_action_format():
 
         mock_stream.return_value = [mock_chunk]
 
+        # Pass tools to simulate real scenario where tools are configured
+        tools = [{"name": "calculator", "description": "Calculate expressions"}]
         messages = [{"role": "user", "content": "Calculate 2 + 2"}]
-        result = completion.call(messages=messages)
+        result = completion.call(messages=messages, tools=tools)
 
         assert result is not None
         assert result != ""
