@@ -319,7 +319,7 @@ class CrewAIRagAdapter(Adapter):
                 loader = data_type.get_loader()
                 chunker = data_type.get_chunker()
 
-                loader_result: LoaderResult = loader.load(source_content)
+                loader_result: LoaderResult = loader.load(source_content, **kwargs)
 
                 chunks = chunker.chunk(loader_result.content)
 
