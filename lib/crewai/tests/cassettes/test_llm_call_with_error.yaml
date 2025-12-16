@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "This should fail"}], "model":
-      "non-existent-model", "stream": false}'
+    body: '{"messages": [{"role": "user", "content": "This should fail"}], "model": "non-existent-model", "stream": false}'
     headers:
       accept:
       - application/json
@@ -37,17 +36,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA0yOQQ6DMBAD77zCyrn0Abyj9xCRbYkUdmmyQUWIv1faHsrRY1v20QGAo1KkuAGH
-        SUML1Rpe5Aa4x0xYJFLGyMI9fVJVYu2NjYhCFSwKMyAFuzREMTaHjRCmiWqFCpLe3e0/ovtqC4m3
-        kFP0hd6Nqvrfn0twDSUsbgC3nC94kmh9e+JZ1D+lcXSWOLuz+wIAAP//AwDwJ9T24AAAAA==
+      string: "{\n    \"error\": {\n        \"message\": \"The model `non-existent-model` does not exist or you do not have access to it.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": null,\n        \"code\": \"model_not_found\"\n    }\n}\n"
     headers:
       CF-RAY:
       - 983bb3062e52cfdd-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json; charset=utf-8
       Date:
@@ -55,11 +49,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=l6zvKL1cBSJCxBKgoyWNqDYgKbN15TzoXPOG_Pqn2x0-1758647885-1.0.1.1-rXihI1tsZOnuE2R7fcfOGGKQvNUdbuWqS0hEjwdVNeEuLmF2XwKVItJWKSsJR5_xDi4KPbe_Wk.zJPjaBzSLowk8eLMRzhsYEdH1eu_B4_I;
-        path=/; expires=Tue, 23-Sep-25 17:48:05 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=ftgVtZirdknUkriQmKHRKPo90LBNQJlaHxs6Skum1rY-1758647885920-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=l6zvKL1cBSJCxBKgoyWNqDYgKbN15TzoXPOG_Pqn2x0-1758647885-1.0.1.1-rXihI1tsZOnuE2R7fcfOGGKQvNUdbuWqS0hEjwdVNeEuLmF2XwKVItJWKSsJR5_xDi4KPbe_Wk.zJPjaBzSLowk8eLMRzhsYEdH1eu_B4_I; path=/; expires=Tue, 23-Sep-25 17:48:05 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=ftgVtZirdknUkriQmKHRKPo90LBNQJlaHxs6Skum1rY-1758647885920-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -82,12 +73,7 @@ interactions:
       code: 404
       message: Not Found
 - request:
-    body: '{"trace_id": "13adb67d-0c60-4432-88ab-ee3b84286f78", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
-      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
-      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
-      "2025-09-23T17:20:19.459979+00:00"}}'
+    body: '{"trace_id": "13adb67d-0c60-4432-88ab-ee3b84286f78", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-09-23T17:20:19.459979+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -114,18 +100,7 @@ interactions:
       cache-control:
       - no-cache
       content-security-policy:
-      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
-        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
-        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
-        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
-        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
-        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
-        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com; connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036 wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://www.youtube.com https://share.descript.com'
       content-type:
       - application/json; charset=utf-8
       permissions-policy:
@@ -133,9 +108,7 @@ interactions:
       referrer-policy:
       - strict-origin-when-cross-origin
       server-timing:
-      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00,
-        cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00,
-        process_action.action_controller;dur=1.58
+      - cache_read.active_support;dur=0.03, cache_fetch_hit.active_support;dur=0.00, cache_read_multi.active_support;dur=0.05, start_processing.action_controller;dur=0.00, process_action.action_controller;dur=1.58
       vary:
       - Accept
       x-content-type-options:

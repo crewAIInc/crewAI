@@ -174,9 +174,12 @@ class Telemetry:
 
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
+        if hasattr(signal, "SIGHUP"):
+            self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
+        if hasattr(signal, "SIGTSTP"):
+            self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
+        if hasattr(signal, "SIGCONT"):
+            self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
 
     def _register_signal_handler(
         self,
@@ -392,9 +395,7 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
-                self._add_attribute(
-                    span, "crew_inputs", json.dumps(inputs) if inputs else None
-                )
+                self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             else:
                 self._add_attribute(
                     span,
@@ -707,9 +708,7 @@ class Telemetry:
             self._add_attribute(span, "model_name", model_name)
 
             if crew.share_crew:
-                self._add_attribute(
-                    span, "inputs", json.dumps(inputs) if inputs else None
-                )
+                self._add_attribute(span, "inputs", json.dumps(inputs or {}))
 
             close_span(span)
 
@@ -814,9 +813,7 @@ class Telemetry:
             add_crew_attributes(
                 span, crew, self._add_attribute, include_fingerprint=False
             )
-            self._add_attribute(
-                span, "crew_inputs", json.dumps(inputs) if inputs else None
-            )
+            self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             self._add_attribute(
                 span,
                 "crew_agents",

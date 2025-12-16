@@ -42,20 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3SQTUsDMRCG/0qci5dUdmsLNhdP0uqpCIJFJIRk2C7NzqzJpLaU/nfZYvELT8O8
-        zzPDMAfoOGAEAz66EnCUmQhlNBmNq/G0mtYT0NAGMNDlxlb19bLfuFVDT/P54zatHmbPd7slgwbZ
-        9zhYmLNrEDQkjkPgcm6zOBLQ4JkEScC8HM6+4G4gp2JggTHyhbqXy6yo9aiEVYcoas/lSi34XbmE
-        Q6MCt9Qo4eD2t3B81ZCFe5vQZSYwgBSslETwCTK+FSSPYKjEqKGcjjQHaKkvYoU3SBnMTIN3fo3W
-        J3TSMtmfvDrzhC78x86zw3rs19hhctFOu7/+F63Xv+lRAxf5HtU3GjKmbevRSosJDAyPDS4FOB4/
-        AAAA//8DAOKqeZbJAQAA
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_013PpkaYgnUGGRvrYJ9XExPo","type":"message","role":"assistant","content":[{"type":"text","text":"Hello! It''s nice to meet you. How are you doing today?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":9,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":18,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -142,20 +134,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3TQTUsDMRAG4L8S55zC7tKi5lL01IInEYuIhJBMu8HsZE0mtkvZ/y5bLH7haWCe
-        d4ZhjtBFhwEU2GCKw1mORMiz+aypmkW1qOcgwTtQ0OWdruqrwpu7x277VC4fOn9obra39f0GJPDQ
-        45TCnM0OQUKKYWqYnH1mQwwSbCRGYlDPx3Oe8TDJqShYYQjxQqziXpiEYohFuOhpJzg6MyzFOgtu
-        MaEwNHA7wVpYQ6LF0J/Se8/tEsYXCZljrxOaHAkUIDnNJRF8Qsa3gmQRFJUQJJTT0eoInvrCmuMr
-        UgZ1LcEa26K2CQ37SPqnV2dPaNx/dp6d1mPfYofJBL3o/ua/tG5/6yghFv7eaioJGdO7t6jZYwIF
-        06OdSQ7G8QMAAP//AwATs5vC2QEAAA==
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_018utWLVmfYu7Tmix2AfB1RW","type":"message","role":"assistant","content":[{"type":"text","text":"Hello! How are you doing today? Is there anything I can help you with?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":9,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":20,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

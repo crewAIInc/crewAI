@@ -188,8 +188,6 @@ interactions:
       - 8c85ec4a8c261cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -402,8 +400,6 @@ interactions:
       - 8c85ec8258981cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

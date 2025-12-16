@@ -32,6 +32,8 @@ Uma crew no crewAI representa um grupo colaborativo de agentes trabalhando em co
 | **Prompt File** _(opcional)_          | `prompt_file`           | Caminho para o arquivo JSON de prompt a ser utilizado pela crew.                                                                                                                   |
 | **Planning** *(opcional)*             | `planning`              | Adiciona habilidade de planejamento à Crew. Quando ativado, antes de cada iteração, todos os dados da Crew são enviados a um AgentPlanner que planejará as tasks e este plano será adicionado à descrição de cada task.    |
 | **Planning LLM** *(opcional)*         | `planning_llm`          | O modelo de linguagem usado pelo AgentPlanner em um processo de planejamento.                                                                                                      |
+| **Knowledge Sources** _(opcional)_    | `knowledge_sources`    | Fontes de conhecimento disponíveis no nível da crew, acessíveis a todos os agentes.                                                                                                                                                             |
+| **Stream** _(opcional)_               | `stream`               | Habilita saída em streaming para receber atualizações em tempo real durante a execução da crew. Retorna um objeto `CrewStreamingOutput` que pode ser iterado para chunks. O padrão é `False`.                                                                                    |
 
 <Tip>
 **Crew Max RPM**: O atributo `max_rpm` define o número máximo de requisições por minuto que a crew pode executar para evitar limites de taxa e irá sobrescrever as configurações de `max_rpm` dos agentes individuais se você o definir.
@@ -303,12 +305,27 @@ print(result)
 
 ### Diferentes Formas de Iniciar uma Crew
 
-Assim que sua crew estiver definida, inicie o fluxo de trabalho com o método kickoff apropriado. O CrewAI oferece vários métodos para melhor controle do processo: `kickoff()`, `kickoff_for_each()`, `kickoff_async()` e `kickoff_for_each_async()`.
+Assim que sua crew estiver definida, inicie o fluxo de trabalho com o método kickoff apropriado. O CrewAI oferece vários métodos para melhor controle do processo.
+
+#### Métodos Síncronos
 
 - `kickoff()`: Inicia o processo de execução seguindo o fluxo definido.
 - `kickoff_for_each()`: Executa tasks sequencialmente para cada evento de entrada ou item da coleção fornecida.
-- `kickoff_async()`: Inicia o workflow de forma assíncrona.
-- `kickoff_for_each_async()`: Executa as tasks concorrentemente para cada entrada, aproveitando o processamento assíncrono.
+
+#### Métodos Assíncronos
+
+O CrewAI oferece duas abordagens para execução assíncrona:
+
+| Método | Tipo | Descrição |
+|--------|------|-------------|
+| `akickoff()` | Async nativo | Async/await verdadeiro em toda a cadeia de execução |
+| `akickoff_for_each()` | Async nativo | Execução async nativa para cada entrada em uma lista |
+| `kickoff_async()` | Baseado em thread | Envolve execução síncrona em `asyncio.to_thread` |
+| `kickoff_for_each_async()` | Baseado em thread | Async baseado em thread para cada entrada em uma lista |
+
+<Note>
+Para cargas de trabalho de alta concorrência, `akickoff()` e `akickoff_for_each()` são recomendados pois usam async nativo para execução de tasks, operações de memória e recuperação de conhecimento.
+</Note>
 
 ```python Code
 # Iniciar execução das tasks da crew
@@ -321,19 +338,53 @@ results = my_crew.kickoff_for_each(inputs=inputs_array)
 for result in results:
     print(result)
 
-# Exemplo com kickoff_async
+# Exemplo usando async nativo com akickoff
+inputs = {'topic': 'AI in healthcare'}
+async_result = await my_crew.akickoff(inputs=inputs)
+print(async_result)
+
+# Exemplo usando async nativo com akickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = await my_crew.akickoff_for_each(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+
+# Exemplo usando kickoff_async baseado em thread
 inputs = {'topic': 'AI in healthcare'}
 async_result = await my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
-# Exemplo com kickoff_for_each_async
+# Exemplo usando kickoff_for_each_async baseado em thread
 inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
 async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```
 
-Esses métodos fornecem flexibilidade para gerenciar e executar tasks dentro de sua crew, permitindo fluxos de trabalho síncronos e assíncronos de acordo com sua necessidade.
+Esses métodos fornecem flexibilidade para gerenciar e executar tasks dentro de sua crew, permitindo fluxos de trabalho síncronos e assíncronos de acordo com sua necessidade. Para exemplos detalhados de async, consulte o guia [Inicie uma Crew de Forma Assíncrona](/pt-BR/learn/kickoff-async).
+
+### Streaming na Execução da Crew
+
+Para visibilidade em tempo real da execução da crew, você pode habilitar streaming para receber saída conforme é gerada:
+
+```python Code
+# Habilitar streaming
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True
+)
+
+# Iterar sobre saída em streaming
+streaming = crew.kickoff(inputs={"topic": "AI"})
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# Acessar resultado final
+result = streaming.result
+```
+
+Saiba mais sobre streaming no guia [Streaming na Execução da Crew](/pt-BR/learn/streaming-crew-execution).
 
 ### Repetindo Execução a partir de uma Task Específica
 

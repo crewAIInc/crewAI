@@ -3,8 +3,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
+from anthropic.types import ThinkingBlock
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
@@ -22,13 +23,17 @@ if TYPE_CHECKING:
 
 try:
     from anthropic import Anthropic, AsyncAnthropic
-    from anthropic.types import Message
-    from anthropic.types.tool_use_block import ToolUseBlock
+    from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
         'Anthropic native provider not available, to install: uv add "crewai[anthropic]"'
     ) from None
+
+
+class AnthropicThinkingConfig(BaseModel):
+    type: Literal["enabled", "disabled"]
+    budget_tokens: int | None = None
 
 
 class AnthropicCompletion(BaseLLM):
@@ -52,6 +57,7 @@ class AnthropicCompletion(BaseLLM):
         stream: bool = False,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
+        thinking: AnthropicThinkingConfig | None = None,
         **kwargs: Any,
     ):
         """Initialize Anthropic chat completion client.
@@ -97,6 +103,10 @@ class AnthropicCompletion(BaseLLM):
         self.top_p = top_p
         self.stream = stream
         self.stop_sequences = stop_sequences or []
+        self.thinking = thinking
+        self.previous_thinking_blocks: list[ThinkingBlock] = []
+        # Model-specific settings
+        self.is_claude_3 = "claude-3" in model.lower()
         self.supports_tools = True
 
     @property
@@ -326,6 +336,12 @@ class AnthropicCompletion(BaseLLM):
         if tools and self.supports_tools:
             params["tools"] = self._convert_tools_for_interference(tools)
 
+        if self.thinking:
+            if isinstance(self.thinking, AnthropicThinkingConfig):
+                params["thinking"] = self.thinking.model_dump()
+            else:
+                params["thinking"] = self.thinking
+
         return params
 
     def _convert_tools_for_interference(
@@ -365,6 +381,34 @@ class AnthropicCompletion(BaseLLM):
 
         return anthropic_tools
 
+    def _extract_thinking_block(
+        self, content_block: Any
+    ) -> ThinkingBlock | dict[str, Any] | None:
+        """Extract and format thinking block from content block.
+
+        Args:
+            content_block: Content block from Anthropic response
+
+        Returns:
+            Dictionary with thinking block data including signature, or None if not a thinking block
+        """
+        if content_block.type == "thinking":
+            thinking_block = {
+                "type": "thinking",
+                "thinking": content_block.thinking,
+            }
+            if hasattr(content_block, "signature"):
+                thinking_block["signature"] = content_block.signature
+            return thinking_block
+        if content_block.type == "redacted_thinking":
+            redacted_block = {"type": "redacted_thinking"}
+            if hasattr(content_block, "thinking"):
+                redacted_block["thinking"] = content_block.thinking
+            if hasattr(content_block, "signature"):
+                redacted_block["signature"] = content_block.signature
+            return redacted_block
+        return None
+
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
     ) -> tuple[list[LLMMessage], str | None]:
@@ -374,6 +418,7 @@ class AnthropicCompletion(BaseLLM):
         - System messages are separate from conversation messages
         - Messages must alternate between user and assistant
         - First message must be from user
+        - When thinking is enabled, assistant messages must start with thinking blocks
 
         Args:
             messages: Input messages
@@ -398,8 +443,29 @@ class AnthropicCompletion(BaseLLM):
                     system_message = cast(str, content)
             else:
                 role_str = role if role is not None else "user"
-                content_str = content if content is not None else ""
-                formatted_messages.append({"role": role_str, "content": content_str})
+
+                if isinstance(content, list):
+                    formatted_messages.append({"role": role_str, "content": content})
+                elif (
+                    role_str == "assistant"
+                    and self.thinking
+                    and self.previous_thinking_blocks
+                ):
+                    structured_content = cast(
+                        list[dict[str, Any]],
+                        [
+                            *self.previous_thinking_blocks,
+                            {"type": "text", "text": content if content else ""},
+                        ],
+                    )
+                    formatted_messages.append(
+                        LLMMessage(role=role_str, content=structured_content)
+                    )
+                else:
+                    content_str = content if content is not None else ""
+                    formatted_messages.append(
+                        LLMMessage(role=role_str, content=content_str)
+                    )
 
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
@@ -449,7 +515,6 @@ class AnthropicCompletion(BaseLLM):
             if tool_uses and tool_uses[0].name == "structured_output":
                 structured_data = tool_uses[0].input
                 structured_json = json.dumps(structured_data)
-
                 self._emit_call_completed_event(
                     response=structured_json,
                     call_type=LLMCallType.LLM_CALL,
@@ -477,15 +542,22 @@ class AnthropicCompletion(BaseLLM):
                     from_agent,
                 )
 
-        # Extract text content
         content = ""
+        thinking_blocks: list[ThinkingBlock] = []
+
         if response.content:
             for content_block in response.content:
                 if hasattr(content_block, "text"):
                     content += content_block.text
+                else:
+                    thinking_block = self._extract_thinking_block(content_block)
+                    if thinking_block:
+                        thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self.previous_thinking_blocks = thinking_blocks
 
         content = self._apply_stop_words(content)
-
         self._emit_call_completed_event(
             response=content,
             call_type=LLMCallType.LLM_CALL,
@@ -539,6 +611,16 @@ class AnthropicCompletion(BaseLLM):
                     )
 
             final_message: Message = stream.get_final_message()
+
+        thinking_blocks: list[ThinkingBlock] = []
+        if final_message.content:
+            for content_block in final_message.content:
+                thinking_block = self._extract_thinking_block(content_block)
+                if thinking_block:
+                    thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+        if thinking_blocks:
+            self.previous_thinking_blocks = thinking_blocks
 
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
@@ -597,6 +679,49 @@ class AnthropicCompletion(BaseLLM):
             params["messages"], full_response, from_agent
         )
 
+    def _execute_tools_and_collect_results(
+        self,
+        tool_uses: list[ToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute tools and collect results in Anthropic format.
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            List of tool result dictionaries in Anthropic format
+        """
+        tool_results = []
+
+        for tool_use in tool_uses:
+            function_name = tool_use.name
+            function_args = tool_use.input
+
+            result = self._handle_tool_execution(
+                function_name=function_name,
+                function_args=cast(dict[str, Any], function_args),
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": str(result)
+                if result is not None
+                else "Tool execution completed",
+            }
+            tool_results.append(tool_result)
+
+        return tool_results
+
     def _handle_tool_use_conversation(
         self,
         initial_response: Message,
@@ -614,37 +739,33 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        # Execute all requested tools and collect results
-        tool_results = []
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            # Execute the tool
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=function_args,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            # Create tool result in Anthropic format
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
-
-        # Prepare follow-up conversation with tool results
         follow_up_params = params.copy()
 
         # Add Claude's tool use response to conversation
-        assistant_message = {"role": "assistant", "content": initial_response.content}
+        assistant_content: list[
+            ThinkingBlock | ToolUseBlock | TextBlock | dict[str, Any]
+        ] = []
+        for block in initial_response.content:
+            thinking_block = self._extract_thinking_block(block)
+            if thinking_block:
+                assistant_content.append(thinking_block)
+            elif block.type == "tool_use":
+                assistant_content.append(
+                    {
+                        "type": "tool_use",
+                        "id": block.id,
+                        "name": block.name,
+                        "input": block.input,
+                    }
+                )
+            elif hasattr(block, "text"):
+                assistant_content.append({"type": "text", "text": block.text})
+
+        assistant_message = {"role": "assistant", "content": assistant_content}
 
         # Add user message with tool results
         user_message = {"role": "user", "content": tool_results}
@@ -663,12 +784,20 @@ class AnthropicCompletion(BaseLLM):
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
-            # Extract final text content
             final_content = ""
+            thinking_blocks: list[ThinkingBlock] = []
+
             if final_response.content:
                 for content_block in final_response.content:
                     if hasattr(content_block, "text"):
                         final_content += content_block.text
+                    else:
+                        thinking_block = self._extract_thinking_block(content_block)
+                        if thinking_block:
+                            thinking_blocks.append(cast(ThinkingBlock, thinking_block))
+
+            if thinking_blocks:
+                self.previous_thinking_blocks = thinking_blocks
 
             final_content = self._apply_stop_words(final_content)
 
@@ -701,7 +830,7 @@ class AnthropicCompletion(BaseLLM):
             logging.error(f"Tool follow-up conversation failed: {e}")
             # Fallback: return the first tool result if follow-up fails
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     async def _ahandle_completion(
@@ -894,28 +1023,9 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        tool_results = []
-
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=function_args,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
         follow_up_params = params.copy()
 
@@ -970,7 +1080,7 @@ class AnthropicCompletion(BaseLLM):
 
             logging.error(f"Tool follow-up conversation failed: {e}")
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     def supports_function_calling(self) -> bool:
@@ -1006,7 +1116,8 @@ class AnthropicCompletion(BaseLLM):
         # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_anthropic_token_usage(self, response: Message) -> dict[str, Any]:
+    @staticmethod
+    def _extract_anthropic_token_usage(response: Message) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
