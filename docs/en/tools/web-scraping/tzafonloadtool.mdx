@@ -1,0 +1,52 @@
+---
+title: Tzafon Web Loader
+description: Tzafon is a platform for programmatic control of browsers and desktops.
+icon: browser
+mode: "wide"
+---
+
+# `TzafonLoadTool`
+
+## Description
+
+The `TzafonLoadTool` enables web scraping and automation using [Tzafon](https://tzafon.ai), a platform for programmatic control of browsers and desktops. This tool allows agents to navigate websites, interact with content, and extract data using Tzafon's stealth and speed capabilities.
+
+Key Features:
+- **Full Stealth**: Bypass anti-bot measures with built-in stealth features.
+- **Lightning Fast**: Optimized for speed and performance.
+- **Multi-Tab Control**: Manage multiple browser tabs programmatically.
+- **Page Context API**: Access detailed context about the page structure and content.
+
+## Installation
+
+To use this tool, you need to install the Tzafon SDK along with `crewai[tools]`:
+
+```shell
+pip install tzafon 'crewai[tools]'
+```
+
+## Example
+
+The following example demonstrates how to initialize the tool and use it to load a website:
+
+```python Code
+from crewai_tools import TzafonLoadTool
+
+# Initialize the tool
+# The API key can be passed directly or set as TZAFON_API_KEY environment variable
+tool = TzafonLoadTool()
+``` 
+
+## Arguments
+
+The `TzafonLoadTool` accepts the following parameters:
+
+| Argument    | Type     | Description                                                                 |
+|:------------|:---------|:----------------------------------------------------------------------------|
+| **url** | `string` | _Required_. URL of the website to load.                                         |
+| **api_key** | `string` | _Optional_. Tzafon API key. Default is `TZAFON_API_KEY` env variable.       |
+| **text_content** | `bool` | _Optional_. Retrieve only text content. Default is `True`.       |
+
+## Return Format
+
+The tool returns the content of the loaded page, typically in a text or html format suitable for LLM processing.

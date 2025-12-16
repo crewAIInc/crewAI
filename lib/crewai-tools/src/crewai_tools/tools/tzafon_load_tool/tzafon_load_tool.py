@@ -13,6 +13,18 @@ class TzafonLoadToolSchema(BaseModel):
 
 
 class TzafonLoadTool(BaseTool):
+    """
+    TzafonLoadTool
+    A tool for loading and extracting content from webpages using Tzafon's browser.
+    Requires `tzafon` package to be installed.
+    Get your API key from https://tzafon.ai/dashboard
+    The Tzafon API key, can be set as an environment variable `TZAFON_API_KEY` or passed directly.
+
+    Args:
+        api_key (Optional[str]): The API key for accessing Tzafon services. 
+                                 If not provided, it will be retrieved from the TZAFON_API_KEY environment variable.
+        **kwargs: Additional keyword arguments passed to the BaseTool constructor.
+    """
     name: str = "Tzafon web load tool"
     description: str = "Load webpages url using Tzafon and return its contents"
     args_schema: type[BaseModel] = TzafonLoadToolSchema
@@ -20,11 +32,25 @@ class TzafonLoadTool(BaseTool):
     tzafon: Any | None = None
     text_content: bool | None = True
     package_dependencies: list[str] = Field(default_factory=lambda: ["tzafon", "playwright"])
-    env_vars: list[EnvVar] = [
-        EnvVar(name="TZAFON_API_KEY", description="API key for Tzafon services"),
-    ]
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="TZAFON_API_KEY",
+                description="API key for Tzafon services",
+                required=False,
+            ),
+        ]
+    )
 
     def __init__(self, api_key: str | None = None, **kwargs):
+        """
+        Initialize the TzafonLoadTool.
+
+        Args:
+            api_key (Optional[str]): The API key for accessing Tzafon services. 
+                                     If not provided, it will be retrieved from the TZAFON_API_KEY environment variable.
+            **kwargs: Additional keyword arguments passed to the BaseTool constructor.
+        """
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("TZAFON_API_KEY")
 
@@ -54,6 +80,15 @@ class TzafonLoadTool(BaseTool):
         self.computer = self.tzafon.create(kind="browser")
 
     def _run(self, url: str):
+        """
+        Synchronously load a webpage and extract its content.
+
+        Args:
+            url (str): The URL of the webpage to load.
+
+        Returns:
+            str: The text content of the webpage if text_content is True, otherwise the HTML content.
+        """
         computer_id = self.computer.id
        
         with sync_playwright() as playwright:
@@ -79,6 +114,15 @@ class TzafonLoadTool(BaseTool):
         return content
 
     async def _arun(self, url: str):
+        """
+        Asynchronously load a webpage and extract its content.
+
+        Args:
+            url (str): The URL of the webpage to load.
+
+        Returns:
+            str: The text content of the webpage if text_content is True, otherwise the HTML content.
+        """
         computer_id = self.computer.id
        
         async with async_playwright() as playwright:
