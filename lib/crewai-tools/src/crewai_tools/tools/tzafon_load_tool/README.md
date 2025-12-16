@@ -19,7 +19,7 @@ For more information about Tzafon, please visit the [Tzafon website](https://tza
 - Install the [Tzafon SDK](https://docs.tzafon.ai/quickstart) along with `crewai[tools]` package:
 
 ```
-pip install tzafon 'crewai[tools]'
+pip install tzafon playwright 'crewai[tools]'
 ```
 
 ## Example

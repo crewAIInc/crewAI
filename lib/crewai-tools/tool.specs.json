@@ -9043,6 +9043,16 @@
             "description": "The Tzafon API key, can be set as an environment variable `TZAFON_API_KEY` or passed directly",
             "title": "Api Key"
           },
+          "tzafon": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tzafon"
+          },
           "text_content": {
             "anyOf": [
               {
