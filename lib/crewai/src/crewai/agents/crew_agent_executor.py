@@ -39,6 +39,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    is_null_response_because_context_length_exceeded,
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -49,6 +50,7 @@ from crewai.utilities.tool_utils import (
     execute_tool_and_check_finality,
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -289,7 +291,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if is_context_length_exceeded(e):
+                if is_context_length_exceeded(exception=e) or is_null_response_because_context_length_exceeded(exception=e, messages=self.messages, llm=self.llm):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,

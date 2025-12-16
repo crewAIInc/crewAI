@@ -9,6 +9,7 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:

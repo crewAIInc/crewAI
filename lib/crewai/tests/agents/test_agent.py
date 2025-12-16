@@ -1619,6 +1619,55 @@ def test_handle_context_length_exceeds_limit():
         mock_summarize.assert_called_once()
 
 
+def test_handle_context_length_exceeds_no_response():
+    mock_agent_finish = MagicMock(spec=AgentFinish)
+    mock_agent_finish.output = "This is the final answer"
+
+    llm = LLM(model="gpt-4o-mini",context_window_size = 2, api_key = "DUMMY")
+    llm.context_window_size = 2 # Manually overriding it to be 2 
+
+    exception_to_be_raised =  ValueError("Invalid response from LLM call - None or empty.")
+
+    with patch("crewai.agents.crew_agent_executor.handle_max_iterations_exceeded", return_value = mock_agent_finish) as mock_handle_max_iterations_exceeded:
+        with patch("crewai.agents.crew_agent_executor.get_llm_response") as mock_get_llm_response:
+            with patch("crewai.agents.crew_agent_executor.is_null_response_because_context_length_exceeded", return_value = True) as mock_is_null_response_because_context_length_exceeded:
+                with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize_messages:
+                    mock_get_llm_response.side_effect = exception_to_be_raised
+
+                    agent = Agent(
+                        role="test role",
+                        goal="test goal",
+                        backstory="test backstory",
+                        respect_context_window=True,
+                        llm=llm,
+                        max_iter = 0
+                    )
+                    
+                    task = Task(description="The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.",expected_output="The final answer")
+                    result = agent.execute_task(
+                        task=task,
+                    )
+                    
+                    mock_get_llm_response.assert_called_once()
+                    mock_is_null_response_because_context_length_exceeded.assert_called_once_with(
+                        exception = exception_to_be_raised,
+                        messages=[{'role': 'system', 'content': 'You are test role. test backstory\nYour personal goal is: test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!'}, {'role': 'user', 'content': "\nCurrent Task: The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.\n\nThis is the expected criteria for your final answer: The final answer\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+                        llm = llm
+                    )
+
+                    mock_summarize_messages.assert_called_once()
+                    
+                    assert mock_is_null_response_because_context_length_exceeded(
+                        exception = exception_to_be_raised,
+                        messages=[{'role': 'system', 'content': 'You are test role. test backstory\nYour personal goal is: test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!'}, {'role': 'user', 'content': "\nCurrent Task: The final answer is 42. But don't give it yet, instead keep using the `get_final_answer` tool.\n\nThis is the expected criteria for your final answer: The final answer\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],
+                        llm = llm
+                    ) is True
+
+                    mock_summarize_messages.assert_called_once()
+                    mock_handle_max_iterations_exceeded.assert_called_once()
+                    assert result == "This is the final answer"
+
+
 @pytest.mark.vcr()
 def test_handle_context_length_exceeds_limit_cli_no():
     agent = Agent(
