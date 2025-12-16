@@ -583,6 +583,47 @@ class GeminiCompletion(BaseLLM):
             messages_for_event, content, from_agent
         )
 
+    def _format_function_call_as_action(
+        self, function_name: str, function_args: dict[str, Any]
+    ) -> str:
+        """Format a function call as Action/Action Input text for CrewAI's parser.
+
+        When Gemini returns a function call but native tool execution is not available
+        (i.e., available_functions is empty), this method formats the function call
+        in the text format that CrewAI's agent parser expects.
+
+        Args:
+            function_name: Name of the function to call
+            function_args: Arguments for the function call
+
+        Returns:
+            Formatted string in "Action: <name>\nAction Input: <args>" format
+        """
+        import json
+
+        try:
+            args_str = json.dumps(function_args, default=str)
+        except (TypeError, ValueError):
+            args_str = str(function_args)
+
+        return f"Action: {function_name}\nAction Input: {args_str}"
+
+    def _extract_text_from_parts(
+        self, parts: list[Any]
+    ) -> str:
+        """Extract text content from response parts.
+
+        Args:
+            parts: List of response parts from Gemini
+
+        Returns:
+            Concatenated text content from all text parts
+        """
+        text_parts = [
+            part.text for part in parts if hasattr(part, "text") and part.text
+        ]
+        return " ".join(text_parts).strip()
+
     def _process_response_with_tools(
         self,
         response: GenerateContentResponse,
@@ -605,6 +646,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content or function call result
         """
+        function_call_fallback = ""
+
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
@@ -619,18 +662,35 @@ class GeminiCompletion(BaseLLM):
                             else {}
                         )
 
-                        result = self._handle_tool_execution(
-                            function_name=function_name,
-                            function_args=function_args,
-                            available_functions=available_functions or {},
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
+                        if available_functions:
+                            result = self._handle_tool_execution(
+                                function_name=function_name,
+                                function_args=function_args,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
 
-                        if result is not None:
-                            return result
+                            if result is not None:
+                                return result
 
-        content = response.text or ""
+                        if not function_call_fallback:
+                            function_call_fallback = self._format_function_call_as_action(
+                                function_name, function_args
+                            )
+
+        content = ""
+        if response.candidates:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                content = self._extract_text_from_parts(candidate.content.parts)
+
+        if not content:
+            content = response.text or ""
+
+        if not content and function_call_fallback:
+            content = function_call_fallback
+
         content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
@@ -718,8 +778,10 @@ class GeminiCompletion(BaseLLM):
         """
         self._track_token_usage_internal(usage_data)
 
+        function_call_fallback = ""
+
         # Handle completed function calls
-        if function_calls and available_functions:
+        if function_calls:
             for call_data in function_calls.values():
                 function_name = call_data["name"]
                 function_args = call_data["args"]
@@ -732,20 +794,32 @@ class GeminiCompletion(BaseLLM):
                 if not isinstance(function_args, dict):
                     function_args = {}
 
-                # Execute tool
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
+                # Try to execute tool if available_functions provided
+                if available_functions:
+                    result = self._handle_tool_execution(
+                        function_name=function_name,
+                        function_args=function_args,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
 
-                if result is not None:
-                    return result
+                    if result is not None:
+                        return result
+
+                # Store first function call as fallback if no text response
+                if not function_call_fallback:
+                    function_call_fallback = self._format_function_call_as_action(
+                        function_name, function_args
+                    )
+
+        # Use function call fallback if no text response
+        content = full_response
+        if not content and function_call_fallback:
+            content = function_call_fallback
 
         return self._finalize_completion_response(
-            content=full_response,
+            content=content,
             contents=contents,
             response_model=response_model,
             from_task=from_task,

@@ -728,3 +728,273 @@ def test_google_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+def test_gemini_function_call_without_text_returns_action_format():
+    """
+    Test that when Gemini returns a function call without text content,
+    the response is formatted as Action/Action Input for CrewAI's parser.
+
+    This addresses GitHub issue #4093 where Gemini models would return
+    "None or empty response" errors when the model returned only a function call.
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    with patch.object(completion.client.models, 'generate_content') as mock_generate:
+        mock_function_call = Mock()
+        mock_function_call.name = "search_tool"
+        mock_function_call.args = {"query": "weather in Tokyo"}
+
+        mock_part = Mock()
+        mock_part.function_call = mock_function_call
+        mock_part.text = None
+
+        mock_content = Mock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = Mock()
+        mock_candidate.content = mock_content
+
+        mock_response = Mock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.text = None
+        mock_response.usage_metadata = Mock()
+        mock_response.usage_metadata.prompt_token_count = 100
+        mock_response.usage_metadata.candidates_token_count = 50
+        mock_response.usage_metadata.total_token_count = 150
+
+        mock_generate.return_value = mock_response
+
+        messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
+        result = completion.call(messages=messages)
+
+        assert result is not None
+        assert result != ""
+        assert "Action: search_tool" in result
+        assert "Action Input:" in result
+        assert "weather in Tokyo" in result
+
+
+def test_gemini_function_call_with_text_returns_text():
+    """
+    Test that when Gemini returns both a function call and text content,
+    the text content is returned (not the Action/Action Input format).
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    with patch.object(completion.client.models, 'generate_content') as mock_generate:
+        mock_function_call = Mock()
+        mock_function_call.name = "search_tool"
+        mock_function_call.args = {"query": "weather"}
+
+        mock_function_part = Mock()
+        mock_function_part.function_call = mock_function_call
+        mock_function_part.text = None
+
+        mock_text_part = Mock()
+        mock_text_part.function_call = None
+        mock_text_part.text = "Let me search for the weather information."
+
+        mock_content = Mock()
+        mock_content.parts = [mock_text_part, mock_function_part]
+
+        mock_candidate = Mock()
+        mock_candidate.content = mock_content
+
+        mock_response = Mock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.text = "Let me search for the weather information."
+        mock_response.usage_metadata = Mock()
+        mock_response.usage_metadata.prompt_token_count = 100
+        mock_response.usage_metadata.candidates_token_count = 50
+        mock_response.usage_metadata.total_token_count = 150
+
+        mock_generate.return_value = mock_response
+
+        messages = [{"role": "user", "content": "What's the weather?"}]
+        result = completion.call(messages=messages)
+
+        assert result is not None
+        assert result != ""
+        assert "Let me search for the weather information" in result
+        assert "Action:" not in result
+
+
+def test_gemini_function_call_with_available_functions_executes_tool():
+    """
+    Test that when available_functions is provided, the function call is executed
+    instead of being formatted as Action/Action Input.
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    def mock_search_tool(query: str) -> str:
+        return f"Search results for: {query}"
+
+    available_functions = {"search_tool": mock_search_tool}
+
+    with patch.object(completion.client.models, 'generate_content') as mock_generate:
+        mock_function_call = Mock()
+        mock_function_call.name = "search_tool"
+        mock_function_call.args = {"query": "weather in Tokyo"}
+
+        mock_part = Mock()
+        mock_part.function_call = mock_function_call
+        mock_part.text = None
+
+        mock_content = Mock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = Mock()
+        mock_candidate.content = mock_content
+
+        mock_response = Mock()
+        mock_response.candidates = [mock_candidate]
+        mock_response.text = None
+        mock_response.usage_metadata = Mock()
+        mock_response.usage_metadata.prompt_token_count = 100
+        mock_response.usage_metadata.candidates_token_count = 50
+        mock_response.usage_metadata.total_token_count = 150
+
+        mock_generate.return_value = mock_response
+
+        messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
+        result = completion.call(
+            messages=messages,
+            available_functions=available_functions
+        )
+
+        assert result == "Search results for: weather in Tokyo"
+
+
+def test_gemini_streaming_function_call_without_text_returns_action_format():
+    """
+    Test that streaming responses with function calls but no text content
+    return Action/Action Input format.
+    """
+    from unittest.mock import Mock, patch
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001", stream=True)
+
+    with patch.object(completion.client.models, 'generate_content_stream') as mock_stream:
+        mock_function_call = Mock()
+        mock_function_call.name = "calculator"
+        mock_function_call.args = {"expression": "2 + 2"}
+
+        mock_part = Mock()
+        mock_part.function_call = mock_function_call
+        mock_part.text = None
+
+        mock_content = Mock()
+        mock_content.parts = [mock_part]
+
+        mock_candidate = Mock()
+        mock_candidate.content = mock_content
+
+        mock_chunk = Mock()
+        mock_chunk.candidates = [mock_candidate]
+        mock_chunk.text = None
+        mock_chunk.usage_metadata = Mock()
+        mock_chunk.usage_metadata.prompt_token_count = 50
+        mock_chunk.usage_metadata.candidates_token_count = 25
+        mock_chunk.usage_metadata.total_token_count = 75
+
+        mock_stream.return_value = [mock_chunk]
+
+        messages = [{"role": "user", "content": "Calculate 2 + 2"}]
+        result = completion.call(messages=messages)
+
+        assert result is not None
+        assert result != ""
+        assert "Action: calculator" in result
+        assert "Action Input:" in result
+        assert "2 + 2" in result
+
+
+def test_gemini_format_function_call_as_action():
+    """
+    Test the _format_function_call_as_action helper method directly.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    result = completion._format_function_call_as_action(
+        function_name="search_tool",
+        function_args={"query": "test query", "limit": 10}
+    )
+
+    assert "Action: search_tool" in result
+    assert "Action Input:" in result
+    assert "test query" in result
+    assert "10" in result
+
+
+def test_gemini_format_function_call_as_action_handles_special_types():
+    """
+    Test that _format_function_call_as_action handles non-JSON-serializable types.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    from datetime import datetime
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    result = completion._format_function_call_as_action(
+        function_name="date_tool",
+        function_args={"date": datetime(2024, 1, 1), "value": 42}
+    )
+
+    assert "Action: date_tool" in result
+    assert "Action Input:" in result
+    assert "42" in result
+
+
+def test_gemini_extract_text_from_parts():
+    """
+    Test the _extract_text_from_parts helper method.
+    """
+    from unittest.mock import Mock
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    mock_part1 = Mock()
+    mock_part1.text = "Hello"
+
+    mock_part2 = Mock()
+    mock_part2.text = "World"
+
+    mock_part3 = Mock()
+    mock_part3.text = None
+
+    parts = [mock_part1, mock_part2, mock_part3]
+    result = completion._extract_text_from_parts(parts)
+
+    assert result == "Hello World"
+
+
+def test_gemini_extract_text_from_parts_empty():
+    """
+    Test _extract_text_from_parts with no text parts.
+    """
+    from unittest.mock import Mock
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    completion = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    mock_part = Mock()
+    mock_part.text = None
+
+    parts = [mock_part]
+    result = completion._extract_text_from_parts(parts)
+
+    assert result == ""
