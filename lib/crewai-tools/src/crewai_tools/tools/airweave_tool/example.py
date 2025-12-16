@@ -1,3 +1,4 @@
+# ruff: noqa: T201
 #!/usr/bin/env python3
 """
 Example usage of the AirweaveSearchTool with CrewAI.
@@ -26,7 +27,7 @@ from crewai_tools import AirweaveSearchTool
 # Load environment variables from .env file
 # Try to find .env in parent directories
 current_dir = Path(__file__).resolve().parent
-for parent in [current_dir] + list(current_dir.parents):
+for parent in [current_dir, *list(current_dir.parents)]:
     env_file = parent / '.env'
     if env_file.exists():
         load_dotenv(env_file)
@@ -63,12 +64,12 @@ def example_basic_search():
     # Create a search task - using env variable for collection
     search_task = Task(
         description=f"""
-        Search the '{DEFAULT_COLLECTION_ID}' collection for information. 
+        Search the '{DEFAULT_COLLECTION_ID}' collection for information.
         Use these parameters:
         - query: "What information is available?"
         - collection_id: "{DEFAULT_COLLECTION_ID}"
         - limit: 10
-        
+
         Provide a summary of key findings.
         """,
         agent=researcher,
@@ -113,7 +114,7 @@ def example_with_answer_generation():
     analysis_task = Task(
         description=f"""
         Using the AirweaveSearchTool, research available data by:
-        
+
         1. Searching the '{DEFAULT_COLLECTION_ID}' collection
         2. Using query: "Tell me about the most important information"
         3. Enabling these features:
@@ -122,7 +123,7 @@ def example_with_answer_generation():
            - rerank: True (better relevance)
            - temporal_relevance: 0.3 (slightly favor recent data)
            - limit: 15
-        
+
         Analyze the results and provide:
         - Key findings
         - Important patterns
@@ -166,18 +167,18 @@ def example_comprehensive_research():
     research_task = Task(
         description=f"""
         Research the available data by searching the '{DEFAULT_COLLECTION_ID}' collection:
-        
+
         Search for:
            - Available information and data
            - Key documents and content
            - Recent updates and changes
-        
+
         Use these parameters:
         - expand_query: True
         - rerank: True
         - generate_answer: True
         - limit: 10
-        
+
         Provide a comprehensive report showing:
         - What data is available
         - Key insights found
