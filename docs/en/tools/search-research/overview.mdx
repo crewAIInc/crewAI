@@ -50,8 +50,16 @@ These tools enable your agents to search the web, research topics, and find info
     Comprehensive web search using Tavily's AI-powered search API.
   </Card>
 
-  <Card title="Tavily Extractor Tool" icon="file-text" href="/en/tools/search-research/tavilyextractortool">
+  <Card title="Tavily Extract Tool" icon="file-text" href="/en/tools/search-research/tavilyextractortool">
     Extract structured content from web pages using the Tavily API.
+  </Card>
+
+  <Card title="Tavily Crawl Tool" icon="spider" href="/en/tools/search-research/tavilycrawltool">
+    Crawl websites and extract content from multiple pages at scale.
+  </Card>
+
+  <Card title="Tavily Map Tool" icon="sitemap" href="/en/tools/search-research/tavilymaptool">
+    Map website structure and discover pages without full extraction.
   </Card>
 
   <Card title="Arxiv Paper Tool" icon="box-archive" href="/en/tools/search-research/arxivpapertool">
@@ -76,19 +84,24 @@ These tools enable your agents to search the web, research topics, and find info
 - **Academic Research**: Find scholarly articles and technical papers
 
 ```python
-from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
+from crewai_tools import (
+    SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool,
+    TavilySearchTool, TavilyExtractTool, TavilyCrawlTool, TavilyMapTool
+)
 
 # Create research tools
 web_search = SerperDevTool()
 code_search = GitHubSearchTool()
 video_research = YoutubeVideoSearchTool()
 tavily_search = TavilySearchTool()
-content_extractor = TavilyExtractorTool()
+content_extractor = TavilyExtractTool()
+site_crawler = TavilyCrawlTool()
+site_mapper = TavilyMapTool()
 
 # Add to your agent
 agent = Agent(
     role="Research Analyst",
-    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
+    tools=[web_search, code_search, video_research, tavily_search, content_extractor, site_crawler, site_mapper],
     goal="Gather comprehensive information on any topic"
 )
 ```
