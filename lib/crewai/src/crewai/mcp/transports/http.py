@@ -3,6 +3,7 @@
 import asyncio
 from typing import Any
 
+import httpx
 from typing_extensions import Self
 
 
@@ -14,6 +15,48 @@ except ImportError:
     BaseExceptionGroup = Exception
 
 from crewai.mcp.transports.base import BaseTransport, TransportType
+
+
+def _create_httpx_client_factory(
+    verify: bool | str,
+) -> Any:
+    """Create a custom httpx client factory with SSL verification settings.
+
+    This factory preserves MCP's default client settings (follow_redirects, timeout)
+    while allowing customization of SSL verification.
+
+    Args:
+        verify: SSL verification setting. True for default verification,
+                False to disable, or a path to a CA bundle file.
+
+    Returns:
+        A factory function compatible with MCP's McpHttpClientFactory protocol.
+    """
+
+    def factory(
+        headers: dict[str, str] | None = None,
+        timeout: httpx.Timeout | None = None,
+        auth: httpx.Auth | None = None,
+    ) -> httpx.AsyncClient:
+        kwargs: dict[str, Any] = {
+            "follow_redirects": True,
+            "verify": verify,
+        }
+
+        if timeout is None:
+            kwargs["timeout"] = httpx.Timeout(30.0)
+        else:
+            kwargs["timeout"] = timeout
+
+        if headers is not None:
+            kwargs["headers"] = headers
+
+        if auth is not None:
+            kwargs["auth"] = auth
+
+        return httpx.AsyncClient(**kwargs)
+
+    return factory
 
 
 class HTTPTransport(BaseTransport):
@@ -30,6 +73,12 @@ class HTTPTransport(BaseTransport):
         )
         async with transport:
             # Use transport...
+
+        # With SSL verification disabled
+        transport = HTTPTransport(
+            url="https://internal-server.example.com/mcp",
+            verify=False
+        )
         ```
     """
 
@@ -38,6 +87,7 @@ class HTTPTransport(BaseTransport):
         url: str,
         headers: dict[str, str] | None = None,
         streamable: bool = True,
+        verify: bool | str = True,
         **kwargs: Any,
     ) -> None:
         """Initialize HTTP transport.
@@ -46,12 +96,15 @@ class HTTPTransport(BaseTransport):
             url: Server URL (e.g., "https://api.example.com/mcp").
             headers: Optional HTTP headers.
             streamable: Whether to use streamable HTTP (default: True).
+            verify: SSL certificate verification. Set to False to disable,
+                    or provide a path to a CA bundle file (default: True).
             **kwargs: Additional transport options.
         """
         super().__init__(**kwargs)
         self.url = url
         self.headers = headers or {}
         self.streamable = streamable
+        self.verify = verify
         self._transport_context: Any = None
 
     @property
@@ -75,11 +128,17 @@ class HTTPTransport(BaseTransport):
         try:
             from mcp.client.streamable_http import streamablehttp_client
 
-            self._transport_context = streamablehttp_client(
-                self.url,
-                headers=self.headers if self.headers else None,
-                terminate_on_close=True,
-            )
+            client_kwargs: dict[str, Any] = {
+                "headers": self.headers if self.headers else None,
+                "terminate_on_close": True,
+            }
+
+            if self.verify is not True:
+                client_kwargs["httpx_client_factory"] = _create_httpx_client_factory(
+                    self.verify
+                )
+
+            self._transport_context = streamablehttp_client(self.url, **client_kwargs)
 
             try:
                 read, write, _ = await asyncio.wait_for(

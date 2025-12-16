@@ -63,6 +63,18 @@ class MCPServerHTTP(BaseModel):
             headers={"Authorization": "Bearer ..."},
             cache_tools_list=True,
         )
+
+        # Disable SSL verification (for self-signed certificates)
+        mcp_server = MCPServerHTTP(
+            url="https://internal-server.example.com/mcp",
+            verify=False,
+        )
+
+        # Use custom CA bundle
+        mcp_server = MCPServerHTTP(
+            url="https://internal-server.example.com/mcp",
+            verify="/path/to/ca-bundle.crt",
+        )
         ```
     """
 
@@ -76,6 +88,11 @@ class MCPServerHTTP(BaseModel):
     streamable: bool = Field(
         default=True,
         description="Whether to use streamable HTTP transport (default: True).",
+    )
+    verify: bool | str = Field(
+        default=True,
+        description="SSL certificate verification. Set to False to disable verification, "
+        "or provide a path to a CA bundle file.",
     )
     tool_filter: ToolFilter | None = Field(
         default=None,
@@ -99,6 +116,18 @@ class MCPServerSSE(BaseModel):
             url="https://api.example.com/mcp/sse",
             headers={"Authorization": "Bearer ..."},
         )
+
+        # Disable SSL verification (for self-signed certificates)
+        mcp_server = MCPServerSSE(
+            url="https://internal-server.example.com/mcp/sse",
+            verify=False,
+        )
+
+        # Use custom CA bundle
+        mcp_server = MCPServerSSE(
+            url="https://internal-server.example.com/mcp/sse",
+            verify="/path/to/ca-bundle.crt",
+        )
         ```
     """
 
@@ -109,6 +138,11 @@ class MCPServerSSE(BaseModel):
     headers: dict[str, str] | None = Field(
         default=None,
         description="Optional HTTP headers for authentication or other purposes.",
+    )
+    verify: bool | str = Field(
+        default=True,
+        description="SSL certificate verification. Set to False to disable verification, "
+        "or provide a path to a CA bundle file.",
     )
     tool_filter: ToolFilter | None = Field(
         default=None,
