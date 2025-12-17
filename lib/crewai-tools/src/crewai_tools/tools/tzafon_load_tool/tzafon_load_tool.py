@@ -86,7 +86,7 @@ class TzafonLoadTool(BaseTool):
 
         computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
         computer_id = computer.id
-
+        content = ""
         try:
             with sync_playwright() as playwright:
                 cdp_url = (
@@ -129,6 +129,7 @@ class TzafonLoadTool(BaseTool):
 
         computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
         computer_id = computer.id
+        content = ""
 
         try:
             async with async_playwright() as playwright:
