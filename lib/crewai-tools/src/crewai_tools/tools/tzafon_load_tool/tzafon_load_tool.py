@@ -65,19 +65,10 @@ class TzafonLoadTool(BaseTool):
         try:
             from tzafon import Computer
         except ImportError:
-            import click
-
-            if click.confirm(
-                "`tzafon` package not found, would you like to install it?"
-            ):
-                import subprocess
-
-                subprocess.run(["pip", "install", "tzafon", "playwright"], check=True)  # noqa: S607
-                from tzafon import Computer
-            else:
-                raise ImportError(
-                    "`tzafon` package not found, please run `pip install tzafon`"
-                ) from None
+            raise ImportError(
+                "The `tzafon` and `playwright` packages are required to use this tool. "
+                "Please install them with `pip install tzafon playwright`."
+            ) from None
 
         self.tzafon = Computer(api_key=self.api_key)
 
@@ -96,29 +87,32 @@ class TzafonLoadTool(BaseTool):
         computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
         computer_id = computer.id
 
-        with sync_playwright() as playwright:
-            cdp_url = f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
-            browser = playwright.chromium.connect_over_cdp(cdp_url)
+        try:
+            with sync_playwright() as playwright:
+                cdp_url = (
+                    f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
+                )
+                browser = playwright.chromium.connect_over_cdp(cdp_url)
 
-            if browser.contexts:
-                context = browser.contexts[0]
-            else:
-                context = browser.new_context()
+                if browser.contexts:
+                    context = browser.contexts[0]
+                else:
+                    context = browser.new_context()
 
-            page = context.pages[0] if context.pages else context.new_page()
+                page = context.pages[0] if context.pages else context.new_page()
 
-            page.goto(url)
-            if self.text_content:
-                page_text = page.inner_text("body")
-                content = str(page_text)
-            else:
-                page_html = page.content()
-                content = str(page_html)
+                page.goto(url)
+                if self.text_content:
+                    page_text = page.inner_text("body")
+                    content = str(page_text)
+                else:
+                    page_html = page.content()
+                    content = str(page_html)
 
-            page.close()
-            browser.close()
-
-        computer.terminate()
+                page.close()
+                browser.close()
+        finally:
+            computer.terminate()
         return content
 
     async def _arun(self, url: str) -> str:
@@ -136,27 +130,30 @@ class TzafonLoadTool(BaseTool):
         computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
         computer_id = computer.id
 
-        async with async_playwright() as playwright:
-            cdp_url = f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
-            browser = await playwright.chromium.connect_over_cdp(cdp_url)
+        try:
+            async with async_playwright() as playwright:
+                cdp_url = (
+                    f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
+                )
+                browser = await playwright.chromium.connect_over_cdp(cdp_url)
 
-            if browser.contexts:
-                context = browser.contexts[0]
-            else:
-                context = await browser.new_context()
+                if browser.contexts:
+                    context = browser.contexts[0]
+                else:
+                    context = await browser.new_context()
 
-            page = context.pages[0] if context.pages else await context.new_page()
+                page = context.pages[0] if context.pages else await context.new_page()
 
-            await page.goto(url)
-            if self.text_content:
-                page_text = await page.inner_text("body")
-                content = page_text
-            else:
-                page_html = await page.content()
-                content = page_html
+                await page.goto(url)
+                if self.text_content:
+                    page_text = await page.inner_text("body")
+                    content = page_text
+                else:
+                    page_html = await page.content()
+                    content = page_html
 
-            await page.close()
-            await browser.close()
-
-        computer.terminate()
+                await page.close()
+                await browser.close()
+        finally:
+            computer.terminate()
         return content
