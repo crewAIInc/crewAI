@@ -169,7 +169,18 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted = format_answer(answer=answer)
+    try:
+        formatted = format_answer(answer=answer)
+    except OutputParserError:
+        printer.print(
+            content="Failed to parse forced final answer. Returning raw response.",
+            color="yellow",
+        )
+        return AgentFinish(
+            thought="Failed to parse LLM response during max iterations",
+            output=answer,
+            text=answer,
+        )
 
     # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
@@ -206,9 +217,15 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
 
     Returns:
         Either an AgentAction or AgentFinish
+
+    Raises:
+        OutputParserError: If parsing fails due to malformed LLM output format.
+            This allows the retry logic in _invoke_loop() to handle the error.
     """
     try:
         return parse(answer)
+    except OutputParserError:
+        raise
     except Exception:
         return AgentFinish(
             thought="Failed to parse LLM response",
