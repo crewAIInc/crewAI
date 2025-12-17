@@ -45,7 +45,12 @@ class TzafonLoadTool(BaseTool):
         ]
     )
 
-    def __init__(self, api_key: str | None = None, **kwargs: Any):
+    def __init__(
+        self,
+        api_key: str | None = None,
+        text_content: bool | None = True,
+        **kwargs: Any,
+    ):
         """
         Initialize the TzafonLoadTool.
 
@@ -56,6 +61,7 @@ class TzafonLoadTool(BaseTool):
         """
         super().__init__(**kwargs)
         self.api_key = api_key or os.getenv("TZAFON_API_KEY")
+        self.text_content = text_content
 
         if not self.api_key:
             raise EnvironmentError(
