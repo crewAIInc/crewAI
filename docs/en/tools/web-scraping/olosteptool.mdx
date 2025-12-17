@@ -1,0 +1,250 @@
+---
+title: "OlostepTool"
+description: "The most reliable and cost-effective web search, scraping and crawling API for AI. Build intelligent agents that can search, scrape, analyze, and structure data from any website."
+icon: "rocket"
+mode: "wide"
+---
+
+## Description
+
+[Olostep](https://olostep.com) is the most reliable and cost-effective web search, scraping and crawling API for AI. Build intelligent agents that can search, scrape, analyze, and structure data from any website. OlostepTool offers four operation modes:
+
+- **Scrape Mode**: Extract clean content from single webpages with support for LLM extraction and built-in parsers
+- **Crawl Mode**: Follow links and extract content from multiple pages
+- **Map Mode**: Discover all URLs on a website (sitemap generation)
+- **Answer Mode**: AI-powered web search with structured JSON responses
+
+Key features include JavaScript rendering, country-based geolocation, built-in parsers for Google/LinkedIn/etc., and LLM-powered structured data extraction.
+
+## Installation
+
+Install the required packages:
+
+```bash
+pip install crewai-tools olostep
+```
+
+Set your API key:
+
+```bash
+export OLOSTEP_API_KEY="your-api-key-here"
+```
+
+Get your API key at [olostep.com/dashboard](https://olostep.com/dashboard)
+
+## Available Tools
+
+| Tool | Mode | Use Case |
+|------|------|----------|
+| `OlostepTool` | All modes | General purpose - supports all operations |
+| `OlostepScrapeTool` | Scrape | Single page extraction |
+| `OlostepCrawlTool` | Crawl | Multi-page crawling |
+| `OlostepMapTool` | Map | URL discovery |
+| `OlostepAnswerTool` | Answer | AI-powered web search |
+
+## Example - Basic Scraping
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import OlostepTool
+
+# Create the tool
+scrape_tool = OlostepTool()
+
+# Create an agent with the tool
+researcher = Agent(
+    role="Web Researcher",
+    goal="Extract information from websites",
+    backstory="Expert at web research and data extraction",
+    tools=[scrape_tool]
+)
+
+# Create a task
+task = Task(
+    description="Scrape the content from https://example.com and summarize it",
+    agent=researcher,
+    expected_output="A summary of the webpage content"
+)
+
+# Run the crew
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Example - Using Built-in Parsers
+
+Olostep provides built-in parsers for popular websites:
+
+```python
+from crewai_tools import OlostepTool
+
+tool = OlostepTool()
+
+# Parse Google search results
+results = tool.run(
+    url="https://www.google.com/search?q=python+programming",
+    mode="scrape",
+    parser="@olostep/google-search"
+)
+
+# Parse LinkedIn profile
+profile = tool.run(
+    url="https://www.linkedin.com/in/username",
+    mode="scrape",
+    parser="@olostep/linkedin-profile"
+)
+```
+
+**Available parsers:**
+- `@olostep/google-search` - Google search results
+- `@olostep/google-news` - Google News articles
+- `@olostep/google-maps` - Google Maps places
+- `@olostep/linkedin-profile` - LinkedIn profiles
+- `@olostep/linkedin-company` - LinkedIn companies
+- `@olostep/perplexity-search` - Perplexity AI search
+- `@olostep/brave-search` - Brave search results
+
+## Example - LLM Extraction
+
+Extract structured data using JSON schemas:
+
+```python
+from crewai_tools import OlostepTool
+
+tool = OlostepTool()
+
+# Extract event data with a schema
+event_data = tool.run(
+    url="https://example.com/event-page",
+    mode="scrape",
+    llm_extract_schema={
+        "event_name": {"type": "string"},
+        "date": {"type": "string"},
+        "venue": {"type": "string"},
+        "ticket_price": {"type": "number"}
+    }
+)
+```
+
+## Example - Crawling Websites
+
+```python
+from crewai_tools import OlostepCrawlTool
+
+crawl_tool = OlostepCrawlTool()
+
+# Crawl a website with up to 50 pages
+result = crawl_tool.run(
+    url="https://docs.example.com",
+    max_pages=50,
+    include_patterns=["/docs/*", "/api/*"]
+)
+```
+
+## Example - URL Discovery
+
+```python
+from crewai_tools import OlostepMapTool
+
+map_tool = OlostepMapTool()
+
+# Discover all URLs on a website
+urls = map_tool.run(url="https://example.com")
+```
+
+## Example - AI-Powered Search
+
+```python
+from crewai_tools import OlostepAnswerTool
+
+answer_tool = OlostepAnswerTool()
+
+# Ask a question
+answer = answer_tool.run(
+    task="What are the latest AI trends in 2024?"
+)
+
+# Get structured response
+structured = answer_tool.run(
+    task="What are the top 3 programming languages?",
+    json_schema={
+        "languages": [{"name": "", "rank": 0, "use_case": ""}]
+    }
+)
+```
+
+## Arguments
+
+### OlostepTool (All Modes)
+
+| Argument | Type | Required | Description |
+|----------|------|----------|-------------|
+| `url` | `str` | Yes* | URL to process (*required for scrape/crawl/map) |
+| `mode` | `str` | No | Operation mode: `"scrape"`, `"crawl"`, `"map"`, `"answer"` (default: `"scrape"`) |
+| `formats` | `list[str]` | No | Output formats: `"markdown"`, `"html"`, `"text"`, `"json"` |
+| `wait_before_scraping` | `int` | No | Milliseconds to wait for JavaScript content |
+| `country` | `str` | No | Country code for geolocation (e.g., `"US"`, `"UK"`, `"DE"`) |
+| `parser` | `str` | No | Parser ID for structured extraction |
+| `llm_extract_schema` | `dict` | No | JSON schema for LLM-powered extraction |
+| `max_pages` | `int` | No | Max pages for crawl mode (1-1000, default: 10) |
+| `include_patterns` | `list[str]` | No | URL patterns to include in crawl |
+| `exclude_patterns` | `list[str]` | No | URL patterns to exclude from crawl |
+| `task` | `str` | Yes* | Question for answer mode (*required for answer mode) |
+| `json_schema` | `dict` | No | JSON schema for structured answer output |
+
+### Constructor Arguments
+
+| Argument | Type | Default | Description |
+|----------|------|---------|-------------|
+| `api_key` | `str` | `None` | Olostep API key (uses `OLOSTEP_API_KEY` env var if not provided) |
+| `default_mode` | `str` | `"scrape"` | Default operation mode |
+| `default_formats` | `list[str]` | `["markdown"]` | Default output formats |
+| `default_max_pages` | `int` | `10` | Default max pages for crawling |
+| `log_failures` | `bool` | `True` | Whether to log errors |
+
+## Full Agent Example
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import OlostepTool, OlostepAnswerTool, OlostepCrawlTool
+
+# Create specialized tools
+scrape_tool = OlostepTool()
+answer_tool = OlostepAnswerTool()
+crawl_tool = OlostepCrawlTool()
+
+# Create a comprehensive researcher
+researcher = Agent(
+    role="Senior Web Researcher",
+    goal="Find, extract, and analyze information from the web",
+    backstory="""You are an expert web researcher with access to powerful
+    tools for scraping websites, crawling documentation, and getting 
+    AI-powered answers to questions.""",
+    tools=[scrape_tool, answer_tool, crawl_tool],
+    verbose=True
+)
+
+# Research task
+research_task = Task(
+    description="""
+    Research the latest developments in AI agents:
+    1. Search for recent news about AI agents
+    2. Crawl key documentation sites
+    3. Extract structured information about top frameworks
+    4. Summarize your findings
+    """,
+    agent=researcher,
+    expected_output="A comprehensive report on AI agent developments with sources"
+)
+
+# Run
+crew = Crew(agents=[researcher], tasks=[research_task])
+result = crew.kickoff()
+print(result)
+```
+
+## Links
+
+- [Olostep Website](https://olostep.com)
+- [API Documentation](https://docs.olostep.com)
+- [Get API Key](https://olostep.com/dashboard)
