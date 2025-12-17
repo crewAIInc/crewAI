@@ -84,7 +84,7 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /status/{kickoff_id}:
+  /{kickoff_id}/status:
     get:
       summary: 실행 상태 조회
       description: |

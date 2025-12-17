@@ -323,13 +323,17 @@ def cli() -> None:
     "--dry-run", is_flag=True, help="Show what would be done without making changes"
 )
 @click.option("--no-push", is_flag=True, help="Don't push changes to remote")
-def bump(version: str, dry_run: bool, no_push: bool) -> None:
+@click.option(
+    "--no-commit", is_flag=True, help="Don't commit changes (just update files)"
+)
+def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
     """Bump version across all packages in lib/.
 
     Args:
         version: New version to set (e.g., 1.0.0, 1.0.0a1).
         dry_run: Show what would be done without making changes.
         no_push: Don't push changes to remote.
+        no_commit: Don't commit changes (just update files).
     """
     try:
         # Check prerequisites
@@ -397,51 +401,60 @@ def bump(version: str, dry_run: bool, no_push: bool) -> None:
         else:
             console.print("[dim][DRY RUN][/dim] Would run: uv sync")
 
-        branch_name = f"feat/bump-version-{version}"
-        if not dry_run:
-            console.print(f"\nCreating branch {branch_name}...")
-            run_command(["git", "checkout", "-b", branch_name])
-            console.print("[green]✓[/green] Branch created")
-
-            console.print("\nCommitting changes...")
-            run_command(["git", "add", "."])
-            run_command(["git", "commit", "-m", f"feat: bump versions to {version}"])
-            console.print("[green]✓[/green] Changes committed")
-
-            if not no_push:
-                console.print("\nPushing branch...")
-                run_command(["git", "push", "-u", "origin", branch_name])
-                console.print("[green]✓[/green] Branch pushed")
+        if no_commit:
+            console.print("\nSkipping git operations (--no-commit flag set)")
         else:
-            console.print(f"[dim][DRY RUN][/dim] Would create branch: {branch_name}")
-            console.print(
-                f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
-            )
-            if not no_push:
-                console.print(f"[dim][DRY RUN][/dim] Would push branch: {branch_name}")
+            branch_name = f"feat/bump-version-{version}"
+            if not dry_run:
+                console.print(f"\nCreating branch {branch_name}...")
+                run_command(["git", "checkout", "-b", branch_name])
+                console.print("[green]✓[/green] Branch created")
 
-        if not dry_run and not no_push:
-            console.print("\nCreating pull request...")
-            run_command(
-                [
-                    "gh",
-                    "pr",
-                    "create",
-                    "--base",
-                    "main",
-                    "--title",
-                    f"feat: bump versions to {version}",
-                    "--body",
-                    "",
-                ]
-            )
-            console.print("[green]✓[/green] Pull request created")
-        elif dry_run:
-            console.print(
-                f"[dim][DRY RUN][/dim] Would create PR: feat: bump versions to {version}"
-            )
-        else:
-            console.print("\nSkipping PR creation (--no-push flag set)")
+                console.print("\nCommitting changes...")
+                run_command(["git", "add", "."])
+                run_command(
+                    ["git", "commit", "-m", f"feat: bump versions to {version}"]
+                )
+                console.print("[green]✓[/green] Changes committed")
+
+                if not no_push:
+                    console.print("\nPushing branch...")
+                    run_command(["git", "push", "-u", "origin", branch_name])
+                    console.print("[green]✓[/green] Branch pushed")
+            else:
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would create branch: {branch_name}"
+                )
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
+                )
+                if not no_push:
+                    console.print(
+                        f"[dim][DRY RUN][/dim] Would push branch: {branch_name}"
+                    )
+
+            if not dry_run and not no_push:
+                console.print("\nCreating pull request...")
+                run_command(
+                    [
+                        "gh",
+                        "pr",
+                        "create",
+                        "--base",
+                        "main",
+                        "--title",
+                        f"feat: bump versions to {version}",
+                        "--body",
+                        "",
+                    ]
+                )
+                console.print("[green]✓[/green] Pull request created")
+            elif dry_run:
+                console.print(
+                    f"[dim][DRY RUN][/dim] Would create PR: feat: bump versions to {version}"
+                )
+            else:
+                console.print("\nSkipping PR creation (--no-push flag set)")
 
         console.print(f"\n[green]✓[/green] Version bump to {version} complete!")
 
