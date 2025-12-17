@@ -79,8 +79,7 @@ class TzafonLoadTool(BaseTool):
                     "`tzafon` package not found, please run `pip install tzafon`"
                 ) from None
 
-        client = Computer(api_key=self.api_key)
-        self.tzafon = client.create(kind="browser")  # type: ignore[attr-defined]
+        self.tzafon = Computer(api_key=self.api_key)
 
     def _run(self, url: str) -> str:
         """
@@ -94,10 +93,8 @@ class TzafonLoadTool(BaseTool):
         """
         from playwright.sync_api import sync_playwright
 
-        if self.tzafon is None:
-            raise ValueError("Tzafon computer not initialized.")
-
-        computer_id = self.tzafon.id
+        computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
+        computer_id = computer.id
 
         with sync_playwright() as playwright:
             cdp_url = f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
@@ -121,7 +118,7 @@ class TzafonLoadTool(BaseTool):
             page.close()
             browser.close()
 
-        self.tzafon.terminate()
+        computer.terminate()
         return content
 
     async def _arun(self, url: str) -> str:
@@ -136,10 +133,8 @@ class TzafonLoadTool(BaseTool):
         """
         from playwright.async_api import async_playwright
 
-        if self.tzafon is None:
-            raise ValueError("Tzafon computer not initialized.")
-
-        computer_id = self.tzafon.id
+        computer = self.tzafon.create(kind="browser")  # type: ignore[union-attr]
+        computer_id = computer.id
 
         async with async_playwright() as playwright:
             cdp_url = f"{API_BASE_URL}/computers/{computer_id}/cdp?token={self.api_key}"
@@ -163,5 +158,5 @@ class TzafonLoadTool(BaseTool):
             await page.close()
             await browser.close()
 
-        self.tzafon.terminate()
+        computer.terminate()
         return content
