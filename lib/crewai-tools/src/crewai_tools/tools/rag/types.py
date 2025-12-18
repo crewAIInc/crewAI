@@ -65,8 +65,10 @@ class RagToolConfig(TypedDict, total=False):
 
     Attributes:
         embedding_model: Embedding model configuration accepted by RAG tools.
+        embedder: Alias for embedding_model (for backward compatibility with docs).
         vectordb: Vector database configuration accepted by RAG tools.
     """
 
     embedding_model: ProviderSpec
+    embedder: ProviderSpec
     vectordb: VectorDbConfig

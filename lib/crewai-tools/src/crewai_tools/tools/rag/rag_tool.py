@@ -131,11 +131,28 @@ class RagTool(BaseTool):
     @field_validator("config", mode="before")
     @classmethod
     def _validate_config(cls, value: Any) -> Any:
-        """Validate config with improved error messages for embedding providers."""
+        """Validate config with improved error messages for embedding providers.
+
+        Also normalizes 'embedder' key to 'embedding_model' for backward compatibility
+        with documentation examples that use the 'embedder' key.
+        """
         if not isinstance(value, dict):
             return value
 
+        embedder = value.get("embedder")
         embedding_model = value.get("embedding_model")
+
+        if embedder is not None and embedding_model is not None:
+            raise ValueError(
+                "Cannot specify both 'embedder' and 'embedding_model' in config. "
+                "Please use only one of them (they are aliases for the same setting)."
+            )
+
+        if embedder is not None:
+            value["embedding_model"] = embedder
+            del value["embedder"]
+            embedding_model = embedder
+
         if embedding_model:
             try:
                 value["embedding_model"] = _validate_embedding_config(embedding_model)

@@ -299,3 +299,113 @@ def test_rag_tool_config_with_qdrant_and_azure_embeddings(
 
         assert tool.adapter is not None
         assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_with_embedder_key_alias(
+    mock_create_client: Mock,
+) -> None:
+    """Test that RagTool accepts 'embedder' key as alias for 'embedding_model'.
+
+    This test verifies the fix for GitHub issue #4122 where users following
+    the documentation examples using 'embedder' key were getting errors.
+    """
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        config = {
+            "embedder": {
+                "provider": "openai",
+                "config": {
+                    "model": "text-embedding-3-small",
+                    "api_key": "sk-test123",
+                },
+            }
+        }
+
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_with_bedrock_embedder_config(
+    mock_create_client: Mock,
+) -> None:
+    """Test RagTool with Amazon Bedrock embedder configuration.
+
+    This test verifies the fix for GitHub issue #4122 where users trying
+    to use Bedrock embeddings were getting OPENAI_API_KEY errors.
+    """
+    mock_embedding_func = MagicMock()
+    mock_embedding_func.return_value = [[0.1] * 1536]
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    with patch(
+        "crewai_tools.tools.rag.rag_tool.build_embedder",
+        return_value=mock_embedding_func,
+    ):
+
+        class MyTool(RagTool):
+            pass
+
+        config = {
+            "embedder": {
+                "provider": "amazon-bedrock",
+                "config": {
+                    "model_name": "amazon.titan-embed-text-v2:0",
+                },
+            }
+        }
+
+        tool = MyTool(config=config)
+
+        assert tool.adapter is not None
+        assert isinstance(tool.adapter, CrewAIRagAdapter)
+
+
+@patch("crewai_tools.adapters.crewai_rag_adapter.create_client")
+def test_rag_tool_rejects_both_embedder_and_embedding_model(
+    mock_create_client: Mock,
+) -> None:
+    """Test that RagTool raises error when both 'embedder' and 'embedding_model' are provided."""
+    import pytest
+
+    mock_client = MagicMock()
+    mock_client.get_or_create_collection = MagicMock(return_value=None)
+    mock_create_client.return_value = mock_client
+
+    class MyTool(RagTool):
+        pass
+
+    config = {
+        "embedder": {
+            "provider": "openai",
+            "config": {"model": "text-embedding-3-small"},
+        },
+        "embedding_model": {
+            "provider": "openai",
+            "config": {"model": "text-embedding-3-large"},
+        },
+    }
+
+    with pytest.raises(ValueError) as exc_info:
+        MyTool(config=config)
+
+    assert "Cannot specify both 'embedder' and 'embedding_model'" in str(exc_info.value)
