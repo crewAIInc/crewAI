@@ -67,6 +67,16 @@ class FlowFinishedEvent(FlowEvent):
     state: dict[str, Any] | BaseModel
 
 
+class FlowFailedEvent(FlowEvent):
+    """Event emitted when a flow fails execution"""
+
+    flow_name: str
+    error: Exception
+    type: str = "flow_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class FlowPlotEvent(FlowEvent):
     """Event emitted when a flow plot is created"""
 
