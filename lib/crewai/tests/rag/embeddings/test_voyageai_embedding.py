@@ -264,3 +264,102 @@ def test_is_context_model() -> None:
 def test_name() -> None:
     """Test the static name method."""
     assert VoyageAIEmbeddingFunction.name() == "voyageai"
+
+
+def test_voyage_multimodal_3() -> None:
+    """Test voyage-multimodal-3 embedding generation."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3",
+    )
+    embeddings = ef(["hello world"])
+    assert embeddings is not None
+    assert len(embeddings) == 1
+    assert len(embeddings[0]) > 0
+
+
+def test_voyage_multimodal_3_5() -> None:
+    """Test voyage-multimodal-3.5 embedding generation."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3.5",
+    )
+    embeddings = ef(["hello world"])
+    assert embeddings is not None
+    assert len(embeddings) == 1
+    assert len(embeddings[0]) > 0
+
+
+@pytest.mark.skip(reason="output_dimension for multimodal requires voyageai SDK >=0.3.6")
+def test_voyage_multimodal_3_5_with_dimensions() -> None:
+    """Test voyage-multimodal-3.5 embedding with custom dimensions.
+
+    Note: This test requires voyageai SDK >=0.3.6 which adds ffmpeg-python
+    as a required dependency. Skipped to avoid unnecessary dependencies.
+    """
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3.5",
+        output_dimension=2048,
+    )
+    embeddings = ef(["hello world"])
+    assert embeddings is not None
+    assert len(embeddings) == 1
+    assert len(embeddings[0]) == 2048
+
+
+def test_voyage_multimodal_3_5_token_limit() -> None:
+    """Test voyage-multimodal-3.5 token limit is correctly set."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3.5",
+    )
+    assert ef.get_token_limit() == 32_000
+
+
+def test_voyage_multimodal_batching() -> None:
+    """Test multimodal model batching with multiple texts."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3.5",
+    )
+    texts = ["text1", "text2", "text3", "text4", "text5"]
+    embeddings = ef(texts)
+    assert len(embeddings) == 5
+    assert all(len(emb) > 0 for emb in embeddings)
+
+
+def test_is_multimodal_model() -> None:
+    """Test the _is_multimodal_model helper method."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+
+    # Test with multimodal model
+    ef_multimodal = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3",
+    )
+    assert ef_multimodal._is_multimodal_model() is True
+
+    ef_multimodal_35 = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-multimodal-3.5",
+    )
+    assert ef_multimodal_35._is_multimodal_model() is True
+
+    # Test with regular model
+    ef_regular = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model="voyage-3.5",
+    )
+    assert ef_regular._is_multimodal_model() is False

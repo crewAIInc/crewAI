@@ -26,7 +26,8 @@ VOYAGE_TOTAL_TOKEN_LIMITS = {
     "voyage-3-lite": 120_000,
     "voyage-code-2": 120_000,
     "voyage-3-m-exp": 120_000,
-    "voyage-multimodal-3": 120_000,
+    "voyage-multimodal-3": 32_000,
+    "voyage-multimodal-3.5": 32_000,
 }
 
 # Batch size for embedding requests
@@ -92,6 +93,11 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         if not texts:
             return
 
+        # Multimodal models use count-based batching (tokenize API doesn't support them)
+        if self._is_multimodal_model():
+            yield from self._build_batches_by_count(texts)
+            return
+
         max_tokens_per_batch = self.get_token_limit()
         current_batch: list[str] = []
         current_batch_tokens = 0
@@ -120,6 +126,21 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         if current_batch:
             yield current_batch
 
+    def _build_batches_by_count(
+        self, texts: list[str]
+    ) -> Generator[list[str], None, None]:
+        """
+        Generate batches of texts based on count only (for multimodal models).
+
+        Args:
+            texts: List of texts to batch.
+
+        Yields:
+            Batches of texts as lists.
+        """
+        for i in range(0, len(texts), BATCH_SIZE):
+            yield texts[i : i + BATCH_SIZE]
+
     def _get_embed_function(self) -> Callable[[list[str]], list[list[float]]]:
         """
         Get the appropriate embedding function based on model type.
@@ -131,7 +152,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
 
         if self._is_context_model():
 
-            def embed_batch(batch: list[str]) -> list[list[float]]:
+            def embed_batch_context(batch: list[str]) -> list[list[float]]:
                 result = self._client.contextualized_embed(
                     inputs=[batch],
                     model=model_name,
@@ -141,7 +162,24 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
                 )
                 return [list(emb) for emb in result.results[0].embeddings]
 
-            return embed_batch
+            return embed_batch_context
+
+        if self._is_multimodal_model():
+
+            def embed_batch_multimodal(batch: list[str]) -> list[list[float]]:
+                # Multimodal API expects inputs as list of content lists
+                # For text-only: [[text1], [text2], ...]
+                inputs = [[text] for text in batch]
+                result = self._client.multimodal_embed(
+                    inputs=inputs,
+                    model=model_name,
+                    input_type=self._config.get("input_type"),
+                    truncation=self._config.get("truncation", True),
+                    # Note: output_dimension requires voyageai SDK >=0.3.6
+                )
+                return [list(emb) for emb in result.embeddings]
+
+            return embed_batch_multimodal
 
         def embed_batch_regular(batch: list[str]) -> list[list[float]]:
             result = self._client.embed(
@@ -212,3 +250,8 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         """Check if the model is a contextualized embedding model."""
         model_name = self._config["model"]
         return "context" in model_name
+
+    def _is_multimodal_model(self) -> bool:
+        """Check if the model is a multimodal embedding model."""
+        model_name = self._config["model"]
+        return "multimodal" in model_name
