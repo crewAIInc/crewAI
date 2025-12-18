@@ -33,6 +33,7 @@ from crewai.events.types.crew_events import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -194,6 +195,16 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
+            if self.batch_manager.batch_owner_type == "flow":
+                if self.first_time_handler.is_first_time:
+                    self.first_time_handler.mark_events_collected()
+                    self.first_time_handler.handle_execution_completion()
+                else:
+                    self.batch_manager.finalize_batch()
+
+        @event_bus.on(FlowFailedEvent)
+        def on_flow_failed(source: Any, event: FlowFailedEvent) -> None:
+            self._handle_trace_event("flow_failed", source, event)
             if self.batch_manager.batch_owner_type == "flow":
                 if self.first_time_handler.is_first_time:
                     self.first_time_handler.mark_events_collected()

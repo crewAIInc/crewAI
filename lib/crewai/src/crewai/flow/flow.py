@@ -40,6 +40,7 @@ from crewai.events.listeners.tracing.utils import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -1019,6 +1020,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._event_futures.clear()
 
             return final_output
+        except Exception as e:
+            future = crewai_event_bus.emit(
+                self,
+                FlowFailedEvent(
+                    flow_name=self.name or self.__class__.__name__,
+                    error=e,
+                ),
+            )
+            if future:
+                self._event_futures.append(future)
+            raise e
         finally:
             detach(flow_token)
 
