@@ -977,7 +977,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             future = crewai_event_bus.emit(
                 self,
                 FlowStartedEvent(
-                    type="flow_started",
                     flow_name=self.name or self.__class__.__name__,
                     inputs=inputs,
                 ),
@@ -1005,7 +1004,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
-                    type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
                     state=self._copy_and_serialize_state(),
