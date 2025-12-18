@@ -93,8 +93,6 @@ class TraceCollectionListener(BaseEventListener):
     complex_events: ClassVar[list[str]] = [
         "task_started",
         "task_completed",
-        "llm_call_started",
-        "llm_call_completed",
         "agent_execution_started",
         "agent_execution_completed",
     ]
@@ -641,18 +639,6 @@ class TraceCollectionListener(BaseEventListener):
                 "agent_goal": agent_execution_completed_event.agent.goal,
                 "agent_backstory": agent_execution_completed_event.agent.backstory,
             }
-        elif event_type == "llm_call_started":
-            llm_call_started_event: LLMCallStartedEvent = cast(
-                LLMCallStartedEvent, event
-            )
-            event_data = safe_serialize_to_dict(event)
-            event_data["task_name"] = llm_call_started_event.task_name
-        elif event_type == "llm_call_completed":
-            llm_call_completed_event: LLMCallCompletedEvent = cast(
-                LLMCallCompletedEvent, event
-            )
-            event_data = safe_serialize_to_dict(event)
-            event_data["task_name"] = llm_call_completed_event.task_name
         else:
             event_data = {
                 "event_type": event_type,
