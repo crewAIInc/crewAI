@@ -194,6 +194,12 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
+            if self.batch_manager.batch_owner_type == "flow":
+                if self.first_time_handler.is_first_time:
+                    self.first_time_handler.mark_events_collected()
+                    self.first_time_handler.handle_execution_completion()
+                else:
+                    self.batch_manager.finalize_batch()
 
         @event_bus.on(FlowPlotEvent)
         def on_flow_plot(source: Any, event: FlowPlotEvent) -> None:

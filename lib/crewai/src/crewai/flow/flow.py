@@ -1020,14 +1020,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            trace_listener = TraceCollectionListener()
-            if trace_listener.batch_manager.batch_owner_type == "flow":
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
-
             return final_output
         finally:
             detach(flow_token)
