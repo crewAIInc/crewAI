@@ -9,6 +9,8 @@ from rich.console import Console
 from rich.panel import Panel
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
+from crewai.cli.config import Settings
+from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.plus_api import PlusAPI
 from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
@@ -16,7 +18,6 @@ from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
     should_auto_collect_first_time_traces,
 )
-from crewai.utilities.constants import CREWAI_BASE_URL
 
 
 logger = getLogger(__name__)
@@ -326,10 +327,12 @@ class TraceBatchManager:
             if response.status_code == 200:
                 access_code = response.json().get("access_code", None)
                 console = Console()
+                settings = Settings()
+                base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
                 return_link = (
-                    f"{CREWAI_BASE_URL}/crewai_plus/trace_batches/{self.trace_batch_id}"
+                    f"{base_url}/crewai_plus/trace_batches/{self.trace_batch_id}"
                     if not self.is_current_batch_ephemeral and access_code is None
-                    else f"{CREWAI_BASE_URL}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
+                    else f"{base_url}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
                 )
 
                 if self.is_current_batch_ephemeral:
