@@ -1919,14 +1919,50 @@ class LLM(BaseLLM):
                 return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
             return messages  # type: ignore[return-value]
 
-        # TODO: Remove this code after merging PR https://github.com/BerriAI/litellm/pull/10917
-        # Ollama doesn't supports last message to be 'assistant'
-        if (
-            "ollama" in self.model.lower()
-            and messages
-            and messages[-1]["role"] == "assistant"
-        ):
-            return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
+        # Handle Ollama models - merge system messages into user messages
+        # Some Ollama models (like Olmo, Nemotron-3-nano) don't properly respect
+        # system messages, causing them to ignore tool-format instructions.
+        # By merging system content into the first user message, we ensure
+        # the instructions are visible to the model.
+        if self._get_custom_llm_provider() == "ollama":
+            formatted_messages: list[dict[str, str]] = []
+            system_contents: list[str] = []
+
+            for msg in messages:
+                if msg["role"] == "system":
+                    # Accumulate all system message contents
+                    system_contents.append(str(msg["content"]))
+                else:
+                    # For the first non-system message, prepend accumulated system content
+                    if system_contents and not formatted_messages:
+                        merged_content = "\n\n".join(system_contents)
+                        if msg["role"] == "user":
+                            # Merge system content into the first user message
+                            formatted_messages.append({
+                                "role": "user",
+                                "content": f"{merged_content}\n\n{msg['content']}"
+                            })
+                        else:
+                            # If first non-system message isn't user, prepend a user message
+                            formatted_messages.append({
+                                "role": "user",
+                                "content": merged_content
+                            })
+                            formatted_messages.append({"role": msg["role"], "content": str(msg["content"])})
+                        system_contents = []
+                    else:
+                        formatted_messages.append({"role": msg["role"], "content": str(msg["content"])})
+
+            # Handle case where there are only system messages
+            if system_contents and not formatted_messages:
+                merged_content = "\n\n".join(system_contents)
+                formatted_messages.append({"role": "user", "content": merged_content})
+
+            # Ollama doesn't support last message being 'assistant'
+            if formatted_messages and formatted_messages[-1]["role"] == "assistant":
+                formatted_messages.append({"role": "user", "content": ""})
+
+            return formatted_messages
 
         # Handle Anthropic models
         if not self.is_anthropic:

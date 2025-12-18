@@ -705,7 +705,121 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
 
     formatted = ollama_llm._format_messages_for_provider(original_messages)
 
-    assert formatted == original_messages
+    # Ollama formatting should preserve user-only messages
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Tell me a joke."
+
+
+def test_ollama_merges_system_message_into_first_user_message(ollama_llm):
+    """Test that system messages are merged into the first user message for Ollama models.
+
+    This ensures that tool-format instructions in system messages are visible to
+    models that don't properly respect system messages (like Olmo, Nemotron-3-nano).
+    """
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    # System message should be merged into user message
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert "You are a helpful assistant." in formatted[0]["content"]
+    assert "Hello!" in formatted[0]["content"]
+
+
+def test_ollama_merges_multiple_system_messages(ollama_llm):
+    """Test that multiple system messages are accumulated and merged."""
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": "Use the following tools:"},
+        {"role": "user", "content": "What's the weather?"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    # Both system messages should be merged into user message
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert "You are a helpful assistant." in formatted[0]["content"]
+    assert "Use the following tools:" in formatted[0]["content"]
+    assert "What's the weather?" in formatted[0]["content"]
+
+
+def test_ollama_handles_system_only_messages(ollama_llm):
+    """Test that system-only messages are converted to user messages."""
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    # System message should be converted to user message
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "You are a helpful assistant."
+
+
+def test_ollama_handles_system_then_assistant_messages(ollama_llm):
+    """Test that system messages are prepended when first non-system is assistant."""
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "assistant", "content": "Hello!"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    # System should be prepended as user, assistant kept, then empty user appended
+    assert len(formatted) == 3
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "You are a helpful assistant."
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == "Hello!"
+    assert formatted[2]["role"] == "user"
+    assert formatted[2]["content"] == ""
+
+
+def test_ollama_preserves_conversation_after_system_merge(ollama_llm):
+    """Test that conversation history is preserved after system message merge."""
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+        {"role": "assistant", "content": "Hi there!"},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    formatted = ollama_llm._format_messages_for_provider(original_messages)
+
+    # System merged into first user, then rest of conversation preserved
+    assert len(formatted) == 3
+    assert formatted[0]["role"] == "user"
+    assert "You are a helpful assistant." in formatted[0]["content"]
+    assert "Hello!" in formatted[0]["content"]
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == "Hi there!"
+    assert formatted[2]["role"] == "user"
+    assert formatted[2]["content"] == "How are you?"
+
+
+def test_non_ollama_model_preserves_system_messages():
+    """Test that non-Ollama models preserve system messages as-is."""
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    original_messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Hello!"},
+    ]
+
+    formatted = llm._format_messages_for_provider(original_messages)
+
+    # Non-Ollama models should preserve system messages
+    assert len(formatted) == 2
+    assert formatted[0]["role"] == "system"
+    assert formatted[0]["content"] == "You are a helpful assistant."
+    assert formatted[1]["role"] == "user"
+    assert formatted[1]["content"] == "Hello!"
 
 
 def test_native_provider_raises_error_when_supported_but_fails():
