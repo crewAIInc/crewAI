@@ -320,6 +320,7 @@ class TestPlusAPI(unittest.TestCase):
         )
 
     @patch("crewai.cli.plus_api.Settings")
+    @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
     def test_custom_base_url(self, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.enterprise_base_url = "https://custom-url.com/api"
