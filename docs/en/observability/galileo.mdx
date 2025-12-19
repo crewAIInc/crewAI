@@ -1,6 +1,6 @@
 ---
 title: Galileo
-description: Galileo integration for CrewAI with OpenTelemetry tracing and evaluation
+description: Galileo integration for CrewAI tracing and evaluation
 icon: telescope
 mode: "wide"
 ---
@@ -8,7 +8,7 @@ mode: "wide"
 ## Overview
 
 This guide demonstrates how to integrate **Galileo** with **CrewAI**
-using OpenTelemetry for comprehensive tracing and evaluation.
+for comprehensive tracing and evaluation.
 By the end of this guide, you will be able to trace your CrewAI agents,
 monitor their performance and
 Galileo's powerful observability platform.
@@ -22,11 +22,9 @@ transparency, and continuous improvement across the AI lifecycle.
 
 ## Getting started
 
-We'll walk through a simple example of using CrewAI and integrating it
-with Galileo's via OpenTelemetry for comprehensive observability and evaluation.
 This tutorial follows the [CrewAI quickstart](/en/quickstart) and shows how to add
 Galileo's [CrewAIEventListener](https://v2docs.galileo.ai/sdk-api/python/reference/handlers/crewai/handler),
-an event handler implemented on top of OpenTelemetry (OTel).
+an event handler.
 For more information, see Galileo’s
 [Add Galileo to a CrewAI Application](https://v2docs.galileo.ai/how-to-guides/third-party-integrations/add-galileo-to-crewai/add-galileo-to-crewai)
 how-to guide.
@@ -110,8 +108,6 @@ Once your crew has finished, the traces will be flushed and appear in Galileo.
 Galileo integrates with CrewAI by registering an event listener
 that captures Crew execution events (e.g., agent actions, tool calls, model responses)
 and forwards them to Galileo for observability and evaluation.
-Under the hood, this integration is built on OpenTelemetry (OTel)
-for standardized tracing and telemetry collection.
 
 ### Register the event listener
 
@@ -134,7 +130,6 @@ Creating a CrewAIEventListener() instance is all that’s
 required to enable Galileo for a CrewAI run. When instantiated, the listener:
 
 - Automatically registers itself with CrewAI
-- Uses OpenTelemetry (OTel) to instrument Crew execution events
 - Reads Galileo configuration from environment variables
 - Logs all run data to the Galileo project and log stream specified by
   `GALILEO_PROJECT` and `GALILEO_LOG_STREAM`
