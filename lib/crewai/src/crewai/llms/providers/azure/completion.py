@@ -699,6 +699,7 @@ class AzureCompletion(BaseLLM):
                     chunk=content_delta,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=update.id if hasattr(update,"id") else None
                 )
 
             if choice.delta and choice.delta.tool_calls:
