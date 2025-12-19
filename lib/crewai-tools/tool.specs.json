@@ -8587,7 +8587,7 @@
           "required": true
         }
       ],
-      "humanized_name": "TavilyExtractorTool",
+      "humanized_name": "TavilyExtractTool",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -8698,15 +8698,15 @@
             "type": "integer"
           }
         },
-        "title": "TavilyExtractorTool",
+        "title": "TavilyExtractTool",
         "type": "object"
       },
-      "name": "TavilyExtractorTool",
+      "name": "TavilyExtractTool",
       "package_dependencies": [
         "tavily-python"
       ],
       "run_params_schema": {
-        "description": "Input schema for TavilyExtractorTool.",
+        "description": "Input schema for TavilyExtractTool.",
         "properties": {
           "urls": {
             "anyOf": [
@@ -8727,7 +8727,7 @@
         "required": [
           "urls"
         ],
-        "title": "TavilyExtractorToolSchema",
+        "title": "TavilyExtractToolSchema",
         "type": "object"
       }
     },
