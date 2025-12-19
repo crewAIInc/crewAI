@@ -279,6 +279,7 @@
                   "en/observability/arize-phoenix",
                   "en/observability/braintrust",
                   "en/observability/datadog",
+                  "en/observability/galileo",
                   "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
