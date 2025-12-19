@@ -1,7 +1,7 @@
+import os
 import unittest
 from unittest.mock import ANY, MagicMock, patch
 
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.plus_api import PlusAPI
 
 
@@ -35,7 +35,7 @@ class TestPlusAPI(unittest.TestCase):
     ):
         mock_make_request.assert_called_once_with(
             method,
-            f"{DEFAULT_CREWAI_ENTERPRISE_URL}{endpoint}",
+            f"{os.getenv('CREWAI_PLUS_URL')}{endpoint}",
             headers={
                 "Authorization": ANY,
                 "Content-Type": ANY,
@@ -53,7 +53,7 @@ class TestPlusAPI(unittest.TestCase):
     ):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
-        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
+        mock_settings.enterprise_base_url = os.getenv('CREWAI_PLUS_URL')
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -84,7 +84,7 @@ class TestPlusAPI(unittest.TestCase):
     def test_get_agent_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
-        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
+        mock_settings.enterprise_base_url = os.getenv('CREWAI_PLUS_URL')
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -115,7 +115,7 @@ class TestPlusAPI(unittest.TestCase):
     def test_get_tool_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
-        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
+        mock_settings.enterprise_base_url = os.getenv('CREWAI_PLUS_URL')
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -163,7 +163,7 @@ class TestPlusAPI(unittest.TestCase):
     def test_publish_tool_with_org_uuid(self, mock_make_request, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
-        mock_settings.enterprise_base_url = DEFAULT_CREWAI_ENTERPRISE_URL
+        mock_settings.enterprise_base_url = os.getenv('CREWAI_PLUS_URL')
         mock_settings_class.return_value = mock_settings
         # re-initialize Client
         self.api = PlusAPI(self.api_key)
@@ -328,4 +328,12 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(
             custom_api.base_url,
             "https://custom-url.com/api",
+        )
+
+    @patch.dict(os.environ, {"CREWAI_PLUS_URL": "https://custom-url-from-env.com"})
+    def test_custom_base_url_from_env(self):
+        custom_api = PlusAPI("test_key")
+        self.assertEqual(
+            custom_api.base_url,
+            "https://custom-url-from-env.com",
         )
