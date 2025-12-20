@@ -453,7 +453,8 @@ class Agent(BaseAgent):
         """
         import concurrent.futures
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        executor = concurrent.futures.ThreadPoolExecutor()
+        try:
             future = executor.submit(
                 self._execute_without_timeout, task_prompt=task_prompt, task=task
             )
@@ -461,13 +462,35 @@ class Agent(BaseAgent):
             try:
                 return future.result(timeout=timeout)
             except concurrent.futures.TimeoutError as e:
-                future.cancel()
+                # Attempt to cancel, but if the task is already running, cancel() returns False
+                # In that case, we must wait for it to complete to avoid orphaned threads
+                cancelled = future.cancel()
+                if not cancelled:
+                    # Task is already running - wait for it with a grace period to avoid
+                    # indefinite blocking, but ensure thread cleanup
+                    try:
+                        # Wait a short time for natural completion, then force shutdown
+                        future.result(timeout=1.0)
+                    except (concurrent.futures.TimeoutError, concurrent.futures.CancelledError):
+                        # Task still running after grace period - will be cleaned up by executor shutdown
+                        pass
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
                 ) from e
             except Exception as e:
-                future.cancel()
+                # Attempt to cancel on other exceptions too
+                cancelled = future.cancel()
+                if not cancelled:
+                    # Wait briefly for completion to avoid orphaned threads
+                    try:
+                        future.result(timeout=0.1)
+                    except (concurrent.futures.TimeoutError, concurrent.futures.CancelledError):
+                        pass
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            # Always shutdown executor and wait for threads to complete
+            # This ensures no orphaned threads even if cancel() failed
+            executor.shutdown(wait=True)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
