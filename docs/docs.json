@@ -183,7 +183,8 @@
                       "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                       "en/tools/web-scraping/firecrawlscrapewebsitetool",
                       "en/tools/web-scraping/oxylabsscraperstool",
-                      "en/tools/web-scraping/brightdata-tools"
+                      "en/tools/web-scraping/brightdata-tools",
+                      "en/tools/web-scraping/olosteptool"
                     ]
                   },
                   {
