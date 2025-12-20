@@ -470,9 +470,12 @@ class Agent(BaseAgent):
                     # indefinite blocking, but ensure thread cleanup
                     try:
                         # Wait a short time for natural completion, then force shutdown
+                        # Catch all exceptions to prevent task exceptions from leaking through
                         future.result(timeout=1.0)
-                    except (concurrent.futures.TimeoutError, concurrent.futures.CancelledError):
-                        # Task still running after grace period - will be cleaned up by executor shutdown
+                    except Exception:
+                        # Task either timed out again, was cancelled, or raised an exception
+                        # In all cases, we ignore it here and raise TimeoutError below
+                        # This ensures the API contract is maintained
                         pass
                 raise TimeoutError(
                     f"Task '{task.description}' execution timed out after {timeout} seconds. Consider increasing max_execution_time or optimizing the task."
@@ -482,9 +485,13 @@ class Agent(BaseAgent):
                 cancelled = future.cancel()
                 if not cancelled:
                     # Wait briefly for completion to avoid orphaned threads
+                    # Catch all exceptions to prevent task exceptions from leaking through
                     try:
                         future.result(timeout=0.1)
-                    except (concurrent.futures.TimeoutError, concurrent.futures.CancelledError):
+                    except Exception:
+                        # Task either timed out, was cancelled, or raised a different exception
+                        # In all cases, we ignore it here and raise RuntimeError below
+                        # This ensures the API contract is maintained
                         pass
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
         finally:
