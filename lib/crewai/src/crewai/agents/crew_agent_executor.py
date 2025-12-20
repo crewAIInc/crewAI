@@ -138,6 +138,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.messages: list[LLMMessage] = []
         self.iterations = 0
         self.log_error_after = 3
+        self._execution_deadline: float | None = None
         self.before_llm_call_hooks: list[Callable[..., Any]] = []
         self.after_llm_call_hooks: list[Callable[..., Any]] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
@@ -161,6 +162,36 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             bool: True if tool should be used or not.
         """
         return self.llm.supports_stop_words() if self.llm else False
+
+    def set_execution_deadline(self, timeout_seconds: int | float) -> None:
+        """Set the execution deadline for cooperative timeout.
+
+        Args:
+            timeout_seconds: Maximum execution time in seconds.
+        """
+        import time
+
+        self._execution_deadline = time.monotonic() + timeout_seconds
+
+    def clear_execution_deadline(self) -> None:
+        """Clear the execution deadline."""
+        self._execution_deadline = None
+
+    def _check_execution_deadline(self) -> None:
+        """Check if the execution deadline has been exceeded.
+
+        Raises:
+            TimeoutError: If the deadline has been exceeded.
+        """
+        import time
+
+        if self._execution_deadline is not None:
+            if time.monotonic() >= self._execution_deadline:
+                task_desc = self.task.description if self.task else "Unknown task"
+                raise TimeoutError(
+                    f"Task '{task_desc}' execution timed out. "
+                    "Consider increasing max_execution_time or optimizing the task."
+                )
 
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
@@ -217,6 +248,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
+                self._check_execution_deadline()
+
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
@@ -371,6 +404,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         formatted_answer = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
+                self._check_execution_deadline()
+
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
