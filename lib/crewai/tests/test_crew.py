@@ -1251,6 +1251,200 @@ async def test_async_task_execution_call_count(researcher, writer):
         assert mock_execute_sync.call_count == 1
 
 
+def test_sync_task_outputs_preserved_when_mixing_sync_async_tasks():
+    """Test for issue #4137: Task outputs lost when mixing sync and async tasks.
+
+    Scenario: sync -> async -> sync
+    Expected: All 3 task outputs should be in the result.
+    """
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="Expert researcher",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Sync task 1",
+        expected_output="Output 1",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+    task2 = Task(
+        description="Async task 2",
+        expected_output="Output 2",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+    task3 = Task(
+        description="Sync task 3",
+        expected_output="Output 3",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        tasks=[task1, task2, task3],
+        verbose=False,
+    )
+
+    mock_output1 = TaskOutput(
+        description="Sync task 1",
+        raw="Result 1",
+        agent="Researcher",
+    )
+    mock_output2 = TaskOutput(
+        description="Async task 2",
+        raw="Result 2",
+        agent="Researcher",
+    )
+    mock_output3 = TaskOutput(
+        description="Sync task 3",
+        raw="Result 3",
+        agent="Researcher",
+    )
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = mock_output2
+
+    with (
+        patch.object(Task, "execute_sync", side_effect=[mock_output1, mock_output3]),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+        assert result is not None
+        assert len(result.tasks_output) == 3
+        assert result.tasks_output[0].raw == "Result 1"
+        assert result.tasks_output[1].raw == "Result 2"
+        assert result.tasks_output[2].raw == "Result 3"
+
+
+def test_sync_task_outputs_preserved_when_crew_ends_with_async_task():
+    """Test for issue #4137: Task outputs preserved when crew ends with async task.
+
+    Scenario: sync -> async (final)
+    Expected: Both task outputs should be in the result.
+    """
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="Expert researcher",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Sync task 1",
+        expected_output="Output 1",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+    task2 = Task(
+        description="Async task 2",
+        expected_output="Output 2",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        tasks=[task1, task2],
+        verbose=False,
+    )
+
+    mock_output1 = TaskOutput(
+        description="Sync task 1",
+        raw="Result 1",
+        agent="Researcher",
+    )
+    mock_output2 = TaskOutput(
+        description="Async task 2",
+        raw="Result 2",
+        agent="Researcher",
+    )
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = mock_output2
+
+    with (
+        patch.object(Task, "execute_sync", return_value=mock_output1),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+        assert result is not None
+        assert len(result.tasks_output) == 2
+        assert result.tasks_output[0].raw == "Result 1"
+        assert result.tasks_output[1].raw == "Result 2"
+
+
+def test_sync_multiple_sync_tasks_before_async_all_preserved():
+    """Test for issue #4137: Multiple sync task outputs before async are preserved.
+
+    Scenario: sync -> sync -> async -> sync
+    Expected: All 4 task outputs should be in the result.
+    """
+    researcher_agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="Expert researcher",
+        allow_delegation=False,
+    )
+
+    task1 = Task(
+        description="Sync task 1",
+        expected_output="Output 1",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+    task2 = Task(
+        description="Sync task 2",
+        expected_output="Output 2",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+    task3 = Task(
+        description="Async task 3",
+        expected_output="Output 3",
+        agent=researcher_agent,
+        async_execution=True,
+    )
+    task4 = Task(
+        description="Sync task 4",
+        expected_output="Output 4",
+        agent=researcher_agent,
+        async_execution=False,
+    )
+
+    crew = Crew(
+        agents=[researcher_agent],
+        tasks=[task1, task2, task3, task4],
+        verbose=False,
+    )
+
+    mock_outputs = [
+        TaskOutput(description=f"Task {i}", raw=f"Result {i}", agent="Researcher")
+        for i in range(1, 5)
+    ]
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = mock_outputs[2]
+
+    with (
+        patch.object(
+            Task, "execute_sync", side_effect=[mock_outputs[0], mock_outputs[1], mock_outputs[3]]
+        ),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+        assert result is not None
+        assert len(result.tasks_output) == 4
+        for i in range(4):
+            assert result.tasks_output[i].raw == f"Result {i + 1}"
+
+
 @pytest.mark.vcr()
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""

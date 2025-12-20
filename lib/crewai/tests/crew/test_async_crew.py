@@ -382,3 +382,170 @@ class TestAsyncProcessAsyncTasks:
         """Test processing empty list of async tasks."""
         result = await test_crew._aprocess_async_tasks([])
         assert result == []
+
+
+class TestMixedSyncAsyncTaskOutputs:
+    """Tests for issue #4137: Task outputs lost when mixing sync and async tasks.
+
+    These tests verify that when a Crew executes a mix of synchronous and
+    asynchronous tasks, all task outputs are preserved correctly.
+    """
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_async_sync_task_before_async_task_outputs_preserved(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test that sync task outputs before async tasks are preserved.
+
+        Scenario: sync -> async -> sync
+        Expected: All 3 task outputs should be in the result.
+        """
+        task1 = Task(
+            description="Sync task 1",
+            expected_output="Output 1",
+            agent=test_agent,
+            async_execution=False,
+        )
+        task2 = Task(
+            description="Async task 2",
+            expected_output="Output 2",
+            agent=test_agent,
+            async_execution=True,
+        )
+        task3 = Task(
+            description="Sync task 3",
+            expected_output="Output 3",
+            agent=test_agent,
+            async_execution=False,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task1, task2, task3],
+            verbose=False,
+        )
+
+        mock_output1 = TaskOutput(
+            description="Sync task 1",
+            raw="Result 1",
+            agent="Test Agent",
+        )
+        mock_output2 = TaskOutput(
+            description="Async task 2",
+            raw="Result 2",
+            agent="Test Agent",
+        )
+        mock_output3 = TaskOutput(
+            description="Sync task 3",
+            raw="Result 3",
+            agent="Test Agent",
+        )
+        mock_execute.side_effect = [mock_output1, mock_output2, mock_output3]
+
+        result = await crew._aexecute_tasks(crew.tasks)
+
+        assert result is not None
+        assert len(result.tasks_output) == 3
+        assert result.tasks_output[0].raw == "Result 1"
+        assert result.tasks_output[1].raw == "Result 2"
+        assert result.tasks_output[2].raw == "Result 3"
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_async_crew_ending_with_async_task_preserves_outputs(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test that outputs are preserved when crew ends with async task.
+
+        Scenario: sync -> async (final)
+        Expected: Both task outputs should be in the result.
+        """
+        task1 = Task(
+            description="Sync task 1",
+            expected_output="Output 1",
+            agent=test_agent,
+            async_execution=False,
+        )
+        task2 = Task(
+            description="Async task 2",
+            expected_output="Output 2",
+            agent=test_agent,
+            async_execution=True,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task1, task2],
+            verbose=False,
+        )
+
+        mock_output1 = TaskOutput(
+            description="Sync task 1",
+            raw="Result 1",
+            agent="Test Agent",
+        )
+        mock_output2 = TaskOutput(
+            description="Async task 2",
+            raw="Result 2",
+            agent="Test Agent",
+        )
+        mock_execute.side_effect = [mock_output1, mock_output2]
+
+        result = await crew._aexecute_tasks(crew.tasks)
+
+        assert result is not None
+        assert len(result.tasks_output) == 2
+        assert result.tasks_output[0].raw == "Result 1"
+        assert result.tasks_output[1].raw == "Result 2"
+
+    @pytest.mark.asyncio
+    @patch("crewai.task.Task.aexecute_sync", new_callable=AsyncMock)
+    async def test_async_multiple_sync_before_async_all_preserved(
+        self, mock_execute: AsyncMock, test_agent: Agent
+    ) -> None:
+        """Test that multiple sync task outputs before async are preserved.
+
+        Scenario: sync -> sync -> async -> sync
+        Expected: All 4 task outputs should be in the result.
+        """
+        task1 = Task(
+            description="Sync task 1",
+            expected_output="Output 1",
+            agent=test_agent,
+            async_execution=False,
+        )
+        task2 = Task(
+            description="Sync task 2",
+            expected_output="Output 2",
+            agent=test_agent,
+            async_execution=False,
+        )
+        task3 = Task(
+            description="Async task 3",
+            expected_output="Output 3",
+            agent=test_agent,
+            async_execution=True,
+        )
+        task4 = Task(
+            description="Sync task 4",
+            expected_output="Output 4",
+            agent=test_agent,
+            async_execution=False,
+        )
+        crew = Crew(
+            agents=[test_agent],
+            tasks=[task1, task2, task3, task4],
+            verbose=False,
+        )
+
+        mock_outputs = [
+            TaskOutput(description=f"Task {i}", raw=f"Result {i}", agent="Test Agent")
+            for i in range(1, 5)
+        ]
+        mock_execute.side_effect = mock_outputs
+
+        result = await crew._aexecute_tasks(crew.tasks)
+
+        assert result is not None
+        assert len(result.tasks_output) == 4
+        for i in range(4):
+            assert result.tasks_output[i].raw == f"Result {i + 1}"
