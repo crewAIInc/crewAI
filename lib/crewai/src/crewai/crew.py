@@ -1644,42 +1644,56 @@ class Crew(FlowTrackable, BaseModel):
         else:
             workflow_metrics = WorkflowTokenMetrics()
 
+        # Build per-agent metrics from per-task data (more accurate)
+        # This avoids the cumulative token issue where all agents show the same total
+        agent_token_sums = {}
+        
+        if workflow_metrics.per_task:
+            # Sum up tokens for each agent from their tasks
+            for task_name, task_metrics in workflow_metrics.per_task.items():
+                agent_name = task_metrics.agent_name
+                if agent_name not in agent_token_sums:
+                    agent_token_sums[agent_name] = {
+                        'total_tokens': 0,
+                        'prompt_tokens': 0,
+                        'cached_prompt_tokens': 0,
+                        'completion_tokens': 0,
+                        'successful_requests': 0
+                    }
+                agent_token_sums[agent_name]['total_tokens'] += task_metrics.total_tokens
+                agent_token_sums[agent_name]['prompt_tokens'] += task_metrics.prompt_tokens
+                agent_token_sums[agent_name]['cached_prompt_tokens'] += task_metrics.cached_prompt_tokens
+                agent_token_sums[agent_name]['completion_tokens'] += task_metrics.completion_tokens
+                agent_token_sums[agent_name]['successful_requests'] += task_metrics.successful_requests
+        
+        # Create per-agent metrics from the summed task data
         for agent in self.agents:
             agent_role = getattr(agent, 'role', 'Unknown Agent')
             agent_id = str(getattr(agent, 'id', ''))
             
-            if isinstance(agent.llm, BaseLLM):
-                llm_usage = agent.llm.get_token_usage_summary()
-                total_usage_metrics.add_usage_metrics(llm_usage)
-                
-                # Create per-agent metrics
+            if agent_role in agent_token_sums:
+                # Use accurate per-task summed data
+                sums = agent_token_sums[agent_role]
                 agent_metrics = AgentTokenMetrics(
                     agent_name=agent_role,
                     agent_id=agent_id,
-                    total_tokens=llm_usage.total_tokens,
-                    prompt_tokens=llm_usage.prompt_tokens,
-                    cached_prompt_tokens=llm_usage.cached_prompt_tokens,
-                    completion_tokens=llm_usage.completion_tokens,
-                    successful_requests=llm_usage.successful_requests
+                    total_tokens=sums['total_tokens'],
+                    prompt_tokens=sums['prompt_tokens'],
+                    cached_prompt_tokens=sums['cached_prompt_tokens'],
+                    completion_tokens=sums['completion_tokens'],
+                    successful_requests=sums['successful_requests']
                 )
                 workflow_metrics.per_agent[agent_role] = agent_metrics
+            
+            # Still get total usage for overall metrics
+            if isinstance(agent.llm, BaseLLM):
+                llm_usage = agent.llm.get_token_usage_summary()
+                total_usage_metrics.add_usage_metrics(llm_usage)
             else:
                 # fallback litellm
                 if hasattr(agent, "_token_process"):
                     token_sum = agent._token_process.get_summary()
                     total_usage_metrics.add_usage_metrics(token_sum)
-                    
-                    # Create per-agent metrics from litellm
-                    agent_metrics = AgentTokenMetrics(
-                        agent_name=agent_role,
-                        agent_id=agent_id,
-                        total_tokens=token_sum.total_tokens,
-                        prompt_tokens=token_sum.prompt_tokens,
-                        cached_prompt_tokens=token_sum.cached_prompt_tokens,
-                        completion_tokens=token_sum.completion_tokens,
-                        successful_requests=token_sum.successful_requests
-                    )
-                    workflow_metrics.per_agent[agent_role] = agent_metrics
 
         if self.manager_agent:
             manager_role = getattr(self.manager_agent, 'role', 'Manager Agent')
