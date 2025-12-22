@@ -179,6 +179,7 @@ from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
 )
+from crewai_tools.tools.tavily_map_tool.tavily_map_tool import TavilyMapTool
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
@@ -280,6 +281,7 @@ __all__ = [
     "StagehandTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
+    "TavilyMapTool",
     "TavilySearchTool",
     "VisionTool",
     "WeaviateVectorSearchTool",
