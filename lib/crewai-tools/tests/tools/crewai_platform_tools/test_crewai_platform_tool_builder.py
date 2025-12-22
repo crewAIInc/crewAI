@@ -258,3 +258,98 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         assert "simple_string" in description_text
         assert "nested_object" in description_text
         assert "array_prop" in description_text
+
+
+
+class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
+    """Test suite for SSL verification behavior in CrewaiPlatformToolBuilder"""
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"}, clear=True)
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
+    def test_fetch_actions_with_ssl_verification_default(self, mock_get):
+        """Test that _fetch_actions uses SSL verification by default when CREWAI_FACTORY is not set"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"actions": {}}
+        mock_get.return_value = mock_response
+
+        builder = CrewaiPlatformToolBuilder(apps=["github"])
+        builder._fetch_actions()
+
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert call_args.kwargs["verify"] is True
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "false"}, clear=True)
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
+    def test_fetch_actions_with_ssl_verification_factory_false(self, mock_get):
+        """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'false'"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"actions": {}}
+        mock_get.return_value = mock_response
+
+        builder = CrewaiPlatformToolBuilder(apps=["github"])
+        builder._fetch_actions()
+
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert call_args.kwargs["verify"] is True
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "FALSE"}, clear=True)
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
+    def test_fetch_actions_with_ssl_verification_factory_false_uppercase(self, mock_get):
+        """Test that _fetch_actions uses SSL verification when CREWAI_FACTORY is 'FALSE' (case-insensitive)"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"actions": {}}
+        mock_get.return_value = mock_response
+
+        builder = CrewaiPlatformToolBuilder(apps=["github"])
+        builder._fetch_actions()
+
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert call_args.kwargs["verify"] is True
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "true"}, clear=True)
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
+    def test_fetch_actions_without_ssl_verification_factory_true(self, mock_get):
+        """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'true'"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"actions": {}}
+        mock_get.return_value = mock_response
+
+        builder = CrewaiPlatformToolBuilder(apps=["github"])
+        builder._fetch_actions()
+
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert call_args.kwargs["verify"] is False
+
+    @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token", "CREWAI_FACTORY": "TRUE"}, clear=True)
+    @patch(
+        "crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get"
+    )
+    def test_fetch_actions_without_ssl_verification_factory_true_uppercase(self, mock_get):
+        """Test that _fetch_actions disables SSL verification when CREWAI_FACTORY is 'TRUE' (case-insensitive)"""
+        mock_response = Mock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.return_value = {"actions": {}}
+        mock_get.return_value = mock_response
+
+        builder = CrewaiPlatformToolBuilder(apps=["github"])
+        builder._fetch_actions()
+
+        mock_get.assert_called_once()
+        call_args = mock_get.call_args
+        assert call_args.kwargs["verify"] is False
