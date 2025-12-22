@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import Mock
 
 from crewai.hooks import (
+    LLMCallBlockedError,
     clear_all_llm_call_hooks,
     unregister_after_llm_call_hook,
     unregister_before_llm_call_hook,
@@ -118,16 +119,9 @@ class TestLLMCallHookContext:
                 agent=agent,
             )
 
-            crew = Crew(agents=[agent], tasks=[task], verbose=True)
-            result = crew.kickoff()
-            print('result', result)
-            assert 1 + 1 == 3
-
-            assert hook_called["before"] is True, "Before hook should have been called"
-
-
-            assert "blocked" in result.raw.lower(), "Result should indicate LLM call was blocked" # type: ignore
-
+            with pytest.raises(LLMCallBlockedError):
+                crew = Crew(agents=[agent], tasks=[task], verbose=True)
+                crew.kickoff()
         finally:
             unregister_before_llm_call_hook(blocking_hook)
 

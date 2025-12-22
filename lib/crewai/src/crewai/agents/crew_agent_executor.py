@@ -9,7 +9,6 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from crewai.hooks import LLMCallBlockedError
 from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
@@ -286,12 +285,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     log_error_after=self.log_error_after,
                     printer=self._printer,
                 )
-            except LLMCallBlockedError as e:
-                formatted_answer = handle_llm_call_blocked_error(
-                    e=e,
-                    messages=self.messages,
-                )
-
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
