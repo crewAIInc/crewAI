@@ -7,6 +7,7 @@ from crewai.hooks.decorators import (
     before_tool_call,
 )
 from crewai.hooks.llm_hooks import (
+    LLMCallBlockedError,
     LLMCallHookContext,
     clear_after_llm_call_hooks,
     clear_all_llm_call_hooks,
@@ -74,6 +75,8 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 
 __all__ = [
+    # Exceptions
+    "LLMCallBlockedError",
     # Context classes
     "LLMCallHookContext",
     "ToolCallHookContext",

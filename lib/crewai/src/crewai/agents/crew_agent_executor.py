@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from crewai.hooks import LLMCallBlockedError
 from pydantic import BaseModel, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 
@@ -34,6 +35,7 @@ from crewai.utilities.agent_utils import (
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
+    handle_llm_call_blocked_error,
     handle_max_iterations_exceeded,
     handle_output_parser_exception,
     handle_unknown_error,
@@ -283,6 +285,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                )
+            except LLMCallBlockedError as e:
+                formatted_answer = handle_llm_call_blocked_error(
+                    e=e,
+                    messages=self.messages,
                 )
 
             except Exception as e:

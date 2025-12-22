@@ -44,6 +44,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.hooks import LLMCallBlockedError
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent import LiteAgent
@@ -409,6 +410,16 @@ class Agent(BaseAgent):
                     ),
                 )
                 raise e
+            if isinstance(e, LLMCallBlockedError):
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 crewai_event_bus.emit(
@@ -606,6 +617,17 @@ class Agent(BaseAgent):
             raise e
         except Exception as e:
             if e.__class__.__module__.startswith("litellm"):
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            # Don't retry on intentionally blocked LLM calls
+            if isinstance(e, LLMCallBlockedError):
                 crewai_event_bus.emit(
                     self,
                     event=AgentExecutionErrorEvent(

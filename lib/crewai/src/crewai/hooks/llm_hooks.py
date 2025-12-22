@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
-from crewai.events.event_listener import event_listener
 from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
 from crewai.utilities.printer import Printer
 
@@ -12,6 +11,14 @@ if TYPE_CHECKING:
     from crewai.lite_agent import LiteAgent
     from crewai.llms.base_llm import BaseLLM
     from crewai.utilities.types import LLMMessage
+
+
+class LLMCallBlockedError(Exception):
+    """Raised when a before_llm_call hook blocks the LLM call.
+
+    This exception is intentionally NOT retried by the agent,
+    as it represents an intentional block by the hook.
+    """
 
 
 class LLMCallHookContext:
@@ -131,6 +138,7 @@ class LLMCallHookContext:
             ...         if response.lower() == "no":
             ...             print("LLM call skipped by user")
         """
+        from crewai.events.event_listener import event_listener
 
         printer = Printer()
         event_listener.formatter.pause_live_updates()

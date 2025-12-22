@@ -1645,8 +1645,7 @@ class LLM(BaseLLM):
                     msg_role: Literal["assistant"] = "assistant"
                     message["role"] = msg_role
 
-        if not self._invoke_before_llm_call_hooks(messages, from_agent):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+        self._invoke_before_llm_call_hooks(messages, from_agent)
 
         # --- 5) Set up callbacks if provided
         with suppress_warnings():
