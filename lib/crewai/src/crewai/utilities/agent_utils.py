@@ -198,6 +198,53 @@ def format_message_for_llm(
     return {"role": role, "content": prompt}
 
 
+def _clean_raw_output(answer: str) -> str:
+    """Clean raw LLM output by removing internal ReAct format markers.
+
+    When parsing fails, the raw answer may contain internal format markers
+    like 'Thought:', 'Action:', 'Action Input:' that should not appear in
+    the final user-facing output.
+
+    Args:
+        answer: The raw response from the LLM
+
+    Returns:
+        Cleaned output with internal format markers removed
+    """
+    # Check if answer contains "Final Answer:" and extract that part
+    if "Final Answer:" in answer:
+        # Extract everything after "Final Answer:"
+        parts = answer.split("Final Answer:")
+        if len(parts) > 1:
+            return parts[-1].strip()
+
+    # Remove Thought: prefix if present at the start
+    lines = answer.split("\n")
+    cleaned_lines = []
+    skip_until_content = False
+
+    for line in lines:
+        stripped = line.strip()
+        # Skip lines that are internal format markers
+        if stripped.startswith("Thought:"):
+            skip_until_content = True
+            continue
+        if stripped.startswith("Action:") or stripped.startswith("Action Input:"):
+            skip_until_content = True
+            continue
+        if stripped.startswith("Observation:"):
+            skip_until_content = True
+            continue
+
+        if skip_until_content and stripped:
+            skip_until_content = False
+        if not skip_until_content:
+            cleaned_lines.append(line)
+
+    result = "\n".join(cleaned_lines).strip()
+    return result if result else answer
+
+
 def format_answer(answer: str) -> AgentAction | AgentFinish:
     """Format a response from the LLM into an AgentAction or AgentFinish.
 
@@ -210,9 +257,11 @@ def format_answer(answer: str) -> AgentAction | AgentFinish:
     try:
         return parse(answer)
     except Exception:
+        # Clean the output to remove internal format markers
+        cleaned_output = _clean_raw_output(answer)
         return AgentFinish(
             thought="Failed to parse LLM response",
-            output=answer,
+            output=cleaned_output,
             text=answer,
         )
 
