@@ -1566,15 +1566,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             # Display output with formatting
-            print("\n" + "═" * 50)
-            print("  OUTPUT FOR REVIEW")
-            print("═" * 50 + "\n")
-            print(output)
-            print("\n" + "═" * 50 + "\n")
+            self._printer.print("\n" + "═" * 50, color="bold_cyan")
+            self._printer.print("  OUTPUT FOR REVIEW", color="bold_cyan")
+            self._printer.print("═" * 50 + "\n", color="bold_cyan")
+            self._printer.print(output)
+            self._printer.print("\n" + "═" * 50 + "\n", color="bold_cyan")
 
             # Show message and prompt for feedback
-            print(message)
-            print("(Press Enter to skip, or type your feedback)\n")
+            self._printer.print(message, color="yellow")
+            self._printer.print("(Press Enter to skip, or type your feedback)\n", color="cyan")
 
             feedback = input("Your feedback: ").strip()
 
