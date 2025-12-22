@@ -103,7 +103,7 @@ def test_conditional_start_with_resumption(tmp_path):
             return "initialized"
 
         @router(init)
-        def route_to_branch(self):
+        def emit_branch(self):
             execution_log.append("router")
             return "branch_a"
 
@@ -124,7 +124,7 @@ def test_conditional_start_with_resumption(tmp_path):
     assert execution_log == ["init", "router", "branch_a_start", "branch_a_process"]
 
     flow2 = ConditionalStartFlow(persistence=persistence)
-    flow2._completed_methods = {"init", "route_to_branch", "branch_a_start"}
+    flow2._completed_methods = {"init", "emit_branch", "branch_a_start"}
     execution_log.clear()
 
     flow2.kickoff(inputs={"id": flow_id})
@@ -145,7 +145,7 @@ def test_cyclic_flow_with_conditional_start():
             return "init_done"
 
         @router(initial)
-        def route_to_cycle(self):
+        def emit_cycle(self):
             execution_log.append("router_initial")
             return "loop"
 

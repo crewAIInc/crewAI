@@ -7,12 +7,13 @@ for building event-driven workflows with conditional execution and routing.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 import copy
 import inspect
 import logging
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
@@ -69,6 +70,11 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+
+if TYPE_CHECKING:
+    from crewai.flow.human_feedback import HumanFeedbackResult
+    from crewai.llms.base_llm import BaseLLM
+
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.printer import Printer, PrinterColor
@@ -443,6 +449,23 @@ class FlowMeta(type):
                         else:
                             router_paths[attr_name] = []
 
+                # Handle start methods that are also routers (e.g., @human_feedback with emit)
+                if (
+                    hasattr(attr_value, "__is_start_method__")
+                    and hasattr(attr_value, "__is_router__")
+                    and attr_value.__is_router__
+                ):
+                    routers.add(attr_name)
+                    # Get router paths from the decorator attribute
+                    if hasattr(attr_value, "__router_paths__") and attr_value.__router_paths__:
+                        router_paths[attr_name] = attr_value.__router_paths__
+                    else:
+                        possible_returns = get_possible_return_constants(attr_value)
+                        if possible_returns:
+                            router_paths[attr_name] = possible_returns
+                        else:
+                            router_paths[attr_name] = []
+
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
         cls._routers = routers  # type: ignore[attr-defined]
@@ -498,6 +521,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._persistence: FlowPersistence | None = persistence
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
+
+        # Human feedback storage
+        self.human_feedback_history: list[HumanFeedbackResult] = []
+        self.last_human_feedback: HumanFeedbackResult | None = None
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -1075,7 +1102,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
 
         result = await self._execute_method(start_method_name, enhanced_method)
-        await self._execute_listeners(start_method_name, result)
+
+        # If start method is a router, use its result as an additional trigger
+        if start_method_name in self._routers and result is not None:
+            # Execute listeners for the start method name first
+            await self._execute_listeners(start_method_name, result)
+            # Then execute listeners for the router result (e.g., "approved")
+            router_result_trigger = FlowMethodName(str(result))
+            listeners_for_result = self._find_triggered_methods(
+                router_result_trigger, router_only=False
+            )
+            if listeners_for_result:
+                # Pass the HumanFeedbackResult if available
+                listener_result = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not None
+                    else result
+                )
+                tasks = [
+                    self._execute_single_listener(listener_name, listener_result)
+                    for listener_name in listeners_for_result
+                ]
+                await asyncio.gather(*tasks)
+        else:
+            await self._execute_listeners(start_method_name, result)
 
     def _inject_trigger_payload_for_start_method(
         self, original_method: Callable[..., Any]
@@ -1210,7 +1260,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
+        router_result_to_feedback: dict[str, Any] = {}  # Map outcome -> HumanFeedbackResult
         current_trigger = trigger_method
+        current_result = result  # Track the result to pass to each router
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -1220,13 +1272,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 break
 
             for router_name in routers_triggered:
-                await self._execute_single_listener(router_name, result)
+                # For routers triggered by a router outcome, pass the HumanFeedbackResult
+                router_input = router_result_to_feedback.get(
+                    str(current_trigger), current_result
+                )
+                await self._execute_single_listener(router_name, router_input)
                 # After executing router, the router's result is the path
                 router_result = (
                     self._method_outputs[-1] if self._method_outputs else None
                 )
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
+                    # If this was a human_feedback router, map the outcome to the feedback
+                    if self.last_human_feedback is not None:
+                        router_result_to_feedback[str(router_result)] = (
+                            self.last_human_feedback
+                        )
                 current_trigger = (
                     FlowMethodName(str(router_result))
                     if router_result is not None
@@ -1242,8 +1303,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
+                    # Determine what result to pass to listeners
+                    # For router outcomes, pass the HumanFeedbackResult if available
+                    listener_result = router_result_to_feedback.get(
+                        str(current_trigger), result
+                    )
                     tasks = [
-                        self._execute_single_listener(listener_name, result)
+                        self._execute_single_listener(listener_name, listener_result)
                         for listener_name in listeners_triggered
                     ]
                     await asyncio.gather(*tasks)
@@ -1435,9 +1501,189 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(listener_name, listener_result)
 
+            # If this listener is also a router (e.g., has @human_feedback with emit),
+            # we need to trigger listeners for the router result as well
+            if listener_name in self._routers and listener_result is not None:
+                router_result_trigger = FlowMethodName(str(listener_result))
+                listeners_for_result = self._find_triggered_methods(
+                    router_result_trigger, router_only=False
+                )
+                if listeners_for_result:
+                    # Pass the HumanFeedbackResult if available
+                    feedback_result = (
+                        self.last_human_feedback
+                        if self.last_human_feedback is not None
+                        else listener_result
+                    )
+                    tasks = [
+                        self._execute_single_listener(name, feedback_result)
+                        for name in listeners_for_result
+                    ]
+                    await asyncio.gather(*tasks)
+
         except Exception as e:
             logger.error(f"Error executing listener {listener_name}: {e}")
             raise
+
+    def _request_human_feedback(
+        self,
+        message: str,
+        output: Any,
+        metadata: dict[str, Any] | None = None,
+        emit: Sequence[str] | None = None,
+    ) -> str:
+        """Request feedback from a human.
+        Args:
+            message: The message to display when requesting feedback.
+            output: The method output to show the human for review.
+            metadata: Optional metadata for enterprise integrations.
+            emit: Optional list of possible outcomes for routing.
+
+        Returns:
+            The human's feedback as a string. Empty string if no feedback provided.
+        """
+        from crewai.events.event_listener import event_listener
+        from crewai.events.types.flow_events import (
+            HumanFeedbackReceivedEvent,
+            HumanFeedbackRequestedEvent,
+        )
+
+        # Emit feedback requested event
+        crewai_event_bus.emit(
+            self,
+            HumanFeedbackRequestedEvent(
+                type="human_feedback_requested",
+                flow_name=self.name or self.__class__.__name__,
+                method_name="",  # Will be set by decorator if needed
+                output=output,
+                message=message,
+                emit=list(emit) if emit else None,
+            ),
+        )
+
+        # Pause live updates during human input
+        event_listener.formatter.pause_live_updates()
+
+        try:
+            # Display output with formatting
+            print("\n" + "═" * 50)
+            print("  OUTPUT FOR REVIEW")
+            print("═" * 50 + "\n")
+            print(output)
+            print("\n" + "═" * 50 + "\n")
+
+            # Show message and prompt for feedback
+            print(message)
+            print("(Press Enter to skip, or type your feedback)\n")
+
+            feedback = input("Your feedback: ").strip()
+
+            # Emit feedback received event
+            crewai_event_bus.emit(
+                self,
+                HumanFeedbackReceivedEvent(
+                    type="human_feedback_received",
+                    flow_name=self.name or self.__class__.__name__,
+                    method_name="",  # Will be set by decorator if needed
+                    feedback=feedback,
+                    outcome=None,  # Will be determined after collapsing
+                ),
+            )
+
+            return feedback
+        finally:
+            # Resume live updates
+            event_listener.formatter.resume_live_updates()
+
+    def _collapse_to_outcome(
+        self,
+        feedback: str,
+        outcomes: Sequence[str],
+        llm: str | BaseLLM,
+    ) -> str:
+        """Collapse free-form feedback to a predefined outcome using LLM.
+
+        This method uses the specified LLM to interpret the human's feedback
+        and map it to one of the predefined outcomes for routing purposes.
+
+        Uses structured outputs (function calling) when supported by the LLM
+        to guarantee the response is one of the valid outcomes. Falls back
+        to simple prompting if structured outputs fail.
+
+        Args:
+            feedback: The raw human feedback text.
+            outcomes: Sequence of valid outcome strings to choose from.
+            llm: The LLM model to use. Can be a model string or BaseLLM instance.
+
+        Returns:
+            One of the outcome strings that best matches the feedback intent.
+        """
+        from typing import Literal
+
+        from pydantic import BaseModel, Field
+
+        from crewai.llm import LLM
+        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+        from crewai.utilities.i18n import I18N
+
+        # Get or create LLM instance
+        if isinstance(llm, str):
+            llm_instance = LLM(model=llm)
+        elif isinstance(llm, BaseLLMClass):
+            llm_instance = llm
+        else:
+            raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
+
+        # Dynamically create a Pydantic model with constrained outcomes
+        outcomes_tuple = tuple(outcomes)
+
+        class FeedbackOutcome(BaseModel):
+            """The outcome that best matches the human's feedback intent."""
+
+            outcome: Literal[outcomes_tuple] = Field(  # type: ignore[valid-type]
+                description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
+            )
+
+        # Load prompt from translations
+        i18n = I18N()
+        prompt_template = i18n.slice("human_feedback_collapse")
+
+        prompt = prompt_template.format(
+            feedback=feedback,
+            outcomes=", ".join(outcomes),
+        )
+
+        try:
+            # Try structured output first (function calling)
+            response = llm_instance.call(
+                messages=[{"role": "user", "content": prompt}],
+                response_model=FeedbackOutcome,
+            )
+            return response.outcome
+        except Exception as e:
+            # Fallback to simple prompting if structured output fails
+            logger.warning(
+                f"Structured output failed, falling back to simple prompting: {e}"
+            )
+            response = llm_instance.call(messages=prompt)
+            response_clean = response.strip()
+
+            # Exact match (case-insensitive)
+            for outcome in outcomes:
+                if outcome.lower() == response_clean.lower():
+                    return outcome
+
+            # Partial match
+            for outcome in outcomes:
+                if outcome.lower() in response_clean.lower():
+                    return outcome
+
+            # Fallback to first outcome
+            logger.warning(
+                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                f"Falling back to first outcome: {outcomes[0]}"
+            )
+            return outcomes[0]
 
     def _log_flow_event(
         self,

@@ -72,3 +72,43 @@ class FlowPlotEvent(FlowEvent):
 
     flow_name: str
     type: str = "flow_plot"
+
+
+class HumanFeedbackRequestedEvent(FlowEvent):
+    """Event emitted when human feedback is requested.
+
+    This event is emitted when a @human_feedback decorated method
+    requires input from a human reviewer.
+
+    Attributes:
+        flow_name: Name of the flow requesting feedback.
+        method_name: Name of the method decorated with @human_feedback.
+        output: The method output shown to the human for review.
+        message: The message displayed when requesting feedback.
+        emit: Optional list of possible outcomes for routing.
+    """
+
+    method_name: str
+    output: Any
+    message: str
+    emit: list[str] | None = None
+    type: str = "human_feedback_requested"
+
+
+class HumanFeedbackReceivedEvent(FlowEvent):
+    """Event emitted when human feedback is received.
+
+    This event is emitted after a human provides feedback in response
+    to a @human_feedback decorated method.
+
+    Attributes:
+        flow_name: Name of the flow that received feedback.
+        method_name: Name of the method that received feedback.
+        feedback: The raw text feedback provided by the human.
+        outcome: The collapsed outcome string (if emit was specified).
+    """
+
+    method_name: str
+    feedback: str
+    outcome: str | None = None
+    type: str = "human_feedback_received"
