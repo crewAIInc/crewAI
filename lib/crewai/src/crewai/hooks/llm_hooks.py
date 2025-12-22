@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from crewai.events.event_listener import event_listener
 from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
 from crewai.utilities.printer import Printer
 
@@ -138,7 +139,7 @@ class LLMCallHookContext:
             ...         if response.lower() == "no":
             ...             print("LLM call skipped by user")
         """
-        from crewai.events.event_listener import event_listener
+        # from crewai.events.event_listener import event_listener
 
         printer = Printer()
         event_listener.formatter.pause_live_updates()
