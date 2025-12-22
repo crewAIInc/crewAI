@@ -10,7 +10,7 @@ mode: "wide"
 This guide demonstrates how to integrate **Galileo** with **CrewAI**
 for comprehensive tracing and evaluation.
 By the end of this guide, you will be able to trace your CrewAI agents,
-monitor their performance and
+monitor their performance, and evaluate their behaviour with
 Galileo's powerful observability platform.
 
 > **What is Galileo?** [Galileo](https://galileo.ai/) is AI evaluation and observability
@@ -29,7 +29,7 @@ For more information, see Galileo’s
 [Add Galileo to a CrewAI Application](https://v2docs.galileo.ai/how-to-guides/third-party-integrations/add-galileo-to-crewai/add-galileo-to-crewai)
 how-to guide.
 
-> **Note** This tutorail assumes you have completed the [CrewAI quickstart](/en/quickstart).
+> **Note** This tutorial assumes you have completed the [CrewAI quickstart](/en/quickstart).
 If you want a completed comprehensive example, see the Galileo
 [CrewAI sdk-example repo](https://github.com/rungalileo/sdk-examples/tree/main/python/agent/crew-ai).
 
@@ -41,7 +41,7 @@ then install dependencies inside that environment using your
 preferred tool:
 
 ```bash
-uv pip install galileo python-dotenv  
+uv add galileo 
 ```
 
 ### Step 2: Add to the .env file from the [CrewAI quickstart](/en/quickstart)
@@ -57,19 +57,9 @@ GALILEO_PROJECT="your-galileo-project-name"
 GALILEO_LOG_STREAM="your-galileo-log-stream "
 ```
 
-### Step 3: Import the dotenv package
+### Step 3: Add the Galileo event listener
 
-Add the following code at the top of your main.py file to import
-dotenv and load the .env file.
-
-```python
-from dotenv import load_dotenv
-load_dotenv()
-```
-
-### Step 4: Add the Galileo event listener
-
-To enable logging with Galileo, you need to create an instance of the CrewAIEventListener.
+To enable logging with Galileo, you need to create an instance of the `CrewAIEventListener`.
 Import the Galileo CrewAI handler package by
 adding the following code at the top of your main.py file:
 
@@ -89,7 +79,7 @@ def run():
 When you create the listener instance, it is automatically
 registered with CrewAI.
 
-### Step 5: Run your crew
+### Step 4: Run your crew
 
 Run your crew with the CrewAI CLI:
 
@@ -97,11 +87,11 @@ Run your crew with the CrewAI CLI:
 crewai run
 ```
 
-### Step 6: View the traces in Galileo
+### Step 5: View the traces in Galileo
 
 Once your crew has finished, the traces will be flushed and appear in Galileo.
 
-![Galilelo trace view](/images/galileo-trace-veiw.png)
+![Galilelo trace view](/images/galileo-trace-view.png)
   
 ## Understanding the Galileo Integration
 
@@ -109,24 +99,9 @@ Galileo integrates with CrewAI by registering an event listener
 that captures Crew execution events (e.g., agent actions, tool calls, model responses)
 and forwards them to Galileo for observability and evaluation.
 
-### Register the event listener
+### Understanding the event listener
 
-At the beginning of your run() function (or before starting the Crew),
-instantiate the Galileo event listener:
-
-```python
-def run():
-    # Create the event listener (registers itself with CrewAI)
-    CrewAIEventListener()
-
-    # The rest of your existing code goes here
-```
-
-This is insturmented in [main.py](research_crew/src/research_crew/main.py).
-
-### What this does
-
-Creating a CrewAIEventListener() instance is all that’s
+Creating a `CrewAIEventListener()` instance is all that’s
 required to enable Galileo for a CrewAI run. When instantiated, the listener:
 
 - Automatically registers itself with CrewAI
