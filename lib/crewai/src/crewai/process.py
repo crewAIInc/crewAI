@@ -8,4 +8,5 @@ class Process(str, Enum):
 
     sequential = "sequential"
     hierarchical = "hierarchical"
+    continuous = "continuous"
     # TODO: consensual = 'consensual'

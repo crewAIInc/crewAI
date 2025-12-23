@@ -16,6 +16,7 @@ mode: "wide"
 
 - **Sequential**: Executes tasks sequentially, ensuring tasks are completed in an orderly progression.
 - **Hierarchical**: Organizes tasks in a managerial hierarchy, where tasks are delegated and executed based on a structured chain of command. A manager language model (`manager_llm`) or a custom manager agent (`manager_agent`) must be specified in the crew to enable the hierarchical process, facilitating the creation and management of tasks by the manager.
+- **Continuous**: Enables agents to operate indefinitely in an always-on mode, continuously monitoring conditions and taking actions until explicitly stopped. Ideal for 24/7 operations like trading bots, monitoring systems, and automated workflows.
 - **Consensual Process (Planned)**: Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
 
 ## The Role of Processes in Teamwork
@@ -44,8 +45,26 @@ crew = Crew(
     # or
     # manager_agent=my_manager_agent
 )
+
+# Example: Creating a crew with a continuous process
+# For 24/7 operations like monitoring or trading
+crew = Crew(
+    agents=my_agents,
+    process=Process.continuous,
+    iteration_delay=5.0,  # Seconds between iterations
+)
+
+# Start continuous operation
+handle = crew.continuous_kickoff(
+    monitoring_directive="Monitor systems and respond to issues."
+)
+
+# Control the running crew
+handle.pause()   # Pause operation
+handle.resume()  # Resume operation
+handle.stop()    # Stop gracefully
 ```
-**Note:** Ensure `my_agents` and `my_tasks` are defined prior to creating a `Crew` object, and for the hierarchical process, either `manager_llm` or `manager_agent` is also required.
+**Note:** Ensure `my_agents` and `my_tasks` are defined prior to creating a `Crew` object, and for the hierarchical process, either `manager_llm` or `manager_agent` is also required. For continuous process, tasks are optional as agents operate based on a monitoring directive.
 
 ## Sequential Process
 
@@ -57,9 +76,53 @@ To customize task context, utilize the `context` parameter in the `Task` class t
 
 Emulates a corporate hierarchy, CrewAI allows specifying a custom manager agent or automatically creates one, requiring the specification of a manager language model (`manager_llm`). This agent oversees task execution, including planning, delegation, and validation. Tasks are not pre-assigned; the manager allocates tasks to agents based on their capabilities, reviews outputs, and assesses task completion.
 
+## Continuous Process
+
+Enables agents to operate indefinitely in an always-on mode. Unlike sequential or hierarchical processes that complete and return results, continuous process keeps agents running until explicitly stopped. This is ideal for:
+
+- **24/7 Trading Bots**: Monitor markets and execute trades continuously
+- **System Monitoring**: Watch systems and respond to issues in real-time
+- **Data Processing**: Continuously process incoming data streams
+- **Automated Support**: Always-available AI support agents
+
+Key characteristics:
+- Agents never provide a "Final Answer" - they create checkpoints instead
+- Memory is automatically managed to prevent unbounded growth
+- Full control via pause, resume, and stop methods
+- Real-time streaming of agent thoughts and actions
+- Built-in health checks and event monitoring
+
+```python
+from crewai import Agent, Crew, Process
+
+monitor = Agent(
+    role="System Monitor",
+    goal="Monitor systems and respond to issues",
+    backstory="Expert system administrator",
+    tools=[MonitoringTool(), AlertTool()],
+)
+
+crew = Crew(
+    agents=[monitor],
+    process=Process.continuous,
+    iteration_delay=10.0,  # Check every 10 seconds
+)
+
+# Start and control
+handle = crew.continuous_kickoff(
+    monitoring_directive="Monitor all services. Alert on errors."
+)
+
+# Real-time streaming
+async for chunk in crew.continuous_kickoff_stream(...):
+    print(chunk.content, end="", flush=True)
+```
+
+For comprehensive documentation, see [Continuous Mode](/en/concepts/continuous-mode).
+
 ## Process Class: Detailed Overview
 
-The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
+The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`, `continuous`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
 
 ## Conclusion
 

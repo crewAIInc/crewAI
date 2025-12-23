@@ -134,3 +134,71 @@ class Prompts(BaseModel):
             .replace("{role}", self.agent.role)
             .replace("{backstory}", self.agent.backstory)
         )
+
+    def continuous_execution(self) -> SystemPromptResult:
+        """Generate prompts for continuous operation mode.
+
+        Continuous mode prompts instruct the agent to operate indefinitely,
+        monitoring conditions and taking action as needed without providing
+        a "Final Answer".
+
+        Returns:
+            A SystemPromptResult with system and user prompts for continuous mode.
+        """
+        system_prompt = self._build_continuous_system_prompt()
+        user_prompt = self._build_continuous_user_prompt()
+
+        return SystemPromptResult(
+            system=system_prompt,
+            user=user_prompt,
+            prompt=f"{system_prompt}\n\n{user_prompt}",
+        )
+
+    def _build_continuous_system_prompt(self) -> str:
+        """Build system prompt for continuous mode.
+
+        Returns:
+            System prompt string for continuous operation.
+        """
+        tools_section = ""
+        if self.has_tools:
+            tools_section = self.i18n.slice("tools")
+        else:
+            tools_section = "You have no tools available. You can only observe and think."
+
+        return f"""You are {self.agent.role} operating in CONTINUOUS MONITORING MODE.
+
+Your Goal: {self.agent.goal}
+
+Background: {self.agent.backstory}
+
+{tools_section}
+
+CONTINUOUS OPERATION INSTRUCTIONS:
+1. You are running continuously - you should NEVER provide a "Final Answer"
+2. Monitor conditions and take action when needed using your available tools
+3. Report observations and actions clearly
+4. If nothing requires immediate action, state what you are observing
+5. Always be ready to respond to changing conditions
+6. Keep track of what you have done and observed
+
+When you observe something or want to take action, respond in this format:
+Thought: [Your reasoning about what you observe or want to do]
+Action: [The tool you want to use, or "Observe" if just monitoring]
+Action Input: [The input for the tool]
+
+After each observation or action result, continue monitoring and decide on your next action."""
+
+    def _build_continuous_user_prompt(self) -> str:
+        """Build user prompt for continuous mode.
+
+        Returns:
+            User prompt string for continuous operation.
+        """
+        return """Begin continuous operation. Monitor conditions and take appropriate actions.
+Remember: You are operating continuously. Do not try to finish or provide a final answer.
+Instead, observe, act when needed, and continue monitoring.
+
+Current directive: {task}
+
+Start by assessing the current situation and determining if any action is needed."""

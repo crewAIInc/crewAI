@@ -1,0 +1,556 @@
+---
+title: Building a Crypto Trading Bot
+description: Step-by-step guide to building a 24/7 cryptocurrency trading bot with CrewAI Continuous Mode.
+icon: bitcoin
+mode: "wide"
+---
+
+## Overview
+
+This guide walks you through building a fully automated cryptocurrency trading bot using CrewAI's Continuous Mode. The bot will:
+
+- Monitor cryptocurrency prices 24/7
+- Analyze market conditions
+- Execute trades based on predefined strategies
+- Manage risk automatically
+- Stream real-time updates to your dashboard
+
+<Warning>
+**Disclaimer**: This guide is for educational purposes only. Cryptocurrency trading involves significant risk. Always test with paper trading first and never invest more than you can afford to lose.
+</Warning>
+
+## Prerequisites
+
+- CrewAI installed (`pip install crewai`)
+- API keys for a cryptocurrency exchange (e.g., Binance, Coinbase)
+- Basic understanding of trading concepts
+
+## Project Structure
+
+```
+crypto_trader/
+├── src/
+│   ├── tools/
+│   │   ├── price_tool.py
+│   │   ├── order_tool.py
+│   │   └── portfolio_tool.py
+│   ├── agents.py
+│   └── crew.py
+├── main.py
+└── config.yaml
+```
+
+## Step 1: Create Custom Tools
+
+First, create the tools your agents will use to interact with the market.
+
+### Price Fetcher Tool
+
+```python
+# src/tools/price_tool.py
+from crewai.tools import BaseTool
+from pydantic import Field
+import requests
+
+class PriceFetcherTool(BaseTool):
+    name: str = "price_fetcher"
+    description: str = "Fetches current price and 24h statistics for a cryptocurrency pair"
+
+    symbol: str = Field(default="BTCUSDT", description="Trading pair symbol")
+
+    def _run(self, symbol: str = None) -> str:
+        symbol = symbol or self.symbol
+        try:
+            # Example using Binance public API
+            url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
+            response = requests.get(url, timeout=10)
+            data = response.json()
+
+            return f"""
+            Symbol: {symbol}
+            Current Price: ${float(data['lastPrice']):,.2f}
+            24h High: ${float(data['highPrice']):,.2f}
+            24h Low: ${float(data['lowPrice']):,.2f}
+            24h Change: {float(data['priceChangePercent']):.2f}%
+            24h Volume: {float(data['volume']):,.0f}
+            """
+        except Exception as e:
+            return f"Error fetching price: {str(e)}"
+```
+
+### Order Execution Tool
+
+```python
+# src/tools/order_tool.py
+from crewai.tools import BaseTool
+from pydantic import Field
+import hmac
+import hashlib
+import time
+import requests
+
+class OrderExecutionTool(BaseTool):
+    name: str = "order_executor"
+    description: str = "Executes buy or sell orders on the exchange"
+
+    api_key: str = Field(description="Exchange API key")
+    api_secret: str = Field(description="Exchange API secret")
+    paper_trading: bool = Field(default=True, description="Use paper trading mode")
+
+    def _run(self, action: str, symbol: str, quantity: float, price: float = None) -> str:
+        """
+        Execute a trade order.
+
+        Args:
+            action: "BUY" or "SELL"
+            symbol: Trading pair (e.g., "BTCUSDT")
+            quantity: Amount to trade
+            price: Optional limit price (market order if not specified)
+        """
+        if self.paper_trading:
+            return self._paper_trade(action, symbol, quantity, price)
+
+        # Real trading implementation would go here
+        return self._execute_real_order(action, symbol, quantity, price)
+
+    def _paper_trade(self, action: str, symbol: str, quantity: float, price: float) -> str:
+        """Simulate a trade for testing."""
+        order_id = f"PAPER_{int(time.time())}"
+        return f"""
+        [PAPER TRADE EXECUTED]
+        Order ID: {order_id}
+        Action: {action}
+        Symbol: {symbol}
+        Quantity: {quantity}
+        Price: ${price:,.2f} (market)
+        Status: FILLED
+        """
+
+    def _execute_real_order(self, action: str, symbol: str, quantity: float, price: float) -> str:
+        # Implement real exchange API calls here
+        # This is a placeholder - implement based on your exchange's API
+        pass
+```
+
+### Portfolio Tool
+
+```python
+# src/tools/portfolio_tool.py
+from crewai.tools import BaseTool
+from pydantic import Field
+
+class PortfolioTool(BaseTool):
+    name: str = "portfolio_manager"
+    description: str = "Manages and reports on the trading portfolio"
+
+    def _run(self, action: str = "status") -> str:
+        """
+        Manage portfolio.
+
+        Args:
+            action: "status", "balance", or "positions"
+        """
+        if action == "status":
+            return self._get_status()
+        elif action == "balance":
+            return self._get_balance()
+        elif action == "positions":
+            return self._get_positions()
+        else:
+            return f"Unknown action: {action}"
+
+    def _get_status(self) -> str:
+        # Implement real portfolio tracking
+        return """
+        Portfolio Status:
+        - Total Value: $10,500.00
+        - Available Balance: $5,000.00
+        - In Positions: $5,500.00
+        - Today's P&L: +$150.00 (+1.45%)
+        """
+
+    def _get_balance(self) -> str:
+        return "Available Balance: $5,000.00 USDT"
+
+    def _get_positions(self) -> str:
+        return """
+        Current Positions:
+        - BTC: 0.05 @ $45,000 = $2,250.00
+        - ETH: 1.5 @ $2,500 = $3,250.00
+        """
+```
+
+## Step 2: Create Agents
+
+Define specialized agents for different trading responsibilities.
+
+```python
+# src/agents.py
+from crewai import Agent
+from src.tools.price_tool import PriceFetcherTool
+from src.tools.order_tool import OrderExecutionTool
+from src.tools.portfolio_tool import PortfolioTool
+
+def create_market_analyst():
+    return Agent(
+        role="Market Analyst",
+        goal="Continuously analyze market conditions and identify trading opportunities",
+        backstory="""You are an expert cryptocurrency market analyst with years of
+        experience in technical analysis. You monitor price movements, volume patterns,
+        and market sentiment to identify profitable trading opportunities. You are
+        cautious and always consider risk before recommending trades.""",
+        tools=[PriceFetcherTool()],
+        verbose=True,
+    )
+
+def create_trader():
+    return Agent(
+        role="Trade Executor",
+        goal="Execute trades based on analyst recommendations while managing risk",
+        backstory="""You are a disciplined trader who executes orders with precision.
+        You always verify market conditions before executing, use appropriate position
+        sizes, and never exceed risk limits. You document every trade with clear
+        reasoning.""",
+        tools=[
+            OrderExecutionTool(
+                api_key="your_api_key",
+                api_secret="your_api_secret",
+                paper_trading=True  # Always start with paper trading!
+            ),
+            PriceFetcherTool(),
+        ],
+        verbose=True,
+    )
+
+def create_risk_manager():
+    return Agent(
+        role="Risk Manager",
+        goal="Monitor portfolio risk and enforce trading rules",
+        backstory="""You are a conservative risk manager who protects the portfolio.
+        You monitor position sizes, ensure diversification, and halt trading if
+        risk limits are exceeded. Safety is your top priority.""",
+        tools=[PortfolioTool()],
+        verbose=True,
+    )
+```
+
+## Step 3: Create the Trading Crew
+
+Set up the crew for continuous operation.
+
+```python
+# src/crew.py
+from crewai import Crew, Process
+from src.agents import create_market_analyst, create_trader, create_risk_manager
+
+def create_trading_crew():
+    """Create the continuous trading crew."""
+
+    # Create agents
+    analyst = create_market_analyst()
+    trader = create_trader()
+    risk_manager = create_risk_manager()
+
+    # Create crew in continuous mode
+    crew = Crew(
+        agents=[analyst, trader, risk_manager],
+        process=Process.continuous,
+        verbose=True,
+
+        # Continuous mode settings
+        iteration_delay=30.0,        # Check every 30 seconds
+        health_check_interval=300,   # Health check every 5 minutes
+        max_continuous_runtime=None, # Run indefinitely
+    )
+
+    return crew
+```
+
+## Step 4: Run the Bot
+
+Create the main entry point with streaming support.
+
+```python
+# main.py
+import asyncio
+import signal
+from datetime import datetime
+from src.crew import create_trading_crew
+
+# Global handle for signal handling
+handle = None
+
+def signal_handler(signum, frame):
+    """Handle shutdown signals gracefully."""
+    print("\n[SIGNAL] Shutdown requested...")
+    if handle:
+        handle.stop(graceful=True)
+
+async def run_trading_bot():
+    """Main function to run the trading bot."""
+    global handle
+
+    # Setup signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    # Create the crew
+    crew = create_trading_crew()
+
+    # Trading directive
+    directive = """
+    TRADING STRATEGY:
+
+    1. MONITORING:
+       - Check BTC/USD price every iteration
+       - Track 24h high/low and volume
+
+    2. ENTRY CONDITIONS (BUY):
+       - Price drops 3% or more from 24h high
+       - Volume is above average
+       - Portfolio has available balance
+
+    3. EXIT CONDITIONS (SELL):
+       - Price rises 5% from purchase price (take profit)
+       - Price drops 2% from purchase price (stop loss)
+
+    4. RISK RULES:
+       - Maximum position: 10% of portfolio per trade
+       - Maximum total exposure: 50% of portfolio
+       - No trading if daily loss exceeds 5%
+
+    5. REPORTING:
+       - Log all price checks
+       - Report all trading decisions with reasoning
+       - Alert on significant market movements (>2% change)
+    """
+
+    print("=" * 60)
+    print("CRYPTO TRADING BOT - CONTINUOUS MODE")
+    print("=" * 60)
+    print(f"Started at: {datetime.now().isoformat()}")
+    print("Press Ctrl+C to stop gracefully")
+    print("=" * 60)
+
+    # Start with streaming
+    stream = crew.continuous_kickoff_stream(
+        monitoring_directive=directive
+    )
+
+    # Process streaming output
+    async for chunk in stream:
+        # Print agent thoughts in real-time
+        if chunk.chunk_type == "TEXT":
+            print(chunk.content, end="", flush=True)
+
+        # Highlight tool usage
+        elif chunk.chunk_type == "TOOL_CALL":
+            print(f"\n[TOOL] {chunk.tool_call.tool_name}")
+
+        # Show observations
+        elif chunk.chunk_type == "OBSERVATION":
+            print(f"\n[OBS] {chunk.content[:100]}...")
+
+        # Checkpoint reached
+        elif chunk.chunk_type == "CHECKPOINT":
+            print(f"\n[CHECKPOINT] Iteration {chunk.iteration} complete")
+
+    print("\n[BOT] Trading bot stopped")
+
+if __name__ == "__main__":
+    asyncio.run(run_trading_bot())
+```
+
+## Step 5: Add a Dashboard (Optional)
+
+Create a simple web dashboard to monitor your bot.
+
+```python
+# dashboard.py
+from fastapi import FastAPI, WebSocket
+from fastapi.responses import HTMLResponse
+import asyncio
+from src.crew import create_trading_crew
+
+app = FastAPI()
+
+# HTML for simple dashboard
+HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Crypto Trading Bot Dashboard</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
+        #log { height: 500px; overflow-y: auto; border: 1px solid #00ff00; padding: 10px; }
+        .tool { color: #ffff00; }
+        .error { color: #ff0000; }
+        .checkpoint { color: #00ffff; }
+    </style>
+</head>
+<body>
+    <h1>Trading Bot Live Feed</h1>
+    <div id="stats">Connecting...</div>
+    <div id="log"></div>
+    <script>
+        const ws = new WebSocket("ws://localhost:8000/ws");
+        const log = document.getElementById("log");
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            const div = document.createElement("div");
+
+            if (data.type === "chunk") {
+                div.textContent = data.data.content;
+                if (data.data.chunk_type === "TOOL_CALL") {
+                    div.className = "tool";
+                }
+            } else if (data.type === "status") {
+                document.getElementById("stats").textContent =
+                    `Iterations: ${data.data.iterations} | Uptime: ${data.data.uptime}s`;
+                return;
+            }
+
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+        };
+    </script>
+</body>
+</html>
+"""
+
+@app.get("/")
+async def get():
+    return HTMLResponse(HTML)
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+
+    crew = create_trading_crew()
+    stream = crew.continuous_kickoff_stream(
+        monitoring_directive="Monitor BTC/USD. Trade on 3% dips."
+    )
+
+    async for chunk in stream:
+        # Send chunk to dashboard
+        await websocket.send_text(chunk.to_websocket_message())
+
+        # Send periodic status updates
+        if chunk.iteration % 10 == 0:
+            await websocket.send_json({
+                "type": "status",
+                "data": {
+                    "iterations": chunk.iteration,
+                    "uptime": stream.uptime,
+                }
+            })
+```
+
+## Step 6: Event Monitoring
+
+Add comprehensive event monitoring for debugging and analytics.
+
+```python
+# events.py
+from crewai.events import crewai_event_bus
+from crewai.events.types.continuous_events import (
+    ContinuousKickoffStartedEvent,
+    ContinuousKickoffStoppedEvent,
+    ContinuousAgentActionEvent,
+    ContinuousIterationCompleteEvent,
+    ContinuousHealthCheckEvent,
+    ContinuousErrorEvent,
+)
+import logging
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('trading_bot.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
+
+@crewai_event_bus.on(ContinuousKickoffStartedEvent)
+def on_start(source, event):
+    logger.info(f"Trading bot started at {event.timestamp}")
+    logger.info(f"Agents: {', '.join(event.agent_roles)}")
+
+@crewai_event_bus.on(ContinuousAgentActionEvent)
+def on_action(source, event):
+    logger.info(f"[{event.agent_role}] {event.action_type}: {event.tool_name}")
+    if event.action_input:
+        logger.debug(f"  Input: {event.action_input}")
+
+@crewai_event_bus.on(ContinuousIterationCompleteEvent)
+def on_iteration(source, event):
+    logger.info(f"Iteration {event.iteration} complete - Actions: {event.actions_taken}")
+
+@crewai_event_bus.on(ContinuousHealthCheckEvent)
+def on_health(source, event):
+    logger.info(f"Health Check - Uptime: {event.uptime_seconds:.0f}s, "
+                f"Iterations: {event.total_iterations}, "
+                f"Errors: {event.error_count}")
+
+@crewai_event_bus.on(ContinuousErrorEvent)
+def on_error(source, event):
+    logger.error(f"Error in {event.agent_role}: {event.error_message}")
+
+@crewai_event_bus.on(ContinuousKickoffStoppedEvent)
+def on_stop(source, event):
+    logger.info(f"Trading bot stopped: {event.reason}")
+    logger.info(f"Total runtime: {event.runtime_seconds:.0f}s")
+    logger.info(f"Total iterations: {event.total_iterations}")
+```
+
+## Production Considerations
+
+<Warning>
+Before running in production with real money:
+</Warning>
+
+### 1. Security
+- Store API keys in environment variables or a secrets manager
+- Use API key restrictions (IP whitelist, withdrawal disabled)
+- Run on a secure, isolated server
+
+### 2. Error Handling
+- Implement circuit breakers for API failures
+- Add retry logic with exponential backoff
+- Set up alerts for critical errors
+
+### 3. Testing
+- Extensive paper trading before going live
+- Backtest your strategies with historical data
+- Start with minimal position sizes
+
+### 4. Monitoring
+- Set up external monitoring (uptime checks)
+- Log all trades to a database
+- Daily performance reports
+
+### 5. Risk Management
+- Never risk more than you can afford to lose
+- Implement hard stops at the exchange level
+- Have manual override capabilities
+
+## Conclusion
+
+You now have a fully functional 24/7 cryptocurrency trading bot powered by CrewAI's Continuous Mode. The agents work together continuously to:
+
+1. Monitor market conditions
+2. Identify trading opportunities
+3. Execute trades safely
+4. Manage portfolio risk
+
+Remember to always start with paper trading and thoroughly test your strategies before using real funds.
+
+## Next Steps
+
+- Explore [Continuous Mode Concepts](/en/concepts/continuous-mode)
+- Learn about [Event Listeners](/en/concepts/event-listener)
+- Read about [Memory Management](/en/concepts/memory)

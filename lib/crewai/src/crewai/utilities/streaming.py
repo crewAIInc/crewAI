@@ -12,10 +12,12 @@ from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.types.streaming import (
+    AgentInfoChunk,
     CrewStreamingOutput,
     FlowStreamingOutput,
     StreamChunk,
     StreamChunkType,
+    TaskInfoChunk,
     ToolCallChunk,
 )
 
@@ -28,6 +30,127 @@ class TaskInfo(TypedDict):
     id: str
     agent_role: str
     agent_id: str
+
+
+def update_task_info(
+    current_task_info: TaskInfo,
+    task_index: int,
+    task_name: str,
+    task_id: str,
+    agent_role: str = "",
+    agent_id: str = "",
+) -> None:
+    """Update current task info for streaming context.
+
+    This function updates the mutable TaskInfo dictionary so that
+    streaming chunks contain correct task/agent information.
+
+    Args:
+        current_task_info: The TaskInfo dict to update (mutable)
+        task_index: Index of the current task (0-based)
+        task_name: Name or description of the task
+        task_id: Unique identifier of the task
+        agent_role: Role of the agent executing the task
+        agent_id: Unique identifier of the agent
+    """
+    current_task_info["index"] = task_index
+    current_task_info["name"] = task_name
+    current_task_info["id"] = task_id
+    current_task_info["agent_role"] = agent_role
+    current_task_info["agent_id"] = agent_id
+
+
+def create_task_started_chunk(
+    task: Any,
+    task_index: int,
+    total_tasks: int,
+    agent: Any,
+) -> StreamChunk:
+    """Create a TASK_STARTED chunk for UI lifecycle tracking.
+
+    Args:
+        task: The task being started.
+        task_index: Index of the task (0-based).
+        total_tasks: Total number of tasks in the crew.
+        agent: The agent executing the task.
+
+    Returns:
+        StreamChunk with TASK_STARTED type and task/agent info.
+    """
+    task_name = task.name or task.description[:50] if task.description else ""
+    return StreamChunk(
+        content=f"Starting task: {task_name}",
+        chunk_type=StreamChunkType.TASK_STARTED,
+        task_index=task_index,
+        task_name=task_name,
+        task_id=str(task.id),
+        agent_role=agent.role if agent else "",
+        agent_id=str(agent.id) if agent else "",
+        task_info=TaskInfoChunk(
+            task_index=task_index,
+            task_name=task_name,
+            task_id=str(task.id),
+            expected_output=task.expected_output or "",
+            total_tasks=total_tasks,
+        ),
+        agent_info=AgentInfoChunk(
+            agent_role=agent.role if agent else "",
+            agent_id=str(agent.id) if agent else "",
+            agent_goal=agent.goal if agent else "",
+        ),
+    )
+
+
+def create_task_completed_chunk(
+    task: Any,
+    task_index: int,
+    task_output: Any,
+) -> StreamChunk:
+    """Create a TASK_COMPLETED chunk for UI lifecycle tracking.
+
+    Args:
+        task: The task that completed.
+        task_index: Index of the task (0-based).
+        task_output: The output from the task.
+
+    Returns:
+        StreamChunk with TASK_COMPLETED type and output info.
+    """
+    task_name = task.name or task.description[:50] if task.description else ""
+    output_str = str(task_output.raw) if hasattr(task_output, "raw") else str(task_output)
+    return StreamChunk(
+        content=f"Completed task: {task_name}",
+        chunk_type=StreamChunkType.TASK_COMPLETED,
+        task_index=task_index,
+        task_name=task_name,
+        task_id=str(task.id),
+        agent_role=task_output.agent if hasattr(task_output, "agent") else "",
+        agent_id="",
+        task_info=TaskInfoChunk(
+            task_index=task_index,
+            task_name=task_name,
+            task_id=str(task.id),
+            output=output_str[:500] if len(output_str) > 500 else output_str,
+        ),
+    )
+
+
+def emit_lifecycle_chunk(
+    state: "StreamingState",
+    chunk: StreamChunk,
+    is_async: bool = False,
+) -> None:
+    """Emit a lifecycle chunk to the stream queue.
+
+    Args:
+        state: The streaming state.
+        chunk: The lifecycle chunk to emit.
+        is_async: Whether this is an async stream.
+    """
+    if is_async and state.async_queue is not None and state.loop is not None:
+        state.loop.call_soon_threadsafe(state.async_queue.put_nowait, chunk)
+    else:
+        state.sync_queue.put(chunk)
 
 
 class StreamingState(NamedTuple):

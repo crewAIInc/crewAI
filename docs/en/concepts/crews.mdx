@@ -34,6 +34,9 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
 | **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available at the crew level, accessible to all the agents.                                                                                                                                                                                    |
 | **Stream** _(optional)_               | `stream`               | Enable streaming output to receive real-time updates during crew execution. Returns a `CrewStreamingOutput` object that can be iterated for chunks. Defaults to `False`.                                                                                    |
+| **Iteration Delay** _(optional)_      | `iteration_delay`      | Seconds between iterations in continuous mode. Defaults to `1.0`.                                                                                                                                                                                            |
+| **Max Continuous Runtime** _(optional)_ | `max_continuous_runtime` | Maximum runtime in seconds for continuous mode. `None` for unlimited.                                                                                                                                                                                      |
+| **Health Check Interval** _(optional)_ | `health_check_interval` | Seconds between health checks in continuous mode. Defaults to `60`.                                                                                                                                                                                        |
 
 <Tip>
 **Crew Max RPM**: The `max_rpm` attribute sets the maximum number of requests per minute the crew can perform to avoid rate limits and will override individual agents' `max_rpm` settings if you set it.
@@ -386,7 +389,123 @@ for chunk in streaming:
 result = streaming.result
 ```
 
+#### StreamChunk Types
+
+Each `StreamChunk` contains metadata for UI display:
+
+| Property | Description |
+|----------|-------------|
+| `content` | The text content |
+| `chunk_type` | Type: TEXT, TOOL_CALL, TASK_STARTED, TASK_COMPLETED |
+| `task_index` | Current task index (0-based) |
+| `task_name` | Name of the current task |
+| `task_id` | Unique task identifier |
+| `agent_role` | Role of the executing agent |
+| `agent_id` | Unique agent identifier |
+| `timestamp` | When the chunk was created |
+| `task_info` | Detailed task info for lifecycle events |
+| `agent_info` | Detailed agent info for lifecycle events |
+
+```python Code
+from crewai.types import StreamChunkType
+
+for chunk in streaming:
+    if chunk.chunk_type == StreamChunkType.TASK_STARTED:
+        print(f"\n[Starting: {chunk.task_name}]")
+    elif chunk.chunk_type == StreamChunkType.TASK_COMPLETED:
+        print(f"\n[Completed: {chunk.task_name}]")
+    elif chunk.chunk_type == StreamChunkType.TEXT:
+        print(chunk.content, end="", flush=True)
+    elif chunk.chunk_type == StreamChunkType.TOOL_CALL:
+        print(f"\n[Tool: {chunk.tool_call.tool_name}]")
+```
+
+#### UI Output for Dashboards
+
+Get structured output for rendering in user interfaces:
+
+```python Code
+# During streaming - get real-time state
+for chunk in streaming:
+    ui_state = streaming.get_ui_state()
+    print(f"Progress: {ui_state.crew.completed_tasks}/{ui_state.crew.total_tasks}")
+
+# After streaming - get final UI output
+ui_output = streaming.get_ui_output()
+
+for task in ui_output.tasks:
+    print(f"{task.name}: {task.status} ({task.duration_seconds}s)")
+    if task.agent:
+        print(f"  Agent: {task.agent.role}")
+    if task.output_summary:
+        print(f"  Output: {task.output_summary}")
+```
+
 Learn more about streaming in the [Streaming Crew Execution](/en/learn/streaming-crew-execution) guide.
+
+### Continuous Mode Execution
+
+For 24/7 operations like trading bots, monitoring systems, or always-on automation, use continuous mode:
+
+```python Code
+from crewai import Crew, Process
+
+# Create crew for continuous operation
+crew = Crew(
+    agents=[monitor_agent, trader_agent],
+    process=Process.continuous,
+    iteration_delay=5.0,  # Check every 5 seconds
+)
+
+# Start continuous operation
+handle = crew.continuous_kickoff(
+    monitoring_directive="Monitor BTC price. Trade on 5% dips."
+)
+
+# Check status
+print(f"Running: {handle.is_running}")
+print(f"Iterations: {handle.iterations}")
+print(f"Uptime: {handle.uptime} seconds")
+
+# Control the running crew
+handle.pause()   # Pause operation
+handle.resume()  # Resume operation
+handle.stop()    # Stop gracefully
+```
+
+#### Continuous Mode with Streaming
+
+Get real-time token streaming from your continuous agents:
+
+```python Code
+import asyncio
+
+async def main():
+    stream = crew.continuous_kickoff_stream(
+        monitoring_directive="Monitor markets continuously"
+    )
+
+    async for chunk in stream:
+        print(chunk.content, end="", flush=True)
+
+        if chunk.chunk_type == "TOOL_CALL":
+            print(f"\n[Tool: {chunk.tool_call.tool_name}]")
+
+asyncio.run(main())
+```
+
+#### Continuous Mode Methods
+
+| Method | Type | Description |
+|--------|------|-------------|
+| `continuous_kickoff()` | Sync | Start continuous operation, returns handle |
+| `continuous_kickoff_async()` | Async | Async version of continuous kickoff |
+| `continuous_kickoff_stream()` | Async | Start with real-time streaming |
+| `stop()` | Sync | Stop continuous operation |
+| `pause()` | Sync | Pause continuous operation |
+| `resume()` | Sync | Resume paused operation |
+
+Learn more about continuous mode in the [Continuous Mode](/en/concepts/continuous-mode) guide.
 
 ### Replaying from a Specific Task
 

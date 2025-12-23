@@ -1,0 +1,335 @@
+---
+title: Continuous Mode
+description: Run crews indefinitely for always-on automation like trading bots, monitoring systems, and 24/7 operations.
+icon: infinity
+mode: "wide"
+---
+
+## Overview
+
+<Tip>
+Continuous Mode transforms CrewAI from a "run once and finish" model to an "always-on" operation model.
+Agents operate indefinitely, monitoring conditions and taking actions until explicitly stopped.
+</Tip>
+
+Continuous Mode is designed for use cases that require ongoing operation:
+- **24/7 Trading Bots**: Monitor markets and execute trades continuously
+- **System Monitoring**: Watch systems and respond to issues in real-time
+- **Data Processing Pipelines**: Continuously process incoming data streams
+- **Automated Customer Support**: Always-available AI support agents
+
+## Key Differences from Standard Mode
+
+| Aspect | Standard Mode | Continuous Mode |
+|:-------|:-------------|:----------------|
+| **Execution** | Runs once, produces output | Runs indefinitely until stopped |
+| **Tasks** | Have expected outputs | Ongoing monitoring/action |
+| **Completion** | Agent provides "Final Answer" | Never finishes, creates checkpoints |
+| **Memory** | Static during execution | Managed to prevent unbounded growth |
+| **Control** | Wait for result | Pause, resume, stop anytime |
+
+## Quick Start
+
+```python
+from crewai import Agent, Crew, Process
+
+# Create your continuous agent
+monitor = Agent(
+    role="System Monitor",
+    goal="Monitor system health and respond to issues",
+    backstory="Expert system administrator with 24/7 monitoring experience",
+    tools=[SystemHealthTool(), AlertTool(), RestartServiceTool()],
+)
+
+# Create crew for continuous operation
+crew = Crew(
+    agents=[monitor],
+    process=Process.continuous,
+    iteration_delay=5.0,  # Check every 5 seconds
+)
+
+# Start continuous operation
+handle = crew.continuous_kickoff(
+    monitoring_directive="Monitor all services. Alert on errors. Auto-restart failed services."
+)
+
+# Control the running crew
+print(f"Running: {handle.is_running}")
+print(f"Iterations: {handle.iterations}")
+
+# Stop when needed
+handle.stop()
+```
+
+## Real-Time Streaming
+
+Continuous Mode supports real-time token streaming, allowing you to see agent thoughts and actions as they happen.
+
+### Method 1: Async Generator
+
+```python
+import asyncio
+
+async def main():
+    stream = crew.continuous_kickoff_stream(
+        monitoring_directive="Monitor BTC price continuously"
+    )
+
+    async for chunk in stream:
+        # Print tokens as they're generated
+        print(chunk.content, end="", flush=True)
+
+        # React to specific events
+        if chunk.chunk_type == "TOOL_CALL":
+            print(f"\n[Using tool: {chunk.tool_call.tool_name}]")
+
+asyncio.run(main())
+```
+
+### Method 2: Callback Functions
+
+```python
+def on_token(chunk):
+    """Called for each streamed token."""
+    print(chunk.content, end="", flush=True)
+
+def on_action(chunk):
+    """Called when agent takes action."""
+    if chunk.chunk_type == "TOOL_CALL":
+        print(f"\n[Agent using: {chunk.tool_call.tool_name}]")
+
+handle = crew.continuous_kickoff(
+    monitoring_directive="Monitor systems",
+    on_chunk=on_token,
+)
+```
+
+### Method 3: WebSocket/SSE Integration
+
+```python
+from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
+
+app = FastAPI()
+
+@app.get("/stream")
+async def stream_endpoint():
+    async def generate():
+        stream = crew.continuous_kickoff_stream(
+            monitoring_directive="Monitor markets"
+        )
+        async for chunk in stream:
+            # WebSocket-ready JSON format
+            yield f"data: {chunk.to_websocket_message()}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream"
+    )
+```
+
+## Crew Handle
+
+The `ContinuousCrewHandle` provides full control over your running crew:
+
+```python
+handle = crew.continuous_kickoff(monitoring_directive="...")
+
+# Status checks
+handle.is_running    # True if actively running
+handle.is_paused     # True if paused
+handle.iterations    # Number of iterations completed
+handle.uptime        # Seconds since start
+
+# Control methods
+handle.pause()       # Pause operation
+handle.resume()      # Resume after pause
+handle.stop()        # Graceful shutdown
+
+# Statistics
+stats = handle.get_stats()
+print(f"Iterations: {stats['iterations']}")
+print(f"Uptime: {stats['uptime_seconds']}s")
+print(f"Errors: {stats['error_count']}")
+```
+
+## Continuous Task
+
+In continuous mode, tasks work differently. They track observations and iterations rather than producing a final output:
+
+```python
+from crewai.tasks import ContinuousTask
+
+task = ContinuousTask(
+    description="Monitor BTC/USD and execute trades when conditions are met.",
+    agent=trader_agent,
+    max_observations=100,  # Keep last 100 observations
+)
+
+# Access task state
+task.iteration_count      # Current iteration
+task.observations         # Recorded observations
+task.uptime_seconds       # How long running
+task.get_recent_observations(10)  # Last 10 observations
+
+# Create checkpoints
+task.checkpoint(summary="Completed morning trading session")
+```
+
+## Event System
+
+Subscribe to continuous mode events for detailed monitoring:
+
+```python
+from crewai.events import crewai_event_bus
+from crewai.events.types.continuous_events import (
+    ContinuousAgentActionEvent,
+    ContinuousIterationCompleteEvent,
+    ContinuousHealthCheckEvent,
+)
+
+@crewai_event_bus.on(ContinuousAgentActionEvent)
+def on_action(source, event):
+    print(f"[{event.timestamp}] {event.agent_role}: {event.action_type}")
+    print(f"  Tool: {event.tool_name}")
+
+@crewai_event_bus.on(ContinuousIterationCompleteEvent)
+def on_iteration(source, event):
+    print(f"Iteration {event.iteration} complete")
+    print(f"  Actions taken: {event.actions_taken}")
+
+@crewai_event_bus.on(ContinuousHealthCheckEvent)
+def on_health(source, event):
+    print(f"Health check - Uptime: {event.uptime_seconds}s")
+    print(f"  Total iterations: {event.total_iterations}")
+```
+
+## Memory Management
+
+Continuous mode automatically manages memory to prevent unbounded growth:
+
+```python
+from crewai.continuous import ContinuousMemoryHandler
+
+# Memory is managed automatically, but you can customize:
+crew = Crew(
+    agents=[monitor],
+    process=Process.continuous,
+    # Memory settings
+    max_continuous_runtime=3600,  # Optional: max 1 hour
+)
+```
+
+The `ContinuousMemoryHandler`:
+- Trims old messages when exceeding threshold
+- Summarizes discarded context to preserve important information
+- Manages tool results and observations efficiently
+- Provides statistics on memory usage
+
+## Configuration Options
+
+| Parameter | Type | Default | Description |
+|:----------|:-----|:--------|:------------|
+| `iteration_delay` | `float` | `1.0` | Seconds between iterations |
+| `max_continuous_runtime` | `int \| None` | `None` | Maximum runtime in seconds |
+| `health_check_interval` | `int` | `60` | Seconds between health checks |
+| `continuous_callback` | `Callable` | `None` | Callback after each iteration |
+
+```python
+crew = Crew(
+    agents=[monitor],
+    process=Process.continuous,
+    iteration_delay=5.0,           # Check every 5 seconds
+    max_continuous_runtime=86400,  # Run for max 24 hours
+    health_check_interval=300,     # Health check every 5 minutes
+)
+```
+
+## Graceful Shutdown
+
+Continuous mode supports graceful shutdown with signal handling:
+
+```python
+# Graceful stop - waits for current iteration
+handle.stop(graceful=True, timeout=30.0)
+
+# Force stop - immediate termination
+handle.stop(graceful=False)
+```
+
+The shutdown controller handles:
+- `SIGINT` (Ctrl+C) - Graceful shutdown
+- `SIGTERM` - Graceful shutdown
+- Cleanup callbacks for resource management
+
+## Best Practices
+
+<Tip>
+**Design for Resilience**: Since continuous agents run indefinitely, design them to handle errors gracefully and recover automatically.
+</Tip>
+
+1. **Set Appropriate Delays**: Use `iteration_delay` to prevent excessive API calls
+2. **Monitor Resource Usage**: Use health checks and events to track performance
+3. **Handle Errors Gracefully**: Agents should recover from transient failures
+4. **Use Checkpoints**: Periodically create checkpoints for state tracking
+5. **Implement Graceful Shutdown**: Always use `stop()` rather than killing the process
+
+## Example: Crypto Trading Bot
+
+See our complete guide: [Building a Crypto Trading Bot](/en/guides/continuous/crypto-trading-bot)
+
+```python
+from crewai import Agent, Crew, Process
+
+# Price monitoring agent
+price_monitor = Agent(
+    role="Price Monitor",
+    goal="Track BTC/USD price and identify trading opportunities",
+    backstory="Experienced quantitative analyst",
+    tools=[PriceFetcherTool()],
+)
+
+# Trade execution agent
+trader = Agent(
+    role="Trade Executor",
+    goal="Execute profitable trades based on signals",
+    backstory="Expert day trader with risk management skills",
+    tools=[OrderExecutionTool(), PortfolioTool()],
+)
+
+# Continuous trading crew
+crew = Crew(
+    agents=[price_monitor, trader],
+    process=Process.continuous,
+    iteration_delay=10.0,  # Check every 10 seconds
+)
+
+handle = crew.continuous_kickoff(
+    monitoring_directive="""
+    Monitor BTC/USD price continuously.
+    Buy when price drops 5% from recent high.
+    Sell when price rises 10% from purchase price.
+    Maximum position size: 0.1 BTC.
+    """
+)
+
+# Run until manually stopped
+try:
+    while handle.is_running:
+        time.sleep(60)
+        stats = handle.get_stats()
+        print(f"Uptime: {stats['uptime_seconds']/3600:.1f}h, Iterations: {stats['iterations']}")
+except KeyboardInterrupt:
+    handle.stop()
+```
+
+## Comparison with Flows
+
+| Feature | Continuous Mode | Flows |
+|:--------|:---------------|:------|
+| **Purpose** | Indefinite operation | Complex workflows |
+| **Execution** | Always running | Triggered execution |
+| **State** | Managed automatically | User-defined state |
+| **Best for** | Monitoring, trading | Pipelines, orchestration |
+
+Use **Continuous Mode** when you need agents running 24/7. Use **Flows** when you need complex, multi-step workflows with defined start and end points.

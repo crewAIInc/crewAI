@@ -116,6 +116,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    _continuous_executor: Any = PrivateAttr(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")

@@ -101,8 +101,12 @@ from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
+    create_task_completed_chunk,
+    create_task_started_chunk,
+    emit_lifecycle_chunk,
     signal_end,
     signal_error,
+    update_task_info,
 )
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -168,6 +172,16 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+
+    # Streaming context for UI-friendly output
+    _streaming_context: Any = PrivateAttr(default=None)
+
+    # Continuous mode private attributes
+    _shutdown_controller: Any = PrivateAttr(default=None)
+    _continuous_context: Any = PrivateAttr(default=None)
+    _continuous_streaming_output: Any = PrivateAttr(default=None)
+    _is_continuous: bool = PrivateAttr(default=False)
+    _continuous_task: Any = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -302,6 +316,24 @@ class Crew(FlowTrackable, BaseModel):
     tracing: bool | None = Field(
         default=None,
         description="Whether to enable tracing for the crew. True=always enable, False=always disable, None=check environment/user settings.",
+    )
+
+    # Continuous mode fields
+    iteration_delay: float = Field(
+        default=1.0,
+        description="Delay between continuous iterations in seconds.",
+    )
+    max_continuous_runtime: int | None = Field(
+        default=None,
+        description="Maximum runtime for continuous mode in seconds. None for unlimited.",
+    )
+    health_check_interval: int = Field(
+        default=60,
+        description="Interval for health check events in seconds.",
+    )
+    continuous_callback: Any | None = Field(
+        default=None,
+        description="Callback for each continuous iteration.",
     )
 
     @field_validator("id", mode="before")
@@ -680,6 +712,7 @@ class Crew(FlowTrackable, BaseModel):
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext()
+            self._streaming_context = ctx  # Store for task info updates
 
             def run_crew() -> None:
                 """Execute the crew and capture the result."""
@@ -692,12 +725,14 @@ class Crew(FlowTrackable, BaseModel):
                     signal_error(ctx.state, exc)
                 finally:
                     self.stream = True
+                    self._streaming_context = None  # Clear context
                     signal_end(ctx.state)
 
             streaming_output = CrewStreamingOutput(
                 sync_iterator=create_chunk_generator(
                     ctx.state, run_crew, ctx.output_holder
-                )
+                ),
+                crew=self,
             )
             ctx.output_holder.append(streaming_output)
             return streaming_output
@@ -791,7 +826,8 @@ class Crew(FlowTrackable, BaseModel):
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
                     ctx.state, run_crew, ctx.output_holder
-                )
+                ),
+                crew=self,
             )
             ctx.output_holder.append(streaming_output)
 
@@ -844,7 +880,8 @@ class Crew(FlowTrackable, BaseModel):
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
                     ctx.state, run_crew, ctx.output_holder
-                )
+                ),
+                crew=self,
             )
             ctx.output_holder.append(streaming_output)
 
@@ -898,6 +935,442 @@ class Crew(FlowTrackable, BaseModel):
             return await crew.akickoff(inputs=input_data)
 
         return await run_for_each_async(self, inputs, kickoff_fn)
+
+    def continuous_kickoff(
+        self,
+        inputs: dict[str, Any] | None = None,
+        monitoring_directive: str | None = None,
+        stream: bool = False,
+        on_chunk: Any | None = None,
+    ) -> Any:
+        """Start continuous crew operation.
+
+        This method starts the crew in continuous mode where agents run
+        indefinitely until explicitly stopped. Unlike regular kickoff(),
+        this method does not return until stop() is called.
+
+        Args:
+            inputs: Initial inputs for agent interpolation
+            monitoring_directive: High-level directive for what agents should do
+            stream: Whether to enable streaming output
+            on_chunk: Optional callback for streaming chunks
+
+        Returns:
+            ContinuousCrewHandle for controlling the running crew
+
+        Example:
+            ```python
+            handle = crew.continuous_kickoff(
+                monitoring_directive="Monitor BTC. Buy on 5% dip.",
+                stream=True,
+                on_chunk=lambda chunk: print(chunk.content)
+            )
+
+            # Later: stop gracefully
+            handle.stop()
+            ```
+        """
+        from crewai.continuous.shutdown import ShutdownController
+        from crewai.continuous.state import ContinuousContext, ContinuousState
+        from crewai.crews.continuous_crew_handle import ContinuousCrewHandle
+        from crewai.events.types.continuous_events import (
+            ContinuousHealthCheckEvent,
+            ContinuousKickoffStartedEvent,
+            ContinuousKickoffStoppedEvent,
+        )
+        from crewai.tasks.continuous_task import ContinuousTask
+        from crewai.types.continuous_streaming import ContinuousStreamingOutput
+
+        # Initialize continuous mode
+        self._is_continuous = True
+        self._shutdown_controller = ShutdownController()
+        self._continuous_context = ContinuousContext()
+
+        # Setup streaming if requested
+        if stream:
+            self._continuous_streaming_output = ContinuousStreamingOutput(
+                self._shutdown_controller
+            )
+            self._continuous_streaming_output.start()
+            if on_chunk:
+                self._continuous_streaming_output.on_chunk(on_chunk)
+
+        # Install signal handlers
+        self._shutdown_controller.install_signal_handlers()
+
+        # Prepare inputs
+        inputs = inputs or {}
+        for callback in self.before_kickoff_callbacks:
+            inputs = callback(inputs) or inputs
+
+        # Emit start event
+        crewai_event_bus.emit(
+            self,
+            ContinuousKickoffStartedEvent(
+                crew_name=self.name,
+                crew=self,
+                agents=[a.role for a in self.agents],
+                monitoring_directive=monitoring_directive,
+            ),
+        )
+
+        # Create continuous task
+        directive = monitoring_directive or self._generate_continuous_directive()
+        self._continuous_task = ContinuousTask(
+            description=directive,
+            agent=self.agents[0] if len(self.agents) == 1 else None,
+        )
+
+        # Create handle before starting
+        handle = ContinuousCrewHandle(
+            crew=self,
+            context=self._continuous_context,
+            streaming_output=self._continuous_streaming_output if stream else None,
+        )
+
+        # Run continuous process
+        stop_reason = "user_requested"
+        try:
+            self._run_continuous_process(inputs)
+        except Exception as e:
+            stop_reason = f"error: {str(e)}"
+            self._continuous_context.record_error(str(e))
+            raise
+        finally:
+            # Emit stop event
+            crewai_event_bus.emit(
+                self,
+                ContinuousKickoffStoppedEvent(
+                    crew_name=self.name,
+                    crew=self,
+                    reason=stop_reason,
+                    total_iterations=self._continuous_context.iteration_count,
+                    runtime_seconds=self._continuous_context.uptime_seconds,
+                ),
+            )
+
+            # Cleanup
+            self._cleanup_continuous()
+
+        return handle
+
+    def continuous_kickoff_stream(
+        self,
+        inputs: dict[str, Any] | None = None,
+        monitoring_directive: str | None = None,
+    ) -> Any:
+        """Start continuous crew with streaming output.
+
+        Convenience method that returns a streaming iterator.
+
+        Args:
+            inputs: Initial inputs for agent interpolation
+            monitoring_directive: High-level directive for what agents should do
+
+        Returns:
+            ContinuousStreamingOutput that can be iterated
+
+        Example:
+            ```python
+            async for chunk in crew.continuous_kickoff_stream():
+                print(chunk.content, end="", flush=True)
+            ```
+        """
+        from crewai.continuous.shutdown import ShutdownController
+        from crewai.continuous.state import ContinuousContext
+        from crewai.types.continuous_streaming import ContinuousStreamingOutput
+        import threading
+
+        # Initialize
+        self._is_continuous = True
+        self._shutdown_controller = ShutdownController()
+        self._continuous_context = ContinuousContext()
+        self._continuous_streaming_output = ContinuousStreamingOutput(
+            self._shutdown_controller
+        )
+        self._continuous_streaming_output.start()
+
+        # Start in background thread
+        def run_continuous() -> None:
+            try:
+                self.continuous_kickoff(
+                    inputs=inputs,
+                    monitoring_directive=monitoring_directive,
+                    stream=False,  # We handle streaming separately
+                )
+            finally:
+                self._continuous_streaming_output.stop()
+
+        thread = threading.Thread(target=run_continuous, daemon=True)
+        thread.start()
+
+        return self._continuous_streaming_output
+
+    def _run_continuous_process(self, inputs: dict[str, Any]) -> None:
+        """Execute the continuous process loop.
+
+        Args:
+            inputs: Inputs for the process
+        """
+        import time
+        from crewai.agents.continuous_agent_executor import ContinuousAgentExecutor
+        from crewai.continuous.state import ContinuousState
+        from crewai.events.types.continuous_events import ContinuousHealthCheckEvent
+        from crewai.utilities.prompts import Prompts
+
+        last_health_check = time.time()
+        start_time = time.time()
+
+        # Setup agents with continuous executors
+        for agent in self.agents:
+            self._setup_agent_for_continuous(agent, inputs)
+
+        # Main continuous loop
+        while not self._shutdown_controller.should_stop:
+            # Check max runtime
+            if self.max_continuous_runtime:
+                if time.time() - start_time > self.max_continuous_runtime:
+                    self._shutdown_controller.request_stop()
+                    break
+
+            # Check pause state
+            if self._continuous_context.state == ContinuousState.PAUSED:
+                time.sleep(0.1)
+                continue
+
+            # Execute one iteration for each agent
+            for agent in self.agents:
+                if self._shutdown_controller.should_stop:
+                    break
+
+                if hasattr(agent, "_continuous_executor") and agent._continuous_executor:
+                    agent._continuous_executor.continuous_iterate()
+
+            # Update streaming output iteration
+            if self._continuous_streaming_output:
+                self._continuous_streaming_output.current_iteration = (
+                    self._continuous_context.iteration_count
+                )
+
+            # Call continuous callback if set
+            if self.continuous_callback:
+                try:
+                    self.continuous_callback(self._continuous_context)
+                except Exception:
+                    pass  # Don't let callback errors break the loop
+
+            # Health check
+            if time.time() - last_health_check > self.health_check_interval:
+                self._emit_health_check()
+                last_health_check = time.time()
+
+            # Apply delay
+            time.sleep(self.iteration_delay)
+
+    def _setup_agent_for_continuous(
+        self,
+        agent: BaseAgent,
+        inputs: dict[str, Any],
+    ) -> None:
+        """Setup an agent for continuous operation.
+
+        Args:
+            agent: Agent to setup
+            inputs: Inputs for initialization
+        """
+        from crewai.agents.continuous_agent_executor import ContinuousAgentExecutor
+        from crewai.utilities.prompts import Prompts
+        from crewai.tools.structured_tool import CrewStructuredTool
+
+        # Get agent's tools
+        tools = agent.tools or []
+
+        # Create prompts for continuous mode
+        prompts = Prompts(agent=agent, i18n=agent.i18n)
+        prompt = prompts.continuous_execution()
+
+        # Parse tools
+        from crewai.utilities.tool_utils import parse_tools
+        parsed_tools = parse_tools(tools)
+
+        # Create continuous executor
+        executor = ContinuousAgentExecutor(
+            llm=agent.llm,
+            task=self._continuous_task,
+            crew=self,
+            agent=agent,
+            prompt=prompt,
+            max_iter=agent.max_iter,
+            tools=parsed_tools,
+            tools_names=", ".join([t.name for t in parsed_tools]),
+            stop_words=[agent.i18n.slice("observation")],
+            tools_description=self._get_tools_description(parsed_tools),
+            tools_handler=agent.tools_handler,
+            shutdown_controller=self._shutdown_controller,
+            state_manager=self._continuous_context,
+            streaming_output=self._continuous_streaming_output,
+            function_calling_llm=agent.function_calling_llm,
+            respect_context_window=True,
+            iteration_delay=0,  # We handle delay in main loop
+        )
+
+        # Initialize executor
+        executor.initialize(inputs)
+
+        # Store on agent
+        agent._continuous_executor = executor
+
+    def _get_tools_description(self, tools: list) -> str:
+        """Get formatted description of tools.
+
+        Args:
+            tools: List of tools
+
+        Returns:
+            Formatted tool descriptions
+        """
+        if not tools:
+            return "No tools available."
+
+        descriptions = []
+        for tool in tools:
+            name = getattr(tool, "name", str(tool))
+            desc = getattr(tool, "description", "No description")
+            descriptions.append(f"- {name}: {desc}")
+
+        return "\n".join(descriptions)
+
+    def _generate_continuous_directive(self) -> str:
+        """Generate a default continuous directive from agent goals.
+
+        Returns:
+            Generated directive string
+        """
+        if not self.agents:
+            return "Continuously monitor and take action as needed."
+
+        goals = [agent.goal for agent in self.agents]
+        return f"Continuously work towards: {'; '.join(goals)}"
+
+    def _emit_health_check(self) -> None:
+        """Emit a health check event."""
+        from crewai.events.types.continuous_events import ContinuousHealthCheckEvent
+
+        crewai_event_bus.emit(
+            self,
+            ContinuousHealthCheckEvent(
+                crew_name=self.name,
+                crew=self,
+                uptime_seconds=self._continuous_context.uptime_seconds,
+                total_iterations=self._continuous_context.iteration_count,
+                agents_status={
+                    agent.role: "active" for agent in self.agents
+                },
+                error_count=len(self._continuous_context.errors),
+                recent_errors=self._continuous_context.errors[-5:] if self._continuous_context.errors else None,
+            ),
+        )
+        self._continuous_context.update_health_check()
+
+    def _cleanup_continuous(self) -> None:
+        """Cleanup continuous mode resources."""
+        from crewai.continuous.state import ContinuousState
+
+        # Stop streaming output
+        if self._continuous_streaming_output:
+            self._continuous_streaming_output.stop()
+
+        # Set stopped state
+        if self._continuous_context:
+            self._continuous_context.state = ContinuousState.STOPPED
+
+        # Restore signal handlers
+        if self._shutdown_controller:
+            self._shutdown_controller.restore_signal_handlers()
+            self._shutdown_controller.run_cleanup()
+
+        # Reset flag
+        self._is_continuous = False
+
+    def stop(self, graceful: bool = True, timeout: float = 30.0) -> None:
+        """Stop continuous operation.
+
+        Args:
+            graceful: If True, wait for current iteration to complete
+            timeout: Maximum time to wait for graceful stop (seconds)
+
+        Raises:
+            RuntimeError: If crew is not running in continuous mode
+        """
+        if not self._is_continuous or not self._shutdown_controller:
+            raise RuntimeError("Crew is not running in continuous mode")
+
+        from crewai.continuous.state import ContinuousState
+
+        self._continuous_context.state = ContinuousState.STOPPING
+
+        if graceful:
+            self._shutdown_controller.stop_with_timeout(timeout)
+        else:
+            self._shutdown_controller.force_stop()
+
+    def pause(self) -> None:
+        """Pause continuous operation.
+
+        The crew will stop processing after the current iteration
+        completes but will maintain its state for resumption.
+
+        Raises:
+            RuntimeError: If crew is not running in continuous mode
+        """
+        if not self._is_continuous or not self._continuous_context:
+            raise RuntimeError("Crew is not running in continuous mode")
+
+        from crewai.continuous.state import ContinuousState
+        from crewai.events.types.continuous_events import ContinuousPausedEvent
+
+        self._continuous_context.state = ContinuousState.PAUSED
+
+        crewai_event_bus.emit(
+            self,
+            ContinuousPausedEvent(
+                crew_name=self.name,
+                crew=self,
+                iteration=self._continuous_context.iteration_count,
+            ),
+        )
+
+    def resume(self) -> None:
+        """Resume a paused continuous operation.
+
+        Raises:
+            RuntimeError: If crew is not running in continuous mode
+        """
+        if not self._is_continuous or not self._continuous_context:
+            raise RuntimeError("Crew is not running in continuous mode")
+
+        from crewai.continuous.state import ContinuousState
+        from crewai.events.types.continuous_events import ContinuousResumedEvent
+
+        # Calculate pause duration
+        pause_duration = 0.0
+        if self._continuous_context.last_action_time:
+            from datetime import datetime
+            pause_duration = (
+                datetime.now() - self._continuous_context.last_action_time
+            ).total_seconds()
+
+        self._continuous_context.state = ContinuousState.RUNNING
+
+        crewai_event_bus.emit(
+            self,
+            ContinuousResumedEvent(
+                crew_name=self.name,
+                crew=self,
+                iteration=self._continuous_context.iteration_count,
+                pause_duration_seconds=pause_duration,
+            ),
+        )
 
     async def _arun_sequential_process(self) -> CrewOutput:
         """Executes tasks sequentially using native async and returns the final output."""
@@ -1132,6 +1605,25 @@ class Crew(FlowTrackable, BaseModel):
             if exec_data.should_skip:
                 continue
 
+            # Update streaming context with current task info for UI-friendly output
+            if self._streaming_context is not None:
+                update_task_info(
+                    self._streaming_context.current_task_info,
+                    task_index=task_index,
+                    task_name=task.name or task.description[:50],
+                    task_id=str(task.id),
+                    agent_role=exec_data.agent.role if exec_data.agent else "",
+                    agent_id=str(exec_data.agent.id) if exec_data.agent else "",
+                )
+                # Emit TASK_STARTED lifecycle chunk
+                started_chunk = create_task_started_chunk(
+                    task=task,
+                    task_index=task_index,
+                    total_tasks=len(tasks),
+                    agent=exec_data.agent,
+                )
+                emit_lifecycle_chunk(self._streaming_context.state, started_chunk)
+
             if isinstance(task, ConditionalTask):
                 skipped_task_output = self._handle_conditional_task(
                     task, task_outputs, futures, task_index, was_replayed
@@ -1164,6 +1656,15 @@ class Crew(FlowTrackable, BaseModel):
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+
+                # Emit TASK_COMPLETED lifecycle chunk
+                if self._streaming_context is not None:
+                    completed_chunk = create_task_completed_chunk(
+                        task=task,
+                        task_index=task_index,
+                        task_output=task_output,
+                    )
+                    emit_lifecycle_chunk(self._streaming_context.state, completed_chunk)
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
