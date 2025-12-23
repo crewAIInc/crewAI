@@ -34,6 +34,7 @@ A crew in crewAI represents a collaborative group of agents working together to 
 | **Planning LLM** *(optional)*         | `planning_llm`         | The language model used by the AgentPlanner in a planning process.                                                                                                                                                                                        |
 | **Knowledge Sources** _(optional)_    | `knowledge_sources`    | Knowledge sources available at the crew level, accessible to all the agents.                                                                                                                                                                                    |
 | **Stream** _(optional)_               | `stream`               | Enable streaming output to receive real-time updates during crew execution. Returns a `CrewStreamingOutput` object that can be iterated for chunks. Defaults to `False`.                                                                                    |
+| **Streaming Config** _(optional)_     | `streaming_config`     | Configuration for streaming behavior including heartbeat interval and timeouts. Useful for slow local LLM models. See [Slow Local Model Support](#slow-local-model-support).                                                                                |
 | **Iteration Delay** _(optional)_      | `iteration_delay`      | Seconds between iterations in continuous mode. Defaults to `1.0`.                                                                                                                                                                                            |
 | **Max Continuous Runtime** _(optional)_ | `max_continuous_runtime` | Maximum runtime in seconds for continuous mode. `None` for unlimited.                                                                                                                                                                                      |
 | **Health Check Interval** _(optional)_ | `health_check_interval` | Seconds between health checks in continuous mode. Defaults to `60`.                                                                                                                                                                                        |
@@ -396,7 +397,7 @@ Each `StreamChunk` contains metadata for UI display:
 | Property | Description |
 |----------|-------------|
 | `content` | The text content |
-| `chunk_type` | Type: TEXT, TOOL_CALL, TASK_STARTED, TASK_COMPLETED |
+| `chunk_type` | Type: TEXT, TOOL_CALL, TASK_STARTED, TASK_COMPLETED, HEARTBEAT, ERROR |
 | `task_index` | Current task index (0-based) |
 | `task_name` | Name of the current task |
 | `task_id` | Unique task identifier |
@@ -442,6 +443,53 @@ for task in ui_output.tasks:
 ```
 
 Learn more about streaming in the [Streaming Crew Execution](/en/learn/streaming-crew-execution) guide.
+
+#### Slow Local Model Support
+
+When using local LLMs (like Ollama, LM Studio, or other self-hosted models), response times can be significantly longer than cloud APIs. CrewAI provides `StreamingConfig` to handle these scenarios with heartbeat feedback and retry logic.
+
+```python Code
+from crewai import Crew
+from crewai.utilities.streaming import StreamingConfig
+from crewai.types import StreamChunkType
+
+# Configure for slow local models
+config = StreamingConfig(
+    heartbeat_interval=30.0,  # Emit heartbeat every 30 seconds
+    queue_poll_timeout=1.0,   # Poll interval for queue
+    llm_timeout=None,         # Wait indefinitely for LLM response
+    max_retries=5,            # Retry up to 5 times on connection errors
+    retry_delay=1.0,          # Initial retry delay
+    retry_backoff=2.0,        # Exponential backoff multiplier
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True,
+    streaming_config=config,
+)
+
+for chunk in crew.kickoff(inputs={"topic": "AI"}):
+    if chunk.chunk_type == StreamChunkType.HEARTBEAT:
+        # Keep UI alive during long waits
+        print(f"[Still working...] {chunk.content}")
+    else:
+        print(chunk.content, end="", flush=True)
+```
+
+| StreamingConfig Option | Default | Description |
+|------------------------|---------|-------------|
+| `heartbeat_interval` | `30.0` | Seconds between heartbeat emissions during LLM waits |
+| `queue_poll_timeout` | `1.0` | Timeout for queue polling (enables heartbeat detection) |
+| `llm_timeout` | `None` | Maximum wait time for LLM response (`None` = unlimited) |
+| `max_retries` | `3` | Maximum retry attempts on connection errors |
+| `retry_delay` | `1.0` | Initial delay before first retry (seconds) |
+| `retry_backoff` | `2.0` | Multiplier for exponential backoff |
+
+<Tip>
+**Heartbeat Chunks**: The `HEARTBEAT` chunk type keeps your UI responsive during long LLM waits. The chunk content includes the wait duration (e.g., "Still waiting for LLM response... (45s)").
+</Tip>
 
 ### Continuous Mode Execution
 

@@ -2,8 +2,11 @@
 
 import asyncio
 from collections.abc import AsyncIterator, Callable, Iterator
+from dataclasses import dataclass
+from datetime import datetime
 import queue
 import threading
+import time
 from typing import Any, NamedTuple
 
 from typing_extensions import TypedDict
@@ -20,6 +23,91 @@ from crewai.types.streaming import (
     TaskInfoChunk,
     ToolCallChunk,
 )
+
+
+@dataclass
+class StreamingConfig:
+    """Configuration for streaming behavior with slow LLM models.
+
+    Attributes:
+        heartbeat_interval: Seconds between heartbeat emissions (default: 30)
+        queue_poll_timeout: Seconds to wait for queue items before checking for heartbeat (default: 1.0)
+        llm_timeout: Maximum seconds to wait for LLM response (None = wait forever)
+        max_retries: Number of retries for transient failures (default: 3)
+        retry_delay: Seconds to wait between retries (default: 1.0)
+        retry_backoff: Multiplier for retry delay (default: 2.0)
+    """
+
+    heartbeat_interval: float = 30.0
+    queue_poll_timeout: float = 1.0
+    llm_timeout: float | None = None  # None = wait forever (for slow local models)
+    max_retries: int = 3
+    retry_delay: float = 1.0
+    retry_backoff: float = 2.0
+
+
+# Default global config
+DEFAULT_STREAMING_CONFIG = StreamingConfig()
+
+
+class HeartbeatTracker:
+    """Tracks time since last heartbeat to know when to emit.
+
+    Used to send periodic "still waiting" signals to the UI during
+    long LLM response times (common with local models).
+    """
+
+    def __init__(self, interval: float = 30.0) -> None:
+        """Initialize the heartbeat tracker.
+
+        Args:
+            interval: Seconds between heartbeat emissions.
+        """
+        self.interval = interval
+        self.last_heartbeat = time.time()
+        self.wait_start = time.time()
+
+    def should_emit(self) -> bool:
+        """Check if enough time has passed to emit a heartbeat."""
+        return time.time() - self.last_heartbeat >= self.interval
+
+    def mark_emitted(self) -> None:
+        """Mark that a heartbeat was just emitted."""
+        self.last_heartbeat = time.time()
+
+    def get_wait_duration(self) -> float:
+        """Get total time spent waiting."""
+        return time.time() - self.wait_start
+
+    def reset(self) -> None:
+        """Reset tracker for new wait period."""
+        self.last_heartbeat = time.time()
+        self.wait_start = time.time()
+
+
+def create_heartbeat_chunk(
+    current_task_info: "TaskInfo",
+    wait_duration_seconds: float,
+) -> StreamChunk:
+    """Create a HEARTBEAT chunk to indicate system is still processing.
+
+    Args:
+        current_task_info: Current task context info.
+        wait_duration_seconds: How long we've been waiting.
+
+    Returns:
+        StreamChunk with HEARTBEAT type.
+    """
+    return StreamChunk(
+        content=f"Still waiting for LLM response... ({wait_duration_seconds:.0f}s)",
+        chunk_type=StreamChunkType.HEARTBEAT,
+        task_index=current_task_info["index"],
+        task_name=current_task_info["name"],
+        task_id=current_task_info["id"],
+        agent_role=current_task_info["agent_role"],
+        agent_id=current_task_info["agent_id"],
+        timestamp=datetime.now(),
+    )
 
 
 class TaskInfo(TypedDict):
@@ -351,30 +439,57 @@ def create_chunk_generator(
     state: StreamingState,
     run_func: Callable[[], None],
     output_holder: list[CrewStreamingOutput | FlowStreamingOutput],
+    config: StreamingConfig | None = None,
 ) -> Iterator[StreamChunk]:
     """Create a chunk generator that uses a holder to access streaming output.
+
+    Features timeout-based polling with heartbeat emission for slow LLM models.
 
     Args:
         state: The streaming state.
         run_func: Function to run in a separate thread.
         output_holder: Single-element list that will contain the streaming output.
+        config: Optional streaming configuration (uses defaults if None).
 
     Yields:
-        StreamChunk objects as they arrive.
+        StreamChunk objects as they arrive, including HEARTBEAT chunks during long waits.
     """
+    cfg = config or DEFAULT_STREAMING_CONFIG
     thread = threading.Thread(target=run_func, daemon=True)
     thread.start()
 
+    heartbeat_tracker = HeartbeatTracker(interval=cfg.heartbeat_interval)
+
     try:
         while True:
-            item = state.sync_queue.get()
-            if item is None:
-                break
-            if isinstance(item, Exception):
-                raise item
-            yield item
+            try:
+                # Use timeout-based polling instead of blocking forever
+                item = state.sync_queue.get(timeout=cfg.queue_poll_timeout)
+
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+
+                # Reset heartbeat tracker when we get actual content
+                heartbeat_tracker.reset()
+                yield item
+
+            except queue.Empty:
+                # No item received within timeout - check if we should emit heartbeat
+                if heartbeat_tracker.should_emit():
+                    heartbeat_chunk = create_heartbeat_chunk(
+                        state.current_task_info,
+                        heartbeat_tracker.get_wait_duration(),
+                    )
+                    heartbeat_tracker.mark_emitted()
+                    yield heartbeat_chunk
+                # Continue polling
+                continue
+
     finally:
-        thread.join()
+        # Wait for thread with a reasonable timeout to avoid blocking forever
+        thread.join(timeout=5.0)
         if output_holder:
             _finalize_streaming(state, output_holder[0])
         else:
@@ -385,32 +500,61 @@ async def create_async_chunk_generator(
     state: StreamingState,
     run_coro: Callable[[], Any],
     output_holder: list[CrewStreamingOutput | FlowStreamingOutput],
+    config: StreamingConfig | None = None,
 ) -> AsyncIterator[StreamChunk]:
     """Create an async chunk generator that uses a holder to access streaming output.
+
+    Features timeout-based polling with heartbeat emission for slow LLM models.
 
     Args:
         state: The streaming state.
         run_coro: Coroutine function to run as a task.
         output_holder: Single-element list that will contain the streaming output.
+        config: Optional streaming configuration (uses defaults if None).
 
     Yields:
-        StreamChunk objects as they arrive.
+        StreamChunk objects as they arrive, including HEARTBEAT chunks during long waits.
     """
     if state.async_queue is None:
         raise RuntimeError(
             "Async queue not initialized. Use create_streaming_state(use_async=True)."
         )
 
+    cfg = config or DEFAULT_STREAMING_CONFIG
     task = asyncio.create_task(run_coro())
+
+    heartbeat_tracker = HeartbeatTracker(interval=cfg.heartbeat_interval)
 
     try:
         while True:
-            item = await state.async_queue.get()
-            if item is None:
-                break
-            if isinstance(item, Exception):
-                raise item
-            yield item
+            try:
+                # Use timeout-based polling instead of blocking forever
+                item = await asyncio.wait_for(
+                    state.async_queue.get(),
+                    timeout=cfg.queue_poll_timeout,
+                )
+
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    raise item
+
+                # Reset heartbeat tracker when we get actual content
+                heartbeat_tracker.reset()
+                yield item
+
+            except asyncio.TimeoutError:
+                # No item received within timeout - check if we should emit heartbeat
+                if heartbeat_tracker.should_emit():
+                    heartbeat_chunk = create_heartbeat_chunk(
+                        state.current_task_info,
+                        heartbeat_tracker.get_wait_duration(),
+                    )
+                    heartbeat_tracker.mark_emitted()
+                    yield heartbeat_chunk
+                # Continue polling
+                continue
+
     finally:
         await task
         if output_holder:

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
 import json
 import re
+import time
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from pydantic import BaseModel
@@ -37,6 +40,124 @@ if TYPE_CHECKING:
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
+
+
+@dataclass
+class LLMRetryConfig:
+    """Configuration for LLM retry behavior.
+
+    Useful for slow local models or unreliable network connections.
+
+    Attributes:
+        max_retries: Maximum number of retry attempts (default: 3).
+        initial_delay: Initial delay in seconds before first retry (default: 1.0).
+        backoff_multiplier: Multiplier for exponential backoff (default: 2.0).
+        max_delay: Maximum delay in seconds between retries (default: 60.0).
+        retryable_exceptions: Tuple of exception types that trigger a retry.
+    """
+
+    max_retries: int = 3
+    initial_delay: float = 1.0
+    backoff_multiplier: float = 2.0
+    max_delay: float = 60.0
+    retryable_exceptions: tuple[type[Exception], ...] = field(
+        default_factory=lambda: (ConnectionError, TimeoutError, OSError)
+    )
+
+
+DEFAULT_LLM_RETRY_CONFIG = LLMRetryConfig()
+
+
+def with_llm_retry(
+    func: Callable[..., Any],
+    config: LLMRetryConfig | None = None,
+    on_retry: Callable[[int, Exception, float], None] | None = None,
+) -> Callable[..., Any]:
+    """Wrap a function with retry logic for LLM calls.
+
+    Args:
+        func: The function to wrap.
+        config: Optional retry configuration. Uses defaults if not provided.
+        on_retry: Optional callback invoked before each retry with
+                  (attempt_number, exception, delay_seconds).
+
+    Returns:
+        Wrapped function with retry logic.
+
+    Example:
+        >>> def call_llm():
+        ...     return llm.call(messages)
+        >>> resilient_call = with_llm_retry(call_llm, config=LLMRetryConfig(max_retries=5))
+        >>> result = resilient_call()
+    """
+    cfg = config or DEFAULT_LLM_RETRY_CONFIG
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        delay = cfg.initial_delay
+        last_exception: Exception | None = None
+
+        for attempt in range(cfg.max_retries + 1):
+            try:
+                return func(*args, **kwargs)
+            except cfg.retryable_exceptions as e:
+                last_exception = e
+                if attempt < cfg.max_retries:
+                    if on_retry:
+                        on_retry(attempt + 1, e, delay)
+                    time.sleep(delay)
+                    delay = min(delay * cfg.backoff_multiplier, cfg.max_delay)
+                else:
+                    raise
+
+        # This should never be reached, but satisfy type checker
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("Unexpected state in retry logic")
+
+    return wrapper
+
+
+async def with_llm_retry_async(
+    func: Callable[..., Any],
+    config: LLMRetryConfig | None = None,
+    on_retry: Callable[[int, Exception, float], None] | None = None,
+) -> Callable[..., Any]:
+    """Async version of with_llm_retry for async LLM calls.
+
+    Args:
+        func: The async function to wrap.
+        config: Optional retry configuration. Uses defaults if not provided.
+        on_retry: Optional callback invoked before each retry with
+                  (attempt_number, exception, delay_seconds).
+
+    Returns:
+        Wrapped async function with retry logic.
+    """
+    cfg = config or DEFAULT_LLM_RETRY_CONFIG
+
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        delay = cfg.initial_delay
+        last_exception: Exception | None = None
+
+        for attempt in range(cfg.max_retries + 1):
+            try:
+                return await func(*args, **kwargs)
+            except cfg.retryable_exceptions as e:
+                last_exception = e
+                if attempt < cfg.max_retries:
+                    if on_retry:
+                        on_retry(attempt + 1, e, delay)
+                    await asyncio.sleep(delay)
+                    delay = min(delay * cfg.backoff_multiplier, cfg.max_delay)
+                else:
+                    raise
+
+        # This should never be reached, but satisfy type checker
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("Unexpected state in retry logic")
+
+    return wrapper
 
 
 class SummaryContent(TypedDict):

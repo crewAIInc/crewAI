@@ -334,7 +334,10 @@ async def run_for_each_async(
 
         streaming_output = CrewStreamingOutput(
             async_iterator=create_async_chunk_generator(
-                ctx.state, run_all_crews, ctx.output_holder
+                ctx.state,
+                run_all_crews,
+                ctx.output_holder,
+                config=crew.streaming_config,
             ),
             crew=crew,
         )

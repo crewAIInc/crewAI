@@ -99,6 +99,7 @@ from crewai.utilities.planning_handler import CrewPlanner
 from crewai.utilities.printer import PrinterColor
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
+    StreamingConfig,
     create_async_chunk_generator,
     create_chunk_generator,
     create_task_completed_chunk,
@@ -256,6 +257,13 @@ class Crew(FlowTrackable, BaseModel):
     stream: bool = Field(
         default=False,
         description="Whether to stream output from the crew execution.",
+    )
+    streaming_config: StreamingConfig | None = Field(
+        default=None,
+        description=(
+            "Configuration for streaming behavior including heartbeat interval "
+            "and timeouts. Useful for slow local LLM models."
+        ),
     )
     max_rpm: int | None = Field(
         default=None,
@@ -730,7 +738,10 @@ class Crew(FlowTrackable, BaseModel):
 
             streaming_output = CrewStreamingOutput(
                 sync_iterator=create_chunk_generator(
-                    ctx.state, run_crew, ctx.output_holder
+                    ctx.state,
+                    run_crew,
+                    ctx.output_holder,
+                    config=self.streaming_config,
                 ),
                 crew=self,
             )
@@ -825,7 +836,10 @@ class Crew(FlowTrackable, BaseModel):
 
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
-                    ctx.state, run_crew, ctx.output_holder
+                    ctx.state,
+                    run_crew,
+                    ctx.output_holder,
+                    config=self.streaming_config,
                 ),
                 crew=self,
             )
@@ -879,7 +893,10 @@ class Crew(FlowTrackable, BaseModel):
 
             streaming_output = CrewStreamingOutput(
                 async_iterator=create_async_chunk_generator(
-                    ctx.state, run_crew, ctx.output_holder
+                    ctx.state,
+                    run_crew,
+                    ctx.output_holder,
+                    config=self.streaming_config,
                 ),
                 crew=self,
             )

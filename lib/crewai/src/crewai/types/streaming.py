@@ -27,6 +27,7 @@ class StreamChunkType(Enum):
     AGENT_STARTED = "agent_started"
     AGENT_COMPLETED = "agent_completed"
     ERROR = "error"
+    HEARTBEAT = "heartbeat"  # For keeping UI alive during long LLM waits
 
 
 class ToolCallChunk(BaseModel):
