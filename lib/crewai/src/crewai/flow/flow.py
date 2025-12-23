@@ -40,6 +40,7 @@ from crewai.events.listeners.tracing.utils import (
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
+    FlowFailedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
@@ -977,7 +978,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             future = crewai_event_bus.emit(
                 self,
                 FlowStartedEvent(
-                    type="flow_started",
                     flow_name=self.name or self.__class__.__name__,
                     inputs=inputs,
                 ),
@@ -1005,7 +1005,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
-                    type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
                     state=self._copy_and_serialize_state(),
@@ -1020,15 +1019,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            trace_listener = TraceCollectionListener()
-            if trace_listener.batch_manager.batch_owner_type == "flow":
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
-
             return final_output
+        except Exception as e:
+            future = crewai_event_bus.emit(
+                self,
+                FlowFailedEvent(
+                    flow_name=self.name or self.__class__.__name__,
+                    error=e,
+                ),
+            )
+            if future:
+                self._event_futures.append(future)
+            raise e
         finally:
             detach(flow_token)
 
