@@ -1,0 +1,349 @@
+---
+title: Kraken Trading Tools
+description: Built-in tools for interacting with the Kraken cryptocurrency exchange API.
+icon: bitcoin
+---
+
+## Overview
+
+CrewAI includes 55 built-in tools for interacting with the Kraken cryptocurrency exchange. These tools enable agents to autonomously:
+
+- Monitor market data and prices
+- Place and manage orders
+- Check account balances
+- Handle deposits and withdrawals
+- Manage staking/earn strategies
+- Transfer between wallets and subaccounts
+
+## Installation
+
+The Kraken tools are included in CrewAI. No additional installation required.
+
+```bash
+pip install crewai
+```
+
+## Quick Start
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.tools.kraken import (
+    GetTickerInformationTool,
+    GetAccountBalanceTool,
+    AddOrderTool,
+)
+
+# Public tools (no authentication required)
+ticker_tool = GetTickerInformationTool()
+
+# Private tools (require API credentials)
+balance_tool = GetAccountBalanceTool(
+    api_key="your-kraken-api-key",
+    api_secret="your-kraken-api-secret",
+)
+
+order_tool = AddOrderTool(
+    api_key="your-kraken-api-key",
+    api_secret="your-kraken-api-secret",
+)
+
+# Create a trading agent
+trader = Agent(
+    role="Crypto Trader",
+    goal="Monitor BTC price and execute trades based on market conditions",
+    backstory="Expert cryptocurrency trader with years of experience",
+    tools=[ticker_tool, balance_tool, order_tool],
+    verbose=True,
+)
+
+# Create a task
+task = Task(
+    description="Check BTC/USD price and account balance. If BTC is below $90,000, place a limit buy order for 0.001 BTC.",
+    expected_output="Summary of actions taken including price check and any orders placed.",
+    agent=trader,
+)
+
+# Run the crew
+crew = Crew(agents=[trader], tasks=[task])
+result = crew.kickoff()
+```
+
+## Available Tools
+
+### Market Data (Public - No Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `GetServerTimeTool` | Get Kraken server time for API connectivity check |
+| `GetSystemStatusTool` | Get system status (online, maintenance, etc.) |
+| `GetAssetInfoTool` | Get info about tradeable assets |
+| `GetTradableAssetPairsTool` | Get trading pairs with fees and limits |
+| `GetTickerInformationTool` | Get current price, volume, high/low |
+| `GetOrderBookTool` | Get order book (asks/bids) |
+| `GetRecentTradesTool` | Get recent public trades |
+| `GetRecentSpreadsTool` | Get recent bid/ask spreads |
+| `GetOHLCDataTool` | Get candlestick (OHLC) data |
+
+### Trading (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `AddOrderTool` | Place a new order |
+| `AddOrderBatchTool` | Place multiple orders (max 15) |
+| `AmendOrderTool` | Amend an existing order |
+| `EditOrderTool` | Edit (cancel/replace) an order |
+| `CancelOrderTool` | Cancel a specific order |
+| `CancelOrderBatchTool` | Cancel multiple orders |
+| `CancelAllOrdersTool` | Cancel ALL open orders |
+| `CancelAllOrdersAfterXTool` | Dead man's switch |
+| `GetWebSocketsTokenTool` | Get WebSocket auth token |
+
+### Account Data (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `GetAccountBalanceTool` | Get balance for all assets |
+| `GetExtendedBalanceTool` | Get balance with holds/credit |
+| `GetTradeBalanceTool` | Get margin/P&L info |
+| `GetOpenOrdersTool` | Get all open orders |
+| `GetClosedOrdersTool` | Get closed orders history |
+| `QueryOrdersInfoTool` | Query specific orders |
+| `GetTradesHistoryTool` | Get trade history |
+| `QueryTradesInfoTool` | Query specific trades |
+| `GetOpenPositionsTool` | Get margin positions |
+| `GetLedgersTool` | Get ledger entries |
+| `QueryLedgersTool` | Query specific ledgers |
+| `GetTradeVolumeTool` | Get 30-day volume/fees |
+| `RequestExportReportTool` | Request data export |
+| `GetExportReportStatusTool` | Check export status |
+| `RetrieveDataExportTool` | Download export |
+| `DeleteExportReportTool` | Delete export |
+| `GetOrderAmendsTool` | Get amend history |
+
+### Funding (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `GetDepositMethodsTool` | Get deposit methods |
+| `GetDepositAddressesTool` | Get deposit addresses |
+| `GetDepositStatusTool` | Get deposit status |
+| `GetWithdrawalMethodsTool` | Get withdrawal methods |
+| `GetWithdrawalAddressesTool` | Get saved addresses |
+| `GetWithdrawalInfoTool` | Get withdrawal fee/limits |
+| `WithdrawFundsTool` | Initiate withdrawal |
+| `GetWithdrawalStatusTool` | Get withdrawal status |
+| `WalletTransferTool` | Transfer spot/futures |
+| `CancelWithdrawalTool` | Cancel withdrawal |
+
+### Earn/Staking (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `ListEarnStrategiesTool` | List staking strategies |
+| `ListEarnAllocationsTool` | Get current allocations |
+| `AllocateEarnFundsTool` | Stake funds |
+| `GetAllocationStatusTool` | Check stake status |
+| `DeallocateEarnFundsTool` | Unstake funds |
+| `GetDeallocationStatusTool` | Check unstake status |
+
+### Subaccounts (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `CreateSubaccountTool` | Create subaccount |
+| `AccountTransferTool` | Transfer between accounts |
+
+### Transparency (Public - No Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `GetPreTradeDataTool` | Pre-trade transparency |
+| `GetPostTradeDataTool` | Post-trade transparency |
+
+## Authentication
+
+### Getting API Keys
+
+1. Log in to your [Kraken account](https://www.kraken.com/)
+2. Go to **Settings** → **API**
+3. Click **Generate New Key**
+4. Set appropriate permissions:
+   - **Query Funds** - For balance tools
+   - **Query Open Orders & Trades** - For order/trade tools
+   - **Create & Modify Orders** - For trading tools
+   - **Withdraw Funds** - For withdrawal tools (use with caution!)
+
+### Using Environment Variables
+
+```python
+import os
+from crewai.tools.kraken import GetAccountBalanceTool
+
+balance_tool = GetAccountBalanceTool(
+    api_key=os.environ["KRAKEN_API_KEY"],
+    api_secret=os.environ["KRAKEN_API_SECRET"],
+)
+```
+
+## Tool Examples
+
+### Check Price and Place Order
+
+```python
+from crewai.tools.kraken import GetTickerInformationTool, AddOrderTool
+
+# Get current BTC price
+ticker = GetTickerInformationTool()
+price_data = ticker.run(pair="XBTUSD")
+print(price_data)
+
+# Place a limit buy order
+order = AddOrderTool(api_key="...", api_secret="...")
+result = order.run(
+    pair="XBTUSD",
+    type="buy",
+    ordertype="limit",
+    volume="0.001",
+    price="85000",
+)
+print(result)
+```
+
+### Monitor and Cancel Orders
+
+```python
+from crewai.tools.kraken import GetOpenOrdersTool, CancelOrderTool
+
+# Get all open orders
+open_orders = GetOpenOrdersTool(api_key="...", api_secret="...")
+orders = open_orders.run()
+print(orders)
+
+# Cancel a specific order
+cancel = CancelOrderTool(api_key="...", api_secret="...")
+result = cancel.run(txid="ORDER-TXID-HERE")
+print(result)
+```
+
+### Get OHLC Data for Analysis
+
+```python
+from crewai.tools.kraken import GetOHLCDataTool
+
+ohlc = GetOHLCDataTool()
+# Get 1-hour candles for ETH/USD
+data = ohlc.run(pair="ETHUSD", interval=60)
+print(data)
+```
+
+### Check Balances and Trade Volume
+
+```python
+from crewai.tools.kraken import GetAccountBalanceTool, GetTradeVolumeTool
+
+balance = GetAccountBalanceTool(api_key="...", api_secret="...")
+print(balance.run())
+
+volume = GetTradeVolumeTool(api_key="...", api_secret="...")
+print(volume.run(pair="XBTUSD"))  # Shows 30-day volume and fee tier
+```
+
+## Order Types
+
+The `AddOrderTool` supports various order types:
+
+| Order Type | Description |
+|------------|-------------|
+| `market` | Execute immediately at best price |
+| `limit` | Execute at specified price or better |
+| `stop-loss` | Market order when price reaches trigger |
+| `take-profit` | Market order when price reaches target |
+| `stop-loss-limit` | Limit order when stop triggered |
+| `take-profit-limit` | Limit order when target reached |
+| `trailing-stop` | Dynamic stop that follows price |
+| `trailing-stop-limit` | Dynamic stop with limit |
+| `settle-position` | Settle margin position |
+
+## Safety Considerations
+
+<Warning>
+**Real Money**: These tools interact with real cryptocurrency exchanges and real money. Always:
+- Test with small amounts first
+- Use the `validate=True` parameter to test orders without submitting
+- Never share API keys
+- Restrict API key permissions to only what's needed
+- Consider using subaccounts for trading bots
+</Warning>
+
+### Validate Orders Before Submitting
+
+```python
+from crewai.tools.kraken import AddOrderTool
+
+order = AddOrderTool(api_key="...", api_secret="...")
+
+# Validate without submitting
+result = order.run(
+    pair="XBTUSD",
+    type="buy",
+    ordertype="limit",
+    volume="0.001",
+    price="85000",
+    validate=True,  # Only validates, doesn't submit
+)
+print(result)
+```
+
+### Use Dead Man's Switch for Safety
+
+```python
+from crewai.tools.kraken import CancelAllOrdersAfterXTool
+
+# Cancel all orders if not reset within 60 seconds
+switch = CancelAllOrdersAfterXTool(api_key="...", api_secret="...")
+switch.run(timeout=60)
+
+# To disable the switch
+switch.run(timeout=0)
+```
+
+## Error Handling
+
+All tools return Kraken's standard response format:
+
+```python
+{
+    "error": [],  # Empty if successful
+    "result": {   # Response data
+        ...
+    }
+}
+```
+
+Check for errors in the response:
+
+```python
+import json
+
+result = ticker.run(pair="INVALID")
+data = eval(result)  # or json.loads if properly formatted
+
+if data.get("error"):
+    print(f"Error: {data['error']}")
+else:
+    print(f"Success: {data['result']}")
+```
+
+## Rate Limits
+
+Kraken has API rate limits. The tools automatically handle basic timeouts, but for high-frequency operations:
+
+- Public endpoints: ~1 request/second
+- Private endpoints: Uses a "call counter" system
+- Use `CancelAllOrdersAfterXTool` as a safety mechanism
+
+## Related Resources
+
+- [Kraken API Documentation](https://docs.kraken.com/api/)
+- [Kraken WebSocket API](https://docs.kraken.com/websockets/)
+- [CrewAI Tools Overview](/en/concepts/tools)

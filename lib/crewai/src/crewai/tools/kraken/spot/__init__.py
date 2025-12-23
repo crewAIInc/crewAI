@@ -1,0 +1,136 @@
+"""Kraken Spot API Tools."""
+
+from crewai.tools.kraken.spot.account import (
+    DeleteExportReportTool,
+    GetAccountBalanceTool,
+    GetClosedOrdersTool,
+    GetExportReportStatusTool,
+    GetExtendedBalanceTool,
+    GetLedgersTool,
+    GetOpenOrdersTool,
+    GetOpenPositionsTool,
+    GetOrderAmendsTool,
+    GetTradeBalanceTool,
+    GetTradesHistoryTool,
+    GetTradeVolumeTool,
+    QueryLedgersTool,
+    QueryOrdersInfoTool,
+    QueryTradesInfoTool,
+    RequestExportReportTool,
+    RetrieveDataExportTool,
+)
+from crewai.tools.kraken.spot.earn import (
+    AllocateEarnFundsTool,
+    DeallocateEarnFundsTool,
+    GetAllocationStatusTool,
+    GetDeallocationStatusTool,
+    ListEarnAllocationsTool,
+    ListEarnStrategiesTool,
+)
+from crewai.tools.kraken.spot.funding import (
+    CancelWithdrawalTool,
+    GetDepositAddressesTool,
+    GetDepositMethodsTool,
+    GetDepositStatusTool,
+    GetWithdrawalAddressesTool,
+    GetWithdrawalInfoTool,
+    GetWithdrawalMethodsTool,
+    GetWithdrawalStatusTool,
+    WalletTransferTool,
+    WithdrawFundsTool,
+)
+from crewai.tools.kraken.spot.market_data import (
+    GetAssetInfoTool,
+    GetOHLCDataTool,
+    GetOrderBookTool,
+    GetRecentSpreadsTool,
+    GetRecentTradesTool,
+    GetServerTimeTool,
+    GetSystemStatusTool,
+    GetTickerInformationTool,
+    GetTradableAssetPairsTool,
+)
+from crewai.tools.kraken.spot.subaccounts import (
+    AccountTransferTool,
+    CreateSubaccountTool,
+)
+from crewai.tools.kraken.spot.trading import (
+    AddOrderBatchTool,
+    AddOrderTool,
+    AmendOrderTool,
+    CancelAllOrdersAfterXTool,
+    CancelAllOrdersTool,
+    CancelOrderBatchTool,
+    CancelOrderTool,
+    EditOrderTool,
+    GetWebSocketsTokenTool,
+)
+from crewai.tools.kraken.spot.transparency import (
+    GetPostTradeDataTool,
+    GetPreTradeDataTool,
+)
+
+__all__ = [
+    # Market Data (9)
+    "GetServerTimeTool",
+    "GetSystemStatusTool",
+    "GetAssetInfoTool",
+    "GetTradableAssetPairsTool",
+    "GetTickerInformationTool",
+    "GetOrderBookTool",
+    "GetRecentTradesTool",
+    "GetRecentSpreadsTool",
+    "GetOHLCDataTool",
+    # Trading (9)
+    "AddOrderTool",
+    "AddOrderBatchTool",
+    "AmendOrderTool",
+    "EditOrderTool",
+    "CancelOrderTool",
+    "CancelOrderBatchTool",
+    "CancelAllOrdersTool",
+    "CancelAllOrdersAfterXTool",
+    "GetWebSocketsTokenTool",
+    # Account (17)
+    "GetAccountBalanceTool",
+    "GetExtendedBalanceTool",
+    "GetTradeBalanceTool",
+    "GetOpenOrdersTool",
+    "GetClosedOrdersTool",
+    "QueryOrdersInfoTool",
+    "GetTradesHistoryTool",
+    "QueryTradesInfoTool",
+    "GetOpenPositionsTool",
+    "GetLedgersTool",
+    "QueryLedgersTool",
+    "GetTradeVolumeTool",
+    "RequestExportReportTool",
+    "GetExportReportStatusTool",
+    "RetrieveDataExportTool",
+    "DeleteExportReportTool",
+    "GetOrderAmendsTool",
+    # Funding (10)
+    "GetDepositMethodsTool",
+    "GetDepositAddressesTool",
+    "GetDepositStatusTool",
+    "GetWithdrawalMethodsTool",
+    "GetWithdrawalAddressesTool",
+    "GetWithdrawalInfoTool",
+    "WithdrawFundsTool",
+    "GetWithdrawalStatusTool",
+    "WalletTransferTool",
+    "CancelWithdrawalTool",
+    # Earn (6)
+    "ListEarnStrategiesTool",
+    "ListEarnAllocationsTool",
+    "AllocateEarnFundsTool",
+    "GetAllocationStatusTool",
+    "DeallocateEarnFundsTool",
+    "GetDeallocationStatusTool",
+    # Subaccounts (2)
+    "CreateSubaccountTool",
+    "AccountTransferTool",
+    # Transparency (2)
+    "GetPreTradeDataTool",
+    "GetPostTradeDataTool",
+]
