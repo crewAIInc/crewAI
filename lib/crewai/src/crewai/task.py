@@ -24,6 +24,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    ValidationError,
     field_validator,
     model_validator,
 )
@@ -43,7 +44,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
-from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.converter import Converter, ConverterError, convert_to_model
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -1044,7 +1045,13 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            try:
+                pydantic_output, json_output = self._export_output(result)
+            except (ValidationError, ConverterError):
+                # If export fails due to invalid output format, set outputs to None
+                # and let the next iteration's guardrail check handle it
+                pydantic_output, json_output = None, None
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
@@ -1140,7 +1147,13 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            try:
+                pydantic_output, json_output = self._export_output(result)
+            except (ValidationError, ConverterError):
+                # If export fails due to invalid output format, set outputs to None
+                # and let the next iteration's guardrail check handle it
+                pydantic_output, json_output = None, None
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,

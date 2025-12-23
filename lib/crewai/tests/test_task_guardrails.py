@@ -752,3 +752,155 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_retries_with_invalid_pydantic_output():
+    """Test that guardrail retries work when agent produces invalid pydantic output.
+
+    This test covers the bug reported in issue #4126 where guardrail_max_retries
+    logic was broken due to unhandled ValidationError in _invoke_guardrail_function.
+    When the agent produces invalid JSON that fails Pydantic validation, the system
+    should continue retrying instead of crashing.
+    """
+    from pydantic import BaseModel, Field
+
+    class OutputModel(BaseModel):
+        title: str = Field(description="The title")
+        content: str = Field(description="The content")
+
+    call_count = 0
+
+    def mock_execute_task(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "invalid json that will fail pydantic validation"
+        elif call_count == 2:
+            return "still invalid { broken json"
+        else:
+            return '{"title": "Valid Title", "content": "Valid Content"}'
+
+    def always_fail_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        if call_count < 3:
+            return (False, "Output not valid yet")
+        return (True, result.raw)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task = mock_execute_task
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test pydantic validation during guardrail retries",
+        expected_output="Valid structured output",
+        guardrail=always_fail_guardrail,
+        output_pydantic=OutputModel,
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert call_count == 3
+    assert result.pydantic is not None
+    assert result.pydantic.title == "Valid Title"
+    assert result.pydantic.content == "Valid Content"
+
+
+def test_guardrail_max_retries_exhausted_with_invalid_pydantic():
+    """Test that max retries are properly exhausted even with pydantic validation errors.
+
+    This ensures that when the agent consistently produces invalid output that fails
+    pydantic validation, the retry loop continues until max_retries is exhausted,
+    rather than crashing on the first validation error.
+    """
+    from pydantic import BaseModel, Field
+
+    class StrictModel(BaseModel):
+        required_field: str = Field(description="A required field")
+
+    call_count = 0
+
+    def mock_execute_task(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        return "this is not valid json and will always fail"
+
+    def always_fail_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (False, "Output is not valid")
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task = mock_execute_task
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test max retries with invalid pydantic",
+        expected_output="Structured output",
+        guardrail=always_fail_guardrail,
+        output_pydantic=StrictModel,
+        guardrail_max_retries=2,
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        task.execute_sync(agent=agent)
+
+    assert "Task failed guardrail validation after 2 retries" in str(exc_info.value)
+    assert call_count == 3
+
+
+def test_guardrail_with_pydantic_validation_error_continues_retry():
+    """Test that pydantic ValidationError during retry doesn't crash the loop.
+
+    This is a regression test for issue #4126. The bug was that when _export_output
+    raised a ValidationError during the guardrail retry loop, it would crash instead
+    of continuing to the next retry attempt.
+    """
+    from pydantic import BaseModel, Field
+
+    class TestModel(BaseModel):
+        value: int = Field(description="An integer value")
+
+    execution_results = [
+        "not json",
+        '{"value": "not_an_int"}',
+        '{"value": 42}',
+    ]
+    call_index = 0
+
+    def mock_execute_task(*args, **kwargs):
+        nonlocal call_index
+        result = execution_results[call_index]
+        call_index += 1
+        return result
+
+    guardrail_calls = 0
+
+    def counting_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        nonlocal guardrail_calls
+        guardrail_calls += 1
+        if guardrail_calls < 3:
+            return (False, f"Retry attempt {guardrail_calls}")
+        return (True, result.raw)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task = mock_execute_task
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test ValidationError handling in retry loop",
+        expected_output="Integer output",
+        guardrail=counting_guardrail,
+        output_pydantic=TestModel,
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert call_index == 3
+    assert guardrail_calls == 3
+    assert result.pydantic is not None
+    assert result.pydantic.value == 42
