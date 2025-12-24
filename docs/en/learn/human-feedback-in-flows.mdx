@@ -435,14 +435,16 @@ else:
 When feedback arrives (e.g., via webhook), resume the flow:
 
 ```python Code
-# In your webhook handler:
+# Sync handler:
 def handle_feedback_webhook(flow_id: str, feedback: str):
-    # Restore the paused flow
     flow = ReviewFlow.from_pending(flow_id)
-
-    # Resume with the feedback
     result = flow.resume(feedback)
+    return result
 
+# Async handler (FastAPI, aiohttp, etc.):
+async def handle_feedback_webhook(flow_id: str, feedback: str):
+    flow = ReviewFlow.from_pending(flow_id)
+    result = await flow.resume_async(feedback)
     return result
 ```
 
@@ -543,20 +545,32 @@ def start_content_pipeline():
     return result
 
 
-# Resuming when Slack webhook fires
+# Resuming when Slack webhook fires (sync handler)
 def on_slack_feedback(flow_id: str, slack_message: str):
     flow = ContentPipeline.from_pending(flow_id)
     result = flow.resume(slack_message)
     return result
+
+
+# If your handler is async (FastAPI, aiohttp, Slack Bolt async, etc.)
+async def on_slack_feedback_async(flow_id: str, slack_message: str):
+    flow = ContentPipeline.from_pending(flow_id)
+    result = await flow.resume_async(slack_message)
+    return result
 ```
+
+<Warning>
+If you're using an async web framework (FastAPI, aiohttp, Slack Bolt async mode), use `await flow.resume_async()` instead of `flow.resume()`. Calling `resume()` from within a running event loop will raise a `RuntimeError`.
+</Warning>
 
 ### Best Practices for Async Feedback
 
 1. **Check the return type**: `kickoff()` returns `HumanFeedbackPending` when paused—no try/except needed
-2. **Store callback info**: Use `callback_info` to store webhook URLs, ticket IDs, etc.
-3. **Implement idempotency**: Your resume handler should be idempotent for safety
-4. **Automatic persistence**: State is automatically saved when `HumanFeedbackPending` is raised and uses `SQLiteFlowPersistence` by default
-5. **Custom persistence**: Pass a custom persistence instance to `from_pending()` if needed
+2. **Use the right resume method**: Use `resume()` in sync code, `await resume_async()` in async code
+3. **Store callback info**: Use `callback_info` to store webhook URLs, ticket IDs, etc.
+4. **Implement idempotency**: Your resume handler should be idempotent for safety
+5. **Automatic persistence**: State is automatically saved when `HumanFeedbackPending` is raised and uses `SQLiteFlowPersistence` by default
+6. **Custom persistence**: Pass a custom persistence instance to `from_pending()` if needed
 
 ## Related Documentation
 

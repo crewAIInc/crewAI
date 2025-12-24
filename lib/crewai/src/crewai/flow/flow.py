@@ -648,6 +648,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
         outcome collapsing if emit was specified), stores the result, and
         triggers downstream listeners.
 
+        Note:
+            If called from within an async context (running event loop),
+            use `await flow.resume_async(feedback)` instead.
+
         Args:
             feedback: The human's feedback as a string. If empty, uses
                 default_outcome or the first emit option.
@@ -658,20 +662,34 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Raises:
             ValueError: If no pending feedback context exists (flow wasn't paused)
+            RuntimeError: If called from within a running event loop (use resume_async instead)
 
         Example:
             ```python
-            # In a webhook handler:
+            # In a sync webhook handler:
             def handle_feedback(flow_id: str, feedback: str):
-                persistence = SQLiteFlowPersistence("flows.db")
-                flow = MyFlow.from_pending(flow_id, persistence)
+                flow = MyFlow.from_pending(flow_id)
                 result = flow.resume(feedback)
                 return result
 
-            # Resume without feedback (uses default outcome):
-            flow.resume()
+            # In an async handler, use resume_async instead:
+            async def handle_feedback_async(flow_id: str, feedback: str):
+                flow = MyFlow.from_pending(flow_id)
+                result = await flow.resume_async(feedback)
+                return result
             ```
         """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None:
+            raise RuntimeError(
+                "resume() cannot be called from within an async context. "
+                "Use 'await flow.resume_async(feedback)' instead."
+            )
+
         return asyncio.run(self.resume_async(feedback))
 
     async def resume_async(self, feedback: str = "") -> Any:
@@ -781,18 +799,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
-                # Auto-save pending feedback if persistence is configured
-                if self._persistence:
-                    state_data = (
-                        self._state
-                        if isinstance(self._state, dict)
-                        else self._state.model_dump()
-                    )
-                    self._persistence.save_pending_feedback(
-                        flow_uuid=e.context.flow_id,
-                        context=e.context,
-                        state_data=state_data,
-                    )
+                # Auto-save pending feedback (create default persistence if needed)
+                if self._persistence is None:
+                    from crewai.flow.persistence import SQLiteFlowPersistence
+
+                    self._persistence = SQLiteFlowPersistence()
+
+                state_data = (
+                    self._state
+                    if isinstance(self._state, dict)
+                    else self._state.model_dump()
+                )
+                self._persistence.save_pending_feedback(
+                    flow_uuid=e.context.flow_id,
+                    context=e.context,
+                    state_data=state_data,
+                )
 
                 # Emit flow paused event
                 crewai_event_bus.emit(
@@ -1313,18 +1335,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 from crewai.flow.async_feedback.types import HumanFeedbackPending
 
                 if isinstance(e, HumanFeedbackPending):
-                    # Auto-save pending feedback if persistence is configured
-                    if self._persistence:
-                        state_data = (
-                            self._state
-                            if isinstance(self._state, dict)
-                            else self._state.model_dump()
-                        )
-                        self._persistence.save_pending_feedback(
-                            flow_uuid=e.context.flow_id,
-                            context=e.context,
-                            state_data=state_data,
-                        )
+                    # Auto-save pending feedback (create default persistence if needed)
+                    if self._persistence is None:
+                        from crewai.flow.persistence import SQLiteFlowPersistence
+
+                        self._persistence = SQLiteFlowPersistence()
+
+                    state_data = (
+                        self._state
+                        if isinstance(self._state, dict)
+                        else self._state.model_dump()
+                    )
+                    self._persistence.save_pending_feedback(
+                        flow_uuid=e.context.flow_id,
+                        context=e.context,
+                        state_data=state_data,
+                    )
 
                     # Emit flow paused event
                     future = crewai_event_bus.emit(
