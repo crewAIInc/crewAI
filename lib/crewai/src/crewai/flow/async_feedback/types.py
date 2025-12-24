@@ -111,7 +111,7 @@ class PendingFeedbackContext:
         )
 
 
-class HumanFeedbackPending(Exception):
+class HumanFeedbackPending(Exception):  # noqa: N818 - Not an error, a control flow signal
     """Signal that flow execution should pause for async human feedback.
 
     When raised by a provider, the flow framework will:

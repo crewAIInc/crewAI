@@ -94,11 +94,11 @@ class FlowPersistence(ABC):
         """
         return None
 
-    def clear_pending_feedback(self, flow_uuid: str) -> None:
+    def clear_pending_feedback(self, flow_uuid: str) -> None:  # noqa: B027
         """Clear the pending feedback marker after successful resume.
 
         This is called after feedback is received and the flow resumes.
-        Override to remove the pending feedback marker.
+        Optional override to remove the pending feedback marker.
 
         Args:
             flow_uuid: Unique identifier for the flow instance
