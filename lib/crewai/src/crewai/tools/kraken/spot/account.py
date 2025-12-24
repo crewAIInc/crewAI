@@ -2,11 +2,52 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from crewai.tools.kraken.base import KrakenBaseTool
+
+
+def _balance_threshold() -> float:
+    raw = os.getenv("KRAKEN_BALANCE_MIN_THRESHOLD", "0.000001").strip()
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 0.000001
+    return max(value, 0.0)
+
+
+def _has_significant_value(value: Any, threshold: float) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, dict):
+        return any(_has_significant_value(v, threshold) for v in value.values())
+    if isinstance(value, list):
+        return any(_has_significant_value(v, threshold) for v in value)
+    if isinstance(value, bool):
+        return bool(value)
+    try:
+        return abs(float(value)) >= threshold
+    except (TypeError, ValueError):
+        return True
+
+
+def _filter_balance_result(payload: dict[str, Any], threshold: float) -> dict[str, Any]:
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        return payload
+    filtered = {
+        asset: data
+        for asset, data in result.items()
+        if _has_significant_value(data, threshold)
+    }
+    if filtered == result:
+        return payload
+    new_payload = dict(payload)
+    new_payload["result"] = filtered
+    return new_payload
 
 
 # =============================================================================
@@ -21,7 +62,7 @@ class GetAccountBalanceTool(KrakenBaseTool):
     def _run(self) -> str:
         """Haal account saldo op van Kraken."""
         result = self._private_request("Balance")
-        return str(result)
+        return str(_filter_balance_result(result, _balance_threshold()))
 
 
 # =============================================================================
@@ -36,7 +77,7 @@ class GetExtendedBalanceTool(KrakenBaseTool):
     def _run(self) -> str:
         """Haal uitgebreid saldo op van Kraken."""
         result = self._private_request("BalanceEx")
-        return str(result)
+        return str(_filter_balance_result(result, _balance_threshold()))
 
 
 # =============================================================================

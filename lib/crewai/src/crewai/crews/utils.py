@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Coroutine, Iterable
+import os
 from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -27,9 +28,14 @@ def enable_agent_streaming(agents: Iterable[BaseAgent]) -> None:
     Args:
         agents: Iterable of agents to enable streaming on.
     """
+    stream_enabled = os.getenv("CREWAI_LLM_STREAMING", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
     for agent in agents:
         if agent.llm is not None:
-            agent.llm.stream = True
+            agent.llm.stream = stream_enabled
 
 
 def setup_agents(

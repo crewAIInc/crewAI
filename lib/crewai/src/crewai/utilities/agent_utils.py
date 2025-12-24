@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 import json
+import os
 import re
 import time
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -482,6 +483,27 @@ def process_llm_response(
     return format_answer(answer)
 
 
+def _tool_result_to_text(result: Any) -> str:
+    if isinstance(result, str):
+        return result
+    try:
+        return json.dumps(result, ensure_ascii=True, default=str)
+    except (TypeError, ValueError):
+        return str(result)
+
+
+def _truncate_tool_result(result: Any) -> str:
+    text = _tool_result_to_text(result)
+    raw_limit = os.getenv("CREWAI_TOOL_RESULT_MAX_CHARS", "4000").strip()
+    try:
+        max_chars = int(raw_limit)
+    except ValueError:
+        max_chars = 4000
+    if max_chars <= 0 or len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}... [truncated {len(text) - max_chars} chars]"
+
+
 def handle_agent_action_core(
     formatted_answer: AgentAction,
     tool_result: ToolResult,
@@ -507,7 +529,8 @@ def handle_agent_action_core(
     if step_callback:
         step_callback(tool_result)
 
-    formatted_answer.text += f"\nObservation: {tool_result.result}"
+    observation = _truncate_tool_result(tool_result.result)
+    formatted_answer.text += f"\nObservation: {observation}"
     formatted_answer.result = tool_result.result
 
     if tool_result.result_as_answer:

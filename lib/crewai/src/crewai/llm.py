@@ -1169,10 +1169,38 @@ class LLM(BaseLLM):
                 return structured_response
 
         # --- 3) Extract response message and content (standard response)
-        response_message = cast(Choices, cast(ModelResponse, response).choices)[
-            0
-        ].message
-        text_response = response_message.content or ""
+        choices = cast(ModelResponse, response).choices
+        choice = cast(Choices, choices)[0]
+        response_message = getattr(choice, "message", None)
+        text_response = ""
+        if response_message is not None:
+            if isinstance(response_message, dict):
+                text_response = (
+                    response_message.get("content")
+                    or response_message.get("reasoning_content")
+                    or ""
+                )
+            else:
+                text_response = (
+                    getattr(response_message, "content", "")
+                    or getattr(response_message, "reasoning_content", "")
+                    or ""
+                )
+        if not text_response:
+            if isinstance(choice, dict):
+                text_response = (
+                    choice.get("text")
+                    or choice.get("content")
+                    or choice.get("reasoning_content")
+                    or ""
+                )
+            else:
+                text_response = (
+                    getattr(choice, "text", "")
+                    or getattr(choice, "content", "")
+                    or getattr(choice, "reasoning_content", "")
+                    or ""
+                )
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
@@ -1186,7 +1214,12 @@ class LLM(BaseLLM):
                             end_time=0,
                         )
         # --- 4) Check for tool calls
-        tool_calls = getattr(response_message, "tool_calls", [])
+        tool_calls: list[Any] = []
+        if response_message is not None:
+            if isinstance(response_message, dict):
+                tool_calls = response_message.get("tool_calls") or []
+            else:
+                tool_calls = getattr(response_message, "tool_calls", []) or []
 
         # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
         if (not tool_calls or not available_functions) and text_response:

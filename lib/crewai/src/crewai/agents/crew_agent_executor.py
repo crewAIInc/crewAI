@@ -7,6 +7,7 @@ and memory management.
 from __future__ import annotations
 
 from collections.abc import Callable
+import os
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, GetCoreSchemaHandler
@@ -144,14 +145,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm:
             # This may be mutating the shared llm object and needs further evaluation
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
+            disable_stop_words = os.getenv("CREWAI_DISABLE_STOP_WORDS", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
             )
+            if disable_stop_words:
+                self.llm.stop = []
+            else:
+                existing_stop = getattr(self.llm, "stop", [])
+                self.llm.stop = list(
+                    set(
+                        existing_stop + self.stop
+                        if isinstance(existing_stop, list)
+                        else self.stop
+                    )
+                )
 
     @property
     def use_stop_words(self) -> bool:
@@ -515,6 +524,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             role: Message role (default: assistant).
         """
         self.messages.append(format_message_for_llm(text, role=role))
+        if role == "assistant":
+            append_continue = os.getenv("CREWAI_APPEND_USER_CONTINUE", "").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+            )
+            if append_continue and "Observation:" in text:
+                continue_prompt = os.getenv("CREWAI_TOOL_CONTINUE_PROMPT", "Continue.")
+                self.messages.append(
+                    format_message_for_llm(continue_prompt, role="user")
+                )
 
     def _show_start_logs(self) -> None:
         """Emit agent start event."""
