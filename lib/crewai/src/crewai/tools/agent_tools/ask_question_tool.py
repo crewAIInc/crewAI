@@ -4,15 +4,15 @@ from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 
 class AskQuestionToolSchema(BaseModel):
-    question: str = Field(..., description="The question to ask")
-    context: str = Field(..., description="The context for the question")
-    coworker: str = Field(..., description="The role/name of the coworker to ask")
+    question: str = Field(..., description="De vraag om te stellen")
+    context: str = Field(..., description="De context voor de vraag")
+    coworker: str = Field(..., description="De rol/naam van de collega om te vragen")
 
 
 class AskQuestionTool(BaseAgentTool):
-    """Tool for asking questions to coworkers"""
+    """Tool voor het stellen van vragen aan collega's"""
 
-    name: str = "Ask question to coworker"
+    name: str = "Vraag stellen aan collega"
     args_schema: type[BaseModel] = AskQuestionToolSchema
 
     def _run(

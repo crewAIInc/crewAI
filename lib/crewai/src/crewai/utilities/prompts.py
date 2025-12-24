@@ -1,4 +1,4 @@
-"""Prompt generation and management utilities for CrewAI agents."""
+"""Prompt generatie en beheer hulpmiddelen voor CrewAI agents."""
 
 from __future__ import annotations
 
@@ -10,52 +10,52 @@ from crewai.utilities.i18n import I18N, get_i18n
 
 
 class StandardPromptResult(TypedDict):
-    """Result with only prompt field for standard mode."""
+    """Resultaat met alleen prompt veld voor standaard modus."""
 
-    prompt: Annotated[str, "The generated prompt string"]
+    prompt: Annotated[str, "De gegenereerde prompt string"]
 
 
 class SystemPromptResult(StandardPromptResult):
-    """Result with system, user, and prompt fields for system prompt mode."""
+    """Resultaat met systeem, gebruiker en prompt velden voor systeem prompt modus."""
 
-    system: Annotated[str, "The system prompt component"]
-    user: Annotated[str, "The user prompt component"]
+    system: Annotated[str, "Het systeem prompt component"]
+    user: Annotated[str, "Het gebruiker prompt component"]
 
 
 COMPONENTS = Literal["role_playing", "tools", "no_tools", "task"]
 
 
 class Prompts(BaseModel):
-    """Manages and generates prompts for a generic agent.
+    """Beheert en genereert prompts voor een generieke agent.
 
-    Notes:
-        - Need to refactor so that prompt is not tightly coupled to agent.
+    Opmerkingen:
+        - Moet worden gerefactord zodat prompt niet strak gekoppeld is aan agent.
     """
 
     i18n: I18N = Field(default_factory=get_i18n)
     has_tools: bool = Field(
-        default=False, description="Indicates if the agent has access to tools"
+        default=False, description="Geeft aan of de agent toegang heeft tot tools"
     )
     system_template: str | None = Field(
-        default=None, description="Custom system prompt template"
+        default=None, description="Aangepaste systeem prompt template"
     )
     prompt_template: str | None = Field(
-        default=None, description="Custom user prompt template"
+        default=None, description="Aangepaste gebruiker prompt template"
     )
     response_template: str | None = Field(
-        default=None, description="Custom response prompt template"
+        default=None, description="Aangepaste antwoord prompt template"
     )
     use_system_prompt: bool = Field(
         default=False,
-        description="Whether to use the system prompt when no custom templates are provided",
+        description="Of de systeem prompt gebruikt moet worden wanneer geen aangepaste templates zijn opgegeven",
     )
-    agent: Any = Field(description="Reference to the agent using these prompts")
+    agent: Any = Field(description="Referentie naar de agent die deze prompts gebruikt")
 
     def task_execution(self) -> SystemPromptResult | StandardPromptResult:
-        """Generate a standard prompt for task execution.
+        """Genereer een standaard prompt voor taakuitvoering.
 
-        Returns:
-            A dictionary containing the constructed prompt(s).
+        Retourneert:
+            Een dictionary met de geconstrueerde prompt(s).
         """
         slices: list[COMPONENTS] = ["role_playing"]
         if self.has_tools:
@@ -91,26 +91,26 @@ class Prompts(BaseModel):
         prompt_template: str | None = None,
         response_template: str | None = None,
     ) -> str:
-        """Constructs a prompt string from specified components.
+        """Construeert een prompt string van gespecificeerde componenten.
 
         Args:
-            components: List of component names to include in the prompt.
-            system_template: Optional custom template for the system prompt.
-            prompt_template: Optional custom template for the user prompt.
-            response_template: Optional custom template for the response prompt.
+            components: Lijst van componentnamen om op te nemen in de prompt.
+            system_template: Optionele aangepaste template voor de systeem prompt.
+            prompt_template: Optionele aangepaste template voor de gebruiker prompt.
+            response_template: Optionele aangepaste template voor de antwoord prompt.
 
-        Returns:
-            The constructed prompt string.
+        Retourneert:
+            De geconstrueerde prompt string.
         """
         prompt: str
         if not system_template or not prompt_template:
-            # If any of the required templates are missing, fall back to the default format
+            # Als een van de vereiste templates ontbreekt, val terug op het standaard formaat
             prompt_parts: list[str] = [
                 self.i18n.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
-            # All templates are provided, use them
+            # Alle templates zijn opgegeven, gebruik ze
             template_parts: list[str] = [
                 self.i18n.slice(component)
                 for component in components
@@ -122,7 +122,7 @@ class Prompts(BaseModel):
             prompt = prompt_template.replace(
                 "{{ .Prompt }}", "".join(self.i18n.slice("task"))
             )
-            # Handle missing response_template
+            # Behandel ontbrekende response_template
             if response_template:
                 response: str = response_template.split("{{ .Response }}")[0]
                 prompt = f"{system}\n{prompt}\n{response}"
@@ -136,14 +136,14 @@ class Prompts(BaseModel):
         )
 
     def continuous_execution(self) -> SystemPromptResult:
-        """Generate prompts for continuous operation mode.
+        """Genereer prompts voor continue operatie modus.
 
-        Continuous mode prompts instruct the agent to operate indefinitely,
-        monitoring conditions and taking action as needed without providing
-        a "Final Answer".
+        Continue modus prompts instrueren de agent om oneindig te opereren,
+        condities te monitoren en actie te ondernemen indien nodig zonder een
+        "Eindantwoord" te geven.
 
-        Returns:
-            A SystemPromptResult with system and user prompts for continuous mode.
+        Retourneert:
+            Een SystemPromptResult met systeem en gebruiker prompts voor continue modus.
         """
         system_prompt = self._build_continuous_system_prompt()
         user_prompt = self._build_continuous_user_prompt()
@@ -155,50 +155,50 @@ class Prompts(BaseModel):
         )
 
     def _build_continuous_system_prompt(self) -> str:
-        """Build system prompt for continuous mode.
+        """Bouw systeem prompt voor continue modus.
 
-        Returns:
-            System prompt string for continuous operation.
+        Retourneert:
+            Systeem prompt string voor continue operatie.
         """
         tools_section = ""
         if self.has_tools:
             tools_section = self.i18n.slice("tools")
         else:
-            tools_section = "You have no tools available. You can only observe and think."
+            tools_section = "Je hebt geen tools beschikbaar. Je kunt alleen observeren en denken."
 
-        return f"""You are {self.agent.role} operating in CONTINUOUS MONITORING MODE.
+        return f"""Je bent {self.agent.role} opererend in CONTINUE MONITORING MODUS.
 
-Your Goal: {self.agent.goal}
+Je Doel: {self.agent.goal}
 
-Background: {self.agent.backstory}
+Achtergrond: {self.agent.backstory}
 
 {tools_section}
 
-CONTINUOUS OPERATION INSTRUCTIONS:
-1. You are running continuously - you should NEVER provide a "Final Answer"
-2. Monitor conditions and take action when needed using your available tools
-3. Report observations and actions clearly
-4. If nothing requires immediate action, state what you are observing
-5. Always be ready to respond to changing conditions
-6. Keep track of what you have done and observed
+CONTINUE OPERATIE INSTRUCTIES:
+1. Je draait continu - je mag NOOIT een "Eindantwoord" geven
+2. Monitor condities en onderneem actie indien nodig met je beschikbare tools
+3. Rapporteer observaties en acties duidelijk
+4. Als niets directe actie vereist, vermeld wat je observeert
+5. Wees altijd klaar om te reageren op veranderende condities
+6. Houd bij wat je hebt gedaan en geobserveerd
 
-When you observe something or want to take action, respond in this format:
-Thought: [Your reasoning about what you observe or want to do]
-Action: [The tool you want to use, or "Observe" if just monitoring]
-Action Input: [The input for the tool]
+Wanneer je iets observeert of actie wilt ondernemen, antwoord in dit formaat:
+Gedachte: [Je redenering over wat je observeert of wilt doen]
+Actie: [De tool die je wilt gebruiken, of "Observeren" als je alleen monitort]
+Actie Input: [De input voor de tool]
 
-After each observation or action result, continue monitoring and decide on your next action."""
+Na elk observatie- of actieresultaat, ga door met monitoren en besluit over je volgende actie."""
 
     def _build_continuous_user_prompt(self) -> str:
-        """Build user prompt for continuous mode.
+        """Bouw gebruiker prompt voor continue modus.
 
-        Returns:
-            User prompt string for continuous operation.
+        Retourneert:
+            Gebruiker prompt string voor continue operatie.
         """
-        return """Begin continuous operation. Monitor conditions and take appropriate actions.
-Remember: You are operating continuously. Do not try to finish or provide a final answer.
-Instead, observe, act when needed, and continue monitoring.
+        return """Begin continue operatie. Monitor condities en onderneem gepaste acties.
+Onthoud: Je opereert continu. Probeer niet te eindigen of een eindantwoord te geven.
+In plaats daarvan, observeer, onderneem actie indien nodig en ga door met monitoren.
 
-Current directive: {task}
+Huidige richtlijn: {task}
 
-Start by assessing the current situation and determining if any action is needed."""
+Begin met het beoordelen van de huidige situatie en bepaal of actie nodig is."""

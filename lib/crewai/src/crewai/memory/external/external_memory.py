@@ -43,15 +43,15 @@ class ExternalMemory(Memory):
         crew: Any, embedder_config: dict[str, Any] | ProviderSpec | None
     ) -> Storage:
         if not embedder_config:
-            raise ValueError("embedder_config is required")
+            raise ValueError("embedder_config is vereist")
 
         if "provider" not in embedder_config:
-            raise ValueError("embedder_config must include a 'provider' key")
+            raise ValueError("embedder_config moet een 'provider' sleutel bevatten")
 
         provider = embedder_config["provider"]
         supported_storages = ExternalMemory.external_supported_storages()
         if provider not in supported_storages:
-            raise ValueError(f"Provider {provider} not supported")
+            raise ValueError(f"Provider {provider} wordt niet ondersteund")
 
         storage: Storage = supported_storages[provider](
             crew, embedder_config.get("config", {})
@@ -63,7 +63,7 @@ class ExternalMemory(Memory):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Saves a value into the external storage."""
+        """Slaat een waarde op in de externe opslag."""
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
@@ -115,15 +115,15 @@ class ExternalMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search external memory for relevant entries.
+        """Zoek in extern geheugen naar relevante entries.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -176,11 +176,11 @@ class ExternalMemory(Memory):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Save a value to external memory asynchronously.
+        """Sla een waarde asynchroon op in extern geheugen.
 
         Args:
-            value: The value to save.
-            metadata: Optional metadata to associate with the value.
+            value: De waarde om op te slaan.
+            metadata: Optionele metadata om te koppelen aan de waarde.
         """
         crewai_event_bus.emit(
             self,
@@ -233,15 +233,15 @@ class ExternalMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search external memory asynchronously.
+        """Zoek asynchroon in extern geheugen.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,

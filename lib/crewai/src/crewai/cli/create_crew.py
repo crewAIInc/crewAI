@@ -20,7 +20,7 @@ def create_folder_structure(name, parent_folder=None):
     name = name.rstrip("/")
 
     if not name.strip():
-        raise ValueError("Project name cannot be empty or contain only whitespace")
+        raise ValueError("Projectnaam kan niet leeg zijn of alleen spaties bevatten")
 
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     folder_name = re.sub(r"[^a-zA-Z0-9_]", "", folder_name)
@@ -28,27 +28,27 @@ def create_folder_structure(name, parent_folder=None):
     # Check if the name starts with invalid characters or is primarily invalid
     if re.match(r"^[^a-zA-Z0-9_-]+", name):
         raise ValueError(
-            f"Project name '{name}' contains no valid characters for a Python module name"
+            f"Projectnaam '{name}' bevat geen geldige karakters voor een Python module naam"
         )
 
     if not folder_name:
         raise ValueError(
-            f"Project name '{name}' contains no valid characters for a Python module name"
+            f"Projectnaam '{name}' bevat geen geldige karakters voor een Python module naam"
         )
 
     if folder_name[0].isdigit():
         raise ValueError(
-            f"Project name '{name}' would generate folder name '{folder_name}' which cannot start with a digit (invalid Python module name)"
+            f"Projectnaam '{name}' zou mapnaam '{folder_name}' genereren die niet met een cijfer kan beginnen (ongeldige Python module naam)"
         )
 
     if keyword.iskeyword(folder_name):
         raise ValueError(
-            f"Project name '{name}' would generate folder name '{folder_name}' which is a reserved Python keyword"
+            f"Projectnaam '{name}' zou mapnaam '{folder_name}' genereren wat een gereserveerd Python sleutelwoord is"
         )
 
     if not folder_name.isidentifier():
         raise ValueError(
-            f"Project name '{name}' would generate invalid Python module name '{folder_name}'"
+            f"Projectnaam '{name}' zou ongeldige Python module naam '{folder_name}' genereren"
         )
 
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -57,12 +57,12 @@ def create_folder_structure(name, parent_folder=None):
 
     if not class_name:
         raise ValueError(
-            f"Project name '{name}' contains no valid characters for a Python class name"
+            f"Projectnaam '{name}' bevat geen geldige karakters voor een Python klasse naam"
         )
 
     if class_name[0].isdigit():
         raise ValueError(
-            f"Project name '{name}' would generate class name '{class_name}' which cannot start with a digit"
+            f"Projectnaam '{name}' zou klassenaam '{class_name}' genereren die niet met een cijfer kan beginnen"
         )
 
     # Check if the original name (before title casing) is a keyword
@@ -75,12 +75,12 @@ def create_folder_structure(name, parent_folder=None):
         or class_name in ("True", "False", "None")
     ):
         raise ValueError(
-            f"Project name '{name}' would generate class name '{class_name}' which is a reserved Python keyword"
+            f"Projectnaam '{name}' zou klassenaam '{class_name}' genereren wat een gereserveerd Python sleutelwoord is"
         )
 
     if not class_name.isidentifier():
         raise ValueError(
-            f"Project name '{name}' would generate invalid Python class name '{class_name}'"
+            f"Projectnaam '{name}' zou ongeldige Python klasse naam '{class_name}' genereren"
         )
 
     if parent_folder:
@@ -90,15 +90,15 @@ def create_folder_structure(name, parent_folder=None):
 
     if folder_path.exists():
         if not click.confirm(
-            f"Folder {folder_name} already exists. Do you want to override it?"
+            f"Map {folder_name} bestaat al. Wil je deze overschrijven?"
         ):
-            click.secho("Operation cancelled.", fg="yellow")
+            click.secho("Operatie geannuleerd.", fg="yellow")
             sys.exit(0)
-        click.secho(f"Overriding folder {folder_name}...", fg="green", bold=True)
+        click.secho(f"Map {folder_name} wordt overschreven...", fg="green", bold=True)
         shutil.rmtree(folder_path)  # Delete the existing folder and its contents
 
     click.secho(
-        f"Creating {'crew' if parent_folder else 'folder'} {folder_name}...",
+        f"{'Crew' if parent_folder else 'Map'} {folder_name} wordt aangemaakt...",
         fg="green",
         bold=True,
     )
@@ -175,9 +175,9 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
 
         if existing_provider:
             if not click.confirm(
-                f"Found existing environment variable configuration for {existing_provider.capitalize()}. Do you want to override it?"
+                f"Bestaande omgevingsvariabele configuratie gevonden voor {existing_provider.capitalize()}. Wil je deze overschrijven?"
             ):
-                click.secho("Keeping existing provider configuration.", fg="yellow")
+                click.secho("Bestaande provider configuratie wordt behouden.", fg="yellow")
                 return
 
         provider_models = get_provider_data()
@@ -187,12 +187,12 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
         while True:
             selected_provider = select_provider(provider_models)
             if selected_provider is None:  # User typed 'q'
-                click.secho("Exiting...", fg="yellow")
+                click.secho("Afsluiten...", fg="yellow")
                 sys.exit(0)
             if selected_provider:  # Valid selection
                 break
             click.secho(
-                "No provider selected. Please try again or press 'q' to exit.", fg="red"
+                "Geen provider geselecteerd. Probeer opnieuw of druk op 'q' om af te sluiten.", fg="red"
             )
 
         # Check if the selected provider has predefined models
@@ -200,12 +200,12 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
             while True:
                 selected_model = select_model(selected_provider, provider_models)
                 if selected_model is None:  # User typed 'q'
-                    click.secho("Exiting...", fg="yellow")
+                    click.secho("Afsluiten...", fg="yellow")
                     sys.exit(0)
                 if selected_model:  # Valid selection
                     break
                 click.secho(
-                    "No model selected. Please try again or press 'q' to exit.",
+                    "Geen model geselecteerd. Probeer opnieuw of druk op 'q' om af te sluiten.",
                     fg="red",
                 )
             env_vars["MODEL"] = selected_model
@@ -230,13 +230,13 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
 
         if env_vars:
             write_env_file(folder_path, env_vars)
-            click.secho("API keys and model saved to .env file", fg="green")
+            click.secho("API sleutels en model opgeslagen in .env bestand", fg="green")
         else:
             click.secho(
-                "No API keys provided. Skipping .env file creation.", fg="yellow"
+                "Geen API sleutels opgegeven. .env bestand aanmaken overgeslagen.", fg="yellow"
             )
 
-        click.secho(f"Selected model: {env_vars.get('MODEL', 'N/A')}", fg="green")
+        click.secho(f"Geselecteerd model: {env_vars.get('MODEL', 'N.v.t.')}", fg="green")
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
@@ -270,4 +270,4 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_name)
 
-    click.secho(f"Crew {name} created successfully!", fg="green", bold=True)
+    click.secho(f"Crew {name} succesvol aangemaakt!", fg="green", bold=True)

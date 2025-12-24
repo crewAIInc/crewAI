@@ -15,7 +15,7 @@ def evaluate_crew(n_iterations: int, model: str) -> None:
 
     try:
         if n_iterations <= 0:
-            raise ValueError("The number of iterations must be a positive integer.")
+            raise ValueError("Het aantal iteraties moet een positief geheel getal zijn.")
 
         result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
 
@@ -23,8 +23,8 @@ def evaluate_crew(n_iterations: int, model: str) -> None:
             click.echo(result.stderr, err=True)
 
     except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while testing the crew: {e}", err=True)
+        click.echo(f"Er is een fout opgetreden bij het testen van de crew: {e}", err=True)
         click.echo(e.output, err=True)
 
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"Er is een onverwachte fout opgetreden: {e}", err=True)

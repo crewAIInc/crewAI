@@ -1,7 +1,7 @@
-"""Native MCP tool wrapper for CrewAI agents.
+"""Native MCP tool wrapper voor CrewAI agents.
 
-This module provides a tool wrapper that reuses existing MCP client sessions
-for better performance and connection management.
+Deze module biedt een tool wrapper die bestaande MCP client sessies hergebruikt
+voor betere performance en verbindingsbeheer.
 """
 
 import asyncio
@@ -11,14 +11,14 @@ from crewai.tools import BaseTool
 
 
 class MCPNativeTool(BaseTool):
-    """Native MCP tool that reuses client sessions.
+    """Native MCP tool die client sessies hergebruikt.
 
-    This tool wrapper is used when agents connect to MCP servers using
-    structured configurations. It reuses existing client sessions for
-    better performance and proper connection lifecycle management.
+    Deze tool wrapper wordt gebruikt wanneer agents verbinden met MCP servers via
+    gestructureerde configuraties. Het hergebruikt bestaande client sessies voor
+    betere performance en correct verbinding lifecycle beheer.
 
-    Unlike MCPToolWrapper which connects on-demand, this tool uses
-    a shared MCP client instance that maintains a persistent connection.
+    In tegenstelling tot MCPToolWrapper die on-demand verbindt, gebruikt deze tool
+    een gedeelde MCP client instantie die een persistente verbinding onderhoudt.
     """
 
     def __init__(
@@ -28,13 +28,13 @@ class MCPNativeTool(BaseTool):
         tool_schema: dict[str, Any],
         server_name: str,
     ) -> None:
-        """Initialize native MCP tool.
+        """Initialiseer native MCP tool.
 
         Args:
-            mcp_client: MCPClient instance with active session.
-            tool_name: Original name of the tool on the MCP server.
-            tool_schema: Schema information for the tool.
-            server_name: Name of the MCP server for prefixing.
+            mcp_client: MCPClient instantie met actieve sessie.
+            tool_name: Originele naam van de tool op de MCP server.
+            tool_schema: Schema informatie voor de tool.
+            server_name: Naam van de MCP server voor prefixing.
         """
         # Create tool name with server prefix to avoid conflicts
         prefixed_name = f"{server_name}_{tool_name}"
@@ -63,27 +63,27 @@ class MCPNativeTool(BaseTool):
 
     @property
     def mcp_client(self) -> Any:
-        """Get the MCP client instance."""
+        """Haal de MCP client instantie op."""
         return self._mcp_client
 
     @property
     def original_tool_name(self) -> str:
-        """Get the original tool name."""
+        """Haal de originele tool naam op."""
         return self._original_tool_name
 
     @property
     def server_name(self) -> str:
-        """Get the server name."""
+        """Haal de server naam op."""
         return self._server_name
 
     def _run(self, **kwargs) -> str:
-        """Execute tool using the MCP client session.
+        """Voer tool uit met de MCP client sessie.
 
         Args:
-            **kwargs: Arguments to pass to the MCP tool.
+            **kwargs: Argumenten om door te geven aan de MCP tool.
 
-        Returns:
-            Result from the MCP tool execution.
+        Retourneert:
+            Resultaat van de MCP tool uitvoering.
         """
         try:
             try:
@@ -100,22 +100,22 @@ class MCPNativeTool(BaseTool):
 
         except Exception as e:
             raise RuntimeError(
-                f"Error executing MCP tool {self.original_tool_name}: {e!s}"
+                f"Fout bij uitvoeren MCP tool {self.original_tool_name}: {e!s}"
             ) from e
 
     async def _run_async(self, **kwargs) -> str:
-        """Async implementation of tool execution.
+        """Async implementatie van tool uitvoering.
 
         Args:
-            **kwargs: Arguments to pass to the MCP tool.
+            **kwargs: Argumenten om door te geven aan de MCP tool.
 
-        Returns:
-            Result from the MCP tool execution.
+        Retourneert:
+            Resultaat van de MCP tool uitvoering.
         """
-        # Note: Since we use asyncio.run() which creates a new event loop each time,
-        # Always reconnect on-demand because asyncio.run() creates new event loops per call
-        # All MCP transport context managers (stdio, streamablehttp_client, sse_client)
-        # use anyio.create_task_group() which can't span different event loops
+        # Opmerking: Omdat we asyncio.run() gebruiken die elke keer een nieuwe event loop maakt,
+        # altijd opnieuw verbinden on-demand omdat asyncio.run() nieuwe event loops per aanroep maakt
+        # Alle MCP transport context managers (stdio, streamablehttp_client, sse_client)
+        # gebruiken anyio.create_task_group() die niet over verschillende event loops kan
         if self._mcp_client.connected:
             await self._mcp_client.disconnect()
 
@@ -141,16 +141,16 @@ class MCPNativeTool(BaseTool):
                 raise
 
         finally:
-            # Always disconnect after tool call to ensure clean context manager lifecycle
-            # This prevents "exit cancel scope in different task" errors
-            # All transport context managers must be exited in the same event loop they were entered
+            # Altijd verbinding verbreken na tool aanroep voor schone context manager lifecycle
+            # Dit voorkomt "exit cancel scope in different task" fouten
+            # Alle transport context managers moeten worden afgesloten in dezelfde event loop waarin ze zijn gestart
             await self._mcp_client.disconnect()
 
-        # Extract result content
+        # Extraheer resultaat inhoud
         if isinstance(result, str):
             return result
 
-        # Handle various result formats
+        # Verwerk verschillende resultaat formaten
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]

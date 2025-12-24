@@ -46,10 +46,10 @@ T = TypeVar("T")
 
 # Constants for log messages
 LOG_MESSAGES: Final[dict[str, str]] = {
-    "save_state": "Saving flow state to memory for ID: {}",
-    "save_error": "Failed to persist state for method {}: {}",
-    "state_missing": "Flow instance has no state",
-    "id_missing": "Flow state must have an 'id' field for persistence",
+    "save_state": "Flow state wordt opgeslagen in geheugen voor ID: {}",
+    "save_error": "State opslaan mislukt voor methode {}: {}",
+    "state_missing": "Flow instantie heeft geen state",
+    "id_missing": "Flow state moet een 'id' veld hebben voor persistentie",
 }
 
 
@@ -85,7 +85,7 @@ class PersistenceDecorator:
         try:
             state = getattr(flow_instance, "state", None)
             if state is None:
-                raise ValueError("Flow instance has no state")
+                raise ValueError("Flow instantie heeft geen state")
 
             flow_uuid: str | None = None
             if isinstance(state, dict):
@@ -94,7 +94,7 @@ class PersistenceDecorator:
                 flow_uuid = getattr(state, "id", None)
 
             if not flow_uuid:
-                raise ValueError("Flow state must have an 'id' field for persistence")
+                raise ValueError("Flow state moet een 'id' veld hebben voor persistentie")
 
             # Log state saving only if verbose is True
             if verbose:
@@ -113,7 +113,7 @@ class PersistenceDecorator:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
                 cls._printer.print(error_msg, color="red")
                 logger.error(error_msg)
-                raise RuntimeError(f"State persistence failed: {e!s}") from e
+                raise RuntimeError(f"State persistentie mislukt: {e!s}") from e
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
             cls._printer.print(error_msg, color="red")

@@ -44,11 +44,11 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         project_root = Path(folder_name)
         if project_root.exists():
-            click.secho(f"Folder {folder_name} already exists.", fg="red")
+            click.secho(f"Map {folder_name} bestaat al.", fg="red")
             raise SystemExit
         os.makedirs(project_root)
 
-        click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
+        click.secho(f"Custom tool {folder_name} wordt aangemaakt...", fg="green", bold=True)
 
         template_dir = Path(__file__).parent.parent / "templates" / "tool"
         tree_copy(template_dir, project_root)
@@ -61,7 +61,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             self.login()
             subprocess.run(["git", "init"], check=True)  # noqa: S607
             console.print(
-                f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
+                f"[green]Custom tool [bold]{folder_name}[/bold] aangemaakt. Voer [bold]cd {project_root}[/bold] uit om te beginnen.[/green]"
             )
         finally:
             os.chdir(old_directory)
@@ -69,12 +69,12 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     def publish(self, is_public: bool, force: bool = False) -> None:
         if not git.Repository().is_synced() and not force:
             console.print(
-                "[bold red]Failed to publish tool.[/bold red]\n"
-                "Local changes need to be resolved before publishing. Please do the following:\n"
-                "* [bold]Commit[/bold] your changes.\n"
-                "* [bold]Push[/bold] to sync with the remote.\n"
-                "* [bold]Pull[/bold] the latest changes from the remote.\n"
-                "\nOnce your repository is up-to-date, retry publishing the tool."
+                "[bold red]Tool publiceren mislukt.[/bold red]\n"
+                "Lokale wijzigingen moeten worden opgelost voor publicatie. Doe het volgende:\n"
+                "* [bold]Commit[/bold] je wijzigingen.\n"
+                "* [bold]Push[/bold] om te synchroniseren met de remote.\n"
+                "* [bold]Pull[/bold] de laatste wijzigingen van de remote.\n"
+                "\nProbeer de tool opnieuw te publiceren zodra je repository up-to-date is."
             )
             raise SystemExit()
 
@@ -87,12 +87,12 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         project_description = get_project_description(require=False)
         encoded_tarball = None
 
-        console.print("[bold blue]Discovering tools from your project...[/bold blue]")
+        console.print("[bold blue]Tools worden ontdekt in je project...[/bold blue]")
         available_exports = extract_available_exports()
 
         if available_exports:
             console.print(
-                f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
+                f"[green]Deze tools gevonden om te publiceren: {', '.join([e['name'] for e in available_exports])}[/green]"
             )
         self._print_current_organization()
 
@@ -108,7 +108,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             )
             if not tarball_filename:
                 console.print(
-                    "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
+                    "Project build mislukt. Zorg ervoor dat het commando `uv build --sdist` succesvol wordt uitgevoerd.",
                     style="bold red",
                 )
                 raise SystemExit
@@ -119,7 +119,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
             encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
 
-        console.print("[bold blue]Publishing tool to repository...[/bold blue]")
+        console.print("[bold blue]Tool wordt gepubliceerd naar repository...[/bold blue]")
         publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
             is_public=is_public,
@@ -136,9 +136,9 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
 
         console.print(
-            f"Successfully published `{published_handle}` ({project_version}).\n\n"
-            + "⚠️ Security checks are running in the background. Your tool will be available once these are complete.\n"
-            + f"You can monitor the status or access your tool here:\n{base_url}/crewai_plus/tools/{published_handle}",
+            f"`{published_handle}` ({project_version}) succesvol gepubliceerd.\n\n"
+            + "⚠️ Beveiligingscontroles worden op de achtergrond uitgevoerd. Je tool is beschikbaar zodra deze zijn voltooid.\n"
+            + f"Je kunt de status monitoren of je tool hier openen:\n{base_url}/crewai_plus/tools/{published_handle}",
             style="bold green",
         )
 
@@ -148,26 +148,26 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         if get_response.status_code == 404:
             console.print(
-                "No tool found with this name. Please ensure the tool was published and you have access to it.",
+                "Geen tool gevonden met deze naam. Zorg ervoor dat de tool is gepubliceerd en dat je er toegang toe hebt.",
                 style="bold red",
             )
             raise SystemExit
         if get_response.status_code != 200:
             console.print(
-                "Failed to get tool details. Please try again later.", style="bold red"
+                "Tool details ophalen mislukt. Probeer het later opnieuw.", style="bold red"
             )
             raise SystemExit
 
         self._add_package(get_response.json())
 
-        console.print(f"Successfully installed {handle}", style="bold green")
+        console.print(f"{handle} succesvol geïnstalleerd", style="bold green")
 
     def login(self) -> None:
         login_response = self.plus_api_client.login_to_tool_repository()
 
         if login_response.status_code != 200:
             console.print(
-                "Authentication failed. Verify if the currently active organization can access the tool repository, and run 'crewai login' again.",
+                "Authenticatie mislukt. Controleer of de huidige actieve organisatie toegang heeft tot de tool repository, en voer 'crewai login' opnieuw uit.",
                 style="bold red",
             )
             try:
@@ -227,13 +227,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
     def _ensure_not_in_project(self) -> None:
         if os.path.isfile("./pyproject.toml"):
             console.print(
-                "[bold red]Oops! It looks like you're inside a project.[/bold red]"
+                "[bold red]Oeps! Het lijkt erop dat je in een project zit.[/bold red]"
             )
             console.print(
-                "You can't create a new tool while inside an existing project."
+                "Je kunt geen nieuwe tool aanmaken terwijl je in een bestaand project zit."
             )
             console.print(
-                "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
+                "[bold yellow]Tip:[/bold yellow] Navigeer naar een andere directory en probeer opnieuw."
             )
             raise SystemExit
 
@@ -241,11 +241,11 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         settings = Settings()
         if settings.org_uuid:
             console.print(
-                f"Current organization: {settings.org_name} ({settings.org_uuid})",
+                f"Huidige organisatie: {settings.org_name} ({settings.org_uuid})",
                 style="bold blue",
             )
         else:
             console.print(
-                "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
+                "Geen organisatie ingesteld. We raden aan om er een in te stellen met: `crewai org switch <org_id>` commando.",
                 style="yellow",
             )

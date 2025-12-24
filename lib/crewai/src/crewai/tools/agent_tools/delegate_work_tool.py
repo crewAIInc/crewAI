@@ -4,17 +4,17 @@ from crewai.tools.agent_tools.base_agent_tools import BaseAgentTool
 
 
 class DelegateWorkToolSchema(BaseModel):
-    task: str = Field(..., description="The task to delegate")
-    context: str = Field(..., description="The context for the task")
+    task: str = Field(..., description="De taak om te delegeren")
+    context: str = Field(..., description="De context voor de taak")
     coworker: str = Field(
-        ..., description="The role/name of the coworker to delegate to"
+        ..., description="De rol/naam van de collega om naar te delegeren"
     )
 
 
 class DelegateWorkTool(BaseAgentTool):
-    """Tool for delegating work to coworkers"""
+    """Tool voor het delegeren van werk aan collega's"""
 
-    name: str = "Delegate work to coworker"
+    name: str = "Werk delegeren aan collega"
     args_schema: type[BaseModel] = DelegateWorkToolSchema
 
     def _run(

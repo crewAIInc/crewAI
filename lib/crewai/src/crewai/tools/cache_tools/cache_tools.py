@@ -5,11 +5,11 @@ from crewai.tools.structured_tool import CrewStructuredTool
 
 
 class CacheTools(BaseModel):
-    """Default tools to hit the cache."""
+    """Standaard tools om de cache te raadplegen."""
 
-    name: str = "Hit Cache"
+    name: str = "Cache Raadplegen"
     cache_handler: CacheHandler = Field(
-        description="Cache Handler for the crew",
+        description="Cache Handler voor de crew",
         default_factory=CacheHandler,
     )
 
@@ -17,7 +17,7 @@ class CacheTools(BaseModel):
         return CrewStructuredTool.from_function(
             func=self.hit_cache,
             name=self.name,
-            description="Reads directly from the cache",
+            description="Leest direct uit de cache",
         )
 
     def hit_cache(self, key):

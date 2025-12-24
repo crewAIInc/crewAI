@@ -22,12 +22,12 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
 
             if not orgs:
                 console.print(
-                    "You don't belong to any organizations yet.", style="yellow"
+                    "Je behoort nog tot geen organisaties.", style="yellow"
                 )
                 return
 
-            table = Table(title="Your Organizations")
-            table.add_column("Name", style="cyan")
+            table = Table(title="Jouw Organisaties")
+            table.add_column("Naam", style="cyan")
             table.add_column("ID", style="green")
             for org in orgs:
                 table.add_row(org["name"], org["uuid"])
@@ -36,17 +36,17 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
         except HTTPError as e:
             if e.response.status_code == 401:
                 console.print(
-                    "You are not logged in to any organization. Use 'crewai login' to login.",
+                    "Je bent niet ingelogd bij een organisatie. Gebruik 'crewai login' om in te loggen.",
                     style="bold red",
                 )
                 return
             console.print(
-                f"Failed to retrieve organization list: {e!s}", style="bold red"
+                f"Ophalen van organisatielijst mislukt: {e!s}", style="bold red"
             )
             raise SystemExit(1) from e
         except Exception as e:
             console.print(
-                f"Failed to retrieve organization list: {e!s}", style="bold red"
+                f"Ophalen van organisatielijst mislukt: {e!s}", style="bold red"
             )
             raise SystemExit(1) from e
 
@@ -59,7 +59,7 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             org = next((o for o in orgs if o["uuid"] == org_id), None)
             if not org:
                 console.print(
-                    f"Organization with id '{org_id}' not found.", style="bold red"
+                    f"Organisatie met id '{org_id}' niet gevonden.", style="bold red"
                 )
                 return
 
@@ -69,39 +69,39 @@ class OrganizationCommand(BaseCommand, PlusAPIMixin):
             settings.dump()
 
             console.print(
-                f"Successfully switched to {org['name']} ({org['uuid']})",
+                f"Succesvol gewisseld naar {org['name']} ({org['uuid']})",
                 style="bold green",
             )
         except HTTPError as e:
             if e.response.status_code == 401:
                 console.print(
-                    "You are not logged in to any organization. Use 'crewai login' to login.",
+                    "Je bent niet ingelogd bij een organisatie. Gebruik 'crewai login' om in te loggen.",
                     style="bold red",
                 )
                 return
             console.print(
-                f"Failed to retrieve organization list: {e!s}", style="bold red"
+                f"Ophalen van organisatielijst mislukt: {e!s}", style="bold red"
             )
             raise SystemExit(1) from e
         except Exception as e:
-            console.print(f"Failed to switch organization: {e!s}", style="bold red")
+            console.print(f"Wisselen van organisatie mislukt: {e!s}", style="bold red")
             raise SystemExit(1) from e
 
     def current(self):
         settings = Settings()
         if settings.org_uuid:
             console.print(
-                f"Currently logged in to organization {settings.org_name} ({settings.org_uuid})",
+                f"Momenteel ingelogd bij organisatie {settings.org_name} ({settings.org_uuid})",
                 style="bold green",
             )
         else:
             console.print(
-                "You're not currently logged in to any organization.", style="yellow"
+                "Je bent momenteel niet ingelogd bij een organisatie.", style="yellow"
             )
             console.print(
-                "Use 'crewai org list' to see available organizations.", style="yellow"
+                "Gebruik 'crewai org list' om beschikbare organisaties te zien.", style="yellow"
             )
             console.print(
-                "Use 'crewai org switch <id>' to switch to an organization.",
+                "Gebruik 'crewai org switch <id>' om naar een organisatie te wisselen.",
                 style="yellow",
             )

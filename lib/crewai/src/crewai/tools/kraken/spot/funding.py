@@ -1,4 +1,4 @@
-"""Kraken Spot Funding Tools - Private endpoints for deposits and withdrawals."""
+"""Kraken Spot Funding Tools - Private endpoints voor stortingen en opnames."""
 
 from __future__ import annotations
 
@@ -10,49 +10,49 @@ from crewai.tools.kraken.base import KrakenBaseTool
 
 
 # =============================================================================
-# Tool 1: Get Deposit Methods
+# Tool 1: Haal Stortingsmethodes Op
 # =============================================================================
 class GetDepositMethodsInput(BaseModel):
-    """Input schema for GetDepositMethodsTool."""
+    """Input schema voor GetDepositMethodsTool."""
 
-    asset: str = Field(..., description="Asset to get deposit methods for (e.g., 'XBT', 'ETH')")
+    asset: str = Field(..., description="Asset om stortingsmethodes voor op te halen (bijv. 'XBT', 'ETH')")
 
 
 class GetDepositMethodsTool(KrakenBaseTool):
-    """Get available deposit methods for an asset."""
+    """Haal beschikbare stortingsmethodes op voor een asset."""
 
     name: str = "kraken_get_deposit_methods"
-    description: str = "Get available deposit methods for an asset including fees, limits, and method names."
+    description: str = "Haal beschikbare stortingsmethodes op voor een asset inclusief fees, limieten en methode namen."
     args_schema: type[BaseModel] = GetDepositMethodsInput
 
     def _run(self, asset: str) -> str:
-        """Get deposit methods from Kraken."""
+        """Haal stortingsmethodes op van Kraken."""
         result = self._private_request("DepositMethods", {"asset": asset})
         return str(result)
 
 
 # =============================================================================
-# Tool 2: Get Deposit Addresses
+# Tool 2: Haal Stortingsadressen Op
 # =============================================================================
 class GetDepositAddressesInput(BaseModel):
-    """Input schema for GetDepositAddressesTool."""
+    """Input schema voor GetDepositAddressesTool."""
 
-    asset: str = Field(..., description="Asset to get deposit addresses for")
-    method: str = Field(..., description="Deposit method name from GetDepositMethods")
+    asset: str = Field(..., description="Asset om stortingsadressen voor op te halen")
+    method: str = Field(..., description="Stortingsmethode naam van GetDepositMethods")
     new: bool | None = Field(
-        default=None, description="Generate a new address if true"
+        default=None, description="Genereer een nieuw adres indien true"
     )
 
 
 class GetDepositAddressesTool(KrakenBaseTool):
-    """Get deposit addresses for an asset."""
+    """Haal stortingsadressen op voor een asset."""
 
     name: str = "kraken_get_deposit_addresses"
-    description: str = "Get deposit addresses for an asset. Can optionally generate a new address."
+    description: str = "Haal stortingsadressen op voor een asset. Kan optioneel een nieuw adres genereren."
     args_schema: type[BaseModel] = GetDepositAddressesInput
 
     def _run(self, asset: str, method: str, new: bool | None = None) -> str:
-        """Get deposit addresses from Kraken."""
+        """Haal stortingsadressen op van Kraken."""
         data: dict[str, Any] = {"asset": asset, "method": method}
         if new is not None:
             data["new"] = new
@@ -61,24 +61,24 @@ class GetDepositAddressesTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 3: Get Deposit Status
+# Tool 3: Haal Stortingsstatus Op
 # =============================================================================
 class GetDepositStatusInput(BaseModel):
-    """Input schema for GetDepositStatusTool."""
+    """Input schema voor GetDepositStatusTool."""
 
-    asset: str | None = Field(default=None, description="Filter by asset")
-    method: str | None = Field(default=None, description="Filter by deposit method")
+    asset: str | None = Field(default=None, description="Filter op asset")
+    method: str | None = Field(default=None, description="Filter op stortingsmethode")
 
 
 class GetDepositStatusTool(KrakenBaseTool):
-    """Get status of recent deposits."""
+    """Haal status op van recente stortingen."""
 
     name: str = "kraken_get_deposit_status"
-    description: str = "Get status of recent deposits including amount, status, timestamp, and transaction info."
+    description: str = "Haal status op van recente stortingen inclusief bedrag, status, timestamp en transactie info."
     args_schema: type[BaseModel] = GetDepositStatusInput
 
     def _run(self, asset: str | None = None, method: str | None = None) -> str:
-        """Get deposit status from Kraken."""
+        """Haal stortingsstatus op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -89,24 +89,24 @@ class GetDepositStatusTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 4: Get Withdrawal Methods
+# Tool 4: Haal Opnamemethodes Op
 # =============================================================================
 class GetWithdrawalMethodsInput(BaseModel):
-    """Input schema for GetWithdrawalMethodsTool."""
+    """Input schema voor GetWithdrawalMethodsTool."""
 
-    asset: str | None = Field(default=None, description="Filter by asset")
-    network: str | None = Field(default=None, description="Filter by network")
+    asset: str | None = Field(default=None, description="Filter op asset")
+    network: str | None = Field(default=None, description="Filter op netwerk")
 
 
 class GetWithdrawalMethodsTool(KrakenBaseTool):
-    """Get available withdrawal methods."""
+    """Haal beschikbare opnamemethodes op."""
 
     name: str = "kraken_get_withdrawal_methods"
-    description: str = "Get available withdrawal methods including fees, limits, and network information."
+    description: str = "Haal beschikbare opnamemethodes op inclusief fees, limieten en netwerk informatie."
     args_schema: type[BaseModel] = GetWithdrawalMethodsInput
 
     def _run(self, asset: str | None = None, network: str | None = None) -> str:
-        """Get withdrawal methods from Kraken."""
+        """Haal opnamemethodes op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -117,24 +117,24 @@ class GetWithdrawalMethodsTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 5: Get Withdrawal Addresses
+# Tool 5: Haal Opnameadressen Op
 # =============================================================================
 class GetWithdrawalAddressesInput(BaseModel):
-    """Input schema for GetWithdrawalAddressesTool."""
+    """Input schema voor GetWithdrawalAddressesTool."""
 
-    asset: str | None = Field(default=None, description="Filter by asset")
-    method: str | None = Field(default=None, description="Filter by withdrawal method")
+    asset: str | None = Field(default=None, description="Filter op asset")
+    method: str | None = Field(default=None, description="Filter op opnamemethode")
 
 
 class GetWithdrawalAddressesTool(KrakenBaseTool):
-    """Get saved withdrawal addresses."""
+    """Haal opgeslagen opnameadressen op."""
 
     name: str = "kraken_get_withdrawal_addresses"
-    description: str = "Get saved withdrawal addresses from your account."
+    description: str = "Haal opgeslagen opnameadressen op van je account."
     args_schema: type[BaseModel] = GetWithdrawalAddressesInput
 
     def _run(self, asset: str | None = None, method: str | None = None) -> str:
-        """Get withdrawal addresses from Kraken."""
+        """Haal opnameadressen op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -145,25 +145,25 @@ class GetWithdrawalAddressesTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 6: Get Withdrawal Info
+# Tool 6: Haal Opname Info Op
 # =============================================================================
 class GetWithdrawalInfoInput(BaseModel):
-    """Input schema for GetWithdrawalInfoTool."""
+    """Input schema voor GetWithdrawalInfoTool."""
 
-    asset: str = Field(..., description="Asset to withdraw")
-    key: str = Field(..., description="Withdrawal key name (from saved addresses)")
-    amount: str = Field(..., description="Amount to withdraw")
+    asset: str = Field(..., description="Asset om op te nemen")
+    key: str = Field(..., description="Opname sleutel naam (van opgeslagen adressen)")
+    amount: str = Field(..., description="Bedrag om op te nemen")
 
 
 class GetWithdrawalInfoTool(KrakenBaseTool):
-    """Get withdrawal fee and limit information."""
+    """Haal opname fee en limiet informatie op."""
 
     name: str = "kraken_get_withdrawal_info"
-    description: str = "Get withdrawal fee and limit information for a specific withdrawal request."
+    description: str = "Haal opname fee en limiet informatie op voor een specifiek opname verzoek."
     args_schema: type[BaseModel] = GetWithdrawalInfoInput
 
     def _run(self, asset: str, key: str, amount: str) -> str:
-        """Get withdrawal info from Kraken."""
+        """Haal opname info op van Kraken."""
         result = self._private_request(
             "WithdrawInfo", {"asset": asset, "key": key, "amount": amount}
         )
@@ -171,30 +171,30 @@ class GetWithdrawalInfoTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 7: Withdraw Funds
+# Tool 7: Neem Fondsen Op
 # =============================================================================
 class WithdrawFundsInput(BaseModel):
-    """Input schema for WithdrawFundsTool."""
+    """Input schema voor WithdrawFundsTool."""
 
-    asset: str = Field(..., description="Asset to withdraw")
-    key: str = Field(..., description="Withdrawal key name (from saved addresses)")
-    amount: str = Field(..., description="Amount to withdraw")
+    asset: str = Field(..., description="Asset om op te nemen")
+    key: str = Field(..., description="Opname sleutel naam (van opgeslagen adressen)")
+    amount: str = Field(..., description="Bedrag om op te nemen")
     address: str | None = Field(
-        default=None, description="Crypto address (for new addresses not yet saved)"
+        default=None, description="Crypto adres (voor nieuwe adressen nog niet opgeslagen)"
     )
 
 
 class WithdrawFundsTool(KrakenBaseTool):
-    """Initiate a withdrawal."""
+    """Start een opname."""
 
     name: str = "kraken_withdraw_funds"
-    description: str = "Initiate a withdrawal. CAUTION: This moves real funds! Use GetWithdrawalInfo first to verify fees."
+    description: str = "Start een opname. LET OP: Dit verplaatst echte fondsen! Gebruik GetWithdrawalInfo eerst om fees te verifiëren."
     args_schema: type[BaseModel] = WithdrawFundsInput
 
     def _run(
         self, asset: str, key: str, amount: str, address: str | None = None
     ) -> str:
-        """Withdraw funds from Kraken."""
+        """Neem fondsen op van Kraken."""
         data: dict[str, Any] = {"asset": asset, "key": key, "amount": amount}
         if address:
             data["address"] = address
@@ -203,24 +203,24 @@ class WithdrawFundsTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 8: Get Withdrawal Status
+# Tool 8: Haal Opnamestatus Op
 # =============================================================================
 class GetWithdrawalStatusInput(BaseModel):
-    """Input schema for GetWithdrawalStatusTool."""
+    """Input schema voor GetWithdrawalStatusTool."""
 
-    asset: str | None = Field(default=None, description="Filter by asset")
-    method: str | None = Field(default=None, description="Filter by withdrawal method")
+    asset: str | None = Field(default=None, description="Filter op asset")
+    method: str | None = Field(default=None, description="Filter op opnamemethode")
 
 
 class GetWithdrawalStatusTool(KrakenBaseTool):
-    """Get status of recent withdrawals."""
+    """Haal status op van recente opnames."""
 
     name: str = "kraken_get_withdrawal_status"
-    description: str = "Get status of recent withdrawals including amount, status, timestamp, and transaction info."
+    description: str = "Haal status op van recente opnames inclusief bedrag, status, timestamp en transactie info."
     args_schema: type[BaseModel] = GetWithdrawalStatusInput
 
     def _run(self, asset: str | None = None, method: str | None = None) -> str:
-        """Get withdrawal status from Kraken."""
+        """Haal opnamestatus op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -234,27 +234,27 @@ class GetWithdrawalStatusTool(KrakenBaseTool):
 # Tool 9: Wallet Transfer
 # =============================================================================
 class WalletTransferInput(BaseModel):
-    """Input schema for WalletTransferTool."""
+    """Input schema voor WalletTransferTool."""
 
-    asset: str = Field(..., description="Asset to transfer")
-    amount: str = Field(..., description="Amount to transfer")
+    asset: str = Field(..., description="Asset om over te maken")
+    amount: str = Field(..., description="Bedrag om over te maken")
     from_wallet: str = Field(
-        ..., description="Source wallet: 'Spot Wallet' or 'Futures Wallet'"
+        ..., description="Bron wallet: 'Spot Wallet' of 'Futures Wallet'"
     )
     to_wallet: str = Field(
-        ..., description="Destination wallet: 'Spot Wallet' or 'Futures Wallet'"
+        ..., description="Bestemming wallet: 'Spot Wallet' of 'Futures Wallet'"
     )
 
 
 class WalletTransferTool(KrakenBaseTool):
-    """Transfer between Kraken wallets."""
+    """Transfer tussen Kraken wallets."""
 
     name: str = "kraken_wallet_transfer"
-    description: str = "Transfer funds between Spot Wallet and Futures Wallet on Kraken."
+    description: str = "Maak fondsen over tussen Spot Wallet en Futures Wallet op Kraken."
     args_schema: type[BaseModel] = WalletTransferInput
 
     def _run(self, asset: str, amount: str, from_wallet: str, to_wallet: str) -> str:
-        """Transfer between wallets on Kraken."""
+        """Transfer tussen wallets op Kraken."""
         result = self._private_request(
             "WalletTransfer",
             {"asset": asset, "amount": amount, "from": from_wallet, "to": to_wallet},
@@ -263,24 +263,24 @@ class WalletTransferTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 10: Cancel Withdrawal
+# Tool 10: Annuleer Opname
 # =============================================================================
 class CancelWithdrawalInput(BaseModel):
-    """Input schema for CancelWithdrawalTool."""
+    """Input schema voor CancelWithdrawalTool."""
 
-    asset: str = Field(..., description="Asset of the withdrawal to cancel")
-    refid: str = Field(..., description="Reference ID of the withdrawal to cancel")
+    asset: str = Field(..., description="Asset van de opname om te annuleren")
+    refid: str = Field(..., description="Referentie ID van de opname om te annuleren")
 
 
 class CancelWithdrawalTool(KrakenBaseTool):
-    """Cancel a pending withdrawal."""
+    """Annuleer een in afwachting zijnde opname."""
 
     name: str = "kraken_cancel_withdrawal"
-    description: str = "Cancel a pending withdrawal that hasn't been processed yet."
+    description: str = "Annuleer een in afwachting zijnde opname die nog niet verwerkt is."
     args_schema: type[BaseModel] = CancelWithdrawalInput
 
     def _run(self, asset: str, refid: str) -> str:
-        """Cancel withdrawal on Kraken."""
+        """Annuleer opname op Kraken."""
         result = self._private_request(
             "WithdrawCancel", {"asset": asset, "refid": refid}
         )

@@ -43,13 +43,13 @@ def check_conversational_crews_version(
     try:
         if version.parse(crewai_version) < version.parse(MIN_REQUIRED_VERSION):
             click.secho(
-                "You are using an older version of crewAI that doesn't support conversational crews. "
-                "Run 'uv upgrade crewai' to get the latest version.",
+                "Je gebruikt een oudere versie van crewAI die geen conversationele crews ondersteunt. "
+                "Voer 'uv upgrade crewai' uit om de laatste versie te krijgen.",
                 fg="red",
             )
             return False
     except version.InvalidVersion:
-        click.secho("Invalid crewAI version format detected.", fg="red")
+        click.secho("Ongeldig crewAI versie formaat gedetecteerd.", fg="red")
         return False
     return True
 
@@ -71,10 +71,10 @@ def run_chat() -> None:
     if not chat_llm:
         return
 
-    # Indicate that the crew is being analyzed
+    # Geef aan dat de crew wordt geanalyseerd
     click.secho(
-        "\nAnalyzing crew and required inputs - this may take 3 to 30 seconds "
-        "depending on the complexity of your crew.",
+        "\nCrew en vereiste inputs worden geanalyseerd - dit kan 3 tot 30 seconden duren "
+        "afhankelijk van de complexiteit van je crew.",
         fg="white",
     )
 
@@ -97,8 +97,8 @@ def run_chat() -> None:
         loading_complete.set()
         loading_thread.join()
 
-    # Indicate that the analysis is complete
-    click.secho("\nFinished analyzing crew.\n", fg="white")
+    # Geef aan dat de analyse compleet is
+    click.secho("\nCrew analyse voltooid.\n", fg="white")
 
     click.secho(f"Assistant: {introductory_message}\n", fg="green")
 
@@ -123,12 +123,12 @@ def show_loading(event: threading.Event) -> None:
 
 
 def initialize_chat_llm(crew: Crew) -> LLM | BaseLLM | None:
-    """Initializes the chat LLM and handles exceptions."""
+    """Initialiseert de chat LLM en handelt uitzonderingen af."""
     try:
         return create_llm(crew.chat_llm)
     except Exception as e:
         click.secho(
-            f"Unable to find a Chat LLM. Please make sure you set chat_llm on the crew: {e}",
+            f"Kan geen Chat LLM vinden. Zorg ervoor dat je chat_llm hebt ingesteld op de crew: {e}",
             fg="red",
         )
         return None
@@ -138,10 +138,10 @@ def build_system_message(crew_chat_inputs: ChatInputs) -> str:
     """Builds the initial system message for the chat."""
     required_fields_str = (
         ", ".join(
-            f"{field.name} (desc: {field.description or 'n/a'})"
+            f"{field.name} (beschr: {field.description or 'n.v.t.'})"
             for field in crew_chat_inputs.inputs
         )
-        or "(No required fields detected)"
+        or "(Geen vereiste velden gedetecteerd)"
     )
 
     return (
@@ -205,17 +205,17 @@ def chat_loop(
             )
 
         except KeyboardInterrupt:  # noqa: PERF203
-            click.echo("\nExiting chat. Goodbye!")
+            click.echo("\nChat afsluiten. Tot ziens!")
             break
         except Exception as e:
-            click.secho(f"An error occurred: {e}", fg="red")
+            click.secho(f"Er is een fout opgetreden: {e}", fg="red")
             break
 
 
 def get_user_input() -> str:
-    """Collect multi-line user input with exit handling."""
+    """Verzamel multi-regel gebruikersinvoer met exit afhandeling."""
     click.secho(
-        "\nYou (type your message below. Press 'Enter' twice when you're done):",
+        "\nJij (typ je bericht hieronder. Druk tweemaal op 'Enter' als je klaar bent):",
         fg="blue",
     )
     user_input_lines = []
@@ -237,18 +237,18 @@ def handle_user_input(
     available_functions: dict[str, Any],
 ) -> None:
     if user_input.strip().lower() == "exit":
-        click.echo("Exiting chat. Goodbye!")
+        click.echo("Chat afsluiten. Tot ziens!")
         return
 
     if not user_input.strip():
-        click.echo("Empty message. Please provide input or type 'exit' to quit.")
+        click.echo("Leeg bericht. Voer invoer in of typ 'exit' om af te sluiten.")
         return
 
     messages.append({"role": "user", "content": user_input})
 
-    # Indicate that assistant is processing
+    # Geef aan dat assistent aan het verwerken is
     click.echo()
-    click.secho("Assistant is processing your input. Please wait...", fg="green")
+    click.secho("Assistent verwerkt je invoer. Even geduld...", fg="green")
 
     # Process assistant's response
     final_response = chat_llm.call(
@@ -273,7 +273,7 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict[str, Any]:
     for field in crew_inputs.inputs:
         properties[field.name] = {
             "type": "string",
-            "description": field.description or "No description provided",
+            "description": field.description or "Geen beschrijving opgegeven",
         }
 
     required_fields = [field.name for field in crew_inputs.inputs]
@@ -282,7 +282,7 @@ def generate_crew_tool_schema(crew_inputs: ChatInputs) -> dict[str, Any]:
         "type": "function",
         "function": {
             "name": crew_inputs.crew_name,
-            "description": crew_inputs.crew_description or "No crew description",
+            "description": crew_inputs.crew_description or "Geen crew beschrijving",
             "parameters": {
                 "type": "object",
                 "properties": properties,
@@ -318,8 +318,8 @@ def run_crew_tool(crew: Crew, messages: list[LLMMessage], **kwargs: Any) -> str:
         return str(crew_output)
 
     except Exception as e:
-        # Exit the chat and show the error message
-        click.secho("An error occurred while running the crew:", fg="red")
+        # Sluit de chat af en toon de foutmelding
+        click.secho("Er is een fout opgetreden bij het uitvoeren van de crew:", fg="red")
         click.secho(str(e), fg="red")
         sys.exit(1)
 
@@ -337,7 +337,7 @@ def load_crew_and_name() -> tuple[Crew, str]:
     # Path to the pyproject.toml file
     pyproject_path = cwd / "pyproject.toml"
     if not pyproject_path.exists():
-        raise FileNotFoundError("pyproject.toml not found in the current directory.")
+        raise FileNotFoundError("pyproject.toml niet gevonden in de huidige directory.")
 
     # Load the pyproject.toml file using 'tomli'
     with pyproject_path.open("rb") as f:
@@ -362,15 +362,15 @@ def load_crew_and_name() -> tuple[Crew, str]:
         crew_module = __import__(crew_module_name, fromlist=[crew_class_name])
     except ImportError as e:
         raise ImportError(
-            f"Failed to import crew module {crew_module_name}: {e}"
+            f"Kon crew module {crew_module_name} niet importeren: {e}"
         ) from e
 
-    # Get the crew class from the module
+    # Haal de crew klasse uit de module
     try:
         crew_class = getattr(crew_module, crew_class_name)
     except AttributeError as e:
         raise AttributeError(
-            f"Crew class {crew_class_name} not found in module {crew_module_name}"
+            f"Crew klasse {crew_class_name} niet gevonden in module {crew_module_name}"
         ) from e
 
     # Instantiate the crew
@@ -471,8 +471,8 @@ def generate_input_description_with_ai(
 
     context = "\n".join(context_texts)
     if not context:
-        # If no context is found for the input, raise an exception as per instruction
-        raise ValueError(f"No context found for input '{input_name}'.")
+        # Als geen context is gevonden voor de input, gooi een uitzondering
+        raise ValueError(f"Geen context gevonden voor input '{input_name}'.")
 
     prompt = (
         f"Based on the following context, write a concise description (15 words or less) of the input '{input_name}'.\n"
@@ -522,7 +522,7 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
 
     context = "\n".join(context_texts)
     if not context:
-        raise ValueError("No context found for generating crew description.")
+        raise ValueError("Geen context gevonden voor het genereren van crew beschrijving.")
 
     prompt = (
         "Based on the following context, write a concise, action-oriented description (15 words or less) of the crew's purpose.\n"

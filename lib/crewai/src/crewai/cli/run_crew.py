@@ -31,8 +31,8 @@ def run_crew() -> None:
         version.parse(crewai_version) < version.parse(min_required_version)
     ):
         click.secho(
-            f"You are running an older version of crewAI ({crewai_version}) that uses poetry pyproject.toml. "
-            f"Please run `crewai update` to update your pyproject.toml to use uv.",
+            f"Je gebruikt een oudere versie van crewAI ({crewai_version}) die poetry pyproject.toml gebruikt. "
+            f"Voer `crewai update` uit om je pyproject.toml te updaten naar uv.",
             fg="red",
         )
 
@@ -41,7 +41,7 @@ def run_crew() -> None:
     crew_type = CrewType.FLOW if is_flow else CrewType.STANDARD
 
     # Display appropriate message
-    click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
+    click.echo(f"{'Flow' if is_flow else 'Crew'} wordt uitgevoerd")
 
     # Execute the appropriate command
     execute_command(crew_type)
@@ -77,7 +77,7 @@ def execute_command(crew_type: CrewType) -> None:
         handle_error(e, crew_type)
 
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"Er is een onverwachte fout opgetreden: {e}", err=True)
 
 
 def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> None:
@@ -89,7 +89,7 @@ def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> N
         crew_type: The type of crew that was being run
     """
     entity_type = "flow" if crew_type == CrewType.FLOW else "crew"
-    click.echo(f"An error occurred while running the {entity_type}: {error}", err=True)
+    click.echo(f"Er is een fout opgetreden bij het uitvoeren van de {entity_type}: {error}", err=True)
 
     if error.output:
         click.echo(error.output, err=True, nl=True)
@@ -97,7 +97,7 @@ def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> N
     pyproject_data = read_toml()
     if pyproject_data.get("tool", {}).get("poetry"):
         click.secho(
-            "It's possible that you are using an old version of crewAI that uses poetry, "
-            "please run `crewai update` to update your pyproject.toml to use uv.",
+            "Het is mogelijk dat je een oude versie van crewAI gebruikt die poetry gebruikt, "
+            "voer `crewai update` uit om je pyproject.toml te updaten naar uv.",
             fg="yellow",
         )

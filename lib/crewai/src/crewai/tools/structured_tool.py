@@ -17,14 +17,14 @@ if TYPE_CHECKING:
 
 
 class ToolUsageLimitExceededError(Exception):
-    """Exception raised when a tool has reached its maximum usage limit."""
+    """Exceptie die wordt opgeworpen wanneer een tool zijn maximale gebruikslimiet heeft bereikt."""
 
 
 class CrewStructuredTool:
-    """A structured tool that can operate on any number of inputs.
+    """Een gestructureerde tool die op elk aantal inputs kan opereren.
 
-    This tool intends to replace StructuredTool with a custom implementation
-    that integrates better with CrewAI's ecosystem.
+    Deze tool is bedoeld om StructuredTool te vervangen met een aangepaste implementatie
+    die beter integreert met het CrewAI ecosysteem.
     """
 
     def __init__(
@@ -37,16 +37,16 @@ class CrewStructuredTool:
         max_usage_count: int | None = None,
         current_usage_count: int = 0,
     ) -> None:
-        """Initialize the structured tool.
+        """Initialiseer de gestructureerde tool.
 
         Args:
-            name: The name of the tool
-            description: A description of what the tool does
-            args_schema: The pydantic model for the tool's arguments
-            func: The function to run when the tool is called
-            result_as_answer: Whether to return the output directly
-            max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
-            current_usage_count: Current number of times this tool has been used.
+            name: De naam van de tool
+            description: Een beschrijving van wat de tool doet
+            args_schema: Het pydantic model voor de argumenten van de tool
+            func: De functie die wordt uitgevoerd wanneer de tool wordt aangeroepen
+            result_as_answer: Of de output direct geretourneerd moet worden
+            max_usage_count: Maximaal aantal keren dat deze tool gebruikt kan worden. None betekent onbeperkt gebruik.
+            current_usage_count: Huidig aantal keren dat deze tool is gebruikt.
         """
         self.name = name
         self.description = description
@@ -58,7 +58,7 @@ class CrewStructuredTool:
         self.current_usage_count = current_usage_count
         self._original_tool: BaseTool | None = None
 
-        # Validate the function signature matches the schema
+        # Valideer dat de functie signatuur overeenkomt met het schema
         self._validate_function_signature()
 
     @classmethod
@@ -72,46 +72,46 @@ class CrewStructuredTool:
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
-        """Create a tool from a function.
+        """Maak een tool van een functie.
 
         Args:
-            func: The function to create a tool from
-            name: The name of the tool. Defaults to the function name
-            description: The description of the tool. Defaults to the function docstring
-            return_direct: Whether to return the output directly
-            args_schema: Optional schema for the function arguments
-            infer_schema: Whether to infer the schema from the function signature
-            **kwargs: Additional arguments to pass to the tool
+            func: De functie om een tool van te maken
+            name: De naam van de tool. Standaard de functienaam
+            description: De beschrijving van de tool. Standaard de functie docstring
+            return_direct: Of de output direct geretourneerd moet worden
+            args_schema: Optioneel schema voor de functie argumenten
+            infer_schema: Of het schema afgeleid moet worden van de functie signatuur
+            **kwargs: Extra argumenten om door te geven aan de tool
 
-        Returns:
-            A CrewStructuredTool instance
+        Retourneert:
+            Een CrewStructuredTool instantie
 
-        Example:
-            >>> def add(a: int, b: int) -> int:
-            ...     '''Add two numbers'''
+        Voorbeeld:
+            >>> def optellen(a: int, b: int) -> int:
+            ...     '''Tel twee getallen op'''
             ...     return a + b
-            >>> tool = CrewStructuredTool.from_function(add)
+            >>> tool = CrewStructuredTool.from_function(optellen)
         """
         name = name or func.__name__
         description = description or inspect.getdoc(func)
 
         if description is None:
             raise ValueError(
-                f"Function {name} must have a docstring if description not provided."
+                f"Functie {name} moet een docstring hebben als beschrijving niet is opgegeven."
             )
 
-        # Clean up the description
+        # Schoon de beschrijving op
         description = textwrap.dedent(description).strip()
 
         if args_schema is not None:
-            # Use provided schema
+            # Gebruik opgegeven schema
             schema = args_schema
         elif infer_schema:
-            # Infer schema from function signature
+            # Leid schema af van functie signatuur
             schema = cls._create_schema_from_function(name, func)
         else:
             raise ValueError(
-                "Either args_schema must be provided or infer_schema must be True."
+                "Ofwel args_schema moet zijn opgegeven of infer_schema moet True zijn."
             )
 
         return cls(
@@ -127,87 +127,87 @@ class CrewStructuredTool:
         name: str,
         func: Callable,
     ) -> type[BaseModel]:
-        """Create a Pydantic schema from a function's signature.
+        """Maak een Pydantic schema van een functie signatuur.
 
         Args:
-            name: The name to use for the schema
-            func: The function to create a schema from
+            name: De naam om te gebruiken voor het schema
+            func: De functie om een schema van te maken
 
-        Returns:
-            A Pydantic model class
+        Retourneert:
+            Een Pydantic model klasse
         """
-        # Get function signature
+        # Haal functie signatuur op
         sig = inspect.signature(func)
 
-        # Get type hints
+        # Haal type hints op
         type_hints = get_type_hints(func)
 
-        # Create field definitions
+        # Maak veld definities
         fields = {}
         for param_name, param in sig.parameters.items():
-            # Skip self/cls for methods
+            # Sla self/cls over voor methodes
             if param_name in ("self", "cls"):
                 continue
 
-            # Get type annotation
+            # Haal type annotatie op
             annotation = type_hints.get(param_name, Any)
 
-            # Get default value
+            # Haal standaard waarde op
             default = ... if param.default == param.empty else param.default
 
-            # Add field
+            # Voeg veld toe
             fields[param_name] = (annotation, Field(default=default))
 
-        # Create model
+        # Maak model
         schema_name = f"{name.title()}Schema"
         return create_model(schema_name, **fields)  # type: ignore[call-overload]
 
     def _validate_function_signature(self) -> None:
-        """Validate that the function signature matches the args schema."""
+        """Valideer dat de functie signatuur overeenkomt met het args schema."""
         sig = inspect.signature(self.func)
         schema_fields = self.args_schema.model_fields
 
-        # Check required parameters
+        # Controleer vereiste parameters
         for param_name, param in sig.parameters.items():
-            # Skip self/cls for methods
+            # Sla self/cls over voor methodes
             if param_name in ("self", "cls"):
                 continue
 
-            # Skip **kwargs parameters
+            # Sla **kwargs parameters over
             if param.kind in (
                 inspect.Parameter.VAR_KEYWORD,
                 inspect.Parameter.VAR_POSITIONAL,
             ):
                 continue
 
-            # Only validate required parameters without defaults
+            # Valideer alleen vereiste parameters zonder standaardwaarden
             if param.default == inspect.Parameter.empty:
                 if param_name not in schema_fields:
                     raise ValueError(
-                        f"Required function parameter '{param_name}' "
-                        f"not found in args_schema"
+                        f"Vereiste functie parameter '{param_name}' "
+                        f"niet gevonden in args_schema"
                     )
 
     def _parse_args(self, raw_args: str | dict) -> dict:
-        """Parse and validate the input arguments against the schema.
+        """Parse en valideer de input argumenten tegen het schema.
 
         Args:
-            raw_args: The raw arguments to parse, either as a string or dict
+            raw_args: De ruwe argumenten om te parsen, als string of dict
 
-        Returns:
-            The validated arguments as a dictionary
+        Retourneert:
+            De gevalideerde argumenten als dictionary
         """
         if isinstance(raw_args, str):
             try:
                 raw_args = json.loads(raw_args)
             except json.JSONDecodeError as e:
-                raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
+                raise ValueError(f"Kon argumenten niet parsen als JSON: {e}") from e
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
             return validated_args.model_dump()
         except Exception as e:
-            raise ValueError(f"Arguments validation failed: {e}") from e
+            raise ValueError(f"Argumenten validatie mislukt: {e}") from e
 
     async def ainvoke(
         self,
@@ -215,21 +215,21 @@ class CrewStructuredTool:
         config: dict | None = None,
         **kwargs: Any,
     ) -> Any:
-        """Asynchronously invoke the tool.
+        """Roep de tool asynchroon aan.
 
         Args:
-            input: The input arguments
-            config: Optional configuration
-            **kwargs: Additional keyword arguments
+            input: De input argumenten
+            config: Optionele configuratie
+            **kwargs: Extra keyword argumenten
 
-        Returns:
-            The result of the tool execution
+        Retourneert:
+            Het resultaat van de tool uitvoering
         """
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{self.name}' heeft zijn maximale gebruikslimiet van {self.max_usage_count} bereikt. Je mag de {self.name} tool niet meer gebruiken."
             )
 
         self._increment_usage_count()
@@ -237,7 +237,7 @@ class CrewStructuredTool:
         try:
             if inspect.iscoroutinefunction(self.func):
                 return await self.func(**parsed_args, **kwargs)
-            # Run sync functions in a thread pool
+            # Voer sync functies uit in een thread pool
             import asyncio
 
             return await asyncio.get_event_loop().run_in_executor(
@@ -247,8 +247,8 @@ class CrewStructuredTool:
             raise
 
     def _run(self, *args, **kwargs) -> Any:
-        """Legacy method for compatibility."""
-        # Convert args/kwargs to our expected format
+        """Legacy methode voor compatibiliteit."""
+        # Converteer args/kwargs naar ons verwachte formaat
         input_dict = dict(zip(self.args_schema.model_fields.keys(), args, strict=False))
         input_dict.update(kwargs)
         return self.invoke(input_dict)
@@ -256,12 +256,12 @@ class CrewStructuredTool:
     def invoke(
         self, input: str | dict, config: dict | None = None, **kwargs: Any
     ) -> Any:
-        """Main method for tool execution."""
+        """Hoofdmethode voor tool uitvoering."""
         parsed_args = self._parse_args(input)
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{self.name}' heeft zijn maximale gebruikslimiet van {self.max_usage_count} bereikt. Je mag de {self.name} tool niet meer gebruiken."
             )
 
         self._increment_usage_count()
@@ -277,21 +277,21 @@ class CrewStructuredTool:
         return result
 
     def has_reached_max_usage_count(self) -> bool:
-        """Check if the tool has reached its maximum usage count."""
+        """Controleer of de tool zijn maximale gebruiksaantal heeft bereikt."""
         return (
             self.max_usage_count is not None
             and self.current_usage_count >= self.max_usage_count
         )
 
     def _increment_usage_count(self) -> None:
-        """Increment the usage count."""
+        """Verhoog het gebruiksaantal."""
         self.current_usage_count += 1
         if self._original_tool is not None:
             self._original_tool.current_usage_count = self.current_usage_count
 
     @property
     def args(self) -> dict:
-        """Get the tool's input arguments schema."""
+        """Haal het input argumenten schema van de tool op."""
         return self.args_schema.model_json_schema()["properties"]
 
     def __repr__(self) -> str:

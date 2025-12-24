@@ -61,28 +61,28 @@ _printer = Printer()
 
 
 class Task(BaseModel):
-    """Class that represents a task to be executed.
+    """Klasse die een uit te voeren taak representeert.
 
-    Each task must have a description, an expected output and an agent responsible for execution.
+    Elke taak moet een beschrijving, een verwachte output en een verantwoordelijke agent voor uitvoering hebben.
 
-    Attributes:
-        agent: Agent responsible for task execution. Represents entity performing task.
-        async_execution: Boolean flag indicating asynchronous task execution.
-        callback: Function/object executed post task completion for additional actions.
-        config: Dictionary containing task-specific configuration parameters.
-        context: List of Task instances providing task context or input data.
-        description: Descriptive text detailing task's purpose and execution.
-        expected_output: Clear definition of expected task outcome.
-        output_file: File path for storing task output.
-        create_directory: Whether to create the directory for output_file if it doesn't exist.
-        output_json: Pydantic model for structuring JSON output.
-        output_pydantic: Pydantic model for task output.
-        security_config: Security configuration including fingerprinting.
-        tools: List of tools/resources limited for task execution.
-        allow_crewai_trigger_context: Optional flag to control crewai_trigger_payload injection.
-                              None (default): Auto-inject for first task only.
-                              True: Always inject trigger payload for this task.
-                              False: Never inject trigger payload, even for first task.
+    Attributen:
+        agent: Agent verantwoordelijk voor taakuitvoering. Representeert de entiteit die de taak uitvoert.
+        async_execution: Boolean vlag die asynchrone taakuitvoering aangeeft.
+        callback: Functie/object uitgevoerd na taakafronding voor aanvullende acties.
+        config: Dictionary met taak-specifieke configuratie parameters.
+        context: Lijst van Task instanties die taakcontext of inputdata leveren.
+        description: Beschrijvende tekst die doel en uitvoering van de taak detailleert.
+        expected_output: Duidelijke definitie van verwachte taakuitkomst.
+        output_file: Bestandspad voor opslag van taakoutput.
+        create_directory: Of de directory voor output_file aangemaakt moet worden als deze niet bestaat.
+        output_json: Pydantic model voor structurering van JSON output.
+        output_pydantic: Pydantic model voor taakoutput.
+        security_config: Beveiligingsconfiguratie inclusief fingerprinting.
+        tools: Lijst van tools/resources beperkt voor taakuitvoering.
+        allow_crewai_trigger_context: Optionele vlag om crewai_trigger_payload injectie te controleren.
+                              None (standaard): Auto-injecteer alleen voor eerste taak.
+                              True: Injecteer altijd trigger payload voor deze taak.
+                              False: Injecteer nooit trigger payload, zelfs niet voor eerste taak.
     """
 
     __hash__ = object.__hash__
@@ -93,103 +93,103 @@ class Task(BaseModel):
     i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
-    description: str = Field(description="Description of the actual task.")
+    description: str = Field(description="Beschrijving van de daadwerkelijke taak.")
     expected_output: str = Field(
-        description="Clear definition of expected output for the task."
+        description="Duidelijke definitie van verwachte output voor de taak."
     )
     config: dict[str, Any] | None = Field(
-        description="Configuration for the agent",
+        description="Configuratie voor de agent",
         default=None,
     )
     callback: Any | None = Field(
-        description="Callback to be executed after the task is completed.", default=None
+        description="Callback om uit te voeren nadat de taak is voltooid.", default=None
     )
     agent: BaseAgent | None = Field(
-        description="Agent responsible for execution the task.", default=None
+        description="Agent verantwoordelijk voor uitvoering van de taak.", default=None
     )
     context: list[Task] | None | _NotSpecified = Field(
-        description="Other tasks that will have their output used as context for this task.",
+        description="Andere taken waarvan de output als context voor deze taak wordt gebruikt.",
         default=NOT_SPECIFIED,
     )
     async_execution: bool | None = Field(
-        description="Whether the task should be executed asynchronously or not.",
+        description="Of de taak asynchroon moet worden uitgevoerd of niet.",
         default=False,
     )
     output_json: type[BaseModel] | None = Field(
-        description="A Pydantic model to be used to create a JSON output.",
+        description="Een Pydantic model om een JSON output te maken.",
         default=None,
     )
     output_pydantic: type[BaseModel] | None = Field(
-        description="A Pydantic model to be used to create a Pydantic output.",
+        description="Een Pydantic model om een Pydantic output te maken.",
         default=None,
     )
     response_model: type[BaseModel] | None = Field(
-        description="A Pydantic model for structured LLM outputs using native provider features.",
+        description="Een Pydantic model voor gestructureerde LLM outputs met native provider features.",
         default=None,
     )
     output_file: str | None = Field(
-        description="A file path to be used to create a file output.",
+        description="Een bestandspad om een bestandsoutput te maken.",
         default=None,
     )
     create_directory: bool | None = Field(
-        description="Whether to create the directory for output_file if it doesn't exist.",
+        description="Of de directory voor output_file aangemaakt moet worden als deze niet bestaat.",
         default=True,
     )
     output: TaskOutput | None = Field(
-        description="Task output, it's final result after being executed", default=None
+        description="Taakoutput, het uiteindelijke resultaat na uitvoering", default=None
     )
     tools: list[BaseTool] | None = Field(
         default_factory=list,
-        description="Tools the agent is limited to use for this task.",
+        description="Tools waar de agent beperkt is tot voor deze taak.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
-        description="Security configuration for the task.",
+        description="Beveiligingsconfiguratie voor de taak.",
     )
     id: uuid.UUID = Field(
         default_factory=uuid.uuid4,
         frozen=True,
-        description="Unique identifier for the object, not set by user.",
+        description="Unieke identifier voor het object, niet ingesteld door gebruiker.",
     )
     human_input: bool | None = Field(
-        description="Whether the task should have a human review the final answer of the agent",
+        description="Of de taak een menselijke review van het eindantwoord van de agent moet hebben",
         default=False,
     )
     markdown: bool | None = Field(
-        description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
+        description="Of de taak de agent moet instrueren om het eindantwoord geformatteerd in Markdown te retourneren",
         default=False,
     )
     converter_cls: type[Converter] | None = Field(
-        description="A converter class used to export structured output",
+        description="Een converter klasse gebruikt om gestructureerde output te exporteren",
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
     guardrail: GuardrailType | None = Field(
         default=None,
-        description="Function or string description of a guardrail to validate task output before proceeding to next task",
+        description="Functie of string beschrijving van een guardrail om taakoutput te valideren voordat naar volgende taak wordt gegaan",
     )
     guardrails: GuardrailsType | None = Field(
         default=None,
-        description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
+        description="Lijst van guardrails om taakoutput te valideren voordat naar volgende taak wordt gegaan. Ondersteunt ook een enkele guardrail functie of string beschrijving",
     )
 
     max_retries: int | None = Field(
         default=None,
-        description="[DEPRECATED] Maximum number of retries when guardrail fails. Use guardrail_max_retries instead. Will be removed in v1.0.0",
+        description="[VEROUDERD] Maximaal aantal herhalingen wanneer guardrail faalt. Gebruik guardrail_max_retries in plaats daarvan. Wordt verwijderd in v1.0.0",
     )
     guardrail_max_retries: int = Field(
-        default=3, description="Maximum number of retries when guardrail fails"
+        default=3, description="Maximaal aantal herhalingen wanneer guardrail faalt"
     )
-    retry_count: int = Field(default=0, description="Current number of retries")
+    retry_count: int = Field(default=0, description="Huidig aantal herhalingen")
     start_time: datetime.datetime | None = Field(
-        default=None, description="Start time of the task execution"
+        default=None, description="Starttijd van de taakuitvoering"
     )
     end_time: datetime.datetime | None = Field(
-        default=None, description="End time of the task execution"
+        default=None, description="Eindtijd van de taakuitvoering"
     )
     allow_crewai_trigger_context: bool | None = Field(
         default=None,
-        description="Whether this task should append 'Trigger Payload: {crewai_trigger_payload}' to the task description when crewai_trigger_payload exists in crew inputs.",
+        description="Of deze taak 'Trigger Payload: {crewai_trigger_payload}' moet toevoegen aan de taakbeschrijving wanneer crewai_trigger_payload bestaat in crew inputs.",
     )
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrails: list[GuardrailCallable] = PrivateAttr(
@@ -210,28 +210,28 @@ class Task(BaseModel):
         cls, v: str | GuardrailCallable | None
     ) -> str | GuardrailCallable | None:
         """
-        If v is a callable, validate that the guardrail function has the correct signature and behavior.
-        If v is a string, return it as is.
+        Als v een callable is, valideer dat de guardrail functie de correcte signatuur en gedrag heeft.
+        Als v een string is, retourneer het zoals het is.
 
-        While type hints provide static checking, this validator ensures runtime safety by:
-        1. Verifying the function accepts exactly one parameter (the TaskOutput)
-        2. Checking return type annotations match Tuple[bool, Any] if present
-        3. Providing clear, immediate error messages for debugging
+        Terwijl type hints statische controle bieden, zorgt deze validator voor runtime veiligheid door:
+        1. Te verifiëren dat de functie exact één parameter accepteert (de TaskOutput)
+        2. Te controleren of return type annotaties overeenkomen met Tuple[bool, Any] indien aanwezig
+        3. Duidelijke, directe foutmeldingen te geven voor debugging
 
-        This runtime validation is crucial because:
-        - Type hints are optional and can be ignored at runtime
-        - Function signatures need immediate validation before task execution
-        - Clear error messages help users debug guardrail implementation issues
+        Deze runtime validatie is cruciaal omdat:
+        - Type hints optioneel zijn en genegeerd kunnen worden tijdens runtime
+        - Functie signaturen directe validatie nodig hebben voor taakuitvoering
+        - Duidelijke foutmeldingen gebruikers helpen guardrail implementatie problemen te debuggen
 
         Args:
-            v: The guardrail function to validate or a string describing the guardrail task
+            v: De guardrail functie om te valideren of een string die de guardrail taak beschrijft
 
-        Returns:
-            The validated guardrail function or a string describing the guardrail task
+        Retourneert:
+            De gevalideerde guardrail functie of een string die de guardrail taak beschrijft
 
-        Raises:
-            ValueError: If the function signature is invalid or return annotation
-                       doesn't match Tuple[bool, Any]
+        Gooit:
+            ValueError: Als de functie signatuur ongeldig is of return annotatie
+                       niet overeenkomt met Tuple[bool, Any]
         """
         if v is not None and callable(v):
             sig = inspect.signature(v)
@@ -241,7 +241,7 @@ class Task(BaseModel):
                 if param.default is inspect.Parameter.empty
             ]
             if len(positional_args) != 1:
-                raise ValueError("Guardrail function must accept exactly one parameter")
+                raise ValueError("Guardrail functie moet exact één parameter accepteren")
 
             # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
@@ -259,7 +259,7 @@ class Task(BaseModel):
                     )
                 ):
                     raise ValueError(
-                        "If return type is annotated, it must be Tuple[bool, Any]"
+                        "Als return type is geannoteerd, moet het Tuple[bool, Any] zijn"
                     )
         return v
 
@@ -286,7 +286,7 @@ class Task(BaseModel):
             from crewai.tasks.llm_guardrail import LLMGuardrail
 
             if self.agent is None:
-                raise ValueError("Agent is required to use LLMGuardrail")
+                raise ValueError("Agent is vereist om LLMGuardrail te gebruiken")
 
             self._guardrail = cast(
                 GuardrailCallable,
@@ -307,7 +307,7 @@ class Task(BaseModel):
                         elif isinstance(guardrail, str):
                             if self.agent is None:
                                 raise ValueError(
-                                    "Agent is required to use non-programmatic guardrails"
+                                    "Agent is vereist om niet-programmatische guardrails te gebruiken"
                                 )
                             from crewai.tasks.llm_guardrail import LLMGuardrail
 
@@ -320,14 +320,14 @@ class Task(BaseModel):
                                 )
                             )
                         else:
-                            raise ValueError("Guardrail must be a callable or a string")
+                            raise ValueError("Guardrail moet een callable of een string zijn")
             else:
                 if callable(self.guardrails):
                     guardrails.append(self.guardrails)
                 elif isinstance(self.guardrails, str):
                     if self.agent is None:
                         raise ValueError(
-                            "Agent is required to use non-programmatic guardrails"
+                            "Agent is vereist om niet-programmatische guardrails te gebruiken"
                         )
                     from crewai.tasks.llm_guardrail import LLMGuardrail
 
@@ -340,7 +340,7 @@ class Task(BaseModel):
                         )
                     )
                 else:
-                    raise ValueError("Guardrail must be a callable or a string")
+                    raise ValueError("Guardrail moet een callable of een string zijn")
 
         self._guardrails = guardrails
         if self._guardrails:
@@ -360,58 +360,58 @@ class Task(BaseModel):
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
-        """Validate the output file path.
+        """Valideer het output bestandspad.
 
         Args:
-            value: The output file path to validate. Can be None or a string.
-                  If the path contains template variables (e.g. {var}), leading slashes are preserved.
-                  For regular paths, leading slashes are stripped.
+            value: Het output bestandspad om te valideren. Kan None of een string zijn.
+                  Als het pad template variabelen bevat (bijv. {var}), worden leidende slashes behouden.
+                  Voor normale paden worden leidende slashes verwijderd.
 
-        Returns:
-            The validated and potentially modified path, or None if no path was provided.
+        Retourneert:
+            Het gevalideerde en mogelijk gewijzigde pad, of None als geen pad werd opgegeven.
 
-        Raises:
-            ValueError: If the path contains invalid characters, path traversal attempts,
-                      or other security concerns.
+        Gooit:
+            ValueError: Als het pad ongeldige karakters bevat, path traversal pogingen,
+                      of andere beveiligingsproblemen.
         """
         if value is None:
             return None
 
-        # Basic security checks
+        # Basis beveiligingscontroles
         if ".." in value:
             raise ValueError(
-                "Path traversal attempts are not allowed in output_file paths"
+                "Path traversal pogingen zijn niet toegestaan in output_file paden"
             )
 
-        # Check for shell expansion first
+        # Controleer eerst op shell expansion
         if value.startswith(("~", "$")):
             raise ValueError(
-                "Shell expansion characters are not allowed in output_file paths"
+                "Shell expansion karakters zijn niet toegestaan in output_file paden"
             )
 
-        # Then check other shell special characters
+        # Controleer dan andere shell speciale karakters
         if any(char in value for char in ["|", ">", "<", "&", ";"]):
             raise ValueError(
-                "Shell special characters are not allowed in output_file paths"
+                "Shell speciale karakters zijn niet toegestaan in output_file paden"
             )
 
-        # Don't strip leading slash if it's a template path with variables
+        # Strip leidende slash niet als het een template pad is met variabelen
         if "{" in value or "}" in value:
-            # Validate template variable format
+            # Valideer template variabele formaat
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
                 if not var.isidentifier():
-                    raise ValueError(f"Invalid template variable name: {var}")
+                    raise ValueError(f"Ongeldige template variabele naam: {var}")
             return value
 
-        # Strip leading slash for regular paths
+        # Strip leidende slash voor normale paden
         if value.startswith("/"):
             return value[1:]
         return value
 
     @model_validator(mode="after")
     def set_attributes_based_on_config(self) -> Task:
-        """Set attributes based on the agent configuration."""
+        """Stel attributen in op basis van de agent configuratie."""
         if self.config:
             for key, value in self.config.items():
                 setattr(self, key, value)
@@ -419,19 +419,19 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def check_tools(self) -> Self:
-        """Check if the tools are set."""
+        """Controleer of de tools zijn ingesteld."""
         if not self.tools and self.agent and self.agent.tools:
             self.tools = self.agent.tools
         return self
 
     @model_validator(mode="after")
     def check_output(self) -> Self:
-        """Check if an output type is set."""
+        """Controleer of een output type is ingesteld."""
         output_types = [self.output_json, self.output_pydantic]
         if len([type for type in output_types if type]) > 1:
             raise PydanticCustomError(
                 "output_type",
-                "Only one output type can be set, either output_pydantic or output_json.",
+                "Slechts één output type kan worden ingesteld, ofwel output_pydantic of output_json.",
                 {},
             )
         return self
@@ -454,7 +454,7 @@ class Task(BaseModel):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
-        """Execute the task synchronously."""
+        """Voer de taak synchroon uit."""
         return self._execute_core(agent, context, tools)
 
     @property
@@ -477,7 +477,7 @@ class Task(BaseModel):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> Future[TaskOutput]:
-        """Execute the task asynchronously."""
+        """Voer de taak asynchroon uit."""
         future: Future[TaskOutput] = Future()
         threading.Thread(
             daemon=True,
@@ -493,7 +493,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
         future: Future[TaskOutput],
     ) -> None:
-        """Execute the task asynchronously with context handling."""
+        """Voer de taak asynchroon uit met context handling."""
         try:
           result = self._execute_core(agent, context, tools)
           future.set_result(result)
@@ -506,7 +506,7 @@ class Task(BaseModel):
         context: str | None = None,
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
-        """Execute the task asynchronously using native async/await."""
+        """Voer de taak asynchroon uit met native async/await."""
         return await self._aexecute_core(agent, context, tools)
 
     async def _aexecute_core(
@@ -515,13 +515,13 @@ class Task(BaseModel):
         context: str | None,
         tools: list[Any] | None,
     ) -> TaskOutput:
-        """Run the core execution logic of the task asynchronously."""
+        """Voer de kern uitvoeringslogica van de taak asynchroon uit."""
         try:
             agent = agent or self.agent
             self.agent = agent
             if not agent:
                 raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    f"De taak '{self.description}' heeft geen agent toegewezen, daarom kan het niet direct worden uitgevoerd en moet het worden uitgevoerd in een Crew met een specifiek proces dat dit ondersteunt, zoals hiërarchisch."
                 )
 
             self.start_time = datetime.datetime.now()
@@ -607,13 +607,13 @@ class Task(BaseModel):
         context: str | None,
         tools: list[Any] | None,
     ) -> TaskOutput:
-        """Run the core execution logic of the task."""
+        """Voer de kern uitvoeringslogica van de taak uit."""
         try:
             agent = agent or self.agent
             self.agent = agent
             if not agent:
                 raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    f"De taak '{self.description}' heeft geen agent toegewezen, daarom kan het niet direct worden uitgevoerd en moet het worden uitgevoerd in een Crew met een specifiek proces dat dit ondersteunt, zoals hiërarchisch."
                 )
 
             self.start_time = datetime.datetime.now()
@@ -695,14 +695,14 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
 
     def prompt(self) -> str:
-        """Generates the task prompt with optional markdown formatting.
+        """Genereert de taak prompt met optionele markdown formattering.
 
-        When the markdown attribute is True, instructions for formatting the
-        response in Markdown syntax will be added to the prompt.
+        Wanneer het markdown attribuut True is, worden instructies voor formattering van het
+        antwoord in Markdown syntax toegevoegd aan de prompt.
 
-        Returns:
-            str: The formatted prompt string containing the task description,
-                 expected output, and optional markdown formatting instructions.
+        Retourneert:
+            str: De geformatteerde prompt string met de taakbeschrijving,
+                 verwachte output, en optionele markdown formatterings instructies.
         """
         description = self.description
 
@@ -737,15 +737,15 @@ Follow these guidelines:
     def interpolate_inputs_and_add_conversation_history(
         self, inputs: dict[str, str | int | float | dict[str, Any] | list[Any]]
     ) -> None:
-        """Interpolate inputs into the task description, expected output, and output file path.
-           Add conversation history if present.
+        """Interpoleer inputs in de taakbeschrijving, verwachte output, en output bestandspad.
+           Voeg conversatie geschiedenis toe indien aanwezig.
 
         Args:
-            inputs: Dictionary mapping template variables to their values.
-                   Supported value types are strings, integers, and floats.
+            inputs: Dictionary die template variabelen mapt naar hun waarden.
+                   Ondersteunde waarde types zijn strings, integers, en floats.
 
-        Raises:
-            ValueError: If a required template variable is missing from inputs.
+        Gooit:
+            ValueError: Als een vereiste template variabele ontbreekt in inputs.
         """
         if self._original_description is None:
             self._original_description = self.description
@@ -810,11 +810,11 @@ Follow these guidelines:
             )
 
     def increment_tools_errors(self) -> None:
-        """Increment the tools errors counter."""
+        """Verhoog de tools fouten teller."""
         self.tools_errors += 1
 
     def increment_delegations(self, agent_name: str | None) -> None:
-        """Increment the delegations counter."""
+        """Verhoog de delegaties teller."""
         if agent_name:
             self.processed_by_agents.add(agent_name)
         self.delegations += 1
@@ -822,14 +822,14 @@ Follow these guidelines:
     def copy(  # type: ignore
         self, agents: list[BaseAgent], task_mapping: dict[str, Task]
     ) -> Task:
-        """Creates a deep copy of the Task while preserving its original class type.
+        """Maakt een diepe kopie van de Task terwijl het originele klasse type behouden blijft.
 
         Args:
-            agents: List of agents available for the task.
-            task_mapping: Dictionary mapping task IDs to Task instances.
+            agents: Lijst van agents beschikbaar voor de taak.
+            task_mapping: Dictionary die taak IDs mapt naar Task instanties.
 
-        Returns:
-            A copy of the task with the same class type as the original.
+        Retourneert:
+            Een kopie van de taak met hetzelfde klasse type als het origineel.
         """
         exclude = {
             "id",
@@ -897,29 +897,29 @@ Follow these guidelines:
         return OutputFormat.RAW
 
     def _save_file(self, result: dict[str, Any] | str | Any) -> None:
-        """Save task output to a file.
+        """Sla taakoutput op naar een bestand.
 
-        Note:
-            For cross-platform file writing, especially on Windows, consider using FileWriterTool
-            from the crewai_tools package:
+        Opmerking:
+            Voor cross-platform bestand schrijven, vooral op Windows, overweeg FileWriterTool
+            van het crewai_tools pakket te gebruiken:
                 pip install 'crewai[tools]'
                 from crewai_tools import FileWriterTool
 
         Args:
-            result: The result to save to the file. Can be a dict or any stringifiable object.
+            result: Het resultaat om op te slaan in het bestand. Kan een dict of elk stringifiable object zijn.
 
-        Raises:
-            ValueError: If output_file is not set
-            RuntimeError: If there is an error writing to the file. For cross-platform
-                compatibility, especially on Windows, use FileWriterTool from crewai_tools
-                package.
+        Gooit:
+            ValueError: Als output_file niet is ingesteld
+            RuntimeError: Als er een fout is bij het schrijven naar het bestand. Voor cross-platform
+                compatibiliteit, vooral op Windows, gebruik FileWriterTool van crewai_tools
+                pakket.
         """
         if self.output_file is None:
-            raise ValueError("output_file is not set.")
+            raise ValueError("output_file is niet ingesteld.")
 
         filewriter_recommendation = (
-            "For cross-platform file writing, especially on Windows, "
-            "use FileWriterTool from crewai_tools package."
+            "Voor cross-platform bestand schrijven, vooral op Windows, "
+            "gebruik FileWriterTool van crewai_tools pakket."
         )
 
         try:
@@ -930,7 +930,7 @@ Follow these guidelines:
                 directory.mkdir(parents=True, exist_ok=True)
             elif not self.create_directory and not directory.exists():
                 raise RuntimeError(
-                    f"Directory {directory} does not exist and create_directory is False"
+                    f"Directory {directory} bestaat niet en create_directory is False"
                 )
 
             with resolved_path.open("w", encoding="utf-8") as file:
@@ -943,7 +943,7 @@ Follow these guidelines:
         except (OSError, IOError) as e:
             raise RuntimeError(
                 "\n".join(
-                    [f"Failed to save output file: {e}", filewriter_recommendation]
+                    [f"Kon output bestand niet opslaan: {e}", filewriter_recommendation]
                 )
             ) from e
         return
@@ -953,10 +953,10 @@ Follow these guidelines:
 
     @property
     def fingerprint(self) -> Fingerprint:
-        """Get the fingerprint of the task.
+        """Haal de fingerprint van de taak op.
 
-        Returns:
-            Fingerprint: The fingerprint of the task
+        Retourneert:
+            Fingerprint: De fingerprint van de taak
         """
         return self.security_config.fingerprint
 
@@ -989,10 +989,10 @@ Follow these guidelines:
             )
 
             if guardrail_result.success:
-                # Guardrail passed
+                # Guardrail geslaagd
                 if guardrail_result.result is None:
                     raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
+                        "Taak guardrail retourneerde None als resultaat. Dit is niet toegestaan."
                     )
 
                 if isinstance(guardrail_result.result, str):
@@ -1007,17 +1007,17 @@ Follow these guidelines:
 
                 return task_output
 
-            # Guardrail failed
+            # Guardrail mislukt
             if attempt >= self.guardrail_max_retries:
-                # Max retries reached
+                # Max herhalingen bereikt
                 guardrail_name = (
                     f"guardrail {guardrail_index}"
                     if guardrail_index is not None
                     else "guardrail"
                 )
                 raise Exception(
-                    f"Task failed {guardrail_name} validation after {self.guardrail_max_retries} retries. "
-                    f"Last error: {guardrail_result.error}"
+                    f"Taak faalde {guardrail_name} validatie na {self.guardrail_max_retries} herhalingen. "
+                    f"Laatste fout: {guardrail_result.error}"
                 )
 
             if guardrail_index is not None:
@@ -1033,11 +1033,11 @@ Follow these guidelines:
             )
             printer = Printer()
             printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} geblokkeerd (poging {attempt + 1}/{max_attempts}), opnieuw proberen vanwege: {guardrail_result.error}\n",
                 color="yellow",
             )
 
-            # Regenerate output from agent
+            # Regenereer output van agent
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -1067,7 +1067,7 @@ Follow these guidelines:
         guardrail: GuardrailCallable | None,
         guardrail_index: int | None = None,
     ) -> TaskOutput:
-        """Invoke the guardrail function asynchronously."""
+        """Roep de guardrail functie asynchroon aan."""
         if not guardrail:
             return task_output
 
@@ -1091,7 +1091,7 @@ Follow these guidelines:
             if guardrail_result.success:
                 if guardrail_result.result is None:
                     raise Exception(
-                        "Task guardrail returned None as result. This is not allowed."
+                        "Taak guardrail retourneerde None als resultaat. Dit is niet toegestaan."
                     )
 
                 if isinstance(guardrail_result.result, str):

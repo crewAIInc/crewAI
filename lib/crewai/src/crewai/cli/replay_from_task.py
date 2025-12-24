@@ -18,8 +18,8 @@ def replay_task_command(task_id: str) -> None:
             click.echo(result.stderr, err=True)
 
     except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while replaying the task: {e}", err=True)
+        click.echo(f"Er is een fout opgetreden bij het herspelen van de taak: {e}", err=True)
         click.echo(e.output, err=True)
 
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"Er is een onverwachte fout opgetreden: {e}", err=True)

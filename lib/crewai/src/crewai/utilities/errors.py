@@ -32,11 +32,11 @@ class DatabaseError:
     operation failures.
     """
 
-    INIT_ERROR: Final[str] = "Database initialization error: {}"
-    SAVE_ERROR: Final[str] = "Error saving task outputs: {}"
-    UPDATE_ERROR: Final[str] = "Error updating task outputs: {}"
-    LOAD_ERROR: Final[str] = "Error loading task outputs: {}"
-    DELETE_ERROR: Final[str] = "Error deleting task outputs: {}"
+    INIT_ERROR: Final[str] = "Database initialisatie fout: {}"
+    SAVE_ERROR: Final[str] = "Fout bij opslaan van taak outputs: {}"
+    UPDATE_ERROR: Final[str] = "Fout bij bijwerken van taak outputs: {}"
+    LOAD_ERROR: Final[str] = "Fout bij laden van taak outputs: {}"
+    DELETE_ERROR: Final[str] = "Fout bij verwijderen van taak outputs: {}"
 
     @classmethod
     def format_error(cls, template: str, error: Exception) -> str:

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class ContextualMemory:
-    """Aggregates and retrieves context from multiple memory sources."""
+    """Aggregeert en haalt context op uit meerdere geheugenbronnen."""
 
     def __init__(
         self,
@@ -49,14 +49,14 @@ class ContextualMemory:
             self.exm.task = self.task
 
     def build_context_for_task(self, task: Task, context: str) -> str:
-        """Build contextual information for a task synchronously.
+        """Bouw contextuele informatie voor een taak synchroon.
 
         Args:
-            task: The task to build context for.
-            context: Additional context string.
+            task: De taak om context voor te bouwen.
+            context: Aanvullende context string.
 
-        Returns:
-            Formatted context string from all memory sources.
+        Retourneert:
+            Geformatteerde context string van alle geheugenbronnen.
         """
         query = f"{task.description} {context}".strip()
 
@@ -72,14 +72,14 @@ class ContextualMemory:
         return "\n".join(filter(None, context_parts))
 
     async def abuild_context_for_task(self, task: Task, context: str) -> str:
-        """Build contextual information for a task asynchronously.
+        """Bouw contextuele informatie voor een taak asynchroon.
 
         Args:
-            task: The task to build context for.
-            context: Additional context string.
+            task: De taak om context voor te bouwen.
+            context: Aanvullende context string.
 
-        Returns:
-            Formatted context string from all memory sources.
+        Retourneert:
+            Geformatteerde context string van alle geheugenbronnen.
         """
         query = f"{task.description} {context}".strip()
 
@@ -98,8 +98,8 @@ class ContextualMemory:
 
     def _fetch_stm_context(self, query: str) -> str:
         """
-        Fetches recent relevant insights from STM related to the task's description and expected_output,
-        formatted as bullet points.
+        Haalt recente relevante inzichten op uit STM gerelateerd aan de taakbeschrijving en expected_output,
+        geformatteerd als opsommingspunten.
         """
 
         if self.stm is None:
@@ -109,12 +109,12 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['content']}" for result in stm_results]
         )
-        return f"Recent Insights:\n{formatted_results}" if stm_results else ""
+        return f"Recente Inzichten:\n{formatted_results}" if stm_results else ""
 
     def _fetch_ltm_context(self, task: str) -> str | None:
         """
-        Fetches historical data or insights from LTM that are relevant to the task's description and expected_output,
-        formatted as bullet points.
+        Haalt historische data of inzichten op uit LTM die relevant zijn voor de taakbeschrijving en expected_output,
+        geformatteerd als opsommingspunten.
         """
 
         if self.ltm is None:
@@ -132,12 +132,12 @@ class ContextualMemory:
         formatted_results = list(dict.fromkeys(formatted_results))
         formatted_results = "\n".join([f"- {result}" for result in formatted_results])  # type: ignore # Incompatible types in assignment (expression has type "str", variable has type "list[str]")
 
-        return f"Historical Data:\n{formatted_results}" if ltm_results else ""
+        return f"Historische Data:\n{formatted_results}" if ltm_results else ""
 
     def _fetch_entity_context(self, query: str) -> str:
         """
-        Fetches relevant entity information from Entity Memory related to the task's description and expected_output,
-        formatted as bullet points.
+        Haalt relevante entiteit informatie op uit Entity Memory gerelateerd aan de taakbeschrijving en expected_output,
+        geformatteerd als opsommingspunten.
         """
         if self.em is None:
             return ""
@@ -146,15 +146,15 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['content']}" for result in em_results]
         )
-        return f"Entities:\n{formatted_results}" if em_results else ""
+        return f"Entiteiten:\n{formatted_results}" if em_results else ""
 
     def _fetch_external_context(self, query: str) -> str:
         """
-        Fetches and formats relevant information from External Memory.
+        Haalt relevante informatie op en formatteert deze uit Extern Geheugen.
         Args:
-            query (str): The search query to find relevant information.
-        Returns:
-            str: Formatted information as bullet points, or an empty string if none found.
+            query (str): De zoekquery om relevante informatie te vinden.
+        Retourneert:
+            str: Geformatteerde informatie als opsommingspunten, of een lege string als niets gevonden.
         """
         if self.exm is None:
             return ""
@@ -167,16 +167,16 @@ class ContextualMemory:
         formatted_memories = "\n".join(
             f"- {result['content']}" for result in external_memories
         )
-        return f"External memories:\n{formatted_memories}"
+        return f"Externe herinneringen:\n{formatted_memories}"
 
     async def _afetch_stm_context(self, query: str) -> str:
-        """Fetch recent relevant insights from STM asynchronously.
+        """Haal recente relevante inzichten asynchroon op uit STM.
 
         Args:
-            query: The search query.
+            query: De zoekquery.
 
-        Returns:
-            Formatted insights as bullet points, or empty string if none found.
+        Retourneert:
+            Geformatteerde inzichten als opsommingspunten, of lege string als niets gevonden.
         """
         if self.stm is None:
             return ""
@@ -185,16 +185,16 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['content']}" for result in stm_results]
         )
-        return f"Recent Insights:\n{formatted_results}" if stm_results else ""
+        return f"Recente Inzichten:\n{formatted_results}" if stm_results else ""
 
     async def _afetch_ltm_context(self, task: str) -> str | None:
-        """Fetch historical data from LTM asynchronously.
+        """Haal historische data asynchroon op uit LTM.
 
         Args:
-            task: The task description to search for.
+            task: De taakbeschrijving om naar te zoeken.
 
-        Returns:
-            Formatted historical data as bullet points, or None if none found.
+        Retourneert:
+            Geformatteerde historische data als opsommingspunten, of None als niets gevonden.
         """
         if self.ltm is None:
             return ""
@@ -211,16 +211,16 @@ class ContextualMemory:
         formatted_results = list(dict.fromkeys(formatted_results))
         formatted_results = "\n".join([f"- {result}" for result in formatted_results])  # type: ignore # Incompatible types in assignment (expression has type "str", variable has type "list[str]")
 
-        return f"Historical Data:\n{formatted_results}" if ltm_results else ""
+        return f"Historische Data:\n{formatted_results}" if ltm_results else ""
 
     async def _afetch_entity_context(self, query: str) -> str:
-        """Fetch relevant entity information asynchronously.
+        """Haal relevante entiteit informatie asynchroon op.
 
         Args:
-            query: The search query.
+            query: De zoekquery.
 
-        Returns:
-            Formatted entity information as bullet points, or empty string if none found.
+        Retourneert:
+            Geformatteerde entiteit informatie als opsommingspunten, of lege string als niets gevonden.
         """
         if self.em is None:
             return ""
@@ -229,16 +229,16 @@ class ContextualMemory:
         formatted_results = "\n".join(
             [f"- {result['content']}" for result in em_results]
         )
-        return f"Entities:\n{formatted_results}" if em_results else ""
+        return f"Entiteiten:\n{formatted_results}" if em_results else ""
 
     async def _afetch_external_context(self, query: str) -> str:
-        """Fetch relevant information from External Memory asynchronously.
+        """Haal relevante informatie asynchroon op uit Extern Geheugen.
 
         Args:
-            query: The search query.
+            query: De zoekquery.
 
-        Returns:
-            Formatted information as bullet points, or empty string if none found.
+        Retourneert:
+            Geformatteerde informatie als opsommingspunten, of lege string als niets gevonden.
         """
         if self.exm is None:
             return ""
@@ -251,4 +251,4 @@ class ContextualMemory:
         formatted_memories = "\n".join(
             f"- {result['content']}" for result in external_memories
         )
-        return f"External memories:\n{formatted_memories}"
+        return f"Externe herinneringen:\n{formatted_memories}"

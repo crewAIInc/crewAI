@@ -14,10 +14,10 @@ def add_crew_to_flow(crew_name: str) -> None:
     # Check if pyproject.toml exists in the current directory
     if not Path("pyproject.toml").exists():
         _printer.print(
-            "This command must be run from the root of a flow project.", color="red"
+            "Dit commando moet worden uitgevoerd vanuit de root van een flow project.", color="red"
         )
         raise click.ClickException(
-            "This command must be run from the root of a flow project."
+            "Dit commando moet worden uitgevoerd vanuit de root van een flow project."
         )
 
     # Determine the flow folder based on the current directory
@@ -25,14 +25,14 @@ def add_crew_to_flow(crew_name: str) -> None:
     crews_folder = flow_folder / "src" / flow_folder.name / "crews"
 
     if not crews_folder.exists():
-        _printer.print("Crews folder does not exist in the current flow.", color="red")
-        raise click.ClickException("Crews folder does not exist in the current flow.")
+        _printer.print("Crews map bestaat niet in de huidige flow.", color="red")
+        raise click.ClickException("Crews map bestaat niet in de huidige flow.")
 
     # Create the crew within the flow's crews directory
     create_embedded_crew(crew_name, parent_folder=crews_folder)
 
     click.echo(
-        f"Crew {crew_name} added to the current flow successfully!",
+        f"Crew {crew_name} succesvol toegevoegd aan de huidige flow!",
     )
 
 
@@ -45,13 +45,13 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
 
     if crew_folder.exists():
         if not click.confirm(
-            f"Crew {folder_name} already exists. Do you want to override it?"
+            f"Crew {folder_name} bestaat al. Wil je deze overschrijven?"
         ):
-            click.secho("Operation cancelled.", fg="yellow")
+            click.secho("Operatie geannuleerd.", fg="yellow")
             return
-        click.secho(f"Overriding crew {folder_name}...", fg="green", bold=True)
+        click.secho(f"Crew {folder_name} wordt overschreven...", fg="green", bold=True)
     else:
-        click.secho(f"Creating crew {folder_name}...", fg="green", bold=True)
+        click.secho(f"Crew {folder_name} wordt aangemaakt...", fg="green", bold=True)
         crew_folder.mkdir(parents=True)
 
     # Create config and crew.py files
@@ -72,5 +72,5 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
     copy_template(src_file, dst_file, crew_name, class_name, folder_name)
 
     click.secho(
-        f"Crew {crew_name} added to the flow successfully!", fg="green", bold=True
+        f"Crew {crew_name} succesvol toegevoegd aan de flow!", fg="green", bold=True
     )

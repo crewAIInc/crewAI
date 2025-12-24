@@ -8,7 +8,7 @@ from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 
 
 class BaseKnowledgeSource(BaseModel, ABC):
-    """Abstract base class for knowledge sources."""
+    """Abstracte basis klasse voor kennisbronnen."""
 
     chunk_size: int = 4000
     chunk_overlap: int = 200
@@ -22,49 +22,49 @@ class BaseKnowledgeSource(BaseModel, ABC):
 
     @abstractmethod
     def validate_content(self) -> Any:
-        """Load and preprocess content from the source."""
+        """Laad en verwerk content uit de bron."""
 
     @abstractmethod
     def add(self) -> None:
-        """Process content, chunk it, compute embeddings, and save them."""
+        """Verwerk content, chunk het, bereken embeddings, en sla ze op."""
 
     def get_embeddings(self) -> list[np.ndarray]:
-        """Return the list of embeddings for the chunks."""
+        """Retourneer de lijst van embeddings voor de chunks."""
         return self.chunk_embeddings
 
     def _chunk_text(self, text: str) -> list[str]:
-        """Utility method to split text into chunks."""
+        """Hulpmethode om tekst op te splitsen in chunks."""
         return [
             text[i : i + self.chunk_size]
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)
         ]
 
     def _save_documents(self) -> None:
-        """Save the documents to the storage.
+        """Sla de documenten op in de opslag.
 
-        This method should be called after the chunks and embeddings are generated.
+        Deze methode moet worden aangeroepen nadat de chunks en embeddings zijn gegenereerd.
 
-        Raises:
-            ValueError: If no storage is configured.
+        Gooit:
+            ValueError: Als geen opslag is geconfigureerd.
         """
         if self.storage:
             self.storage.save(self.chunks)
         else:
-            raise ValueError("No storage found to save documents.")
+            raise ValueError("Geen opslag gevonden om documenten op te slaan.")
 
     @abstractmethod
     async def aadd(self) -> None:
-        """Process content, chunk it, compute embeddings, and save them asynchronously."""
+        """Verwerk content, chunk het, bereken embeddings, en sla ze asynchroon op."""
 
     async def _asave_documents(self) -> None:
-        """Save the documents to the storage asynchronously.
+        """Sla de documenten asynchroon op in de opslag.
 
-        This method should be called after the chunks and embeddings are generated.
+        Deze methode moet worden aangeroepen nadat de chunks en embeddings zijn gegenereerd.
 
-        Raises:
-            ValueError: If no storage is configured.
+        Gooit:
+            ValueError: Als geen opslag is geconfigureerd.
         """
         if self.storage:
             await self.storage.asave(self.chunks)
         else:
-            raise ValueError("No storage found to save documents.")
+            raise ValueError("Geen opslag gevonden om documenten op te slaan.")

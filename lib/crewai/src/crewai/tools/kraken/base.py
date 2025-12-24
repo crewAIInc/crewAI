@@ -1,4 +1,4 @@
-"""Base class for Kraken API tools."""
+"""Basis klasse voor Kraken API tools."""
 
 from __future__ import annotations
 
@@ -16,34 +16,34 @@ from crewai.tools import BaseTool
 
 
 class KrakenBaseTool(BaseTool):
-    """Base class for all Kraken API tools.
+    """Basis klasse voor alle Kraken API tools.
 
-    Provides authentication and request methods for both public and private endpoints.
+    Biedt authenticatie en request methodes voor zowel publieke als private endpoints.
 
-    Attributes:
-        api_key: Kraken API key (required for private endpoints).
-        api_secret: Kraken API secret (required for private endpoints).
-        base_url: Kraken API base URL.
+    Attributen:
+        api_key: Kraken API sleutel (vereist voor private endpoints).
+        api_secret: Kraken API geheim (vereist voor private endpoints).
+        base_url: Kraken API basis URL.
     """
 
-    api_key: str = Field(default="", description="Kraken API key")
-    api_secret: str = Field(default="", description="Kraken API secret")
+    api_key: str = Field(default="", description="Kraken API sleutel")
+    api_secret: str = Field(default="", description="Kraken API geheim")
     base_url: str = Field(
-        default="https://api.kraken.com", description="Kraken API base URL"
+        default="https://api.kraken.com", description="Kraken API basis URL"
     )
 
     def _get_kraken_signature(
         self, urlpath: str, data: dict[str, Any], nonce: str
     ) -> str:
-        """Generate Kraken API signature for authenticated requests.
+        """Genereer Kraken API handtekening voor geauthenticeerde requests.
 
         Args:
-            urlpath: The API endpoint path.
-            data: The request data.
-            nonce: A unique nonce for the request.
+            urlpath: Het API endpoint pad.
+            data: De request data.
+            nonce: Een unieke nonce voor de request.
 
         Returns:
-            The base64-encoded signature.
+            De base64-gecodeerde handtekening.
         """
         postdata = urllib.parse.urlencode(data)
         encoded = (nonce + postdata).encode()
@@ -54,14 +54,14 @@ class KrakenBaseTool(BaseTool):
     def _public_request(
         self, endpoint: str, params: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Make a public API request (no authentication required).
+        """Maak een publieke API request (geen authenticatie vereist).
 
         Args:
-            endpoint: The API endpoint name (e.g., "Time", "Ticker").
-            params: Optional query parameters.
+            endpoint: De API endpoint naam (bijv. "Time", "Ticker").
+            params: Optionele query parameters.
 
         Returns:
-            The JSON response from the API.
+            De JSON response van de API.
         """
         url = f"{self.base_url}/0/public/{endpoint}"
         with httpx.Client(timeout=30.0) as client:
@@ -71,21 +71,21 @@ class KrakenBaseTool(BaseTool):
     def _private_request(
         self, endpoint: str, data: dict[str, Any] | None = None
     ) -> dict[str, Any]:
-        """Make a private API request (authentication required).
+        """Maak een private API request (authenticatie vereist).
 
         Args:
-            endpoint: The API endpoint name (e.g., "Balance", "AddOrder").
-            data: Optional request data.
+            endpoint: De API endpoint naam (bijv. "Balance", "AddOrder").
+            data: Optionele request data.
 
         Returns:
-            The JSON response from the API.
+            De JSON response van de API.
 
         Raises:
-            ValueError: If API credentials are not configured.
+            ValueError: Als API credentials niet geconfigureerd zijn.
         """
         if not self.api_key or not self.api_secret:
             return {
-                "error": ["EAPI:Invalid key - API key and secret are required for private endpoints"]
+                "error": ["EAPI:Invalid key - API sleutel en geheim zijn vereist voor private endpoints"]
             }
 
         url = f"{self.base_url}/0/private/{endpoint}"

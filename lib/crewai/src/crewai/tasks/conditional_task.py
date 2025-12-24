@@ -1,4 +1,4 @@
-"""Conditional task execution based on previous task output."""
+"""Conditionele taakuitvoering gebaseerd op vorige taakoutput."""
 
 from collections.abc import Callable
 from typing import Any
@@ -11,22 +11,22 @@ from crewai.tasks.task_output import TaskOutput
 
 
 class ConditionalTask(Task):
-    """A task that can be conditionally executed based on the output of another task.
+    """Een taak die conditioneel kan worden uitgevoerd gebaseerd op de output van een andere taak.
 
-    This task type allows for dynamic workflow execution based on the results of
-    previous tasks in the crew execution chain.
+    Dit taaktype maakt dynamische workflow uitvoering mogelijk gebaseerd op de resultaten van
+    vorige taken in de crew uitvoeringsketen.
 
-    Attributes:
-        condition: Function that evaluates previous task output to determine execution.
+    Attributen:
+        condition: Functie die vorige taakoutput evalueert om uitvoering te bepalen.
 
-    Notes:
-        - Cannot be the only task in your crew
-        - Cannot be the first task since it needs context from the previous task
+    Opmerkingen:
+        - Kan niet de enige taak in je crew zijn
+        - Kan niet de eerste taak zijn omdat het context nodig heeft van de vorige taak
     """
 
     condition: Callable[[TaskOutput], bool] | None = Field(
         default=None,
-        description="Function that determines whether the task should be executed based on previous task output.",
+        description="Functie die bepaalt of de taak moet worden uitgevoerd gebaseerd op vorige taakoutput.",
     )
 
     def __init__(
@@ -38,26 +38,26 @@ class ConditionalTask(Task):
         self.condition = condition
 
     def should_execute(self, context: TaskOutput) -> bool:
-        """Determines whether the conditional task should be executed based on the provided context.
+        """Bepaalt of de conditionele taak moet worden uitgevoerd gebaseerd op de opgegeven context.
 
         Args:
-            context: The output from the previous task that will be evaluated by the condition.
+            context: De output van de vorige taak die door de conditie zal worden geëvalueerd.
 
-        Returns:
-            True if the task should be executed, False otherwise.
+        Retourneert:
+            True als de taak moet worden uitgevoerd, anders False.
 
-        Raises:
-            ValueError: If no condition function is set.
+        Gooit:
+            ValueError: Als geen conditie functie is ingesteld.
         """
         if self.condition is None:
-            raise ValueError("No condition function set for conditional task")
+            raise ValueError("Geen conditie functie ingesteld voor conditionele taak")
         return self.condition(context)
 
     def get_skipped_task_output(self) -> TaskOutput:
-        """Generate a TaskOutput for when the conditional task is skipped.
+        """Genereer een TaskOutput voor wanneer de conditionele taak wordt overgeslagen.
 
-        Returns:
-            Empty TaskOutput with RAW format indicating the task was skipped.
+        Retourneert:
+            Lege TaskOutput met RAW formaat die aangeeft dat de taak werd overgeslagen.
         """
         return TaskOutput(
             description=self.description,

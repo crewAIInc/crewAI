@@ -1,20 +1,36 @@
-"""Kraken API Tools for CrewAI.
+"""Kraken API Tools voor CrewAI.
 
-This module provides tools for interacting with the Kraken cryptocurrency exchange API.
-Includes both public (market data) and private (trading, account) endpoints.
+Deze module biedt tools voor interactie met de Kraken cryptocurrency exchange APIs.
+Bevat zowel Spot als Futures tools met publieke en private endpoints.
 
-Example:
-    >>> from crewai.tools.kraken import GetTickerInformationTool, AddOrderTool
+Voorbeeld:
+    >>> from crewai.tools.kraken import (
+    ...     # Spot tools
+    ...     GetTickerInformationTool,
+    ...     AddOrderTool,
+    ...     # Futures tools
+    ...     KrakenFuturesGetTickersTool,
+    ...     KrakenFuturesSendOrderTool,
+    ... )
     >>>
-    >>> # Public tool (no auth needed)
+    >>> # Spot publieke tool (geen auth nodig)
     >>> ticker = GetTickerInformationTool()
     >>> result = ticker.run(pair="XBTUSD")
     >>>
-    >>> # Private tool (requires API credentials)
-    >>> order_tool = AddOrderTool(api_key="...", api_secret="...")
-    >>> result = order_tool.run(pair="XBTUSD", type="buy", ordertype="limit", volume="0.001", price="50000")
+    >>> # Futures private tool (vereist API credentials)
+    >>> order_tool = KrakenFuturesSendOrderTool(api_key="...", api_secret="...")
+    >>> result = order_tool.run(
+    ...     order_type="lmt",
+    ...     symbol="PI_XBTUSD",
+    ...     side="buy",
+    ...     size="1",
+    ...     limit_price="50000"
+    ... )
 """
 
+# ============================================================================
+# SPOT API Tools (55 tools)
+# ============================================================================
 from crewai.tools.kraken.base import KrakenBaseTool
 from crewai.tools.kraken.spot import (
     # Market Data (9)
@@ -81,7 +97,71 @@ from crewai.tools.kraken.spot import (
     GetPostTradeDataTool,
 )
 
+# ============================================================================
+# FUTURES API Tools (41 tools)
+# ============================================================================
+from crewai.tools.kraken.futures import (
+    # Base
+    KrakenFuturesBaseTool,
+    # Market Data (4) - PUBLIC
+    KrakenFuturesGetTickersTool,
+    KrakenFuturesGetTickerTool,
+    KrakenFuturesGetOrderBookTool,
+    KrakenFuturesGetTradeHistoryTool,
+    # Order Management (8) - PRIVATE
+    KrakenFuturesSendOrderTool,
+    KrakenFuturesEditOrderTool,
+    KrakenFuturesCancelOrderTool,
+    KrakenFuturesCancelAllOrdersTool,
+    KrakenFuturesBatchOrderTool,
+    KrakenFuturesGetOpenOrdersTool,
+    KrakenFuturesGetOrderStatusTool,
+    KrakenFuturesDeadMansSwitchTool,
+    # Account (5) - PRIVATE
+    KrakenFuturesGetWalletsTool,
+    KrakenFuturesGetOpenPositionsTool,
+    KrakenFuturesGetPortfolioMarginTool,
+    KrakenFuturesCalculateMarginPnLTool,
+    KrakenFuturesGetUnwindQueueTool,
+    # Multi-Collateral (4) - PRIVATE
+    KrakenFuturesGetLeverageTool,
+    KrakenFuturesSetLeverageTool,
+    KrakenFuturesGetPnLCurrencyTool,
+    KrakenFuturesSetPnLCurrencyTool,
+    # Transfers (3) - PRIVATE
+    KrakenFuturesWalletTransferTool,
+    KrakenFuturesSubAccountTransferTool,
+    KrakenFuturesWithdrawToSpotTool,
+    # Subaccounts (3) - PRIVATE
+    KrakenFuturesGetSubaccountsTool,
+    KrakenFuturesCheckTradingStatusTool,
+    KrakenFuturesUpdateTradingStatusTool,
+    # Instruments (3) - PUBLIC
+    KrakenFuturesGetInstrumentsTool,
+    KrakenFuturesGetInstrumentStatusTool,
+    KrakenFuturesGetInstrumentStatusListTool,
+    # Fee Schedules (2) - PRIVATE
+    KrakenFuturesGetFeeSchedulesTool,
+    KrakenFuturesGetFeeVolumesTool,
+    # Assignment Program (4) - PRIVATE
+    KrakenFuturesListAssignmentProgramsTool,
+    KrakenFuturesAddAssignmentPreferenceTool,
+    KrakenFuturesDeleteAssignmentPreferenceTool,
+    KrakenFuturesListAssignmentHistoryTool,
+    # Historical Data (2)
+    KrakenFuturesGetFillsTool,
+    KrakenFuturesGetFundingRatesTool,
+    # Trading Settings (2) - PRIVATE
+    KrakenFuturesGetSelfTradeStrategyTool,
+    KrakenFuturesSetSelfTradeStrategyTool,
+    # General (1) - PRIVATE
+    KrakenFuturesGetNotificationsTool,
+)
+
 __all__ = [
+    # ========================================================================
+    # SPOT API (55 tools)
+    # ========================================================================
     # Base
     "KrakenBaseTool",
     # Market Data (9) - PUBLIC
@@ -146,4 +226,62 @@ __all__ = [
     # Transparency (2) - PUBLIC
     "GetPreTradeDataTool",
     "GetPostTradeDataTool",
+    # ========================================================================
+    # FUTURES API (41 tools)
+    # ========================================================================
+    # Base
+    "KrakenFuturesBaseTool",
+    # Market Data (4) - PUBLIC
+    "KrakenFuturesGetTickersTool",
+    "KrakenFuturesGetTickerTool",
+    "KrakenFuturesGetOrderBookTool",
+    "KrakenFuturesGetTradeHistoryTool",
+    # Order Management (8) - PRIVATE
+    "KrakenFuturesSendOrderTool",
+    "KrakenFuturesEditOrderTool",
+    "KrakenFuturesCancelOrderTool",
+    "KrakenFuturesCancelAllOrdersTool",
+    "KrakenFuturesBatchOrderTool",
+    "KrakenFuturesGetOpenOrdersTool",
+    "KrakenFuturesGetOrderStatusTool",
+    "KrakenFuturesDeadMansSwitchTool",
+    # Account (5) - PRIVATE
+    "KrakenFuturesGetWalletsTool",
+    "KrakenFuturesGetOpenPositionsTool",
+    "KrakenFuturesGetPortfolioMarginTool",
+    "KrakenFuturesCalculateMarginPnLTool",
+    "KrakenFuturesGetUnwindQueueTool",
+    # Multi-Collateral (4) - PRIVATE
+    "KrakenFuturesGetLeverageTool",
+    "KrakenFuturesSetLeverageTool",
+    "KrakenFuturesGetPnLCurrencyTool",
+    "KrakenFuturesSetPnLCurrencyTool",
+    # Transfers (3) - PRIVATE
+    "KrakenFuturesWalletTransferTool",
+    "KrakenFuturesSubAccountTransferTool",
+    "KrakenFuturesWithdrawToSpotTool",
+    # Subaccounts (3) - PRIVATE
+    "KrakenFuturesGetSubaccountsTool",
+    "KrakenFuturesCheckTradingStatusTool",
+    "KrakenFuturesUpdateTradingStatusTool",
+    # Instruments (3) - PUBLIC
+    "KrakenFuturesGetInstrumentsTool",
+    "KrakenFuturesGetInstrumentStatusTool",
+    "KrakenFuturesGetInstrumentStatusListTool",
+    # Fee Schedules (2) - PRIVATE
+    "KrakenFuturesGetFeeSchedulesTool",
+    "KrakenFuturesGetFeeVolumesTool",
+    # Assignment Program (4) - PRIVATE
+    "KrakenFuturesListAssignmentProgramsTool",
+    "KrakenFuturesAddAssignmentPreferenceTool",
+    "KrakenFuturesDeleteAssignmentPreferenceTool",
+    "KrakenFuturesListAssignmentHistoryTool",
+    # Historical Data (2)
+    "KrakenFuturesGetFillsTool",
+    "KrakenFuturesGetFundingRatesTool",
+    # Trading Settings (2) - PRIVATE
+    "KrakenFuturesGetSelfTradeStrategyTool",
+    "KrakenFuturesSetSelfTradeStrategyTool",
+    # General (1) - PRIVATE
+    "KrakenFuturesGetNotificationsTool",
 ]

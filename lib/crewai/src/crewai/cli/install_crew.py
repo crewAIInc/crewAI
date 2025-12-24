@@ -16,8 +16,8 @@ def install_crew(proxy_options: list[str]) -> None:
         subprocess.run(command, check=True, capture_output=False, text=True)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while running the crew: {e}", err=True)
+        click.echo(f"Er is een fout opgetreden bij het uitvoeren van de crew: {e}", err=True)
         click.echo(e.output, err=True)
 
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"Er is een onverwachte fout opgetreden: {e}", err=True)

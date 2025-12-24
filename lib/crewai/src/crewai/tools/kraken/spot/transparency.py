@@ -1,4 +1,4 @@
-"""Kraken Spot Transparency Tools - Public endpoints for regulatory transparency data."""
+"""Kraken Spot Transparency Tools - Publieke endpoints voor regulatoire transparantie data."""
 
 from __future__ import annotations
 
@@ -8,45 +8,45 @@ from crewai.tools.kraken.base import KrakenBaseTool
 
 
 # =============================================================================
-# Tool 1: Get Pre-Trade Data
+# Tool 1: Haal Pre-Trade Data Op
 # =============================================================================
 class GetPreTradeDataInput(BaseModel):
-    """Input schema for GetPreTradeDataTool."""
+    """Input schema voor GetPreTradeDataTool."""
 
-    pair: str = Field(..., description="Asset pair (e.g., 'XBTUSD')")
+    pair: str = Field(..., description="Asset paar (bijv. 'XBTUSD')")
 
 
 class GetPreTradeDataTool(KrakenBaseTool):
-    """Get pre-trade transparency data."""
+    """Haal pre-trade transparantie data op."""
 
     name: str = "kraken_get_pre_trade_data"
-    description: str = "Get pre-trade transparency data for regulatory compliance. Includes bid/offer prices and volumes."
+    description: str = "Haal pre-trade transparantie data op voor regulatoire compliance. Bevat vraag/bod prijzen en volumes."
     args_schema: type[BaseModel] = GetPreTradeDataInput
 
     def _run(self, pair: str) -> str:
-        """Get pre-trade data from Kraken."""
+        """Haal pre-trade data op van Kraken."""
         result = self._public_request("Transparency/PreTrade", {"pair": pair})
         return str(result)
 
 
 # =============================================================================
-# Tool 2: Get Post-Trade Data
+# Tool 2: Haal Post-Trade Data Op
 # =============================================================================
 class GetPostTradeDataInput(BaseModel):
-    """Input schema for GetPostTradeDataTool."""
+    """Input schema voor GetPostTradeDataTool."""
 
-    pair: str = Field(..., description="Asset pair (e.g., 'XBTUSD')")
+    pair: str = Field(..., description="Asset paar (bijv. 'XBTUSD')")
 
 
 class GetPostTradeDataTool(KrakenBaseTool):
-    """Get post-trade transparency data."""
+    """Haal post-trade transparantie data op."""
 
     name: str = "kraken_get_post_trade_data"
-    description: str = "Get post-trade transparency data for regulatory compliance. Includes recent executed trades."
+    description: str = "Haal post-trade transparantie data op voor regulatoire compliance. Bevat recente uitgevoerde trades."
     args_schema: type[BaseModel] = GetPostTradeDataInput
 
     def _run(self, pair: str) -> str:
-        """Get post-trade data from Kraken."""
+        """Haal post-trade data op van Kraken."""
         result = self._public_request("Transparency/PostTrade", {"pair": pair})
         return str(result)
 

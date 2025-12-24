@@ -29,7 +29,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Display a standard error message when no UUID or project name is available.
         """
         console.print(
-            "No UUID provided, project pyproject.toml not found or with error.",
+            "Geen UUID opgegeven, project pyproject.toml niet gevonden of met fout.",
             style="bold red",
         )
 
@@ -40,12 +40,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             json_response (Dict[str, Any]): The deployment information to display.
         """
-        console.print("Deploying the crew...\n", style="bold blue")
+        console.print("Crew wordt gedeployed...\n", style="bold blue")
         for key, value in json_response.items():
             console.print(f"{key.title()}: [green]{value}[/green]")
-        console.print("\nTo check the status of the deployment, run:")
+        console.print("\nOm de status van de deployment te controleren, voer uit:")
         console.print("crewai deploy status")
-        console.print(" or")
+        console.print(" of")
         console.print(f'crewai deploy status --uuid "{json_response["uuid"]}"')
 
     def _display_logs(self, log_messages: list[dict[str, Any]]) -> None:
@@ -68,7 +68,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
         """
         self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
-        console.print("Starting deployment...", style="bold blue")
+        console.print("Deployment wordt gestart...", style="bold blue")
         if uuid:
             response = self.plus_api_client.deploy_by_uuid(uuid)
         elif self.project_name:
@@ -87,7 +87,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._create_crew_deployment_span = (
             self._telemetry.create_crew_deployment_span()
         )
-        console.print("Creating deployment...", style="bold blue")
+        console.print("Deployment wordt aangemaakt...", style="bold blue")
         env_vars = fetch_and_json_env_file()
 
         try:
@@ -96,9 +96,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             remote_repo_url = None
 
         if remote_repo_url is None:
-            console.print("No remote repository URL found.", style="bold red")
+            console.print("Geen remote repository URL gevonden.", style="bold red")
             console.print(
-                "Please ensure your project has a valid remote repository.",
+                "Zorg ervoor dat je project een geldige remote repository heeft.",
                 style="yellow",
             )
             return
@@ -122,9 +122,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to confirm input.
         """
         if not confirm:
-            input(f"Press Enter to continue with the following Env vars: {env_vars}")
+            input(f"Druk op Enter om door te gaan met de volgende omgevingsvariabelen: {env_vars}")
             input(
-                f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
+                f"Druk op Enter om door te gaan met de volgende remote repository: {remote_repo_url}\n"
             )
 
     def _create_payload(
@@ -157,21 +157,21 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             json_response (Dict[str, Any]): The response containing crew information.
         """
-        console.print("Deployment created successfully!\n", style="bold green")
+        console.print("Deployment succesvol aangemaakt!\n", style="bold green")
         console.print(
-            f"Name: {self.project_name} ({json_response['uuid']})", style="bold green"
+            f"Naam: {self.project_name} ({json_response['uuid']})", style="bold green"
         )
         console.print(f"Status: {json_response['status']}", style="bold green")
-        console.print("\nTo (re)deploy the crew, run:")
+        console.print("\nOm de crew te (her)deployen, voer uit:")
         console.print("crewai deploy push")
-        console.print(" or")
+        console.print(" of")
         console.print(f"crewai deploy push --uuid {json_response['uuid']}")
 
     def list_crews(self) -> None:
         """
         List all available crews.
         """
-        console.print("Listing all Crews\n", style="bold blue")
+        console.print("Alle Crews worden weergegeven\n", style="bold blue")
 
         response = self.plus_api_client.list_crews()
         json_response = response.json()
@@ -196,8 +196,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         Display a message when no crews are available.
         """
-        console.print("You don't have any Crews yet. Let's create one!", style="yellow")
-        console.print("  crewai create crew <crew_name>", style="green")
+        console.print("Je hebt nog geen Crews. Laten we er een maken!", style="yellow")
+        console.print("  crewai create crew <crew_naam>", style="green")
 
     def get_crew_status(self, uuid: str | None = None) -> None:
         """
@@ -206,7 +206,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             uuid (Optional[str]): The UUID of the crew to check.
         """
-        console.print("Fetching deployment status...", style="bold blue")
+        console.print("Deployment status wordt opgehaald...", style="bold blue")
         if uuid:
             response = self.plus_api_client.crew_status_by_uuid(uuid)
         elif self.project_name:
@@ -225,7 +225,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             status_data (Dict[str, str]): The status data to display.
         """
-        console.print(f"Name:\t {status_data['name']}")
+        console.print(f"Naam:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
 
     def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
@@ -237,7 +237,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
         self._get_crew_logs_span = self._telemetry.get_crew_logs_span(uuid, log_type)
-        console.print(f"Fetching {log_type} logs...", style="bold blue")
+        console.print(f"{log_type} logs worden opgehaald...", style="bold blue")
 
         if uuid:
             response = self.plus_api_client.crew_by_uuid(uuid, log_type)
@@ -258,7 +258,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to remove.
         """
         self._remove_crew_span = self._telemetry.remove_crew_span(uuid)
-        console.print("Removing deployment...", style="bold blue")
+        console.print("Deployment wordt verwijderd...", style="bold blue")
 
         if uuid:
             response = self.plus_api_client.delete_crew_by_uuid(uuid)
@@ -270,9 +270,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         if response.status_code == 204:
             console.print(
-                f"Crew '{self.project_name}' removed successfully.", style="green"
+                f"Crew '{self.project_name}' succesvol verwijderd.", style="green"
             )
         else:
             console.print(
-                f"Failed to remove crew '{self.project_name}'", style="bold red"
+                f"Verwijderen van crew '{self.project_name}' mislukt", style="bold red"
             )

@@ -1,4 +1,4 @@
-"""Kraken Spot Trading Tools - Private endpoints for order management."""
+"""Kraken Spot Trading Tools - Private endpoints voor orderbeheer."""
 
 from __future__ import annotations
 
@@ -10,47 +10,47 @@ from crewai.tools.kraken.base import KrakenBaseTool
 
 
 # =============================================================================
-# Tool 1: Add Order
+# Tool 1: Plaats Order
 # =============================================================================
 class AddOrderInput(BaseModel):
-    """Input schema for AddOrderTool."""
+    """Input schema voor AddOrderTool."""
 
-    pair: str = Field(..., description="Asset pair (e.g., 'XBTUSD')")
-    type: str = Field(..., description="Order direction: 'buy' or 'sell'")
+    pair: str = Field(..., description="Asset paar (bijv. 'XBTUSD')")
+    type: str = Field(..., description="Order richting: 'buy' of 'sell'")
     ordertype: str = Field(
         ...,
         description="Order type: 'market', 'limit', 'stop-loss', 'take-profit', 'stop-loss-limit', 'take-profit-limit', 'trailing-stop', 'trailing-stop-limit', 'settle-position'",
     )
-    volume: str = Field(..., description="Order volume in base currency")
+    volume: str = Field(..., description="Order volume in basisvaluta")
     price: str | None = Field(
-        default=None, description="Price (required for limit orders)"
+        default=None, description="Prijs (vereist voor limit orders)"
     )
     price2: str | None = Field(
-        default=None, description="Secondary price (for stop-loss-limit, etc.)"
+        default=None, description="Secundaire prijs (voor stop-loss-limit, etc.)"
     )
     leverage: str | None = Field(
-        default=None, description="Leverage amount (e.g., '2:1', '3:1')"
+        default=None, description="Hefboom hoeveelheid (bijv. '2:1', '3:1')"
     )
     reduce_only: bool | None = Field(
-        default=None, description="If true, order will only reduce existing position"
+        default=None, description="Indien true, zal order alleen bestaande positie verkleinen"
     )
     validate: bool | None = Field(
-        default=None, description="If true, validate inputs only without submitting order"
+        default=None, description="Indien true, valideer alleen inputs zonder order te plaatsen"
     )
     userref: int | None = Field(
-        default=None, description="User reference ID for the order"
+        default=None, description="Gebruiker referentie ID voor de order"
     )
     oflags: str | None = Field(
         default=None,
-        description="Order flags: 'post' (post-only), 'fcib' (fee in base), 'fciq' (fee in quote), 'nompp' (no market price protection)",
+        description="Order vlaggen: 'post' (post-only), 'fcib' (fee in basis), 'fciq' (fee in quote), 'nompp' (geen marktprijs bescherming)",
     )
 
 
 class AddOrderTool(KrakenBaseTool):
-    """Place a new spot order on Kraken."""
+    """Plaats een nieuwe spot order op Kraken."""
 
     name: str = "kraken_add_order"
-    description: str = "Place a new spot order on Kraken. Supports market, limit, stop-loss, take-profit, and other order types."
+    description: str = "Plaats een nieuwe spot order op Kraken. Ondersteunt market, limit, stop-loss, take-profit en andere order types."
     args_schema: type[BaseModel] = AddOrderInput
 
     def _run(
@@ -67,7 +67,7 @@ class AddOrderTool(KrakenBaseTool):
         userref: int | None = None,
         oflags: str | None = None,
     ) -> str:
-        """Place a new order on Kraken."""
+        """Plaats een nieuwe order op Kraken."""
         data: dict[str, Any] = {
             "pair": pair,
             "type": type,
@@ -94,32 +94,32 @@ class AddOrderTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 2: Add Order Batch
+# Tool 2: Plaats Order Batch
 # =============================================================================
 class AddOrderBatchInput(BaseModel):
-    """Input schema for AddOrderBatchTool."""
+    """Input schema voor AddOrderBatchTool."""
 
-    pair: str = Field(..., description="Asset pair for all orders (e.g., 'XBTUSD')")
+    pair: str = Field(..., description="Asset paar voor alle orders (bijv. 'XBTUSD')")
     orders: str = Field(
         ...,
-        description="JSON array of order objects, each with: type, ordertype, volume, price, etc. Max 15 orders.",
+        description="JSON array van order objecten, elk met: type, ordertype, volume, price, etc. Max 15 orders.",
     )
     validate: bool | None = Field(
-        default=None, description="If true, validate inputs only"
+        default=None, description="Indien true, valideer alleen inputs"
     )
 
 
 class AddOrderBatchTool(KrakenBaseTool):
-    """Place multiple orders in a single request."""
+    """Plaats meerdere orders in één request."""
 
     name: str = "kraken_add_order_batch"
-    description: str = "Place multiple orders (up to 15) in a single request for the same asset pair."
+    description: str = "Plaats meerdere orders (tot 15) in één request voor hetzelfde asset paar."
     args_schema: type[BaseModel] = AddOrderBatchInput
 
     def _run(
         self, pair: str, orders: str, validate: bool | None = None
     ) -> str:
-        """Place multiple orders on Kraken."""
+        """Plaats meerdere orders op Kraken."""
         data: dict[str, Any] = {"pair": pair, "orders": orders}
         if validate is not None:
             data["validate"] = validate
@@ -128,23 +128,23 @@ class AddOrderBatchTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 3: Amend Order
+# Tool 3: Wijzig Order
 # =============================================================================
 class AmendOrderInput(BaseModel):
-    """Input schema for AmendOrderTool."""
+    """Input schema voor AmendOrderTool."""
 
-    txid: str = Field(..., description="Transaction ID of the order to amend")
-    pair: str = Field(..., description="Asset pair (e.g., 'XBTUSD')")
-    volume: str | None = Field(default=None, description="New order volume")
-    price: str | None = Field(default=None, description="New order price")
-    price2: str | None = Field(default=None, description="New secondary price")
+    txid: str = Field(..., description="Transactie ID van de order om te wijzigen")
+    pair: str = Field(..., description="Asset paar (bijv. 'XBTUSD')")
+    volume: str | None = Field(default=None, description="Nieuw order volume")
+    price: str | None = Field(default=None, description="Nieuwe order prijs")
+    price2: str | None = Field(default=None, description="Nieuwe secundaire prijs")
 
 
 class AmendOrderTool(KrakenBaseTool):
-    """Amend an existing open order."""
+    """Wijzig een bestaande open order."""
 
     name: str = "kraken_amend_order"
-    description: str = "Amend an existing open order by changing its volume or price. Faster than edit as it doesn't cancel/recreate."
+    description: str = "Wijzig een bestaande open order door volume of prijs aan te passen. Sneller dan edit omdat het niet annuleert/hercreëert."
     args_schema: type[BaseModel] = AmendOrderInput
 
     def _run(
@@ -155,7 +155,7 @@ class AmendOrderTool(KrakenBaseTool):
         price: str | None = None,
         price2: str | None = None,
     ) -> str:
-        """Amend an order on Kraken."""
+        """Wijzig een order op Kraken."""
         data: dict[str, Any] = {"txid": txid, "pair": pair}
         if volume:
             data["volume"] = volume
@@ -168,27 +168,27 @@ class AmendOrderTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 4: Edit Order
+# Tool 4: Bewerk Order
 # =============================================================================
 class EditOrderInput(BaseModel):
-    """Input schema for EditOrderTool."""
+    """Input schema voor EditOrderTool."""
 
-    txid: str = Field(..., description="Transaction ID of the order to edit")
-    pair: str = Field(..., description="Asset pair (e.g., 'XBTUSD')")
-    volume: str | None = Field(default=None, description="New order volume")
-    price: str | None = Field(default=None, description="New order price")
-    price2: str | None = Field(default=None, description="New secondary price")
-    oflags: str | None = Field(default=None, description="New order flags")
+    txid: str = Field(..., description="Transactie ID van de order om te bewerken")
+    pair: str = Field(..., description="Asset paar (bijv. 'XBTUSD')")
+    volume: str | None = Field(default=None, description="Nieuw order volume")
+    price: str | None = Field(default=None, description="Nieuwe order prijs")
+    price2: str | None = Field(default=None, description="Nieuwe secundaire prijs")
+    oflags: str | None = Field(default=None, description="Nieuwe order vlaggen")
     validate: bool | None = Field(
-        default=None, description="If true, validate inputs only"
+        default=None, description="Indien true, valideer alleen inputs"
     )
 
 
 class EditOrderTool(KrakenBaseTool):
-    """Edit an existing open order (cancel and replace)."""
+    """Bewerk een bestaande open order (annuleer en vervang)."""
 
     name: str = "kraken_edit_order"
-    description: str = "Edit an existing open order. This cancels the original order and creates a new one with updated parameters."
+    description: str = "Bewerk een bestaande open order. Dit annuleert de originele order en maakt een nieuwe met bijgewerkte parameters."
     args_schema: type[BaseModel] = EditOrderInput
 
     def _run(
@@ -201,7 +201,7 @@ class EditOrderTool(KrakenBaseTool):
         oflags: str | None = None,
         validate: bool | None = None,
     ) -> str:
-        """Edit an order on Kraken."""
+        """Bewerk een order op Kraken."""
         data: dict[str, Any] = {"txid": txid, "pair": pair}
         if volume:
             data["volume"] = volume
@@ -218,106 +218,106 @@ class EditOrderTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 5: Cancel Order
+# Tool 5: Annuleer Order
 # =============================================================================
 class CancelOrderInput(BaseModel):
-    """Input schema for CancelOrderTool."""
+    """Input schema voor CancelOrderTool."""
 
     txid: str = Field(
         ...,
-        description="Transaction ID of order to cancel (or comma-separated list, or userref with # prefix)",
+        description="Transactie ID van order om te annuleren (of komma-gescheiden lijst, of userref met # prefix)",
     )
 
 
 class CancelOrderTool(KrakenBaseTool):
-    """Cancel a specific open order."""
+    """Annuleer een specifieke open order."""
 
     name: str = "kraken_cancel_order"
-    description: str = "Cancel a specific open order by its transaction ID. Can also use userref with # prefix."
+    description: str = "Annuleer een specifieke open order op basis van transactie ID. Kan ook userref gebruiken met # prefix."
     args_schema: type[BaseModel] = CancelOrderInput
 
     def _run(self, txid: str) -> str:
-        """Cancel an order on Kraken."""
+        """Annuleer een order op Kraken."""
         result = self._private_request("CancelOrder", {"txid": txid})
         return str(result)
 
 
 # =============================================================================
-# Tool 6: Cancel Order Batch
+# Tool 6: Annuleer Order Batch
 # =============================================================================
 class CancelOrderBatchInput(BaseModel):
-    """Input schema for CancelOrderBatchTool."""
+    """Input schema voor CancelOrderBatchTool."""
 
     orders: str = Field(
         ...,
-        description="JSON array of transaction IDs to cancel (e.g., '[\"TXID1\", \"TXID2\"]')",
+        description="JSON array van transactie IDs om te annuleren (bijv. '[\"TXID1\", \"TXID2\"]')",
     )
 
 
 class CancelOrderBatchTool(KrakenBaseTool):
-    """Cancel multiple orders in a single request."""
+    """Annuleer meerdere orders in één request."""
 
     name: str = "kraken_cancel_order_batch"
-    description: str = "Cancel multiple orders in a single request using their transaction IDs."
+    description: str = "Annuleer meerdere orders in één request met hun transactie IDs."
     args_schema: type[BaseModel] = CancelOrderBatchInput
 
     def _run(self, orders: str) -> str:
-        """Cancel multiple orders on Kraken."""
+        """Annuleer meerdere orders op Kraken."""
         result = self._private_request("CancelOrderBatch", {"orders": orders})
         return str(result)
 
 
 # =============================================================================
-# Tool 7: Cancel All Orders
+# Tool 7: Annuleer Alle Orders
 # =============================================================================
 class CancelAllOrdersTool(KrakenBaseTool):
-    """Cancel all open orders."""
+    """Annuleer alle open orders."""
 
     name: str = "kraken_cancel_all_orders"
-    description: str = "Cancel ALL open orders. Use with caution! Returns count of cancelled orders."
+    description: str = "Annuleer ALLE open orders. Gebruik met voorzichtigheid! Geeft aantal geannuleerde orders terug."
 
     def _run(self) -> str:
-        """Cancel all orders on Kraken."""
+        """Annuleer alle orders op Kraken."""
         result = self._private_request("CancelAll")
         return str(result)
 
 
 # =============================================================================
-# Tool 8: Cancel All Orders After X
+# Tool 8: Annuleer Alle Orders Na X
 # =============================================================================
 class CancelAllOrdersAfterXInput(BaseModel):
-    """Input schema for CancelAllOrdersAfterXTool."""
+    """Input schema voor CancelAllOrdersAfterXTool."""
 
     timeout: int = Field(
         ...,
-        description="Timeout in seconds after which all orders will be cancelled. Set to 0 to disable.",
+        description="Timeout in seconden waarna alle orders geannuleerd worden. Zet op 0 om uit te schakelen.",
     )
 
 
 class CancelAllOrdersAfterXTool(KrakenBaseTool):
-    """Set a dead man's switch to cancel all orders after timeout."""
+    """Stel een dode man schakelaar in om alle orders te annuleren na timeout."""
 
     name: str = "kraken_cancel_all_orders_after_x"
-    description: str = "Set a dead man's switch - cancel all orders after X seconds if not reset. Useful for safety. Set timeout to 0 to disable."
+    description: str = "Stel een dode man schakelaar in - annuleer alle orders na X seconden indien niet gereset. Handig voor veiligheid. Zet timeout op 0 om uit te schakelen."
     args_schema: type[BaseModel] = CancelAllOrdersAfterXInput
 
     def _run(self, timeout: int) -> str:
-        """Set dead man's switch on Kraken."""
+        """Stel dode man schakelaar in op Kraken."""
         result = self._private_request("CancelAllOrdersAfter", {"timeout": timeout})
         return str(result)
 
 
 # =============================================================================
-# Tool 9: Get WebSockets Token
+# Tool 9: Haal WebSockets Token Op
 # =============================================================================
 class GetWebSocketsTokenTool(KrakenBaseTool):
-    """Get authentication token for private WebSocket feeds."""
+    """Haal authenticatie token op voor private WebSocket feeds."""
 
     name: str = "kraken_get_websockets_token"
-    description: str = "Get an authentication token for connecting to Kraken's private WebSocket feeds."
+    description: str = "Haal een authenticatie token op voor verbinding met Kraken's private WebSocket feeds."
 
     def _run(self) -> str:
-        """Get WebSocket token from Kraken."""
+        """Haal WebSocket token op van Kraken."""
         result = self._private_request("GetWebSocketsToken")
         return str(result)
 

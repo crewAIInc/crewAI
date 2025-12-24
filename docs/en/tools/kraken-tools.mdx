@@ -1,19 +1,20 @@
 ---
 title: Kraken Trading Tools
-description: Built-in tools for interacting with the Kraken cryptocurrency exchange API.
+description: Built-in tools for interacting with the Kraken cryptocurrency exchange API (Spot + Futures).
 icon: bitcoin
 ---
 
 ## Overview
 
-CrewAI includes 55 built-in tools for interacting with the Kraken cryptocurrency exchange. These tools enable agents to autonomously:
+CrewAI includes **96 built-in tools** for interacting with the Kraken cryptocurrency exchange. These tools enable agents to autonomously:
 
-- Monitor market data and prices
+- Monitor market data and prices (Spot & Futures)
 - Place and manage orders
-- Check account balances
+- Check account balances and positions
 - Handle deposits and withdrawals
 - Manage staking/earn strategies
 - Transfer between wallets and subaccounts
+- Trade perpetual futures with leverage
 
 ## Installation
 
@@ -24,6 +25,8 @@ pip install crewai
 ```
 
 ## Quick Start
+
+### Spot Trading
 
 ```python
 from crewai import Agent, Task, Crew
@@ -68,97 +71,256 @@ crew = Crew(agents=[trader], tasks=[task])
 result = crew.kickoff()
 ```
 
-## Available Tools
+### Futures Trading
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.tools.kraken import (
+    KrakenFuturesGetTickersTool,
+    KrakenFuturesGetOpenPositionsTool,
+    KrakenFuturesSendOrderTool,
+    KrakenFuturesSetLeverageTool,
+)
+
+# Public tools (no authentication required)
+futures_ticker = KrakenFuturesGetTickersTool()
+
+# Private tools (require API credentials)
+positions_tool = KrakenFuturesGetOpenPositionsTool(
+    api_key="your-futures-api-key",
+    api_secret="your-futures-api-secret",
+)
+
+order_tool = KrakenFuturesSendOrderTool(
+    api_key="your-futures-api-key",
+    api_secret="your-futures-api-secret",
+)
+
+leverage_tool = KrakenFuturesSetLeverageTool(
+    api_key="your-futures-api-key",
+    api_secret="your-futures-api-secret",
+)
+
+# Create a futures trading agent
+futures_trader = Agent(
+    role="Futures Trader",
+    goal="Trade BTC perpetual futures with proper risk management",
+    backstory="Professional derivatives trader specializing in crypto futures",
+    tools=[futures_ticker, positions_tool, order_tool, leverage_tool],
+    verbose=True,
+)
+
+# Create a task
+task = Task(
+    description="Check BTC futures price and open positions. Set leverage to 5x and place a limit long order if no positions exist.",
+    expected_output="Summary of futures positions and any orders placed.",
+    agent=futures_trader,
+)
+
+crew = Crew(agents=[futures_trader], tasks=[task])
+result = crew.kickoff()
+```
+
+---
+
+## Spot API Tools (55 tools)
 
 ### Market Data (Public - No Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `GetServerTimeTool` | Get Kraken server time for API connectivity check |
-| `GetSystemStatusTool` | Get system status (online, maintenance, etc.) |
-| `GetAssetInfoTool` | Get info about tradeable assets |
-| `GetTradableAssetPairsTool` | Get trading pairs with fees and limits |
-| `GetTickerInformationTool` | Get current price, volume, high/low |
-| `GetOrderBookTool` | Get order book (asks/bids) |
-| `GetRecentTradesTool` | Get recent public trades |
-| `GetRecentSpreadsTool` | Get recent bid/ask spreads |
-| `GetOHLCDataTool` | Get candlestick (OHLC) data |
+| `GetServerTimeTool` | Haal Kraken servertijd op voor API connectiviteit check |
+| `GetSystemStatusTool` | Haal systeemstatus op (online, onderhoud, etc.) |
+| `GetAssetInfoTool` | Haal info op over verhandelbare assets |
+| `GetTradableAssetPairsTool` | Haal handelsparen op met fees en limieten |
+| `GetTickerInformationTool` | Haal huidige prijs, volume, hoog/laag op |
+| `GetOrderBookTool` | Haal orderboek op (asks/bids) |
+| `GetRecentTradesTool` | Haal recente publieke trades op |
+| `GetRecentSpreadsTool` | Haal recente bid/ask spreads op |
+| `GetOHLCDataTool` | Haal candlestick (OHLC) data op |
 
 ### Trading (Private - Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `AddOrderTool` | Place a new order |
-| `AddOrderBatchTool` | Place multiple orders (max 15) |
-| `AmendOrderTool` | Amend an existing order |
-| `EditOrderTool` | Edit (cancel/replace) an order |
-| `CancelOrderTool` | Cancel a specific order |
-| `CancelOrderBatchTool` | Cancel multiple orders |
-| `CancelAllOrdersTool` | Cancel ALL open orders |
-| `CancelAllOrdersAfterXTool` | Dead man's switch |
-| `GetWebSocketsTokenTool` | Get WebSocket auth token |
+| `AddOrderTool` | Plaats een nieuwe order |
+| `AddOrderBatchTool` | Plaats meerdere orders (max 15) |
+| `AmendOrderTool` | Wijzig een bestaande order |
+| `EditOrderTool` | Bewerk (annuleer/vervang) een order |
+| `CancelOrderTool` | Annuleer een specifieke order |
+| `CancelOrderBatchTool` | Annuleer meerdere orders |
+| `CancelAllOrdersTool` | Annuleer ALLE open orders |
+| `CancelAllOrdersAfterXTool` | Dode man schakelaar |
+| `GetWebSocketsTokenTool` | Haal WebSocket auth token op |
 
 ### Account Data (Private - Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `GetAccountBalanceTool` | Get balance for all assets |
-| `GetExtendedBalanceTool` | Get balance with holds/credit |
-| `GetTradeBalanceTool` | Get margin/P&L info |
-| `GetOpenOrdersTool` | Get all open orders |
-| `GetClosedOrdersTool` | Get closed orders history |
-| `QueryOrdersInfoTool` | Query specific orders |
-| `GetTradesHistoryTool` | Get trade history |
-| `QueryTradesInfoTool` | Query specific trades |
-| `GetOpenPositionsTool` | Get margin positions |
-| `GetLedgersTool` | Get ledger entries |
-| `QueryLedgersTool` | Query specific ledgers |
-| `GetTradeVolumeTool` | Get 30-day volume/fees |
-| `RequestExportReportTool` | Request data export |
+| `GetAccountBalanceTool` | Haal saldo op voor alle assets |
+| `GetExtendedBalanceTool` | Haal saldo op met holds/credit |
+| `GetTradeBalanceTool` | Haal margin/W&V info op |
+| `GetOpenOrdersTool` | Haal alle open orders op |
+| `GetClosedOrdersTool` | Haal gesloten orders geschiedenis op |
+| `QueryOrdersInfoTool` | Query specifieke orders |
+| `GetTradesHistoryTool` | Haal trade geschiedenis op |
+| `QueryTradesInfoTool` | Query specifieke trades |
+| `GetOpenPositionsTool` | Haal margin posities op |
+| `GetLedgersTool` | Haal ledger entries op |
+| `QueryLedgersTool` | Query specifieke ledgers |
+| `GetTradeVolumeTool` | Haal 30-dagen volume/fees op |
+| `RequestExportReportTool` | Vraag data export aan |
 | `GetExportReportStatusTool` | Check export status |
 | `RetrieveDataExportTool` | Download export |
-| `DeleteExportReportTool` | Delete export |
-| `GetOrderAmendsTool` | Get amend history |
+| `DeleteExportReportTool` | Verwijder export |
+| `GetOrderAmendsTool` | Haal wijzigingsgeschiedenis op |
 
 ### Funding (Private - Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `GetDepositMethodsTool` | Get deposit methods |
-| `GetDepositAddressesTool` | Get deposit addresses |
-| `GetDepositStatusTool` | Get deposit status |
-| `GetWithdrawalMethodsTool` | Get withdrawal methods |
-| `GetWithdrawalAddressesTool` | Get saved addresses |
-| `GetWithdrawalInfoTool` | Get withdrawal fee/limits |
-| `WithdrawFundsTool` | Initiate withdrawal |
-| `GetWithdrawalStatusTool` | Get withdrawal status |
+| `GetDepositMethodsTool` | Haal stortingsmethodes op |
+| `GetDepositAddressesTool` | Haal stortingsadressen op |
+| `GetDepositStatusTool` | Haal stortingsstatus op |
+| `GetWithdrawalMethodsTool` | Haal opnamemethodes op |
+| `GetWithdrawalAddressesTool` | Haal opgeslagen adressen op |
+| `GetWithdrawalInfoTool` | Haal opname fee/limieten op |
+| `WithdrawFundsTool` | Start opname |
+| `GetWithdrawalStatusTool` | Haal opnamestatus op |
 | `WalletTransferTool` | Transfer spot/futures |
-| `CancelWithdrawalTool` | Cancel withdrawal |
+| `CancelWithdrawalTool` | Annuleer opname |
 
 ### Earn/Staking (Private - Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `ListEarnStrategiesTool` | List staking strategies |
-| `ListEarnAllocationsTool` | Get current allocations |
-| `AllocateEarnFundsTool` | Stake funds |
+| `ListEarnStrategiesTool` | Lijst staking strategieën |
+| `ListEarnAllocationsTool` | Haal huidige allocaties op |
+| `AllocateEarnFundsTool` | Stake fondsen |
 | `GetAllocationStatusTool` | Check stake status |
-| `DeallocateEarnFundsTool` | Unstake funds |
+| `DeallocateEarnFundsTool` | Unstake fondsen |
 | `GetDeallocationStatusTool` | Check unstake status |
 
 ### Subaccounts (Private - Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `CreateSubaccountTool` | Create subaccount |
-| `AccountTransferTool` | Transfer between accounts |
+| `CreateSubaccountTool` | Maak subaccount aan |
+| `AccountTransferTool` | Transfer tussen accounts |
 
 ### Transparency (Public - No Auth Required)
 
 | Tool | Description |
 |------|-------------|
-| `GetPreTradeDataTool` | Pre-trade transparency |
-| `GetPostTradeDataTool` | Post-trade transparency |
+| `GetPreTradeDataTool` | Pre-trade transparantie |
+| `GetPostTradeDataTool` | Post-trade transparantie |
+
+---
+
+## Futures API Tools (41 tools)
+
+### Market Data (Public - No Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetTickersTool` | Haal tickers op voor alle instrumenten |
+| `KrakenFuturesGetTickerTool` | Haal ticker op voor specifiek symbool |
+| `KrakenFuturesGetOrderBookTool` | Haal orderboek op |
+| `KrakenFuturesGetTradeHistoryTool` | Haal handelsgeschiedenis op |
+
+### Order Management (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesSendOrderTool` | Plaats een nieuwe order |
+| `KrakenFuturesEditOrderTool` | Wijzig een bestaande order |
+| `KrakenFuturesCancelOrderTool` | Annuleer een order |
+| `KrakenFuturesCancelAllOrdersTool` | Annuleer alle orders |
+| `KrakenFuturesBatchOrderTool` | Batch order operaties |
+| `KrakenFuturesGetOpenOrdersTool` | Haal open orders op |
+| `KrakenFuturesGetOrderStatusTool` | Haal order status op |
+| `KrakenFuturesDeadMansSwitchTool` | Dode man schakelaar |
+
+### Account (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetWalletsTool` | Haal wallet info op |
+| `KrakenFuturesGetOpenPositionsTool` | Haal open posities op |
+| `KrakenFuturesGetPortfolioMarginTool` | Haal portfolio margin parameters op |
+| `KrakenFuturesCalculateMarginPnLTool` | Bereken portfolio margin PnL en Greeks |
+| `KrakenFuturesGetUnwindQueueTool` | Haal positie percentiel in unwind wachtrij op |
+
+### Multi-Collateral (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetLeverageTool` | Haal hefboom instellingen op |
+| `KrakenFuturesSetLeverageTool` | Stel hefboom in |
+| `KrakenFuturesGetPnLCurrencyTool` | Haal PnL valuta voorkeur op |
+| `KrakenFuturesSetPnLCurrencyTool` | Stel PnL valuta voorkeur in |
+
+### Transfers (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesWalletTransferTool` | Transfer tussen wallets |
+| `KrakenFuturesSubAccountTransferTool` | Transfer tussen subaccounts |
+| `KrakenFuturesWithdrawToSpotTool` | Opname naar spot wallet |
+
+### Subaccounts (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetSubaccountsTool` | Haal subaccounts op |
+| `KrakenFuturesCheckTradingStatusTool` | Check subaccount trading status |
+| `KrakenFuturesUpdateTradingStatusTool` | Update trading status |
+
+### Instruments (Public - No Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetInstrumentsTool` | Haal instrumenten op |
+| `KrakenFuturesGetInstrumentStatusTool` | Haal instrument status op |
+| `KrakenFuturesGetInstrumentStatusListTool` | Haal alle instrument statussen op |
+
+### Fee Schedules (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetFeeSchedulesTool` | Haal fee schedules op |
+| `KrakenFuturesGetFeeVolumesTool` | Haal fee volumes op |
+
+### Assignment Program (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesListAssignmentProgramsTool` | Lijst assignment programma's |
+| `KrakenFuturesAddAssignmentPreferenceTool` | Voeg assignment voorkeur toe |
+| `KrakenFuturesDeleteAssignmentPreferenceTool` | Verwijder assignment voorkeur |
+| `KrakenFuturesListAssignmentHistoryTool` | Lijst assignment geschiedenis |
+
+### Historical Data (Private/Public)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetFillsTool` | Haal fills/executions op |
+| `KrakenFuturesGetFundingRatesTool` | Haal historische funding rates op |
+
+### Trading Settings (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetSelfTradeStrategyTool` | Haal self-trade strategie op |
+| `KrakenFuturesSetSelfTradeStrategyTool` | Stel self-trade strategie in |
+
+### General (Private - Auth Required)
+
+| Tool | Description |
+|------|-------------|
+| `KrakenFuturesGetNotificationsTool` | Haal meldingen op |
+
+---
 
 ## Authentication
 
@@ -177,17 +339,26 @@ result = crew.kickoff()
 
 ```python
 import os
-from crewai.tools.kraken import GetAccountBalanceTool
+from crewai.tools.kraken import GetAccountBalanceTool, KrakenFuturesGetWalletsTool
 
+# Spot
 balance_tool = GetAccountBalanceTool(
     api_key=os.environ["KRAKEN_API_KEY"],
     api_secret=os.environ["KRAKEN_API_SECRET"],
 )
+
+# Futures
+futures_wallet = KrakenFuturesGetWalletsTool(
+    api_key=os.environ["KRAKEN_FUTURES_API_KEY"],
+    api_secret=os.environ["KRAKEN_FUTURES_API_SECRET"],
+)
 ```
+
+---
 
 ## Tool Examples
 
-### Check Price and Place Order
+### Spot: Check Price and Place Order
 
 ```python
 from crewai.tools.kraken import GetTickerInformationTool, AddOrderTool
@@ -209,19 +380,33 @@ result = order.run(
 print(result)
 ```
 
-### Monitor and Cancel Orders
+### Futures: Open Position with Leverage
 
 ```python
-from crewai.tools.kraken import GetOpenOrdersTool, CancelOrderTool
+from crewai.tools.kraken import (
+    KrakenFuturesGetTickerTool,
+    KrakenFuturesSetLeverageTool,
+    KrakenFuturesSendOrderTool,
+)
 
-# Get all open orders
-open_orders = GetOpenOrdersTool(api_key="...", api_secret="...")
-orders = open_orders.run()
-print(orders)
+# Get BTC perpetual price
+ticker = KrakenFuturesGetTickerTool()
+price = ticker.run(symbol="PI_XBTUSD")
+print(price)
 
-# Cancel a specific order
-cancel = CancelOrderTool(api_key="...", api_secret="...")
-result = cancel.run(txid="ORDER-TXID-HERE")
+# Set leverage to 10x
+leverage = KrakenFuturesSetLeverageTool(api_key="...", api_secret="...")
+leverage.run(symbol="PI_XBTUSD", max_leverage="10")
+
+# Place a limit long order
+order = KrakenFuturesSendOrderTool(api_key="...", api_secret="...")
+result = order.run(
+    order_type="lmt",
+    symbol="PI_XBTUSD",
+    side="buy",
+    size="1",
+    limit_price="90000",
+)
 print(result)
 ```
 
@@ -236,21 +421,11 @@ data = ohlc.run(pair="ETHUSD", interval=60)
 print(data)
 ```
 
-### Check Balances and Trade Volume
-
-```python
-from crewai.tools.kraken import GetAccountBalanceTool, GetTradeVolumeTool
-
-balance = GetAccountBalanceTool(api_key="...", api_secret="...")
-print(balance.run())
-
-volume = GetTradeVolumeTool(api_key="...", api_secret="...")
-print(volume.run(pair="XBTUSD"))  # Shows 30-day volume and fee tier
-```
+---
 
 ## Order Types
 
-The `AddOrderTool` supports various order types:
+### Spot Order Types
 
 | Order Type | Description |
 |------------|-------------|
@@ -263,6 +438,17 @@ The `AddOrderTool` supports various order types:
 | `trailing-stop` | Dynamic stop that follows price |
 | `trailing-stop-limit` | Dynamic stop with limit |
 | `settle-position` | Settle margin position |
+
+### Futures Order Types
+
+| Order Type | Description |
+|------------|-------------|
+| `mkt` | Market order - execute immediately |
+| `lmt` | Limit order - execute at specified price |
+| `stp` | Stop order - trigger at stop price |
+| `take_profit` | Take profit order |
+
+---
 
 ## Safety Considerations
 
@@ -297,15 +483,21 @@ print(result)
 ### Use Dead Man's Switch for Safety
 
 ```python
-from crewai.tools.kraken import CancelAllOrdersAfterXTool
+from crewai.tools.kraken import CancelAllOrdersAfterXTool, KrakenFuturesDeadMansSwitchTool
 
-# Cancel all orders if not reset within 60 seconds
-switch = CancelAllOrdersAfterXTool(api_key="...", api_secret="...")
-switch.run(timeout=60)
+# Spot: Cancel all orders if not reset within 60 seconds
+spot_switch = CancelAllOrdersAfterXTool(api_key="...", api_secret="...")
+spot_switch.run(timeout=60)
+
+# Futures: Same concept
+futures_switch = KrakenFuturesDeadMansSwitchTool(api_key="...", api_secret="...")
+futures_switch.run(timeout=60)
 
 # To disable the switch
-switch.run(timeout=0)
+spot_switch.run(timeout=0)
 ```
+
+---
 
 ## Error Handling
 
@@ -334,16 +526,23 @@ else:
     print(f"Success: {data['result']}")
 ```
 
+---
+
 ## Rate Limits
 
-Kraken has API rate limits. The tools automatically handle basic timeouts, but for high-frequency operations:
+Kraken has API rate limits:
 
-- Public endpoints: ~1 request/second
-- Private endpoints: Uses a "call counter" system
-- Use `CancelAllOrdersAfterXTool` as a safety mechanism
+- **Spot Public endpoints**: ~1 request/second
+- **Spot Private endpoints**: Uses a "call counter" system
+- **Futures endpoints**: Similar rate limiting applies
+
+Use `CancelAllOrdersAfterXTool` or `KrakenFuturesDeadMansSwitchTool` as a safety mechanism.
+
+---
 
 ## Related Resources
 
-- [Kraken API Documentation](https://docs.kraken.com/api/)
+- [Kraken Spot API Documentation](https://docs.kraken.com/api/)
+- [Kraken Futures API Documentation](https://docs.futures.kraken.com/)
 - [Kraken WebSocket API](https://docs.kraken.com/websockets/)
 - [CrewAI Tools Overview](/en/concepts/tools)

@@ -62,7 +62,7 @@ OPENAI_BIGGER_MODELS: list[
 
 
 class ToolUsageError(Exception):
-    """Exception raised for errors in the tool usage."""
+    """Exceptie opgeworpen voor fouten in het tool gebruik."""
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -71,15 +71,15 @@ class ToolUsageError(Exception):
 
 class ToolUsage:
     """
-    Class that represents the usage of a tool by an agent.
+    Klasse die het gebruik van een tool door een agent representeert.
 
-    Attributes:
-      task: Task being executed.
-      tools_handler: Tools handler that will manage the tool usage.
-      tools: List of tools available for the agent.
-      tools_description: Description of the tools available for the agent.
-      tools_names: Names of the tools available for the agent.
-      function_calling_llm: Language model to be used for the tool usage.
+    Attributen:
+      task: Taak die wordt uitgevoerd.
+      tools_handler: Tools handler die het tool gebruik beheert.
+      tools: Lijst van tools beschikbaar voor de agent.
+      tools_description: Beschrijving van de tools beschikbaar voor de agent.
+      tools_names: Namen van de tools beschikbaar voor de agent.
+      function_calling_llm: Taalmodel dat wordt gebruikt voor het tool gebruik.
     """
 
     def __init__(
@@ -163,14 +163,14 @@ class ToolUsage:
     async def ause(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
     ) -> str:
-        """Execute a tool asynchronously.
+        """Voer een tool asynchroon uit.
 
         Args:
-            calling: The tool calling information.
-            tool_string: The raw tool string from the agent.
+            calling: De tool aanroep informatie.
+            tool_string: De ruwe tool string van de agent.
 
-        Returns:
-            The result of the tool execution as a string.
+        Retourneert:
+            Het resultaat van de tool uitvoering als string.
         """
         if isinstance(calling, ToolUsageError):
             error = calling.message
@@ -216,15 +216,15 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: ToolCalling | InstructorToolCalling,
     ) -> str:
-        """Internal async tool execution implementation.
+        """Interne async tool uitvoering implementatie.
 
         Args:
-            tool_string: The raw tool string from the agent.
-            tool: The tool to execute.
-            calling: The tool calling information.
+            tool_string: De ruwe tool string van de agent.
+            tool: De tool om uit te voeren.
+            calling: De tool aanroep informatie.
 
-        Returns:
-            The result of the tool execution as a string.
+        Retourneert:
+            Het resultaat van de tool uitvoering als string.
         """
         if self._check_tool_repeated_usage(calling=calling):
             try:
@@ -297,8 +297,8 @@ class ToolUsage:
         if result is None:
             try:
                 if calling.tool_name in [
-                    "Delegate work to coworker",
-                    "Ask question to coworker",
+                    "Werk delegeren aan collega",
+                    "Vraag stellen aan collega",
                 ]:
                     coworker = (
                         calling.arguments.get("coworker") if calling.arguments else None
@@ -399,7 +399,7 @@ class ToolUsage:
                 and available_tool.max_usage_count is not None
             ):
                 self._printer.print(
-                    content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                    content=f"Tool '{available_tool.name}' gebruik: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                     color="blue",
                 )
 
@@ -486,8 +486,8 @@ class ToolUsage:
         if result is None:
             try:
                 if calling.tool_name in [
-                    "Delegate work to coworker",
-                    "Ask question to coworker",
+                    "Werk delegeren aan collega",
+                    "Vraag stellen aan collega",
                 ]:
                     coworker = (
                         calling.arguments.get("coworker") if calling.arguments else None
@@ -590,7 +590,7 @@ class ToolUsage:
                 and available_tool.max_usage_count is not None
             ):
                 self._printer.print(
-                    content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                    content=f"Tool '{available_tool.name}' gebruik: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                     color="blue",
                 )
 
@@ -628,21 +628,21 @@ class ToolUsage:
 
     @staticmethod
     def _check_usage_limit(tool: Any, tool_name: str) -> str | None:
-        """Check if tool has reached its usage limit.
+        """Controleer of de tool zijn gebruikslimiet heeft bereikt.
 
         Args:
-            tool: The tool to check
-            tool_name: The name of the tool (used for error message)
+            tool: De tool om te controleren
+            tool_name: De naam van de tool (gebruikt voor foutmelding)
 
-        Returns:
-            Error message if limit reached, None otherwise
+        Retourneert:
+            Foutmelding als limiet bereikt, anders None
         """
         if (
             hasattr(tool, "max_usage_count")
             and tool.max_usage_count is not None
             and tool.current_usage_count >= tool.max_usage_count
         ):
-            return f"Tool '{tool_name}' has reached its usage limit of {tool.max_usage_count} times and cannot be used anymore."
+            return f"Tool '{tool_name}' heeft zijn gebruikslimiet van {tool.max_usage_count} keer bereikt en kan niet meer worden gebruikt."
         return None
 
     def _select_tool(self, tool_name: str) -> Any:
@@ -672,7 +672,7 @@ class ToolUsage:
             "tool_class": self.tools_description,
         }
         if tool_name and tool_name != "":
-            error = f"Action '{tool_name}' don't exist, these are the only available Actions:\n{self.tools_description}"
+            error = f"Actie '{tool_name}' bestaat niet, dit zijn de enige beschikbare Acties:\n{self.tools_description}"
             crewai_event_bus.emit(
                 self,
                 ToolSelectionErrorEvent(
@@ -681,7 +681,7 @@ class ToolUsage:
                 ),
             )
             raise Exception(error)
-        error = f"I forgot the Action name, these are the only available Actions: {self.tools_description}"
+        error = f"Ik ben de Actie naam vergeten, dit zijn de enige beschikbare Acties: {self.tools_description}"
         crewai_event_bus.emit(
             self,
             ToolSelectionErrorEvent(
@@ -692,7 +692,7 @@ class ToolUsage:
         raise Exception(error)
 
     def _render(self) -> str:
-        """Render the tool name and description in plain text."""
+        """Render de tool naam en beschrijving in platte tekst."""
         descriptions = [tool.description for tool in self.tools]
         return "\n--\n".join(descriptions)
 
@@ -721,7 +721,7 @@ class ToolUsage:
         )
         tool_object = converter.to_pydantic()
         if not isinstance(tool_object, (ToolCalling, InstructorToolCalling)):
-            raise ToolUsageError("Failed to parse tool calling")
+            raise ToolUsageError("Kon tool aanroep niet parsen")
 
         return tool_object
 
@@ -777,7 +777,7 @@ class ToolUsage:
 
         if not isinstance(tool_input, str) or not tool_input.strip():
             raise Exception(
-                "Tool input must be a valid dictionary in JSON or Python literal format"
+                "Tool input moet een geldige dictionary zijn in JSON of Python literal formaat"
             )
 
         # Attempt 1: Parse as JSON
@@ -815,14 +815,14 @@ class ToolUsage:
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
-            error = f"Failed to repair JSON: {e}"
+            error = f"Kon JSON niet repareren: {e}"
             self._printer.print(content=error, color="red")
 
         error_message = (
-            "Tool input must be a valid dictionary in JSON or Python literal format"
+            "Tool input moet een geldige dictionary zijn in JSON of Python literal formaat"
         )
         self._emit_validate_input_error(error_message)
-        # If all parsing attempts fail, raise an error
+        # Als alle parse pogingen mislukken, gooi een error
         raise Exception(error_message)
 
     def _emit_validate_input_error(self, final_error: str) -> None:

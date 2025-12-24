@@ -10,11 +10,11 @@ def create_flow(name):
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
 
-    click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
+    click.secho(f"Flow {folder_name} wordt aangemaakt...", fg="green", bold=True)
 
     project_root = Path(folder_name)
     if project_root.exists():
-        click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
+        click.secho(f"Fout: Map {folder_name} bestaat al.", fg="red")
         return
 
     # Initialize telemetry
@@ -51,7 +51,7 @@ def create_flow(name):
             with open(src_file, "r", encoding="utf-8") as file:
                 content = file.read()
         except Exception as e:
-            click.secho(f"Error processing file {src_file}: {e}", fg="red")
+            click.secho(f"Fout bij verwerken bestand {src_file}: {e}", fg="red")
             return
 
         content = content.replace("{{name}}", name)
@@ -92,8 +92,8 @@ def create_flow(name):
                     process_file(src_file, dst_file)
         else:
             click.secho(
-                f"Warning: Crew folder {crew_folder} not found in template.",
+                f"Waarschuwing: Crew map {crew_folder} niet gevonden in template.",
                 fg="yellow",
             )
 
-    click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
+    click.secho(f"Flow {name} succesvol aangemaakt!", fg="green", bold=True)

@@ -1,4 +1,4 @@
-"""Task output representation and formatting."""
+"""Taakoutput representatie en formattering."""
 
 import json
 from typing import Any
@@ -10,45 +10,45 @@ from crewai.utilities.types import LLMMessage
 
 
 class TaskOutput(BaseModel):
-    """Class that represents the result of a task.
+    """Klasse die het resultaat van een taak representeert.
 
-    Attributes:
-        description: Description of the task
-        name: Optional name of the task
-        expected_output: Expected output of the task
-        summary: Summary of the task (auto-generated from description)
-        raw: Raw output of the task
-        pydantic: Pydantic model output of the task
-        json_dict: JSON dictionary output of the task
-        agent: Agent that executed the task
-        output_format: Output format of the task (JSON, PYDANTIC, or RAW)
+    Attributen:
+        description: Beschrijving van de taak
+        name: Optionele naam van de taak
+        expected_output: Verwachte output van de taak
+        summary: Samenvatting van de taak (automatisch gegenereerd van beschrijving)
+        raw: Ruwe output van de taak
+        pydantic: Pydantic model output van de taak
+        json_dict: JSON dictionary output van de taak
+        agent: Agent die de taak heeft uitgevoerd
+        output_format: Output formaat van de taak (JSON, PYDANTIC, of RAW)
     """
 
-    description: str = Field(description="Description of the task")
-    name: str | None = Field(description="Name of the task", default=None)
+    description: str = Field(description="Beschrijving van de taak")
+    name: str | None = Field(description="Naam van de taak", default=None)
     expected_output: str | None = Field(
-        description="Expected output of the task", default=None
+        description="Verwachte output van de taak", default=None
     )
-    summary: str | None = Field(description="Summary of the task", default=None)
-    raw: str = Field(description="Raw output of the task", default="")
+    summary: str | None = Field(description="Samenvatting van de taak", default=None)
+    raw: str = Field(description="Ruwe output van de taak", default="")
     pydantic: BaseModel | None = Field(
-        description="Pydantic output of task", default=None
+        description="Pydantic output van de taak", default=None
     )
     json_dict: dict[str, Any] | None = Field(
-        description="JSON dictionary of task", default=None
+        description="JSON dictionary van de taak", default=None
     )
-    agent: str = Field(description="Agent that executed the task")
+    agent: str = Field(description="Agent die de taak heeft uitgevoerd")
     output_format: OutputFormat = Field(
-        description="Output format of the task", default=OutputFormat.RAW
+        description="Output formaat van de taak", default=OutputFormat.RAW
     )
-    messages: list[LLMMessage] = Field(description="Messages of the task", default=[])
+    messages: list[LLMMessage] = Field(description="Berichten van de taak", default=[])
 
     @model_validator(mode="after")
     def set_summary(self):
-        """Set the summary field based on the description.
+        """Stel het samenvatting veld in op basis van de beschrijving.
 
-        Returns:
-            Self with updated summary field.
+        Retourneert:
+            Self met bijgewerkt samenvatting veld.
         """
         excerpt = " ".join(self.description.split(" ")[:10])
         self.summary = f"{excerpt}..."
@@ -56,34 +56,34 @@ class TaskOutput(BaseModel):
 
     @property
     def json(self) -> str | None:  # type: ignore[override]
-        """Get the JSON string representation of the task output.
+        """Haal de JSON string representatie van de taakoutput op.
 
-        Returns:
-            JSON string representation of the task output.
+        Retourneert:
+            JSON string representatie van de taakoutput.
 
-        Raises:
-            ValueError: If output format is not JSON.
+        Gooit:
+            ValueError: Als output formaat niet JSON is.
 
-        Notes:
-            TODO: Refactor to use model_dump_json() to avoid BaseModel method conflict
+        Opmerkingen:
+            TODO: Refactor om model_dump_json() te gebruiken om BaseModel methode conflict te vermijden
         """
         if self.output_format != OutputFormat.JSON:
             raise ValueError(
                 """
-                Invalid output format requested.
-                If you would like to access the JSON output,
-                please make sure to set the output_json property for the task
+                Ongeldig output formaat gevraagd.
+                Als je de JSON output wilt benaderen,
+                zorg ervoor dat je de output_json property voor de taak instelt
                 """
             )
 
         return json.dumps(self.json_dict)
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert json_output and pydantic_output to a dictionary.
+        """Converteer json_output en pydantic_output naar een dictionary.
 
-        Returns:
-            Dictionary representation of the task output. Prioritizes json_dict
-            over pydantic model dump if both are available.
+        Retourneert:
+            Dictionary representatie van de taakoutput. Geeft prioriteit aan json_dict
+            boven pydantic model dump als beide beschikbaar zijn.
         """
         output_dict = {}
         if self.json_dict:

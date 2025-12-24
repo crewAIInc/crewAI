@@ -32,54 +32,54 @@ def reset_memories_command(
             [long, short, entity, kickoff_outputs, knowledge, agent_knowledge, all]
         ):
             click.echo(
-                "No memory type specified. Please specify at least one type to reset."
+                "Geen geheugentype opgegeven. Geef ten minste één type op om te resetten."
             )
             return
 
         crews = get_crews()
         if not crews:
-            raise ValueError("No crew found.")
+            raise ValueError("Geen crew gevonden.")
         for crew in crews:
             if all:
                 crew.reset_memories(command_type="all")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Reset memories command has been completed."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Reset geheugen commando is voltooid."
                 )
                 continue
             if long:
                 crew.reset_memories(command_type="long")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Long term memory has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Lange-termijn geheugen is gereset."
                 )
             if short:
                 crew.reset_memories(command_type="short")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Short term memory has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Korte-termijn geheugen is gereset."
                 )
             if entity:
                 crew.reset_memories(command_type="entity")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Entity memory has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Entiteit geheugen is gereset."
                 )
             if kickoff_outputs:
                 crew.reset_memories(command_type="kickoff_outputs")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Latest Kickoff outputs stored has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Laatste Kickoff outputs opgeslagen zijn gereset."
                 )
             if knowledge:
                 crew.reset_memories(command_type="knowledge")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Knowledge has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Kennis is gereset."
                 )
             if agent_knowledge:
                 crew.reset_memories(command_type="agent_knowledge")
                 click.echo(
-                    f"[Crew ({crew.name if crew.name else crew.id})] Agents knowledge has been reset."
+                    f"[Crew ({crew.name if crew.name else crew.id})] Agenten kennis is gereset."
                 )
 
     except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while resetting the memories: {e}", err=True)
+        click.echo(f"Er is een fout opgetreden bij het resetten van de geheugens: {e}", err=True)
         click.echo(e.output, err=True)
 
     except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        click.echo(f"Er is een onverwachte fout opgetreden: {e}", err=True)

@@ -44,9 +44,9 @@ class I18N(BaseModel):
                 with open(prompts_path, encoding="utf-8") as f:
                     self._prompts = json.load(f)
         except FileNotFoundError as e:
-            raise Exception(f"Prompt file '{self.prompt_file}' not found.") from e
+            raise Exception(f"Prompt bestand '{self.prompt_file}' niet gevonden.") from e
         except json.JSONDecodeError as e:
-            raise Exception("Error decoding JSON from the prompts file.") from e
+            raise Exception("Fout bij decoderen van JSON uit het prompts bestand.") from e
 
         if not self._prompts:
             self._prompts = {}
@@ -108,7 +108,7 @@ class I18N(BaseModel):
         try:
             return self._prompts[kind][key]
         except Exception as e:
-            raise Exception(f"Prompt for '{kind}':'{key}'  not found.") from e
+            raise Exception(f"Prompt voor '{kind}':'{key}' niet gevonden.") from e
 
 
 @lru_cache(maxsize=None)

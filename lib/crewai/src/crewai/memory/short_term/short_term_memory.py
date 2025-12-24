@@ -21,11 +21,11 @@ from crewai.memory.storage.rag_storage import RAGStorage
 
 class ShortTermMemory(Memory):
     """
-    ShortTermMemory class for managing transient data related to immediate tasks
-    and interactions.
-    Inherits from the Memory class and utilizes an instance of a class that
-    adheres to the Storage for data storage, specifically working with
-    MemoryItem instances.
+    ShortTermMemory klasse voor het beheren van tijdelijke data gerelateerd aan directe taken
+    en interacties.
+    Erft van de Memory klasse en gebruikt een instantie van een klasse die
+    voldoet aan de Storage voor data opslag, specifiek werkend met
+    MemoryItem instanties.
     """
 
     _memory_provider: str | None = PrivateAttr()
@@ -46,7 +46,7 @@ class ShortTermMemory(Memory):
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError as e:
                 raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                    "Mem0 is niet geïnstalleerd. Installeer het met `pip install mem0ai`."
                 ) from e
             config = (
                 embedder_config.get("config")
@@ -130,15 +130,15 @@ class ShortTermMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search short-term memory for relevant entries.
+        """Zoek in korte-termijn geheugen naar relevante entries.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -191,11 +191,11 @@ class ShortTermMemory(Memory):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Save a value to short-term memory asynchronously.
+        """Sla een waarde asynchroon op in korte-termijn geheugen.
 
         Args:
-            value: The value to save.
-            metadata: Optional metadata to associate with the value.
+            value: De waarde om op te slaan.
+            metadata: Optionele metadata om te koppelen aan de waarde.
         """
         crewai_event_bus.emit(
             self,
@@ -253,15 +253,15 @@ class ShortTermMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search short-term memory asynchronously.
+        """Zoek asynchroon in korte-termijn geheugen.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -314,5 +314,5 @@ class ShortTermMemory(Memory):
             self.storage.reset()
         except Exception as e:
             raise Exception(
-                f"An error occurred while resetting the short-term memory: {e}"
+                f"Er is een fout opgetreden bij het resetten van het korte-termijn geheugen: {e}"
             ) from e

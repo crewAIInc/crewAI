@@ -5,10 +5,10 @@ from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledge
 
 
 class PDFKnowledgeSource(BaseFileKnowledgeSource):
-    """A knowledge source that stores and queries PDF file content using embeddings."""
+    """Een kennisbron die PDF bestandsinhoud opslaat en bevraagt met behulp van embeddings."""
 
     def load_content(self) -> dict[Path, str]:
-        """Load and preprocess PDF file content."""
+        """Laad en verwerk PDF bestandsinhoud."""
         pdfplumber = self._import_pdfplumber()
 
         content = {}
@@ -25,20 +25,20 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         return content
 
     def _import_pdfplumber(self) -> ModuleType:
-        """Dynamically import pdfplumber."""
+        """Dynamisch importeer pdfplumber."""
         try:
             import pdfplumber
 
             return pdfplumber
         except ImportError as e:
             raise ImportError(
-                "pdfplumber is not installed. Please install it with: pip install pdfplumber"
+                "pdfplumber is niet geïnstalleerd. Installeer het met: pip install pdfplumber"
             ) from e
 
     def add(self) -> None:
         """
-        Add PDF file content to the knowledge source, chunk it, compute embeddings,
-        and save the embeddings.
+        Voeg PDF bestandsinhoud toe aan de kennisbron, chunk het, bereken embeddings,
+        en sla de embeddings op.
         """
         for text in self.content.values():
             new_chunks = self._chunk_text(text)
@@ -46,14 +46,14 @@ class PDFKnowledgeSource(BaseFileKnowledgeSource):
         self._save_documents()
 
     async def aadd(self) -> None:
-        """Add PDF file content asynchronously."""
+        """Voeg PDF bestandsinhoud asynchroon toe."""
         for text in self.content.values():
             new_chunks = self._chunk_text(text)
             self.chunks.extend(new_chunks)
         await self._asave_documents()
 
     def _chunk_text(self, text: str) -> list[str]:
-        """Utility method to split text into chunks."""
+        """Hulpmethode om tekst op te splitsen in chunks."""
         return [
             text[i : i + self.chunk_size]
             for i in range(0, len(text), self.chunk_size - self.chunk_overlap)

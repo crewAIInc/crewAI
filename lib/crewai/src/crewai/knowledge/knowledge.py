@@ -13,7 +13,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
 
 class Knowledge(BaseModel):
     """
-    Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
+    Knowledge is een verzameling van bronnen en setup voor de vector store om relevante context op te slaan en te bevragen.
     Args:
         sources: list[BaseKnowledgeSource] = Field(default_factory=list)
         storage: KnowledgeStorage | None = Field(default=None)
@@ -47,14 +47,14 @@ class Knowledge(BaseModel):
         self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
     ) -> list[SearchResult]:
         """
-        Query across all knowledge sources to find the most relevant information.
-        Returns the top_k most relevant chunks.
+        Bevraag alle kennisbronnen om de meest relevante informatie te vinden.
+        Retourneert de top_k meest relevante chunks.
 
-        Raises:
-            ValueError: If storage is not initialized.
+        Gooit:
+            ValueError: Als opslag niet is geïnitialiseerd.
         """
         if self.storage is None:
-            raise ValueError("Storage is not initialized.")
+            raise ValueError("Opslag is niet geïnitialiseerd.")
 
         return self.storage.search(
             query,
@@ -74,26 +74,26 @@ class Knowledge(BaseModel):
         if self.storage:
             self.storage.reset()
         else:
-            raise ValueError("Storage is not initialized.")
+            raise ValueError("Opslag is niet geïnitialiseerd.")
 
     async def aquery(
         self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
     ) -> list[SearchResult]:
-        """Query across all knowledge sources asynchronously.
+        """Bevraag alle kennisbronnen asynchroon.
 
         Args:
-            query: List of query strings.
-            results_limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: Lijst van query strings.
+            results_limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            The top results matching the query.
+        Retourneert:
+            De top resultaten die overeenkomen met de query.
 
-        Raises:
-            ValueError: If storage is not initialized.
+        Gooit:
+            ValueError: Als opslag niet is geïnitialiseerd.
         """
         if self.storage is None:
-            raise ValueError("Storage is not initialized.")
+            raise ValueError("Opslag is niet geïnitialiseerd.")
 
         return await self.storage.asearch(
             query,
@@ -102,7 +102,7 @@ class Knowledge(BaseModel):
         )
 
     async def aadd_sources(self) -> None:
-        """Add all knowledge sources to storage asynchronously."""
+        """Voeg alle kennisbronnen asynchroon toe aan opslag."""
         try:
             for source in self.sources:
                 source.storage = self.storage
@@ -111,8 +111,8 @@ class Knowledge(BaseModel):
             raise e
 
     async def areset(self) -> None:
-        """Reset the knowledge base asynchronously."""
+        """Reset de kennisbasis asynchroon."""
         if self.storage:
             await self.storage.areset()
         else:
-            raise ValueError("Storage is not initialized.")
+            raise ValueError("Opslag is niet geïnitialiseerd.")

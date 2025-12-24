@@ -1,4 +1,4 @@
-"""Kraken Spot Account Data Tools - Private endpoints for account information."""
+"""Kraken Spot Account Data Tools - Private endpoints voor account informatie."""
 
 from __future__ import annotations
 
@@ -10,55 +10,55 @@ from crewai.tools.kraken.base import KrakenBaseTool
 
 
 # =============================================================================
-# Tool 1: Get Account Balance
+# Tool 1: Haal Account Saldo Op
 # =============================================================================
 class GetAccountBalanceTool(KrakenBaseTool):
-    """Get current account balance for all assets."""
+    """Haal huidig account saldo op voor alle assets."""
 
     name: str = "kraken_get_account_balance"
-    description: str = "Get current account balance for all assets. Returns available balance for each asset."
+    description: str = "Haal huidig account saldo op voor alle assets. Geeft beschikbaar saldo terug voor elk asset."
 
     def _run(self) -> str:
-        """Get account balance from Kraken."""
+        """Haal account saldo op van Kraken."""
         result = self._private_request("Balance")
         return str(result)
 
 
 # =============================================================================
-# Tool 2: Get Extended Balance
+# Tool 2: Haal Uitgebreid Saldo Op
 # =============================================================================
 class GetExtendedBalanceTool(KrakenBaseTool):
-    """Get extended balance information."""
+    """Haal uitgebreide saldo informatie op."""
 
     name: str = "kraken_get_extended_balance"
-    description: str = "Get extended balance info including available balance, hold amounts, and credit for all assets."
+    description: str = "Haal uitgebreide saldo info op inclusief beschikbaar saldo, vastgehouden bedragen en krediet voor alle assets."
 
     def _run(self) -> str:
-        """Get extended balance from Kraken."""
+        """Haal uitgebreid saldo op van Kraken."""
         result = self._private_request("BalanceEx")
         return str(result)
 
 
 # =============================================================================
-# Tool 3: Get Trade Balance
+# Tool 3: Haal Handelsaldo Op
 # =============================================================================
 class GetTradeBalanceInput(BaseModel):
-    """Input schema for GetTradeBalanceTool."""
+    """Input schema voor GetTradeBalanceTool."""
 
     asset: str | None = Field(
-        default=None, description="Base asset for calculations (default: ZUSD)"
+        default=None, description="Basis asset voor berekeningen (standaard: ZUSD)"
     )
 
 
 class GetTradeBalanceTool(KrakenBaseTool):
-    """Get trade balance including margin information."""
+    """Haal handelsaldo op inclusief margin informatie."""
 
     name: str = "kraken_get_trade_balance"
-    description: str = "Get trade balance including equivalent balance, trade balance, margin used, unrealized P&L, and free margin."
+    description: str = "Haal handelsaldo op inclusief equivalent saldo, handelsaldo, gebruikte margin, ongerealiseerde W&V en vrije margin."
     args_schema: type[BaseModel] = GetTradeBalanceInput
 
     def _run(self, asset: str | None = None) -> str:
-        """Get trade balance from Kraken."""
+        """Haal handelsaldo op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -67,28 +67,28 @@ class GetTradeBalanceTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 4: Get Open Orders
+# Tool 4: Haal Open Orders Op
 # =============================================================================
 class GetOpenOrdersInput(BaseModel):
-    """Input schema for GetOpenOrdersTool."""
+    """Input schema voor GetOpenOrdersTool."""
 
     trades: bool | None = Field(
-        default=None, description="Include trades related to orders in output"
+        default=None, description="Voeg trades gerelateerd aan orders toe in output"
     )
     userref: int | None = Field(
-        default=None, description="Filter orders by user reference ID"
+        default=None, description="Filter orders op gebruiker referentie ID"
     )
 
 
 class GetOpenOrdersTool(KrakenBaseTool):
-    """Get list of all currently open orders."""
+    """Haal lijst op van alle momenteel open orders."""
 
     name: str = "kraken_get_open_orders"
-    description: str = "Get list of all currently open orders with details like price, volume, type, and status."
+    description: str = "Haal lijst op van alle momenteel open orders met details zoals prijs, volume, type en status."
     args_schema: type[BaseModel] = GetOpenOrdersInput
 
     def _run(self, trades: bool | None = None, userref: int | None = None) -> str:
-        """Get open orders from Kraken."""
+        """Haal open orders op van Kraken."""
         data: dict[str, Any] = {}
         if trades is not None:
             data["trades"] = trades
@@ -99,30 +99,30 @@ class GetOpenOrdersTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 5: Get Closed Orders
+# Tool 5: Haal Gesloten Orders Op
 # =============================================================================
 class GetClosedOrdersInput(BaseModel):
-    """Input schema for GetClosedOrdersTool."""
+    """Input schema voor GetClosedOrdersTool."""
 
-    trades: bool | None = Field(default=None, description="Include trades in output")
+    trades: bool | None = Field(default=None, description="Voeg trades toe in output")
     userref: int | None = Field(
-        default=None, description="Filter by user reference ID"
+        default=None, description="Filter op gebruiker referentie ID"
     )
     start: str | None = Field(
-        default=None, description="Start timestamp or order txid"
+        default=None, description="Start timestamp of order txid"
     )
-    end: str | None = Field(default=None, description="End timestamp or order txid")
-    ofs: int | None = Field(default=None, description="Offset for pagination")
+    end: str | None = Field(default=None, description="Eind timestamp of order txid")
+    ofs: int | None = Field(default=None, description="Offset voor paginatie")
     closetime: str | None = Field(
-        default=None, description="Which time to use: 'open', 'close', or 'both'"
+        default=None, description="Welke tijd te gebruiken: 'open', 'close' of 'both'"
     )
 
 
 class GetClosedOrdersTool(KrakenBaseTool):
-    """Get list of closed orders."""
+    """Haal lijst op van gesloten orders."""
 
     name: str = "kraken_get_closed_orders"
-    description: str = "Get list of closed orders with full details. Supports filtering by time range and pagination."
+    description: str = "Haal lijst op van gesloten orders met volledige details. Ondersteunt filteren op tijdsbereik en paginatie."
     args_schema: type[BaseModel] = GetClosedOrdersInput
 
     def _run(
@@ -134,7 +134,7 @@ class GetClosedOrdersTool(KrakenBaseTool):
         ofs: int | None = None,
         closetime: str | None = None,
     ) -> str:
-        """Get closed orders from Kraken."""
+        """Haal gesloten orders op van Kraken."""
         data: dict[str, Any] = {}
         if trades is not None:
             data["trades"] = trades
@@ -156,28 +156,28 @@ class GetClosedOrdersTool(KrakenBaseTool):
 # Tool 6: Query Orders Info
 # =============================================================================
 class QueryOrdersInput(BaseModel):
-    """Input schema for QueryOrdersInfoTool."""
+    """Input schema voor QueryOrdersInfoTool."""
 
     txid: str = Field(
-        ..., description="Comma-separated list of transaction IDs to query"
+        ..., description="Komma-gescheiden lijst van transactie IDs om te queryen"
     )
-    trades: bool | None = Field(default=None, description="Include trades in output")
+    trades: bool | None = Field(default=None, description="Voeg trades toe in output")
     userref: int | None = Field(
-        default=None, description="Filter by user reference ID"
+        default=None, description="Filter op gebruiker referentie ID"
     )
 
 
 class QueryOrdersInfoTool(KrakenBaseTool):
-    """Query info about specific orders by transaction ID."""
+    """Query info over specifieke orders op transactie ID."""
 
     name: str = "kraken_query_orders_info"
-    description: str = "Query detailed info about specific orders by their transaction IDs (up to 50)."
+    description: str = "Query gedetailleerde info over specifieke orders op hun transactie IDs (tot 50)."
     args_schema: type[BaseModel] = QueryOrdersInput
 
     def _run(
         self, txid: str, trades: bool | None = None, userref: int | None = None
     ) -> str:
-        """Query orders info from Kraken."""
+        """Query orders info van Kraken."""
         data: dict[str, Any] = {"txid": txid}
         if trades is not None:
             data["trades"] = trades
@@ -188,26 +188,26 @@ class QueryOrdersInfoTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 7: Get Trades History
+# Tool 7: Haal Trades Geschiedenis Op
 # =============================================================================
 class GetTradesHistoryInput(BaseModel):
-    """Input schema for GetTradesHistoryTool."""
+    """Input schema voor GetTradesHistoryTool."""
 
     type: str | None = Field(
         default=None,
         description="Trade type filter: 'all', 'any position', 'closed position', 'closing position', 'no position'",
     )
-    trades: bool | None = Field(default=None, description="Include related trades")
+    trades: bool | None = Field(default=None, description="Voeg gerelateerde trades toe")
     start: str | None = Field(default=None, description="Start timestamp")
-    end: str | None = Field(default=None, description="End timestamp")
-    ofs: int | None = Field(default=None, description="Offset for pagination")
+    end: str | None = Field(default=None, description="Eind timestamp")
+    ofs: int | None = Field(default=None, description="Offset voor paginatie")
 
 
 class GetTradesHistoryTool(KrakenBaseTool):
-    """Get history of all your trades."""
+    """Haal geschiedenis op van al je trades."""
 
     name: str = "kraken_get_trades_history"
-    description: str = "Get history of all your executed trades with details like price, volume, cost, fee, and margin."
+    description: str = "Haal geschiedenis op van al je uitgevoerde trades met details zoals prijs, volume, kosten, fee en margin."
     args_schema: type[BaseModel] = GetTradesHistoryInput
 
     def _run(
@@ -218,7 +218,7 @@ class GetTradesHistoryTool(KrakenBaseTool):
         end: str | None = None,
         ofs: int | None = None,
     ) -> str:
-        """Get trades history from Kraken."""
+        """Haal trades geschiedenis op van Kraken."""
         data: dict[str, Any] = {}
         if type:
             data["type"] = type
@@ -238,21 +238,21 @@ class GetTradesHistoryTool(KrakenBaseTool):
 # Tool 8: Query Trades Info
 # =============================================================================
 class QueryTradesInput(BaseModel):
-    """Input schema for QueryTradesInfoTool."""
+    """Input schema voor QueryTradesInfoTool."""
 
-    txid: str = Field(..., description="Comma-separated list of trade IDs to query")
-    trades: bool | None = Field(default=None, description="Include related trades")
+    txid: str = Field(..., description="Komma-gescheiden lijst van trade IDs om te queryen")
+    trades: bool | None = Field(default=None, description="Voeg gerelateerde trades toe")
 
 
 class QueryTradesInfoTool(KrakenBaseTool):
-    """Query info about specific trades."""
+    """Query info over specifieke trades."""
 
     name: str = "kraken_query_trades_info"
-    description: str = "Query detailed info about specific trades by their transaction IDs (up to 20)."
+    description: str = "Query gedetailleerde info over specifieke trades op hun transactie IDs (tot 20)."
     args_schema: type[BaseModel] = QueryTradesInput
 
     def _run(self, txid: str, trades: bool | None = None) -> str:
-        """Query trades info from Kraken."""
+        """Query trades info van Kraken."""
         data: dict[str, Any] = {"txid": txid}
         if trades is not None:
             data["trades"] = trades
@@ -261,27 +261,27 @@ class QueryTradesInfoTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 9: Get Open Positions
+# Tool 9: Haal Open Posities Op
 # =============================================================================
 class GetOpenPositionsInput(BaseModel):
-    """Input schema for GetOpenPositionsTool."""
+    """Input schema voor GetOpenPositionsTool."""
 
     txid: str | None = Field(
-        default=None, description="Comma-separated position transaction IDs to filter"
+        default=None, description="Komma-gescheiden positie transactie IDs om te filteren"
     )
     docalcs: bool | None = Field(
-        default=None, description="Include profit/loss calculations"
+        default=None, description="Voeg winst/verlies berekeningen toe"
     )
     consolidation: str | None = Field(
-        default=None, description="Consolidation method: 'market' to consolidate by market"
+        default=None, description="Consolidatie methode: 'market' om per markt te consolideren"
     )
 
 
 class GetOpenPositionsTool(KrakenBaseTool):
-    """Get open margin positions."""
+    """Haal open margin posities op."""
 
     name: str = "kraken_get_open_positions"
-    description: str = "Get open margin positions with details like cost, value, profit/loss, and margin used."
+    description: str = "Haal open margin posities op met details zoals kosten, waarde, winst/verlies en gebruikte margin."
     args_schema: type[BaseModel] = GetOpenPositionsInput
 
     def _run(
@@ -290,7 +290,7 @@ class GetOpenPositionsTool(KrakenBaseTool):
         docalcs: bool | None = None,
         consolidation: str | None = None,
     ) -> str:
-        """Get open positions from Kraken."""
+        """Haal open posities op van Kraken."""
         data: dict[str, Any] = {}
         if txid:
             data["txid"] = txid
@@ -303,29 +303,29 @@ class GetOpenPositionsTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 10: Get Ledgers
+# Tool 10: Haal Ledgers Op
 # =============================================================================
 class GetLedgersInput(BaseModel):
-    """Input schema for GetLedgersTool."""
+    """Input schema voor GetLedgersTool."""
 
     asset: str | None = Field(
-        default=None, description="Comma-separated list of assets to filter"
+        default=None, description="Komma-gescheiden lijst van assets om te filteren"
     )
-    aclass: str | None = Field(default=None, description="Asset class filter")
+    aclass: str | None = Field(default=None, description="Asset klasse filter")
     type: str | None = Field(
         default=None,
         description="Ledger type: 'all', 'trade', 'deposit', 'withdrawal', 'transfer', 'margin', 'adjustment', 'rollover', 'credit', 'settled', 'staking', 'dividend', 'sale', 'nft_rebate'",
     )
     start: str | None = Field(default=None, description="Start timestamp")
-    end: str | None = Field(default=None, description="End timestamp")
-    ofs: int | None = Field(default=None, description="Offset for pagination")
+    end: str | None = Field(default=None, description="Eind timestamp")
+    ofs: int | None = Field(default=None, description="Offset voor paginatie")
 
 
 class GetLedgersTool(KrakenBaseTool):
-    """Get ledger entries."""
+    """Haal ledger entries op."""
 
     name: str = "kraken_get_ledgers"
-    description: str = "Get ledger entries (deposits, withdrawals, trades, fees, margin, etc.) with full transaction details."
+    description: str = "Haal ledger entries op (stortingen, opnames, trades, fees, margin, etc.) met volledige transactie details."
     args_schema: type[BaseModel] = GetLedgersInput
 
     def _run(
@@ -337,7 +337,7 @@ class GetLedgersTool(KrakenBaseTool):
         end: str | None = None,
         ofs: int | None = None,
     ) -> str:
-        """Get ledgers from Kraken."""
+        """Haal ledgers op van Kraken."""
         data: dict[str, Any] = {}
         if asset:
             data["asset"] = asset
@@ -359,21 +359,21 @@ class GetLedgersTool(KrakenBaseTool):
 # Tool 11: Query Ledgers
 # =============================================================================
 class QueryLedgersInput(BaseModel):
-    """Input schema for QueryLedgersTool."""
+    """Input schema voor QueryLedgersTool."""
 
-    id: str = Field(..., description="Comma-separated list of ledger IDs to query")
-    trades: bool | None = Field(default=None, description="Include related trades")
+    id: str = Field(..., description="Komma-gescheiden lijst van ledger IDs om te queryen")
+    trades: bool | None = Field(default=None, description="Voeg gerelateerde trades toe")
 
 
 class QueryLedgersTool(KrakenBaseTool):
-    """Query info about specific ledger entries."""
+    """Query info over specifieke ledger entries."""
 
     name: str = "kraken_query_ledgers"
-    description: str = "Query detailed info about specific ledger entries by their IDs (up to 20)."
+    description: str = "Query gedetailleerde info over specifieke ledger entries op hun IDs (tot 20)."
     args_schema: type[BaseModel] = QueryLedgersInput
 
     def _run(self, id: str, trades: bool | None = None) -> str:
-        """Query ledgers from Kraken."""
+        """Query ledgers van Kraken."""
         data: dict[str, Any] = {"id": id}
         if trades is not None:
             data["trades"] = trades
@@ -382,26 +382,26 @@ class QueryLedgersTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 12: Get Trade Volume
+# Tool 12: Haal Handelsvolume Op
 # =============================================================================
 class GetTradeVolumeInput(BaseModel):
-    """Input schema for GetTradeVolumeTool."""
+    """Input schema voor GetTradeVolumeTool."""
 
     pair: str | None = Field(
         default=None,
-        description="Comma-separated list of pairs to get fee info for",
+        description="Komma-gescheiden lijst van paren om fee info voor op te halen",
     )
 
 
 class GetTradeVolumeTool(KrakenBaseTool):
-    """Get 30-day trading volume and fee tier."""
+    """Haal 30-dagen handelsvolume en fee tier op."""
 
     name: str = "kraken_get_trade_volume"
-    description: str = "Get 30-day USD trading volume and current fee tier. Can also get fee info for specific pairs."
+    description: str = "Haal 30-dagen USD handelsvolume en huidige fee tier op. Kan ook fee info ophalen voor specifieke paren."
     args_schema: type[BaseModel] = GetTradeVolumeInput
 
     def _run(self, pair: str | None = None) -> str:
-        """Get trade volume from Kraken."""
+        """Haal handelsvolume op van Kraken."""
         data: dict[str, Any] = {}
         if pair:
             data["pair"] = pair
@@ -410,29 +410,29 @@ class GetTradeVolumeTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 13: Request Export Report
+# Tool 13: Vraag Export Rapport Aan
 # =============================================================================
 class RequestExportReportInput(BaseModel):
-    """Input schema for RequestExportReportTool."""
+    """Input schema voor RequestExportReportTool."""
 
     report: str = Field(
-        ..., description="Report type: 'trades' or 'ledgers'"
+        ..., description="Rapport type: 'trades' of 'ledgers'"
     )
     format: str | None = Field(
-        default=None, description="Report format: 'CSV' (default) or 'TSV'"
+        default=None, description="Rapport formaat: 'CSV' (standaard) of 'TSV'"
     )
     description: str | None = Field(
-        default=None, description="Description for the report"
+        default=None, description="Beschrijving voor het rapport"
     )
     starttm: str | None = Field(default=None, description="Start timestamp")
-    endtm: str | None = Field(default=None, description="End timestamp")
+    endtm: str | None = Field(default=None, description="Eind timestamp")
 
 
 class RequestExportReportTool(KrakenBaseTool):
-    """Request generation of a historical data export."""
+    """Vraag generatie van een historische data export aan."""
 
     name: str = "kraken_request_export_report"
-    description: str = "Request generation of a historical data export (trades or ledgers). Returns a report ID to check status."
+    description: str = "Vraag generatie van een historische data export aan (trades of ledgers). Geeft een rapport ID terug om status te checken."
     args_schema: type[BaseModel] = RequestExportReportInput
 
     def _run(
@@ -443,7 +443,7 @@ class RequestExportReportTool(KrakenBaseTool):
         starttm: str | None = None,
         endtm: str | None = None,
     ) -> str:
-        """Request export report from Kraken."""
+        """Vraag export rapport aan van Kraken."""
         data: dict[str, Any] = {"report": report}
         if format:
             data["format"] = format
@@ -458,90 +458,90 @@ class RequestExportReportTool(KrakenBaseTool):
 
 
 # =============================================================================
-# Tool 14: Get Export Report Status
+# Tool 14: Haal Export Rapport Status Op
 # =============================================================================
 class GetExportReportStatusInput(BaseModel):
-    """Input schema for GetExportReportStatusTool."""
+    """Input schema voor GetExportReportStatusTool."""
 
-    report: str = Field(..., description="Report type: 'trades' or 'ledgers'")
+    report: str = Field(..., description="Rapport type: 'trades' of 'ledgers'")
 
 
 class GetExportReportStatusTool(KrakenBaseTool):
-    """Check status of export report requests."""
+    """Check status van export rapport aanvragen."""
 
     name: str = "kraken_get_export_status"
-    description: str = "Get status of all export report requests of the specified type."
+    description: str = "Haal status op van alle export rapport aanvragen van het gespecificeerde type."
     args_schema: type[BaseModel] = GetExportReportStatusInput
 
     def _run(self, report: str) -> str:
-        """Get export status from Kraken."""
+        """Haal export status op van Kraken."""
         result = self._private_request("ExportStatus", {"report": report})
         return str(result)
 
 
 # =============================================================================
-# Tool 15: Retrieve Data Export
+# Tool 15: Haal Data Export Op
 # =============================================================================
 class RetrieveDataExportInput(BaseModel):
-    """Input schema for RetrieveDataExportTool."""
+    """Input schema voor RetrieveDataExportTool."""
 
-    id: str = Field(..., description="Report ID to retrieve")
+    id: str = Field(..., description="Rapport ID om op te halen")
 
 
 class RetrieveDataExportTool(KrakenBaseTool):
-    """Download a completed export report."""
+    """Download een voltooid export rapport."""
 
     name: str = "kraken_retrieve_export"
-    description: str = "Download a completed export report by its ID. Returns the report data."
+    description: str = "Download een voltooid export rapport op basis van ID. Geeft de rapport data terug."
     args_schema: type[BaseModel] = RetrieveDataExportInput
 
     def _run(self, id: str) -> str:
-        """Retrieve export from Kraken."""
+        """Haal export op van Kraken."""
         result = self._private_request("RetrieveExport", {"id": id})
         return str(result)
 
 
 # =============================================================================
-# Tool 16: Delete Export Report
+# Tool 16: Verwijder Export Rapport
 # =============================================================================
 class DeleteExportReportInput(BaseModel):
-    """Input schema for DeleteExportReportTool."""
+    """Input schema voor DeleteExportReportTool."""
 
-    id: str = Field(..., description="Report ID to delete")
-    type: str = Field(..., description="Delete type: 'cancel' or 'delete'")
+    id: str = Field(..., description="Rapport ID om te verwijderen")
+    type: str = Field(..., description="Verwijder type: 'cancel' of 'delete'")
 
 
 class DeleteExportReportTool(KrakenBaseTool):
-    """Delete or cancel an export report."""
+    """Verwijder of annuleer een export rapport."""
 
     name: str = "kraken_delete_export"
-    description: str = "Delete a completed export report or cancel a pending one."
+    description: str = "Verwijder een voltooid export rapport of annuleer een in afwachting zijnde."
     args_schema: type[BaseModel] = DeleteExportReportInput
 
     def _run(self, id: str, type: str) -> str:
-        """Delete export from Kraken."""
+        """Verwijder export van Kraken."""
         result = self._private_request("RemoveExport", {"id": id, "type": type})
         return str(result)
 
 
 # =============================================================================
-# Tool 17: Get Order Amends
+# Tool 17: Haal Order Wijzigingen Op
 # =============================================================================
 class GetOrderAmendsInput(BaseModel):
-    """Input schema for GetOrderAmendsTool."""
+    """Input schema voor GetOrderAmendsTool."""
 
     order_txid: str | None = Field(
-        default=None, description="Filter by order transaction ID"
+        default=None, description="Filter op order transactie ID"
     )
     start: str | None = Field(default=None, description="Start timestamp")
-    end: str | None = Field(default=None, description="End timestamp")
+    end: str | None = Field(default=None, description="Eind timestamp")
 
 
 class GetOrderAmendsTool(KrakenBaseTool):
-    """Get order amendment history."""
+    """Haal order wijzigingsgeschiedenis op."""
 
     name: str = "kraken_get_order_amends"
-    description: str = "Get history of order amendments showing what changed on each amend."
+    description: str = "Haal geschiedenis op van order wijzigingen die laten zien wat er bij elke wijziging veranderd is."
     args_schema: type[BaseModel] = GetOrderAmendsInput
 
     def _run(
@@ -550,7 +550,7 @@ class GetOrderAmendsTool(KrakenBaseTool):
         start: str | None = None,
         end: str | None = None,
     ) -> str:
-        """Get order amends from Kraken."""
+        """Haal order wijzigingen op van Kraken."""
         data: dict[str, Any] = {}
         if order_txid:
             data["order_txid"] = order_txid

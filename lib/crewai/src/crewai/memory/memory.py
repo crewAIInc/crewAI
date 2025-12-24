@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class Memory(BaseModel):
-    """Base class for memory, supporting agent tags and generic metadata."""
+    """Basis klasse voor geheugen, ondersteunt agent tags en generieke metadata."""
 
     embedder_config: EmbedderConfig | dict[str, Any] | None = None
     crew: Any | None = None
@@ -27,22 +27,22 @@ class Memory(BaseModel):
 
     @property
     def task(self) -> Task | None:
-        """Get the current task associated with this memory."""
+        """Haal de huidige taak op die aan dit geheugen is gekoppeld."""
         return self._task
 
     @task.setter
     def task(self, task: Task | None) -> None:
-        """Set the current task associated with this memory."""
+        """Stel de huidige taak in die aan dit geheugen is gekoppeld."""
         self._task = task
 
     @property
     def agent(self) -> Agent | None:
-        """Get the current agent associated with this memory."""
+        """Haal de huidige agent op die aan dit geheugen is gekoppeld."""
         return self._agent
 
     @agent.setter
     def agent(self, agent: Agent | None) -> None:
-        """Set the current agent associated with this memory."""
+        """Stel de huidige agent in die aan dit geheugen is gekoppeld."""
         self._agent = agent
 
     def save(
@@ -50,11 +50,11 @@ class Memory(BaseModel):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Save a value to memory.
+        """Sla een waarde op in het geheugen.
 
         Args:
-            value: The value to save.
-            metadata: Optional metadata to associate with the value.
+            value: De waarde om op te slaan.
+            metadata: Optionele metadata om te koppelen aan de waarde.
         """
         metadata = metadata or {}
         self.storage.save(value, metadata)
@@ -64,11 +64,11 @@ class Memory(BaseModel):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Save a value to memory asynchronously.
+        """Sla een waarde asynchroon op in het geheugen.
 
         Args:
-            value: The value to save.
-            metadata: Optional metadata to associate with the value.
+            value: De waarde om op te slaan.
+            metadata: Optionele metadata om te koppelen aan de waarde.
         """
         metadata = metadata or {}
         await self.storage.asave(value, metadata)
@@ -79,15 +79,15 @@ class Memory(BaseModel):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search memory for relevant entries.
+        """Zoek in het geheugen naar relevante entries.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         results: list[Any] = self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
@@ -100,15 +100,15 @@ class Memory(BaseModel):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search memory for relevant entries asynchronously.
+        """Zoek asynchroon in het geheugen naar relevante entries.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         results: list[Any] = await self.storage.asearch(
             query=query, limit=limit, score_threshold=score_threshold
@@ -116,6 +116,6 @@ class Memory(BaseModel):
         return results
 
     def set_crew(self, crew: Any) -> Memory:
-        """Set the crew for this memory instance."""
+        """Stel de crew in voor deze geheugen instantie."""
         self.crew = crew
         return self

@@ -17,11 +17,11 @@ from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
 
 class LongTermMemory(Memory):
     """
-    LongTermMemory class for managing cross runs data related to overall crew's
-    execution and performance.
-    Inherits from the Memory class and utilizes an instance of a class that
-    adheres to the Storage for data storage, specifically working with
-    LongTermMemoryItem instances.
+    LongTermMemory klasse voor het beheren van cross-run data gerelateerd aan de algehele
+    crew's uitvoering en prestaties.
+    Erft van de Memory klasse en gebruikt een instantie van een klasse die
+    voldoet aan de Storage voor data opslag, specifiek werkend met
+    LongTermMemoryItem instanties.
     """
 
     def __init__(
@@ -89,14 +89,14 @@ class LongTermMemory(Memory):
         task: str,
         latest_n: int = 3,
     ) -> list[dict[str, Any]]:
-        """Search long-term memory for relevant entries.
+        """Zoek in lange-termijn geheugen naar relevante entries.
 
         Args:
-            task: The task description to search for.
-            latest_n: Maximum number of results to return.
+            task: De taakbeschrijving om naar te zoeken.
+            latest_n: Maximaal aantal resultaten om te retourneren.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -140,10 +140,10 @@ class LongTermMemory(Memory):
             raise
 
     async def asave(self, item: LongTermMemoryItem) -> None:  # type: ignore[override]
-        """Save an item to long-term memory asynchronously.
+        """Sla een item asynchroon op in lange-termijn geheugen.
 
         Args:
-            item: The LongTermMemoryItem to save.
+            item: Het LongTermMemoryItem om op te slaan.
         """
         crewai_event_bus.emit(
             self,
@@ -200,14 +200,14 @@ class LongTermMemory(Memory):
         task: str,
         latest_n: int = 3,
     ) -> list[dict[str, Any]]:
-        """Search long-term memory asynchronously.
+        """Zoek asynchroon in lange-termijn geheugen.
 
         Args:
-            task: The task description to search for.
-            latest_n: Maximum number of results to return.
+            task: De taakbeschrijving om naar te zoeken.
+            latest_n: Maximaal aantal resultaten om te retourneren.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -251,5 +251,5 @@ class LongTermMemory(Memory):
             raise
 
     def reset(self) -> None:
-        """Reset long-term memory."""
+        """Reset lange-termijn geheugen."""
         self.storage.reset()

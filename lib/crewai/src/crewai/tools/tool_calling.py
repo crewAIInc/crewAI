@@ -9,16 +9,16 @@ from pydantic import (
 
 
 class ToolCalling(BaseModel):
-    tool_name: str = Field(..., description="The name of the tool to be called.")
+    tool_name: str = Field(..., description="De naam van de tool die aangeroepen moet worden.")
     arguments: dict[str, Any] | None = Field(
-        ..., description="A dictionary of arguments to be passed to the tool."
+        ..., description="Een dictionary van argumenten om door te geven aan de tool."
     )
 
 
 class InstructorToolCalling(PydanticBaseModel):
     tool_name: str = PydanticField(
-        ..., description="The name of the tool to be called."
+        ..., description="De naam van de tool die aangeroepen moet worden."
     )
     arguments: dict[str, Any] | None = PydanticField(
-        ..., description="A dictionary of arguments to be passed to the tool."
+        ..., description="Een dictionary van argumenten om door te geven aan de tool."
     )

@@ -29,11 +29,11 @@ def select_choice(prompt_message, choices):
     click.secho(prompt_message, fg="cyan")
     for idx, choice in enumerate(choices, start=1):
         click.secho(f"{idx}. {choice}", fg="cyan")
-    click.secho("q. Quit", fg="cyan")
+    click.secho("q. Afsluiten", fg="cyan")
 
     while True:
         choice = click.prompt(
-            "Enter the number of your choice or 'q' to quit", type=str
+            "Voer het nummer van je keuze in of 'q' om af te sluiten", type=str
         )
 
         if choice.lower() == "q":
@@ -47,7 +47,7 @@ def select_choice(prompt_message, choices):
             pass
 
         click.secho(
-            "Invalid selection. Please select a number between 1 and 6 or 'q' to quit.",
+            "Ongeldige selectie. Selecteer een nummer tussen 1 en 6 of 'q' om af te sluiten.",
             fg="red",
         )
 
@@ -67,13 +67,13 @@ def select_provider(provider_models):
     all_providers = sorted(set(predefined_providers + list(provider_models.keys())))
 
     provider = select_choice(
-        "Select a provider to set up:", [*predefined_providers, "other"]
+        "Selecteer een provider om in te stellen:", [*predefined_providers, "other"]
     )
     if provider is None:  # User typed 'q'
         return None
 
     if provider == "other":
-        provider = select_choice("Select a provider from the full list:", all_providers)
+        provider = select_choice("Selecteer een provider uit de volledige lijst:", all_providers)
         if provider is None:  # User typed 'q'
             return None
 
@@ -99,11 +99,11 @@ def select_model(provider, provider_models):
         available_models = provider_models.get(provider, [])
 
     if not available_models:
-        click.secho(f"No models available for provider '{provider}'.", fg="red")
+        click.secho(f"Geen modellen beschikbaar voor provider '{provider}'.", fg="red")
         return None
 
     return select_choice(
-        f"Select a model to use for {provider.capitalize()}:", available_models
+        f"Selecteer een model om te gebruiken voor {provider.capitalize()}:", available_models
     )
 
 
@@ -127,11 +127,11 @@ def load_provider_data(cache_file, cache_expiry):
         if data:
             return data
         click.secho(
-            "Cache is corrupted. Fetching provider data from the web...", fg="yellow"
+            "Cache is beschadigd. Provider data wordt opgehaald van het web...", fg="yellow"
         )
     else:
         click.secho(
-            "Cache expired or not found. Fetching provider data from the web...",
+            "Cache verlopen of niet gevonden. Provider data wordt opgehaald van het web...",
             fg="cyan",
         )
     return fetch_provider_data(cache_file)
@@ -174,9 +174,9 @@ def fetch_provider_data(cache_file):
             json.dump(data, f)
         return data
     except requests.RequestException as e:
-        click.secho(f"Error fetching provider data: {e}", fg="red")
+        click.secho(f"Fout bij ophalen provider data: {e}", fg="red")
     except json.JSONDecodeError:
-        click.secho("Error parsing provider data. Invalid JSON format.", fg="red")
+        click.secho("Fout bij verwerken provider data. Ongeldig JSON formaat.", fg="red")
     return None
 
 
@@ -194,7 +194,7 @@ def download_data(response):
     block_size = 8192
     data_chunks = []
     with click.progressbar(
-        length=total_size, label="Downloading", show_pos=True
+        length=total_size, label="Downloaden", show_pos=True
     ) as progress_bar:
         for chunk in response.iter_content(block_size):
             if chunk:

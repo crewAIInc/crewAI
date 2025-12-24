@@ -7,10 +7,10 @@ class Repository:
         self.path = path
 
         if not self.is_git_installed():
-            raise ValueError("Git is not installed or not found in your PATH.")
+            raise ValueError("Git is niet geïnstalleerd of niet gevonden in je PATH.")
 
         if not self.is_git_repo():
-            raise ValueError(f"{self.path} is not a Git repository.")
+            raise ValueError(f"{self.path} is geen Git repository.")
 
         self.fetch()
 

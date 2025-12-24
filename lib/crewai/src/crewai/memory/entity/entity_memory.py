@@ -19,9 +19,9 @@ from crewai.memory.storage.rag_storage import RAGStorage
 
 class EntityMemory(Memory):
     """
-    EntityMemory class for managing structured information about entities
-    and their relationships using SQLite storage.
-    Inherits from the Memory class.
+    EntityMemory klasse voor het beheren van gestructureerde informatie over entiteiten
+    en hun relaties met behulp van SQLite opslag.
+    Erft van de Memory klasse.
     """
 
     _memory_provider: str | None = PrivateAttr()
@@ -42,7 +42,7 @@ class EntityMemory(Memory):
                 from crewai.memory.storage.mem0_storage import Mem0Storage
             except ImportError as e:
                 raise ImportError(
-                    "Mem0 is not installed. Please install it with `pip install mem0ai`."
+                    "Mem0 is niet geïnstalleerd. Installeer het met `pip install mem0ai`."
                 ) from e
             config = (
                 embedder_config.get("config")
@@ -71,15 +71,15 @@ class EntityMemory(Memory):
         value: EntityMemoryItem | list[EntityMemoryItem],
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Saves one or more entity items into the SQLite storage.
+        """Slaat één of meer entiteit items op in de SQLite opslag.
 
         Args:
-            value: Single EntityMemoryItem or list of EntityMemoryItems to save.
-            metadata: Optional metadata dict (included for supertype compatibility but not used).
+            value: Enkele EntityMemoryItem of lijst van EntityMemoryItems om op te slaan.
+            metadata: Optionele metadata dict (opgenomen voor supertype compatibiliteit maar niet gebruikt).
 
-        Notes:
-            The metadata parameter is included to satisfy the supertype signature but is not
-            used - entity metadata is extracted from the EntityMemoryItem objects themselves.
+        Opmerkingen:
+            De metadata parameter is opgenomen om te voldoen aan de supertype signatuur maar wordt niet
+            gebruikt - entiteit metadata wordt geëxtraheerd uit de EntityMemoryItem objecten zelf.
         """
 
         if not value:
@@ -104,7 +104,7 @@ class EntityMemory(Memory):
         errors = []
 
         def save_single_item(item: EntityMemoryItem) -> tuple[bool, str | None]:
-            """Save a single item and return success status."""
+            """Sla een enkel item op en retourneer succes status."""
             try:
                 if self._memory_provider == "mem0":
                     data = f"""
@@ -177,15 +177,15 @@ class EntityMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search entity memory for relevant entries.
+        """Zoek in entiteit geheugen naar relevante entries.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -238,11 +238,11 @@ class EntityMemory(Memory):
         value: EntityMemoryItem | list[EntityMemoryItem],
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Save entity items asynchronously.
+        """Sla entiteit items asynchroon op.
 
         Args:
-            value: Single EntityMemoryItem or list of EntityMemoryItems to save.
-            metadata: Optional metadata dict (not used, for signature compatibility).
+            value: Enkele EntityMemoryItem of lijst van EntityMemoryItems om op te slaan.
+            metadata: Optionele metadata dict (niet gebruikt, voor signatuur compatibiliteit).
         """
         if not value:
             return
@@ -266,7 +266,7 @@ class EntityMemory(Memory):
         errors: list[str | None] = []
 
         async def save_single_item(item: EntityMemoryItem) -> tuple[bool, str | None]:
-            """Save a single item asynchronously."""
+            """Sla een enkel item asynchroon op."""
             try:
                 if self._memory_provider == "mem0":
                     data = f"""
@@ -339,15 +339,15 @@ class EntityMemory(Memory):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        """Search entity memory asynchronously.
+        """Zoek asynchroon in entiteit geheugen.
 
         Args:
-            query: The search query.
-            limit: Maximum number of results to return.
-            score_threshold: Minimum similarity score for results.
+            query: De zoekquery.
+            limit: Maximaal aantal resultaten om te retourneren.
+            score_threshold: Minimale gelijkenisscore voor resultaten.
 
-        Returns:
-            List of matching memory entries.
+        Retourneert:
+            Lijst van overeenkomende geheugen entries.
         """
         crewai_event_bus.emit(
             self,
@@ -400,5 +400,5 @@ class EntityMemory(Memory):
             self.storage.reset()
         except Exception as e:
             raise Exception(
-                f"An error occurred while resetting the entity memory: {e}"
+                f"Er is een fout opgetreden bij het resetten van het entiteit geheugen: {e}"
             ) from e

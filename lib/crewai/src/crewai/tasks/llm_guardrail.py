@@ -10,23 +10,23 @@ from crewai.tasks.task_output import TaskOutput
 
 class LLMGuardrailResult(BaseModel):
     valid: bool = Field(
-        description="Whether the task output complies with the guardrail"
+        description="Of de taakoutput voldoet aan de guardrail"
     )
     feedback: str | None = Field(
-        description="A feedback about the task output if it is not valid",
+        description="Een feedback over de taakoutput als deze niet geldig is",
         default=None,
     )
 
 
 class LLMGuardrail:
-    """It validates the output of another task using an LLM.
+    """Het valideert de output van een andere taak met behulp van een LLM.
 
-    This class is used to validate the output from a Task based on specified criteria.
-    It uses an LLM to validate the output and provides a feedback if the output is not valid.
+    Deze klasse wordt gebruikt om de output van een Task te valideren op basis van gespecificeerde criteria.
+    Het gebruikt een LLM om de output te valideren en geeft feedback als de output niet geldig is.
 
     Args:
-        description (str): The description of the validation criteria.
-        llm (LLM, optional): The language model to use for code generation.
+        description (str): De beschrijving van de validatie criteria.
+        llm (LLM, optional): Het taalmodel om te gebruiken voor code generatie.
     """
 
     def __init__(
@@ -41,48 +41,48 @@ class LLMGuardrail:
     def _validate_output(self, task_output: TaskOutput) -> LiteAgentOutput:
         agent = Agent(
             role="Guardrail Agent",
-            goal="Validate the output of the task",
-            backstory="You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.",
+            goal="Valideer de output van de taak",
+            backstory="Je bent een expert in het valideren van de output van een taak. Door effectieve feedback te geven als de output niet geldig is.",
             llm=self.llm,
         )
 
         query = f"""
-        Ensure the following task result complies with the given guardrail.
+        Zorg ervoor dat het volgende taakresultaat voldoet aan de opgegeven guardrail.
 
-        Task result:
+        Taakresultaat:
         {task_output.raw}
 
         Guardrail:
         {self.description}
 
-        Your task:
-        - Confirm if the Task result complies with the guardrail.
-        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).
-        - Focus only on identifying issues — do not propose corrections.
-        - If the Task result complies with the guardrail, saying that is valid
+        Jouw taak:
+        - Bevestig of het Taakresultaat voldoet aan de guardrail.
+        - Zo niet, geef duidelijke feedback die uitlegt wat er mis is (bijv. met hoeveel het de regel schendt, of welk specifiek onderdeel faalt).
+        - Focus alleen op het identificeren van problemen — stel geen correcties voor.
+        - Als het Taakresultaat voldoet aan de guardrail, zeg dat het geldig is
         """
 
         return agent.kickoff(query, response_format=LLMGuardrailResult)
 
     def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
-        """Validates the output of a task based on specified criteria.
+        """Valideert de output van een taak op basis van gespecificeerde criteria.
 
         Args:
-            task_output (TaskOutput): The output to be validated.
+            task_output (TaskOutput): De output om te valideren.
 
-        Returns:
-            Tuple[bool, Any]: A tuple containing:
-                - bool: True if validation passed, False otherwise
-                - Any: The validation result or error message
+        Retourneert:
+            Tuple[bool, Any]: Een tuple met:
+                - bool: True als validatie geslaagd, anders False
+                - Any: Het validatie resultaat of foutmelding
         """
 
         try:
             result = self._validate_output(task_output)
             if not isinstance(result.pydantic, LLMGuardrailResult):
-                raise ValueError("The guardrail result is not a valid pydantic model")
+                raise ValueError("Het guardrail resultaat is geen geldig pydantic model")
 
             if result.pydantic.valid:
                 return True, task_output.raw
             return False, result.pydantic.feedback
         except Exception as e:
-            return False, f"Error while validating the task output: {e!s}"
+            return False, f"Fout bij het valideren van de taakoutput: {e!s}"
