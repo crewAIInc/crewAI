@@ -1421,6 +1421,10 @@ stagehand = [
 tavily-python = [
     { name = "tavily-python" },
 ]
+tzafon = [
+    { name = "playwright" },
+    { name = "tzafon" },
+]
 weaviate-client = [
     { name = "weaviate-client" },
 ]
@@ -1458,6 +1462,7 @@ requires-dist = [
     { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = "==2.0.0" },
     { name = "patronus", marker = "extra == 'patronus'", specifier = ">=0.0.16" },
     { name = "playwright", marker = "extra == 'bedrock'", specifier = ">=1.52.0" },
+    { name = "playwright", marker = "extra == 'tzafon'", specifier = ">=1.56.0" },
     { name = "psycopg2-binary", marker = "extra == 'postgresql'", specifier = ">=2.9.10" },
     { name = "pygithub", marker = "extra == 'github'", specifier = "==1.59.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.13" },
@@ -1481,11 +1486,12 @@ requires-dist = [
     { name = "stagehand", marker = "extra == 'stagehand'", specifier = ">=0.4.1" },
     { name = "tavily-python", marker = "extra == 'tavily-python'", specifier = ">=0.5.4" },
     { name = "tiktoken", specifier = "~=0.8.0" },
+    { name = "tzafon", marker = "extra == 'tzafon'", specifier = ">=2.8.1" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "extra == 'xml'", specifier = ">=0.17.2" },
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "tzafon", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -8336,6 +8342,23 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/55/e3/70399cb7dd41c10ac53367ae42139cf4b1ca5f36bb3dc6c9d33acdb43655/typing_inspection-0.4.2.tar.gz", hash = "sha256:ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464", size = 75949, upload-time = "2025-10-01T02:14:41.687Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7", size = 14611, upload-time = "2025-10-01T02:14:40.154Z" },
+]
+
+[[package]]
+name = "tzafon"
+version = "2.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/1f/1ec7065c190128cc6f83c65de37f2f9040cb83718f2cbdbb4fc0af8c2ba3/tzafon-2.8.1.tar.gz", hash = "sha256:c34b0149a4c22dd1eced540d3c5f241e3e927b4ccd34b06ac62dea24d4317ca4", size = 105697, upload-time = "2025-11-28T19:04:37.516Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c1/3d/c28dfe2278518165794cd952382ebcfb52fd183d4ff478d2aadf66dd9ce9/tzafon-2.8.1-py3-none-any.whl", hash = "sha256:391fbf75a758c7103b5b2f62d32385b63b687a73925f9b842dd222f05eda4822", size = 84845, upload-time = "2025-11-28T19:04:36.349Z" },
 ]
 
 [[package]]
