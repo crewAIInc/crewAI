@@ -22,6 +22,8 @@ class TaskOutput(BaseModel):
         json_dict: JSON dictionary output van de taak
         agent: Agent die de taak heeft uitgevoerd
         output_format: Output formaat van de taak (JSON, PYDANTIC, of RAW)
+        actions_executed: Lijst van uitgevoerde tool acties
+        execution_success: Of de taakuitvoering succesvol was
     """
 
     description: str = Field(description="Beschrijving van de taak")
@@ -42,6 +44,14 @@ class TaskOutput(BaseModel):
         description="Output formaat van de taak", default=OutputFormat.RAW
     )
     messages: list[LLMMessage] = Field(description="Berichten van de taak", default=[])
+    actions_executed: list[dict[str, Any]] = Field(
+        description="Lijst van uitgevoerde tool acties met tool naam, argumenten, resultaat en status",
+        default_factory=list
+    )
+    execution_success: bool = Field(
+        description="Of de taakuitvoering succesvol was",
+        default=True
+    )
 
     @model_validator(mode="after")
     def set_summary(self):
@@ -97,4 +107,10 @@ class TaskOutput(BaseModel):
             return str(self.pydantic)
         if self.json_dict:
             return str(self.json_dict)
+        if self.actions_executed:
+            actions_summary = [
+                f"{a.get('tool', 'onbekend')}: {'✓' if a.get('success', False) else '✗'}"
+                for a in self.actions_executed
+            ]
+            return f"Uitgevoerde acties: {', '.join(actions_summary)}"
         return self.raw

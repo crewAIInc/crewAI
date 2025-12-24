@@ -63,16 +63,18 @@ _printer = Printer()
 class Task(BaseModel):
     """Klasse die een uit te voeren taak representeert.
 
-    Elke taak moet een beschrijving, een verwachte output en een verantwoordelijke agent voor uitvoering hebben.
+    Elke taak moet minimaal een beschrijving hebben. De agent voert acties uit met tools
+    om de taak te voltooien.
 
     Attributen:
         agent: Agent verantwoordelijk voor taakuitvoering. Representeert de entiteit die de taak uitvoert.
         async_execution: Boolean vlag die asynchrone taakuitvoering aangeeft.
+        action_based: Of de taak actie-georiënteerd is (tools uitvoeren) of tekst-georiënteerd.
         callback: Functie/object uitgevoerd na taakafronding voor aanvullende acties.
         config: Dictionary met taak-specifieke configuratie parameters.
         context: Lijst van Task instanties die taakcontext of inputdata leveren.
         description: Beschrijvende tekst die doel en uitvoering van de taak detailleert.
-        expected_output: Duidelijke definitie van verwachte taakuitkomst.
+        expected_output: Optionele definitie van verwachte taakuitkomst (alleen voor tekst-taken).
         output_file: Bestandspad voor opslag van taakoutput.
         create_directory: Of de directory voor output_file aangemaakt moet worden als deze niet bestaat.
         output_json: Pydantic model voor structurering van JSON output.
@@ -90,12 +92,18 @@ class Task(BaseModel):
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
+    executed_actions: list[dict[str, Any]] = Field(default_factory=list)
     i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Beschrijving van de daadwerkelijke taak.")
-    expected_output: str = Field(
-        description="Duidelijke definitie van verwachte output voor de taak."
+    expected_output: str | None = Field(
+        default=None,
+        description="Optionele definitie van verwachte output (alleen voor tekst-taken)."
+    )
+    action_based: bool = Field(
+        default=True,
+        description="Of de taak actie-georiënteerd is (tools uitvoeren) of tekst-georiënteerd."
     )
     config: dict[str, Any] | None = Field(
         description="Configuratie voor de agent",
@@ -270,12 +278,11 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def validate_required_fields(self) -> Self:
-        required_fields = ["description", "expected_output"]
-        for field in required_fields:
-            if getattr(self, field) is None:
-                raise ValueError(
-                    f"{field} must be provided either directly or through config"
-                )
+        # Alleen description is verplicht - expected_output is optioneel voor actie-georiënteerde taken
+        if self.description is None:
+            raise ValueError(
+                "description must be provided either directly or through config"
+            )
         return self
 
     @model_validator(mode="after")
@@ -552,6 +559,8 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                actions_executed=self.executed_actions,
+                execution_success=len(self.executed_actions) > 0 or bool(result),
             )
 
             if self._guardrails:
@@ -644,6 +653,8 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                actions_executed=self.executed_actions,
+                execution_success=len(self.executed_actions) > 0 or bool(result),
             )
 
             if self._guardrails:
@@ -697,12 +708,15 @@ class Task(BaseModel):
     def prompt(self) -> str:
         """Genereert de taak prompt met optionele markdown formattering.
 
-        Wanneer het markdown attribuut True is, worden instructies voor formattering van het
-        antwoord in Markdown syntax toegevoegd aan de prompt.
+        Voor actie-georiënteerde taken (action_based=True) wordt een prompt gegenereerd
+        die de agent instrueert om tools te gebruiken en acties uit te voeren.
+
+        Voor tekst-georiënteerde taken (action_based=False) wordt een prompt gegenereerd
+        met de verwachte output.
 
         Retourneert:
             str: De geformatteerde prompt string met de taakbeschrijving,
-                 verwachte output, en optionele markdown formatterings instructies.
+                 en actie-instructies of verwachte output afhankelijk van het taaktype.
         """
         description = self.description
 
@@ -717,10 +731,16 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = self.i18n.slice("expected_output").format(
-            expected_output=self.expected_output
-        )
-        tasks_slices = [description, output]
+        # Voor actie-georiënteerde taken: gebruik de action_task prompt
+        if self.action_based:
+            action_instruction = self.i18n.slice("action_task")
+            tasks_slices.append(action_instruction)
+        elif self.expected_output:
+            # Voor tekst-georiënteerde taken: gebruik expected_output prompt
+            output = self.i18n.slice("expected_output").format(
+                expected_output=self.expected_output
+            )
+            tasks_slices.append(output)
 
         if self.markdown:
             markdown_instruction = """Your final answer MUST be formatted in Markdown syntax.
@@ -818,6 +838,29 @@ Follow these guidelines:
         if agent_name:
             self.processed_by_agents.add(agent_name)
         self.delegations += 1
+
+    def add_executed_action(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+        result: Any = None,
+        success: bool = True,
+    ) -> None:
+        """Voeg een uitgevoerde actie toe aan de taak.
+
+        Args:
+            tool_name: Naam van de uitgevoerde tool.
+            arguments: Argumenten die aan de tool zijn meegegeven.
+            result: Resultaat van de tool uitvoering.
+            success: Of de tool uitvoering succesvol was.
+        """
+        self.executed_actions.append({
+            "tool": tool_name,
+            "arguments": arguments or {},
+            "result": str(result) if result is not None else None,
+            "success": success,
+            "timestamp": datetime.datetime.now().isoformat(),
+        })
 
     def copy(  # type: ignore
         self, agents: list[BaseAgent], task_mapping: dict[str, Task]
@@ -1055,6 +1098,8 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                actions_executed=self.executed_actions,
+                execution_success=len(self.executed_actions) > 0 or bool(result),
             )
 
         return task_output
@@ -1151,6 +1196,8 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                actions_executed=self.executed_actions,
+                execution_success=len(self.executed_actions) > 0 or bool(result),
             )
 
         return task_output

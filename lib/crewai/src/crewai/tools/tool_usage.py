@@ -392,6 +392,15 @@ class ToolUsage:
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
 
+        # Track uitgevoerde actie in de taak voor actie-georiënteerde taken
+        if self.task and hasattr(self.task, "add_executed_action"):
+            self.task.add_executed_action(
+                tool_name=tool.name,
+                arguments=calling.arguments,
+                result=result,
+                success=True,
+            )
+
         if available_tool and hasattr(available_tool, "current_usage_count"):
             available_tool.current_usage_count += 1
             if (
@@ -582,6 +591,15 @@ class ToolUsage:
 
         if self.agent and hasattr(self.agent, "tools_results"):
             self.agent.tools_results.append(data)
+
+        # Track uitgevoerde actie in de taak voor actie-georiënteerde taken
+        if self.task and hasattr(self.task, "add_executed_action"):
+            self.task.add_executed_action(
+                tool_name=tool.name,
+                arguments=calling.arguments,
+                result=result,
+                success=True,
+            )
 
         if available_tool and hasattr(available_tool, "current_usage_count"):
             available_tool.current_usage_count += 1
