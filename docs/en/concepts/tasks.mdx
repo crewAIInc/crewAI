@@ -45,7 +45,8 @@ crew = Crew(
 | Attribute                        | Parameters        | Type                          | Description                                                                                                          |
 | :------------------------------- | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
 | **Description**                  | `description`     | `str`                         | A clear, concise statement of what the task entails.                                                                 |
-| **Expected Output**              | `expected_output` | `str`                         | A detailed description of what the task's completion looks like.                                                     |
+| **Action Based** _(optional)_    | `action_based`    | `bool`                        | Whether the task is action-oriented (execute tools) or text-oriented. Defaults to True.                             |
+| **Expected Output** _(optional)_ | `expected_output` | `Optional[str]`               | A detailed description of what the task's completion looks like. Only required for text-oriented tasks.             |
 | **Name** _(optional)_            | `name`            | `Optional[str]`               | A name identifier for the task.                                                                                      |
 | **Agent** _(optional)_           | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
 | **Tools** _(optional)_           | `tools`           | `List[BaseTool]`              | The tools/resources the agent is limited to use for this task.                                                       |
@@ -66,6 +67,67 @@ crew = Crew(
 <Note type="warning" title="Deprecated: max_retries">
   The task attribute `max_retries` is deprecated and will be removed in v1.0.0.
   Use `guardrail_max_retries` instead to control retry attempts when a guardrail fails.
+</Note>
+
+## Action-Oriented vs Text-Oriented Tasks
+
+CrewAI supports two types of tasks based on their intended outcome:
+
+### Action-Oriented Tasks (Default)
+
+Action-oriented tasks are designed for agents that need to **execute actions** using tools rather than produce text output. This is the default behavior (`action_based=True`).
+
+```python Code
+from crewai import Task
+
+# The agent will use tools to execute the task
+# No expected_output needed - the action IS the result
+buy_task = Task(
+    description="Buy 100 BTC on Kraken at market price",
+    agent=trader_agent
+)
+
+# Multiple actions in one task
+portfolio_task = Task(
+    description="""
+    1. Check the current account balance
+    2. Get the current BTC/EUR price
+    3. Place a limit buy order for 0.5 BTC at 5% below market price
+    """,
+    agent=trader_agent
+)
+```
+
+### Text-Oriented Tasks
+
+Text-oriented tasks are for when you need the agent to **produce text output** like reports, summaries, or analyses. Set `action_based=False` and provide `expected_output`.
+
+```python Code
+from crewai import Task
+
+# The agent will produce a text output
+analysis_task = Task(
+    description="Analyze the Bitcoin market trends for the past month",
+    expected_output="A detailed analysis report with key insights and predictions",
+    action_based=False,
+    agent=analyst_agent
+)
+```
+
+### When to Use Each Type
+
+| Use Case | Task Type | `action_based` | `expected_output` |
+| :------- | :-------- | :------------- | :---------------- |
+| Execute trades | Action | `True` (default) | Not needed |
+| Send emails | Action | `True` (default) | Not needed |
+| Create files | Action | `True` (default) | Not needed |
+| API operations | Action | `True` (default) | Not needed |
+| Write reports | Text | `False` | Required |
+| Generate summaries | Text | `False` | Required |
+| Research & analysis | Text | `False` | Required |
+
+<Note type="info" title="Tracking Executed Actions">
+For action-oriented tasks, all tool executions are automatically tracked in `task.executed_actions` and `task.output.actions_executed`. This allows you to see exactly what actions the agent performed.
 </Note>
 
 ## Creating Tasks
@@ -215,16 +277,18 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 
 ### Task Output Attributes
 
-| Attribute         | Parameters      | Type                       | Description                                                                                        |
-| :---------------- | :-------------- | :------------------------- | :------------------------------------------------------------------------------------------------- |
-| **Description**   | `description`   | `str`                      | Description of the task.                                                                           |
-| **Summary**       | `summary`       | `Optional[str]`            | Summary of the task, auto-generated from the first 10 words of the description.                    |
-| **Raw**           | `raw`           | `str`                      | The raw output of the task. This is the default format for the output.                             |
-| **Pydantic**      | `pydantic`      | `Optional[BaseModel]`      | A Pydantic model object representing the structured output of the task.                            |
-| **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
-| **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
-| **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
-| **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                           |
+| Attribute             | Parameters          | Type                       | Description                                                                                        |
+| :-------------------- | :------------------ | :------------------------- | :------------------------------------------------------------------------------------------------- |
+| **Description**       | `description`       | `str`                      | Description of the task.                                                                           |
+| **Summary**           | `summary`           | `Optional[str]`            | Summary of the task, auto-generated from the first 10 words of the description.                    |
+| **Raw**               | `raw`               | `str`                      | The raw output of the task. This is the default format for the output.                             |
+| **Pydantic**          | `pydantic`          | `Optional[BaseModel]`      | A Pydantic model object representing the structured output of the task.                            |
+| **JSON Dict**         | `json_dict`         | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
+| **Agent**             | `agent`             | `str`                      | The agent that executed the task.                                                                  |
+| **Output Format**     | `output_format`     | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
+| **Messages**          | `messages`          | `list[LLMMessage]`         | The messages from the last task execution.                                                         |
+| **Actions Executed**  | `actions_executed`  | `list[dict]`               | List of tool actions executed during the task. Each dict contains tool name, arguments, result, and success status. |
+| **Execution Success** | `execution_success` | `bool`                     | Whether the task execution was successful. Defaults to True.                                       |
 
 ### Task Methods and Properties
 
@@ -268,6 +332,13 @@ if task_output.json_dict:
     print(f"JSON Output: {json.dumps(task_output.json_dict, indent=2)}")
 if task_output.pydantic:
     print(f"Pydantic Output: {task_output.pydantic}")
+
+# For action-oriented tasks, check executed actions
+if task_output.actions_executed:
+    print(f"Actions Executed: {len(task_output.actions_executed)}")
+    for action in task_output.actions_executed:
+        status = "✓" if action.get("success") else "✗"
+        print(f"  {status} {action.get('tool')}: {action.get('result', '')[:50]}...")
 ```
 
 ## Markdown Output Formatting
