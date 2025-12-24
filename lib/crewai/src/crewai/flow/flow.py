@@ -42,10 +42,12 @@ from crewai.events.listeners.tracing.utils import (
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
+    FlowPausedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
@@ -72,12 +74,12 @@ from crewai.flow.utils import (
 )
 
 if TYPE_CHECKING:
+    from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
-from crewai.utilities.printer import Printer, PrinterColor
 from crewai.utilities.streaming import (
     TaskInfo,
     create_async_chunk_generator,
@@ -479,8 +481,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
 
-    _printer: ClassVar[Printer] = Printer()
-
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
@@ -525,6 +525,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         # Human feedback storage
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
+        self._pending_feedback_context: PendingFeedbackContext | None = None
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -556,6 +557,273 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
 
+    @classmethod
+    def from_pending(
+        cls,
+        flow_id: str,
+        persistence: FlowPersistence | None = None,
+        **kwargs: Any,
+    ) -> "Flow[Any]":
+        """Create a Flow instance from a pending feedback state.
+
+        This classmethod is used to restore a flow that was paused waiting
+        for async human feedback. It loads the persisted state and pending
+        feedback context, then returns a flow instance ready to resume.
+
+        Args:
+            flow_id: The unique identifier of the paused flow (from state.id)
+            persistence: The persistence backend where the state was saved.
+                If not provided, defaults to SQLiteFlowPersistence().
+            **kwargs: Additional keyword arguments passed to the Flow constructor
+
+        Returns:
+            A new Flow instance with restored state, ready to call resume()
+
+        Raises:
+            ValueError: If no pending feedback exists for the given flow_id
+
+        Example:
+            ```python
+            # Simple usage with default persistence:
+            flow = MyFlow.from_pending("abc-123")
+            result = flow.resume("looks good!")
+
+            # Or with custom persistence:
+            persistence = SQLiteFlowPersistence("custom.db")
+            flow = MyFlow.from_pending("abc-123", persistence)
+            result = flow.resume("looks good!")
+            ```
+        """
+        if persistence is None:
+            from crewai.flow.persistence import SQLiteFlowPersistence
+
+            persistence = SQLiteFlowPersistence()
+
+        # Load pending feedback context and state
+        loaded = persistence.load_pending_feedback(flow_id)
+        if loaded is None:
+            raise ValueError(f"No pending feedback found for flow_id: {flow_id}")
+
+        state_data, pending_context = loaded
+
+        # Create flow instance with persistence
+        instance = cls(persistence=persistence, **kwargs)
+
+        # Restore state
+        instance._initialize_state(state_data)
+
+        # Store pending context for resume
+        instance._pending_feedback_context = pending_context
+
+        # Mark that we're resuming execution
+        instance._is_execution_resuming = True
+
+        # Mark the method as completed (it ran before pausing)
+        instance._completed_methods.add(FlowMethodName(pending_context.method_name))
+
+        return instance
+
+    @property
+    def pending_feedback(self) -> "PendingFeedbackContext | None":
+        """Get the pending feedback context if this flow is waiting for feedback.
+
+        Returns:
+            The PendingFeedbackContext if the flow is paused waiting for feedback,
+            None otherwise.
+
+        Example:
+            ```python
+            flow = MyFlow.from_pending("abc-123", persistence)
+            if flow.pending_feedback:
+                print(f"Waiting for feedback on: {flow.pending_feedback.method_name}")
+            ```
+        """
+        return self._pending_feedback_context
+
+    def resume(self, feedback: str = "") -> Any:
+        """Resume flow execution, optionally with human feedback.
+
+        This method continues flow execution after a flow was paused for
+        async human feedback. It processes the feedback (including LLM-based
+        outcome collapsing if emit was specified), stores the result, and
+        triggers downstream listeners.
+
+        Args:
+            feedback: The human's feedback as a string. If empty, uses
+                default_outcome or the first emit option.
+
+        Returns:
+            The final output from the flow execution, or HumanFeedbackPending
+            if another feedback point is reached.
+
+        Raises:
+            ValueError: If no pending feedback context exists (flow wasn't paused)
+
+        Example:
+            ```python
+            # In a webhook handler:
+            def handle_feedback(flow_id: str, feedback: str):
+                persistence = SQLiteFlowPersistence("flows.db")
+                flow = MyFlow.from_pending(flow_id, persistence)
+                result = flow.resume(feedback)
+                return result
+
+            # Resume without feedback (uses default outcome):
+            flow.resume()
+            ```
+        """
+        return asyncio.run(self.resume_async(feedback))
+
+    async def resume_async(self, feedback: str = "") -> Any:
+        """Async version of resume.
+
+        Resume flow execution, optionally with human feedback asynchronously.
+
+        Args:
+            feedback: The human's feedback as a string. If empty, uses
+                default_outcome or the first emit option.
+
+        Returns:
+            The final output from the flow execution, or HumanFeedbackPending
+            if another feedback point is reached.
+
+        Raises:
+            ValueError: If no pending feedback context exists
+        """
+        from crewai.flow.human_feedback import HumanFeedbackResult
+        from datetime import datetime
+
+        if self._pending_feedback_context is None:
+            raise ValueError(
+                "No pending feedback context. Use from_pending() to restore a paused flow."
+            )
+
+        context = self._pending_feedback_context
+        emit = context.emit
+        default_outcome = context.default_outcome
+        llm = context.llm
+
+        # Determine outcome
+        collapsed_outcome: str | None = None
+
+        if not feedback.strip():
+            # Empty feedback
+            if default_outcome:
+                collapsed_outcome = default_outcome
+            elif emit:
+                # No default and no feedback - use first outcome
+                collapsed_outcome = emit[0]
+        elif emit:
+            # Collapse feedback to outcome using LLM
+            collapsed_outcome = self._collapse_to_outcome(
+                feedback=feedback,
+                outcomes=emit,
+                llm=llm,
+            )
+
+        # Create result
+        result = HumanFeedbackResult(
+            output=context.method_output,
+            feedback=feedback,
+            outcome=collapsed_outcome,
+            timestamp=datetime.now(),
+            method_name=context.method_name,
+            metadata=context.metadata,
+        )
+
+        # Store in flow instance
+        self.human_feedback_history.append(result)
+        self.last_human_feedback = result
+
+        # Clear pending context after processing
+        self._pending_feedback_context = None
+
+        # Clear pending feedback from persistence
+        if self._persistence:
+            self._persistence.clear_pending_feedback(context.flow_id)
+
+        # Emit feedback received event
+        crewai_event_bus.emit(
+            self,
+            MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=context.method_name,
+                result=collapsed_outcome if emit else result,
+                state=self._state,
+            ),
+        )
+
+        # Clear resumption flag before triggering listeners
+        # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
+        self._is_execution_resuming = False
+
+        # Determine what to pass to listeners
+        try:
+            if emit and collapsed_outcome:
+                # Router behavior - the outcome itself triggers listeners
+                # First, add the outcome to method outputs as a router would
+                self._method_outputs.append(collapsed_outcome)
+
+                # Then trigger listeners for the outcome (e.g., "approved" triggers @listen("approved"))
+                final_result = await self._execute_listeners(
+                    FlowMethodName(collapsed_outcome),  # Use outcome as trigger
+                    result,  # Pass HumanFeedbackResult to listeners
+                )
+            else:
+                # Normal behavior - pass the HumanFeedbackResult
+                final_result = await self._execute_listeners(
+                    FlowMethodName(context.method_name),
+                    result,
+                )
+        except Exception as e:
+            # Check if flow was paused again for human feedback (loop case)
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if isinstance(e, HumanFeedbackPending):
+                # Auto-save pending feedback if persistence is configured
+                if self._persistence:
+                    state_data = (
+                        self._state
+                        if isinstance(self._state, dict)
+                        else self._state.model_dump()
+                    )
+                    self._persistence.save_pending_feedback(
+                        flow_uuid=e.context.flow_id,
+                        context=e.context,
+                        state_data=state_data,
+                    )
+
+                # Emit flow paused event
+                crewai_event_bus.emit(
+                    self,
+                    FlowPausedEvent(
+                        type="flow_paused",
+                        flow_name=self.name or self.__class__.__name__,
+                        flow_id=e.context.flow_id,
+                        method_name=e.context.method_name,
+                        state=self._copy_and_serialize_state(),
+                        message=e.context.message,
+                        emit=e.context.emit,
+                    ),
+                )
+                # Return the pending exception instead of raising
+                return e
+            raise
+
+        # Emit flow finished
+        crewai_event_bus.emit(
+            self,
+            FlowFinishedEvent(
+                type="flow_finished",
+                flow_name=self.name or self.__class__.__name__,
+                result=final_result,
+                state=self._state,
+            ),
+        )
+
+        return final_result
+
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID and default values.
 
@@ -571,19 +839,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    # Create instance without id, then set it
+                    # Create instance - FlowState auto-generates id via default_factory
                     instance = state_type()
-                    if not hasattr(instance, "id"):
-                        instance.id = str(uuid4())
+                    # Ensure id is set - generate UUID if empty
+                    if not getattr(instance, "id", None):
+                        object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if issubclass(state_type, BaseModel):
-                    # Create a new type that includes the ID field
-                    class StateWithId(state_type, FlowState):  # type: ignore
+                    # Create a new type with FlowState first for proper id default
+                    class StateWithId(FlowState, state_type):  # type: ignore
                         pass
 
                     instance = StateWithId()
-                    if not hasattr(instance, "id"):
-                        instance.id = str(uuid4())
+                    # Ensure id is set - generate UUID if empty
+                    if not getattr(instance, "id", None):
+                        object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
@@ -601,7 +871,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                return self.initial_state()  # Uses model defaults
+                instance = self.initial_state()
+                # Ensure id is set - generate UUID if empty
+                if not getattr(instance, "id", None):
+                    object.__setattr__(instance, "id", str(uuid4()))
+                return instance
             if self.initial_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -630,6 +904,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 state_dict = {
                     k: v for k, v in model.__dict__.items() if not k.startswith("_")
                 }
+
+            # Ensure id is set - generate UUID if empty
+            if not state_dict.get("id"):
+                state_dict["id"] = str(uuid4())
 
             # Create new instance of the same class
             model_class = type(model)
@@ -713,16 +991,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
             TypeError: If state is neither BaseModel nor dictionary
         """
         if isinstance(self._state, dict):
-            # For dict states, preserve existing fields unless overridden
+            # For dict states, update with inputs
+            # If inputs contains an id, use it (for restoring from persistence)
+            # Otherwise preserve the current id or generate a new one
             current_id = self._state.get("id")
-            # Only update specified fields
+            inputs_has_id = "id" in inputs
+
+            # Update specified fields
             for k, v in inputs.items():
                 self._state[k] = v
-            # Ensure ID is preserved or generated
-            if current_id:
-                self._state["id"] = current_id
-            elif "id" not in self._state:
-                self._state["id"] = str(uuid4())
+
+            # Ensure ID is set: prefer inputs id, then current id, then generate
+            if not inputs_has_id:
+                if current_id:
+                    self._state["id"] = current_id
+                elif "id" not in self._state:
+                    self._state["id"] = str(uuid4())
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
@@ -1012,17 +1296,69 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             self._log_flow_event(
-                f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+                f"Flow started with ID: {self.flow_id}", color="bold magenta"
             )
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
 
-            tasks = [
-                self._execute_start_method(start_method)
-                for start_method in self._start_methods
-            ]
-            await asyncio.gather(*tasks)
+            try:
+                tasks = [
+                    self._execute_start_method(start_method)
+                    for start_method in self._start_methods
+                ]
+                await asyncio.gather(*tasks)
+            except Exception as e:
+                # Check if flow was paused for human feedback
+                from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+                if isinstance(e, HumanFeedbackPending):
+                    # Auto-save pending feedback if persistence is configured
+                    if self._persistence:
+                        state_data = (
+                            self._state
+                            if isinstance(self._state, dict)
+                            else self._state.model_dump()
+                        )
+                        self._persistence.save_pending_feedback(
+                            flow_uuid=e.context.flow_id,
+                            context=e.context,
+                            state_data=state_data,
+                        )
+
+                    # Emit flow paused event
+                    future = crewai_event_bus.emit(
+                        self,
+                        FlowPausedEvent(
+                            type="flow_paused",
+                            flow_name=self.name or self.__class__.__name__,
+                            flow_id=e.context.flow_id,
+                            method_name=e.context.method_name,
+                            state=self._copy_and_serialize_state(),
+                            message=e.context.message,
+                            emit=e.context.emit,
+                        ),
+                    )
+                    if future and isinstance(future, Future):
+                        self._event_futures.append(future)
+
+                    # Wait for events to be processed
+                    if self._event_futures:
+                        await asyncio.gather(
+                            *[
+                                asyncio.wrap_future(f)
+                                for f in self._event_futures
+                                if isinstance(f, Future)
+                            ]
+                        )
+                        self._event_futures.clear()
+
+                    # Return the pending exception instead of raising
+                    # This allows the caller to handle the paused state gracefully
+                    return e
+
+                # Re-raise other exceptions
+                raise
 
             # Clear the resumption flag after initial execution completes
             self._is_execution_resuming = False
@@ -1216,6 +1552,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return result
         except Exception as e:
+            # Check if this is a HumanFeedbackPending exception (paused, not failed)
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if isinstance(e, HumanFeedbackPending):
+                # Emit paused event instead of failed
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionPausedEvent(
+                        type="method_execution_paused",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        state=self._copy_and_serialize_state(),
+                        flow_id=e.context.flow_id,
+                        message=e.context.message,
+                        emit=e.context.emit,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
+                raise e
+
+            # Regular failure
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFailedEvent(
@@ -1522,7 +1880,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     await asyncio.gather(*tasks)
 
         except Exception as e:
-            logger.error(f"Error executing listener {listener_name}: {e}")
+            # Don't log HumanFeedbackPending as an error - it's expected control flow
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if not isinstance(e, HumanFeedbackPending):
+                logger.error(f"Error executing listener {listener_name}: {e}")
             raise
 
     def _request_human_feedback(
@@ -1562,19 +1924,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
         # Pause live updates during human input
-        event_listener.formatter.pause_live_updates()
+        formatter = event_listener.formatter
+        formatter.pause_live_updates()
 
         try:
-            # Display output with formatting
-            self._printer.print("\n" + "═" * 50, color="bold_cyan")
-            self._printer.print("  OUTPUT FOR REVIEW", color="bold_cyan")
-            self._printer.print("═" * 50 + "\n", color="bold_cyan")
-            self._printer.print(output)
-            self._printer.print("\n" + "═" * 50 + "\n", color="bold_cyan")
+            # Display output with formatting using centralized Rich console
+            formatter.console.print("\n" + "═" * 50, style="bold cyan")
+            formatter.console.print("  OUTPUT FOR REVIEW", style="bold cyan")
+            formatter.console.print("═" * 50 + "\n", style="bold cyan")
+            formatter.console.print(output)
+            formatter.console.print("\n" + "═" * 50 + "\n", style="bold cyan")
 
             # Show message and prompt for feedback
-            self._printer.print(message, color="yellow")
-            self._printer.print("(Press Enter to skip, or type your feedback)\n", color="cyan")
+            formatter.console.print(message, style="yellow")
+            formatter.console.print("(Press Enter to skip, or type your feedback)\n", style="cyan")
 
             feedback = input("Your feedback: ").strip()
 
@@ -1593,7 +1956,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return feedback
         finally:
             # Resume live updates
-            event_listener.formatter.resume_live_updates()
+            formatter.resume_live_updates()
 
     def _collapse_to_outcome(
         self,
@@ -1624,7 +1987,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         from crewai.llm import LLM
         from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-        from crewai.utilities.i18n import I18N
+        from crewai.utilities.i18n import get_i18n
 
         # Get or create LLM instance
         if isinstance(llm, str):
@@ -1644,8 +2007,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
             )
 
-        # Load prompt from translations
-        i18n = I18N()
+        # Load prompt from translations (using cached instance)
+        i18n = get_i18n()
         prompt_template = i18n.slice("human_feedback_collapse")
 
         prompt = prompt_template.format(
@@ -1655,18 +2018,42 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             # Try structured output first (function calling)
+            # Note: LLM.call with response_model returns JSON string, not Pydantic model
             response = llm_instance.call(
                 messages=[{"role": "user", "content": prompt}],
                 response_model=FeedbackOutcome,
             )
-            return response.outcome
+
+            # Parse the response - LLM returns JSON string when using response_model
+            if isinstance(response, str):
+                import json
+
+                try:
+                    parsed = json.loads(response)
+                    return parsed.get("outcome", outcomes[0])
+                except json.JSONDecodeError:
+                    # Not valid JSON, might be raw outcome string
+                    response_clean = response.strip()
+                    for outcome in outcomes:
+                        if outcome.lower() == response_clean.lower():
+                            return outcome
+                    return outcomes[0]
+            elif isinstance(response, FeedbackOutcome):
+                return response.outcome
+            elif hasattr(response, "outcome"):
+                return response.outcome
+            else:
+                # Unexpected type, fall back to first outcome
+                logger.warning(f"Unexpected response type: {type(response)}")
+                return outcomes[0]
+
         except Exception as e:
             # Fallback to simple prompting if structured output fails
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
             response = llm_instance.call(messages=prompt)
-            response_clean = response.strip()
+            response_clean = str(response).strip()
 
             # Exact match (case-insensitive)
             for outcome in outcomes:
@@ -1688,7 +2075,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def _log_flow_event(
         self,
         message: str,
-        color: PrinterColor = "yellow",
+        color: str = "yellow",
         level: Literal["info", "warning"] = "info",
     ) -> None:
         """Centralized logging method for flow events.
@@ -1698,20 +2085,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Args:
             message: The message to log
-            color: Color to use for console output (default: yellow)
-                  Available colors: purple, red, bold_green, bold_purple,
-                  bold_blue, yellow, yellow
+            color: Rich style for console output (default: "yellow")
+                  Examples: "yellow", "red", "bold green", "bold magenta"
             level: Log level to use (default: info)
                   Supported levels: info, warning
 
         Note:
-            This method uses the Printer utility for colored console output
+            This method uses the centralized Rich console formatter for output
             and the standard logging module for log level support.
         """
-        self._printer.print(message, color=color)
+        from crewai.events.event_listener import event_listener
+
+        event_listener.formatter.console.print(message, style=color)
         if level == "info":
             logger.info(message)
-        logger.warning(message)
+        else:
+            logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
         """Create interactive HTML visualization of Flow structure.

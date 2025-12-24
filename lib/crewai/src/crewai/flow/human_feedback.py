@@ -4,7 +4,10 @@ This module provides the @human_feedback decorator that enables human-in-the-loo
 workflows within CrewAI Flows. It allows collecting human feedback on method outputs
 and optionally routing to different listeners based on the feedback.
 
-Example:
+Supports both synchronous (blocking) and asynchronous (non-blocking) feedback
+collection through the provider parameter.
+
+Example (synchronous, default):
     ```python
     from crewai.flow import Flow, start, listen, human_feedback
 
@@ -23,6 +26,28 @@ Example:
             result = self.human_feedback
             print(f"Publishing: {result.output}")
     ```
+
+Example (asynchronous with custom provider):
+    ```python
+    from crewai.flow import Flow, start, human_feedback
+    from crewai.flow.async_feedback import HumanFeedbackProvider, HumanFeedbackPending
+
+    class SlackProvider(HumanFeedbackProvider):
+        def request_feedback(self, context, flow):
+            self.send_notification(context)
+            raise HumanFeedbackPending(context=context)
+
+    class ReviewFlow(Flow):
+        @start()
+        @human_feedback(
+            message="Review this:",
+            emit=["approved", "rejected"],
+            llm="gpt-4o-mini",
+            provider=SlackProvider(),
+        )
+        def generate_content(self):
+            return "Content..."
+    ```
 """
 
 from __future__ import annotations
@@ -38,6 +63,7 @@ from crewai.flow.flow_wrappers import FlowMethod
 
 
 if TYPE_CHECKING:
+    from crewai.flow.async_feedback.types import HumanFeedbackProvider
     from crewai.flow.flow import Flow
     from crewai.llms.base_llm import BaseLLM
 
@@ -98,6 +124,7 @@ class HumanFeedbackConfig:
         llm: The LLM model to use for collapsing feedback to outcomes.
         default_outcome: The outcome to use when no feedback is provided.
         metadata: Optional metadata for enterprise integrations.
+        provider: Optional custom feedback provider for async workflows.
     """
 
     message: str
@@ -105,6 +132,7 @@ class HumanFeedbackConfig:
     llm: str | BaseLLM | None = None
     default_outcome: str | None = None
     metadata: dict[str, Any] | None = None
+    provider: HumanFeedbackProvider | None = None
 
 
 class HumanFeedbackMethod(FlowMethod[Any, Any]):
@@ -130,6 +158,7 @@ def human_feedback(
     llm: str | BaseLLM | None = None,
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,
+    provider: HumanFeedbackProvider | None = None,
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -142,6 +171,10 @@ def human_feedback(
 
     When `emit` is specified, the decorator acts as a router, and the
     collapsed outcome triggers the appropriate @listen decorated method.
+
+    Supports both synchronous (blocking) and asynchronous (non-blocking)
+    feedback collection through the `provider` parameter. If no provider
+    is specified, defaults to synchronous console input.
 
     Args:
         message: The message shown to the human when requesting feedback.
@@ -159,6 +192,11 @@ def human_feedback(
         metadata: Optional metadata for enterprise integrations. This is
             passed through to the HumanFeedbackResult and can be used
             by enterprise forks for features like Slack/Teams integration.
+        provider: Optional HumanFeedbackProvider for custom feedback
+            collection. Use this for async workflows that integrate with
+            external systems like Slack, Teams, or webhooks. When the
+            provider raises HumanFeedbackPending, the flow pauses and
+            can be resumed later with Flow.resume().
 
     Returns:
         A decorator function that wraps the method with human feedback
@@ -168,6 +206,7 @@ def human_feedback(
         ValueError: If emit is specified but llm is not provided.
         ValueError: If default_outcome is specified but emit is not.
         ValueError: If default_outcome is not in the emit list.
+        HumanFeedbackPending: When an async provider pauses execution.
 
     Example:
         Basic feedback without routing:
@@ -194,6 +233,19 @@ def human_feedback(
         def publish(self):
             print(f"Publishing: {self.last_human_feedback.output}")
         ```
+
+        Async feedback with custom provider:
+        ```python
+        @start()
+        @human_feedback(
+            message="Review this content:",
+            emit=["approved", "rejected"],
+            llm="gpt-4o-mini",
+            provider=SlackProvider(channel="#reviews"),
+        )
+        def generate_content(self):
+            return "Content to review..."
+        ```
     """
     # Validation at decoration time
     if emit is not None:
@@ -210,17 +262,82 @@ def human_feedback(
     elif default_outcome is not None:
         raise ValueError("default_outcome requires emit to be specified.")
 
-    # Create config for storage
-    config = HumanFeedbackConfig(
-        message=message,
-        emit=emit,
-        llm=llm,
-        default_outcome=default_outcome,
-        metadata=metadata,
-    )
-
     def decorator(func: F) -> F:
         """Inner decorator that wraps the function."""
+
+        def _request_feedback(flow_instance: Flow, method_output: Any) -> str:
+            """Request feedback using provider or default console."""
+            from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+            # Build context for provider
+            # Use flow_id property which handles both dict and BaseModel states
+            context = PendingFeedbackContext(
+                flow_id=flow_instance.flow_id or "unknown",
+                flow_class=f"{flow_instance.__class__.__module__}.{flow_instance.__class__.__name__}",
+                method_name=func.__name__,
+                method_output=method_output,
+                message=message,
+                emit=list(emit) if emit else None,
+                default_outcome=default_outcome,
+                metadata=metadata or {},
+                llm=llm if isinstance(llm, str) else None,
+            )
+
+            if provider is not None:
+                # Use custom provider (may raise HumanFeedbackPending)
+                return provider.request_feedback(context, flow_instance)
+            else:
+                # Use default console input
+                return flow_instance._request_human_feedback(
+                    message=message,
+                    output=method_output,
+                    metadata=metadata,
+                    emit=emit,
+                )
+
+        def _process_feedback(
+            flow_instance: Flow,
+            method_output: Any,
+            raw_feedback: str,
+        ) -> HumanFeedbackResult | str:
+            """Process feedback and return result or outcome."""
+            # Determine outcome
+            collapsed_outcome: str | None = None
+
+            if not raw_feedback.strip():
+                # Empty feedback
+                if default_outcome:
+                    collapsed_outcome = default_outcome
+                elif emit:
+                    # No default and no feedback - use first outcome
+                    collapsed_outcome = emit[0]
+            elif emit:
+                # Collapse feedback to outcome using LLM
+                collapsed_outcome = flow_instance._collapse_to_outcome(
+                    feedback=raw_feedback,
+                    outcomes=emit,
+                    llm=llm,
+                )
+
+            # Create result
+            result = HumanFeedbackResult(
+                output=method_output,
+                feedback=raw_feedback,
+                outcome=collapsed_outcome,
+                timestamp=datetime.now(),
+                method_name=func.__name__,
+                metadata=metadata or {},
+            )
+
+            # Store in flow instance
+            flow_instance.human_feedback_history.append(result)
+            flow_instance.last_human_feedback = result
+
+            # Return based on mode
+            if emit:
+                # Return outcome for routing
+                return collapsed_outcome  # type: ignore[return-value]
+            return result
 
         if asyncio.iscoroutinefunction(func):
             # Async wrapper
@@ -229,51 +346,11 @@ def human_feedback(
                 # Execute the original method
                 method_output = await func(self, *args, **kwargs)
 
-                # Request human feedback
-                raw_feedback = self._request_human_feedback(
-                    message=message,
-                    output=method_output,
-                    metadata=metadata,
-                    emit=emit,
-                )
+                # Request human feedback (may raise HumanFeedbackPending)
+                raw_feedback = _request_feedback(self, method_output)
 
-                # Determine outcome
-                collapsed_outcome: str | None = None
-
-                if not raw_feedback.strip():
-                    # Empty feedback
-                    if default_outcome:
-                        collapsed_outcome = default_outcome
-                    elif emit:
-                        # No default and no feedback - use first outcome
-                        collapsed_outcome = emit[0]
-                elif emit:
-                    # Collapse feedback to outcome using LLM
-                    collapsed_outcome = self._collapse_to_outcome(
-                        feedback=raw_feedback,
-                        outcomes=emit,
-                        llm=llm,
-                    )
-
-                # Create result
-                result = HumanFeedbackResult(
-                    output=method_output,
-                    feedback=raw_feedback,
-                    outcome=collapsed_outcome,
-                    timestamp=datetime.now(),
-                    method_name=func.__name__,
-                    metadata=metadata or {},
-                )
-
-                # Store in flow instance
-                self.human_feedback_history.append(result)
-                self.last_human_feedback = result
-
-                # Return based on mode
-                if emit:
-                    # Return outcome for routing
-                    return collapsed_outcome
-                return result
+                # Process and return
+                return _process_feedback(self, method_output, raw_feedback)
 
             wrapper: Any = async_wrapper
         else:
@@ -283,51 +360,11 @@ def human_feedback(
                 # Execute the original method
                 method_output = func(self, *args, **kwargs)
 
-                # Request human feedback
-                raw_feedback = self._request_human_feedback(
-                    message=message,
-                    output=method_output,
-                    metadata=metadata,
-                    emit=emit,
-                )
+                # Request human feedback (may raise HumanFeedbackPending)
+                raw_feedback = _request_feedback(self, method_output)
 
-                # Determine outcome
-                collapsed_outcome: str | None = None
-
-                if not raw_feedback.strip():
-                    # Empty feedback
-                    if default_outcome:
-                        collapsed_outcome = default_outcome
-                    elif emit:
-                        # No default and no feedback - use first outcome
-                        collapsed_outcome = emit[0]
-                elif emit:
-                    # Collapse feedback to outcome using LLM
-                    collapsed_outcome = self._collapse_to_outcome(
-                        feedback=raw_feedback,
-                        outcomes=emit,
-                        llm=llm,
-                    )
-
-                # Create result
-                result = HumanFeedbackResult(
-                    output=method_output,
-                    feedback=raw_feedback,
-                    outcome=collapsed_outcome,
-                    timestamp=datetime.now(),
-                    method_name=func.__name__,
-                    metadata=metadata or {},
-                )
-
-                # Store in flow instance
-                self.human_feedback_history.append(result)
-                self.last_human_feedback = result
-
-                # Return based on mode
-                if emit:
-                    # Return outcome for routing
-                    return collapsed_outcome
-                return result
+                # Process and return
+                return _process_feedback(self, method_output, raw_feedback)
 
             wrapper = sync_wrapper
 
@@ -342,8 +379,15 @@ def human_feedback(
             if hasattr(func, attr):
                 setattr(wrapper, attr, getattr(func, attr))
 
-        # Add human feedback specific attributes
-        wrapper.__human_feedback_config__ = config
+        # Add human feedback specific attributes (create config inline to avoid race conditions)
+        wrapper.__human_feedback_config__ = HumanFeedbackConfig(
+            message=message,
+            emit=emit,
+            llm=llm,
+            default_outcome=default_outcome,
+            metadata=metadata,
+            provider=provider,
+        )
         wrapper.__is_flow_method__ = True
 
         # Make it a router if emit specified

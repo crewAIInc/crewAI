@@ -37,8 +37,8 @@ from crewai.flow.flow import Flow, start, listen
 from crewai.flow.human_feedback import human_feedback
 
 class SimpleReviewFlow(Flow):
-    @human_feedback(request="Please review this content:")
     @start()
+    @human_feedback(message="Please review this content:")
     def generate_content(self):
         return "This is AI-generated content that needs review."
 
@@ -63,19 +63,20 @@ When this flow runs, it will:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `request` | `str` | Yes | The message shown to the human alongside the method output |
+| `message` | `str` | Yes | The message shown to the human alongside the method output |
 | `emit` | `Sequence[str]` | No | List of possible outcomes. Feedback is collapsed to one of these, which triggers `@listen` decorators |
 | `llm` | `str \| BaseLLM` | When `emit` specified | LLM used to interpret feedback and map to an outcome |
 | `default_outcome` | `str` | No | Outcome to use if no feedback provided. Must be in `emit` |
 | `metadata` | `dict` | No | Additional data for enterprise integrations |
+| `provider` | `HumanFeedbackProvider` | No | Custom provider for async/non-blocking feedback. See [Async Human Feedback](#async-human-feedback-non-blocking) |
 
 ### Basic Usage (No Routing)
 
 When you don't specify `emit`, the decorator simply collects feedback and passes a `HumanFeedbackResult` to the next listener:
 
 ```python Code
-@human_feedback(request="What do you think of this analysis?")
 @start()
+@human_feedback(message="What do you think of this analysis?")
 def analyze_data(self):
     return "Analysis results: Revenue up 15%, costs down 8%"
 
@@ -91,13 +92,13 @@ def handle_feedback(self, result):
 When you specify `emit`, the decorator becomes a router. The human's free-form feedback is interpreted by an LLM and collapsed into one of the specified outcomes:
 
 ```python Code
+@start()
 @human_feedback(
-    request="Do you approve this content for publication?",
+    message="Do you approve this content for publication?",
     emit=["approved", "rejected", "needs_revision"],
     llm="gpt-4o-mini",
     default_outcome="needs_revision",
 )
-@start()
 def review_content(self):
     return "Draft blog post content here..."
 
@@ -212,13 +213,13 @@ class ContentApprovalFlow(Flow[ContentState]):
         self.state.draft = f"# {topic}\n\nThis is a draft about {topic}..."
         return self.state.draft
 
+    @listen(generate_draft)
     @human_feedback(
-        request="Please review this draft. Reply 'approved', 'rejected', or provide revision feedback:",
+        message="Please review this draft. Reply 'approved', 'rejected', or provide revision feedback:",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    @listen(generate_draft)
     def review_draft(self, draft):
         return draft
 
@@ -278,23 +279,23 @@ Flow completed. Revisions requested: 0
 
 ## Combining with Other Decorators
 
-The `@human_feedback` decorator works with other flow decorators. The order matters:
+The `@human_feedback` decorator works with other flow decorators. Place it as the innermost decorator (closest to the function):
 
 ```python Code
-# Correct: @human_feedback wraps the flow decorator
-@human_feedback(request="Review this:")
+# Correct: @human_feedback is innermost (closest to the function)
 @start()
+@human_feedback(message="Review this:")
 def my_start_method(self):
     return "content"
 
-@human_feedback(request="Review this too:")
 @listen(other_method)
+@human_feedback(message="Review this too:")
 def my_listener(self, data):
     return f"processed: {data}"
 ```
 
 <Tip>
-Place `@human_feedback` as the outermost decorator (first/top) so it runs after the method completes and can capture the return value.
+Place `@human_feedback` as the innermost decorator (last/closest to the function) so it wraps the method directly and can capture the return value before passing to the flow system.
 </Tip>
 
 ## Best Practices
@@ -305,10 +306,10 @@ The `request` parameter is what the human sees. Make it actionable:
 
 ```python Code
 # ✅ Good - clear and actionable
-@human_feedback(request="Does this summary accurately capture the key points? Reply 'yes' or explain what's missing:")
+@human_feedback(message="Does this summary accurately capture the key points? Reply 'yes' or explain what's missing:")
 
 # ❌ Bad - vague
-@human_feedback(request="Review this:")
+@human_feedback(message="Review this:")
 ```
 
 ### 2. Choose Meaningful Outcomes
@@ -329,7 +330,7 @@ Use `default_outcome` to handle cases where users press Enter without typing:
 
 ```python Code
 @human_feedback(
-    request="Approve? (press Enter to request revision)",
+    message="Approve? (press Enter to request revision)",
     emit=["approved", "needs_revision"],
     llm="gpt-4o-mini",
     default_outcome="needs_revision",  # Safe default
@@ -365,9 +366,202 @@ When designing flows, consider whether you need routing:
 | Approval gates with approve/reject/revise | Use `emit` |
 | Collecting comments for logging only | No `emit` |
 
+## Async Human Feedback (Non-Blocking)
+
+By default, `@human_feedback` blocks execution waiting for console input. For production applications, you may need **async/non-blocking** feedback that integrates with external systems like Slack, email, webhooks, or APIs.
+
+### The Provider Abstraction
+
+Use the `provider` parameter to specify a custom feedback collection strategy:
+
+```python Code
+from crewai.flow import Flow, start, human_feedback, HumanFeedbackProvider, HumanFeedbackPending, PendingFeedbackContext
+
+class WebhookProvider(HumanFeedbackProvider):
+    """Provider that pauses flow and waits for webhook callback."""
+
+    def __init__(self, webhook_url: str):
+        self.webhook_url = webhook_url
+
+    def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+        # Notify external system (e.g., send Slack message, create ticket)
+        self.send_notification(context)
+
+        # Pause execution - framework handles persistence automatically
+        raise HumanFeedbackPending(
+            context=context,
+            callback_info={"webhook_url": f"{self.webhook_url}/{context.flow_id}"}
+        )
+
+class ReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="Review this content:",
+        emit=["approved", "rejected"],
+        llm="gpt-4o-mini",
+        provider=WebhookProvider("https://myapp.com/api"),
+    )
+    def generate_content(self):
+        return "AI-generated content..."
+
+    @listen("approved")
+    def publish(self, result):
+        return "Published!"
+```
+
+<Tip>
+The flow framework **automatically persists state** when `HumanFeedbackPending` is raised. Your provider only needs to notify the external system and raise the exception—no manual persistence calls required.
+</Tip>
+
+### Handling Paused Flows
+
+When using an async provider, `kickoff()` returns a `HumanFeedbackPending` object instead of raising an exception:
+
+```python Code
+flow = ReviewFlow()
+result = flow.kickoff()
+
+if isinstance(result, HumanFeedbackPending):
+    # Flow is paused, state is automatically persisted
+    print(f"Waiting for feedback at: {result.callback_info['webhook_url']}")
+    print(f"Flow ID: {result.context.flow_id}")
+else:
+    # Normal completion
+    print(f"Flow completed: {result}")
+```
+
+### Resuming a Paused Flow
+
+When feedback arrives (e.g., via webhook), resume the flow:
+
+```python Code
+# In your webhook handler:
+def handle_feedback_webhook(flow_id: str, feedback: str):
+    # Restore the paused flow
+    flow = ReviewFlow.from_pending(flow_id)
+
+    # Resume with the feedback
+    result = flow.resume(feedback)
+
+    return result
+```
+
+### Key Types
+
+| Type | Description |
+|------|-------------|
+| `HumanFeedbackProvider` | Protocol for custom feedback providers |
+| `PendingFeedbackContext` | Contains all info needed to resume a paused flow |
+| `HumanFeedbackPending` | Returned by `kickoff()` when flow is paused for feedback |
+| `ConsoleProvider` | Default blocking console input provider |
+
+### PendingFeedbackContext
+
+The context contains everything needed to resume:
+
+```python Code
+@dataclass
+class PendingFeedbackContext:
+    flow_id: str           # Unique identifier for this flow execution
+    flow_class: str        # Fully qualified class name
+    method_name: str       # Method that triggered feedback
+    method_output: Any     # Output shown to the human
+    message: str           # The request message
+    emit: list[str] | None # Possible outcomes for routing
+    default_outcome: str | None
+    metadata: dict         # Custom metadata
+    llm: str | None        # LLM for outcome collapsing
+    requested_at: datetime
+```
+
+### Complete Async Flow Example
+
+```python Code
+from crewai.flow import (
+    Flow, start, listen, human_feedback,
+    HumanFeedbackProvider, HumanFeedbackPending, PendingFeedbackContext
+)
+
+class SlackNotificationProvider(HumanFeedbackProvider):
+    """Provider that sends Slack notifications and pauses for async feedback."""
+
+    def __init__(self, channel: str):
+        self.channel = channel
+
+    def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+        # Send Slack notification (implement your own)
+        slack_thread_id = self.post_to_slack(
+            channel=self.channel,
+            message=f"Review needed:\n\n{context.method_output}\n\n{context.message}",
+        )
+
+        # Pause execution - framework handles persistence automatically
+        raise HumanFeedbackPending(
+            context=context,
+            callback_info={
+                "slack_channel": self.channel,
+                "thread_id": slack_thread_id,
+            }
+        )
+
+class ContentPipeline(Flow):
+    @start()
+    @human_feedback(
+        message="Approve this content for publication?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+        provider=SlackNotificationProvider("#content-reviews"),
+    )
+    def generate_content(self):
+        return "AI-generated blog post content..."
+
+    @listen("approved")
+    def publish(self, result):
+        print(f"Publishing! Reviewer said: {result.feedback}")
+        return {"status": "published"}
+
+    @listen("rejected")
+    def archive(self, result):
+        print(f"Archived. Reason: {result.feedback}")
+        return {"status": "archived"}
+
+    @listen("needs_revision")
+    def queue_revision(self, result):
+        print(f"Queued for revision: {result.feedback}")
+        return {"status": "revision_needed"}
+
+
+# Starting the flow (will pause and wait for Slack response)
+def start_content_pipeline():
+    flow = ContentPipeline()
+    result = flow.kickoff()
+
+    if isinstance(result, HumanFeedbackPending):
+        return {"status": "pending", "flow_id": result.context.flow_id}
+
+    return result
+
+
+# Resuming when Slack webhook fires
+def on_slack_feedback(flow_id: str, slack_message: str):
+    flow = ContentPipeline.from_pending(flow_id)
+    result = flow.resume(slack_message)
+    return result
+```
+
+### Best Practices for Async Feedback
+
+1. **Check the return type**: `kickoff()` returns `HumanFeedbackPending` when paused—no try/except needed
+2. **Store callback info**: Use `callback_info` to store webhook URLs, ticket IDs, etc.
+3. **Implement idempotency**: Your resume handler should be idempotent for safety
+4. **Automatic persistence**: State is automatically saved when `HumanFeedbackPending` is raised and uses `SQLiteFlowPersistence` by default
+5. **Custom persistence**: Pass a custom persistence instance to `from_pending()` if needed
+
 ## Related Documentation
 
 - [Flows Overview](/en/concepts/flows) - Learn about CrewAI Flows
 - [Flow State Management](/en/guides/flows/mastering-flow-state) - Managing state in flows
+- [Flow Persistence](/en/concepts/flows#persistence) - Persisting flow state
 - [Routing with @router](/en/concepts/flows#router) - More about conditional routing
 - [Human Input on Execution](/en/learn/human-input-on-execution) - Task-level human input

@@ -58,6 +58,29 @@ class MethodExecutionFailedEvent(FlowEvent):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class MethodExecutionPausedEvent(FlowEvent):
+    """Event emitted when a flow method is paused waiting for human feedback.
+
+    This event is emitted when a @human_feedback decorated method with an
+    async provider raises HumanFeedbackPending to pause execution.
+
+    Attributes:
+        flow_name: Name of the flow that is paused.
+        method_name: Name of the method waiting for feedback.
+        state: Current flow state when paused.
+        flow_id: Unique identifier for this flow execution.
+        message: The message shown when requesting feedback.
+        emit: Optional list of possible outcomes for routing.
+    """
+
+    method_name: str
+    state: dict[str, Any] | BaseModel
+    flow_id: str
+    message: str
+    emit: list[str] | None = None
+    type: str = "method_execution_paused"
+
+
 class FlowFinishedEvent(FlowEvent):
     """Event emitted when a flow completes execution"""
 
@@ -65,6 +88,29 @@ class FlowFinishedEvent(FlowEvent):
     result: Any | None = None
     type: str = "flow_finished"
     state: dict[str, Any] | BaseModel
+
+
+class FlowPausedEvent(FlowEvent):
+    """Event emitted when a flow is paused waiting for human feedback.
+
+    This event is emitted when a flow is paused due to a @human_feedback
+    decorated method with an async provider raising HumanFeedbackPending.
+
+    Attributes:
+        flow_name: Name of the flow that is paused.
+        flow_id: Unique identifier for this flow execution.
+        method_name: Name of the method waiting for feedback.
+        state: Current flow state when paused.
+        message: The message shown when requesting feedback.
+        emit: Optional list of possible outcomes for routing.
+    """
+
+    flow_id: str
+    method_name: str
+    state: dict[str, Any] | BaseModel
+    message: str
+    emit: list[str] | None = None
+    type: str = "flow_paused"
 
 
 class FlowPlotEvent(FlowEvent):
