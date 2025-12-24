@@ -676,14 +676,13 @@ class LLM(BaseLLM):
         formatted_messages = self._format_messages_for_provider(messages)
 
         # --- 2) Prepare the parameters for the completion call
-        params = {
+        params: dict[str, Any] = {
             "model": self.model,
             "messages": formatted_messages,
             "timeout": self.timeout,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -701,6 +700,12 @@ class LLM(BaseLLM):
             "reasoning_effort": self.reasoning_effort,
             **self.additional_params,
         }
+
+        # Only include stop if it has values and is not in additional_drop_params
+        # Some models (e.g., gpt-5.1) don't support the stop parameter at all
+        drop_params = self.additional_params.get("additional_drop_params", [])
+        if self.stop and "stop" not in drop_params:
+            params["stop"] = self.stop
 
         # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
