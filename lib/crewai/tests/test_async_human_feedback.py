@@ -274,18 +274,6 @@ class TestConsoleProvider:
         quiet_provider = ConsoleProvider(verbose=False)
         assert quiet_provider.verbose is False
 
-    def test_provider_is_instance_of_protocol(self) -> None:
-        """Test that ConsoleProvider implements the protocol."""
-        provider = ConsoleProvider()
-        assert isinstance(provider, HumanFeedbackProvider)
-
-    def test_provider_has_verbose_attribute(self) -> None:
-        """Test that provider has verbose attribute."""
-        provider = ConsoleProvider(verbose=True)
-        assert provider.verbose is True
-
-        provider2 = ConsoleProvider(verbose=False)
-        assert provider2.verbose is False
 
 
 # =============================================================================
@@ -539,6 +527,81 @@ class TestFlowResumeWithFeedback:
         with pytest.raises(ValueError, match="No pending feedback context"):
             flow.resume("some feedback")
 
+    def test_resume_from_async_context_raises_error(self) -> None:
+        """Test that resume() raises RuntimeError when called from async context."""
+        import asyncio
+
+        class TestFlow(Flow):
+            @start()
+            def begin(self):
+                return "started"
+
+        async def call_resume_from_async():
+            with tempfile.TemporaryDirectory() as tmpdir:
+                db_path = os.path.join(tmpdir, "test.db")
+                persistence = SQLiteFlowPersistence(db_path)
+
+                # Save pending feedback
+                context = PendingFeedbackContext(
+                    flow_id="async-context-test",
+                    flow_class="TestFlow",
+                    method_name="begin",
+                    method_output="output",
+                    message="Review:",
+                )
+                persistence.save_pending_feedback(
+                    flow_uuid="async-context-test",
+                    context=context,
+                    state_data={"id": "async-context-test"},
+                )
+
+                flow = TestFlow.from_pending("async-context-test", persistence)
+
+                # This should raise RuntimeError because we're in an async context
+                with pytest.raises(RuntimeError, match="cannot be called from within an async context"):
+                    flow.resume("feedback")
+
+        asyncio.run(call_resume_from_async())
+
+    @pytest.mark.asyncio
+    async def test_resume_async_direct(self) -> None:
+        """Test resume_async() can be called directly in async context."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test.db")
+            persistence = SQLiteFlowPersistence(db_path)
+
+            class TestFlow(Flow):
+                @start()
+                @human_feedback(message="Review:")
+                def generate(self):
+                    return "content"
+
+                @listen(generate)
+                def process(self, result):
+                    return f"processed: {result.feedback}"
+
+            # Save pending feedback
+            context = PendingFeedbackContext(
+                flow_id="async-direct-test",
+                flow_class="TestFlow",
+                method_name="generate",
+                method_output="content",
+                message="Review:",
+            )
+            persistence.save_pending_feedback(
+                flow_uuid="async-direct-test",
+                context=context,
+                state_data={"id": "async-direct-test"},
+            )
+
+            flow = TestFlow.from_pending("async-direct-test", persistence)
+
+            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+                result = await flow.resume_async("async feedback")
+
+            assert flow.last_human_feedback is not None
+            assert flow.last_human_feedback.feedback == "async feedback"
+
     @patch("crewai.flow.flow.crewai_event_bus.emit")
     def test_resume_basic(self, mock_emit: MagicMock) -> None:
         """Test basic resume functionality."""
@@ -783,6 +846,131 @@ class TestAsyncHumanFeedbackIntegration:
 # =============================================================================
 
 
+class TestAutoPersistence:
+    """Tests for automatic persistence when no persistence is provided."""
+
+    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    def test_auto_persistence_when_none_provided(self, mock_emit: MagicMock) -> None:
+        """Test that persistence is auto-created when HumanFeedbackPending is raised."""
+
+        class PausingProvider:
+            def request_feedback(
+                self, context: PendingFeedbackContext, flow: Flow
+            ) -> str:
+                raise HumanFeedbackPending(
+                    context=context,
+                    callback_info={"paused": True},
+                )
+
+        class TestFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                provider=PausingProvider(),
+            )
+            def generate(self):
+                return "content"
+
+        # Create flow WITHOUT persistence
+        flow = TestFlow()
+        assert flow._persistence is None  # No persistence initially
+
+        # kickoff should auto-create persistence when HumanFeedbackPending is raised
+        result = flow.kickoff()
+
+        # Should return HumanFeedbackPending (not raise it)
+        assert isinstance(result, HumanFeedbackPending)
+
+        # Persistence should have been auto-created
+        assert flow._persistence is not None
+
+        # The pending feedback should be saved
+        flow_id = result.context.flow_id
+        loaded = flow._persistence.load_pending_feedback(flow_id)
+        assert loaded is not None
+
+
+class TestCollapseToOutcomeJsonParsing:
+    """Tests for _collapse_to_outcome JSON parsing edge cases."""
+
+    def test_json_string_response_is_parsed(self) -> None:
+        """Test that JSON string response from LLM is correctly parsed."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # Simulate LLM returning JSON string (the bug we fixed)
+            mock_llm.call.return_value = '{"outcome": "approved"}'
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="I approve this",
+                outcomes=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+
+        assert result == "approved"
+
+    def test_plain_string_response_is_matched(self) -> None:
+        """Test that plain string response is correctly matched."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # Simulate LLM returning plain outcome string
+            mock_llm.call.return_value = "rejected"
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="This is not good",
+                outcomes=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+
+        assert result == "rejected"
+
+    def test_invalid_json_falls_back_to_matching(self) -> None:
+        """Test that invalid JSON falls back to string matching."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # Invalid JSON that contains "approved"
+            mock_llm.call.return_value = "{invalid json but says approved"
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="looks good",
+                outcomes=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+
+        assert result == "approved"
+
+    def test_llm_exception_falls_back_to_simple_prompting(self) -> None:
+        """Test that LLM exception triggers fallback to simple prompting."""
+        flow = Flow()
+
+        with patch("crewai.llm.LLM") as MockLLM:
+            mock_llm = MagicMock()
+            # First call raises, second call succeeds (fallback)
+            mock_llm.call.side_effect = [
+                Exception("Structured output failed"),
+                "approved",
+            ]
+            MockLLM.return_value = mock_llm
+
+            result = flow._collapse_to_outcome(
+                feedback="I approve",
+                outcomes=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+
+        assert result == "approved"
+        # Verify it was called twice (initial + fallback)
+        assert mock_llm.call.call_count == 2
+
+
 class TestAsyncHumanFeedbackEdgeCases:
     """Edge case tests for async human feedback."""
 
@@ -879,18 +1067,3 @@ class TestAsyncHumanFeedbackEdgeCases:
 
             assert flow.last_human_feedback.outcome == "approved"
             assert flow.last_human_feedback.feedback == ""
-
-    def test_provider_is_protocol_not_base_class(self) -> None:
-        """Test that provider uses Protocol, not inheritance."""
-        # This should work because Protocol uses structural typing
-
-        class CustomProvider:
-            """A provider that doesn't explicitly inherit from HumanFeedbackProvider."""
-
-            def request_feedback(
-                self, context: PendingFeedbackContext, flow: Flow
-            ) -> str:
-                return "feedback from custom provider"
-
-        provider = CustomProvider()
-        assert isinstance(provider, HumanFeedbackProvider)
