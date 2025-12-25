@@ -37,8 +37,8 @@ from crewai.flow.flow import Flow, start, listen
 from crewai.flow.human_feedback import human_feedback
 
 class SimpleReviewFlow(Flow):
-    @human_feedback(request="이 콘텐츠를 검토해 주세요:")
     @start()
+    @human_feedback(message="이 콘텐츠를 검토해 주세요:")
     def generate_content(self):
         return "검토가 필요한 AI 생성 콘텐츠입니다."
 
@@ -63,19 +63,20 @@ flow.kickoff()
 
 | 매개변수 | 타입 | 필수 | 설명 |
 |----------|------|------|------|
-| `request` | `str` | 예 | 메서드 출력과 함께 인간에게 표시되는 메시지 |
+| `message` | `str` | 예 | 메서드 출력과 함께 인간에게 표시되는 메시지 |
 | `emit` | `Sequence[str]` | 아니오 | 가능한 outcome 목록. 피드백이 이 중 하나로 매핑되어 `@listen` 데코레이터를 트리거합니다 |
 | `llm` | `str \| BaseLLM` | `emit` 지정 시 | 피드백을 해석하고 outcome에 매핑하는 데 사용되는 LLM |
 | `default_outcome` | `str` | 아니오 | 피드백이 제공되지 않을 때 사용할 outcome. `emit`에 있어야 합니다 |
 | `metadata` | `dict` | 아니오 | 엔터프라이즈 통합을 위한 추가 데이터 |
+| `provider` | `HumanFeedbackProvider` | 아니오 | 비동기/논블로킹 피드백을 위한 커스텀 프로바이더. [비동기 인간 피드백](#비동기-인간-피드백-논블로킹) 참조 |
 
 ### 기본 사용법 (라우팅 없음)
 
 `emit`을 지정하지 않으면, 데코레이터는 단순히 피드백을 수집하고 다음 리스너에 `HumanFeedbackResult`를 전달합니다:
 
 ```python Code
-@human_feedback(request="이 분석에 대해 어떻게 생각하시나요?")
 @start()
+@human_feedback(message="이 분석에 대해 어떻게 생각하시나요?")
 def analyze_data(self):
     return "분석 결과: 매출 15% 증가, 비용 8% 감소"
 
@@ -91,13 +92,13 @@ def handle_feedback(self, result):
 `emit`을 지정하면, 데코레이터는 라우터가 됩니다. 인간의 자유 형식 피드백이 LLM에 의해 해석되어 지정된 outcome 중 하나로 매핑됩니다:
 
 ```python Code
+@start()
 @human_feedback(
-    request="이 콘텐츠의 출판을 승인하시겠습니까?",
+    message="이 콘텐츠의 출판을 승인하시겠습니까?",
     emit=["approved", "rejected", "needs_revision"],
     llm="gpt-4o-mini",
     default_outcome="needs_revision",
 )
-@start()
 def review_content(self):
     return "블로그 게시물 초안 내용..."
 
@@ -212,13 +213,13 @@ class ContentApprovalFlow(Flow[ContentState]):
         self.state.draft = f"# {topic}\n\n{topic}에 대한 초안입니다..."
         return self.state.draft
 
+    @listen(generate_draft)
     @human_feedback(
-        request="이 초안을 검토해 주세요. 'approved', 'rejected'로 답하거나 수정 피드백을 제공해 주세요:",
+        message="이 초안을 검토해 주세요. 'approved', 'rejected'로 답하거나 수정 피드백을 제공해 주세요:",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    @listen(generate_draft)
     def review_draft(self, draft):
         return draft
 
@@ -278,37 +279,37 @@ Flow 완료. 요청된 수정: 0
 
 ## 다른 데코레이터와 결합하기
 
-`@human_feedback` 데코레이터는 다른 Flow 데코레이터와 함께 작동합니다. 순서가 중요합니다:
+`@human_feedback` 데코레이터는 다른 Flow 데코레이터와 함께 작동합니다. 가장 안쪽 데코레이터(함수에 가장 가까운)로 배치하세요:
 
 ```python Code
-# 올바름: @human_feedback이 Flow 데코레이터를 감쌉니다
-@human_feedback(request="이것을 검토해 주세요:")
+# 올바름: @human_feedback이 가장 안쪽(함수에 가장 가까움)
 @start()
+@human_feedback(message="이것을 검토해 주세요:")
 def my_start_method(self):
     return "content"
 
-@human_feedback(request="이것도 검토해 주세요:")
 @listen(other_method)
+@human_feedback(message="이것도 검토해 주세요:")
 def my_listener(self, data):
     return f"processed: {data}"
 ```
 
 <Tip>
-`@human_feedback`를 가장 바깥쪽 데코레이터(첫 번째/상단)로 배치하여 메서드가 완료된 후 실행되고 반환 값을 캡처할 수 있도록 하세요.
+`@human_feedback`를 가장 안쪽 데코레이터(마지막/함수에 가장 가까움)로 배치하여 메서드를 직접 래핑하고 Flow 시스템에 전달하기 전에 반환 값을 캡처할 수 있도록 하세요.
 </Tip>
 
 ## 모범 사례
 
 ### 1. 명확한 요청 메시지 작성
 
-`request` 매개변수는 인간이 보는 것입니다. 실행 가능하게 만드세요:
+`message` 매개변수는 인간이 보는 것입니다. 실행 가능하게 만드세요:
 
 ```python Code
 # ✅ 좋음 - 명확하고 실행 가능
-@human_feedback(request="이 요약이 핵심 포인트를 정확하게 캡처했나요? '예'로 답하거나 무엇이 빠졌는지 설명해 주세요:")
+@human_feedback(message="이 요약이 핵심 포인트를 정확하게 캡처했나요? '예'로 답하거나 무엇이 빠졌는지 설명해 주세요:")
 
 # ❌ 나쁨 - 모호함
-@human_feedback(request="이것을 검토해 주세요:")
+@human_feedback(message="이것을 검토해 주세요:")
 ```
 
 ### 2. 의미 있는 Outcome 선택
@@ -329,7 +330,7 @@ emit=["state_1", "state_2", "state_3"]
 
 ```python Code
 @human_feedback(
-    request="승인하시겠습니까? (수정 요청하려면 Enter 누르세요)",
+    message="승인하시겠습니까? (수정 요청하려면 Enter 누르세요)",
     emit=["approved", "needs_revision"],
     llm="gpt-4o-mini",
     default_outcome="needs_revision",  # 안전한 기본값
@@ -365,9 +366,216 @@ Flow를 설계할 때, 라우팅이 필요한지 고려하세요:
 | 승인/거부/수정이 있는 승인 게이트 | `emit` 사용 |
 | 로깅만을 위한 코멘트 수집 | `emit` 없음 |
 
+## 비동기 인간 피드백 (논블로킹)
+
+기본적으로 `@human_feedback`은 콘솔 입력을 기다리며 실행을 차단합니다. 프로덕션 애플리케이션에서는 Slack, 이메일, 웹훅 또는 API와 같은 외부 시스템과 통합되는 **비동기/논블로킹** 피드백이 필요할 수 있습니다.
+
+### Provider 추상화
+
+커스텀 피드백 수집 전략을 지정하려면 `provider` 매개변수를 사용하세요:
+
+```python Code
+from crewai.flow import Flow, start, human_feedback, HumanFeedbackProvider, HumanFeedbackPending, PendingFeedbackContext
+
+class WebhookProvider(HumanFeedbackProvider):
+    """웹훅 콜백을 기다리며 Flow를 일시 중지하는 Provider."""
+
+    def __init__(self, webhook_url: str):
+        self.webhook_url = webhook_url
+
+    def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+        # 외부 시스템에 알림 (예: Slack 메시지 전송, 티켓 생성)
+        self.send_notification(context)
+
+        # 실행 일시 중지 - 프레임워크가 자동으로 영속성 처리
+        raise HumanFeedbackPending(
+            context=context,
+            callback_info={"webhook_url": f"{self.webhook_url}/{context.flow_id}"}
+        )
+
+class ReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="이 콘텐츠를 검토해 주세요:",
+        emit=["approved", "rejected"],
+        llm="gpt-4o-mini",
+        provider=WebhookProvider("https://myapp.com/api"),
+    )
+    def generate_content(self):
+        return "AI가 생성한 콘텐츠..."
+
+    @listen("approved")
+    def publish(self, result):
+        return "출판됨!"
+```
+
+<Tip>
+Flow 프레임워크는 `HumanFeedbackPending`이 발생하면 **자동으로 상태를 영속화**합니다. Provider는 외부 시스템에 알리고 예외를 발생시키기만 하면 됩니다—수동 영속성 호출이 필요하지 않습니다.
+</Tip>
+
+### 일시 중지된 Flow 처리
+
+비동기 provider를 사용하면 `kickoff()`는 예외를 발생시키는 대신 `HumanFeedbackPending` 객체를 반환합니다:
+
+```python Code
+flow = ReviewFlow()
+result = flow.kickoff()
+
+if isinstance(result, HumanFeedbackPending):
+    # Flow가 일시 중지됨, 상태가 자동으로 영속화됨
+    print(f"피드백 대기 중: {result.callback_info['webhook_url']}")
+    print(f"Flow ID: {result.context.flow_id}")
+else:
+    # 정상 완료
+    print(f"Flow 완료: {result}")
+```
+
+### 일시 중지된 Flow 재개
+
+피드백이 도착하면 (예: 웹훅을 통해) Flow를 재개합니다:
+
+```python Code
+# 동기 핸들러:
+def handle_feedback_webhook(flow_id: str, feedback: str):
+    flow = ReviewFlow.from_pending(flow_id)
+    result = flow.resume(feedback)
+    return result
+
+# 비동기 핸들러 (FastAPI, aiohttp 등):
+async def handle_feedback_webhook(flow_id: str, feedback: str):
+    flow = ReviewFlow.from_pending(flow_id)
+    result = await flow.resume_async(feedback)
+    return result
+```
+
+### 주요 타입
+
+| 타입 | 설명 |
+|------|------|
+| `HumanFeedbackProvider` | 커스텀 피드백 provider를 위한 프로토콜 |
+| `PendingFeedbackContext` | 일시 중지된 Flow를 재개하는 데 필요한 모든 정보 포함 |
+| `HumanFeedbackPending` | Flow가 피드백을 위해 일시 중지되면 `kickoff()`에서 반환됨 |
+| `ConsoleProvider` | 기본 블로킹 콘솔 입력 provider |
+
+### PendingFeedbackContext
+
+컨텍스트는 재개에 필요한 모든 것을 포함합니다:
+
+```python Code
+@dataclass
+class PendingFeedbackContext:
+    flow_id: str           # 이 Flow 실행의 고유 식별자
+    flow_class: str        # 정규화된 클래스 이름
+    method_name: str       # 피드백을 트리거한 메서드
+    method_output: Any     # 인간에게 표시된 출력
+    message: str           # 요청 메시지
+    emit: list[str] | None # 라우팅을 위한 가능한 outcome
+    default_outcome: str | None
+    metadata: dict         # 커스텀 메타데이터
+    llm: str | None        # outcome 매핑을 위한 LLM
+    requested_at: datetime
+```
+
+### 완전한 비동기 Flow 예제
+
+```python Code
+from crewai.flow import (
+    Flow, start, listen, human_feedback,
+    HumanFeedbackProvider, HumanFeedbackPending, PendingFeedbackContext
+)
+
+class SlackNotificationProvider(HumanFeedbackProvider):
+    """Slack 알림을 보내고 비동기 피드백을 위해 일시 중지하는 Provider."""
+
+    def __init__(self, channel: str):
+        self.channel = channel
+
+    def request_feedback(self, context: PendingFeedbackContext, flow: Flow) -> str:
+        # Slack 알림 전송 (직접 구현)
+        slack_thread_id = self.post_to_slack(
+            channel=self.channel,
+            message=f"검토 필요:\n\n{context.method_output}\n\n{context.message}",
+        )
+
+        # 실행 일시 중지 - 프레임워크가 자동으로 영속성 처리
+        raise HumanFeedbackPending(
+            context=context,
+            callback_info={
+                "slack_channel": self.channel,
+                "thread_id": slack_thread_id,
+            }
+        )
+
+class ContentPipeline(Flow):
+    @start()
+    @human_feedback(
+        message="이 콘텐츠의 출판을 승인하시겠습니까?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+        provider=SlackNotificationProvider("#content-reviews"),
+    )
+    def generate_content(self):
+        return "AI가 생성한 블로그 게시물 콘텐츠..."
+
+    @listen("approved")
+    def publish(self, result):
+        print(f"출판 중! 검토자 의견: {result.feedback}")
+        return {"status": "published"}
+
+    @listen("rejected")
+    def archive(self, result):
+        print(f"보관됨. 이유: {result.feedback}")
+        return {"status": "archived"}
+
+    @listen("needs_revision")
+    def queue_revision(self, result):
+        print(f"수정 대기열에 추가됨: {result.feedback}")
+        return {"status": "revision_needed"}
+
+
+# Flow 시작 (Slack 응답을 기다리며 일시 중지)
+def start_content_pipeline():
+    flow = ContentPipeline()
+    result = flow.kickoff()
+
+    if isinstance(result, HumanFeedbackPending):
+        return {"status": "pending", "flow_id": result.context.flow_id}
+
+    return result
+
+
+# Slack 웹훅이 실행될 때 재개 (동기 핸들러)
+def on_slack_feedback(flow_id: str, slack_message: str):
+    flow = ContentPipeline.from_pending(flow_id)
+    result = flow.resume(slack_message)
+    return result
+
+
+# 핸들러가 비동기인 경우 (FastAPI, aiohttp, Slack Bolt 비동기 등)
+async def on_slack_feedback_async(flow_id: str, slack_message: str):
+    flow = ContentPipeline.from_pending(flow_id)
+    result = await flow.resume_async(slack_message)
+    return result
+```
+
+<Warning>
+비동기 웹 프레임워크(FastAPI, aiohttp, Slack Bolt 비동기 모드)를 사용하는 경우 `flow.resume()` 대신 `await flow.resume_async()`를 사용하세요. 실행 중인 이벤트 루프 내에서 `resume()`을 호출하면 `RuntimeError`가 발생합니다.
+</Warning>
+
+### 비동기 피드백 모범 사례
+
+1. **반환 타입 확인**: `kickoff()`는 일시 중지되면 `HumanFeedbackPending`을 반환합니다—try/except가 필요하지 않습니다
+2. **올바른 resume 메서드 사용**: 동기 코드에서는 `resume()`, 비동기 코드에서는 `await resume_async()` 사용
+3. **콜백 정보 저장**: `callback_info`를 사용하여 웹훅 URL, 티켓 ID 등을 저장
+4. **멱등성 구현**: 안전을 위해 resume 핸들러는 멱등해야 합니다
+5. **자동 영속성**: `HumanFeedbackPending`이 발생하면 상태가 자동으로 저장되며 기본적으로 `SQLiteFlowPersistence` 사용
+6. **커스텀 영속성**: 필요한 경우 `from_pending()`에 커스텀 영속성 인스턴스 전달
+
 ## 관련 문서
 
 - [Flow 개요](/ko/concepts/flows) - CrewAI Flow에 대해 알아보기
 - [Flow 상태 관리](/ko/guides/flows/mastering-flow-state) - Flow에서 상태 관리하기
+- [Flow 영속성](/ko/concepts/flows#persistence) - Flow 상태 영속화
 - [@router를 사용한 라우팅](/ko/concepts/flows#router) - 조건부 라우팅에 대해 더 알아보기
 - [실행 시 인간 입력](/ko/learn/human-input-on-execution) - 태스크 수준 인간 입력

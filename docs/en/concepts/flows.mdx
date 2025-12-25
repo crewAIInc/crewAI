@@ -581,13 +581,13 @@ from crewai.flow.flow import Flow, start, listen
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 
 class ReviewFlow(Flow):
+    @start()
     @human_feedback(
-        request="Do you approve this content?",
+        message="Do you approve this content?",
         emit=["approved", "rejected", "needs_revision"],
         llm="gpt-4o-mini",
         default_outcome="needs_revision",
     )
-    @start()
     def generate_content(self):
         return "Content to be reviewed..."
 
@@ -605,8 +605,8 @@ When `emit` is specified, the human's free-form feedback is interpreted by an LL
 You can also use `@human_feedback` without routing to simply collect feedback:
 
 ```python Code
-@human_feedback(request="Any comments on this output?")
 @start()
+@human_feedback(message="Any comments on this output?")
 def my_method(self):
     return "Output for review"
 
@@ -619,7 +619,7 @@ def next_step(self, result: HumanFeedbackResult):
 
 Access all feedback collected during a flow via `self.last_human_feedback` (most recent) or `self.human_feedback_history` (all feedback as a list).
 
-For a complete guide on human feedback in flows, see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
+For a complete guide on human feedback in flows, including **async/non-blocking feedback** with custom providers (Slack, webhooks, etc.), see [Human Feedback in Flows](/en/learn/human-feedback-in-flows).
 
 ## Adding Agents to Flows
 
