@@ -70,7 +70,7 @@ class ResearchResult(BaseModel):
     sources: list[str] = Field(description="List of sources used")
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.parametrize("verbose", [True, False])
 def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     """Test that LiteAgent is created with the correct parameters when Agent.kickoff() is called."""
@@ -130,7 +130,7 @@ def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
     assert created_lite_agent["response_format"] == TestResponse
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_lite_agent_with_tools():
     """Test that Agent can use tools."""
     # Create a LiteAgent with tools
@@ -174,7 +174,7 @@ def test_lite_agent_with_tools():
     assert event.tool_name == "search_web"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_lite_agent_structured_output():
     """Test that Agent can return a simple structured output."""
 
@@ -217,7 +217,7 @@ def test_lite_agent_structured_output():
     return result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_lite_agent_returns_usage_metrics():
     """Test that LiteAgent returns usage metrics."""
     llm = LLM(model="gpt-4o-mini")
@@ -238,7 +238,7 @@ def test_lite_agent_returns_usage_metrics():
     assert result.usage_metrics["total_tokens"] > 0
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_lite_agent_output_includes_messages():
     """Test that LiteAgentOutput includes messages from agent execution."""
     llm = LLM(model="gpt-4o-mini")
@@ -259,7 +259,7 @@ def test_lite_agent_output_includes_messages():
     assert len(result.messages) > 0
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.asyncio
 async def test_lite_agent_returns_usage_metrics_async():
     """Test that LiteAgent returns usage metrics when run asynchronously."""
@@ -354,9 +354,9 @@ def test_sets_parent_flow_when_inside_flow():
     assert captured_agent.parent_flow is flow
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_is_called_using_string():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
@@ -369,35 +369,33 @@ def test_guardrail_is_called_using_string():
         guardrail="""Only include Brazilian players, both women and men""",
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
         assert isinstance(source, LiteAgent)
         assert source.original_agent == agent
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 2
-            and len(guardrail_events["completed"]) == 2
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
         assert isinstance(source, LiteAgent)
         assert source.original_agent == agent
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 2
-            and len(guardrail_events["completed"]) == 2
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     result = agent.kickoff(messages="Top 10 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 2
+            and len(guardrail_events["completed"]) >= 2,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 2
     assert len(guardrail_events["completed"]) == 2
     assert not guardrail_events["completed"][0].success
@@ -408,33 +406,27 @@ def test_guardrail_is_called_using_string():
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_is_called_using_callable():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 1
-            and len(guardrail_events["completed"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 1
-            and len(guardrail_events["completed"]) == 1
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     agent = Agent(
         role="Sports Analyst",
@@ -445,42 +437,40 @@ def test_guardrail_is_called_using_callable():
 
     result = agent.kickoff(messages="Top 1 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 1
+            and len(guardrail_events["completed"]) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 1
     assert len(guardrail_events["completed"]) == 1
     assert guardrail_events["completed"][0].success
     assert "Pelé - Santos, 1958" in result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_guardrail_reached_attempt_limit():
-    guardrail_events = defaultdict(list)
+    guardrail_events: dict[str, list] = defaultdict(list)
     from crewai.events.event_types import (
         LLMGuardrailCompletedEvent,
         LLMGuardrailStartedEvent,
     )
 
-    all_events_received = threading.Event()
+    condition = threading.Condition()
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
-        guardrail_events["started"].append(event)
-        if (
-            len(guardrail_events["started"]) == 3
-            and len(guardrail_events["completed"]) == 3
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["started"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
-        guardrail_events["completed"].append(event)
-        if (
-            len(guardrail_events["started"]) == 3
-            and len(guardrail_events["completed"]) == 3
-        ):
-            all_events_received.set()
+        with condition:
+            guardrail_events["completed"].append(event)
+            condition.notify()
 
     agent = Agent(
         role="Sports Analyst",
@@ -498,9 +488,13 @@ def test_guardrail_reached_attempt_limit():
     ):
         agent.kickoff(messages="Top 10 best players in the world?")
 
-    assert all_events_received.wait(timeout=10), (
-        "Timeout waiting for all guardrail events"
-    )
+    with condition:
+        success = condition.wait_for(
+            lambda: len(guardrail_events["started"]) >= 3
+            and len(guardrail_events["completed"]) >= 3,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for all guardrail events"
     assert len(guardrail_events["started"]) == 3  # 2 retries + 1 initial call
     assert len(guardrail_events["completed"]) == 3  # 2 retries + 1 initial call
     assert not guardrail_events["completed"][0].success
@@ -508,7 +502,7 @@ def test_guardrail_reached_attempt_limit():
     assert not guardrail_events["completed"][2].success
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_output_when_guardrail_returns_base_model():
     class Player(BaseModel):
         name: str
@@ -599,7 +593,7 @@ def test_lite_agent_with_custom_llm_and_guardrails():
     assert result2.raw == "Modified by guardrail"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_lite_agent_with_invalid_llm():
     """Test that LiteAgent raises proper error when create_llm returns None."""
     with patch("crewai.lite_agent.create_llm", return_value=None):
@@ -615,7 +609,7 @@ def test_lite_agent_with_invalid_llm():
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
 @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_kickoff_with_platform_tools(mock_get):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
@@ -657,7 +651,7 @@ def test_agent_kickoff_with_platform_tools(mock_get):
 
 @patch.dict("os.environ", {"EXA_API_KEY": "test_exa_key"})
 @patch("crewai.agent.Agent._get_external_mcp_tools")
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
     # Setup mock MCP tools - create a proper BaseTool instance

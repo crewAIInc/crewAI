@@ -158,6 +158,44 @@ class BaseLLM(ABC):
             RuntimeError: If the LLM request fails for other reasons.
         """
 
+    async def acall(
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Task | None = None,
+        from_agent: Agent | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Call the LLM with the given messages.
+
+        Args:
+            messages: Input messages for the LLM.
+                     Can be a string or list of message dictionaries.
+                     If string, it will be converted to a single user message.
+                     If list, each dict must have 'role' and 'content' keys.
+            tools: Optional list of tool schemas for function calling.
+                  Each tool should define its name, description, and parameters.
+            callbacks: Optional list of callback functions to be executed
+                      during and after the LLM call.
+            available_functions: Optional dict mapping function names to callables
+                               that can be invoked by the LLM.
+            from_task: Optional task caller to be used for the LLM call.
+            from_agent: Optional agent caller to be used for the LLM call.
+            response_model: Optional response model to be used for the LLM call.
+
+        Returns:
+            Either a text response from the LLM (str) or
+            the result of a tool function call (Any).
+
+        Raises:
+            ValueError: If the messages format is invalid.
+            TimeoutError: If the LLM request times out.
+            RuntimeError: If the LLM request fails for other reasons.
+        """
+        raise NotImplementedError
+
     def _convert_tools_for_interference(
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, BaseTool]]:
@@ -276,7 +314,7 @@ class BaseLLM(ABC):
         call_type: LLMCallType,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
-        messages: str | list[dict[str, Any]] | None = None,
+        messages: str | list[LLMMessage] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         crewai_event_bus.emit(
@@ -548,3 +586,134 @@ class BaseLLM(ABC):
             Dictionary with token usage totals
         """
         return UsageMetrics(**self._token_usage)
+
+    def _invoke_before_llm_call_hooks(
+        self,
+        messages: list[LLMMessage],
+        from_agent: Agent | None = None,
+    ) -> bool:
+        """Invoke before_llm_call hooks for direct LLM calls (no agent context).
+
+        This method should be called by native provider implementations before
+        making the actual LLM call when from_agent is None (direct calls).
+
+        Args:
+            messages: The messages being sent to the LLM
+            from_agent: The agent making the call (None for direct calls)
+
+        Returns:
+            True if LLM call should proceed, False if blocked by hook
+
+        Example:
+            >>> # In a native provider's call() method:
+            >>> if from_agent is None and not self._invoke_before_llm_call_hooks(
+            ...     messages, from_agent
+            ... ):
+            ...     raise ValueError("LLM call blocked by hook")
+        """
+        # Only invoke hooks for direct calls (no agent context)
+        if from_agent is not None:
+            return True
+
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            get_before_llm_call_hooks,
+        )
+        from crewai.utilities.printer import Printer
+
+        before_hooks = get_before_llm_call_hooks()
+        if not before_hooks:
+            return True
+
+        hook_context = LLMCallHookContext(
+            executor=None,
+            messages=messages,
+            llm=self,
+            agent=None,
+            task=None,
+            crew=None,
+        )
+        printer = Printer()
+
+        try:
+            for hook in before_hooks:
+                result = hook(hook_context)
+                if result is False:
+                    printer.print(
+                        content="LLM call blocked by before_llm_call hook",
+                        color="yellow",
+                    )
+                    return False
+        except Exception as e:
+            printer.print(
+                content=f"Error in before_llm_call hook: {e}",
+                color="yellow",
+            )
+
+        return True
+
+    def _invoke_after_llm_call_hooks(
+        self,
+        messages: list[LLMMessage],
+        response: str,
+        from_agent: Agent | None = None,
+    ) -> str:
+        """Invoke after_llm_call hooks for direct LLM calls (no agent context).
+
+        This method should be called by native provider implementations after
+        receiving the LLM response when from_agent is None (direct calls).
+
+        Args:
+            messages: The messages that were sent to the LLM
+            response: The response from the LLM
+            from_agent: The agent that made the call (None for direct calls)
+
+        Returns:
+            The potentially modified response string
+
+        Example:
+            >>> # In a native provider's call() method:
+            >>> if from_agent is None and isinstance(result, str):
+            ...     result = self._invoke_after_llm_call_hooks(
+            ...         messages, result, from_agent
+            ...     )
+        """
+        # Only invoke hooks for direct calls (no agent context)
+        if from_agent is not None or not isinstance(response, str):
+            return response
+
+        from crewai.hooks.llm_hooks import (
+            LLMCallHookContext,
+            get_after_llm_call_hooks,
+        )
+        from crewai.utilities.printer import Printer
+
+        after_hooks = get_after_llm_call_hooks()
+        if not after_hooks:
+            return response
+
+        hook_context = LLMCallHookContext(
+            executor=None,
+            messages=messages,
+            llm=self,
+            agent=None,
+            task=None,
+            crew=None,
+            response=response,
+        )
+        printer = Printer()
+        modified_response = response
+
+        try:
+            for hook in after_hooks:
+                result = hook(hook_context)
+                if result is not None and isinstance(result, str):
+                    modified_response = result
+                    hook_context.response = modified_response
+        except Exception as e:
+            printer.print(
+                content=f"Error in after_llm_call hook: {e}",
+                color="yellow",
+            )
+
+        return modified_response

@@ -1,0 +1,97 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 1 best players in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '693'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.78.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.78.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BguT62vse6YScZRVY1mWwODBazdbW\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749566540,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: The top player in the world, as of October 2023, is Lionel Messi. Widely regarded as one of the greatest soccer players of all time, Messi has had an illustrious career characterized by extraordinary skills, vision, and consistency.  \\n\\nKey Achievements:  \\n- **Clubs**: Messi spent the majority of his career at FC Barcelona, where he became the club's all-time leading scorer. He then transferred to Paris Saint-Germain (PSG) in 2021.\\n- **International**: He led Argentina to victory in the 2021 Copa América and the 2022 FIFA World Cup, securing his legacy as a national hero. \\n- **Awards**: Messi has won multiple Ballon d'Or awards,\
+        \ highlighting his status as the best player globally on several occasions.\\n\\nPlaying Style:  \\nMessi is known for his incredible dribbling ability, precise passing, and prolific goal-scoring. His low center of gravity allows him to maneuver through tight defenses seamlessly, making him a constant threat on the field. \\n\\nInfluence:  \\nBeyond statistics, Messi's impact on the game, his influence on aspiring players, and his sportsmanship have also cemented his status in soccer history. His continued performance at a high level well into his mid-30s is a testament to his dedication and skill. \\n\\nOverall, Messi exemplifies what it means to be the best player in the world today.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\": 299,\n    \"total_tokens\": 421,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 94d9a27f5dc000f9-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 10 Jun 2025 14:42:51 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=7hq1JYlSmmLvjUR7npK1vcLJYOvCPn947S.EYBtvTcQ-1749566571-1.0.1.1-11XCSwdUqYCYC3zE9DZk20c_BHXTPqEi6YMhVtX9dekgrj0J3a4EHGdHvcnhBNkIxYzhM4zzQsetx2sxisMk62ywkO8Tzo3rlYdo__Kov7w; path=/; expires=Tue, 10-Jun-25 15:12:51 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=bhxj6kzt6diFCyNbiiw60v4lKiUKaoHjQ3Yc4KWW4OI-1749566571331-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '30419'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '30424'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999859'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b5983a9572e28ded39da7b12e678e2b7
+    status:
+      code: 200
+      message: OK
+version: 1

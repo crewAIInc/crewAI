@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Tell me a short fact"}], "role": "user"}],
+      "generationConfig": {"temperature": 0.7, "topP": 0.9, "maxOutputTokens": 1000}}'
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.52.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Botanically speaking, **bananas are
+        berries**, but strawberries are not.\",\n            \"thoughtSignature\":
+        \"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\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        6,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 750,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 6\n      }\n
+        \   ],\n    \"thoughtsTokenCount\": 729\n  },\n  \"modelVersion\": \"gemini-3-pro-preview\",\n
+        \ \"responseId\": \"O0ItacH2H4Xa_uMP1LLs8Qg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 01 Dec 2025 07:22:35 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=10635
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

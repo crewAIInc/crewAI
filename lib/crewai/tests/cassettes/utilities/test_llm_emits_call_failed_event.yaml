@@ -1,0 +1,101 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": "Hello, how are you?"}], "model":
+      "gpt-4o-mini", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '102'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=IY8ppO70AMHr2skDSUsGh71zqHHdCQCZ3OvkPi26NBc-1740424913267-0.0.1.1-604800000;
+        __cf_bm=fU6K5KZoDmgcEuF8_yWAYKUO5fKHh6q5.wDPnna393g-1740424913-1.0.1.1-2iOaq3JVGWs439V0HxJee0IC9HdJm7dPkeJorD.AGw0YwkngRPM8rrTzn_7ht1BkbOauEezj.wPKcBz18gIYUg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B4YLA2SrC2rwdVQ3U87G5a0P5lsLw\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1740425016,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Hello! I'm just a computer program, so
+      I don't have feelings, but I'm here and ready to help you. How can I assist
+      you today?\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      13,\n    \"completion_tokens\": 30,\n    \"total_tokens\": 43,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_709714d124\"\n}\n"
+    headers:
+      CF-RAY:
+      - 9171d4c0ed44236e-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 24 Feb 2025 19:23:38 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1954'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999978'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_ea2703502b8827e4297cd2a7bae9d9c8
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

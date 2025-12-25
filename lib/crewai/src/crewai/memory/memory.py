@@ -13,9 +13,7 @@ if TYPE_CHECKING:
 
 
 class Memory(BaseModel):
-    """
-    Base class for memory, now supporting agent tags and generic metadata.
-    """
+    """Base class for memory, supporting agent tags and generic metadata."""
 
     embedder_config: EmbedderConfig | dict[str, Any] | None = None
     crew: Any | None = None
@@ -52,9 +50,28 @@ class Memory(BaseModel):
         value: Any,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        metadata = metadata or {}
+        """Save a value to memory.
 
+        Args:
+            value: The value to save.
+            metadata: Optional metadata to associate with the value.
+        """
+        metadata = metadata or {}
         self.storage.save(value, metadata)
+
+    async def asave(
+        self,
+        value: Any,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Save a value to memory asynchronously.
+
+        Args:
+            value: The value to save.
+            metadata: Optional metadata to associate with the value.
+        """
+        metadata = metadata or {}
+        await self.storage.asave(value, metadata)
 
     def search(
         self,
@@ -62,10 +79,43 @@ class Memory(BaseModel):
         limit: int = 5,
         score_threshold: float = 0.6,
     ) -> list[Any]:
-        return self.storage.search(
+        """Search memory for relevant entries.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            List of matching memory entries.
+        """
+        results: list[Any] = self.storage.search(
             query=query, limit=limit, score_threshold=score_threshold
         )
+        return results
+
+    async def asearch(
+        self,
+        query: str,
+        limit: int = 5,
+        score_threshold: float = 0.6,
+    ) -> list[Any]:
+        """Search memory for relevant entries asynchronously.
+
+        Args:
+            query: The search query.
+            limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            List of matching memory entries.
+        """
+        results: list[Any] = await self.storage.asearch(
+            query=query, limit=limit, score_threshold=score_threshold
+        )
+        return results
 
     def set_crew(self, crew: Any) -> Memory:
+        """Set the crew for this memory instance."""
         self.crew = crew
         return self

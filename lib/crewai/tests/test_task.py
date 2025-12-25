@@ -289,7 +289,7 @@ def test_guardrail_type_error():
         )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_pydantic_sequential():
     class ScoreOutput(BaseModel):
         score: int
@@ -314,7 +314,7 @@ def test_output_pydantic_sequential():
     assert result.to_dict() == {"score": 4}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_pydantic_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -344,7 +344,7 @@ def test_output_pydantic_hierarchical():
     assert result.to_dict() == {"score": 4}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_json_sequential():
     import uuid
 
@@ -376,7 +376,7 @@ def test_output_json_sequential():
         os.remove(output_file)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_json_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -406,7 +406,7 @@ def test_output_json_hierarchical():
     assert result.to_dict() == {"score": 4}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_inject_date():
     reporter = Agent(
         role="Reporter",
@@ -431,7 +431,7 @@ def test_inject_date():
     assert "2025-05-21" in result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_inject_date_custom_format():
     reporter = Agent(
         role="Reporter",
@@ -457,7 +457,7 @@ def test_inject_date_custom_format():
     assert "May 21, 2025" in result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_no_inject_date():
     reporter = Agent(
         role="Reporter",
@@ -482,7 +482,7 @@ def test_no_inject_date():
     assert "2025-05-21" not in result.raw
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_json_property_without_output_json():
     class ScoreOutput(BaseModel):
         score: int
@@ -510,7 +510,7 @@ def test_json_property_without_output_json():
     assert "No JSON output found in the final task." in str(excinfo.value)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_json_dict_sequential():
     class ScoreOutput(BaseModel):
         score: int
@@ -535,7 +535,7 @@ def test_output_json_dict_sequential():
     assert result.to_dict() == {"score": 4}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_json_dict_hierarchical():
     class ScoreOutput(BaseModel):
         score: int
@@ -565,7 +565,7 @@ def test_output_json_dict_hierarchical():
     assert result.to_dict() == {"score": 4}
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_pydantic_to_another_task():
     class ScoreOutput(BaseModel):
         score: int
@@ -603,7 +603,7 @@ def test_output_pydantic_to_another_task():
     assert pydantic_result.score == 5
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_output_json_to_another_task():
     class ScoreOutput(BaseModel):
         score: int
@@ -634,7 +634,7 @@ def test_output_json_to_another_task():
     assert '{"score": 3}' == result.json
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_save_task_output():
     scorer = Agent(
         role="Scorer",
@@ -658,7 +658,7 @@ def test_save_task_output():
         save_file.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_save_task_json_output():
     from unittest.mock import patch
 
@@ -696,7 +696,7 @@ def test_save_task_json_output():
                 assert "score" in data
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_save_task_pydantic_output(tmp_path, monkeypatch):
     """Test saving pydantic output to a file.
 
@@ -734,7 +734,7 @@ def test_save_task_pydantic_output(tmp_path, monkeypatch):
     assert {"score": 4} == json.loads(output_path.read_text())
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_custom_converter_cls():
     class ScoreOutput(BaseModel):
         score: int
@@ -766,7 +766,7 @@ def test_custom_converter_cls():
         mock_to_pydantic.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_increment_delegations_for_hierarchical_process():
     scorer = Agent(
         role="Scorer",
@@ -793,7 +793,7 @@ def test_increment_delegations_for_hierarchical_process():
         increment_delegations.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_increment_delegations_for_sequential_process():
     manager = Agent(
         role="Manager",
@@ -827,7 +827,7 @@ def test_increment_delegations_for_sequential_process():
         increment_delegations.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_increment_tool_errors():
     from crewai.tools import tool
 
@@ -1281,7 +1281,7 @@ def test_github_issue_3149_reproduction():
     assert task.output_file == "test_output.txt"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_execution_times():
     researcher = Agent(
         role="Researcher",
@@ -1551,7 +1551,7 @@ def test_task_with_no_max_execution_time():
         execute.assert_called_once()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_with_max_execution_time():
     from crewai.tools import tool
 
@@ -1585,7 +1585,7 @@ def test_task_with_max_execution_time():
     assert result.raw == "okay"
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_with_max_execution_time_exceeded():
     from crewai.tools import tool
 
@@ -1619,7 +1619,7 @@ def test_task_with_max_execution_time_exceeded():
         task.execute_sync(agent=researcher)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_interpolation_with_hyphens():
     agent = Agent(
         role="Researcher",
@@ -1688,7 +1688,7 @@ def test_task_copy_with_list_context():
     assert copied_task2.context[0] is task1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_task_output_includes_messages():
     """Test that TaskOutput includes messages from agent execution."""
     researcher = Agent(
@@ -1727,3 +1727,24 @@ def test_task_output_includes_messages():
     assert hasattr(task2_output, "messages")
     assert isinstance(task2_output.messages, list)
     assert len(task2_output.messages) > 0
+
+
+def test_async_execution_fails():
+    researcher = Agent(
+      role="Researcher",
+      goal="Make the best research and analysis on content about AI and AI agents",
+      backstory="You're an expert researcher, specialized in technology, software engineering, AI and startups. You work as a freelancer and is now working on doing research and analysis for a new customer.",
+      allow_delegation=False,
+    )
+
+    task = Task(
+      description="Give me a list of 5 interesting ideas to explore for na article, what makes them unique and interesting.",
+      expected_output="Bullet point list of 5 interesting ideas.",
+      async_execution=True,
+      agent=researcher,
+    )
+
+    with patch.object(Task, "_execute_core", side_effect=RuntimeError("boom!")):
+      with pytest.raises(RuntimeError, match="boom!"):
+        execution = task.execute_async(agent=researcher)
+        execution.result()

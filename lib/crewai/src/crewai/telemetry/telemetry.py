@@ -9,12 +9,14 @@ data is collected. Users can opt-in to share more complete data using the
 from __future__ import annotations
 
 import asyncio
+import atexit
 from collections.abc import Callable
 from importlib.metadata import version
 import json
 import logging
 import os
 import platform
+import signal
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +33,14 @@ from opentelemetry.sdk.trace.export import (
 from opentelemetry.trace import Span
 from typing_extensions import Self
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.system_events import (
+    SigContEvent,
+    SigHupEvent,
+    SigIntEvent,
+    SigTStpEvent,
+    SigTermEvent,
+)
 from crewai.telemetry.constants import (
     CREWAI_TELEMETRY_BASE_URL,
     CREWAI_TELEMETRY_SERVICE_NAME,
@@ -121,6 +131,7 @@ class Telemetry:
             )
 
             self.provider.add_span_processor(processor)
+            self._register_shutdown_handlers()
             self.ready = True
         except Exception as e:
             if isinstance(
@@ -154,6 +165,74 @@ class Telemetry:
                 logger.debug(f"Failed to set tracer provider: {e}")
                 self.ready = False
                 self.trace_set = False
+
+    def _register_shutdown_handlers(self) -> None:
+        """Register handlers for graceful shutdown on process exit and signals."""
+        atexit.register(self._shutdown)
+
+        self._original_handlers: dict[int, Any] = {}
+
+        self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
+        self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
+        if hasattr(signal, "SIGHUP"):
+            self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
+        if hasattr(signal, "SIGTSTP"):
+            self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
+        if hasattr(signal, "SIGCONT"):
+            self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
+
+    def _register_signal_handler(
+        self,
+        sig: signal.Signals,
+        event_class: type,
+        shutdown: bool = False,
+    ) -> None:
+        """Register a signal handler that emits an event.
+
+        Args:
+            sig: The signal to handle.
+            event_class: The event class to instantiate and emit.
+            shutdown: Whether to trigger shutdown on this signal.
+        """
+        try:
+            original_handler = signal.getsignal(sig)
+            self._original_handlers[sig] = original_handler
+
+            def handler(signum: int, frame: Any) -> None:
+                crewai_event_bus.emit(self, event_class())
+
+                if shutdown:
+                    self._shutdown()
+
+                if original_handler not in (signal.SIG_DFL, signal.SIG_IGN, None):
+                    if callable(original_handler):
+                        original_handler(signum, frame)
+                elif shutdown:
+                    raise SystemExit(0)
+
+            signal.signal(sig, handler)
+        except ValueError as e:
+            logger.warning(
+                f"Cannot register {sig.name} handler: not running in main thread",
+                exc_info=e,
+            )
+        except OSError as e:
+            logger.warning(f"Cannot register {sig.name} handler: {e}", exc_info=e)
+
+    def _shutdown(self) -> None:
+        """Flush and shutdown the telemetry provider on process exit.
+
+        Uses a short timeout to avoid blocking process shutdown.
+        """
+        if not self.ready:
+            return
+
+        try:
+            self.provider.force_flush(timeout_millis=5000)
+            self.provider.shutdown()
+            self.ready = False
+        except Exception as e:
+            logger.debug(f"Telemetry shutdown failed: {e}")
 
     def _safe_telemetry_operation(
         self, operation: Callable[[], Span | None]
@@ -316,9 +395,7 @@ class Telemetry:
                 self._add_attribute(span, "platform_system", platform.system())
                 self._add_attribute(span, "platform_version", platform.version())
                 self._add_attribute(span, "cpus", os.cpu_count())
-                self._add_attribute(
-                    span, "crew_inputs", json.dumps(inputs) if inputs else None
-                )
+                self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             else:
                 self._add_attribute(
                     span,
@@ -631,9 +708,7 @@ class Telemetry:
             self._add_attribute(span, "model_name", model_name)
 
             if crew.share_crew:
-                self._add_attribute(
-                    span, "inputs", json.dumps(inputs) if inputs else None
-                )
+                self._add_attribute(span, "inputs", json.dumps(inputs or {}))
 
             close_span(span)
 
@@ -738,9 +813,7 @@ class Telemetry:
             add_crew_attributes(
                 span, crew, self._add_attribute, include_fingerprint=False
             )
-            self._add_attribute(
-                span, "crew_inputs", json.dumps(inputs) if inputs else None
-            )
+            self._add_attribute(span, "crew_inputs", json.dumps(inputs or {}))
             self._add_attribute(
                 span,
                 "crew_agents",

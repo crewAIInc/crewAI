@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is 2+2?"}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are a helpful assistant."}], "role": "user"}, "generationConfig":
+      {}}'
+    headers:
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      x-goog-api-client:
+      - google-genai-sdk/1.52.0 gl-python/3.12.10
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"2 + 2 is 4.\",\n            \"thoughtSignature\":
+        \"ErUDCrIDAXLI2nyBnHKB7Zg0BoHU3HOlqCL8LaZOucy0BoGvQi5n7cYc88DBaiFNRDt/Oqn+vzs+S8CHTbkn0MoeJ056rT9AAsZlPIhhHdpgyjpq7YUYzl0o5/QienwcVSA2scWPUDc12KJdk2u6KGm1Te/8aOSRfohS+i8bQEY9FVe3uobWRQDO9cf58RFzQoRYcC8kLsAh1sxGKt64mSQYJuSZdSGlha1fFhWWMBYd84a1ajgW6JRA9qMmiZ6JHJE3ACtIf1b5MPXHQABXQZWv0SckI11H626F7yaLZHPSOQF0xMkwMex6ccDlHgaWqVLqEGu2Pdaln3GgCTB6OygIlOwUQNaLQzHz4vUc0/QJ7G8rEGx5Zqz0StcgfZ9y2uHKGXmiI+X0LeDNJUZ5iwQ+7GmkiCwaiIYjpozveNLyYdoLP4SBcTosAqDObPMAecmK/N8bysDeVEr267NV+323akyOrlkRpkqEzKMiLac1i/tkD+yGfrqfv3ug/JobvOyWoUNDMWajwRY2uqydGmym47k0A0Dsbe2qEjsF6L/DfvZWgvzvq5OLYlIRvqQy6arKr+IbyBw=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        15,\n    \"candidatesTokenCount\": 8,\n    \"totalTokenCount\": 129,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 15\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 106\n  },\n  \"modelVersion\":
+        \"gemini-3-pro-preview\",\n  \"responseId\": \"fDgtaaDNHvze_uMP_svB8QM\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 01 Dec 2025 06:41:00 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=4014
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

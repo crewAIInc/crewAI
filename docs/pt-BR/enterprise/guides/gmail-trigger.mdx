@@ -15,7 +15,7 @@ Use the Gmail Trigger to kick off your deployed crews when Gmail events happen i
 
 ## Enabling the Gmail Trigger
 
-1. Open your deployment in CrewAI AMP
+1. Open your deployment in CrewAI AOP
 2. Go to the **Triggers** tab
 3. Locate **Gmail** and switch the toggle to enable
 
@@ -62,13 +62,13 @@ Teste sua integração de trigger do Gmail localmente usando a CLI da CrewAI:
 crewai triggers list
 
 # Simule um trigger do Gmail com payload realista
-crewai triggers run gmail/new_email
+crewai triggers run gmail/new_email_received
 ```
 
 O comando `crewai triggers run` executará sua crew com um payload completo do Gmail, permitindo que você teste sua lógica de parsing antes do deployment.
 
 <Warning>
-  Use `crewai triggers run gmail/new_email` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+  Use `crewai triggers run gmail/new_email_received` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
 </Warning>
 
 ## Monitoring Executions
@@ -83,6 +83,6 @@ Track history and performance of triggered runs:
 
 - Ensure Gmail is connected in Tools & Integrations
 - Verify the Gmail Trigger is enabled on the Triggers tab
-- Teste localmente com `crewai triggers run gmail/new_email` para ver a estrutura exata do payload
+- Teste localmente com `crewai triggers run gmail/new_email_received` para ver a estrutura exata do payload
 - Check the execution logs and confirm the payload is passed as `crewai_trigger_payload`
 - Lembre-se: use `crewai triggers run` (não `crewai run`) para simular execução de trigger

@@ -12,13 +12,14 @@ from crewai.events.event_types import (
     ToolUsageStartedEvent,
 )
 from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO, LLM
+from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from pydantic import BaseModel
 import pytest
 
 
 # TODO: This test fails without print statement, which makes me think that something is happening asynchronously that we need to eventually fix and dive deeper into at a later date
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_callback_replacement():
     llm1 = LLM(model="gpt-4o-mini", is_litellm=True)
     llm2 = LLM(model="gpt-4o-mini", is_litellm=True)
@@ -45,7 +46,7 @@ def test_llm_callback_replacement():
     assert usage_metrics_1 == calc_handler_1.token_cost_process.get_summary()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_string_input():
     llm = LLM(model="gpt-4o-mini")
 
@@ -55,7 +56,7 @@ def test_llm_call_with_string_input():
     assert len(result.strip()) > 0  # Ensure the response is not empty
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_string_input_and_callbacks():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
     calc_handler = TokenCalcHandler(token_cost_process=TokenProcess())
@@ -72,7 +73,7 @@ def test_llm_call_with_string_input_and_callbacks():
     assert usage_metrics.successful_requests == 1
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_message_list():
     llm = LLM(model="gpt-4o-mini")
     messages = [{"role": "user", "content": "What is the capital of France?"}]
@@ -83,7 +84,7 @@ def test_llm_call_with_message_list():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_tool_and_string_input():
     llm = LLM(model="gpt-4o-mini")
 
@@ -121,7 +122,7 @@ def test_llm_call_with_tool_and_string_input():
     assert result == get_current_year()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_call_with_tool_and_message_list():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
 
@@ -161,7 +162,7 @@ def test_llm_call_with_tool_and_message_list():
     assert result == 25
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_llm_passes_additional_params():
     llm = LLM(
         model="gpt-4o-mini",
@@ -243,7 +244,11 @@ def test_validate_call_params_not_supported():
 
     # Patch supports_response_schema to simulate an unsupported model.
     with patch("crewai.llm.supports_response_schema", return_value=False):
-        llm = LLM(model="gemini/gemini-1.5-pro", response_format=DummyResponse, is_litellm=True)
+        llm = LLM(
+            model="gemini/gemini-1.5-pro",
+            response_format=DummyResponse,
+            is_litellm=True,
+        )
         with pytest.raises(ValueError) as excinfo:
             llm._validate_call_params()
         assert "does not support response_format" in str(excinfo.value)
@@ -255,26 +260,25 @@ def test_validate_call_params_no_response_format():
     llm._validate_call_params()
 
 
-@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.vcr()
 @pytest.mark.parametrize(
     "model",
     [
+        "gemini/gemini-3-pro-preview",
         "gemini/gemini-2.0-flash-thinking-exp-01-21",
         "gemini/gemini-2.0-flash-001",
         "gemini/gemini-2.0-flash-lite-001",
-        "gemini/gemini-2.5-flash-preview-04-17",
-        "gemini/gemini-2.5-pro-exp-03-25",
     ],
 )
 def test_gemini_models(model):
     # Use LiteLLM for VCR compatibility (VCR can intercept HTTP calls but not native SDK calls)
-    llm = LLM(model=model, is_litellm=True)
+    llm = LLM(model=model, is_litellm=False)
     result = llm.call("What is the capital of France?")
     assert isinstance(result, str)
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"], filter_query_parameters=["key"])
+@pytest.mark.vcr()
 @pytest.mark.parametrize(
     "model",
     [
@@ -289,7 +293,7 @@ def test_gemma3(model):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.parametrize(
     "model", ["gpt-4.1", "gpt-4.1-mini-2025-04-14", "gpt-4.1-nano-2025-04-14"]
 )
@@ -300,7 +304,7 @@ def test_gpt_4_1(model):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_high():
     llm = LLM(
         model="o3-mini",
@@ -311,7 +315,7 @@ def test_o3_mini_reasoning_effort_high():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_low():
     llm = LLM(
         model="o3-mini",
@@ -322,7 +326,7 @@ def test_o3_mini_reasoning_effort_low():
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_o3_mini_reasoning_effort_medium():
     llm = LLM(
         model="o3-mini",
@@ -411,11 +415,10 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
-    return LLM(model="anthropic/claude-3-sonnet", is_litellm=True)
+    return LLM(model="anthropic/claude-3-sonnet", is_litellm=False)
 
 
 @pytest.fixture
@@ -433,18 +436,19 @@ def user_message():
 def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     """Test edge cases for Anthropic message formatting."""
     # Test None messages
-    with pytest.raises(TypeError, match="Messages cannot be None"):
-        anthropic_llm._format_messages_for_provider(None)
+    anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
+    with pytest.raises(TypeError):
+        anthropic_llm._format_messages_for_anthropic(None)
 
-    # Test empty message list
-    formatted = anthropic_llm._format_messages_for_provider([])
+    # Test empty message list - Anthropic requires first message to be from user
+    formatted, system_message = anthropic_llm._format_messages_for_anthropic([])
     assert len(formatted) == 1
     assert formatted[0]["role"] == "user"
-    assert formatted[0]["content"] == "."
+    assert formatted[0]["content"] == "Hello"
 
     # Test invalid message format
-    with pytest.raises(TypeError, match="Invalid message format"):
-        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
+    with pytest.raises(ValueError, match="must have 'role' and 'content' keys"):
+        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
 def test_anthropic_model_detection():
@@ -466,13 +470,15 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
     """Test Anthropic message formatting with fixtures."""
     # Test when first message is system
 
-    formatted = anthropic_llm._format_messages_for_provider([])
+    # Test empty message list - Anthropic requires first message to be from user
+    formatted, extracted_system = anthropic_llm._format_messages_for_anthropic([])
     assert len(formatted) == 1
     assert formatted[0]["role"] == "user"
-    assert formatted[0]["content"] == "."
+    assert formatted[0]["content"] == "Hello"
 
-    with pytest.raises(TypeError, match="Invalid message format"):
-        anthropic_llm._format_messages_for_provider([{"invalid": "message"}])
+    # Test invalid message format
+    with pytest.raises(ValueError, match="must have 'role' and 'content' keys"):
+        anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
 
 def test_deepseek_r1_with_open_router():
@@ -551,7 +557,7 @@ def mock_emit() -> MagicMock:
         yield mock_emit
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
@@ -579,7 +585,7 @@ def test_handle_streaming_tool_calls(get_weather_tool_schema, mock_emit):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_emit):
     def get_weather_error(location):
         raise Exception("Error")
@@ -604,7 +610,7 @@ def test_handle_streaming_tool_calls_with_error(get_weather_tool_schema, mock_em
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_no_available_functions(
     get_weather_tool_schema, mock_emit
 ):
@@ -625,7 +631,7 @@ def test_handle_streaming_tool_calls_no_available_functions(
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_handle_streaming_tool_calls_no_tools(mock_emit):
     llm = LLM(model="openai/gpt-4o", stream=True, is_litellm=True)
     response = llm.call(
@@ -646,7 +652,7 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
     )
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.skip(reason="Highly flaky on ci")
 def test_llm_call_when_stop_is_unsupported(caplog):
     llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
@@ -657,7 +663,7 @@ def test_llm_call_when_stop_is_unsupported(caplog):
     assert "Paris" in result
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 @pytest.mark.skip(reason="Highly flaky on ci")
 def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(
     caplog,
@@ -701,13 +707,16 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
 
     assert formatted == original_messages
 
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
         with patch("crewai.llm.LLM._get_native_provider") as mock_get_native:
             # Mock that provider exists but throws an error when instantiated
             mock_provider = MagicMock()
-            mock_provider.side_effect = ValueError("Native provider initialization failed")
+            mock_provider.side_effect = ValueError(
+                "Native provider initialization failed"
+            )
             mock_get_native.return_value = mock_provider
 
             with pytest.raises(ImportError) as excinfo:
@@ -750,21 +759,36 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
 
 
 def test_prefixed_models_with_invalid_constants_use_litellm():
-    """Test that models with native provider prefixes use LiteLLM when model is NOT in constants."""
+    """Test that models with native provider prefixes use LiteLLM when model is NOT in constants and does NOT match patterns."""
     # Test openai/ prefix with non-OpenAI model (not in OPENAI_MODELS) → LiteLLM
     llm = LLM(model="openai/gemini-2.5-flash", is_litellm=False)
     assert llm.is_litellm is True
     assert llm.model == "openai/gemini-2.5-flash"
 
-    # Test openai/ prefix with unknown future model → LiteLLM
-    llm2 = LLM(model="openai/gpt-future-6", is_litellm=False)
+    # Test openai/ prefix with model that doesn't match patterns (e.g. no gpt- prefix) → LiteLLM
+    llm2 = LLM(model="openai/custom-finetune-model", is_litellm=False)
     assert llm2.is_litellm is True
-    assert llm2.model == "openai/gpt-future-6"
+    assert llm2.model == "openai/custom-finetune-model"
 
     # Test anthropic/ prefix with non-Anthropic model → LiteLLM
     llm3 = LLM(model="anthropic/gpt-4o", is_litellm=False)
     assert llm3.is_litellm is True
     assert llm3.model == "anthropic/gpt-4o"
+
+
+def test_prefixed_models_with_valid_patterns_use_native_sdk():
+    """Test that models matching provider patterns use native SDK even if not in constants."""
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+        llm = LLM(model="openai/gpt-future-6", is_litellm=False)
+        assert llm.is_litellm is False
+        assert llm.provider == "openai"
+        assert llm.model == "gpt-future-6"
+
+    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+        llm2 = LLM(model="anthropic/claude-future-5", is_litellm=False)
+        assert llm2.is_litellm is False
+        assert llm2.provider == "anthropic"
+        assert llm2.model == "claude-future-5"
 
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
@@ -820,19 +844,36 @@ def test_validate_model_in_constants():
     """Test the _validate_model_in_constants method."""
     # OpenAI models
     assert LLM._validate_model_in_constants("gpt-4o", "openai") is True
-    assert LLM._validate_model_in_constants("gpt-future-6", "openai") is False
+    assert LLM._validate_model_in_constants("gpt-future-6", "openai") is True
+    assert LLM._validate_model_in_constants("o1-latest", "openai") is True
+    assert LLM._validate_model_in_constants("unknown-model", "openai") is False
 
     # Anthropic models
     assert LLM._validate_model_in_constants("claude-opus-4-0", "claude") is True
-    assert LLM._validate_model_in_constants("claude-future-5", "claude") is False
+    assert LLM._validate_model_in_constants("claude-future-5", "claude") is True
+    assert (
+        LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
+    )
+    assert LLM._validate_model_in_constants("unknown-model", "claude") is False
 
     # Gemini models
     assert LLM._validate_model_in_constants("gemini-2.5-pro", "gemini") is True
-    assert LLM._validate_model_in_constants("gemini-future", "gemini") is False
+    assert LLM._validate_model_in_constants("gemini-future", "gemini") is True
+    assert LLM._validate_model_in_constants("gemma-3-latest", "gemini") is True
+    assert LLM._validate_model_in_constants("unknown-model", "gemini") is False
 
     # Azure models
     assert LLM._validate_model_in_constants("gpt-4o", "azure") is True
     assert LLM._validate_model_in_constants("gpt-35-turbo", "azure") is True
 
     # Bedrock models
-    assert LLM._validate_model_in_constants("anthropic.claude-opus-4-1-20250805-v1:0", "bedrock") is True
+    assert (
+        LLM._validate_model_in_constants(
+            "anthropic.claude-opus-4-1-20250805-v1:0", "bedrock"
+        )
+        is True
+    )
+    assert (
+        LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
+        is True
+    )

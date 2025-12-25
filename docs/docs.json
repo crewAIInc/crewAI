@@ -253,7 +253,8 @@
                     "pages": [
                       "en/tools/integration/overview",
                       "en/tools/integration/bedrockinvokeagenttool",
-                      "en/tools/integration/crewaiautomationtool"
+                      "en/tools/integration/crewaiautomationtool",
+                      "en/tools/integration/mergeagenthandlertool"
                     ]
                   },
                   {
@@ -326,7 +327,7 @@
             ]
           },
           {
-            "tab": "AMP",
+            "tab": "AOP",
             "icon": "briefcase",
             "groups": [
               {
@@ -753,7 +754,7 @@
             ]
           },
           {
-            "tab": "AMP",
+            "tab": "AOP",
             "icon": "briefcase",
             "groups": [
               {

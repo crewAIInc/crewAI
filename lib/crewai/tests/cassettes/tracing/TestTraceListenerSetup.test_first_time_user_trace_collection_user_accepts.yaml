@@ -1,0 +1,298 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '825'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=NaXWifUGChHp6Ap1mvfMrNzmO4HdzddrqXkSR9T.hYo-1754508545647-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CGtje2qyvsQDor2zD9Iw9QpkvQRVw\",\n  \"object\": \"chat.completion\",\n  \"created\": 1758143530,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: Hello, World!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 157,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 172,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+    headers:
+      CF-RAY:
+      - 980b99a73c1c22c6-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 17 Sep 2025 21:12:11 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=Ahwkw3J9CDiluZudRgDmybz4FO07eXLz2MQDtkgfct4-1758143531-1.0.1.1-_3e8agfTZW.FPpRMLb1A2nET4OHQEGKNZeGeWT8LIiuSi8R2HWsGsJyueUyzYBYnfHqsfBUO16K1.TkEo2XiqVCaIi6pymeeQxwtXFF1wj8; path=/; expires=Wed, 17-Sep-25 21:42:11 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=iHqLoc_2sNQLMyzfGCLtGol8vf1Y44xirzQJUuUF_TI-1758143531242-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '419'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '609'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-tokens:
+      - '150000000'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-project-tokens:
+      - '149999827'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999830'
+      x-ratelimit-reset-project-tokens:
+      - 0s
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_ece5f999e09e4c189d38e5bc08b2fad9
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"trace_id": "0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0a2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 1, "task_count": 1, "flow_method_count": 0, "execution_started_at": "2025-10-02T22:35:43.236443+00:00"}, "ephemeral_trace_id": "0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '490'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"4b03b659-8866-4245-8fd2-3a5263f4f893","ephemeral_trace_id":"0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.0.0a2","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.0.0a2","privacy_level":"standard"},"created_at":"2025-10-02T22:35:43.372Z","updated_at":"2025-10-02T22:35:43.372Z","access_code":"TRACE-a6b7c862fc","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '519'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:43 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"3cd49b89c6bedfc5139cbdd350c30e4a"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - ce2e7707-99da-4486-a7ca-11e12284d7a6
+      x-runtime:
+      - '0.030681'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"events": [{"event_id": "f328f1d8-6067-4dc0-9f54-f40bd23381b9", "timestamp": "2025-10-02T22:35:43.233706+00:00", "type": "crew_kickoff_started", "event_data": {"timestamp": "2025-10-02T22:35:43.232688+00:00", "type": "crew_kickoff_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "inputs": null}}, {"event_id": "a1323913-eb51-422c-b9b1-a02cebeb2fb4", "timestamp": "2025-10-02T22:35:43.234420+00:00", "type": "task_started", "event_data": {"task_description": "Say hello to the world", "expected_output": "hello world", "task_name": "Say hello to the world", "context": "", "agent_role": "Test Agent", "task_id": "e5063490-e2ae-47a6-a205-af4a91288e63"}}, {"event_id": "50a8abcd-bcdc-4dfa-97c2-259bf8affc88", "timestamp": "2025-10-02T22:35:43.234639+00:00", "type": "agent_execution_started", "event_data": {"agent_role": "Test Agent", "agent_goal":
+      "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "2c481296-a5e4-4a54-8dbc-d41ce102134b", "timestamp": "2025-10-02T22:35:43.234694+00:00", "type": "llm_call_started", "event_data": {"timestamp": "2025-10-02T22:35:43.234676+00:00", "type": "llm_call_started", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "e5063490-e2ae-47a6-a205-af4a91288e63", "task_name": "Say hello to the world", "agent_id": "65e264bb-8025-4730-a8a1-8d0a5a7a32ac", "agent_role": "Test Agent", "from_task": null, "from_agent": null, "model": "gpt-4o-mini", "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "tools": null, "callbacks": ["<crewai.utilities.token_counter_callback.TokenCalcHandler object at 0x36307baa0>"], "available_functions": null}}, {"event_id": "bc04a066-3672-4406-9d65-818f9c68b670", "timestamp": "2025-10-02T22:35:43.235725+00:00", "type": "llm_call_completed", "event_data": {"timestamp": "2025-10-02T22:35:43.235708+00:00", "type": "llm_call_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": "e5063490-e2ae-47a6-a205-af4a91288e63", "task_name": "Say hello to the world", "agent_id": "65e264bb-8025-4730-a8a1-8d0a5a7a32ac", "agent_role": "Test Agent", "from_task": null,
+      "from_agent": null, "messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Say hello to the world\n\nThis is the expected criteria for your final answer: hello world\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "response": "I now can give a great answer  \nFinal Answer: Hello, World!", "call_type": "<LLMCallType.LLM_CALL: ''llm_call''>", "model": "gpt-4o-mini"}}, {"event_id": "32a554bd-7338-49b0-869a-8cbc1a9283b0",
+      "timestamp": "2025-10-02T22:35:43.235801+00:00", "type": "agent_execution_completed", "event_data": {"agent_role": "Test Agent", "agent_goal": "Test goal", "agent_backstory": "Test backstory"}}, {"event_id": "029b9923-7455-4edc-9219-8d568d344165", "timestamp": "2025-10-02T22:35:43.235834+00:00", "type": "task_completed", "event_data": {"task_description": "Say hello to the world", "task_name": "Say hello to the world", "task_id": "e5063490-e2ae-47a6-a205-af4a91288e63", "output_raw": "Hello, World!", "output_format": "OutputFormat.RAW", "agent_role": "Test Agent"}}, {"event_id": "004091a7-6ee3-498c-b18d-91285f7d14c9", "timestamp": "2025-10-02T22:35:43.236399+00:00", "type": "crew_kickoff_completed", "event_data": {"timestamp": "2025-10-02T22:35:43.236386+00:00", "type": "crew_kickoff_completed", "source_fingerprint": null, "source_type": null, "fingerprint_metadata": null, "task_id": null, "task_name": null, "agent_id": null, "agent_role": null, "crew_name": "crew", "crew": null, "output":
+      {"description": "Say hello to the world", "name": "Say hello to the world", "expected_output": "hello world", "summary": "Say hello to the world...", "raw": "Hello, World!", "pydantic": null, "json_dict": null, "agent": "Test Agent", "output_format": "raw"}, "total_tokens": 172}}], "batch_metadata": {"events_count": 8, "batch_sequence": 1, "is_final_batch": false}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '5366'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae/events
+  response:
+    body:
+      string: '{"events_created":8,"ephemeral_trace_batch_id":"4b03b659-8866-4245-8fd2-3a5263f4f893"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '86'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:43 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"a8c7c5e3ef539604da1e89ad3d686230"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 9431879b-bb0c-437c-bc43-f1fb8397e56e
+      x-runtime:
+      - '0.067705'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"status": "completed", "duration_ms": 325, "final_event_count": 0}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate, zstd
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/1.0.0a2
+      X-Crewai-Version:
+      - 1.0.0a2
+    method: PATCH
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches/0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae/finalize
+  response:
+    body:
+      string: '{"id":"4b03b659-8866-4245-8fd2-3a5263f4f893","ephemeral_trace_id":"0bcd1cf5-5a2e-49d5-8140-f0466ad7b7ae","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"completed","duration_ms":325,"crewai_version":"1.0.0a2","total_events":0,"execution_context":{"crew_name":"crew","flow_name":null,"privacy_level":"standard","crewai_version":"1.0.0a2","crew_fingerprint":null},"created_at":"2025-10-02T22:35:43.372Z","updated_at":"2025-10-02T22:35:43.724Z","access_code":"TRACE-a6b7c862fc","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '520'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 02 Oct 2025 22:35:43 GMT
+      cache-control:
+      - max-age=0, private, must-revalidate
+      content-security-policy:
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
+      etag:
+      - W/"0a3640b7c549a0ed48c01459623ff153"
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      strict-transport-security:
+      - max-age=63072000; includeSubDomains
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - 5bf816aa-7226-4c61-a29f-69d31af0d964
+      x-runtime:
+      - '0.030651'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 200
+      message: OK
+version: 1

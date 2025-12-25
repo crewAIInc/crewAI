@@ -97,8 +97,6 @@ interactions:
       - 8fc4c6324d42ad5a-POA
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

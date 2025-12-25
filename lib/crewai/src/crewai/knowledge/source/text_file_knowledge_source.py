@@ -25,6 +25,13 @@ class TextFileKnowledgeSource(BaseFileKnowledgeSource):
             self.chunks.extend(new_chunks)
         self._save_documents()
 
+    async def aadd(self) -> None:
+        """Add text file content asynchronously."""
+        for text in self.content.values():
+            new_chunks = self._chunk_text(text)
+            self.chunks.extend(new_chunks)
+        await self._asave_documents()
+
     def _chunk_text(self, text: str) -> list[str]:
         """Utility method to split text into chunks."""
         return [

@@ -1,0 +1,550 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}], "model": "gpt-4o-mini", "stop":
+      ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1220'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIMCbxAr4MO0Ku8tDYBgJ30LGXi\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222714,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need more information
+      to understand what specific query to search for.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"Test query\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 242,\n    \"completion_tokens\":
+      31,\n    \"total_tokens\": 273,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc01f9bd96cf41-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:34 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '749'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999732'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_99e3ad4ee98371cc1c55a2f5c6ae3962
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```"},
+      {"role": "user", "content": "Test query"}, {"role": "assistant", "content":
+      "```\nThought: I need more information to understand what specific query to
+      search for.\nAction: search_web\nAction Input: {\"query\":\"Test query\"}\nObservation:
+      Found information about Test query: This is a simulated search result for demonstration
+      purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1518'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUINDYiGwrVyJU7wUoXCw3hft7yF\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: This is a simulated search result for demonstration purposes.\\n```\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      295,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 321,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc02003c9ecf41-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:35 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '531'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999667'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_dd9052c40d5d61ecc5eb141f49df3abe
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"test_field\": str\n}\n\nIMPORTANT: Ensure the final output does
+      not include any code block markers like ```json or ```python."}, {"role": "user",
+      "content": "Test query"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1451'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIN3xeM6JBgLjV5HQA8MTI2Uuem\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222715,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I need to clarify what
+      specific information or topic the test query is targeting.\\nAction: search_web\\nAction
+      Input: {\\\"query\\\":\\\"What is the purpose of a test query in data retrieval?\\\"}\",\n
+      \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      288,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 331,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc0204d91ccf41-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:36 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '728'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999675'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_e792e993009ddfe84cfbb503560d88cf
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test Backstory\nYour
+      personal goal is: Test Goal\n\nYou ONLY have access to the following tools,
+      and should NEVER make up tools that are not listed here:\n\nTool Name: search_web\nTool
+      Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Search the web for information about a topic.\nTool Name: calculate\nTool Arguments:
+      {''expression'': {''description'': None, ''type'': ''str''}}\nTool Description:
+      Calculate the result of a mathematical expression.\n\nIMPORTANT: Use the following
+      format in your response:\n\n```\nThought: you should always think about what
+      to do\nAction: the action to take, only one name of [search_web, calculate],
+      just the name, exactly as it''s written.\nAction Input: the input to the action,
+      just a simple JSON object, enclosed in curly braces, using \" to wrap keys and
+      values.\nObservation: the result of the action\n```\n\nOnce all necessary information
+      is gathered, return the following format:\n\n```\nThought: I now know the final
+      answer\nFinal Answer: the final answer to the original input question\n```\nIMPORTANT:
+      Your final answer MUST contain all the information requested in the following
+      format: {\n  \"test_field\": str\n}\n\nIMPORTANT: Ensure the final output does
+      not include any code block markers like ```json or ```python."}, {"role": "user",
+      "content": "Test query"}, {"role": "assistant", "content": "```\nThought: I
+      need to clarify what specific information or topic the test query is targeting.\nAction:
+      search_web\nAction Input: {\"query\":\"What is the purpose of a test query in
+      data retrieval?\"}\nObservation: Found information about What is the purpose
+      of a test query in data retrieval?: This is a simulated search result for demonstration
+      purposes."}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1846'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=skEg5DBE_nQ5gLAsfGzhjTetiNUJ_Y2bXWLMsvjIi7s-1744222695-1.0.1.1-qyjwnTgJKwF54pRhf0YHxW_BUw6p7SC60kwFsF9XTq4i2u2mnFKVq4WbsgvQDeuDEIxyaNb.ngWUVOU1GIX1O2Hcxcdn6TSaJ8NXTQw28F8;
+        _cfuvid=Hwvd7n4RVfOZLGiOKPaHmYJC7h8rCQmlmnBgBsKqy4Y-1744222695443-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.68.2
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.68.2
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.9
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-BKUIOqyLDCIZv6YIz1hlaW479SIzg\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1744222716,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: {\\n  \\\"test_field\\\": \\\"A test query is utilized to evaluate the
+      functionality, performance, and accuracy of data retrieval systems, ensuring
+      they return expected results.\\\"\\n}\\n```\",\n        \"refusal\": null,\n
+      \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 362,\n    \"completion_tokens\":
+      49,\n    \"total_tokens\": 411,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_b376dfbbd5\"\n}\n"
+    headers:
+      CF-RAY:
+      - 92dc020a3defcf41-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 09 Apr 2025 18:18:37 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '805'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999588'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3b6c80fd3066b9e0054d0d2280bc4c98
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"trace_id": "08371613-b242-4871-bffa-1d93f96f6ba9", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "0.193.2",
+      "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate":
+      300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at":
+      "2025-09-23T20:51:28.361471+00:00"}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '436'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - CrewAI-CLI/0.193.2
+      X-Crewai-Version:
+      - 0.193.2
+    method: POST
+    uri: http://localhost:3000/crewai_plus/api/v1/tracing/batches
+  response:
+    body:
+      string: '{"error":"bad_credentials","message":"Bad credentials"}'
+    headers:
+      Content-Length:
+      - '55'
+      cache-control:
+      - no-cache
+      content-security-policy:
+      - 'default-src ''self'' *.crewai.com crewai.com; script-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com
+        https://run.pstmn.io https://share.descript.com/; style-src ''self'' ''unsafe-inline''
+        *.crewai.com crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self''
+        data: *.crewai.com crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
+        https://cdn.jsdelivr.net; font-src ''self'' data: *.crewai.com crewai.com;
+        connect-src ''self'' *.crewai.com crewai.com https://zeus.tools.crewai.com
+        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
+        https://run.pstmn.io https://connect.tools.crewai.com/ ws://localhost:3036
+        wss://localhost:3036; frame-src ''self'' *.crewai.com crewai.com https://connect.useparagon.com/
+        https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/
+        https://www.youtube.com https://share.descript.com'
+      content-type:
+      - application/json; charset=utf-8
+      permissions-policy:
+      - camera=(), microphone=(self), geolocation=()
+      referrer-policy:
+      - strict-origin-when-cross-origin
+      server-timing:
+      - cache_read.active_support;dur=0.05, sql.active_record;dur=3.10, cache_generate.active_support;dur=3.10,
+        cache_write.active_support;dur=0.10, cache_read_multi.active_support;dur=0.07,
+        start_processing.action_controller;dur=0.00, process_action.action_controller;dur=2.13
+      vary:
+      - Accept
+      x-content-type-options:
+      - nosniff
+      x-frame-options:
+      - SAMEORIGIN
+      x-permitted-cross-domain-policies:
+      - none
+      x-request-id:
+      - cb30bc35-90b0-4c27-8e0e-b1b31bb497a7
+      x-runtime:
+      - '0.049151'
+      x-xss-protection:
+      - 1; mode=block
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

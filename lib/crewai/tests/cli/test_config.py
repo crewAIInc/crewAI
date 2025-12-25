@@ -72,7 +72,8 @@ class TestSettings(unittest.TestCase):
     @patch("crewai.cli.config.TokenManager")
     def test_reset_settings(self, mock_token_manager):
         user_settings = {key: f"value_for_{key}" for key in USER_SETTINGS_KEYS}
-        cli_settings = {key: f"value_for_{key}" for key in CLI_SETTINGS_KEYS}
+        cli_settings = {key: f"value_for_{key}" for key in CLI_SETTINGS_KEYS if key != "oauth2_extra"}
+        cli_settings["oauth2_extra"] = {"scope": "xxx", "other": "yyy"}
 
         settings = Settings(
             config_path=self.config_path, **user_settings, **cli_settings
