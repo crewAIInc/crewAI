@@ -6,7 +6,6 @@ dist/
 assets/*
 .idea
 test/
-docs_crew/
 chroma.sqlite3
 old_en.json
 db/
@@ -26,3 +25,8 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
+krakenagents/*
+dashboard/*
+
+# QRI Trading Organization
+krakenagents/.env
