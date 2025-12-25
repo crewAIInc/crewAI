@@ -34,7 +34,7 @@ class AddOrderInput(BaseModel):
     reduce_only: bool | None = Field(
         default=None, description="Indien true, zal order alleen bestaande positie verkleinen"
     )
-    validate: bool | None = Field(
+    validate_only: bool | None = Field(
         default=None, description="Indien true, valideer alleen inputs zonder order te plaatsen"
     )
     userref: int | None = Field(
@@ -63,7 +63,7 @@ class AddOrderTool(KrakenBaseTool):
         price2: str | None = None,
         leverage: str | None = None,
         reduce_only: bool | None = None,
-        validate: bool | None = None,
+        validate_only: bool | None = None,
         userref: int | None = None,
         oflags: str | None = None,
     ) -> str:
@@ -82,8 +82,8 @@ class AddOrderTool(KrakenBaseTool):
             data["leverage"] = leverage
         if reduce_only is not None:
             data["reduce_only"] = reduce_only
-        if validate is not None:
-            data["validate"] = validate
+        if validate_only is not None:
+            data["validate"] = validate_only
         if userref:
             data["userref"] = userref
         if oflags:
@@ -104,7 +104,7 @@ class AddOrderBatchInput(BaseModel):
         ...,
         description="JSON array van order objecten, elk met: type, ordertype, volume, price, etc. Max 15 orders.",
     )
-    validate: bool | None = Field(
+    validate_only: bool | None = Field(
         default=None, description="Indien true, valideer alleen inputs"
     )
 
@@ -117,12 +117,12 @@ class AddOrderBatchTool(KrakenBaseTool):
     args_schema: type[BaseModel] = AddOrderBatchInput
 
     def _run(
-        self, pair: str, orders: str, validate: bool | None = None
+        self, pair: str, orders: str, validate_only: bool | None = None
     ) -> str:
         """Plaats meerdere orders op Kraken."""
         data: dict[str, Any] = {"pair": pair, "orders": orders}
-        if validate is not None:
-            data["validate"] = validate
+        if validate_only is not None:
+            data["validate"] = validate_only
         result = self._private_request("AddOrderBatch", data)
         return str(result)
 
@@ -179,7 +179,7 @@ class EditOrderInput(BaseModel):
     price: str | None = Field(default=None, description="Nieuwe order prijs")
     price2: str | None = Field(default=None, description="Nieuwe secundaire prijs")
     oflags: str | None = Field(default=None, description="Nieuwe order vlaggen")
-    validate: bool | None = Field(
+    validate_only: bool | None = Field(
         default=None, description="Indien true, valideer alleen inputs"
     )
 
@@ -199,7 +199,7 @@ class EditOrderTool(KrakenBaseTool):
         price: str | None = None,
         price2: str | None = None,
         oflags: str | None = None,
-        validate: bool | None = None,
+        validate_only: bool | None = None,
     ) -> str:
         """Bewerk een order op Kraken."""
         data: dict[str, Any] = {"txid": txid, "pair": pair}
@@ -211,8 +211,8 @@ class EditOrderTool(KrakenBaseTool):
             data["price2"] = price2
         if oflags:
             data["oflags"] = oflags
-        if validate is not None:
-            data["validate"] = validate
+        if validate_only is not None:
+            data["validate"] = validate_only
         result = self._private_request("EditOrder", data)
         return str(result)
 

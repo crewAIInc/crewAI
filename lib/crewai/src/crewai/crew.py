@@ -1573,12 +1573,11 @@ class Crew(FlowTrackable, BaseModel):
             manager = self.manager_agent
             if manager.tools is not None and len(manager.tools) > 0:
                 self._logger.log(
-                    "warning",
-                    "Manager agent should not have tools",
-                    color="bold_yellow",
+                    "info",
+                    f"Manager agent has {len(manager.tools)} tools - allowing for trading operations",
+                    color="bold_blue",
                 )
-                manager.tools = []
-                raise Exception("Manager agent should not have tools")
+                # Manager agents are allowed to have tools for trading operations
         else:
             self.manager_llm = create_llm(self.manager_llm)
             i18n = get_i18n(prompt_file=self.prompt_file)
