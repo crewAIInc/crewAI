@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from crewai.flow.async_feedback.types import PendingFeedbackContext
-from crewai.utilities.printer import Printer
 
 if TYPE_CHECKING:
     from crewai.flow.flow import Flow
@@ -46,7 +45,6 @@ class ConsoleProvider:
                 shows the prompt message.
         """
         self.verbose = verbose
-        self._printer = Printer()
 
     def request_feedback(
         self,
@@ -86,21 +84,24 @@ class ConsoleProvider:
         )
 
         # Pause live updates during human input
-        event_listener.formatter.pause_live_updates()
+        formatter = event_listener.formatter
+        formatter.pause_live_updates()
 
         try:
+            console = formatter.console
+
             if self.verbose:
-                # Display output with formatting
-                self._printer.print("\n" + "═" * 50, color="bold_cyan")
-                self._printer.print("  OUTPUT FOR REVIEW", color="bold_cyan")
-                self._printer.print("═" * 50 + "\n", color="bold_cyan")
-                self._printer.print(context.method_output)
-                self._printer.print("\n" + "═" * 50 + "\n", color="bold_cyan")
+                # Display output with formatting using Rich console
+                console.print("\n" + "═" * 50, style="bold cyan")
+                console.print("  OUTPUT FOR REVIEW", style="bold cyan")
+                console.print("═" * 50 + "\n", style="bold cyan")
+                console.print(context.method_output)
+                console.print("\n" + "═" * 50 + "\n", style="bold cyan")
 
             # Show message and prompt for feedback
-            self._printer.print(context.message, color="yellow")
-            self._printer.print(
-                "(Press Enter to skip, or type your feedback)\n", color="cyan"
+            console.print(context.message, style="yellow")
+            console.print(
+                "(Press Enter to skip, or type your feedback)\n", style="cyan"
             )
 
             feedback = input("Your feedback: ").strip()
@@ -120,4 +121,4 @@ class ConsoleProvider:
             return feedback
         finally:
             # Resume live updates
-            event_listener.formatter.resume_live_updates()
+            formatter.resume_live_updates()
