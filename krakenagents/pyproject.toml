@@ -1,0 +1,27 @@
+[project]
+name = "krakenagents"
+version = "0.1.0"
+description = "QRI Trading Organization - AI Agents for Kraken Trading"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "crewai>=1.7.0",
+    "crewai-tools>=1.7.0",
+    "pydantic-settings>=2.0.0",
+    "httpx>=0.27.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "websockets>=14.0",
+]
+
+[project.scripts]
+krakenagents = "krakenagents.main:main"
+krakenagents-server = "uvicorn:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["krakenagents*"]

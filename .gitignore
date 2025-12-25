@@ -25,8 +25,13 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
-krakenagents/*
-dashboard/*
 
 # QRI Trading Organization
 krakenagents/.env
+krakenagents/__pycache__/
+krakenagents/**/__pycache__/
+
+# Dashboard
+dashboard/.next/
+dashboard/node_modules/
+dashboard/.env.local
