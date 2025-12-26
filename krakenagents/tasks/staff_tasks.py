@@ -8,66 +8,48 @@ from krakenagents.tasks.base import create_task
 def get_ceo_tasks(ceo: Agent) -> list[Task]:
     """Get tasks for STAFF-00 CEO."""
     return [
-        # TASK-CEO-00 — Delegate to trading desks
+        # TASK-CEO-00 — ACTIVATE TRADING DESKS (PRIORITY 1)
         create_task(
             description=(
-                "As CEO, delegate trading tasks to the Spot and Futures desks. "
-                "1. Use get_desk_status to check if any desk is already running. "
-                "2. If desks are idle, use delegate_to_spot_desk to start Spot trading operations. "
-                "3. Use delegate_to_futures_desk to start Futures trading operations. "
-                "4. Or use delegate_to_both_desks for coordinated operations. "
-                "Give clear directives about what the desks should analyze or trade."
+                "CRITICAL FIRST ACTION: Activate the trading desks to start trading operations.\n\n"
+                "You MUST execute these steps in order:\n\n"
+                "STEP 1: Check desk status\n"
+                "- Call the tool: get_desk_status\n"
+                "- Input: 'all'\n"
+                "- This shows if Spot and Futures desks are running\n\n"
+                "STEP 2: Start Spot Desk trading\n"
+                "- Call the tool: delegate_to_spot_desk\n"
+                "- directive: 'Analyze BTC and ETH spot markets. Check current prices, order books, "
+                "and recent trades. Identify any arbitrage or trading opportunities. Execute small "
+                "test trades if conditions are favorable.'\n"
+                "- priority: 'high'\n\n"
+                "STEP 3: Start Futures Desk trading\n"
+                "- Call the tool: delegate_to_futures_desk\n"
+                "- directive: 'Analyze BTC and ETH perpetual futures. Check funding rates, open interest, "
+                "and basis vs spot. Look for carry trade opportunities or directional trades. "
+                "Execute positions if edge is identified.'\n"
+                "- priority: 'high'\n\n"
+                "DO NOT proceed to other tasks until both desks are activated."
             ),
-            expected_output="Confirmation that trading desks have been activated with specific directives.",
+            expected_output=(
+                "Confirmation showing:\n"
+                "1. Desk status check completed\n"
+                "2. Spot Desk activated with trading directive\n"
+                "3. Futures Desk activated with trading directive\n"
+                "Both desks must be running before this task is complete."
+            ),
             agent=ceo,
         ),
-        # TASK-CEO-01 — Daily CEO standup
+        # TASK-CEO-01 — Monitor trading operations
         create_task(
             description=(
-                "Daily CEO standup: Review risk pack and ops incident log. "
-                "Check if desks are in normal or reduced risk mode. "
-                "Activate escalation protocol if thresholds are breached."
+                "Monitor active trading operations across both desks.\n"
+                "1. Use get_desk_status with input 'all' to check both desks\n"
+                "2. Review any alerts from the risk dashboard\n"
+                "3. Ensure desks are executing their directives\n"
+                "4. If a desk has stopped, restart it with delegate_to_spot_desk or delegate_to_futures_desk"
             ),
-            expected_output="Daily status report with risk assessment and any escalation actions taken.",
-            agent=ceo,
-        ),
-        # TASK-CEO-02 — Monthly allocation cycle
-        create_task(
-            description=(
-                "Monthly allocation cycle decision: Receive proposals from Group CIO and desk CIOs. "
-                "Validate CRO veto checks. Commit allocation and publish decisions to desks."
-            ),
-            expected_output="Allocation decision document with rationale and KPIs per desk/pod.",
-            agent=ceo,
-        ),
-        # TASK-CEO-03 — Escalation decision
-        create_task(
-            description=(
-                "Escalation decision per protocol with Group CRO: Verify breach/incident classification. "
-                "Choose action: reduce/flatten/kill-switch/venue freeze. "
-                "Direct COO/Compliance/Security to enforce execution."
-            ),
-            expected_output="Escalation action report with chosen response and enforcement orders.",
-            agent=ceo,
-        ),
-        # TASK-CEO-04 — Hiring/exit decisions
-        create_task(
-            description=(
-                "Hiring/exit decisions for board and desk leads. "
-                "Review candidate profiles and make final hiring decisions. "
-                "Handle performance issues and exit procedures for underperformers."
-            ),
-            expected_output="Hiring/exit decision document with rationale.",
-            agent=ceo,
-        ),
-        # TASK-CEO-05 — Strategy expansion & innovation
-        create_task(
-            description=(
-                "Quarterly strategy expansion and innovation review. "
-                "Identify new markets, strategies, or capabilities to explore. "
-                "Allocate resources for R&D and pilot programs."
-            ),
-            expected_output="Strategic expansion report with innovation priorities.",
+            expected_output="Trading operations status report with any interventions made.",
             agent=ceo,
         ),
     ]
@@ -679,41 +661,51 @@ def get_people_tasks(people: Agent) -> list[Task]:
     ]
 
 
-def get_staff_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get all STAFF tasks given a dictionary of agents.
+def get_staff_tasks(agents: dict[str, Agent], mode: str = "trading") -> list[Task]:
+    """Get STAFF tasks given a dictionary of agents.
 
     Args:
         agents: Dictionary mapping agent keys to Agent instances.
                 Expected keys: ceo, group_cio, group_cro, group_coo,
                 group_cfo, compliance, security, prime, data, people
+        mode: Task mode - "trading" for active trading operations (default),
+              "full" for all tasks including interviews/compensation/90day
 
     Returns:
-        List of all STAFF tasks.
+        List of STAFF tasks.
     """
     tasks = []
 
     if "ceo" in agents:
+        # CEO always gets core trading tasks
         tasks.extend(get_ceo_tasks(agents["ceo"]))
-        tasks.extend(get_ceo_interview_tasks(agents["ceo"]))
-        tasks.extend(get_ceo_compensation_tasks(agents["ceo"]))
-        tasks.extend(get_ceo_90day_tasks(agents["ceo"]))
-    if "group_cio" in agents:
-        tasks.extend(get_group_cio_tasks(agents["group_cio"]))
-    if "group_cro" in agents:
-        tasks.extend(get_group_cro_tasks(agents["group_cro"]))
-    if "group_coo" in agents:
-        tasks.extend(get_group_coo_tasks(agents["group_coo"]))
-    if "group_cfo" in agents:
-        tasks.extend(get_group_cfo_tasks(agents["group_cfo"]))
-    if "compliance" in agents:
-        tasks.extend(get_compliance_tasks(agents["compliance"]))
-    if "security" in agents:
-        tasks.extend(get_security_tasks(agents["security"]))
-    if "prime" in agents:
-        tasks.extend(get_prime_tasks(agents["prime"]))
-    if "data" in agents:
-        tasks.extend(get_data_tasks(agents["data"]))
-    if "people" in agents:
-        tasks.extend(get_people_tasks(agents["people"]))
+
+        # Only add extra tasks in full mode
+        if mode == "full":
+            tasks.extend(get_ceo_interview_tasks(agents["ceo"]))
+            tasks.extend(get_ceo_compensation_tasks(agents["ceo"]))
+            tasks.extend(get_ceo_90day_tasks(agents["ceo"]))
+
+    # In trading mode, only CEO tasks matter - CEO delegates to desks
+    # Other STAFF agents support but don't have primary tasks during trading
+    if mode == "full":
+        if "group_cio" in agents:
+            tasks.extend(get_group_cio_tasks(agents["group_cio"]))
+        if "group_cro" in agents:
+            tasks.extend(get_group_cro_tasks(agents["group_cro"]))
+        if "group_coo" in agents:
+            tasks.extend(get_group_coo_tasks(agents["group_coo"]))
+        if "group_cfo" in agents:
+            tasks.extend(get_group_cfo_tasks(agents["group_cfo"]))
+        if "compliance" in agents:
+            tasks.extend(get_compliance_tasks(agents["compliance"]))
+        if "security" in agents:
+            tasks.extend(get_security_tasks(agents["security"]))
+        if "prime" in agents:
+            tasks.extend(get_prime_tasks(agents["prime"]))
+        if "data" in agents:
+            tasks.extend(get_data_tasks(agents["data"]))
+        if "people" in agents:
+            tasks.extend(get_people_tasks(agents["people"]))
 
     return tasks
