@@ -104,6 +104,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
         response_model: type[BaseModel] | None = None,
+        i18n: I18N | None = None,
     ) -> None:
         """Initialize the flow-based agent executor.
 
@@ -127,7 +128,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
             response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = get_i18n()
+        self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
@@ -286,7 +287,9 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         except OutputParserError as e:
             # Store error context for recovery
-            self._last_parser_error = e
+            self._last_parser_error = e or OutputParserError(
+                error="Unknown parser error"
+            )
             return "parser_error"
 
         except Exception as e:

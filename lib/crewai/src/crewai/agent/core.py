@@ -743,6 +743,7 @@ class Agent(BaseAgent):
             self.agent_executor = self.executor_class(
                 llm=cast(BaseLLM, self.llm),
                 task=task,
+                i18n=self.i18n,
                 agent=self,
                 crew=self.crew,
                 tools=parsed_tools,
