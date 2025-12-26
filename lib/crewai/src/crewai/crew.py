@@ -203,6 +203,10 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Metrics for the LLM usage during all tasks execution.",
     )
+    workflow_token_metrics: Any | None = Field(
+        default=None,
+        description="Detailed per-agent and per-task token metrics.",
+    )
     manager_llm: str | InstanceOf[BaseLLM] | Any | None = Field(
         description="Language model that will run the agent.", default=None
     )
@@ -1155,12 +1159,22 @@ class Crew(FlowTrackable, BaseModel):
                     task_outputs = self._process_async_tasks(futures, was_replayed)
                     futures.clear()
 
+                # Capture token usage before task execution
+                tokens_before = self._get_agent_token_usage(exec_data.agent)
+                
                 context = self._get_context(task, task_outputs)
                 task_output = task.execute_sync(
                     agent=exec_data.agent,
                     context=context,
                     tools=exec_data.tools,
                 )
+                
+                # Capture token usage after task execution and attach to task output
+                tokens_after = self._get_agent_token_usage(exec_data.agent)
+                task_output = self._attach_task_token_metrics(
+                    task_output, task, exec_data.agent, tokens_before, tokens_after
+                )
+                
                 task_outputs.append(task_output)
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
@@ -1401,6 +1415,7 @@ class Crew(FlowTrackable, BaseModel):
             json_dict=final_task_output.json_dict,
             tasks_output=task_outputs,
             token_usage=self.token_usage,
+            token_metrics=getattr(self, 'workflow_token_metrics', None),
         )
 
     def _process_async_tasks(
@@ -1616,12 +1631,63 @@ class Crew(FlowTrackable, BaseModel):
 
     def calculate_usage_metrics(self) -> UsageMetrics:
         """Calculates and returns the usage metrics."""
+        from crewai.types.usage_metrics import (
+            AgentTokenMetrics,
+            WorkflowTokenMetrics,
+        )
+        
         total_usage_metrics = UsageMetrics()
+        
+        # Preserve existing workflow_token_metrics if it exists (has per_task data)
+        if hasattr(self, 'workflow_token_metrics') and self.workflow_token_metrics:
+            workflow_metrics = self.workflow_token_metrics
+        else:
+            workflow_metrics = WorkflowTokenMetrics()
 
+        # Build per-agent metrics from per-task data (more accurate)
+        # This avoids the cumulative token issue where all agents show the same total
+        agent_token_sums = {}
+        
+        if workflow_metrics.per_task:
+            # Sum up tokens for each agent from their tasks
+            for task_name, task_metrics in workflow_metrics.per_task.items():
+                agent_name = task_metrics.agent_name
+                if agent_name not in agent_token_sums:
+                    agent_token_sums[agent_name] = {
+                        'total_tokens': 0,
+                        'prompt_tokens': 0,
+                        'cached_prompt_tokens': 0,
+                        'completion_tokens': 0,
+                        'successful_requests': 0
+                    }
+                agent_token_sums[agent_name]['total_tokens'] += task_metrics.total_tokens
+                agent_token_sums[agent_name]['prompt_tokens'] += task_metrics.prompt_tokens
+                agent_token_sums[agent_name]['cached_prompt_tokens'] += task_metrics.cached_prompt_tokens
+                agent_token_sums[agent_name]['completion_tokens'] += task_metrics.completion_tokens
+                agent_token_sums[agent_name]['successful_requests'] += task_metrics.successful_requests
+        
+        # Create per-agent metrics from the summed task data
         for agent in self.agents:
+            agent_role = getattr(agent, 'role', 'Unknown Agent')
+            agent_id = str(getattr(agent, 'id', ''))
+            
+            if agent_role in agent_token_sums:
+                # Use accurate per-task summed data
+                sums = agent_token_sums[agent_role]
+                agent_metrics = AgentTokenMetrics(
+                    agent_name=agent_role,
+                    agent_id=agent_id,
+                    total_tokens=sums['total_tokens'],
+                    prompt_tokens=sums['prompt_tokens'],
+                    cached_prompt_tokens=sums['cached_prompt_tokens'],
+                    completion_tokens=sums['completion_tokens'],
+                    successful_requests=sums['successful_requests']
+                )
+                workflow_metrics.per_agent[agent_role] = agent_metrics
+            
+            # Still get total usage for overall metrics
             if isinstance(agent.llm, BaseLLM):
                 llm_usage = agent.llm.get_token_usage_summary()
-
                 total_usage_metrics.add_usage_metrics(llm_usage)
             else:
                 # fallback litellm
@@ -1629,22 +1695,65 @@ class Crew(FlowTrackable, BaseModel):
                     token_sum = agent._token_process.get_summary()
                     total_usage_metrics.add_usage_metrics(token_sum)
 
-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
-            token_sum = self.manager_agent._token_process.get_summary()
-            total_usage_metrics.add_usage_metrics(token_sum)
+        if self.manager_agent:
+            manager_role = getattr(self.manager_agent, 'role', 'Manager Agent')
+            manager_id = str(getattr(self.manager_agent, 'id', ''))
+            
+            if hasattr(self.manager_agent, "_token_process"):
+                token_sum = self.manager_agent._token_process.get_summary()
+                total_usage_metrics.add_usage_metrics(token_sum)
+                
+                # Create per-agent metrics for manager
+                manager_metrics = AgentTokenMetrics(
+                    agent_name=manager_role,
+                    agent_id=manager_id,
+                    total_tokens=token_sum.total_tokens,
+                    prompt_tokens=token_sum.prompt_tokens,
+                    cached_prompt_tokens=token_sum.cached_prompt_tokens,
+                    completion_tokens=token_sum.completion_tokens,
+                    successful_requests=token_sum.successful_requests
+                )
+                workflow_metrics.per_agent[manager_role] = manager_metrics
 
-        if (
-            self.manager_agent
-            and hasattr(self.manager_agent, "llm")
-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
-        ):
-            if isinstance(self.manager_agent.llm, BaseLLM):
-                llm_usage = self.manager_agent.llm.get_token_usage_summary()
-            else:
-                llm_usage = self.manager_agent.llm._token_process.get_summary()
+            if (
+                hasattr(self.manager_agent, "llm")
+                and hasattr(self.manager_agent.llm, "get_token_usage_summary")
+            ):
+                if isinstance(self.manager_agent.llm, BaseLLM):
+                    llm_usage = self.manager_agent.llm.get_token_usage_summary()
+                else:
+                    llm_usage = self.manager_agent.llm._token_process.get_summary()
 
-            total_usage_metrics.add_usage_metrics(llm_usage)
+                total_usage_metrics.add_usage_metrics(llm_usage)
+                
+                # Update or create manager metrics
+                if manager_role in workflow_metrics.per_agent:
+                    workflow_metrics.per_agent[manager_role].total_tokens += llm_usage.total_tokens
+                    workflow_metrics.per_agent[manager_role].prompt_tokens += llm_usage.prompt_tokens
+                    workflow_metrics.per_agent[manager_role].cached_prompt_tokens += llm_usage.cached_prompt_tokens
+                    workflow_metrics.per_agent[manager_role].completion_tokens += llm_usage.completion_tokens
+                    workflow_metrics.per_agent[manager_role].successful_requests += llm_usage.successful_requests
+                else:
+                    manager_metrics = AgentTokenMetrics(
+                        agent_name=manager_role,
+                        agent_id=manager_id,
+                        total_tokens=llm_usage.total_tokens,
+                        prompt_tokens=llm_usage.prompt_tokens,
+                        cached_prompt_tokens=llm_usage.cached_prompt_tokens,
+                        completion_tokens=llm_usage.completion_tokens,
+                        successful_requests=llm_usage.successful_requests
+                    )
+                    workflow_metrics.per_agent[manager_role] = manager_metrics
 
+        # Set workflow-level totals
+        workflow_metrics.total_tokens = total_usage_metrics.total_tokens
+        workflow_metrics.prompt_tokens = total_usage_metrics.prompt_tokens
+        workflow_metrics.cached_prompt_tokens = total_usage_metrics.cached_prompt_tokens
+        workflow_metrics.completion_tokens = total_usage_metrics.completion_tokens
+        workflow_metrics.successful_requests = total_usage_metrics.successful_requests
+        
+        # Store workflow metrics (preserving per_task data)
+        self.workflow_token_metrics = workflow_metrics
         self.usage_metrics = total_usage_metrics
         return total_usage_metrics
 
@@ -1918,3 +2027,55 @@ To enable tracing, do any one of these:
             padding=(1, 2),
         )
         console.print(panel)
+
+    def _get_agent_token_usage(self, agent: BaseAgent | None) -> UsageMetrics:
+        """Get current token usage for an agent."""
+        if not agent:
+            return UsageMetrics()
+        
+        if isinstance(agent.llm, BaseLLM):
+            return agent.llm.get_token_usage_summary()
+        elif hasattr(agent, "_token_process"):
+            return agent._token_process.get_summary()
+        
+        return UsageMetrics()
+    
+    def _attach_task_token_metrics(
+        self,
+        task_output: TaskOutput,
+        task: Task,
+        agent: BaseAgent | None,
+        tokens_before: UsageMetrics,
+        tokens_after: UsageMetrics
+    ) -> TaskOutput:
+        """Attach per-task token metrics to the task output."""
+        from crewai.types.usage_metrics import TaskTokenMetrics
+        
+        if not agent:
+            return task_output
+        
+        # Calculate the delta (tokens used by this specific task)
+        task_tokens = TaskTokenMetrics(
+            task_name=getattr(task, 'name', None) or task.description[:50],
+            task_id=str(getattr(task, 'id', '')),
+            agent_name=getattr(agent, 'role', 'Unknown Agent'),
+            total_tokens=tokens_after.total_tokens - tokens_before.total_tokens,
+            prompt_tokens=tokens_after.prompt_tokens - tokens_before.prompt_tokens,
+            cached_prompt_tokens=tokens_after.cached_prompt_tokens - tokens_before.cached_prompt_tokens,
+            completion_tokens=tokens_after.completion_tokens - tokens_before.completion_tokens,
+            successful_requests=tokens_after.successful_requests - tokens_before.successful_requests
+        )
+        
+        # Attach to task output
+        task_output.usage_metrics = task_tokens
+        
+        # Store in workflow metrics
+        if not hasattr(self, 'workflow_token_metrics') or self.workflow_token_metrics is None:
+            from crewai.types.usage_metrics import WorkflowTokenMetrics
+            self.workflow_token_metrics = WorkflowTokenMetrics()
+        
+        task_key = f"{task_tokens.task_name}_{task_tokens.agent_name}"
+        self.workflow_token_metrics.per_task[task_key] = task_tokens
+        
+        return task_output
+
