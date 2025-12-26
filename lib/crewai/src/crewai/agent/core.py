@@ -222,7 +222,7 @@ class Agent(BaseAgent):
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
     )
-    agent_executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
+    executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use CrewAgentExecutorFlow.",
     )
@@ -740,7 +740,7 @@ class Agent(BaseAgent):
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
-            self.agent_executor = self.agent_executor_class(
+            self.agent_executor = self.executor_class(
                 llm=cast(BaseLLM, self.llm),
                 task=task,
                 agent=self,
