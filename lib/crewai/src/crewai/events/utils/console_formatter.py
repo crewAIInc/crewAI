@@ -916,7 +916,7 @@ To enable tracing, do any one of these:
             border_style = "yellow"
         else:
             content.append(display_text, style="bright_green")
-            title = "✅ Agent Final Answer"
+            title = "✅ Agent Eindantwoord"
             border_style = "green"
 
         streaming_panel = Panel(
@@ -1643,12 +1643,12 @@ To enable tracing, do any one of these:
                 content = Text()
                 content.append("Agent: ", style="white")
                 content.append(f"{agent_role}\n\n", style="bright_green bold")
-                content.append("Final Answer:\n", style="white")
+                content.append("Eindantwoord:\n", style="white")
                 content.append(f"{formatted_answer.output}", style="bright_green")
 
                 finish_panel = Panel(
                     content,
-                    title="✅ Agent Final Answer",
+                    title="✅ Agent Eindantwoord",
                     border_style="green",
                     padding=(1, 2),
                 )

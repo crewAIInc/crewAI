@@ -217,7 +217,7 @@ class Mem0Storage(Storage):
         )
 
     def _get_assistant_message(self, text: str) -> str:
-        marker = "Final Answer:"
+        marker = "Eindantwoord:"
         if marker in text:
             return text.split(marker, 1)[1].strip()
         return text

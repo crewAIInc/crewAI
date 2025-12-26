@@ -108,6 +108,20 @@ class Prompts(BaseModel):
             prompt_parts: list[str] = [
                 self.i18n.slice(component) for component in components
             ]
+
+            # Voeg medewerker mindset toe voor alle agents
+            employee_mindset = self.i18n.slice("employee_mindset")
+            if employee_mindset:
+                prompt_parts.insert(1, employee_mindset)
+
+            # Voeg risico-gedrag toe voor niet-manager agents (agents die niet delegeren)
+            if hasattr(self.agent, "allow_delegation") and not getattr(
+                self.agent, "allow_delegation", True
+            ):
+                risk_behavior = self.i18n.slice("risk_taking_behavior")
+                if risk_behavior:
+                    prompt_parts.insert(2, risk_behavior)
+
             prompt = "".join(prompt_parts)
         else:
             # Alle templates zijn opgegeven, gebruik ze
@@ -166,7 +180,7 @@ class Prompts(BaseModel):
         else:
             tools_section = "Je hebt geen tools beschikbaar. Je kunt alleen observeren en denken."
 
-        return f"""Je bent {self.agent.role} opererend in CONTINUE MONITORING MODUS.
+        return f"""Je bent {self.agent.role} in CONTINUE OPERATIE MODUS.
 
 Je Doel: {self.agent.goal}
 
@@ -174,20 +188,20 @@ Achtergrond: {self.agent.backstory}
 
 {tools_section}
 
-CONTINUE OPERATIE INSTRUCTIES:
-1. Je draait continu - je mag NOOIT een "Eindantwoord" geven
-2. Monitor condities en onderneem actie indien nodig met je beschikbare tools
-3. Rapporteer observaties en acties duidelijk
-4. Als niets directe actie vereist, vermeld wat je observeert
-5. Wees altijd klaar om te reageren op veranderende condities
-6. Houd bij wat je hebt gedaan en geobserveerd
+CONTINUE WERKWIJZE - JE STOPT NOOIT:
+1. Je blijft ALTIJD werken naar je doel - geef NOOIT een "Eindantwoord"
+2. ONDERNEEM ACTIE wanneer je kansen ziet - wacht niet op instructies
+3. Monitor actief en handel PROACTIEF
+4. Neem INITIATIEF - je bent een professional, geen robot
+5. Kleine risico's zijn OK - niets doen is NIET OK
+6. Rapporteer kort wat je doet, focus op ACTIES
 
-Wanneer je iets observeert of actie wilt ondernemen, antwoord in dit formaat:
-Gedachte: [Je redenering over wat je observeert of wilt doen]
-Actie: [De tool die je wilt gebruiken, of "Observeren" als je alleen monitort]
-Actie Input: [De input voor de tool]
+FORMAAT:
+Gedachte: [Korte redenering - max 2 zinnen]
+Actie: [Tool naam]
+Actie Input: [JSON input]
 
-Na elk observatie- of actieresultaat, ga door met monitoren en besluit over je volgende actie."""
+Na elke actie, ga DIRECT door met de volgende. Je werkt 24/7."""
 
     def _build_continuous_user_prompt(self) -> str:
         """Bouw gebruiker prompt voor continue modus.
@@ -195,9 +209,10 @@ Na elk observatie- of actieresultaat, ga door met monitoren en besluit over je v
         Retourneert:
             Gebruiker prompt string voor continue operatie.
         """
-        return """Begin continue operatie. Monitor condities en onderneem gepaste acties.
-Onthoud: Je opereert continu. Probeer niet te eindigen of een eindantwoord te geven.
-In plaats daarvan, observeer, onderneem actie indien nodig en ga door met monitoren.
+        return """Start nu. Je werkt continu naar je doel.
+
+BELANGRIJK: Je geeft NOOIT een "Eindantwoord". Je blijft altijd doorwerken.
+Analyseer de situatie en onderneem DIRECT actie.
 
 Huidige richtlijn: {task}
 

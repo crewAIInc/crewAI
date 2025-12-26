@@ -142,9 +142,9 @@ def _extract_thought(text: str) -> str:
     Returns:
         The extracted thought string.
     """
-    thought_index = text.find("\nAction")
+    thought_index = text.find("\nActie")
     if thought_index == -1:
-        thought_index = text.find("\nFinal Answer")
+        thought_index = text.find("\nEindantwoord")
     if thought_index == -1:
         return ""
     thought = text[:thought_index].strip()

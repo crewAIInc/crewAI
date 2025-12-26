@@ -344,6 +344,12 @@ class Crew(FlowTrackable, BaseModel):
         description="Callback for each continuous iteration.",
     )
 
+    # Crew-naar-crew delegatie
+    sub_crews: dict[str, "Crew"] | None = Field(
+        default=None,
+        description="Sub-crews die door deze crew kunnen worden aangestuurd via delegatie tools.",
+    )
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: UUID4 | None) -> None:
@@ -1740,6 +1746,10 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
+        # Add crew delegation tools if sub_crews are available
+        if self.sub_crews:
+            tools = self._add_crew_delegation_tools(tools)
+
         # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
         return tools
 
@@ -1843,6 +1853,23 @@ class Crew(FlowTrackable, BaseModel):
             tools = self._inject_mcp_tools(tools, task.agent)
 
         return tools or []
+
+    def _add_crew_delegation_tools(self, tools: list[BaseTool]) -> list[BaseTool]:
+        """Voeg crew delegatie tools toe als sub_crews beschikbaar zijn.
+
+        Args:
+            tools: Bestaande tools lijst.
+
+        Returns:
+            Tools lijst met crew delegatie tools toegevoegd.
+        """
+        if not self.sub_crews:
+            return tools or []
+
+        from crewai.tools.crew_tools import CrewTools
+
+        crew_tools = CrewTools(crews=self.sub_crews).tools()
+        return self._merge_tools(tools or [], crew_tools)
 
     def _log_task_start(self, task: Task, role: str = "None") -> None:
         if self.output_log_file:

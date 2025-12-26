@@ -791,7 +791,7 @@ def show_agent_logs(
         elif isinstance(formatted_answer, AgentFinish):
             printer.print(
                 content=[
-                    ColoredText("## Final Answer: ", "purple"),
+                    ColoredText("## Eindantwoord: ", "purple"),
                     ColoredText(f"\n{formatted_answer.output}\n\n", "green"),
                 ]
             )
