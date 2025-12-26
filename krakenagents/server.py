@@ -607,10 +607,25 @@ async def list_agents():
     return get_all_agents()
 
 
-@app.get("/api/crews", response_model=list[CrewInfo])
+@app.get("/api/crews")
 async def list_crews():
-    """Get all crews."""
-    return get_crews()
+    """Get all crews with real-time status."""
+    crews = get_crews()
+    result = []
+    for crew in crews:
+        # Check if crew is actually running
+        is_running = (
+            crew.id in manager.crew_tasks
+            and not manager.crew_tasks[crew.id].done()
+        )
+        result.append({
+            "id": crew.id,
+            "name": crew.name,
+            "description": crew.description,
+            "agent_count": crew.agent_count,
+            "status": "running" if is_running else "stopped",
+        })
+    return result
 
 
 @app.post("/api/crews/{crew_id}/start")
