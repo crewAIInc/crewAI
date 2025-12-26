@@ -1,4 +1,4 @@
-"""Futures Research agents (40, 52-56) for QRI Trading Organization."""
+"""Futures Research agents (40, 52-56) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_research_tools
 
 
 def create_futures_research_head_agent() -> Agent:
-    """Create Agent 40: Head of Research Futures.
+    """Maak Agent 40: Head of Research Futures.
 
-    Research owner for derivatives/futures intelligence.
-    Uses heavy LLM for research analysis.
+    Research eigenaar voor derivatives/futures intelligence.
+    Gebruikt heavy LLM voor research analyse.
     """
     tools = [
         AlertSystemTool(),
@@ -20,16 +20,16 @@ def create_futures_research_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Research Futures — Research",
         goal=(
-            "Research owner for derivatives/futures intelligence. "
-            "Build funding rate forecast models. "
-            "Monitor cross-exchange basis and funding differentials. "
-            "Track open interest dynamics and positioning. "
-            "Produce tradable derivatives research for the desk."
+            "Research eigenaar voor derivatives/futures intelligence. "
+            "Bouw funding rate forecast modellen. "
+            "Monitor cross-exchange basis en funding differentiëlen. "
+            "Volg open interest dynamiek en positionering. "
+            "Produceer verhandelbaar derivatives research voor de desk."
         ),
         backstory=(
-            "Derivatives research lead with quantitative background. "
-            "Expert in funding rate modeling and OI analysis. "
-            "Known for producing actionable derivatives research."
+            "Derivatives research lead met kwantitatieve achtergrond. "
+            "Expert in funding rate modellering en OI analyse. "
+            "Bekend om het produceren van handelbaar derivatives research."
         ),
         tools=tools,
         allow_delegation=True,
@@ -37,10 +37,10 @@ def create_futures_research_head_agent() -> Agent:
 
 
 def create_futures_funding_analyst_agent() -> Agent:
-    """Create Agent 52: Funding Rate Analyst Futures.
+    """Maak Agent 52: Funding Rate Analyst Futures.
 
-    Funding rate analysis and prediction.
-    Uses heavy LLM for funding analysis.
+    Funding rate analyse en voorspelling.
+    Gebruikt heavy LLM voor funding analyse.
     """
     tools = [
         AlertSystemTool(),
@@ -49,16 +49,16 @@ def create_futures_funding_analyst_agent() -> Agent:
     return create_heavy_agent(
         role="Funding Rate Analyst Futures — Research",
         goal=(
-            "Analyze and predict funding rates. "
-            "Build funding rate forecast models. "
-            "Monitor funding across venues and instruments. "
-            "Identify funding regime changes. "
-            "Alert on extreme funding conditions."
+            "Analyseer en voorspel funding rates. "
+            "Bouw funding rate forecast modellen. "
+            "Monitor funding over venues en instrumenten. "
+            "Identificeer funding regime veranderingen. "
+            "Waarschuw bij extreme funding condities."
         ),
         backstory=(
-            "Funding rate specialist with modeling expertise. "
-            "Expert in perpetual swap mechanics and funding dynamics. "
-            "Known for accurate funding regime predictions."
+            "Funding rate specialist met modellering expertise. "
+            "Expert in perpetual swap mechanics en funding dynamiek. "
+            "Bekend om nauwkeurige funding regime voorspellingen."
         ),
         tools=tools,
         allow_delegation=False,
@@ -66,10 +66,10 @@ def create_futures_funding_analyst_agent() -> Agent:
 
 
 def create_futures_basis_analyst_agent() -> Agent:
-    """Create Agent 53: Basis & Term Structure Analyst Futures.
+    """Maak Agent 53: Basis & Term Structure Analyst Futures.
 
-    Basis and term structure analysis.
-    Uses heavy LLM for basis analysis.
+    Basis en term structure analyse.
+    Gebruikt heavy LLM voor basis analyse.
     """
     tools = [
         AlertSystemTool(),
@@ -78,16 +78,16 @@ def create_futures_basis_analyst_agent() -> Agent:
     return create_heavy_agent(
         role="Basis & Term Structure Analyst Futures — Research",
         goal=(
-            "Analyze basis and term structure dynamics. "
-            "Monitor spot-futures basis across instruments. "
-            "Track calendar spread opportunities. "
-            "Identify convergence and divergence patterns. "
-            "Alert on significant basis dislocations."
+            "Analyseer basis en term structure dynamiek. "
+            "Monitor spot-futures basis over instrumenten. "
+            "Volg calendar spread kansen. "
+            "Identificeer convergentie en divergentie patronen. "
+            "Waarschuw bij significante basis dislocaties."
         ),
         backstory=(
-            "Term structure specialist with derivatives background. "
-            "Expert in basis analysis and convergence trading. "
-            "Known for identifying profitable basis opportunities."
+            "Term structure specialist met derivatives achtergrond. "
+            "Expert in basis analyse en convergentie trading. "
+            "Bekend om het identificeren van winstgevende basis kansen."
         ),
         tools=tools,
         allow_delegation=False,
@@ -95,26 +95,26 @@ def create_futures_basis_analyst_agent() -> Agent:
 
 
 def create_futures_quant_analyst_agent() -> Agent:
-    """Create Agent 54: Quant Analyst Futures.
+    """Maak Agent 54: Quant Analyst Futures.
 
-    Quantitative analysis for derivatives strategies.
-    Uses heavy LLM for quant analysis.
+    Kwantitatieve analyse voor derivatives strategieën.
+    Gebruikt heavy LLM voor quant analyse.
     """
     tools = get_futures_research_tools()
 
     return create_heavy_agent(
         role="Quant Analyst Futures — Research",
         goal=(
-            "Quantitative analysis for derivatives strategies. "
-            "Build statistical models for derivatives signals. "
-            "Backtest and validate strategy ideas. "
-            "Develop risk models for leveraged positions. "
-            "Support systematic strategy development."
+            "Kwantitatieve analyse voor derivatives strategieën. "
+            "Bouw statistische modellen voor derivatives signalen. "
+            "Backtest en valideer strategie ideeën. "
+            "Ontwikkel risicomodellen voor leveraged posities. "
+            "Ondersteun systematische strategie ontwikkeling."
         ),
         backstory=(
-            "Quantitative analyst specialized in derivatives. "
-            "Expert in statistical modeling and backtesting. "
-            "Known for rigorous validation of strategy ideas."
+            "Kwantitatieve analist gespecialiseerd in derivatives. "
+            "Expert in statistisch modelleren en backtesting. "
+            "Bekend om rigoureuze validatie van strategie ideeën."
         ),
         tools=tools,
         allow_delegation=False,
@@ -122,10 +122,10 @@ def create_futures_quant_analyst_agent() -> Agent:
 
 
 def create_futures_macro_analyst_agent() -> Agent:
-    """Create Agent 55: Macro Analyst Futures.
+    """Maak Agent 55: Macro Analyst Futures.
 
-    Macro analysis for derivatives trading context.
-    Uses heavy LLM for macro analysis.
+    Macro analyse voor derivatives trading context.
+    Gebruikt heavy LLM voor macro analyse.
     """
     tools = [
         AlertSystemTool(),
@@ -134,16 +134,16 @@ def create_futures_macro_analyst_agent() -> Agent:
     return create_heavy_agent(
         role="Macro Analyst Futures — Research",
         goal=(
-            "Macro analysis for derivatives trading context. "
-            "Track macro indicators affecting crypto derivatives. "
-            "Monitor correlation between crypto and traditional markets. "
-            "Identify macro regime shifts. "
-            "Alert on macro events impacting derivatives."
+            "Macro analyse voor derivatives trading context. "
+            "Volg macro indicatoren die crypto derivatives beïnvloeden. "
+            "Monitor correlatie tussen crypto en traditionele markten. "
+            "Identificeer macro regime verschuivingen. "
+            "Waarschuw bij macro gebeurtenissen die derivatives beïnvloeden."
         ),
         backstory=(
-            "Macro strategist with derivatives focus. "
-            "Expert in crypto-macro relationships. "
-            "Known for timely macro regime change identification."
+            "Macro strateeg met derivatives focus. "
+            "Expert in crypto-macro relaties. "
+            "Bekend om tijdige macro regime verandering identificatie."
         ),
         tools=tools,
         allow_delegation=False,
@@ -151,10 +151,10 @@ def create_futures_macro_analyst_agent() -> Agent:
 
 
 def create_futures_flow_analyst_agent() -> Agent:
-    """Create Agent 56: Flow & Positioning Analyst Futures.
+    """Maak Agent 56: Flow & Positioning Analyst Futures.
 
-    Flow and positioning analysis for derivatives.
-    Uses light LLM for flow analysis.
+    Flow en positionering analyse voor derivatives.
+    Gebruikt light LLM voor flow analyse.
     """
     tools = [
         AlertSystemTool(),
@@ -163,16 +163,16 @@ def create_futures_flow_analyst_agent() -> Agent:
     return create_light_agent(
         role="Flow & Positioning Analyst Futures — Research",
         goal=(
-            "Analyze flow and positioning in derivatives markets. "
-            "Track open interest changes and liquidations. "
-            "Monitor long/short ratios and crowding. "
-            "Identify significant positioning changes. "
-            "Alert on extreme positioning or liquidation risk."
+            "Analyseer flow en positionering in derivatives markten. "
+            "Volg open interest veranderingen en liquidaties. "
+            "Monitor long/short ratio's en crowding. "
+            "Identificeer significante positionering veranderingen. "
+            "Waarschuw bij extreme positionering of liquidatierisico."
         ),
         backstory=(
-            "Flow analyst specialized in crypto derivatives. "
-            "Expert in OI analysis and positioning dynamics. "
-            "Known for identifying crowded trades and liquidation risks."
+            "Flow analist gespecialiseerd in crypto derivatives. "
+            "Expert in OI analyse en positionering dynamiek. "
+            "Bekend om het identificeren van crowded trades en liquidatierisico's."
         ),
         tools=tools,
         allow_delegation=False,

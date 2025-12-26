@@ -10,36 +10,36 @@ from krakenagents.tools import (
 
 
 def create_prime_agent() -> Agent:
-    """Create STAFF-07 Head of Prime, Venues & Liquidity Agent.
+    """Maak STAFF-07 Hoofd Prime, Venues & Liquiditeit Agent.
 
-    Responsible for:
-    - Venue selection and health monitoring
-    - Liquidity access and fee tier optimization
-    - Venue concentration risk management
-    - Prime broker and OTC relationships
+    Verantwoordelijk voor:
+    - Venue selectie en gezondheidsmonitoring
+    - Liquiditeitstoegang en fee-tier optimalisatie
+    - Venue-concentratierisicobeheer
+    - Prime broker en OTC relaties
 
-    Reports to: STAFF-00 (CEO)
-    Uses light LLM for venue/liquidity operations.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt lichte LLM voor venue/liquiditeitsoperaties.
     """
-    # Market tools for monitoring venue health and liquidity
+    # Market tools voor monitoring van venue gezondheid en liquiditeit
     tools = get_spot_market_tools() + get_futures_market_tools()
 
     return create_light_agent(
-        role="Head of Prime, Venues & Liquidity — Venue Selection and Liquidity Access",
+        role="Hoofd Prime, Venues & Liquiditeit — Venue Selectie en Liquiditeitstoegang",
         goal=(
-            "Manage venue selection, liquidity access, fee tiers, and concentration risk. "
-            "Maintain venue scorecards and propose limits (with CRO). Optimize liquidity and fees "
-            "per venue. Mitigate concentration risk through diversification planning. "
-            "Invest in low-latency connectivity (co-location, dedicated lines) to key venues. "
-            "Maintain multi-venue relationships (prime brokers, OTC desks) for deep liquidity "
-            "and fast execution of large orders."
+            "Beheer venue selectie, liquiditeitstoegang, fee tiers en concentratierisico. "
+            "Onderhoud venue scorecards en stel limieten voor (met CRO). Optimaliseer liquiditeit en fees "
+            "per venue. Mitigeer concentratierisico door diversificatieplanning. "
+            "Investeer in low-latency connectiviteit (co-locatie, dedicated lines) naar belangrijke venues. "
+            "Onderhoud multi-venue relaties (prime brokers, OTC desks) voor diepe liquiditeit "
+            "en snelle uitvoering van grote orders."
         ),
         backstory=(
-            "Market structure expert with deep understanding of crypto exchange ecosystems, "
-            "prime brokerage, and OTC markets. Strong relationships with major venues and "
-            "liquidity providers. Expert in fee optimization and execution quality analysis. "
-            "Known for securing favorable trading terms and managing venue risk through "
-            "diversification. Technical background in low-latency trading infrastructure."
+            "Marktstructuur expert met diep begrip van crypto exchange ecosystemen, "
+            "prime brokerage en OTC markten. Sterke relaties met grote venues en "
+            "liquiditeitsproviders. Expert in fee-optimalisatie en uitvoeringskwaliteitsanalyse. "
+            "Bekend om het veiligstellen van gunstige handelsvoorwaarden en het beheren van venue-risico door "
+            "diversificatie. Technische achtergrond in low-latency handelsinfrastructuur."
         ),
         tools=tools,
         allow_delegation=False,

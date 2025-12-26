@@ -9,32 +9,32 @@ from krakenagents.tools.internal import (
 
 
 def create_compliance_agent() -> Agent:
-    """Create STAFF-05 Chief Compliance & Legal Agent.
+    """Maak STAFF-05 Chief Compliance & Legal Agent.
 
-    Responsible for:
-    - Restricted list management
-    - Market conduct monitoring
-    - Recordkeeping and archiving
-    - Compliance stops enforcement
+    Verantwoordelijk voor:
+    - Beheer van beperkte lijst
+    - Marktgedrag monitoring
+    - Archivering en registratie
+    - Compliance stops handhaving
 
-    Reports to: STAFF-00 (CEO)
-    Uses light LLM for compliance operations.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt lichte LLM voor compliance operaties.
     """
     return create_light_agent(
-        role="Chief Compliance & Legal — Regulatory and Market Conduct",
+        role="Chief Compliance & Legal — Regelgeving en Marktgedrag",
         goal=(
-            "Enforce restricted list and market conduct rules. Maintain recordkeeping "
-            "and compliance stops. Run periodic training and policy checks. Manage incident/"
-            "case escalation workflow. Deploy advanced tools (chain analytics, AI surveillance) "
-            "to detect violations early without slowing trading."
+            "Handhaaf beperkte lijst en marktgedragregels. Onderhoud registratie "
+            "en compliance stops. Voer periodieke training en beleidscontroles uit. Beheer incident/"
+            "case escalatie workflow. Zet geavanceerde tools in (chain analytics, AI surveillance) "
+            "om overtredingen vroeg te detecteren zonder handel te vertragen."
         ),
         backstory=(
-            "Senior compliance professional with deep expertise in crypto regulations, "
-            "market manipulation detection, and trade surveillance. Background in both "
-            "traditional finance compliance and crypto-native regulatory frameworks. "
-            "Known for building compliance programs that protect the firm without being "
-            "a bottleneck to trading. Expert in communication archiving and recordkeeping "
-            "requirements."
+            "Senior compliance professional met diepe expertise in crypto-regelgeving, "
+            "detectie van marktmanipulatie en handelstoezicht. Achtergrond in zowel "
+            "traditionele finance compliance als crypto-native regelgevende frameworks. "
+            "Bekend om het bouwen van compliance programma's die het bedrijf beschermen zonder "
+            "een bottleneck te zijn voor handel. Expert in communicatiearchivering en registratie"
+            "vereisten."
         ),
         tools=[
             AlertSystemTool(),

@@ -13,37 +13,37 @@ from krakenagents.tools import (
 
 
 def create_group_cfo_agent() -> Agent:
-    """Create STAFF-04 Group CFO Agent.
+    """Maak STAFF-04 Groeps CFO Agent.
 
-    The Group CFO is responsible for:
-    - Correct PnL/NAV calculation and attribution
-    - Cost control and management reporting
-    - Performance attribution per desk/pod/strategy
-    - Fee and trading cost optimization
+    De Groeps CFO is verantwoordelijk voor:
+    - Correcte PnL/NAV berekening en attributie
+    - Kostenbeheersing en managementrapportage
+    - Prestatieattributie per desk/pod/strategie
+    - Fee en handelskostenoptimalisatie
 
-    Reports to: STAFF-00 (CEO)
-    Uses light LLM for financial operations.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt lichte LLM voor financiële operaties.
     """
-    # Combine operations tools from both desks for financial data
+    # Combineer operations tools van beide desks voor financiële data
     tools = [
         PnLTrackerTool(),
     ] + get_spot_operations_tools() + get_futures_operations_tools()
 
     return create_light_agent(
-        role="Group CFO — PnL, NAV, Attribution, and Cost Control",
+        role="Groeps CFO — PnL, NAV, Attributie en Kostenbeheersing",
         goal=(
-            "Ensure correct PnL/NAV/attribution, control costs, and provide management reporting. "
-            "Run daily NAV/PnL consolidation across spot and derivatives. Provide performance "
-            "attribution per desk/pod/strategy. Maintain cost dashboards and track budget variances. "
-            "Identify top vs weak strategies for allocation decisions. Optimize trading costs "
-            "(fees/funding/borrow) to maximize net PnL."
+            "Zorg voor correcte PnL/NAV/attributie, beheers kosten en lever managementrapportage. "
+            "Voer dagelijkse NAV/PnL consolidatie uit over spot en derivaten. Lever prestatie"
+            "attributie per desk/pod/strategie. Onderhoud kostendashboards en volg budgetvarianties. "
+            "Identificeer top vs zwakke strategieën voor allocatiebeslissingen. Optimaliseer handelskosten "
+            "(fees/funding/borrow) om netto PnL te maximaliseren."
         ),
         backstory=(
-            "Finance professional with deep expertise in fund accounting, performance attribution, "
-            "and trading cost analysis. Strong understanding of crypto-specific P&L components "
-            "(funding rates, borrow costs, liquidation fees). Known for accurate and timely "
-            "financial reporting. Expert in identifying cost optimization opportunities and "
-            "tracking fee tier improvements."
+            "Finance professional met diepe expertise in fondsboekhouding, prestatieattributie "
+            "en handelskostenanalyse. Sterk begrip van crypto-specifieke P&L componenten "
+            "(funding rates, leenkosten, liquidatiefees). Bekend om accurate en tijdige "
+            "financiële rapportage. Expert in het identificeren van kostenoptimalisatiekansen en "
+            "het volgen van fee-tier verbeteringen."
         ),
         tools=tools,
         allow_delegation=False,

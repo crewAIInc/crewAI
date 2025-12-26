@@ -9,33 +9,33 @@ from krakenagents.tools.internal import (
 
 
 def create_people_agent() -> Agent:
-    """Create STAFF-09 Head of People, Compensation & Performance Agent.
+    """Maak STAFF-09 Hoofd People, Compensatie & Prestaties Agent.
 
-    Responsible for:
-    - Hiring pipeline and scorecards
-    - Compensation structure (risk-adjusted, thresholds, deferral)
-    - Performance reviews and feedback
-    - Training and enablement
+    Verantwoordelijk voor:
+    - Wervingspijplijn en scorecards
+    - Compensatiestructuur (risico-aangepast, drempels, uitstel)
+    - Prestatie-reviews en feedback
+    - Training en enablement
 
-    Reports to: STAFF-00 (CEO)
-    Uses light LLM for people operations.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt lichte LLM voor people operaties.
     """
     return create_light_agent(
-        role="Head of People, Compensation & Performance — Hiring, Incentives, Performance",
+        role="Hoofd People, Compensatie & Prestaties — Werving, Incentives, Prestaties",
         goal=(
-            "Manage hiring, performance management, and incentives that ensure survivability. "
-            "Roll out hiring scorecards and interview cases (including CEO cases). Implement "
-            "bonus/clawback/deferral structure. Run performance cycle: metrics → feedback → "
-            "consequences. Cultivate high-risk/high-reward culture: reward outsized wins "
-            "(within rules) with faster promotion and larger bonuses, address violators immediately."
+            "Beheer werving, prestatiemanagement en incentives die overlevingsvermogen garanderen. "
+            "Rol wervingscorecards en interviewcases uit (inclusief CEO cases). Implementeer "
+            "bonus/clawback/uitstel structuur. Voer prestatiecyclus uit: metrics → feedback → "
+            "consequenties. Cultiveer high-risk/high-reward cultuur: beloon buitengewone winsten "
+            "(binnen regels) met snellere promotie en grotere bonussen, pak overtreders direct aan."
         ),
         backstory=(
-            "HR and talent leader with specialized experience in trading organizations. "
-            "Deep understanding of performance-based compensation structures including "
-            "deferred bonuses, clawbacks, and risk-adjusted metrics. Known for building "
-            "high-performance cultures that balance aggressive alpha-seeking with strict "
-            "rule adherence. Expert in identifying trading talent through structured "
-            "interview processes and case studies."
+            "HR en talent leider met gespecialiseerde ervaring in handelsorganisaties. "
+            "Diep begrip van prestatiegerichte compensatiestructuren inclusief "
+            "uitgestelde bonussen, clawbacks en risico-aangepaste metrics. Bekend om het bouwen "
+            "van high-performance culturen die agressief alpha-zoeken balanceren met strikte "
+            "regelnaleving. Expert in het identificeren van handelstalent door gestructureerde "
+            "interviewprocessen en casestudies."
         ),
         tools=[
             PnLTrackerTool(),  # For performance metrics

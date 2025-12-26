@@ -1,4 +1,4 @@
-"""Futures Systematic Trading agents (37, 42) for QRI Trading Organization."""
+"""Futures Systematic Trading agents (37, 42) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_research_tools, get_futures_execution
 
 
 def create_futures_systematic_head_agent() -> Agent:
-    """Create Agent 37: Head of Systematic Futures.
+    """Maak Agent 37: Head of Systematic Futures.
 
-    Owner of systematic futures strategies.
-    Uses heavy LLM for strategy design and analysis.
+    Eigenaar van systematische futures strategieën.
+    Gebruikt heavy LLM voor strategie ontwerp en analyse.
     """
     tools = [
         TradeJournalTool(),
@@ -20,16 +20,16 @@ def create_futures_systematic_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Systematic Futures — Systematic Trading",
         goal=(
-            "Own systematic futures strategies: funding rate models, basis strategies, momentum. "
-            "Design and maintain signal library for derivatives. "
-            "Write strategy specs including funding cost assumptions. "
-            "Monthly model review with focus on funding regime changes. "
-            "Develop AI/ML models for funding rate prediction and basis dynamics."
+            "Eigenaar systematische futures strategieën: funding rate modellen, basis strategieën, momentum. "
+            "Ontwerp en onderhoud signaalbibliotheek voor derivatives. "
+            "Schrijf strategie specificaties inclusief funding cost aannames. "
+            "Maandelijkse model review met focus op funding regime veranderingen. "
+            "Ontwikkel AI/ML modellen voor funding rate voorspelling en basis dynamiek."
         ),
         backstory=(
-            "Systematic/quant PM specialized in derivatives. "
-            "Deep understanding of perpetual mechanics and funding cycles. "
-            "Expert in incorporating funding costs into strategy returns."
+            "Systematische/quant PM gespecialiseerd in derivatives. "
+            "Diepgaand begrip van perpetual mechanics en funding cycli. "
+            "Expert in het integreren van funding costs in strategie rendementen."
         ),
         tools=tools,
         allow_delegation=True,
@@ -37,10 +37,10 @@ def create_futures_systematic_head_agent() -> Agent:
 
 
 def create_futures_systematic_operator_agent() -> Agent:
-    """Create Agent 42: Systematic Portfolio Operator Futures.
+    """Maak Agent 42: Systematic Portfolio Operator Futures.
 
-    Daily operator of live systematic futures strategies.
-    Uses light LLM for operational execution.
+    Dagelijkse operator van live systematische futures strategieën.
+    Gebruikt light LLM voor operationele uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -50,16 +50,16 @@ def create_futures_systematic_operator_agent() -> Agent:
     return create_light_agent(
         role="Systematic Portfolio Operator Futures — Systematic Trading",
         goal=(
-            "Daily operator of live systematic futures strategies. "
-            "Run signals, monitor funding rates, execute rebalances. "
-            "Track funding payments and their impact on positions. "
-            "Pause strategy on anomalies per SOP. "
-            "Provide feedback on execution friction and funding slippage."
+            "Dagelijkse operator van live systematische futures strategieën. "
+            "Voer signalen uit, monitor funding rates, voer herbalanceringen uit. "
+            "Volg funding betalingen en hun impact op posities. "
+            "Pauzeer strategie bij anomalieën volgens SOP. "
+            "Geef feedback over uitvoeringswrijving en funding slippage."
         ),
         backstory=(
-            "Systematic trader/operator with derivatives experience. "
-            "Expert in running automated strategies with funding considerations. "
-            "Quick at detecting funding regime changes."
+            "Systematische trader/operator met derivatives ervaring. "
+            "Expert in het draaien van geautomatiseerde strategieën met funding overwegingen. "
+            "Snel in het detecteren van funding regime veranderingen."
         ),
         tools=tools,
         allow_delegation=False,

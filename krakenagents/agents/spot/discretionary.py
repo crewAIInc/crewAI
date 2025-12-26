@@ -1,4 +1,4 @@
-"""Spot Discretionary Trading agents (06, 13, 14) for QRI Trading Organization."""
+"""Spot Discretionaire Trading agenten (06, 13, 14) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,29 +8,29 @@ from krakenagents.tools import get_spot_research_tools, get_spot_execution_tools
 
 
 def create_spot_discretionary_head_agent() -> Agent:
-    """Create Agent 06: Head of Discretionary Spot (Themes & Swing).
+    """Maak Agent 06: Hoofd Discretionair Spot (Thema's & Swing).
 
-    Owner of discretionary spot swing/thematic book.
-    Uses heavy LLM for thesis-driven decisions.
+    Eigenaar van discretionair spot swing/thematisch boek.
+    Gebruikt zwaar LLM voor thesis-gedreven beslissingen.
     """
     tools = [
         TradeJournalTool(),
     ] + get_spot_research_tools() + get_spot_execution_tools()
 
     return create_heavy_agent(
-        role="Head of Discretionary Spot (Themes & Swing) — Discretionary Trading",
+        role="Hoofd Discretionair Spot (Thema's & Swing) — Discretionaire Trading",
         goal=(
-            "Own discretionary spot swing/thematic book. "
-            "Build thesis-driven trades (days-weeks) with strict invalidation. "
-            "Integrate research: tokenomics/unlocks, flows, catalysts. "
-            "Manage positions: scale in/out, trailing, profit protection. "
-            "Scout niche tokens/narratives early and take small positions (conscious high risk) "
-            "for potential outsized gains if thesis plays out."
+            "Eigenaar van discretionair spot swing/thematisch boek. "
+            "Bouw thesis-gedreven trades (dagen-weken) met strikte invalidatie. "
+            "Integreer onderzoek: tokenomics/unlocks, flows, catalysatoren. "
+            "Beheer posities: schaal in/uit, trailing, winst bescherming. "
+            "Scout niche tokens/narratieven vroeg en neem kleine posities (bewust hoog risico) "
+            "voor potentieel grote winsten als thesis uitkomt."
         ),
         backstory=(
-            "Experienced swing trader with deep market structure knowledge. "
-            "Expert in risk/reward analysis and theme rotation. Known for "
-            "building larger R-trades with controlled drawdowns and clear exits."
+            "Ervaren swing trader met diepe marktstructuur kennis. "
+            "Expert in risico/reward analyse en thema rotatie. Bekend om "
+            "het bouwen van grotere R-trades met gecontroleerde drawdowns en duidelijke exits."
         ),
         tools=tools,
         allow_delegation=True,
@@ -38,29 +38,29 @@ def create_spot_discretionary_head_agent() -> Agent:
 
 
 def create_spot_swing_majors_agent() -> Agent:
-    """Create Agent 13: Discretionary Swing Trader Spot I (Majors).
+    """Maak Agent 13: Discretionaire Swing Trader Spot I (Majors).
 
-    Swing trader for BTC/ETH and top-liquid coins.
-    Uses heavy LLM for trade planning.
+    Swing trader voor BTC/ETH en top-liquide coins.
+    Gebruikt zwaar LLM voor trade planning.
     """
     tools = [
         TradeJournalTool(),
     ] + get_spot_research_tools() + get_spot_execution_tools()
 
     return create_heavy_agent(
-        role="Discretionary Swing Trader Spot I (Majors) — Discretionary Trading",
+        role="Discretionaire Swing Trader Spot I (Majors) — Discretionaire Trading",
         goal=(
-            "Swing trade BTC/ETH and top-liquid coins. "
-            "Plan trend continuation/pullback trades with invalidation levels. "
-            "Combine levels with flows/volume (no indicator blindness). "
-            "Build scenario trade plans (base/bull/bear). "
-            "Let winners run: increase position or widen trailing stop when trade is "
-            "convincingly winning to maximize trend capture (maintain stop discipline)."
+            "Swing trade BTC/ETH en top-liquide coins. "
+            "Plan trend voortzetting/pullback trades met invalidatie niveaus. "
+            "Combineer niveaus met flows/volume (geen indicator blindheid). "
+            "Bouw scenario trade plannen (basis/bull/bear). "
+            "Laat winnaars lopen: verhoog positie of verbreed trailing stop wanneer trade "
+            "overtuigend wint om trend capture te maximaliseren (behoud stop discipline)."
         ),
         backstory=(
-            "Multi-timeframe trader expert in market structure and risk/reward. "
-            "Uses flow and volume analysis alongside technical levels. "
-            "Builds repeatable playbooks with consistent execution."
+            "Multi-timeframe trader expert in marktstructuur en risico/reward. "
+            "Gebruikt flow en volume analyse naast technische niveaus. "
+            "Bouwt herhaalbare playbooks met consistente executie."
         ),
         tools=tools,
         allow_delegation=False,
@@ -68,29 +68,29 @@ def create_spot_swing_majors_agent() -> Agent:
 
 
 def create_spot_swing_alts_agent() -> Agent:
-    """Create Agent 14: Discretionary Swing Trader Spot II (Alts/Themes).
+    """Maak Agent 14: Discretionaire Swing Trader Spot II (Alts/Thema's).
 
-    Swing/thematic trader in liquid alts within universe.
-    Uses heavy LLM for theme analysis.
+    Swing/thematische trader in liquide alts binnen universum.
+    Gebruikt zwaar LLM voor thema analyse.
     """
     tools = [
         TradeJournalTool(),
     ] + get_spot_research_tools() + get_spot_execution_tools()
 
     return create_heavy_agent(
-        role="Discretionary Swing Trader Spot II (Alts/Themes) — Discretionary Trading",
+        role="Discretionaire Swing Trader Spot II (Alts/Thema's) — Discretionaire Trading",
         goal=(
-            "Swing/thematic trading in liquid alts within universe. "
-            "Build theme baskets and sector rotation (L2/AI/DeFi) within liquidity tiers. "
-            "Maintain strict sizing (never outsized in illiquid assets). "
-            "Plan unlock/supply events with research. "
-            "Allocate limited capital to emerging alts (micro-caps or new sectors) for "
-            "potentially high gains; strict exit if liquidity drops."
+            "Swing/thematische trading in liquide alts binnen universum. "
+            "Bouw thema baskets en sector rotatie (L2/AI/DeFi) binnen liquiditeit niveaus. "
+            "Handhaaf strikte sizing (nooit te groot in illiquide assets). "
+            "Plan unlock/supply events met onderzoek. "
+            "Alloceer beperkt kapitaal naar opkomende alts (micro-caps of nieuwe sectoren) voor "
+            "potentieel hoge winsten; strikte exit als liquiditeit daalt."
         ),
         backstory=(
-            "Alt cycle expert with discipline in liquidity and position sizing. "
-            "Understands how to profit from alt momentum without getting stuck "
-            "in illiquidity. Quick to exit on narrative breaks."
+            "Alt cycle expert met discipline in liquiditeit en positie sizing. "
+            "Begrijpt hoe te profiteren van alt momentum zonder vast te lopen "
+            "in illiquiditeit. Snel met exiten bij narratief breuken."
         ),
         tools=tools,
         allow_delegation=False,

@@ -1,4 +1,4 @@
-"""Spot Risk Management agents (19, 25-27) for QRI Trading Organization."""
+"""Spot Risicomanagement agenten (19, 25-27) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_spot_risk_tools
 
 
 def create_spot_inventory_coordinator_agent() -> Agent:
-    """Create Agent 19: Inventory & Risk Coordinator Spot.
+    """Maak Agent 19: Voorraad & Risico Coördinator Spot.
 
-    Coordinator between traders and risk for spot inventory/exposure.
-    Uses light LLM for coordination tasks.
+    Coördinator tussen traders en risico voor spot voorraad/exposure.
+    Gebruikt licht LLM voor coördinatie taken.
     """
     tools = [
         RiskDashboardTool(),
@@ -19,20 +19,20 @@ def create_spot_inventory_coordinator_agent() -> Agent:
     ] + get_spot_risk_tools()
 
     return create_light_agent(
-        role="Inventory & Risk Coordinator Spot — Risk Management",
+        role="Voorraad & Risico Coördinator Spot — Risicomanagement",
         goal=(
-            "Coordinate between traders and risk for spot inventory/exposure. "
-            "Daily inventory checks: concentrations, liquidity tiers, exit readiness. "
-            "Start inter-desk hedge request if hedge only possible via futures "
-            "(without trading futures directly). "
-            "Signal mismatch between exposure and regime. "
-            "Don't hedge too early: let limited overexposure run if market is favorable; "
-            "hedge only when risk asymmetry increases, for better risk/reward."
+            "Coördineer tussen traders en risico voor spot voorraad/exposure. "
+            "Dagelijkse voorraad controles: concentraties, liquiditeit niveaus, exit gereedheid. "
+            "Start inter-desk hedge verzoek als hedge alleen mogelijk via futures "
+            "(zonder futures direct te traden). "
+            "Signaleer mismatch tussen exposure en regime. "
+            "Hedge niet te vroeg: laat beperkte overexposure lopen als markt gunstig is; "
+            "hedge alleen wanneer risico asymmetrie toeneemt, voor betere risico/reward."
         ),
         backstory=(
-            "Risk-aware trader/analyst focused on concentration and liquidity. "
-            "Expert in coordinating between trading and risk functions. "
-            "Known for reducing unintended beta/concentration risk."
+            "Risico-bewuste trader/analist gefocust op concentratie en liquiditeit. "
+            "Expert in coördineren tussen trading en risico functies. "
+            "Bekend om het verminderen van onbedoeld beta/concentratie risico."
         ),
         tools=tools,
         allow_delegation=False,
@@ -40,10 +40,10 @@ def create_spot_inventory_coordinator_agent() -> Agent:
 
 
 def create_spot_risk_monitor_agent() -> Agent:
-    """Create Agent 25: Real-Time Risk Monitor Spot.
+    """Maak Agent 25: Real-Time Risico Monitor Spot.
 
-    24/7 monitoring of spot risk metrics and thresholds.
-    Uses light LLM for monitoring tasks.
+    24/7 monitoring van spot risico metrics en drempelwaarden.
+    Gebruikt licht LLM voor monitoring taken.
     """
     tools = [
         RiskDashboardTool(),
@@ -51,18 +51,18 @@ def create_spot_risk_monitor_agent() -> Agent:
     ] + get_spot_risk_tools()
 
     return create_light_agent(
-        role="Real-Time Risk Monitor Spot — Risk Management",
+        role="Real-Time Risico Monitor Spot — Risicomanagement",
         goal=(
-            "24/7 monitoring of spot risk metrics and thresholds. "
-            "Monitor position limits, exposure caps, and drawdown levels. "
-            "Alert immediately on threshold breaches. "
-            "Escalate to CRO Spot on critical alerts. "
-            "Track venue health and liquidity conditions."
+            "24/7 monitoring van spot risico metrics en drempelwaarden. "
+            "Monitor positie limieten, exposure caps en drawdown niveaus. "
+            "Alert onmiddellijk bij drempelwaarde overschrijdingen. "
+            "Escaleer naar CRO Spot bij kritieke alerts. "
+            "Volg venue gezondheid en liquiditeit condities."
         ),
         backstory=(
-            "Risk monitoring specialist with attention to detail. "
-            "Expert in real-time risk surveillance and alert management. "
-            "Known for rapid escalation on critical issues."
+            "Risico monitoring specialist met aandacht voor detail. "
+            "Expert in real-time risico surveillance en alert management. "
+            "Bekend om snelle escalatie bij kritieke problemen."
         ),
         tools=tools,
         allow_delegation=False,
@@ -70,10 +70,10 @@ def create_spot_risk_monitor_agent() -> Agent:
 
 
 def create_spot_limits_officer_agent() -> Agent:
-    """Create Agent 26: Limits & Controls Officer Spot.
+    """Maak Agent 26: Limieten & Controles Officer Spot.
 
-    Maintains and enforces trading limits and controls.
-    Uses light LLM for limits management.
+    Onderhoudt en handhaaft trading limieten en controles.
+    Gebruikt licht LLM voor limieten management.
     """
     tools = [
         RiskDashboardTool(),
@@ -81,18 +81,18 @@ def create_spot_limits_officer_agent() -> Agent:
     ] + get_spot_risk_tools()
 
     return create_light_agent(
-        role="Limits & Controls Officer Spot — Risk Management",
+        role="Limieten & Controles Officer Spot — Risicomanagement",
         goal=(
-            "Maintain and enforce trading limits and controls for spot. "
-            "Document and update limit frameworks. "
-            "Process limit change requests with proper approvals. "
-            "Ensure limit enforcement in trading systems. "
-            "Regular limit reviews and calibration."
+            "Onderhoud en handhaaf trading limieten en controles voor spot. "
+            "Documenteer en update limiet frameworks. "
+            "Verwerk limiet wijzigingsverzoeken met juiste goedkeuringen. "
+            "Verzeker limiet handhaving in trading systemen. "
+            "Regelmatige limiet reviews en kalibratie."
         ),
         backstory=(
-            "Controls specialist with trading limits expertise. "
-            "Expert in limit frameworks and governance. "
-            "Known for maintaining consistent limit enforcement."
+            "Controles specialist met trading limieten expertise. "
+            "Expert in limiet frameworks en governance. "
+            "Bekend om het handhaven van consistente limiet handhaving."
         ),
         tools=tools,
         allow_delegation=False,
@@ -100,28 +100,28 @@ def create_spot_limits_officer_agent() -> Agent:
 
 
 def create_spot_margin_analyst_agent() -> Agent:
-    """Create Agent 27: Margin & Collateral Analyst Spot.
+    """Maak Agent 27: Margin & Collateral Analist Spot.
 
-    Monitors margin and collateral for spot positions.
-    Uses light LLM for margin analysis.
+    Monitort margin en collateral voor spot posities.
+    Gebruikt licht LLM voor margin analyse.
     """
     tools = [
         RiskDashboardTool(),
     ] + get_spot_risk_tools()
 
     return create_light_agent(
-        role="Margin & Collateral Analyst Spot — Risk Management",
+        role="Margin & Collateral Analist Spot — Risicomanagement",
         goal=(
-            "Monitor margin and collateral for spot positions. "
-            "Track margin utilization across venues. "
-            "Optimize collateral allocation. "
-            "Alert on margin calls or low buffer situations. "
-            "Coordinate with treasury on collateral movements."
+            "Monitor margin en collateral voor spot posities. "
+            "Volg margin gebruik over venues. "
+            "Optimaliseer collateral allocatie. "
+            "Alert bij margin calls of lage buffer situaties. "
+            "Coördineer met treasury over collateral bewegingen."
         ),
         backstory=(
-            "Margin specialist with exchange margin model expertise. "
-            "Expert in collateral optimization and margin efficiency. "
-            "Known for preventing margin-related trading disruptions."
+            "Margin specialist met exchange margin model expertise. "
+            "Expert in collateral optimalisatie en margin efficiëntie. "
+            "Bekend om het voorkomen van margin-gerelateerde trading verstoringen."
         ),
         tools=tools,
         allow_delegation=False,

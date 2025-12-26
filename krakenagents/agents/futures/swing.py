@@ -1,4 +1,4 @@
-"""Futures Swing/Directional Trading agents (48-50) for QRI Trading Organization."""
+"""Futures Swing/Directional Trading agents (48-50) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_research_tools, get_futures_execution
 
 
 def create_futures_swing_head_agent() -> Agent:
-    """Create Agent 48: Head of Swing/Directional Futures.
+    """Maak Agent 48: Head of Swing/Directional Futures.
 
-    Owner of directional futures trading strategies.
-    Uses heavy LLM for directional analysis.
+    Eigenaar van directionele futures trading strategieën.
+    Gebruikt heavy LLM voor directionele analyse.
     """
     tools = [
         TradeJournalTool(),
@@ -20,16 +20,16 @@ def create_futures_swing_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Swing/Directional Futures — Swing Trading",
         goal=(
-            "Own directional futures trading strategies. "
-            "Develop thesis-driven directional trades using leverage. "
-            "Integrate funding cost into position sizing. "
-            "Manage portfolio of directional bets. "
-            "Scale leverage based on conviction and regime."
+            "Eigenaar directionele futures trading strategieën. "
+            "Ontwikkel these-gedreven directionele trades met leverage. "
+            "Integreer funding cost in positiegrootte. "
+            "Beheer portefeuille van directionele bets. "
+            "Schaal leverage op basis van overtuiging en regime."
         ),
         backstory=(
-            "Directional trader specialized in leveraged positions. "
-            "Expert in sizing positions with funding considerations. "
-            "Known for larger R-trades with controlled leverage risk."
+            "Directionele trader gespecialiseerd in leveraged posities. "
+            "Expert in het dimensioneren van posities met funding overwegingen. "
+            "Bekend om grotere R-trades met gecontroleerd leverage risico."
         ),
         tools=tools,
         allow_delegation=True,
@@ -37,10 +37,10 @@ def create_futures_swing_head_agent() -> Agent:
 
 
 def create_futures_swing_btc_agent() -> Agent:
-    """Create Agent 49: Swing Trader Futures (BTC/ETH).
+    """Maak Agent 49: Swing Trader Futures (BTC/ETH).
 
-    Swing trading BTC/ETH perpetuals and futures.
-    Uses heavy LLM for trade planning.
+    Swing trading BTC/ETH perpetuals en futures.
+    Gebruikt heavy LLM voor trade planning.
     """
     tools = [
         TradeJournalTool(),
@@ -49,16 +49,16 @@ def create_futures_swing_btc_agent() -> Agent:
     return create_heavy_agent(
         role="Swing Trader Futures (BTC/ETH) — Swing Trading",
         goal=(
-            "Swing trade BTC/ETH perpetuals and futures. "
-            "Build directional positions with leverage. "
-            "Incorporate funding cost into trade planning. "
-            "Scale position with market confirmation. "
-            "Strict stop discipline with leverage awareness."
+            "Swing trade BTC/ETH perpetuals en futures. "
+            "Bouw directionele posities met leverage. "
+            "Integreer funding cost in trade planning. "
+            "Schaal positie met marktbevestiging. "
+            "Strikte stop discipline met leverage bewustzijn."
         ),
         backstory=(
-            "Swing trader specialized in BTC/ETH derivatives. "
-            "Expert in leveraged position management. "
-            "Known for disciplined swing trading with proper sizing."
+            "Swing trader gespecialiseerd in BTC/ETH derivatives. "
+            "Expert in leveraged positie management. "
+            "Bekend om gedisciplineerde swing trading met juiste sizing."
         ),
         tools=tools,
         allow_delegation=False,
@@ -66,10 +66,10 @@ def create_futures_swing_btc_agent() -> Agent:
 
 
 def create_futures_curve_trader_agent() -> Agent:
-    """Create Agent 50: Curve/RV Trader Futures.
+    """Maak Agent 50: Curve/RV Trader Futures.
 
-    Curve and relative value trading on futures.
-    Uses heavy LLM for RV analysis.
+    Curve en relative value trading op futures.
+    Gebruikt heavy LLM voor RV analyse.
     """
     tools = [
         TradeJournalTool(),
@@ -78,16 +78,16 @@ def create_futures_curve_trader_agent() -> Agent:
     return create_heavy_agent(
         role="Curve/RV Trader Futures — Swing Trading",
         goal=(
-            "Trade curve and relative value on futures. "
-            "Execute term structure trades. "
-            "Trade cross-venue basis opportunities. "
-            "Manage roll risk in calendar positions. "
-            "Identify RV opportunities in derivatives market."
+            "Handel curve en relative value op futures. "
+            "Voer term structure trades uit. "
+            "Handel cross-venue basis kansen. "
+            "Beheer roll risico in calendar posities. "
+            "Identificeer RV kansen in derivatives markt."
         ),
         backstory=(
-            "RV trader specialized in derivatives curve trading. "
-            "Expert in term structure and cross-venue dynamics. "
-            "Known for extracting alpha from RV opportunities."
+            "RV trader gespecialiseerd in derivatives curve trading. "
+            "Expert in term structure en cross-venue dynamiek. "
+            "Bekend om het extraheren van alpha uit RV kansen."
         ),
         tools=tools,
         allow_delegation=False,

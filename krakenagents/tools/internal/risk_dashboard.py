@@ -1,4 +1,4 @@
-"""Risk Dashboard Tool for internal risk monitoring."""
+"""Risk Dashboard Tool voor interne risico monitoring."""
 
 from datetime import datetime
 from typing import Any
@@ -8,15 +8,15 @@ from pydantic import Field
 
 
 class RiskDashboardTool(BaseTool):
-    """Tool for monitoring and reporting risk metrics across desks.
+    """Tool voor monitoring en rapportage van risico metrics over desks.
 
-    Provides a unified view of risk exposure across Spot and Futures desks.
+    Biedt een uniform overzicht van risico blootstelling over Spot en Futures desks.
     """
 
     name: str = "risk_dashboard"
     description: str = (
-        "Monitor and report risk metrics including position sizes, exposure levels, "
-        "margin utilization, and risk limits. Use this to get a consolidated risk view."
+        "Monitor en rapporteer risico metrics inclusief positie groottes, blootstelling niveaus, "
+        "margin gebruik, en risico limieten. Gebruik dit voor een geconsolideerd risico overzicht."
     )
 
     # Internal state
@@ -29,12 +29,12 @@ class RiskDashboardTool(BaseTool):
         metric: str | None = None,
         **kwargs: Any,
     ) -> str:
-        """Execute risk dashboard action.
+        """Voer risk dashboard actie uit.
 
         Args:
-            action: One of 'get_summary', 'get_exposure', 'check_limits', 'get_alerts'
-            desk: Optional desk filter ('spot', 'futures', or None for all)
-            metric: Optional specific metric to retrieve
+            action: Een van 'get_summary', 'get_exposure', 'check_limits', 'get_alerts'
+            desk: Optionele desk filter ('spot', 'futures', of None voor alle)
+            metric: Optionele specifieke metric om op te halen
         """
         timestamp = datetime.now().isoformat()
 
@@ -47,10 +47,10 @@ class RiskDashboardTool(BaseTool):
         elif action == "get_alerts":
             return self._get_active_alerts(desk, timestamp)
         else:
-            return f"Unknown action: {action}. Available: get_summary, get_exposure, check_limits, get_alerts"
+            return f"Onbekende actie: {action}. Beschikbaar: get_summary, get_exposure, check_limits, get_alerts"
 
     def _get_risk_summary(self, desk: str | None, timestamp: str) -> str:
-        """Get consolidated risk summary."""
+        """Haal geconsolideerde risico samenvatting op."""
         summary = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
@@ -61,14 +61,14 @@ class RiskDashboardTool(BaseTool):
                 "open_positions": 0,
                 "open_orders": 0,
                 "unrealized_pnl_usd": 0.0,
-                "risk_score": "LOW",
+                "risk_score": "LAAG",
             },
-            "note": "Real-time data requires connection to Kraken API tools",
+            "note": "Real-time data vereist connectie met Kraken API tools",
         }
         return str(summary)
 
     def _get_exposure(self, desk: str | None, timestamp: str) -> str:
-        """Get exposure breakdown."""
+        """Haal blootstelling breakdown op."""
         exposure = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
@@ -77,12 +77,12 @@ class RiskDashboardTool(BaseTool):
                 "by_direction": {"long": 0.0, "short": 0.0},
                 "by_desk": {"spot": 0.0, "futures": 0.0},
             },
-            "note": "Populate with real data from position tools",
+            "note": "Vul aan met echte data van positie tools",
         }
         return str(exposure)
 
     def _check_limits(self, desk: str | None, timestamp: str) -> str:
-        """Check if any risk limits are breached."""
+        """Controleer of risico limieten zijn overschreden."""
         limits = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
@@ -97,7 +97,7 @@ class RiskDashboardTool(BaseTool):
         return str(limits)
 
     def _get_active_alerts(self, desk: str | None, timestamp: str) -> str:
-        """Get active risk alerts."""
+        """Haal actieve risico alerts op."""
         alerts = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",

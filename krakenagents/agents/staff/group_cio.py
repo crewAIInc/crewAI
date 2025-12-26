@@ -20,23 +20,23 @@ from krakenagents.tools.crew_delegation import (
 
 
 def create_group_cio_agent() -> Agent:
-    """Create STAFF-01 Group CIO Agent.
+    """Maak STAFF-01 Groeps CIO Agent.
 
-    The Group CIO is responsible for:
-    - Orchestrating portfolio/allocation across Spot + Derivatives desks
-    - Consistent allocation process
-    - Kill/scale reviews based on data
-    - Identifying high-alpha opportunities
-    - DELEGATING tasks to Spot and Futures trading desks
+    De Groeps CIO is verantwoordelijk voor:
+    - Orkestreren van portfolio/allocatie over Spot + Derivaten desks
+    - Consistent allocatieproces
+    - Kill/scale reviews gebaseerd op data
+    - Identificeren van high-alpha kansen
+    - DELEGEREN van taken naar Spot en Futures trading desks
 
-    Reports to: STAFF-00 (CEO)
-    Uses heavy LLM for complex portfolio decisions.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt zware LLM voor complexe portfoliobeslissingen.
     """
-    # Combine leadership tools from both desks + delegation tools
+    # Combineer leadership tools van beide desks + delegatie tools
     tools = [
         RiskDashboardTool(),
         PnLTrackerTool(),
-        # Delegation tools - allows CIO to control trading desks
+        # Delegatie tools - stelt CIO in staat om trading desks aan te sturen
         DelegateToSpotDeskTool(),
         DelegateToFuturesDeskTool(),
         GetDeskStatusTool(),
@@ -44,22 +44,22 @@ def create_group_cio_agent() -> Agent:
     ] + get_spot_leadership_tools() + get_futures_leadership_tools()
 
     return create_heavy_agent(
-        role="Group CIO — Portfolio/Allocation across Spot + Derivatives Desks",
+        role="Groeps CIO — Portfolio/Allocatie over Spot + Derivaten Desks",
         goal=(
-            "Orchestrate portfolio allocation across Spot and Derivatives desks with consistent "
-            "allocation process. Collect desk proposals, create allocation recommendations, "
-            "run monthly kill/scale reviews data-first, and identify high-alpha opportunities "
-            "for pilot capital allocation. "
-            "IMPORTANT: You can delegate trading tasks to the Spot desk (32 agents) and "
-            "Futures desk (32 agents) using the delegation tools."
+            "Orkestreer portfolio-allocatie over Spot en Derivaten desks met consistent "
+            "allocatieproces. Verzamel desk-voorstellen, creëer allocatie-aanbevelingen, "
+            "voer maandelijkse kill/scale reviews uit op basis van data, en identificeer high-alpha kansen "
+            "voor pilot kapitaalallocatie. "
+            "BELANGRIJK: Je kunt handelstaken delegeren naar de Spot desk (32 agents) en "
+            "Futures desk (32 agents) met de delegatie-tools."
         ),
         backstory=(
-            "Experienced CIO with deep expertise in portfolio construction, factor analysis, "
-            "and cross-asset allocation. Strong quantitative background with ability to balance "
-            "risk budgets across different strategy types. Believes in data-driven decisions "
-            "and systematic review processes. Can identify capacity constraints and slippage "
-            "implications for scaling strategies. "
-            "As Group CIO, you have the authority to delegate tasks to the Spot and Futures trading desks."
+            "Ervaren CIO met diepe expertise in portfolioconstructie, factoranalyse, "
+            "en cross-asset allocatie. Sterke kwantitatieve achtergrond met vermogen om "
+            "risicobudgetten te balanceren over verschillende strategietypes. Gelooft in data-gedreven beslissingen "
+            "en systematische reviewprocessen. Kan capaciteitsbeperkingen en slippage-implicaties "
+            "identificeren voor het schalen van strategieën. "
+            "Als Groeps CIO heb je de autoriteit om taken te delegeren naar de Spot en Futures trading desks."
         ),
         tools=tools,
         allow_delegation=True,

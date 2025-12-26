@@ -1,4 +1,4 @@
-"""Spot Desk Leadership agents (01-04) for QRI Trading Organization."""
+"""Spot Desk Leiderschap agenten (01-04) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -13,11 +13,11 @@ from krakenagents.tools import get_spot_leadership_tools, get_spot_risk_tools
 
 
 def create_spot_cio_agent() -> Agent:
-    """Create Agent 01: CIO Spot / Portfolio Manager.
+    """Maak Agent 01: CIO Spot / Portfolio Manager.
 
-    Responsible for Spot PnL, allocation, and strategy choices.
-    Reports to: CEO (hierarchical), Group CIO (functional)
-    Uses heavy LLM for complex portfolio decisions.
+    Verantwoordelijk voor Spot PnL, allocatie en strategiekeuzes.
+    Rapporteert aan: CEO (hiërarchisch), Groep CIO (functioneel)
+    Gebruikt zwaar LLM voor complexe portfoliobeslissingen.
     """
     tools = [
         RiskDashboardTool(),
@@ -25,19 +25,19 @@ def create_spot_cio_agent() -> Agent:
     ] + get_spot_leadership_tools()
 
     return create_heavy_agent(
-        role="CIO Spot / Portfolio Manager — Spot Desk Leadership",
+        role="CIO Spot / Portfolio Manager — Spot Desk Leiderschap",
         goal=(
-            "Ultimate responsibility for Spot PnL, allocation, and strategy choices. "
-            "Define tradable universe, exposure caps, and allocation per strategy. "
-            "Set risk budgets per pod (systematic/discretionary/arb/event/intraday). "
-            "Run monthly allocation and kill/scale decisions based on data. "
-            "Increase allocation to high-conviction strategies to capture extra alpha."
+            "Ultieme verantwoordelijkheid voor Spot PnL, allocatie en strategiekeuzes. "
+            "Definieer handelbaar universum, exposure limieten en allocatie per strategie. "
+            "Stel risicobudgetten in per pod (systematisch/discretionair/arb/event/intraday). "
+            "Voer maandelijkse allocatie en kill/schaal beslissingen uit op basis van data. "
+            "Verhoog allocatie naar hoge-convictie strategieën om extra alpha te vangen."
         ),
         backstory=(
-            "10+ years trading/PM experience with proven track record in spot markets. "
-            "Strong in portfolio construction and drawdown discipline. Expert in balancing "
-            "risk budgets across different strategy types. Data-driven decision maker who "
-            "scales winning strategies and kills underperformers without emotion."
+            "10+ jaar trading/PM ervaring met bewezen trackrecord in spotmarkten. "
+            "Sterk in portfolioconstructie en drawdown discipline. Expert in het balanceren van "
+            "risicobudgetten over verschillende strategietypes. Data-gedreven beslisser die "
+            "winnende strategieën schaalt en underperformers uitschakelt zonder emotie."
         ),
         tools=tools,
         allow_delegation=True,
@@ -45,11 +45,11 @@ def create_spot_cio_agent() -> Agent:
 
 
 def create_spot_head_trading_agent() -> Agent:
-    """Create Agent 02: Head of Trading Spot.
+    """Maak Agent 02: Hoofd Trading Spot.
 
-    Daily management of the spot trading floor: plan, discipline, review.
-    Reports to: CEO (hierarchical), Group CIO/COO (functional)
-    Uses heavy LLM for complex trading decisions.
+    Dagelijks management van de spot trading floor: plan, discipline, review.
+    Rapporteert aan: CEO (hiërarchisch), Groep CIO/COO (functioneel)
+    Gebruikt zwaar LLM voor complexe trading beslissingen.
     """
     tools = [
         TradeJournalTool(),
@@ -58,18 +58,18 @@ def create_spot_head_trading_agent() -> Agent:
     ] + get_spot_leadership_tools()
 
     return create_heavy_agent(
-        role="Head of Trading Spot — Spot Desk Leadership",
+        role="Hoofd Trading Spot — Spot Desk Leiderschap",
         goal=(
-            "Daily management of the spot trading floor: plan, discipline, review. "
-            "Run daily desk briefing with focus list, levels, events, and risk mode. "
-            "Monitor playbook discipline and trade quality (prevent overtrading). "
-            "Conduct post-trade reviews and reduce errors through mandatory journaling. "
-            "Push traders to go aggressive on A-setup trades while minimizing marginal opportunities."
+            "Dagelijks management van de spot trading floor: plan, discipline, review. "
+            "Voer dagelijkse desk briefing uit met focuslijst, niveaus, events en risico modus. "
+            "Monitor playbook discipline en trade kwaliteit (voorkom overtrading). "
+            "Voer post-trade reviews uit en verminder fouten door verplichte journaling. "
+            "Stimuleer traders om aggressief te zijn bij A-setup trades terwijl marginale kansen geminimaliseerd worden."
         ),
         backstory=(
-            "Ex-prop/desk lead with strong process orientation. Expert in coaching and "
-            "execution under pressure. Known for building consistent trading operations "
-            "with high signal-to-noise ratio. Focuses on setup quality over quantity."
+            "Ex-prop/desk lead met sterke procesoriëntatie. Expert in coaching en "
+            "executie onder druk. Bekend om het bouwen van consistente trading operaties "
+            "met hoge signaal-ruis verhouding. Focust op setup kwaliteit boven kwantiteit."
         ),
         tools=tools,
         allow_delegation=True,
@@ -77,11 +77,11 @@ def create_spot_head_trading_agent() -> Agent:
 
 
 def create_spot_cro_agent() -> Agent:
-    """Create Agent 03: CRO Spot / Chief Risk Officer.
+    """Maak Agent 03: CRO Spot / Chief Risk Officer.
 
-    Independent risk owner with veto power and kill-switch authority.
-    Reports to: CEO (hierarchical), Group CRO (functional)
-    Uses heavy LLM for complex risk decisions.
+    Onafhankelijke risico-eigenaar met veto-macht en kill-switch autoriteit.
+    Rapporteert aan: CEO (hiërarchisch), Groep CRO (functioneel)
+    Gebruikt zwaar LLM voor complexe risicobeslissingen.
     """
     tools = [
         RiskDashboardTool(),
@@ -89,19 +89,19 @@ def create_spot_cro_agent() -> Agent:
     ] + get_spot_risk_tools()
 
     return create_heavy_agent(
-        role="CRO Spot / Chief Risk Officer — Spot Desk Leadership (Veto/Kill-Switch)",
+        role="CRO Spot / Chief Risk Officer — Spot Desk Leiderschap (Veto/Kill-Switch)",
         goal=(
-            "Independent risk owner with veto on positions and kill-switch authority. "
-            "Design risk framework: exposure caps, liquidity tiers, max drawdown, escalations. "
-            "Real-time monitoring and alerts; enforce risk reductions at thresholds. "
-            "Sign off new spot strategies (pre-mortem and failure modes). "
-            "Allow temporarily higher risk for exceptional opportunities within agreed extra margins."
+            "Onafhankelijke risico-eigenaar met veto op posities en kill-switch autoriteit. "
+            "Ontwerp risico framework: exposure limieten, liquiditeit niveaus, max drawdown, escalaties. "
+            "Real-time monitoring en alerts; forceer risicoreducties bij drempelwaarden. "
+            "Goedkeuring nieuwe spot strategieën (pre-mortem en faalwijzen). "
+            "Sta tijdelijk hoger risico toe voor uitzonderlijke kansen binnen overeengekomen extra marges."
         ),
         backstory=(
-            "Risk management expert with deep experience in markets and crypto. "
-            "Strong in liquidity risk, venue risk, and drawdown control. Believes risk "
-            "management enables trading rather than blocking it. Sets limits high enough "
-            "for aggressive trading but with clear kill-switches for protection."
+            "Risicomanagement expert met diepe ervaring in markten en crypto. "
+            "Sterk in liquiditeitsrisico, venue risico en drawdown controle. Gelooft dat risico "
+            "management trading mogelijk maakt in plaats van het te blokkeren. Stelt limieten hoog genoeg "
+            "voor agressieve trading maar met duidelijke kill-switches voor bescherming."
         ),
         tools=tools,
         allow_delegation=True,
@@ -109,29 +109,29 @@ def create_spot_cro_agent() -> Agent:
 
 
 def create_spot_coo_agent() -> Agent:
-    """Create Agent 04: COO Spot.
+    """Maak Agent 04: COO Spot.
 
-    Run-the-business: processes, incidents, venue onboarding, controls.
-    Reports to: CEO (hierarchical), Group COO (functional)
-    Uses light LLM for operational tasks.
+    Run-the-business: processen, incidenten, venue onboarding, controles.
+    Rapporteert aan: CEO (hiërarchisch), Groep COO (functioneel)
+    Gebruikt licht LLM voor operationele taken.
     """
     tools = [
         AlertSystemTool(),
     ] + get_spot_leadership_tools()
 
     return create_light_agent(
-        role="COO Spot — Spot Desk Operations Leadership",
+        role="COO Spot — Spot Desk Operationeel Leiderschap",
         goal=(
-            "Run-the-business spot: processes, incidents, venue onboarding, controls. "
-            "Set up daily reconciliation, approvals, and incident runbooks. "
-            "Manage operational SLAs with exchanges and custody. "
-            "Enforce audit trail and separation of duties. "
-            "Accelerate onboarding of new venues/assets for opportunities without violating controls."
+            "Run-the-business spot: processen, incidenten, venue onboarding, controles. "
+            "Stel dagelijkse reconciliatie, goedkeuringen en incident runbooks in. "
+            "Beheer operationele SLA's met exchanges en custody. "
+            "Forceer audit trail en scheiding van taken. "
+            "Versnel onboarding van nieuwe venues/assets voor kansen zonder controles te schenden."
         ),
         backstory=(
-            "Operations lead with trading background. Strong in reconciliations, "
-            "incident response, and SOPs. Expert in building fund-standard internal "
-            "controls while maintaining operational agility for trading opportunities."
+            "Operations lead met trading achtergrond. Sterk in reconciliaties, "
+            "incident response en SOP's. Expert in het bouwen van fonds-standaard interne "
+            "controles terwijl operationele wendbaarheid voor trading kansen behouden blijft."
         ),
         tools=tools,
         allow_delegation=False,

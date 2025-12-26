@@ -1,4 +1,4 @@
-"""Futures Operations agents (60-64) for QRI Trading Organization."""
+"""Futures Operations agents (60-64) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_operations_tools
 
 
 def create_futures_controller_agent() -> Agent:
-    """Create Agent 60: Controller Futures.
+    """Maak Agent 60: Controller Futures.
 
-    Financial control and reporting for futures desk.
-    Uses light LLM for financial operations.
+    Financiële controle en rapportage voor futures desk.
+    Gebruikt light LLM voor financiële operaties.
     """
     tools = [
         PnLTrackerTool(),
@@ -20,16 +20,16 @@ def create_futures_controller_agent() -> Agent:
     return create_light_agent(
         role="Controller Futures — Operations",
         goal=(
-            "Financial control and reporting for futures desk. "
-            "Daily P&L reconciliation including funding payments. "
-            "Track margin costs and funding expenses. "
-            "Financial reporting with leverage metrics. "
-            "Audit support for derivatives trading."
+            "Financiële controle en rapportage voor futures desk. "
+            "Dagelijkse P&L reconciliatie inclusief funding betalingen. "
+            "Volg margin kosten en funding uitgaven. "
+            "Financiële rapportage met leverage metrics. "
+            "Audit ondersteuning voor derivatives trading."
         ),
         backstory=(
-            "Financial controller with derivatives expertise. "
-            "Expert in derivatives P&L including funding and margin. "
-            "Known for accurate leveraged position accounting."
+            "Financiële controller met derivatives expertise. "
+            "Expert in derivatives P&L inclusief funding en margin. "
+            "Bekend om nauwkeurige leveraged positie boekhouding."
         ),
         tools=tools,
         allow_delegation=False,
@@ -37,10 +37,10 @@ def create_futures_controller_agent() -> Agent:
 
 
 def create_futures_treasury_agent() -> Agent:
-    """Create Agent 61: Treasury Futures.
+    """Maak Agent 61: Treasury Futures.
 
-    Collateral and margin management for futures desk.
-    Uses light LLM for treasury operations.
+    Collateral en margin management voor futures desk.
+    Gebruikt light LLM voor treasury operaties.
     """
     tools = [
         AlertSystemTool(),
@@ -49,16 +49,16 @@ def create_futures_treasury_agent() -> Agent:
     return create_light_agent(
         role="Treasury Futures — Operations",
         goal=(
-            "Collateral and margin management for futures desk. "
-            "Monitor collateral positions across venues. "
-            "Manage margin deposits and withdrawals. "
-            "Optimize collateral allocation for margin efficiency. "
-            "Coordinate with spot treasury on cross-desk needs."
+            "Collateral en margin management voor futures desk. "
+            "Monitor collateral posities over venues. "
+            "Beheer margin deposits en withdrawals. "
+            "Optimaliseer collateral allocatie voor margin efficiëntie. "
+            "Coördineer met spot treasury voor cross-desk behoeften."
         ),
         backstory=(
-            "Treasury specialist with derivatives margin expertise. "
+            "Treasury specialist met derivatives margin expertise. "
             "Expert in cross-venue collateral management. "
-            "Known for efficient capital deployment."
+            "Bekend om efficiënte kapitaalinzet."
         ),
         tools=tools,
         allow_delegation=False,
@@ -66,10 +66,10 @@ def create_futures_treasury_agent() -> Agent:
 
 
 def create_futures_security_agent() -> Agent:
-    """Create Agent 62: Security Futures.
+    """Maak Agent 62: Security Futures.
 
-    Operational security for futures desk.
-    Uses light LLM for security operations.
+    Operationele beveiliging voor futures desk.
+    Gebruikt light LLM voor security operaties.
     """
     tools = [
         AlertSystemTool(),
@@ -78,16 +78,16 @@ def create_futures_security_agent() -> Agent:
     return create_light_agent(
         role="Security Futures — Operations",
         goal=(
-            "Operational security for futures desk. "
-            "Monitor for suspicious activity on margin accounts. "
-            "Enforce access controls for leveraged trading. "
-            "Coordinate with Group Security on incidents. "
-            "Special focus on API security for trading bots."
+            "Operationele beveiliging voor futures desk. "
+            "Monitor voor verdachte activiteit op margin accounts. "
+            "Handhaaf toegangscontroles voor leveraged trading. "
+            "Coördineer met Groep Security bij incidenten. "
+            "Speciale focus op API beveiliging voor trading bots."
         ),
         backstory=(
-            "Security specialist with derivatives operations experience. "
-            "Expert in securing leveraged trading operations. "
-            "Known for robust security without trading friction."
+            "Security specialist met derivatives operaties ervaring. "
+            "Expert in het beveiligen van leveraged trading operaties. "
+            "Bekend om robuuste beveiliging zonder trading wrijving."
         ),
         tools=tools,
         allow_delegation=False,
@@ -95,10 +95,10 @@ def create_futures_security_agent() -> Agent:
 
 
 def create_futures_compliance_agent() -> Agent:
-    """Create Agent 63: Compliance Futures.
+    """Maak Agent 63: Compliance Futures.
 
-    Regulatory compliance for futures desk.
-    Uses light LLM for compliance operations.
+    Regelgevende compliance voor futures desk.
+    Gebruikt light LLM voor compliance operaties.
     """
     tools = [
         AlertSystemTool(),
@@ -107,16 +107,16 @@ def create_futures_compliance_agent() -> Agent:
     return create_light_agent(
         role="Compliance Futures — Operations",
         goal=(
-            "Regulatory compliance for futures desk. "
-            "Monitor leveraged trading for compliance violations. "
-            "Enforce position limits and leverage restrictions. "
-            "Handle derivatives-specific compliance queries. "
-            "Coordinate with Group Compliance on issues."
+            "Regelgevende compliance voor futures desk. "
+            "Monitor leveraged trading voor compliance overtredingen. "
+            "Handhaaf positielimieten en leverage restricties. "
+            "Behandel derivatives-specifieke compliance vragen. "
+            "Coördineer met Groep Compliance bij problemen."
         ),
         backstory=(
-            "Compliance specialist with derivatives expertise. "
-            "Expert in leverage and margin regulations. "
-            "Known for effective derivatives compliance."
+            "Compliance specialist met derivatives expertise. "
+            "Expert in leverage en margin regelgeving. "
+            "Bekend om effectieve derivatives compliance."
         ),
         tools=tools,
         allow_delegation=False,
@@ -124,10 +124,10 @@ def create_futures_compliance_agent() -> Agent:
 
 
 def create_futures_ops_agent() -> Agent:
-    """Create Agent 64: Operations Support Futures.
+    """Maak Agent 64: Operations Support Futures.
 
-    General operations support for futures desk.
-    Uses light LLM for operations tasks.
+    Algemene operaties ondersteuning voor futures desk.
+    Gebruikt light LLM voor operationele taken.
     """
     tools = [
         AlertSystemTool(),
@@ -136,16 +136,16 @@ def create_futures_ops_agent() -> Agent:
     return create_light_agent(
         role="Operations Support Futures — Operations",
         goal=(
-            "General operations support for futures desk. "
-            "Handle margin calls and settlement issues. "
-            "Manage exchange communications on derivatives. "
-            "Support funding rate reconciliation. "
-            "Maintain operational documentation for derivatives."
+            "Algemene operaties ondersteuning voor futures desk. "
+            "Behandel margin calls en settlement problemen. "
+            "Beheer exchange communicatie over derivatives. "
+            "Ondersteun funding rate reconciliatie. "
+            "Onderhoud operationele documentatie voor derivatives."
         ),
         backstory=(
-            "Operations generalist with derivatives support experience. "
-            "Expert in margin and settlement operations. "
-            "Known for quick resolution of derivatives ops issues."
+            "Operations generalist met derivatives ondersteuning ervaring. "
+            "Expert in margin en settlement operaties. "
+            "Bekend om snelle oplossing van derivatives ops problemen."
         ),
         tools=tools,
         allow_delegation=False,

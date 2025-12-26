@@ -1,4 +1,4 @@
-"""Trade Journal Tool for logging and reviewing trades."""
+"""Trade Journal Tool voor loggen en reviewen van trades."""
 
 from datetime import datetime
 from typing import Any
@@ -7,15 +7,15 @@ from crewai.tools import BaseTool
 
 
 class TradeJournalTool(BaseTool):
-    """Tool for maintaining a trade journal with entries and analysis.
+    """Tool voor bijhouden van een trade journal met entries en analyse.
 
-    Supports logging trades, adding notes, and reviewing historical entries.
+    Ondersteunt het loggen van trades, toevoegen van notities, en reviewen van historische entries.
     """
 
     name: str = "trade_journal"
     description: str = (
-        "Log trades with rationale, notes, and outcomes. Review past trades for "
-        "pattern analysis and learning. Essential for trading discipline and improvement."
+        "Log trades met rationale, notities, en uitkomsten. Review eerdere trades voor "
+        "patroon analyse en leren. Essentieel voor trading discipline en verbetering."
     )
 
     # In-memory journal storage
@@ -41,24 +41,24 @@ class TradeJournalTool(BaseTool):
         limit: int = 20,
         **kwargs: Any,
     ) -> str:
-        """Execute trade journal action.
+        """Voer trade journal actie uit.
 
         Args:
-            action: One of 'log_entry', 'log_exit', 'add_note', 'list', 'get', 'analyze'
-            trade_id: External trade ID from exchange
-            entry_type: Type of entry ('entry', 'exit', 'adjustment', 'note')
-            symbol: Trading symbol
-            side: Trade side ('buy', 'sell')
-            size: Position size
-            price: Execution price
-            rationale: Reason for the trade
-            notes: Additional notes
-            outcome: Trade outcome description
-            pnl: Profit/loss amount
+            action: Een van 'log_entry', 'log_exit', 'add_note', 'list', 'get', 'analyze'
+            trade_id: Externe trade ID van exchange
+            entry_type: Type entry ('entry', 'exit', 'adjustment', 'note')
+            symbol: Trading symbool
+            side: Trade richting ('buy', 'sell')
+            size: Positie grootte
+            price: Uitvoerings prijs
+            rationale: Reden voor de trade
+            notes: Aanvullende notities
+            outcome: Trade uitkomst beschrijving
+            pnl: Winst/verlies bedrag
             desk: Trading desk ('spot', 'futures')
-            strategy: Strategy name
-            entry_id: Journal entry ID for updates
-            limit: Number of entries to return for list action
+            strategy: Strategie naam
+            entry_id: Journal entry ID voor updates
+            limit: Aantal entries om te tonen voor list actie
         """
         timestamp = datetime.now().isoformat()
 
@@ -79,7 +79,7 @@ class TradeJournalTool(BaseTool):
         elif action == "analyze":
             return self._analyze_entries(desk, strategy, timestamp)
         else:
-            return f"Unknown action: {action}. Available: log_entry, log_exit, add_note, list, get, analyze"
+            return f"Onbekende actie: {action}. Beschikbaar: log_entry, log_exit, add_note, list, get, analyze"
 
     def _log_entry(
         self,
@@ -93,9 +93,9 @@ class TradeJournalTool(BaseTool):
         strategy: str | None,
         timestamp: str,
     ) -> str:
-        """Log a trade entry."""
+        """Log een trade entry."""
         if not symbol:
-            return "Error: symbol is required"
+            return "Fout: symbool is vereist"
 
         self._entry_id_counter += 1
         entry = {
@@ -118,7 +118,7 @@ class TradeJournalTool(BaseTool):
             "exit_time": None,
         }
         self._entries.append(entry)
-        return f"Trade entry logged: {entry}"
+        return f"Trade entry gelogd: {entry}"
 
     def _log_exit(
         self,
@@ -132,8 +132,8 @@ class TradeJournalTool(BaseTool):
         notes: str | None,
         timestamp: str,
     ) -> str:
-        """Log a trade exit."""
-        # Find matching open entry
+        """Log een trade exit."""
+        # Vind overeenkomende open entry
         for entry in reversed(self._entries):
             if (
                 entry["status"] == "open"
@@ -147,9 +147,9 @@ class TradeJournalTool(BaseTool):
                 entry["status"] = "closed"
                 if notes:
                     entry["notes"].append({"timestamp": timestamp, "note": notes})
-                return f"Trade exit logged: {entry}"
+                return f"Trade exit gelogd: {entry}"
 
-        # If no matching entry, create a standalone exit record
+        # Als geen overeenkomende entry, creëer standalone exit record
         self._entry_id_counter += 1
         entry = {
             "id": self._entry_id_counter,
@@ -171,21 +171,21 @@ class TradeJournalTool(BaseTool):
             "exit_time": timestamp,
         }
         self._entries.append(entry)
-        return f"Trade exit logged (no matching entry): {entry}"
+        return f"Trade exit gelogd (geen overeenkomende entry): {entry}"
 
     def _add_note(self, entry_id: int | None, notes: str | None, timestamp: str) -> str:
-        """Add a note to an existing entry."""
+        """Voeg een notitie toe aan een bestaande entry."""
         if not entry_id:
-            return "Error: entry_id is required"
+            return "Fout: entry_id is vereist"
         if not notes:
-            return "Error: notes is required"
+            return "Fout: notities is vereist"
 
         for entry in self._entries:
             if entry["id"] == entry_id:
                 entry["notes"].append({"timestamp": timestamp, "note": notes})
-                return f"Note added to entry {entry_id}"
+                return f"Notitie toegevoegd aan entry {entry_id}"
 
-        return f"Entry {entry_id} not found"
+        return f"Entry {entry_id} niet gevonden"
 
     def _list_entries(
         self,
@@ -195,7 +195,7 @@ class TradeJournalTool(BaseTool):
         limit: int,
         timestamp: str,
     ) -> str:
-        """List journal entries with optional filters."""
+        """Toon journal entries met optionele filters."""
         filtered = self._entries
 
         if desk:
@@ -215,18 +215,18 @@ class TradeJournalTool(BaseTool):
         }
 
     def _get_entry(self, entry_id: int | None, timestamp: str) -> str:
-        """Get a specific journal entry."""
+        """Haal een specifieke journal entry op."""
         if not entry_id:
-            return "Error: entry_id is required"
+            return "Fout: entry_id is vereist"
 
         for entry in self._entries:
             if entry["id"] == entry_id:
                 return {"timestamp": timestamp, "entry": entry}
 
-        return f"Entry {entry_id} not found"
+        return f"Entry {entry_id} niet gevonden"
 
     def _analyze_entries(self, desk: str | None, strategy: str | None, timestamp: str) -> str:
-        """Analyze journal entries for patterns and statistics."""
+        """Analyseer journal entries voor patronen en statistieken."""
         filtered = self._entries
 
         if desk:

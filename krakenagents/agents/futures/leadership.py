@@ -1,4 +1,4 @@
-"""Futures Desk Leadership agents (33-36) for QRI Trading Organization."""
+"""Futures Desk Leadership agents (33-36) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -13,11 +13,11 @@ from krakenagents.tools import get_futures_leadership_tools, get_futures_risk_to
 
 
 def create_futures_cio_agent() -> Agent:
-    """Create Agent 33: CIO Futures / Portfolio Manager.
+    """Maak Agent 33: CIO Futures / Portfolio Manager.
 
-    Responsible for Futures PnL, allocation, and strategy choices.
-    Reports to: CEO (hierarchical), Group CIO (functional)
-    Uses heavy LLM for complex portfolio decisions.
+    Verantwoordelijk voor Futures PnL, allocatie en strategiekeuzes.
+    Rapporteert aan: CEO (hiërarchisch), Groep CIO (functioneel)
+    Gebruikt heavy LLM voor complexe portefeuille beslissingen.
     """
     tools = [
         RiskDashboardTool(),
@@ -27,17 +27,17 @@ def create_futures_cio_agent() -> Agent:
     return create_heavy_agent(
         role="CIO Futures / Portfolio Manager — Futures Desk Leadership",
         goal=(
-            "Ultimate responsibility for Futures PnL, allocation, and strategy choices. "
-            "Define tradable instruments, exposure caps, and allocation per strategy. "
-            "Set risk budgets per pod (systematic/carry/microstructure/swing). "
-            "Run monthly allocation and kill/scale decisions based on data. "
-            "Optimize leverage usage within risk limits for enhanced returns."
+            "Ultieme verantwoordelijkheid voor Futures PnL, allocatie en strategiekeuzes. "
+            "Definieer verhandelbare instrumenten, blootstellingslimieten en allocatie per strategie. "
+            "Stel risicobudgetten in per pod (systematisch/carry/microstructure/swing). "
+            "Voer maandelijkse allocatie en stop/schaal beslissingen uit op basis van data. "
+            "Optimaliseer leverage gebruik binnen risicolimieten voor verbeterde rendementen."
         ),
         backstory=(
-            "10+ years derivatives/futures trading experience with proven track record. "
-            "Strong in portfolio construction with leverage considerations. "
-            "Expert in funding rate dynamics, basis trading, and perpetual mechanics. "
-            "Data-driven decision maker who scales winning strategies."
+            "10+ jaar derivatives/futures trading ervaring met bewezen trackrecord. "
+            "Sterk in portefeuille constructie met leverage overwegingen. "
+            "Expert in funding rate dynamiek, basis trading en perpetual mechanics. "
+            "Data-gedreven beslisser die winnende strategieën opschaalt."
         ),
         tools=tools,
         allow_delegation=True,
@@ -45,11 +45,11 @@ def create_futures_cio_agent() -> Agent:
 
 
 def create_futures_head_trading_agent() -> Agent:
-    """Create Agent 34: Head of Trading Futures.
+    """Maak Agent 34: Head of Trading Futures.
 
-    Daily management of the futures trading floor.
-    Reports to: CEO (hierarchical), Group CIO/COO (functional)
-    Uses heavy LLM for complex trading decisions.
+    Dagelijkse leiding van de futures trading floor.
+    Rapporteert aan: CEO (hiërarchisch), Groep CIO/COO (functioneel)
+    Gebruikt heavy LLM voor complexe trading beslissingen.
     """
     tools = [
         TradeJournalTool(),
@@ -60,16 +60,16 @@ def create_futures_head_trading_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Trading Futures — Futures Desk Leadership",
         goal=(
-            "Daily management of the futures trading floor. "
-            "Run daily desk briefing with focus list, funding expectations, and risk mode. "
-            "Monitor playbook discipline and position sizing. "
-            "Conduct post-trade reviews with emphasis on leverage usage. "
-            "Coordinate with spot desk for cross-desk opportunities."
+            "Dagelijkse leiding van de futures trading floor. "
+            "Voer dagelijkse desk briefing uit met focuslijst, funding verwachtingen en risicomodus. "
+            "Monitor playbook discipline en positiegrootte. "
+            "Voer post-trade reviews uit met nadruk op leverage gebruik. "
+            "Coördineer met spot desk voor cross-desk kansen."
         ),
         backstory=(
-            "Ex-derivatives desk lead with strong process orientation. "
-            "Expert in perpetual swap mechanics and funding dynamics. "
-            "Known for building consistent trading operations with proper risk scaling."
+            "Ex-derivatives desk lead met sterke procesoriëntatie. "
+            "Expert in perpetual swap mechanics en funding dynamiek. "
+            "Bekend om het bouwen van consistente trading operaties met juiste risicoschaling."
         ),
         tools=tools,
         allow_delegation=True,
@@ -77,11 +77,11 @@ def create_futures_head_trading_agent() -> Agent:
 
 
 def create_futures_cro_agent() -> Agent:
-    """Create Agent 35: CRO Futures / Chief Risk Officer.
+    """Maak Agent 35: CRO Futures / Chief Risk Officer.
 
-    Independent risk owner with veto power and kill-switch authority.
-    Reports to: CEO (hierarchical), Group CRO (functional)
-    Uses heavy LLM for complex risk decisions.
+    Onafhankelijke risico-eigenaar met vetobevoegdheid en kill-switch autoriteit.
+    Rapporteert aan: CEO (hiërarchisch), Groep CRO (functioneel)
+    Gebruikt heavy LLM voor complexe risicobeslissingen.
     """
     tools = [
         RiskDashboardTool(),
@@ -91,17 +91,17 @@ def create_futures_cro_agent() -> Agent:
     return create_heavy_agent(
         role="CRO Futures / Chief Risk Officer — Futures Desk Leadership (Veto/Kill-Switch)",
         goal=(
-            "Independent risk owner with veto and kill-switch authority for futures. "
-            "Design risk framework: leverage caps, margin buffers, funding exposure limits. "
-            "Real-time monitoring of margin and liquidation risk. "
-            "Sign off new futures strategies with leverage considerations. "
-            "Allow tactical leverage increases for high-conviction setups within limits."
+            "Onafhankelijke risico-eigenaar met veto en kill-switch autoriteit voor futures. "
+            "Ontwerp risicoraamwerk: leverage caps, margin buffers, funding blootstellingslimieten. "
+            "Real-time monitoring van margin en liquidatierisico. "
+            "Goedkeuring nieuwe futures strategieën met leverage overwegingen. "
+            "Sta tactische leverage verhogingen toe voor high-conviction setups binnen limieten."
         ),
         backstory=(
-            "Risk management expert with deep derivatives experience. "
-            "Strong in margin risk, liquidation mechanics, and funding exposure. "
-            "Understands leverage as a tool requiring strict controls. "
-            "Known for enabling aggressive trading with proper safeguards."
+            "Risicomanagement expert met diepe derivatives ervaring. "
+            "Sterk in margin risico, liquidatiemechanismen en funding blootstelling. "
+            "Begrijpt leverage als een tool die strikte controles vereist. "
+            "Bekend om het mogelijk maken van agressieve trading met juiste waarborgen."
         ),
         tools=tools,
         allow_delegation=True,
@@ -109,11 +109,11 @@ def create_futures_cro_agent() -> Agent:
 
 
 def create_futures_coo_agent() -> Agent:
-    """Create Agent 36: COO Futures.
+    """Maak Agent 36: COO Futures.
 
-    Run-the-business: processes, margin management, controls.
-    Reports to: CEO (hierarchical), Group COO (functional)
-    Uses light LLM for operational tasks.
+    Run-the-business: processen, margin management, controles.
+    Rapporteert aan: CEO (hiërarchisch), Groep COO (functioneel)
+    Gebruikt light LLM voor operationele taken.
     """
     tools = [
         AlertSystemTool(),
@@ -122,16 +122,16 @@ def create_futures_coo_agent() -> Agent:
     return create_light_agent(
         role="COO Futures — Futures Desk Operations Leadership",
         goal=(
-            "Run-the-business futures: processes, margin management, controls. "
-            "Set up margin monitoring, funding reconciliation, and incident runbooks. "
-            "Manage operational SLAs with exchanges. "
-            "Enforce audit trail and separation of duties. "
-            "Ensure 24/7 coverage for margin and liquidation events."
+            "Run-the-business futures: processen, margin management, controles. "
+            "Stel margin monitoring, funding reconciliatie en incident runbooks in. "
+            "Beheer operationele SLA's met exchanges. "
+            "Handhaaf audit trail en functiescheiding. "
+            "Zorg voor 24/7 dekking voor margin en liquidatie gebeurtenissen."
         ),
         backstory=(
-            "Operations lead with derivatives background. "
-            "Strong in margin operations, settlement, and funding flows. "
-            "Expert in building robust controls for leveraged trading."
+            "Operations lead met derivatives achtergrond. "
+            "Sterk in margin operaties, settlement en funding flows. "
+            "Expert in het bouwen van robuuste controles voor leveraged trading."
         ),
         tools=tools,
         allow_delegation=False,

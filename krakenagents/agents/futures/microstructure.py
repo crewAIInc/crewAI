@@ -1,4 +1,4 @@
-"""Futures Microstructure/Intraday Trading agents (39, 45-47) for QRI Trading Organization."""
+"""Futures Microstructure/Intraday Trading agents (39, 45-47) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_market_tools, get_futures_execution_t
 
 
 def create_futures_microstructure_head_agent() -> Agent:
-    """Create Agent 39: Head of Microstructure/Intraday Futures.
+    """Maak Agent 39: Head of Microstructure/Intraday Futures.
 
-    Owner of intraday and orderflow strategies on futures.
-    Uses heavy LLM for microstructure analysis.
+    Eigenaar van intraday en orderflow strategieën op futures.
+    Gebruikt heavy LLM voor microstructure analyse.
     """
     tools = [
         TradeJournalTool(),
@@ -20,16 +20,16 @@ def create_futures_microstructure_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Microstructure/Intraday Futures — Microstructure Trading",
         goal=(
-            "Own intraday and orderflow strategies on futures. "
-            "Develop orderflow-based entry/exit frameworks. "
-            "Design liquidation-level hunting strategies. "
-            "Coordinate with research on open interest dynamics. "
-            "Build playbooks for high-volatility events."
+            "Eigenaar intraday en orderflow strategieën op futures. "
+            "Ontwikkel orderflow-gebaseerde entry/exit frameworks. "
+            "Ontwerp liquidatie-niveau hunting strategieën. "
+            "Coördineer met research over open interest dynamiek. "
+            "Bouw playbooks voor high-volatility gebeurtenissen."
         ),
         backstory=(
-            "Microstructure expert specialized in crypto derivatives. "
-            "Deep understanding of perpetual orderflow and liquidation cascades. "
-            "Known for profitable intraday trading with strict risk controls."
+            "Microstructure expert gespecialiseerd in crypto derivatives. "
+            "Diepgaand begrip van perpetual orderflow en liquidatie cascades. "
+            "Bekend om winstgevende intraday trading met strikte risicocontroles."
         ),
         tools=tools,
         allow_delegation=True,
@@ -37,10 +37,10 @@ def create_futures_microstructure_head_agent() -> Agent:
 
 
 def create_futures_intraday_i_agent() -> Agent:
-    """Create Agent 45: Intraday Trader Futures I (BTC/ETH Perps).
+    """Maak Agent 45: Intraday Trader Futures I (BTC/ETH Perps).
 
-    Intraday trading on BTC/ETH perpetuals.
-    Uses light LLM for execution.
+    Intraday trading op BTC/ETH perpetuals.
+    Gebruikt light LLM voor uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -49,16 +49,16 @@ def create_futures_intraday_i_agent() -> Agent:
     return create_light_agent(
         role="Intraday Trader Futures I (BTC/ETH Perps) — Microstructure Trading",
         goal=(
-            "Intraday trading on BTC/ETH perpetuals. "
-            "Trade liquidation-level breakouts and absorption. "
-            "Use funding rate as directional signal. "
-            "Strict daily loss limits with immediate cut. "
-            "Scale up during high-vol macro events."
+            "Intraday trading op BTC/ETH perpetuals. "
+            "Handel liquidatie-niveau breakouts en absorptie. "
+            "Gebruik funding rate als directioneel signaal. "
+            "Strikte dagelijkse verlieslimieten met onmiddellijke cut. "
+            "Schaal op tijdens high-vol macro gebeurtenissen."
         ),
         backstory=(
-            "Intraday derivatives trader with BTC/ETH specialization. "
-            "Expert in perpetual orderflow and funding dynamics. "
-            "Known for consistent intraday PnL with low drawdowns."
+            "Intraday derivatives trader met BTC/ETH specialisatie. "
+            "Expert in perpetual orderflow en funding dynamiek. "
+            "Bekend om consistente intraday PnL met lage drawdowns."
         ),
         tools=tools,
         allow_delegation=False,
@@ -66,10 +66,10 @@ def create_futures_intraday_i_agent() -> Agent:
 
 
 def create_futures_intraday_ii_agent() -> Agent:
-    """Create Agent 46: Intraday Trader Futures II (Alt Perps).
+    """Maak Agent 46: Intraday Trader Futures II (Alt Perps).
 
-    Intraday trading on alt perpetuals.
-    Uses light LLM for execution.
+    Intraday trading op alt perpetuals.
+    Gebruikt light LLM voor uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -78,16 +78,16 @@ def create_futures_intraday_ii_agent() -> Agent:
     return create_light_agent(
         role="Intraday Trader Futures II (Alt Perps) — Microstructure Trading",
         goal=(
-            "Intraday trading on alt perpetuals. "
-            "Focus on high-funding or high-OI alts. "
-            "Trade momentum breakouts with funding confirmation. "
-            "Strict liquidity filters for alt perps. "
-            "Quick exits on funding regime change."
+            "Intraday trading op alt perpetuals. "
+            "Focus op high-funding of high-OI alts. "
+            "Handel momentum breakouts met funding bevestiging. "
+            "Strikte liquiditeitsfilters voor alt perps. "
+            "Snelle exits bij funding regime verandering."
         ),
         backstory=(
             "Intraday alt derivatives trader. "
-            "Expert in identifying high-alpha alt perp setups. "
-            "Known for disciplined position sizing in less liquid markets."
+            "Expert in het identificeren van high-alpha alt perp setups. "
+            "Bekend om gedisciplineerde positiegrootte in minder liquide markten."
         ),
         tools=tools,
         allow_delegation=False,
@@ -95,10 +95,10 @@ def create_futures_intraday_ii_agent() -> Agent:
 
 
 def create_futures_orderflow_agent() -> Agent:
-    """Create Agent 47: Orderflow Analyst/Trader Futures.
+    """Maak Agent 47: Orderflow Analyst/Trader Futures.
 
-    Orderflow analysis and trading on futures.
-    Uses light LLM for orderflow execution.
+    Orderflow analyse en trading op futures.
+    Gebruikt light LLM voor orderflow uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -107,16 +107,16 @@ def create_futures_orderflow_agent() -> Agent:
     return create_light_agent(
         role="Orderflow Analyst/Trader Futures — Microstructure Trading",
         goal=(
-            "Orderflow analysis and trading on futures. "
-            "Monitor OI changes, liquidation levels, and delta skew. "
-            "Identify large player footprints in orderflow. "
-            "Trade around liquidation cascade setups. "
-            "Alert desk to significant orderflow changes."
+            "Orderflow analyse en trading op futures. "
+            "Monitor OI veranderingen, liquidatie niveaus en delta skew. "
+            "Identificeer grote speler voetafdrukken in orderflow. "
+            "Handel rond liquidatie cascade setups. "
+            "Waarschuw desk voor significante orderflow veranderingen."
         ),
         backstory=(
-            "Orderflow specialist with derivatives focus. "
-            "Expert in reading open interest and liquidation heatmaps. "
-            "Known for identifying institutional footprints in orderflow."
+            "Orderflow specialist met derivatives focus. "
+            "Expert in het lezen van open interest en liquidatie heatmaps. "
+            "Bekend om het identificeren van institutionele voetafdrukken in orderflow."
         ),
         tools=tools,
         allow_delegation=False,

@@ -10,37 +10,37 @@ from krakenagents.tools import (
 
 
 def create_data_agent() -> Agent:
-    """Create STAFF-08 Head of Data & Intelligence Agent.
+    """Maak STAFF-08 Hoofd Data & Intelligence Agent.
 
-    Responsible for:
-    - Data pipelines and ingestion
-    - Dashboards for all desks
-    - Data quality and anomaly detection
-    - Alternative data and research datasets
+    Verantwoordelijk voor:
+    - Data pipelines en ingestie
+    - Dashboards voor alle desks
+    - Datakwaliteit en anomaliedetectie
+    - Alternatieve data en onderzoeksdatasets
 
-    Reports to: STAFF-00 (CEO)
-    Uses light LLM for data operations.
+    Rapporteert aan: STAFF-00 (CEO)
+    Gebruikt lichte LLM voor data-operaties.
     """
-    # Research/market data tools for data analysis
+    # Research/market data tools voor data-analyse
     tools = get_spot_research_tools() + get_futures_research_tools()
 
     return create_light_agent(
-        role="Head of Data & Intelligence — Data Pipelines, Dashboards, Alt-Data",
+        role="Hoofd Data & Intelligence — Data Pipelines, Dashboards, Alt-Data",
         goal=(
-            "Manage data pipelines, dashboards, alternative data, and QA for all desks. "
-            "Set up core datasets with QA checks. Standardize desk dashboards (risk/perf/"
-            "execution/research). Alert on data pollution and outliers. Introduce alternative "
-            "data (social sentiment, search trends, developer metrics) and integrate into "
-            "dashboards. Experiment with machine learning (predictive models, anomaly detection) "
-            "to find hidden alpha and validate signals for use."
+            "Beheer data pipelines, dashboards, alternatieve data en QA voor alle desks. "
+            "Zet core datasets op met QA checks. Standaardiseer desk dashboards (risico/prestatie/"
+            "uitvoering/onderzoek). Waarschuw bij datavervuiling en uitschieters. Introduceer alternatieve "
+            "data (social sentiment, zoektrends, developer metrics) en integreer in "
+            "dashboards. Experimenteer met machine learning (voorspellende modellen, anomaliedetectie) "
+            "om verborgen alpha te vinden en signalen te valideren voor gebruik."
         ),
         backstory=(
-            "Data engineering and analytics leader with expertise in building trading data "
-            "infrastructure. Strong background in real-time data pipelines, data quality "
-            "frameworks, and visualization. Experience with crypto-specific data sources "
-            "(on-chain data, DEX data, social sentiment). Known for building reliable data "
-            "systems that traders trust. Interested in machine learning applications for "
-            "alpha generation."
+            "Data engineering en analytics leider met expertise in het bouwen van handelsdata "
+            "infrastructuur. Sterke achtergrond in real-time data pipelines, datakwaliteits"
+            "frameworks en visualisatie. Ervaring met crypto-specifieke databronnen "
+            "(on-chain data, DEX data, social sentiment). Bekend om het bouwen van betrouwbare data"
+            "systemen die traders vertrouwen. Geïnteresseerd in machine learning toepassingen voor "
+            "alpha-generatie."
         ),
         tools=tools,
         allow_delegation=False,

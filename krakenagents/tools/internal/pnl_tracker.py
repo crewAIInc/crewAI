@@ -1,4 +1,4 @@
-"""PnL Tracker Tool for profit and loss monitoring."""
+"""PnL Tracker Tool voor winst en verlies monitoring."""
 
 from datetime import datetime
 from typing import Any
@@ -7,15 +7,15 @@ from crewai.tools import BaseTool
 
 
 class PnLTrackerTool(BaseTool):
-    """Tool for tracking profit and loss across trading operations.
+    """Tool voor tracking van winst en verlies over trading operaties.
 
-    Provides PnL analysis, attribution, and reporting capabilities.
+    Biedt PnL analyse, toewijzing, en rapportage mogelijkheden.
     """
 
     name: str = "pnl_tracker"
     description: str = (
-        "Track and analyze profit and loss including realized/unrealized PnL, "
-        "PnL attribution by strategy/desk/trader, and historical performance."
+        "Track en analyseer winst en verlies inclusief gerealiseerde/ongerealiseerde PnL, "
+        "PnL toewijzing per strategie/desk/trader, en historische performance."
     )
 
     def _run(
@@ -26,13 +26,13 @@ class PnLTrackerTool(BaseTool):
         strategy: str | None = None,
         **kwargs: Any,
     ) -> str:
-        """Execute PnL tracking action.
+        """Voer PnL tracking actie uit.
 
         Args:
-            action: One of 'get_summary', 'get_attribution', 'get_history', 'get_drawdown'
-            desk: Optional desk filter ('spot', 'futures', or None for all)
-            period: Time period ('today', 'week', 'month', 'ytd', 'all')
-            strategy: Optional strategy filter
+            action: Een van 'get_summary', 'get_attribution', 'get_history', 'get_drawdown'
+            desk: Optionele desk filter ('spot', 'futures', of None voor alle)
+            period: Tijdsperiode ('today', 'week', 'month', 'ytd', 'all')
+            strategy: Optionele strategie filter
         """
         timestamp = datetime.now().isoformat()
 
@@ -45,10 +45,10 @@ class PnLTrackerTool(BaseTool):
         elif action == "get_drawdown":
             return self._get_drawdown_analysis(desk, period, timestamp)
         else:
-            return f"Unknown action: {action}. Available: get_summary, get_attribution, get_history, get_drawdown"
+            return f"Onbekende actie: {action}. Beschikbaar: get_summary, get_attribution, get_history, get_drawdown"
 
     def _get_pnl_summary(self, desk: str | None, period: str, timestamp: str) -> str:
-        """Get PnL summary."""
+        """Haal PnL samenvatting op."""
         summary = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
@@ -64,14 +64,14 @@ class PnLTrackerTool(BaseTool):
                 "absolute_pct": 0.0,
                 "annualized_pct": 0.0,
             },
-            "note": "Real-time data requires trade history analysis",
+            "note": "Real-time data vereist trade history analyse",
         }
         return str(summary)
 
     def _get_pnl_attribution(
         self, desk: str | None, period: str, strategy: str | None, timestamp: str
     ) -> str:
-        """Get PnL attribution breakdown."""
+        """Haal PnL toewijzing breakdown op."""
         attribution = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
@@ -85,19 +85,19 @@ class PnLTrackerTool(BaseTool):
         return str(attribution)
 
     def _get_pnl_history(self, desk: str | None, period: str, timestamp: str) -> str:
-        """Get historical PnL data."""
+        """Haal historische PnL data op."""
         history = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",
             "period": period,
             "daily_pnl": [],
             "cumulative_pnl": [],
-            "note": "Historical data from trade records",
+            "note": "Historische data van trade records",
         }
         return str(history)
 
     def _get_drawdown_analysis(self, desk: str | None, period: str, timestamp: str) -> str:
-        """Get drawdown analysis."""
+        """Haal drawdown analyse op."""
         drawdown = {
             "timestamp": timestamp,
             "desk_filter": desk or "all",

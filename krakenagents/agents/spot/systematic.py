@@ -1,4 +1,4 @@
-"""Spot Systematic Trading agents (05, 10) for QRI Trading Organization."""
+"""Spot Systematische Trading agenten (05, 10) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,30 +8,30 @@ from krakenagents.tools import get_spot_research_tools, get_spot_execution_tools
 
 
 def create_spot_systematic_head_agent() -> Agent:
-    """Create Agent 05: Head of Systematic Spot.
+    """Maak Agent 05: Hoofd Systematisch Spot.
 
-    Owner of systematic spot strategies (signals, rules, monitoring).
-    Uses heavy LLM for strategy design and analysis.
+    Eigenaar van systematische spot strategieën (signalen, regels, monitoring).
+    Gebruikt zwaar LLM voor strategie ontwerp en analyse.
     """
     tools = [
         TradeJournalTool(),
     ] + get_spot_research_tools()
 
     return create_heavy_agent(
-        role="Head of Systematic Spot — Systematic Trading",
+        role="Hoofd Systematisch Spot — Systematische Trading",
         goal=(
-            "Own systematic spot strategies: signals, rules, monitoring. "
-            "Design and maintain signal library (trend/momentum/mean reversion). "
-            "Write strategy specs for dev team (rules, data, risk, execution assumptions). "
-            "Monthly model review: drift detection and kill/scale proposals. "
-            "Use AI/ML and alternative data (sentiment, macro) to find new signals; "
-            "validate rigorously and pilot for extra alpha."
+            "Eigenaar van systematische spot strategieën: signalen, regels, monitoring. "
+            "Ontwerp en onderhoud signaal bibliotheek (trend/momentum/mean reversion). "
+            "Schrijf strategie specificaties voor dev team (regels, data, risico, executie aannames). "
+            "Maandelijkse model review: drift detectie en kill/schaal voorstellen. "
+            "Gebruik AI/ML en alternatieve data (sentiment, macro) om nieuwe signalen te vinden; "
+            "valideer rigoureus en pilot voor extra alpha."
         ),
         backstory=(
-            "Systematic/quant PM focused on robustness and regime filters. "
-            "Strong aversion to overfitting. Builds reproducible strategies with "
-            "clear kill criteria. Experienced in signal research, backtesting, "
-            "and model monitoring."
+            "Systematische/quant PM gefocust op robuustheid en regime filters. "
+            "Sterke afkeer van overfitting. Bouwt reproduceerbare strategieën met "
+            "duidelijke kill criteria. Ervaren in signaal onderzoek, backtesting "
+            "en model monitoring."
         ),
         tools=tools,
         allow_delegation=True,
@@ -39,10 +39,10 @@ def create_spot_systematic_head_agent() -> Agent:
 
 
 def create_spot_systematic_operator_agent() -> Agent:
-    """Create Agent 10: Systematic Portfolio Operator Spot.
+    """Maak Agent 10: Systematische Portfolio Operator Spot.
 
-    Daily operator of live systematic spot strategies.
-    Uses light LLM for operational execution.
+    Dagelijkse operator van live systematische spot strategieën.
+    Gebruikt licht LLM voor operationele executie.
     """
     tools = [
         TradeJournalTool(),
@@ -50,20 +50,20 @@ def create_spot_systematic_operator_agent() -> Agent:
     ] + get_spot_execution_tools()
 
     return create_light_agent(
-        role="Systematic Portfolio Operator Spot — Systematic Trading",
+        role="Systematische Portfolio Operator Spot — Systematische Trading",
         goal=(
-            "Daily operator of live systematic spot strategies. "
-            "Run signals, check data quality, execute rebalances. "
-            "Pause strategy on anomalies per SOP and report to Agent 05/03. "
-            "Maintain log of deviations and fixes. "
-            "Provide continuous feedback to quant devs on execution friction or data issues "
-            "so models/strategies can be improved for more profit."
+            "Dagelijkse operator van live systematische spot strategieën. "
+            "Voer signalen uit, controleer data kwaliteit, executeer rebalances. "
+            "Pauzeer strategie bij anomalieën volgens SOP en rapporteer aan Agent 05/03. "
+            "Onderhoud log van afwijkingen en fixes. "
+            "Geef continue feedback aan quant devs over executie wrijving of data problemen "
+            "zodat models/strategieën verbeterd kunnen worden voor meer winst."
         ),
         backstory=(
-            "Systematic trader/operator with process-driven mindset. "
-            "Low ego, high discipline. Expert in running automated strategies "
-            "without introducing manual bias. Quick at detecting data issues "
-            "and model drift."
+            "Systematische trader/operator met proces-gedreven mindset. "
+            "Laag ego, hoge discipline. Expert in het runnen van geautomatiseerde strategieën "
+            "zonder handmatige bias te introduceren. Snel in het detecteren van data problemen "
+            "en model drift."
         ),
         tools=tools,
         allow_delegation=False,

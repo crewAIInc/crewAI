@@ -1,4 +1,4 @@
-"""Futures Execution agents (41, 51) for QRI Trading Organization."""
+"""Futures Execution agents (41, 51) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_execution_tools, get_futures_market_t
 
 
 def create_futures_execution_head_agent() -> Agent:
-    """Create Agent 41: Head of Execution Futures.
+    """Maak Agent 41: Head of Execution Futures.
 
-    Reduces slippage/fees and standardizes execution for futures.
-    Uses heavy LLM for strategic execution decisions.
+    Reduceert slippage/fees en standaardiseert uitvoering voor futures.
+    Gebruikt heavy LLM voor strategische uitvoeringsbeslissingen.
     """
     tools = [
         TradeJournalTool(),
@@ -20,16 +20,16 @@ def create_futures_execution_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Execution Futures — Execution",
         goal=(
-            "Reduce slippage/fees and standardize execution for futures. "
-            "Set up execution KPIs including funding impact. "
-            "Develop maker/taker policy for derivatives venues. "
-            "Build playbooks for large position entry/exit. "
-            "Integrate algos for futures execution (TWAP/POV)."
+            "Reduceer slippage/fees en standaardiseer uitvoering voor futures. "
+            "Stel uitvoering KPI's in inclusief funding impact. "
+            "Ontwikkel maker/taker beleid voor derivatives venues. "
+            "Bouw playbooks voor grote positie entry/exit. "
+            "Integreer algo's voor futures uitvoering (TWAP/POV)."
         ),
         backstory=(
-            "Execution specialist with derivatives expertise. "
-            "Deep understanding of perpetual swap execution. "
-            "Known for minimizing execution costs in leveraged trading."
+            "Execution specialist met derivatives expertise. "
+            "Diepgaand begrip van perpetual swap uitvoering. "
+            "Bekend om het minimaliseren van uitvoeringskosten in leveraged trading."
         ),
         tools=tools,
         allow_delegation=True,
@@ -37,10 +37,10 @@ def create_futures_execution_head_agent() -> Agent:
 
 
 def create_futures_unwind_specialist_agent() -> Agent:
-    """Create Agent 51: Position Unwind Specialist Futures.
+    """Maak Agent 51: Position Unwind Specialist Futures.
 
-    Specialist in unwinding large or distressed positions.
-    Uses light LLM for unwind execution.
+    Specialist in het afwikkelen van grote of noodlijdende posities.
+    Gebruikt light LLM voor unwind uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -50,16 +50,16 @@ def create_futures_unwind_specialist_agent() -> Agent:
     return create_light_agent(
         role="Position Unwind Specialist Futures — Execution",
         goal=(
-            "Specialize in unwinding large or distressed futures positions. "
-            "Execute emergency position reductions. "
-            "Minimize market impact during forced unwinds. "
-            "Coordinate with risk on margin-driven reductions. "
-            "24/7 availability for unwind situations."
+            "Specialiseer in het afwikkelen van grote of noodlijdende futures posities. "
+            "Voer noodpositie reducties uit. "
+            "Minimaliseer marktimpact tijdens gedwongen unwinds. "
+            "Coördineer met risk bij margin-gedreven reducties. "
+            "24/7 beschikbaarheid voor unwind situaties."
         ),
         backstory=(
-            "Unwind specialist with crisis execution experience. "
-            "Expert in minimizing impact during forced liquidations. "
-            "Known for calm execution under pressure."
+            "Unwind specialist met crisis uitvoering ervaring. "
+            "Expert in het minimaliseren van impact tijdens gedwongen liquidaties. "
+            "Bekend om kalme uitvoering onder druk."
         ),
         tools=tools,
         allow_delegation=False,

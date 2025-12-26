@@ -1,7 +1,7 @@
-"""Crew delegation tools for hierarchical crew management.
+"""Crew delegatie tools voor hiërarchisch crew management.
 
-These tools allow STAFF agents (CEO, Group CIO) to delegate tasks
-to Spot and Futures trading desks.
+Deze tools stellen STAFF agents (CEO, Group CIO) in staat om taken
+te delegeren naar Spot en Futures trading desks.
 """
 
 import asyncio
@@ -18,36 +18,36 @@ _event_loop = None
 
 
 def set_crew_manager(manager, loop):
-    """Set the global crew manager reference."""
+    """Stel de globale crew manager referentie in."""
     global _crew_manager, _event_loop
     _crew_manager = manager
     _event_loop = loop
 
 
 class DelegateToSpotDeskTool(BaseTool):
-    """Tool to delegate trading tasks to the Spot trading desk."""
+    """Tool om trading taken te delegeren naar de Spot trading desk."""
 
     name: str = "delegate_to_spot_desk"
     description: str = """
-    Delegate a trading task to the Spot trading desk.
-    Use this when you need the Spot desk to:
-    - Execute spot trades
-    - Analyze spot market conditions
-    - Monitor spot positions
-    - Run spot trading strategies
+    Delegeer een trading taak naar de Spot trading desk.
+    Gebruik dit wanneer je de Spot desk nodig hebt om:
+    - Spot trades uit te voeren
+    - Spot markt condities te analyseren
+    - Spot posities te monitoren
+    - Spot trading strategieën uit te voeren
 
-    Input should be a JSON string with:
-    - directive: The specific task or goal for the Spot desk
-    - priority: "high", "medium", or "low"
-    - risk_budget: Optional risk budget percentage (1-100)
+    Input moet een JSON string zijn met:
+    - directive: De specifieke taak of doel voor de Spot desk
+    - priority: "high", "medium", of "low"
+    - risk_budget: Optioneel risico budget percentage (1-100)
     """
 
     def _run(self, directive: str, priority: str = "medium", risk_budget: Optional[int] = None) -> str:
-        """Delegate task to Spot desk."""
+        """Delegeer taak naar Spot desk."""
         global _crew_manager, _event_loop
 
         if not _crew_manager:
-            return "Error: Crew manager not initialized. Cannot delegate to Spot desk."
+            return "Fout: Crew manager niet geïnitialiseerd. Kan niet delegeren naar Spot desk."
 
         # Parse input if it's JSON
         if isinstance(directive, str) and directive.startswith("{"):
@@ -71,7 +71,7 @@ class DelegateToSpotDeskTool(BaseTool):
 
         # Check if Spot crew is already running
         if "spot" in _crew_manager.crew_tasks and not _crew_manager.crew_tasks["spot"].done():
-            return f"Spot desk is already executing a task. Current directive will be queued. Directive: {directive}"
+            return f"Spot desk voert al een taak uit. Huidige opdracht wordt in de wachtrij geplaatst. Opdracht: {directive}"
 
         # Start the Spot crew with the directive
         try:
@@ -85,43 +85,43 @@ class DelegateToSpotDeskTool(BaseTool):
                 asyncio.run_coroutine_threadsafe(start_spot(), _event_loop)
 
             return f"""
-Delegation to Spot Desk SUCCESSFUL:
-- Directive: {directive}
-- Priority: {priority}
-- Risk Budget: {risk_budget or 'Default'}
-- Status: Spot desk is now executing the directive
+Delegatie naar Spot Desk GESLAAGD:
+- Opdracht: {directive}
+- Prioriteit: {priority}
+- Risico Budget: {risk_budget or 'Standaard'}
+- Status: Spot desk voert nu de opdracht uit
 
-The Spot desk (32 agents) will analyze and execute the task.
-You will receive updates via the dashboard.
+De Spot desk (32 agents) zal de taak analyseren en uitvoeren.
+Je ontvangt updates via het dashboard.
 """
         except Exception as e:
-            return f"Error delegating to Spot desk: {str(e)}"
+            return f"Fout bij delegeren naar Spot desk: {str(e)}"
 
 
 class DelegateToFuturesDeskTool(BaseTool):
-    """Tool to delegate trading tasks to the Futures trading desk."""
+    """Tool om trading taken te delegeren naar de Futures trading desk."""
 
     name: str = "delegate_to_futures_desk"
     description: str = """
-    Delegate a trading task to the Futures/Derivatives trading desk.
-    Use this when you need the Futures desk to:
-    - Execute futures/perpetual trades
-    - Analyze funding rates and basis
-    - Monitor futures positions and margin
-    - Run carry or microstructure strategies
+    Delegeer een trading taak naar de Futures/Derivatives trading desk.
+    Gebruik dit wanneer je de Futures desk nodig hebt om:
+    - Futures/perpetual trades uit te voeren
+    - Funding rates en basis te analyseren
+    - Futures posities en margin te monitoren
+    - Carry of microstructure strategieën uit te voeren
 
-    Input should be a JSON string with:
-    - directive: The specific task or goal for the Futures desk
-    - priority: "high", "medium", or "low"
-    - risk_budget: Optional risk budget percentage (1-100)
+    Input moet een JSON string zijn met:
+    - directive: De specifieke taak of doel voor de Futures desk
+    - priority: "high", "medium", of "low"
+    - risk_budget: Optioneel risico budget percentage (1-100)
     """
 
     def _run(self, directive: str, priority: str = "medium", risk_budget: Optional[int] = None) -> str:
-        """Delegate task to Futures desk."""
+        """Delegeer taak naar Futures desk."""
         global _crew_manager, _event_loop
 
         if not _crew_manager:
-            return "Error: Crew manager not initialized. Cannot delegate to Futures desk."
+            return "Fout: Crew manager niet geïnitialiseerd. Kan niet delegeren naar Futures desk."
 
         # Parse input if it's JSON
         if isinstance(directive, str) and directive.startswith("{"):
@@ -145,7 +145,7 @@ class DelegateToFuturesDeskTool(BaseTool):
 
         # Check if Futures crew is already running
         if "futures" in _crew_manager.crew_tasks and not _crew_manager.crew_tasks["futures"].done():
-            return f"Futures desk is already executing a task. Current directive will be queued. Directive: {directive}"
+            return f"Futures desk voert al een taak uit. Huidige opdracht wordt in de wachtrij geplaatst. Opdracht: {directive}"
 
         # Start the Futures crew with the directive
         try:
@@ -159,39 +159,39 @@ class DelegateToFuturesDeskTool(BaseTool):
                 asyncio.run_coroutine_threadsafe(start_futures(), _event_loop)
 
             return f"""
-Delegation to Futures Desk SUCCESSFUL:
-- Directive: {directive}
-- Priority: {priority}
-- Risk Budget: {risk_budget or 'Default'}
-- Status: Futures desk is now executing the directive
+Delegatie naar Futures Desk GESLAAGD:
+- Opdracht: {directive}
+- Prioriteit: {priority}
+- Risico Budget: {risk_budget or 'Standaard'}
+- Status: Futures desk voert nu de opdracht uit
 
-The Futures desk (32 agents) will analyze and execute the task.
-You will receive updates via the dashboard.
+De Futures desk (32 agents) zal de taak analyseren en uitvoeren.
+Je ontvangt updates via het dashboard.
 """
         except Exception as e:
-            return f"Error delegating to Futures desk: {str(e)}"
+            return f"Fout bij delegeren naar Futures desk: {str(e)}"
 
 
 class GetDeskStatusTool(BaseTool):
-    """Tool to get status of trading desks."""
+    """Tool om status van trading desks op te halen."""
 
     name: str = "get_desk_status"
     description: str = """
-    Get the current status of trading desks (Spot and/or Futures).
-    Use this to check:
-    - Whether a desk is currently running
-    - What tasks are being executed
-    - Overall desk health
+    Haal de huidige status op van trading desks (Spot en/of Futures).
+    Gebruik dit om te controleren:
+    - Of een desk momenteel actief is
+    - Welke taken worden uitgevoerd
+    - Algemene desk status
 
-    Input: desk name ("spot", "futures", or "all")
+    Input: desk naam ("spot", "futures", of "all")
     """
 
     def _run(self, desk: str = "all") -> str:
-        """Get desk status."""
+        """Haal desk status op."""
         global _crew_manager
 
         if not _crew_manager:
-            return "Error: Crew manager not initialized."
+            return "Fout: Crew manager niet geïnitialiseerd."
 
         statuses = []
         desks_to_check = ["spot", "futures"] if desk == "all" else [desk.lower()]
@@ -200,13 +200,13 @@ class GetDeskStatusTool(BaseTool):
             if desk_id in _crew_manager.crew_tasks:
                 task = _crew_manager.crew_tasks[desk_id]
                 if task.done():
-                    status = "Completed"
+                    status = "Voltooid"
                     if task.exception():
-                        status = f"Error: {task.exception()}"
+                        status = f"Fout: {task.exception()}"
                 else:
-                    status = "Running"
+                    status = "Actief"
             else:
-                status = "Idle"
+                status = "Inactief"
 
             desk_name = "Spot Desk" if desk_id == "spot" else "Futures Desk"
             agent_count = 32
@@ -222,22 +222,22 @@ class GetDeskStatusTool(BaseTool):
 
 
 class DelegateToBothDesksTool(BaseTool):
-    """Tool to delegate tasks to both Spot and Futures desks simultaneously."""
+    """Tool om taken gelijktijdig te delegeren naar zowel Spot als Futures desks."""
 
     name: str = "delegate_to_both_desks"
     description: str = """
-    Delegate coordinated tasks to BOTH Spot and Futures desks.
-    Use this for:
+    Delegeer gecoördineerde taken naar BEIDE Spot en Futures desks.
+    Gebruik dit voor:
     - Basis trades (spot vs futures arbitrage)
-    - Hedging operations
-    - Coordinated risk reduction
-    - Full portfolio analysis
+    - Hedging operaties
+    - Gecoördineerde risico reductie
+    - Volledige portfolio analyse
 
-    Input should be a JSON string with:
-    - spot_directive: Task for Spot desk
-    - futures_directive: Task for Futures desk
-    - coordination_note: How the tasks relate to each other
-    - priority: "high", "medium", or "low"
+    Input moet een JSON string zijn met:
+    - spot_directive: Taak voor Spot desk
+    - futures_directive: Taak voor Futures desk
+    - coordination_note: Hoe de taken aan elkaar gerelateerd zijn
+    - priority: "high", "medium", of "low"
     """
 
     def _run(
@@ -247,11 +247,11 @@ class DelegateToBothDesksTool(BaseTool):
         coordination_note: str = "",
         priority: str = "medium"
     ) -> str:
-        """Delegate to both desks."""
+        """Delegeer naar beide desks."""
         global _crew_manager, _event_loop
 
         if not _crew_manager:
-            return "Error: Crew manager not initialized."
+            return "Fout: Crew manager niet geïnitialiseerd."
 
         # Parse input if it's JSON
         if isinstance(spot_directive, str) and spot_directive.startswith("{"):
@@ -283,20 +283,20 @@ class DelegateToBothDesksTool(BaseTool):
         results.append(f"FUTURES: {futures_result}")
 
         return f"""
-Coordinated Delegation to BOTH Desks:
+Gecoördineerde Delegatie naar BEIDE Desks:
 
-Coordination Note: {coordination_note}
-Priority: {priority}
+Coördinatie Notitie: {coordination_note}
+Prioriteit: {priority}
 
 {chr(10).join(results)}
 
-Both desks are now executing their respective tasks in coordination.
+Beide desks voeren nu hun respectievelijke taken uit in coördinatie.
 """
 
 
 # Export all tools
 def get_delegation_tools() -> list[BaseTool]:
-    """Get all delegation tools for STAFF agents."""
+    """Haal alle delegatie tools op voor STAFF agents."""
     return [
         DelegateToSpotDeskTool(),
         DelegateToFuturesDeskTool(),

@@ -1,4 +1,4 @@
-"""Futures Carry/Funding Trading agents (38, 43, 44) for QRI Trading Organization."""
+"""Futures Carry/Funding Trading agents (38, 43, 44) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_futures_research_tools, get_futures_execution
 
 
 def create_futures_carry_head_agent() -> Agent:
-    """Create Agent 38: Head of Carry/Funding Futures.
+    """Maak Agent 38: Head of Carry/Funding Futures.
 
-    Owner of funding rate and carry strategies.
-    Uses heavy LLM for strategic carry decisions.
+    Eigenaar van funding rate en carry strategieën.
+    Gebruikt heavy LLM voor strategische carry beslissingen.
     """
     tools = [
         TradeJournalTool(),
@@ -21,16 +21,16 @@ def create_futures_carry_head_agent() -> Agent:
     return create_heavy_agent(
         role="Head of Carry/Funding Futures — Carry Trading",
         goal=(
-            "Own funding rate and carry strategies. "
-            "Design funding capture strategies across venues. "
-            "Monitor cross-exchange funding differentials. "
-            "Manage basis positions for yield extraction. "
-            "Scale carry strategies in favorable funding regimes."
+            "Eigenaar funding rate en carry strategieën. "
+            "Ontwerp funding capture strategieën over venues. "
+            "Monitor cross-exchange funding differentiëlen. "
+            "Beheer basis posities voor yield extractie. "
+            "Schaal carry strategieën in gunstige funding regimes."
         ),
         backstory=(
-            "Carry specialist with deep understanding of perpetual funding mechanics. "
-            "Expert in cross-venue funding arbitrage and basis trading. "
-            "Known for consistent carry extraction with controlled risk."
+            "Carry specialist met diepgaand begrip van perpetual funding mechanics. "
+            "Expert in cross-venue funding arbitrage en basis trading. "
+            "Bekend om consistente carry extractie met gecontroleerd risico."
         ),
         tools=tools,
         allow_delegation=True,
@@ -38,10 +38,10 @@ def create_futures_carry_head_agent() -> Agent:
 
 
 def create_futures_carry_trader_i_agent() -> Agent:
-    """Create Agent 43: Carry Trader I (Funding Rate).
+    """Maak Agent 43: Carry Trader I (Funding Rate).
 
     Funding rate capture specialist.
-    Uses light LLM for carry execution.
+    Gebruikt light LLM voor carry uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -50,16 +50,16 @@ def create_futures_carry_trader_i_agent() -> Agent:
     return create_light_agent(
         role="Carry Trader I (Funding Rate) — Carry Trading",
         goal=(
-            "Capture funding rate differentials. "
-            "Monitor funding rates across major perpetuals. "
-            "Execute funding capture positions before settlement. "
-            "Track funding payment timing and magnitude. "
-            "Scale positions based on funding regime persistence."
+            "Vang funding rate differentiëlen op. "
+            "Monitor funding rates over grote perpetuals. "
+            "Voer funding capture posities uit voor settlement. "
+            "Volg funding betaling timing en omvang. "
+            "Schaal posities op basis van funding regime persistentie."
         ),
         backstory=(
-            "Funding rate specialist with timing expertise. "
-            "Expert in predicting funding regime shifts. "
-            "Known for consistent funding capture with proper timing."
+            "Funding rate specialist met timing expertise. "
+            "Expert in het voorspellen van funding regime verschuivingen. "
+            "Bekend om consistente funding capture met juiste timing."
         ),
         tools=tools,
         allow_delegation=False,
@@ -67,10 +67,10 @@ def create_futures_carry_trader_i_agent() -> Agent:
 
 
 def create_futures_carry_trader_ii_agent() -> Agent:
-    """Create Agent 44: Carry Trader II (Basis/Calendar).
+    """Maak Agent 44: Carry Trader II (Basis/Calendar).
 
-    Basis and calendar spread specialist.
-    Uses light LLM for basis execution.
+    Basis en calendar spread specialist.
+    Gebruikt light LLM voor basis uitvoering.
     """
     tools = [
         TradeJournalTool(),
@@ -79,16 +79,16 @@ def create_futures_carry_trader_ii_agent() -> Agent:
     return create_light_agent(
         role="Carry Trader II (Basis/Calendar) — Carry Trading",
         goal=(
-            "Execute basis and calendar spread strategies. "
-            "Monitor spot-futures basis across instruments. "
-            "Trade calendar spreads on quarterly futures. "
-            "Capture basis convergence opportunities. "
-            "Manage roll risk and settlement timing."
+            "Voer basis en calendar spread strategieën uit. "
+            "Monitor spot-futures basis over instrumenten. "
+            "Handel calendar spreads op kwartaal futures. "
+            "Vang basis convergentie kansen op. "
+            "Beheer roll risico en settlement timing."
         ),
         backstory=(
-            "Basis trading specialist with calendar spread expertise. "
-            "Expert in convergence trades and roll dynamics. "
-            "Known for extracting yield from term structure."
+            "Basis trading specialist met calendar spread expertise. "
+            "Expert in convergentie trades en roll dynamiek. "
+            "Bekend om het extraheren van yield uit term structure."
         ),
         tools=tools,
         allow_delegation=False,

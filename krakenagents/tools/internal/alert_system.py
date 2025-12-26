@@ -1,4 +1,4 @@
-"""Alert System Tool for escalation and notifications."""
+"""Alert System Tool voor escalatie en notificaties."""
 
 from datetime import datetime
 from enum import Enum
@@ -8,7 +8,7 @@ from crewai.tools import BaseTool
 
 
 class AlertSeverity(str, Enum):
-    """Alert severity levels."""
+    """Alert ernstniveaus."""
 
     INFO = "info"
     WARNING = "warning"
@@ -17,15 +17,15 @@ class AlertSeverity(str, Enum):
 
 
 class AlertSystemTool(BaseTool):
-    """Tool for managing alerts and escalations within the organization.
+    """Tool voor beheer van alerts en escalaties binnen de organisatie.
 
-    Handles alert creation, routing, acknowledgment, and escalation.
+    Verzorgt alert creatie, routing, bevestiging, en escalatie.
     """
 
     name: str = "alert_system"
     description: str = (
-        "Create and manage alerts for risk events, system issues, and important notifications. "
-        "Supports severity levels (info, warning, critical, emergency) and escalation routing."
+        "Creëer en beheer alerts voor risico events, systeem problemen, en belangrijke notificaties. "
+        "Ondersteunt ernstniveaus (info, warning, critical, emergency) en escalatie routing."
     )
 
     # In-memory alert storage (would be persistent in production)
@@ -42,15 +42,15 @@ class AlertSystemTool(BaseTool):
         alert_id: int | None = None,
         **kwargs: Any,
     ) -> str:
-        """Execute alert system action.
+        """Voer alert systeem actie uit.
 
         Args:
-            action: One of 'create', 'list', 'acknowledge', 'escalate', 'resolve'
-            severity: Alert severity (info, warning, critical, emergency)
-            message: Alert message content
-            source: Source agent/system creating the alert
-            target: Target agent/role for the alert
-            alert_id: Alert ID for acknowledge/escalate/resolve actions
+            action: Een van 'create', 'list', 'acknowledge', 'escalate', 'resolve'
+            severity: Alert ernstniveau (info, warning, critical, emergency)
+            message: Alert bericht inhoud
+            source: Bron agent/systeem die de alert creëert
+            target: Doel agent/rol voor de alert
+            alert_id: Alert ID voor acknowledge/escalate/resolve acties
         """
         timestamp = datetime.now().isoformat()
 
@@ -65,7 +65,7 @@ class AlertSystemTool(BaseTool):
         elif action == "resolve":
             return self._resolve_alert(alert_id, source, timestamp)
         else:
-            return f"Unknown action: {action}. Available: create, list, acknowledge, escalate, resolve"
+            return f"Onbekende actie: {action}. Beschikbaar: create, list, acknowledge, escalate, resolve"
 
     def _create_alert(
         self,
@@ -75,65 +75,65 @@ class AlertSystemTool(BaseTool):
         target: str | None,
         timestamp: str,
     ) -> str:
-        """Create a new alert."""
+        """Creëer een nieuwe alert."""
         if not message:
-            return "Error: message is required for creating an alert"
+            return "Fout: bericht is vereist voor het creëren van een alert"
 
         self._alert_id_counter += 1
         alert = {
             "id": self._alert_id_counter,
             "severity": severity or "info",
             "message": message,
-            "source": source or "unknown",
+            "source": source or "onbekend",
             "target": target,
-            "status": "active",
+            "status": "actief",
             "created_at": timestamp,
             "acknowledged_at": None,
             "resolved_at": None,
             "escalation_history": [],
         }
         self._alerts.append(alert)
-        return f"Alert created: {alert}"
+        return f"Alert aangemaakt: {alert}"
 
     def _list_alerts(self, severity: str | None, timestamp: str) -> str:
-        """List alerts, optionally filtered by severity."""
+        """Toon alerts, optioneel gefilterd op ernstniveau."""
         filtered = self._alerts
         if severity:
             filtered = [a for a in self._alerts if a["severity"] == severity]
 
-        active = [a for a in filtered if a["status"] == "active"]
+        active = [a for a in filtered if a["status"] == "actief"]
         return {
             "timestamp": timestamp,
             "filter": {"severity": severity},
             "active_count": len(active),
             "total_count": len(filtered),
-            "alerts": active[:20],  # Limit to 20 most recent
+            "alerts": active[:20],  # Limiet tot 20 meest recente
         }
 
     def _acknowledge_alert(self, alert_id: int | None, source: str | None, timestamp: str) -> str:
-        """Acknowledge an alert."""
+        """Bevestig een alert."""
         if not alert_id:
-            return "Error: alert_id is required"
+            return "Fout: alert_id is vereist"
 
         for alert in self._alerts:
             if alert["id"] == alert_id:
-                alert["status"] = "acknowledged"
+                alert["status"] = "bevestigd"
                 alert["acknowledged_at"] = timestamp
                 alert["acknowledged_by"] = source
-                return f"Alert {alert_id} acknowledged"
+                return f"Alert {alert_id} bevestigd"
 
-        return f"Alert {alert_id} not found"
+        return f"Alert {alert_id} niet gevonden"
 
     def _escalate_alert(self, alert_id: int | None, target: str | None, timestamp: str) -> str:
-        """Escalate an alert to a higher level."""
+        """Escaleer een alert naar een hoger niveau."""
         if not alert_id:
-            return "Error: alert_id is required"
+            return "Fout: alert_id is vereist"
         if not target:
-            return "Error: target is required for escalation"
+            return "Fout: target is vereist voor escalatie"
 
         for alert in self._alerts:
             if alert["id"] == alert_id:
-                # Increase severity if possible
+                # Verhoog ernstniveau indien mogelijk
                 severity_order = ["info", "warning", "critical", "emergency"]
                 current_idx = severity_order.index(alert["severity"])
                 if current_idx < len(severity_order) - 1:
@@ -145,20 +145,20 @@ class AlertSystemTool(BaseTool):
                     "new_target": target,
                     "new_severity": alert["severity"],
                 })
-                return f"Alert {alert_id} escalated to {target} with severity {alert['severity']}"
+                return f"Alert {alert_id} geëscaleerd naar {target} met ernstniveau {alert['severity']}"
 
-        return f"Alert {alert_id} not found"
+        return f"Alert {alert_id} niet gevonden"
 
     def _resolve_alert(self, alert_id: int | None, source: str | None, timestamp: str) -> str:
-        """Resolve an alert."""
+        """Los een alert op."""
         if not alert_id:
-            return "Error: alert_id is required"
+            return "Fout: alert_id is vereist"
 
         for alert in self._alerts:
             if alert["id"] == alert_id:
-                alert["status"] = "resolved"
+                alert["status"] = "opgelost"
                 alert["resolved_at"] = timestamp
                 alert["resolved_by"] = source
-                return f"Alert {alert_id} resolved"
+                return f"Alert {alert_id} opgelost"
 
-        return f"Alert {alert_id} not found"
+        return f"Alert {alert_id} niet gevonden"

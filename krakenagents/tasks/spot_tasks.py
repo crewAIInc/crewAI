@@ -1,4 +1,4 @@
-"""Spot desk agent tasks for QRI Trading Organization."""
+"""Spot desk agent taken voor QRI Trading Organization."""
 
 from crewai import Agent, Task
 
@@ -6,7 +6,7 @@ from krakenagents.tasks.base import create_task
 
 
 def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot leadership agents (01-04)."""
+    """Haal taken op voor Spot leadership agents (01-04)."""
     tasks = []
 
     if "cio" in agents:
@@ -15,37 +15,37 @@ def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A01-01
             create_task(
                 description=(
-                    "Define tradable universe, exposure caps, and allocation per strategy. "
-                    "Document current allocations and any changes."
+                    "Definieer tradable universe, exposure caps en allocatie per strategie. "
+                    "Documenteer huidige allocaties en eventuele wijzigingen."
                 ),
-                expected_output="Universe and allocation document with exposure limits.",
+                expected_output="Universe en allocatie document met exposure limieten.",
                 agent=cio,
             ),
             # TASK-A01-02
             create_task(
                 description=(
-                    "Set risk budgets per pod: systematic, discretionary, arb, event, intraday. "
-                    "Ensure budgets align with overall portfolio risk."
+                    "Stel risico budgetten in per pod: systematisch, discretionair, arb, event, intraday. "
+                    "Zorg dat budgetten aansluiten bij totaal portfolio risico."
                 ),
-                expected_output="Risk budget allocation per pod with rationale.",
+                expected_output="Risico budget allocatie per pod met rationale.",
                 agent=cio,
             ),
             # TASK-A01-03
             create_task(
                 description=(
-                    "Run monthly allocation and kill/scale decisions. "
-                    "Base decisions on performance data and market conditions."
+                    "Voer maandelijkse allocatie en kill/schaal beslissingen uit. "
+                    "Baseer beslissingen op performance data en markt condities."
                 ),
-                expected_output="Monthly allocation decision report.",
+                expected_output="Maandelijks allocatie beslissingsrapport.",
                 agent=cio,
             ),
             # TASK-A01-04
             create_task(
                 description=(
-                    "Increase allocation to high-conviction strategies: scale winning strategies "
-                    "(within risk limits) to capture extra alpha."
+                    "Verhoog allocatie naar high-conviction strategieën: scale winning strategieën "
+                    "(within risk limits) naar capture extra alpha."
                 ),
-                expected_output="High-conviction allocation increase report.",
+                expected_output="High-conviction allocatie verhogingsrapport.",
                 agent=cio,
             ),
         ])
@@ -56,37 +56,37 @@ def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A02-01
             create_task(
                 description=(
-                    "Daily desk briefing: focus list, levels, events, risk mode. "
-                    "Communicate key information to all traders."
+                    "Dagelijkse desk briefing: focus lijst, levels, events, risico mode. "
+                    "Communiceer key informatie naar alle traders."
                 ),
-                expected_output="Daily briefing document with all key information.",
+                expected_output="Dagelijkse briefing document met alle key informatie.",
                 agent=head,
             ),
             # TASK-A02-02
             create_task(
                 description=(
-                    "Monitor playbook discipline and trade quality. "
-                    "Identify and address overtrading or rule violations."
+                    "Monitor playbook discipline en trade kwaliteit. "
+                    "Identificeer en adresseer overtrading of regelovertredingen."
                 ),
-                expected_output="Trade quality report with any issues flagged.",
+                expected_output="Trade kwaliteit rapport met eventuele problemen gemarkeerd.",
                 agent=head,
             ),
             # TASK-A02-03
             create_task(
                 description=(
-                    "Conduct post-trade reviews and enforce journaling. "
-                    "Identify patterns for improvement."
+                    "Voer post-trade reviews uit en handhaaf journaling. "
+                    "Identificeer patronen voor verbetering."
                 ),
-                expected_output="Post-trade review summary with improvement areas.",
+                expected_output="Post-trade review samenvatting met verbetergebieden.",
                 agent=head,
             ),
             # TASK-A02-04
             create_task(
                 description=(
-                    "Let traders bet aggressively on A-setup trades (within limits) "
-                    "and minimize time on marginal opportunities."
+                    "Laat traders agressief inzetten op A-setup trades (binnen limieten) "
+                    "en minimaliseer tijd op marginale kansen."
                 ),
-                expected_output="A-setup trade focus report with trader performance.",
+                expected_output="A-setup trade focus rapport met trader performance.",
                 agent=head,
             ),
         ])
@@ -97,35 +97,35 @@ def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A03-01
             create_task(
                 description=(
-                    "Design risk framework: exposure caps, liquidity tiers, max drawdown, escalations. "
-                    "Document all limits and thresholds."
+                    "Ontwerp risico framework: exposure caps, liquiditeit tiers, max drawdown, escalaties. "
+                    "Documenteer alle limieten en drempels."
                 ),
-                expected_output="Spot risk framework document.",
+                expected_output="Spot risico framework document.",
                 agent=cro,
             ),
             # TASK-A03-02
             create_task(
                 description=(
-                    "Real-time monitoring and alerts. Enforce risk reductions at thresholds."
+                    "Real-time monitoring en alerts. Handhaaf risico reducties bij drempels."
                 ),
-                expected_output="Risk monitoring report with any actions taken.",
+                expected_output="Risico monitoring rapport met eventuele ondernomen acties.",
                 agent=cro,
             ),
             # TASK-A03-03
             create_task(
                 description=(
-                    "Sign off new spot strategies. Conduct pre-mortem and failure mode analysis."
+                    "Keur nieuwe spot strategieën. Voer pre-mortem en failure mode analyse uit."
                 ),
-                expected_output="Strategy sign-off with risk analysis.",
+                expected_output="Strategie goedkeuring met risico analyse.",
                 agent=cro,
             ),
             # TASK-A03-04
             create_task(
                 description=(
-                    "Allow temporarily higher risk for exceptional opportunities (within agreed extra margins) "
-                    "to facilitate extraordinary gains without breaking the risk framework."
+                    "Sta tijdelijk hoger risico toe voor uitzonderlijke kansen (binnen afgesproken extra marges) "
+                    "om buitengewone winsten mogelijk te maken zonder het risico framework te breken."
                 ),
-                expected_output="Exceptional opportunity risk approval report.",
+                expected_output="Uitzonderlijke kans risico goedkeuringsrapport.",
                 agent=cro,
             ),
         ])
@@ -136,37 +136,37 @@ def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A04-01
             create_task(
                 description=(
-                    "Set up daily reconciliation, approvals, and incident runbooks. "
-                    "Document all operational procedures."
+                    "Stel dagelijkse reconciliation, goedkeuringen en incident runbooks op. "
+                    "Documenteer alle operationele procedures."
                 ),
-                expected_output="Operational procedures documentation.",
+                expected_output="Operationele procedures documentatie.",
                 agent=coo,
             ),
             # TASK-A04-02
             create_task(
                 description=(
-                    "Manage operational SLAs with exchanges and custody. "
-                    "Track performance against SLAs."
+                    "Beheer operationele SLA's met exchanges en custody. "
+                    "Track performance tegen SLA's."
                 ),
-                expected_output="SLA performance report.",
+                expected_output="SLA performance rapport.",
                 agent=coo,
             ),
             # TASK-A04-03
             create_task(
                 description=(
-                    "Maintain audit trail and enforce separation of duties. "
-                    "Ensure all actions are properly logged."
+                    "Onderhoud audit trail en handhaaf scheiding van functies. "
+                    "Zorg dat alle acties correct gelogd worden."
                 ),
-                expected_output="Audit trail and separation of duties report.",
+                expected_output="Audit trail en scheiding van functies rapport.",
                 agent=coo,
             ),
             # TASK-A04-04
             create_task(
                 description=(
-                    "Accelerate onboarding of new venues/assets during opportunities: "
-                    "ensure fast account/approval setup without violating control rules."
+                    "Versnel onboarding van nieuwe venues/assets tijdens kansen: "
+                    "zorg voor snelle account/goedkeuring setup zonder controle regels te overtreden."
                 ),
-                expected_output="Fast-track onboarding report.",
+                expected_output="Fast-track onboarding rapport.",
                 agent=coo,
             ),
         ])
@@ -175,7 +175,7 @@ def get_spot_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot systematic agents (05, 10)."""
+    """Haal taken op voor Spot systematic agents (05, 10)."""
     tasks = []
 
     if "systematic_head" in agents:
@@ -184,37 +184,37 @@ def get_spot_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A05-01
             create_task(
                 description=(
-                    "Design and maintain signal library for systematic strategies. "
-                    "Include trend, momentum, and mean reversion signals."
+                    "Ontwerp en onderhoud signaal library voor systematic strategieën. "
+                    "Inclusief trend, momentum en mean reversion signalen."
                 ),
-                expected_output="Signal library documentation with performance metrics.",
+                expected_output="Signaal library documentatie met performance metrieken.",
                 agent=agent,
             ),
             # TASK-A05-02
             create_task(
                 description=(
-                    "Write strategy specs for dev team: rules, data, risk, execution assumptions. "
-                    "Ensure clear documentation for implementation."
+                    "Schrijf strategie specs voor dev team: regels, data, risico, executie aannames. "
+                    "Zorg voor duidelijke documentatie voor implementatie."
                 ),
-                expected_output="Strategy specification document.",
+                expected_output="Strategie specificatie document.",
                 agent=agent,
             ),
             # TASK-A05-03
             create_task(
                 description=(
-                    "Monthly model review: drift detection + kill/scale proposals. "
-                    "Identify strategies losing edge."
+                    "Maandelijkse model review: drift detectie + kill/schaal voorstellen. "
+                    "Identificeer strategieën losing edge."
                 ),
-                expected_output="Model review report with recommendations.",
+                expected_output="Model review rapport met aanbevelingen.",
                 agent=agent,
             ),
             # TASK-A05-04
             create_task(
                 description=(
-                    "Use AI/ML and alternative data (sentiment, macro) to find new signals. "
-                    "Validate rigorously and pilot for extra alpha."
+                    "Gebruik AI/ML en alternatieve data (sentiment, macro) om nieuwe signalen te vinden. "
+                    "Valideer rigoureus en pilot voor extra alpha."
                 ),
-                expected_output="New signal discovery report with validation results.",
+                expected_output="Nieuwe signaal ontdekking rapport met validatie resultaten.",
                 agent=agent,
             ),
         ])
@@ -225,37 +225,37 @@ def get_spot_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A10-01
             create_task(
                 description=(
-                    "Run signals, check data quality, execute rebalances. "
-                    "Log all deviations and fixes."
+                    "Voer signalen uit, check data kwaliteit, voer rebalances uit. "
+                    "Log alle afwijkingen en fixes."
                 ),
-                expected_output="Daily systematic operations log.",
+                expected_output="Dagelijkse systematische operaties log.",
                 agent=agent,
             ),
             # TASK-A10-02
             create_task(
                 description=(
-                    "Pause strategy on anomalies per SOP and report to Agent 05/03. "
-                    "Document all pauses with rationale."
+                    "Pauzeer strategie bij anomalieën per SOP en rapporteer aan Agent 05/03. "
+                    "Documenteer alle pauzes met rationale."
                 ),
-                expected_output="Anomaly pause log with escalations.",
+                expected_output="Anomalie pauze log met escalaties.",
                 agent=agent,
             ),
             # TASK-A10-03
             create_task(
                 description=(
-                    "Maintain deviation and fix logbook. "
-                    "Track all operational issues and resolutions."
+                    "Onderhoud afwijking en fix logboek. "
+                    "Track alle operationele problemen en resoluties."
                 ),
-                expected_output="Deviation and fix logbook.",
+                expected_output="Afwijking en fix logboek.",
                 agent=agent,
             ),
             # TASK-A10-04
             create_task(
                 description=(
-                    "Provide continuous feedback to quant devs on execution frictions or data errors "
-                    "so models/strategies can be improved for more profit."
+                    "Lever continue feedback aan quant devs over executie fricties of data fouten "
+                    "zodat modellen/strategieën verbeterd kunnen worden voor meer winst."
                 ),
-                expected_output="Feedback report to quant team.",
+                expected_output="Feedback rapport aan quant team.",
                 agent=agent,
             ),
         ])
@@ -264,7 +264,7 @@ def get_spot_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot discretionary/swing agents (06, 13, 14)."""
+    """Haal taken op voor Spot discretionary/swing agents (06, 13, 14)."""
     tasks = []
 
     if "discretionary_head" in agents:
@@ -273,37 +273,37 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A06-01
             create_task(
                 description=(
-                    "Build thesis-driven trades (days-weeks) with strict invalidation. "
-                    "Document entry, exit, and stop levels."
+                    "Bouw thesis-gedreven trades (dagen-weken) met strikte invalidatie. "
+                    "Documenteer entry, exit en stop levels."
                 ),
-                expected_output="Trade thesis document with entry/exit criteria.",
+                expected_output="Trade thesis document met entry/exit criteria.",
                 agent=agent,
             ),
             # TASK-A06-02
             create_task(
                 description=(
-                    "Integrate research: tokenomics, unlocks, flows, catalysts. "
-                    "Use data to inform trade decisions."
+                    "Integreer research: tokenomics, unlocks, flows, catalysts. "
+                    "Gebruik data om trade beslissingen te informeren."
                 ),
-                expected_output="Research integration report.",
+                expected_output="Research integratie rapport.",
                 agent=agent,
             ),
             # TASK-A06-03
             create_task(
                 description=(
-                    "Manage position management: scale in/out, trailing stops, profit protection. "
-                    "Document all position changes."
+                    "Beheer positie management: scale in/out, trailing stops, winst bescherming. "
+                    "Documenteer alle positie wijzigingen."
                 ),
-                expected_output="Position management log.",
+                expected_output="Positie management log.",
                 agent=agent,
             ),
             # TASK-A06-04
             create_task(
                 description=(
-                    "Hunt niche tokens/narratives early and take small positions (conscious high risk) "
-                    "for potential outsized gains if thesis plays out. Exit direct on failure."
+                    "Jaag op niche tokens/narratieven vroeg en neem kleine posities (bewust hoog risico) "
+                    "voor potentieel buitensporige winsten als thesis uitkomt. Exit direct bij falen."
                 ),
-                expected_output="Niche token opportunity report.",
+                expected_output="Niche token kansen rapport.",
                 agent=agent,
             ),
         ])
@@ -314,8 +314,8 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A13-01
             create_task(
                 description=(
-                    "Plan trend continuation/pullback trades with invalidation levels. "
-                    "Document setup criteria."
+                    "Plan trend continuation/pullback trades met invalidation levels. "
+                    "Documenteer setup criteria."
                 ),
                 expected_output="Trend trade plan.",
                 agent=agent,
@@ -323,7 +323,7 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A13-02
             create_task(
                 description=(
-                    "Combine levels with flows/volume (no indicator blindness). "
+                    "Combine levels met flows/volume (no indicator blindness). "
                     "Use multiple confirmation signals."
                 ),
                 expected_output="Multi-signal confluence report.",
@@ -332,8 +332,8 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A13-03
             create_task(
                 description=(
-                    "Build scenario trade plans: base/bull/bear cases. "
-                    "Prepare for different outcomes."
+                    "Bouw scenario trade plans: base/bull/bear cases. "
+                    "Prepare voor different outcomes."
                 ),
                 expected_output="Scenario trade plan document.",
                 agent=agent,
@@ -341,8 +341,8 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A13-04
             create_task(
                 description=(
-                    "Let winners run: increase position or widen trailing stop when trade is convincingly winning "
-                    "to maximize trend profit (maintain stop discipline)."
+                    "Let winners run: increase position of widen trailing stop when trade is convincingly winning "
+                    "om trend winst te maximaliseren (handhaaf stop discipline)."
                 ),
                 expected_output="Winner optimization report.",
                 agent=agent,
@@ -355,8 +355,8 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A14-01
             create_task(
                 description=(
-                    "Build theme baskets + sector rotation (L2/AI/DeFi) within liquidity tiers. "
-                    "Document basket composition."
+                    "Bouw theme baskets + sector rotation (L2/AI/DeFi) within liquidity tiers. "
+                    "Documenteer basket composition."
                 ),
                 expected_output="Theme basket composition document.",
                 agent=agent,
@@ -364,8 +364,8 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A14-02
             create_task(
                 description=(
-                    "Maintain strict sizing (never outsized in illiquid assets). "
-                    "Document sizing rationale."
+                    "Onderhoud strict sizing (never outsized in illiquid assets). "
+                    "Documenteer sizing rationale."
                 ),
                 expected_output="Position sizing report.",
                 agent=agent,
@@ -373,7 +373,7 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A14-03
             create_task(
                 description=(
-                    "Plan unlock/supply events with research. "
+                    "Plan unlock/supply events met research. "
                     "Prepare positions ahead of events."
                 ),
                 expected_output="Event preparation plan.",
@@ -382,7 +382,7 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A14-04
             create_task(
                 description=(
-                    "Allocate limited capital to emerging alts (micro-caps or new sector) "
+                    "Allocate limited capital naar emerging alts (micro-caps of new sector) "
                     "for potential high gains. Strict exit if liquidity drops."
                 ),
                 expected_output="Emerging alt allocation report.",
@@ -394,7 +394,7 @@ def get_spot_discretionary_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot arbitrage agents (07, 11, 12)."""
+    """Haal taken op voor Spot arbitrage agents (07, 11, 12)."""
     tasks = []
 
     if "arb_head" in agents:
@@ -406,14 +406,14 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
                     "Run cross-exchange spreads, triangular arb, stablecoin dislocations (within policy). "
                     "Monitor all opportunities."
                 ),
-                expected_output="Arbitrage opportunity report with capacity analysis.",
+                expected_output="Arbitrage opportunity report met capacity analysis.",
                 agent=agent,
             ),
             # TASK-A07-02
             create_task(
                 description=(
-                    "Define venue filters: withdrawal reliability, limits, liquidity. "
-                    "Maintain approved venue list."
+                    "Definieer venue filters: withdrawal reliability, limits, liquidity. "
+                    "Onderhoud approved venue list."
                 ),
                 expected_output="Venue filter criteria document.",
                 agent=agent,
@@ -430,8 +430,8 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A07-04
             create_task(
                 description=(
-                    "Explore arbitrage on new/illiquid markets (including DEX if possible) "
-                    "with limited capital to profit before competitors."
+                    "Explore arbitrage op new/illiquid markets (including DEX if possible) "
+                    "with limited capital naar profit before competitors."
                 ),
                 expected_output="New market arb exploration report.",
                 agent=agent,
@@ -444,8 +444,8 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A11-01
             create_task(
                 description=(
-                    "Scan spreads and execute legs according to execution policy. "
-                    "Document all executions."
+                    "Scan spreads en execute legs according naar execution policy. "
+                    "Documenteer all executions."
                 ),
                 expected_output="Spread execution log.",
                 agent=agent,
@@ -454,7 +454,7 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Monitor venue limits + settlement windows. "
-                    "Ensure timely settlement."
+                    "Zorg timely settlement."
                 ),
                 expected_output="Venue limit monitoring report.",
                 agent=agent,
@@ -463,16 +463,16 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Report capacity + frictions (fees, slippage, downtime). "
-                    "Identify bottlenecks."
+                    "Identificeer bottlenecks."
                 ),
-                expected_output="Capacity and friction report.",
+                expected_output="Capacity en friction report.",
                 agent=agent,
             ),
             # TASK-A11-04
             create_task(
                 description=(
-                    "Scale successful arb trades: increase volume on stable spreads "
-                    "and expand to new asset pairs if performance is consistent."
+                    "Scale successful arb trades: increase volume op stable spreads "
+                    "and expand naar new asset pairs if performance is consistent."
                 ),
                 expected_output="Arb scaling report.",
                 agent=agent,
@@ -485,8 +485,8 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A12-01
             create_task(
                 description=(
-                    "Identify and execute triangular opportunities within strict limits. "
-                    "Document all opportunities."
+                    "Identificeer en execute triangular opportunities within strict limits. "
+                    "Documenteer all opportunities."
                 ),
                 expected_output="Triangular arb execution log.",
                 agent=agent,
@@ -494,7 +494,7 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A12-02
             create_task(
                 description=(
-                    "Trade stablecoin spreads with predefined depeg rules. "
+                    "Trade stablecoin spreads met predefined depeg rules. "
                     "Monitor stablecoin health."
                 ),
                 expected_output="Stablecoin spread trading log.",
@@ -503,17 +503,17 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A12-03
             create_task(
                 description=(
-                    "Monitor settlement risk + venue health with ops. "
+                    "Monitor settlement risk + venue health met ops. "
                     "Escalate issues immediately."
                 ),
-                expected_output="Settlement and venue health report.",
+                expected_output="Settlement en venue health report.",
                 agent=agent,
             ),
             # TASK-A12-04
             create_task(
                 description=(
-                    "Play stablecoin depeg situations opportunistically (quick in/out for recovery) "
-                    "and experiment with triangular arb on new pairings where liquidity increases."
+                    "Play stablecoin depeg situations opportunistically (quick in/out voor recovery) "
+                    "and experiment met triangular arb op new pairings where liquidity increases."
                 ),
                 expected_output="Opportunistic depeg trading report.",
                 agent=agent,
@@ -524,7 +524,7 @@ def get_spot_arbitrage_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot research agents (08, 20-24)."""
+    """Haal taken op voor Spot research agents (08, 20-24)."""
     tasks = []
 
     if "research_head" in agents:
@@ -533,25 +533,25 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A08-01
             create_task(
                 description=(
-                    "Build catalyst calendar: unlocks, upgrades, listings, treasury moves, governance. "
+                    "Bouw catalyst calendar: unlocks, upgrades, listings, treasury moves, governance. "
                     "Track all upcoming events."
                 ),
-                expected_output="Catalyst calendar and watchlist with scores.",
+                expected_output="Catalyst calendar en watchlist met scores.",
                 agent=agent,
             ),
             # TASK-A08-02
             create_task(
                 description=(
-                    "Produce watchlists with tradeability score (liquidity, supply risk, narrative, flows). "
+                    "Produce watchlists met tradeability score (liquidity, supply risk, narrative, flows). "
                     "Rank opportunities."
                 ),
-                expected_output="Ranked watchlist with tradeability scores.",
+                expected_output="Ranked watchlist met tradeability scores.",
                 agent=agent,
             ),
             # TASK-A08-03
             create_task(
                 description=(
-                    "Publish 'opportunity docket' + real-time alerts with impact assessment. "
+                    "Publish 'opportunity docket' + real-time alerts met impact assessment. "
                     "Keep desk informed."
                 ),
                 expected_output="Opportunity docket publication.",
@@ -560,8 +560,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A08-04
             create_task(
                 description=(
-                    "Monitor social media & dev community for hype (trending Twitter/Reddit, GitHub activity) "
-                    "and alert trading team on early signals."
+                    "Monitor social media & dev community voor hype (trending Twitter/Reddit, GitHub activity) "
+                    "and alert trading team op early signals."
                 ),
                 expected_output="Social/dev community monitoring report.",
                 agent=agent,
@@ -574,7 +574,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A20-01
             create_task(
                 description=(
-                    "Build dashboards: inflow/outflow, whale deposits, cohort behavior. "
+                    "Bouw dashboards: inflow/outflow, whale deposits, cohort behavior. "
                     "Visualize on-chain data."
                 ),
                 expected_output="On-chain analytics dashboard.",
@@ -583,7 +583,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A20-02
             create_task(
                 description=(
-                    "Create alerts with context (noise vs signal). "
+                    "Creëer alerts met context (noise vs signal). "
                     "Filter meaningful signals."
                 ),
                 expected_output="Contextual alert system.",
@@ -592,8 +592,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A20-03
             create_task(
                 description=(
-                    "Run post-mortems: when signal failed and why. "
-                    "Learn from misses."
+                    "Run post-mortems: when signal failed en why. "
+                    "Learn van misses."
                 ),
                 expected_output="Post-mortem analysis report.",
                 agent=agent,
@@ -601,10 +601,10 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A20-04
             create_task(
                 description=(
-                    "Convert on-chain signals directly to trade actions: e.g., large whale deposit -> "
-                    "warn for short, large stablecoin burn -> signal for potential rally."
+                    "Convert on-chain signals directly naar trade actions: e.g., large whale deposit -> "
+                    "warn voor short, large stablecoin burn -> signal voor potential rally."
                 ),
-                expected_output="On-chain signal to trade action mapping.",
+                expected_output="On-chain signal naar trade action mapping.",
                 agent=agent,
             ),
         ])
@@ -615,16 +615,16 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A21-01
             create_task(
                 description=(
-                    "Build supply shock calendar with impact scores (unlock vs liquidity). "
+                    "Bouw supply shock calendar met impact scores (unlock vs liquidity). "
                     "Track all supply events."
                 ),
-                expected_output="Supply shock calendar with impact scores.",
+                expected_output="Supply shock calendar met impact scores.",
                 agent=agent,
             ),
             # TASK-A21-02
             create_task(
                 description=(
-                    "Identify mechanical flows: vesting dumps, emissions pressure. "
+                    "Identificeer mechanical flows: vesting dumps, emissions pressure. "
                     "Predict supply changes."
                 ),
                 expected_output="Mechanical flows analysis.",
@@ -633,7 +633,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A21-03
             create_task(
                 description=(
-                    "Warn for governance/treasury risks. "
+                    "Warn voor governance/treasury risks. "
                     "Flag potential negative events."
                 ),
                 expected_output="Governance/treasury risk report.",
@@ -642,8 +642,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A21-04
             create_task(
                 description=(
-                    "Hunt tokens with extreme tokenomics events (large unlocks, buybacks) coming "
-                    "and advise short/long strategies for extra alpha."
+                    "Hunt tokens met extreme tokenomics events (large unlocks, buybacks) coming "
+                    "and advise short/long strategieën voor extra alpha."
                 ),
                 expected_output="Tokenomics event opportunity report.",
                 agent=agent,
@@ -656,8 +656,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A22-01
             create_task(
                 description=(
-                    "Run ad-hoc studies: reactions to unlocks/listings. "
-                    "Analyze historical patterns."
+                    "Run ad-hoc studies: reactions naar unlocks/listings. "
+                    "Analyseer historical patterns."
                 ),
                 expected_output="Ad-hoc quantitative study.",
                 agent=agent,
@@ -665,7 +665,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A22-02
             create_task(
                 description=(
-                    "Maintain watchlist scoring + sector dashboards. "
+                    "Onderhoud watchlist scoring + sector dashboards. "
                     "Keep metrics updated."
                 ),
                 expected_output="Watchlist scoring update.",
@@ -675,7 +675,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Data QA: outliers + venue inconsistencies. "
-                    "Ensure data quality."
+                    "Zorg data quality."
                 ),
                 expected_output="Data QA report.",
                 agent=agent,
@@ -683,8 +683,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A22-04
             create_task(
                 description=(
-                    "Build sentiment/trend indexes from alt-data (Twitter volume, Google trends) "
-                    "to detect potential price triggers. Share with traders."
+                    "Bouw sentiment/trend indexes van alt-data (Twitter volume, Google trends) "
+                    "to detect potential price triggers. Share met traders."
                 ),
                 expected_output="Sentiment/trend index report.",
                 agent=agent,
@@ -707,7 +707,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Impact assessment: coins, second-order effects, risks. "
-                    "Analyze implications."
+                    "Analyseer implications."
                 ),
                 expected_output="News impact assessment.",
                 agent=agent,
@@ -716,7 +716,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Communicate in short, action-oriented bullets. "
-                    "Clear and concise updates."
+                    "Clear en concise updates."
                 ),
                 expected_output="Action-oriented news summary.",
                 agent=agent,
@@ -724,8 +724,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A23-04
             create_task(
                 description=(
-                    "Monitor crowd sentiment (Twitter/Reddit/Telegram) for extreme mood. "
-                    "Give contrarian or trend-following advice at manic or panic signals."
+                    "Monitor crowd sentiment (Twitter/Reddit/Telegram) voor extreme mood. "
+                    "Give contrarian of trend-following advice at manic of panic signals."
                 ),
                 expected_output="Crowd sentiment analysis.",
                 agent=agent,
@@ -738,7 +738,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A24-01
             create_task(
                 description=(
-                    "Define regime labels + guidance (normal/reduced risk). "
+                    "Definieer regime labels + guidance (normal/reduced risk). "
                     "Set risk mode recommendations."
                 ),
                 expected_output="Regime label definition.",
@@ -747,7 +747,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A24-02
             create_task(
                 description=(
-                    "Build calendar: macro events + weekend liquidity risk. "
+                    "Bouw calendar: macro events + weekend liquidity risk. "
                     "Track risk periods."
                 ),
                 expected_output="Macro event calendar.",
@@ -765,8 +765,8 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A24-04
             create_task(
                 description=(
-                    "Communicate clearly when 'risk-on' vs 'risk-off': give desks green light to go full "
-                    "in favorable macro climate, and brake when macro turns against. Update immediately after events."
+                    "Communicate clearly when 'risk-on' vs 'risk-off': give desks green light naar go full "
+                    "in favorable macro climate, en brake when macro turns against. Update immediately after events."
                 ),
                 expected_output="Risk-on/off communication.",
                 agent=agent,
@@ -777,7 +777,7 @@ def get_spot_research_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot execution agents (09, 16, 17)."""
+    """Haal taken op voor Spot execution agents (09, 16, 17)."""
     tasks = []
 
     if "execution_head" in agents:
@@ -787,16 +787,16 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Set up execution KPIs: implementation shortfall, reject rate, adverse selection. "
-                    "Track and improve performance."
+                    "Track en improve performance."
                 ),
-                expected_output="Execution KPI report with improvement actions.",
+                expected_output="Execution KPI report met improvement actions.",
                 agent=agent,
             ),
             # TASK-A09-02
             create_task(
                 description=(
-                    "Define maker/taker policy + routing rules + large order playbooks. "
-                    "Document execution procedures."
+                    "Definieer maker/taker policy + routing rules + large order playbooks. "
+                    "Documenteer execution procedures."
                 ),
                 expected_output="Execution policy document.",
                 agent=agent,
@@ -805,7 +805,7 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Continuously improve fills/costs across venues. "
-                    "Optimize execution quality."
+                    "Optimaliseer execution quality."
                 ),
                 expected_output="Fill quality improvement report.",
                 agent=agent,
@@ -813,7 +813,7 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A09-04
             create_task(
                 description=(
-                    "Integrate automated execution algos (TWAP/VWAP) and explore dark liquidity sources "
+                    "Integreer automated execution algos (TWAP/VWAP) en explore dark liquidity sources "
                     "to execute large orders quietly."
                 ),
                 expected_output="Execution algo integration report.",
@@ -828,7 +828,7 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Play setups: breakout validation, absorption, liquidity walls (liquid only). "
-                    "Focus on high-probability setups."
+                    "Focus op high-probability setups."
                 ),
                 expected_output="Intraday setup execution log.",
                 agent=agent,
@@ -836,16 +836,16 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A16-02
             create_task(
                 description=(
-                    "Journal with setup tags + execution notes. "
-                    "Document all trades."
+                    "Journal met setup tags + execution notes. "
+                    "Documenteer all trades."
                 ),
-                expected_output="Trade journal with tags.",
+                expected_output="Trade journal met tags.",
                 agent=agent,
             ),
             # TASK-A16-03
             create_task(
                 description=(
-                    "Maintain stop discipline (no moving stops outside playbook). "
+                    "Onderhoud stop discipline (no moving stops outside playbook). "
                     "Strict risk management."
                 ),
                 expected_output="Stop discipline compliance report.",
@@ -854,8 +854,8 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A16-04
             create_task(
                 description=(
-                    "Increase position size slightly when 'in the zone' and market trend goes your way "
-                    "to make extra PnL (but keep daily loss limit)."
+                    "Increase position size slightly wanneer 'in the zone' en markt trend jouw kant opgaat "
+                    "om extra PnL te maken (maar behoud dagelijkse loss limit)."
                 ),
                 expected_output="Position sizing optimization report.",
                 agent=agent,
@@ -877,19 +877,19 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A17-02
             create_task(
                 description=(
-                    "Coordinate larger entries/exits with execution. "
-                    "Work with execution team."
+                    "Coördineer larger entries/exits met execution. "
+                    "Work met execution team."
                 ),
-                expected_output="Coordinated execution log.",
+                expected_output="Coördineerd execution log.",
                 agent=agent,
             ),
             # TASK-A17-03
             create_task(
                 description=(
-                    "Daily self-review + desk review with Agent 02. "
+                    "Dagelijkse self-review + desk review met Agent 02. "
                     "Continuous improvement."
                 ),
-                expected_output="Daily review document.",
+                expected_output="Dagelijkse review document.",
                 agent=agent,
             ),
             # TASK-A17-04
@@ -907,7 +907,7 @@ def get_spot_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot event-driven agent (15)."""
+    """Haal taken op voor Spot event-driven agent (15)."""
     tasks = []
 
     if "event_trader" in agents:
@@ -917,7 +917,7 @@ def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Write pre-event plan: entry, invalidation, hedge/exit rules. "
-                    "Document complete event strategy."
+                    "Documenteer complete event strategy."
                 ),
                 expected_output="Event trading playbook.",
                 agent=agent,
@@ -925,7 +925,7 @@ def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A15-02
             create_task(
                 description=(
-                    "Manage post-event: 'sell the news' + volatility regime. "
+                    "Beheer post-event: 'sell the news' + volatility regime. "
                     "Handle event aftermath."
                 ),
                 expected_output="Post-event management report.",
@@ -934,8 +934,8 @@ def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A15-03
             create_task(
                 description=(
-                    "Use news/on-chain alerts for confirmation. "
-                    "Validate event thesis."
+                    "Use news/on-chain alerts voor confirmation. "
+                    "Valideer event thesis."
                 ),
                 expected_output="Event confirmation checklist.",
                 agent=agent,
@@ -943,8 +943,8 @@ def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A15-04
             create_task(
                 description=(
-                    "Sometimes pre-position for big events (with small risk) when own analysis differs "
-                    "from consensus, for potential outsized gain. Exit immediately on failure."
+                    "Sometimes pre-position voor big events (with small risk) when own analysis differs "
+                    "from consensus, voor potential outsized gain. Exit immediately op failure."
                 ),
                 expected_output="Contrarian event positioning report.",
                 agent=agent,
@@ -955,7 +955,7 @@ def get_spot_event_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_mm_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot market making agent (18)."""
+    """Haal taken op voor Spot market making agent (18)."""
     tasks = []
 
     if "mm_supervisor" in agents:
@@ -965,16 +965,16 @@ def get_spot_mm_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Set quoting rules: spreads, inventory bands, stop rules. "
-                    "Define MM parameters."
+                    "Definieer MM parameters."
                 ),
-                expected_output="Market making rules and inventory report.",
+                expected_output="Market making rules en inventory report.",
                 agent=agent,
             ),
             # TASK-A18-02
             create_task(
                 description=(
-                    "Monitor inventory; force flattening on regime change. "
-                    "Manage inventory risk."
+                    "Monitor inventory; force flattening op regime change. "
+                    "Beheer inventory risk."
                 ),
                 expected_output="Inventory monitoring report.",
                 agent=agent,
@@ -982,8 +982,8 @@ def get_spot_mm_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A18-03
             create_task(
                 description=(
-                    "Evaluate PnL source: spread capture vs adverse selection. "
-                    "Analyze MM profitability."
+                    "Evalueer PnL source: spread capture vs adverse selection. "
+                    "Analyseer MM profitability."
                 ),
                 expected_output="MM PnL attribution report.",
                 agent=agent,
@@ -991,8 +991,8 @@ def get_spot_mm_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A18-04
             create_task(
                 description=(
-                    "Focus on volatile liquid pairs with wide spreads for more spread capture. "
-                    "Reduce inventory quickly on spikes to avoid slippage. Maximize MM PnL."
+                    "Focus op volatile liquid pairs met wide spreads voor more spread capture. "
+                    "Reduce inventory quickly op spikes naar avoid slippage. Maximize MM PnL."
                 ),
                 expected_output="MM optimization report.",
                 agent=agent,
@@ -1003,7 +1003,7 @@ def get_spot_mm_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot risk agents (19, 25-27)."""
+    """Haal taken op voor Spot risk agents (19, 25-27)."""
     tasks = []
 
     if "inventory_coordinator" in agents:
@@ -1012,10 +1012,10 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A19-01
             create_task(
                 description=(
-                    "Daily inventory checks: concentrations, liquidity tiers, exit readiness. "
+                    "Dagelijkse inventory checks: concentrations, liquidity tiers, exit readiness. "
                     "Monitor all positions."
                 ),
-                expected_output="Inventory and exposure report.",
+                expected_output="Inventory en exposure report.",
                 agent=agent,
             ),
             # TASK-A19-02
@@ -1030,8 +1030,8 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A19-03
             create_task(
                 description=(
-                    "Signal mismatch between exposure and regime. "
-                    "Alert on misalignments."
+                    "Signal mismatch between exposure en regime. "
+                    "Alert op misalignments."
                 ),
                 expected_output="Exposure/regime mismatch alert.",
                 agent=agent,
@@ -1040,7 +1040,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Don't hedge too early: let limited overexposure ride when market is favorable. "
-                    "Hedge only when risk-asymmetry increases, for better risk/reward."
+                    "Hedge only when risk-asymmetry increases, voor better risk/reward."
                 ),
                 expected_output="Hedging timing optimization report.",
                 agent=agent,
@@ -1062,7 +1062,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A25-02
             create_task(
                 description=(
-                    "Generate alerts + escalations on threshold breaches. "
+                    "Generate alerts + escalations op threshold breaches. "
                     "Immediate notification."
                 ),
                 expected_output="Threshold breach alert system.",
@@ -1071,17 +1071,17 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A25-03
             create_task(
                 description=(
-                    "Produce daily risk pack for CIO/CRO/Head Trading. "
+                    "Produce dagelijkse risk pack voor CIO/CRO/Head Trading. "
                     "Comprehensive risk summary."
                 ),
-                expected_output="Daily risk pack.",
+                expected_output="Dagelijkse risk pack.",
                 agent=agent,
             ),
             # TASK-A25-04
             create_task(
                 description=(
-                    "Report upside scenarios too: show where taking extra risk can lead to much profit "
-                    "so CIO sees balance between risk and reward."
+                    "Rapporteer ook upside scenarios: laat zien waar extra risico kan leiden naar veel winst "
+                    "so CIO sees balance between risk en reward."
                 ),
                 expected_output="Upside scenario analysis.",
                 agent=agent,
@@ -1094,7 +1094,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A26-01
             create_task(
                 description=(
-                    "Maintain venue scorecards (API stability, withdrawals, legal/ops signals). "
+                    "Onderhoud venue scorecards (API stability, withdrawals, legal/ops signals). "
                     "Track venue health."
                 ),
                 expected_output="Venue scorecard update.",
@@ -1103,8 +1103,8 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A26-02
             create_task(
                 description=(
-                    "Set limits per venue + triggers for exposure reduction. "
-                    "Define venue risk limits."
+                    "Set limits per venue + triggers voor exposure reduction. "
+                    "Definieer venue risk limits."
                 ),
                 expected_output="Venue limit setting.",
                 agent=agent,
@@ -1112,8 +1112,8 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A26-03
             create_task(
                 description=(
-                    "Evaluate new venues before approved status. "
-                    "Due diligence on new venues."
+                    "Evalueer new venues before approved status. "
+                    "Due diligence op new venues."
                 ),
                 expected_output="New venue evaluation report.",
                 agent=agent,
@@ -1122,7 +1122,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Explore new venues cautiously: put small capital when arb edge is large, "
-                    "with strict exposure limit and intensive monitoring, to gain extra profit without big risks."
+                    "with strict exposure limit en intensive monitoring, naar gain extra profit without big risks."
                 ),
                 expected_output="New venue exploration report.",
                 agent=agent,
@@ -1136,7 +1136,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Check overfitting, regime dependency, execution assumptions. "
-                    "Validate strategy robustness."
+                    "Valideer strategy robustness."
                 ),
                 expected_output="Strategy validation report.",
                 agent=agent,
@@ -1144,7 +1144,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A27-02
             create_task(
                 description=(
-                    "Define kill criteria + monitoring metrics before live. "
+                    "Definieer kill criteria + monitoring metrics before live. "
                     "Set strategy guardrails."
                 ),
                 expected_output="Kill criteria definition.",
@@ -1162,7 +1162,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A27-04
             create_task(
                 description=(
-                    "Think along with quants: find ways to bring risky but promising strategies live "
+                    "Think along met quants: find ways naar bring risky but promising strategieën live "
                     "in controlled manner (hedges, lower allocation) instead of rejecting them outright."
                 ),
                 expected_output="Controlled strategy launch plan.",
@@ -1174,7 +1174,7 @@ def get_spot_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Spot operations agents (28-32)."""
+    """Haal taken op voor Spot operations agents (28-32)."""
     tasks = []
 
     if "controller" in agents:
@@ -1183,10 +1183,10 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A28-01
             create_task(
                 description=(
-                    "Daily NAV/PnL; fees; slippage accounting; resolve breaks. "
+                    "Dagelijkse NAV/PnL; fees; slippage accounting; resolve breaks. "
                     "Accurate financial tracking."
                 ),
-                expected_output="Daily NAV/PnL report.",
+                expected_output="Dagelijkse NAV/PnL report.",
                 agent=agent,
             ),
             # TASK-A28-02
@@ -1201,7 +1201,7 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A28-03
             create_task(
                 description=(
-                    "Report deviations directly to COO/CRO. "
+                    "Report deviations directly naar COO/CRO. "
                     "Immediate escalation."
                 ),
                 expected_output="Deviation escalation report.",
@@ -1210,8 +1210,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A28-04
             create_task(
                 description=(
-                    "Analyze which strategies/pods generate real alpha vs just add volatility. "
-                    "Advise CIO for reallocation toward high-performers."
+                    "Analyseer which strategieën/pods generate real alpha vs just add volatility. "
+                    "Advise CIO voor reallocation toward high-performers."
                 ),
                 expected_output="Alpha generation analysis.",
                 agent=agent,
@@ -1224,8 +1224,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A29-01
             create_task(
                 description=(
-                    "Manage buffers per venue; optimize idle vs safety. "
-                    "Balance liquidity and returns."
+                    "Beheer buffers per venue; optimize idle vs safety. "
+                    "Balanceer liquidity en returns."
                 ),
                 expected_output="Buffer management report.",
                 agent=agent,
@@ -1243,7 +1243,7 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Stress planning: weekend, depeg, venue issues. "
-                    "Prepare for contingencies."
+                    "Prepare voor contingencies."
                 ),
                 expected_output="Stress scenario plan.",
                 agent=agent,
@@ -1251,8 +1251,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A29-04
             create_task(
                 description=(
-                    "Put idle funds to work: lend/stake temporary surpluses (with CRO approval) "
-                    "to earn extra yield while not needed for trading."
+                    "Put idle funds naar work: lend/stake temporary surpluses (with CRO approval) "
+                    "to earn extra yield while not needed voor trading."
                 ),
                 expected_output="Idle fund optimization report.",
                 agent=agent,
@@ -1293,7 +1293,7 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Minimize security friction: pre-approve whitelists, set up API keys upfront. "
-                    "Enable fast fund transfers without compromising security."
+                    "Maak mogelijk fast fund transfers without compromising security."
                 ),
                 expected_output="Security friction reduction report.",
                 agent=agent,
@@ -1315,8 +1315,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A31-02
             create_task(
                 description=(
-                    "Surveillance procedures + escalation on suspicious behavior. "
-                    "Monitoring and enforcement."
+                    "Surveillance procedures + escalation op suspicious behavior. "
+                    "Monitoring en enforcement."
                 ),
                 expected_output="Surveillance procedure report.",
                 agent=agent,
@@ -1333,8 +1333,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A31-04
             create_task(
                 description=(
-                    "Track regulations and market developments closely. Update restricted lists/policies "
-                    "immediately on changes so aggressive trades don't lead to violations."
+                    "Track regulations en market developments closely. Update restricted lists/policies "
+                    "immediately op changes so aggressive trades don't lead naar violations."
                 ),
                 expected_output="Regulatory update tracking.",
                 agent=agent,
@@ -1356,7 +1356,7 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A32-02
             create_task(
                 description=(
-                    "Coordinate with controller/treasury on breaks. "
+                    "Coördineer met controller/treasury op breaks. "
                     "Cross-team coordination."
                 ),
                 expected_output="Break coordination report.",
@@ -1365,7 +1365,7 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A32-03
             create_task(
                 description=(
-                    "Operational readiness for new coins/venues. "
+                    "Operational readiness voor new coins/venues. "
                     "Onboarding preparation."
                 ),
                 expected_output="Operational readiness assessment.",
@@ -1374,8 +1374,8 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A32-04
             create_task(
                 description=(
-                    "Prepare ops for new opportunities: before listings or new exchange launches "
-                    "already have accounts/funding/procedures ready so traders can act immediately."
+                    "Prepare ops voor new opportunities: before listings of new exchange launches "
+                    "hebben al accounts/funding/procedures klaar zodat traders onmiddellijk kunnen handelen."
                 ),
                 expected_output="Opportunity readiness report.",
                 agent=agent,
@@ -1386,13 +1386,13 @@ def get_spot_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_spot_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get all Spot desk tasks given a dictionary of agents.
+    """Haal alle Spot desk taken op gegeven een dictionary van agents.
 
     Args:
-        agents: Dictionary mapping agent keys to Agent instances.
+        agents: Dictionary die agent keys mapt naar Agent instances.
 
     Returns:
-        List of all Spot desk tasks.
+        Lijst van alle Spot desk taken.
     """
     tasks = []
     tasks.extend(get_spot_leadership_tasks(agents))

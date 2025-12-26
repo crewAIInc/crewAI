@@ -1,4 +1,4 @@
-"""Futures desk agent tasks for QRI Trading Organization."""
+"""Futures desk agent taken voor QRI Trading Organization."""
 
 from crewai import Agent, Task
 
@@ -6,7 +6,7 @@ from krakenagents.tasks.base import create_task
 
 
 def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures leadership agents (33-36)."""
+    """Haal taken op voor Futures leadership agents (33-36)."""
     tasks = []
 
     if "cio" in agents:
@@ -15,37 +15,37 @@ def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A33-01
             create_task(
                 description=(
-                    "Allocation over futures strategies (funding/carry, intraday, systematic, curve). "
-                    "Consider leverage and funding costs."
+                    "Allocatie over futures strategieën (funding/carry, intraday, systematisch, curve). "
+                    "Overweeg leverage en funding kosten."
                 ),
-                expected_output="Futures universe and allocation document.",
+                expected_output="Futures universe en allocatie document.",
                 agent=cio,
             ),
             # TASK-A33-02
             create_task(
                 description=(
-                    "Determine leverage per regime + max net/gross exposure. "
-                    "Set leverage limits per pod."
+                    "Bepaal leverage per regime + max netto/bruto exposure. "
+                    "Stel leverage limieten in per pod."
                 ),
-                expected_output="Risk budget allocation with leverage limits.",
+                expected_output="Risico budget allocatie met leverage limieten.",
                 agent=cio,
             ),
             # TASK-A33-03
             create_task(
                 description=(
-                    "Kill/scale decisions based on risk-adjusted performance. "
-                    "Factor in funding regime and basis conditions."
+                    "Kill/schaal beslissingen gebaseerd op risico-gecorrigeerde performance. "
+                    "Factor in funding regime en basis condities."
                 ),
-                expected_output="Monthly futures allocation decision report.",
+                expected_output="Maandelijks futures allocatie beslissingsrapport.",
                 agent=cio,
             ),
             # TASK-A33-04
             create_task(
                 description=(
-                    "Allow leverage above normal maximum for exceptional edge (only with CRO approval) "
-                    "to capture mega-opportunities while margin buffers remain guaranteed."
+                    "Sta leverage boven normaal maximum toe voor uitzonderlijke edge (alleen met CRO goedkeuring) "
+                    "om mega-kansen te vangen terwijl margin buffers gegarandeerd blijven."
                 ),
-                expected_output="Exceptional leverage approval report.",
+                expected_output="Uitzonderlijke leverage goedkeuringsrapport.",
                 agent=cio,
             ),
         ])
@@ -56,37 +56,37 @@ def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A34-01
             create_task(
                 description=(
-                    "Daily plan: focus instruments, event windows, risk mode. "
-                    "Coordinate with spot desk on cross-desk opportunities."
+                    "Dagelijks plan: focus instrumenten, event vensters, risico mode. "
+                    "Coördineer met spot desk op cross-desk kansen."
                 ),
-                expected_output="Daily futures briefing document.",
+                expected_output="Dagelijks futures briefing document.",
                 agent=head,
             ),
             # TASK-A34-02
             create_task(
                 description=(
-                    "Monitor intraday risk controls: max loss, max leverage. "
-                    "Special focus on leverage usage."
+                    "Monitor intraday risico controles: max verlies, max leverage. "
+                    "Speciale focus op leverage gebruik."
                 ),
-                expected_output="Trade discipline report with leverage analysis.",
+                expected_output="Trade discipline rapport met leverage analyse.",
                 agent=head,
             ),
             # TASK-A34-03
             create_task(
                 description=(
-                    "Review culture + error reduction. "
-                    "Conduct post-trade reviews and enforce journaling."
+                    "Review cultuur + fout reductie. "
+                    "Voer post-trade reviews uit en handhaaf journaling."
                 ),
-                expected_output="Review culture report.",
+                expected_output="Review cultuur rapport.",
                 agent=head,
             ),
             # TASK-A34-04
             create_task(
                 description=(
-                    "Stimulate larger position on high-conviction trades (within margin limits) and learn from it. "
-                    "Ensure margin stress test is done before such push."
+                    "Stimuleer grotere positie op high-conviction trades (binnen margin limieten) en leer ervan. "
+                    "Zorg dat margin stress test gedaan is voor zo'n push."
                 ),
-                expected_output="High-conviction trade report.",
+                expected_output="High-conviction trade rapport.",
                 agent=head,
             ),
         ])
@@ -97,37 +97,37 @@ def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A35-01
             create_task(
                 description=(
-                    "Design risk framework: leverage caps, liquidation buffers, drawdown limits "
-                    "(and optional gamma-like exposure). Document all limits."
+                    "Ontwerp risico framework: leverage caps, liquidatie buffers, drawdown limieten "
+                    "(en optionele gamma-achtige exposure). Documenteereer alle limieten."
                 ),
-                expected_output="Futures risk framework with margin controls.",
+                expected_output="Futures risico framework met margin controles.",
                 agent=cro,
             ),
             # TASK-A35-02
             create_task(
                 description=(
-                    "Real-time monitoring: margin, liquidation distance, venue risk. "
-                    "Enforce position reductions at thresholds."
+                    "Real-time monitoring: margin, liquidatie afstand, venue risico. "
+                    "Handhaaf positie reducties bij drempels."
                 ),
-                expected_output="Margin and liquidation risk report.",
+                expected_output="Margin en liquidatie risico rapport.",
                 agent=cro,
             ),
             # TASK-A35-03
             create_task(
                 description=(
-                    "Sign off new derivatives strategies. "
-                    "Conduct pre-mortem and failure mode analysis."
+                    "Keur nieuwe derivaten strategieën goed. "
+                    "Voer pre-mortem en failure mode analyse uit."
                 ),
-                expected_output="Strategy sign-off with risk analysis.",
+                expected_output="Strategie goedkeuring met risico analyse.",
                 agent=cro,
             ),
             # TASK-A35-04
             create_task(
                 description=(
-                    "Increase risk limits when performance allows: with consistent profits under current limit, "
-                    "consider higher limits (Board approval) to increase potential without liquidation danger."
+                    "Verhoog risico limieten wanneer performance het toestaat: met consistent profits under current limit, "
+                    "consider higher limits (Board approval) om potentieel te verhogen zonder liquidatie gevaar."
                 ),
-                expected_output="Risk limit increase proposal.",
+                expected_output="Risico limiet verhogingsvoorstel.",
                 agent=cro,
             ),
         ])
@@ -138,37 +138,37 @@ def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A36-01
             create_task(
                 description=(
-                    "Daily reconciliation of positions, funding, fees. "
-                    "Ensure 24/7 coverage for margin events."
+                    "Dagelijkse reconciliation van posities, funding, fees. "
+                    "Zorg voor 24/7 dekking voor margin events."
                 ),
-                expected_output="Futures operational procedures.",
+                expected_output="Futures operationele procedures.",
                 agent=coo,
             ),
             # TASK-A36-02
             create_task(
                 description=(
-                    "Incident management for venue outages/margin changes. "
-                    "Coordinate rapid response."
+                    "Incident management voor venue uitval/margin wijzigingen. "
+                    "Coördineer snelle respons."
                 ),
-                expected_output="Incident management report.",
+                expected_output="Incident management rapport.",
                 agent=coo,
             ),
             # TASK-A36-03
             create_task(
                 description=(
-                    "Process control + audit trail. "
-                    "Ensure all actions are properly logged."
+                    "Proces controle + audit trail. "
+                    "Zorg dat alle acties correct gelogd worden."
                 ),
-                expected_output="Process control report.",
+                expected_output="Proces controle rapport.",
                 agent=coo,
             ),
             # TASK-A36-04
             create_task(
                 description=(
-                    "Ensure operations remain real-time during extreme moves (liquidation cascades): "
-                    "fast funding adjustments, margin top-ups from treasury, etc., executed flawlessly."
+                    "Zorg dat operaties real-time blijven tijdens extreme bewegingen (liquidatie cascades): "
+                    "snelle funding aanpassingen, margin top-ups van treasury, etc., vlekkeloos uitgevoerd."
                 ),
-                expected_output="Extreme move ops readiness report.",
+                expected_output="Extreme beweging ops gereedheid rapport.",
                 agent=coo,
             ),
         ])
@@ -177,7 +177,7 @@ def get_futures_leadership_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures systematic agents (37, 42)."""
+    """Haal taken op voor Futures systematic agents (37, 42)."""
     tasks = []
 
     if "systematic_head" in agents:
@@ -186,7 +186,7 @@ def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A37-01
             create_task(
                 description=(
-                    "Design signals (trend/mean reversion/carry filters) for perps/futures. "
+                    "Ontwerp signals (trend/mean reversion/carry filters) voor perps/futures. "
                     "Include funding cost assumptions."
                 ),
                 expected_output="Futures signal library documentation.",
@@ -195,26 +195,26 @@ def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A37-02
             create_task(
                 description=(
-                    "Specify strategies for dev team; monitor live drift. "
-                    "Ensure clear documentation."
+                    "Specify strategies voor dev team; monitor live drift. "
+                    "Zorg clear documentation."
                 ),
-                expected_output="Strategy specification document.",
+                expected_output="Strategie specificatie document.",
                 agent=agent,
             ),
             # TASK-A37-03
             create_task(
                 description=(
-                    "Monthly model reviews + performance attribution. "
-                    "Identify strategies losing edge."
+                    "Maandelijkse model reviews + performance attribution. "
+                    "Identificeer strategies losing edge."
                 ),
-                expected_output="Model review report.",
+                expected_output="Model review rapport.",
                 agent=agent,
             ),
             # TASK-A37-04
             create_task(
                 description=(
-                    "Research advanced quant (AI, deep learning on orderbook data) for new high-alpha strategies. "
-                    "Strict testing and phased rollout if successful."
+                    "Research advanced quant (AI, deep learning op orderbook data) voor new high-alpha strategies. "
+                    "Strict testing en phased rollout if successful."
                 ),
                 expected_output="Advanced quant research report.",
                 agent=agent,
@@ -227,26 +227,26 @@ def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A42-01
             create_task(
                 description=(
-                    "Execute signals; monitor exceptions; pause on anomalies. "
-                    "Track funding payments and their impact."
+                    "Voer uit signals; monitor exceptions; pause op anomalies. "
+                    "Track funding payments en their impact."
                 ),
-                expected_output="Daily futures systematic operations log.",
+                expected_output="Dagelijkse futures systematic operations log.",
                 agent=agent,
             ),
             # TASK-A42-02
             create_task(
                 description=(
-                    "Log deviations; coordinate with Agent 37/35. "
-                    "Document all operational issues."
+                    "Log deviations; coordinate met Agent 37/35. "
+                    "Documenteer all operational issues."
                 ),
-                expected_output="Deviation log with escalations.",
+                expected_output="Deviation log met escalations.",
                 agent=agent,
             ),
             # TASK-A42-03
             create_task(
                 description=(
-                    "Prevent human override outside protocol. "
-                    "Maintain systematic discipline."
+                    "Voorkom human override outside protocol. "
+                    "Onderhoud systematic discipline."
                 ),
                 expected_output="Protocol compliance report.",
                 agent=agent,
@@ -254,8 +254,8 @@ def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A42-04
             create_task(
                 description=(
-                    "Optimize capital utilization: report to Agent 33 when a strategy is idle or underused "
-                    "so capital can be temporarily deployed elsewhere for more return."
+                    "Optimaliseer capital utilization: rapporteer aan Agent 33 wanneer een strategie idle is of underused "
+                    "so capital can be temporarily deployed elsewhere voor more return."
                 ),
                 expected_output="Capital utilization optimization report.",
                 agent=agent,
@@ -266,7 +266,7 @@ def get_futures_systematic_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures carry agents (38, 43, 44)."""
+    """Haal taken op voor Futures carry agents (38, 43, 44)."""
     tasks = []
 
     if "carry_head" in agents:
@@ -285,16 +285,16 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Capacity & unwind playbooks; prevent stranded hedges. "
-                    "Document exit procedures."
+                    "Documenteer exit procedures."
                 ),
-                expected_output="Capacity and unwind playbook.",
+                expected_output="Capacity en unwind playbook.",
                 agent=agent,
             ),
             # TASK-A38-03
             create_task(
                 description=(
-                    "Coordinate with treasury for collateral efficiency. "
-                    "Optimize margin usage."
+                    "Coördineer met treasury voor collateral efficiency. "
+                    "Optimaliseer margin usage."
                 ),
                 expected_output="Collateral efficiency report.",
                 agent=agent,
@@ -303,7 +303,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Exploit extreme funding dislocations maximally: at very high positive funding rate "
-                    "(shorts get paid) go aggressively short (within margin limits) and hedge via spot/options if needed."
+                    "(shorts get paid) go aggressively short (within margin limits) en hedge via spot/options if needed."
                 ),
                 expected_output="Extreme funding exploitation report.",
                 agent=agent,
@@ -316,8 +316,8 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A43-01
             create_task(
                 description=(
-                    "Execute funding strategies within leverage/margin policy. "
-                    "Document all positions."
+                    "Voer uit funding strategies within leverage/margin policy. "
+                    "Documenteer all positions."
                 ),
                 expected_output="Funding strategy execution log.",
                 agent=agent,
@@ -326,7 +326,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Monitor funding regime shifts + unwind triggers. "
-                    "Alert on significant changes."
+                    "Alert op significant changes."
                 ),
                 expected_output="Funding regime monitoring report.",
                 agent=agent,
@@ -335,16 +335,16 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Report capacity + cost breakdown. "
-                    "Track funding income and costs."
+                    "Track funding income en costs."
                 ),
-                expected_output="Capacity and cost breakdown.",
+                expected_output="Capacity en cost breakdown.",
                 agent=agent,
             ),
             # TASK-A43-04
             create_task(
                 description=(
-                    "Scale to max size on extreme funding spreads (within risk appetite) to maximize carry. "
-                    "Ensure extra margin buffers to prevent liquidations."
+                    "Scale naar max size op extreme funding spreads (within risk appetite) naar maximize carry. "
+                    "Zorg extra margin buffers naar prevent liquidations."
                 ),
                 expected_output="Carry maximization report.",
                 agent=agent,
@@ -357,8 +357,8 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A44-01
             create_task(
                 description=(
-                    "Capture spreads between venues with strict venue limits. "
-                    "Execute cross-venue carry."
+                    "Capture spreads between venues met strict venue limits. "
+                    "Voer uit cross-venue carry."
                 ),
                 expected_output="Cross-venue carry execution log.",
                 agent=agent,
@@ -366,7 +366,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A44-02
             create_task(
                 description=(
-                    "Unwind procedures on venue health deterioration. "
+                    "Unwind procedures op venue health deterioration. "
                     "Rapid exit when needed."
                 ),
                 expected_output="Venue health unwind procedure.",
@@ -375,7 +375,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A44-03
             create_task(
                 description=(
-                    "Prevent stranded legs via predefined triggers. "
+                    "Voorkom stranded legs via predefined triggers. "
                     "Avoid asymmetric positions."
                 ),
                 expected_output="Stranded leg prevention report.",
@@ -384,7 +384,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A44-04
             create_task(
                 description=(
-                    "Explore arbitrage on new futures venues (under strict limit) to benefit from inefficiencies "
+                    "Explore arbitrage op new futures venues (under strict limit) naar benefit van inefficiencies "
                     "before others do. Monitor risk continuously."
                 ),
                 expected_output="New venue arbitrage exploration report.",
@@ -396,7 +396,7 @@ def get_futures_carry_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures microstructure agents (39, 45-47)."""
+    """Haal taken op voor Futures microstructure agents (39, 45-47)."""
     tasks = []
 
     if "microstructure_head" in agents:
@@ -405,8 +405,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A39-01
             create_task(
                 description=(
-                    "Develop playbooks: breakout validation, absorption, stop runs, liquidity cliffs. "
-                    "Design microstructure trading strategies."
+                    "Ontwikkel playbooks: breakout validation, absorption, stop runs, liquidity cliffs. "
+                    "Ontwerp microstructure trading strategies."
                 ),
                 expected_output="Microstructure trading playbook.",
                 agent=agent,
@@ -415,7 +415,7 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Coach intraday traders; enforce no-trade regimes. "
-                    "Maintain trading discipline."
+                    "Onderhoud trading discipline."
                 ),
                 expected_output="Intraday coaching report.",
                 agent=agent,
@@ -423,8 +423,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A39-03
             create_task(
                 description=(
-                    "Work with execution on order types + timing. "
-                    "Optimize execution quality."
+                    "Work met execution op order types + timing. "
+                    "Optimaliseer execution quality."
                 ),
                 expected_output="Execution optimization report.",
                 agent=agent,
@@ -432,8 +432,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A39-04
             create_task(
                 description=(
-                    "Hunt extreme orderflow moments (massive stop-hunts, large buyers/sellers) and design "
-                    "microstructure trades to profit from these (e.g., quick scalps during panic)."
+                    "Hunt extreme orderflow moments (massive stop-hunts, large buyers/sellers) en design "
+                    "microstructure trades naar profit van these (e.g., quick scalps during panic)."
                 ),
                 expected_output="Extreme orderflow opportunity report.",
                 agent=agent,
@@ -455,17 +455,17 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A45-02
             create_task(
                 description=(
-                    "Journal with setup tags + screenshots/notes. "
-                    "Document all trades."
+                    "Journal met setup tags + screenshots/notes. "
+                    "Documenteer all trades."
                 ),
-                expected_output="Trade journal with evidence.",
+                expected_output="Trade journal met evidence.",
                 agent=agent,
             ),
             # TASK-A45-03
             create_task(
                 description=(
-                    "Coordinate timing with execution during stress. "
-                    "Work with execution team."
+                    "Coördineer timing met execution during stress. "
+                    "Work met execution team."
                 ),
                 expected_output="Stress coordination log.",
                 agent=agent,
@@ -473,8 +473,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A45-04
             create_task(
                 description=(
-                    "Use 'house money': with early profit on the day, trade slightly more aggressively "
-                    "with part of that profit later (maintain discipline) for higher PnL."
+                    "Gebruik 'house money': met vroege winst op de dag, trade iets agressiever "
+                    "with part of that profit later (maintain discipline) voor higher PnL."
                 ),
                 expected_output="House money trading report.",
                 agent=agent,
@@ -488,7 +488,7 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Same discipline as Agent 45: max loss, max trades, liquid setups. "
-                    "Focus on ETH-specific opportunities."
+                    "Focus op ETH-specific opportunities."
                 ),
                 expected_output="ETH intraday execution log.",
                 agent=agent,
@@ -514,8 +514,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A46-04
             create_task(
                 description=(
-                    "Play unique ETH drivers: on news where ETH moves independently of BTC, increase ETH position "
-                    "for extra alpha (optionally partially hedged via BTC to temper directional risk)."
+                    "Play unique ETH drivers: op news where ETH moves independently of BTC, increase ETH position "
+                    "for extra alpha (optionally partially hedged via BTC naar temper directional risk)."
                 ),
                 expected_output="ETH-specific opportunity report.",
                 agent=agent,
@@ -528,8 +528,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A47-01
             create_task(
                 description=(
-                    "Play playbooks for headline spikes, liquidation cascades, gap moves. "
-                    "React to orderflow events."
+                    "Play playbooks voor headline spikes, liquidation cascades, gap moves. "
+                    "React naar orderflow events."
                 ),
                 expected_output="Orderflow event trading log.",
                 agent=agent,
@@ -537,8 +537,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A47-02
             create_task(
                 description=(
-                    "Work closely with news analyst + CRO during volatility. "
-                    "Coordinate on fast-moving situations."
+                    "Work closely met news analyst + CRO during volatility. "
+                    "Coördineer op fast-moving situations."
                 ),
                 expected_output="Volatility coordination report.",
                 agent=agent,
@@ -546,8 +546,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A47-03
             create_task(
                 description=(
-                    "Quick exits on regime flips; prevent gambling mode. "
-                    "Maintain discipline."
+                    "Quick exits op regime flips; prevent gambling mode. "
+                    "Onderhoud discipline."
                 ),
                 expected_output="Regime flip response log.",
                 agent=agent,
@@ -555,8 +555,8 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A47-04
             create_task(
                 description=(
-                    "Prepare pre-set orders for macro releases (e.g., stop buys/sells just outside current spread) "
-                    "to react immediately on surprise. Minimize latency."
+                    "Prepare pre-set orders voor macro releases (e.g., stop buys/sells just outside current spread) "
+                    "to react immediately op surprise. Minimize latency."
                 ),
                 expected_output="Macro event pre-positioning report.",
                 agent=agent,
@@ -567,7 +567,7 @@ def get_futures_microstructure_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures research agents (40, 52-56)."""
+    """Haal taken op voor Futures research agents (40, 52-56)."""
     tasks = []
 
     if "research_head" in agents:
@@ -579,13 +579,13 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
                     "Dashboards: funding extremes, OI changes, liquidation clusters. "
                     "Visualize derivatives data."
                 ),
-                expected_output="Futures research report with funding forecasts.",
+                expected_output="Futures research report met funding forecasts.",
                 agent=agent,
             ),
             # TASK-A40-02
             create_task(
                 description=(
-                    "Analyze event impact on perps: funding/OI behavior. "
+                    "Analyseer event impact op perps: funding/OI behavior. "
                     "Track market structure changes."
                 ),
                 expected_output="Event impact analysis.",
@@ -594,17 +594,17 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A40-03
             create_task(
                 description=(
-                    "Alerts + weekly docket to CIO/Head Trading. "
+                    "Alerts + wekelijkse docket naar CIO/Head Trading. "
                     "Keep leadership informed."
                 ),
-                expected_output="Weekly research docket.",
+                expected_output="Wekelijkse research docket.",
                 agent=agent,
             ),
             # TASK-A40-04
             create_task(
                 description=(
                     "Use options market insights (OI, put/call ratios) as supplement: if options show extreme bias "
-                    "vs futures metrics, signal arbitrage or contrarian trade opportunities."
+                    "vs futures metrics, signal arbitrage of contrarian trade opportunities."
                 ),
                 expected_output="Options/futures divergence report.",
                 agent=agent,
@@ -617,7 +617,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A52-01
             create_task(
                 description=(
-                    "Build funding/OI dashboards + liquidation clusters + anomaly alerts. "
+                    "Bouw funding/OI dashboards + liquidation clusters + anomaly alerts. "
                     "Comprehensive derivatives data."
                 ),
                 expected_output="Derivatives data dashboard.",
@@ -627,7 +627,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Data QA: venue differences + outliers. "
-                    "Ensure data quality."
+                    "Zorg data quality."
                 ),
                 expected_output="Data quality report.",
                 agent=agent,
@@ -635,7 +635,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A52-03
             create_task(
                 description=(
-                    "Support desk situational awareness. "
+                    "Ondersteun desk situational awareness. "
                     "Keep traders informed."
                 ),
                 expected_output="Situational awareness report.",
@@ -644,7 +644,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A52-04
             create_task(
                 description=(
-                    "Integrate options data (OI, put/call ratios) in analyses for fuller picture of market expectations, "
+                    "Integreer options data (OI, put/call ratios) in analyses voor fuller picture of market expectations, "
                     "even though we don't trade options directly."
                 ),
                 expected_output="Options data integration report.",
@@ -658,7 +658,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A53-01
             create_task(
                 description=(
-                    "Give risk mode advice (normal/reduced/defensive) based on macro calendar. "
+                    "Give risk mode advice (normal/reduced/defensive) based op macro calendar. "
                     "Set leverage guidance."
                 ),
                 expected_output="Risk mode recommendation.",
@@ -668,7 +668,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Scenario planning around macro events. "
-                    "Prepare for different outcomes."
+                    "Prepare voor different outcomes."
                 ),
                 expected_output="Macro scenario plan.",
                 agent=agent,
@@ -677,7 +677,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Communicate leverage discipline per regime. "
-                    "Clear guidance on position sizing."
+                    "Clear guidance op position sizing."
                 ),
                 expected_output="Leverage discipline communication.",
                 agent=agent,
@@ -685,8 +685,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A53-04
             create_task(
                 description=(
-                    "Warn timely when high leverage is (ir)responsible: signal periods to be more careful "
-                    "(e.g., around Fed decisions) vs moments with macro tailwind to increase risk."
+                    "Warn timely when high leverage is (ir)responsible: signal periods naar be more careful "
+                    "(e.g., around Fed decisions) vs moments met macro tailwind naar increase risk."
                 ),
                 expected_output="Leverage timing advisory.",
                 agent=agent,
@@ -699,16 +699,16 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A54-01
             create_task(
                 description=(
-                    "Alerts: 'what does this mean for perps, funding, OI, liquidations?' "
-                    "Translate news to derivatives impact."
+                    "Alerts: 'what does this mean voor perps, funding, OI, liquidations?' "
+                    "Translate news naar derivatives impact."
                 ),
-                expected_output="News to derivatives impact alert.",
+                expected_output="News naar derivatives impact alert.",
                 agent=agent,
             ),
             # TASK-A54-02
             create_task(
                 description=(
-                    "Coordinate with Head Trading + CRO on headline risk. "
+                    "Coördineer met Head Trading + CRO op headline risk. "
                     "Rapid response coordination."
                 ),
                 expected_output="Headline risk coordination report.",
@@ -717,7 +717,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A54-03
             create_task(
                 description=(
-                    "Support safer reaction trading. "
+                    "Ondersteun safer reaction trading. "
                     "Help traders navigate news-driven moves."
                 ),
                 expected_output="Reaction trading support.",
@@ -726,8 +726,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A54-04
             create_task(
                 description=(
-                    "Monitor traditional markets (S&P, USD, yields) too and translate large moves there to crypto context. "
-                    "Warn team when cross-asset signals point to 'risk-off' or 'risk-on'."
+                    "Monitor traditional markets (S&P, USD, yields) too en translate large moves there naar crypto context. "
+                    "Warn team when cross-asset signals point naar 'risk-off' of 'risk-on'."
                 ),
                 expected_output="Cross-asset signal report.",
                 agent=agent,
@@ -749,8 +749,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A55-02
             create_task(
                 description=(
-                    "Context: when is flow a leading indicator vs noise? "
-                    "Filter signal from noise."
+                    "Context: wanneer is flow een leading indicator vs ruis? "
+                    "Filter signal van noise."
                 ),
                 expected_output="Flow signal analysis.",
                 agent=agent,
@@ -758,8 +758,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A55-03
             create_task(
                 description=(
-                    "Timing input for risk reduction/entries. "
-                    "Provide actionable timing signals."
+                    "Timing input voor risk reduction/entries. "
+                    "Lever actionable timing signals."
                 ),
                 expected_output="Flow timing advisory.",
                 agent=agent,
@@ -767,8 +767,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A55-04
             create_task(
                 description=(
-                    "Use stablecoin on-chain data (large mints/burns) to predict liquidity changes. "
-                    "Warn if e.g. much stablecoins go to exchanges (can affect funding rates)."
+                    "Use stablecoin on-chain data (large mints/burns) naar predict liquidity changes. "
+                    "Warn if e.g. much stablecoins go naar exchanges (can affect funding rates)."
                 ),
                 expected_output="Stablecoin flow impact report.",
                 agent=agent,
@@ -782,7 +782,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Test new ideas (execution-realistic); write research memos. "
-                    "Validate strategy concepts."
+                    "Valideer strategy concepts."
                 ),
                 expected_output="Strategy research memo.",
                 agent=agent,
@@ -790,7 +790,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A56-02
             create_task(
                 description=(
-                    "Post-launch evaluation: edge maintained or declining? "
+                    "Post-launch evaluation: edge maintained of declining? "
                     "Monitor strategy health."
                 ),
                 expected_output="Post-launch strategy evaluation.",
@@ -799,7 +799,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A56-03
             create_task(
                 description=(
-                    "Continuous strategy improvement with evidence. "
+                    "Continuous strategy improvement met evidence. "
                     "Data-driven optimization."
                 ),
                 expected_output="Strategy improvement report.",
@@ -808,8 +808,8 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A56-04
             create_task(
                 description=(
-                    "Follow external quant developments (papers, forums) for fresh ideas. "
-                    "Test promising concepts on our data to discover new edge."
+                    "Follow external quant developments (papers, forums) voor fresh ideas. "
+                    "Test promising concepts op our data naar discover new edge."
                 ),
                 expected_output="External quant research report.",
                 agent=agent,
@@ -820,7 +820,7 @@ def get_futures_research_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures execution agents (41, 51)."""
+    """Haal taken op voor Futures execution agents (41, 51)."""
     tasks = []
 
     if "execution_head" in agents:
@@ -830,7 +830,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "KPIs: slippage, reject rate, adverse selection, fill quality. "
-                    "Track and improve execution."
+                    "Track en improve execution."
                 ),
                 expected_output="Futures execution KPI report.",
                 agent=agent,
@@ -839,7 +839,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Routing + ordertype policy per strategy. "
-                    "Document execution procedures."
+                    "Documenteer execution procedures."
                 ),
                 expected_output="Execution policy document.",
                 agent=agent,
@@ -848,7 +848,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Stress execution playbooks: rapid unwind without panic. "
-                    "Prepare for emergency situations."
+                    "Prepare voor emergency situations."
                 ),
                 expected_output="Stress execution playbook.",
                 agent=agent,
@@ -856,7 +856,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A41-04
             create_task(
                 description=(
-                    "Try new execution channels: use RFQ/dark pool for large orders, apply maker-only vs taker "
+                    "Try new execution channels: use RFQ/dark pool voor large orders, apply maker-only vs taker "
                     "smartly per market condition, minimize fees using reduce-only where possible."
                 ),
                 expected_output="Execution channel optimization report.",
@@ -870,16 +870,16 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A51-01
             create_task(
                 description=(
-                    "Execute desk-wide risk reduction on kill-switch/drawdown. "
+                    "Voer uit desk-wide risk reduction op kill-switch/drawdown. "
                     "Emergency position reduction."
                 ),
-                expected_output="Unwind execution plan and report.",
+                expected_output="Unwind execution plan en report.",
                 agent=agent,
             ),
             # TASK-A51-02
             create_task(
                 description=(
-                    "Manage hedge overlays: reduce net exposure, reduce liquidation risk. "
+                    "Beheer hedge overlays: reduce net exposure, reduce liquidation risk. "
                     "Protective hedging."
                 ),
                 expected_output="Hedge overlay management report.",
@@ -888,7 +888,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A51-03
             create_task(
                 description=(
-                    "Coordinate with treasury/margin specialist. "
+                    "Coördineer met treasury/margin specialist. "
                     "Cross-team coordination."
                 ),
                 expected_output="Treasury coordination log.",
@@ -897,8 +897,8 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A51-04
             create_task(
                 description=(
-                    "Practice periodic crisis-unwind drills: simulate complete portfolio unwind to test processes "
-                    "and prepare traders for real emergency situations."
+                    "Practice periodic crisis-unwind drills: simulate complete portfolio unwind naar test processes "
+                    "and prepare traders voor real emergency situations."
                 ),
                 expected_output="Crisis unwind drill report.",
                 agent=agent,
@@ -909,7 +909,7 @@ def get_futures_execution_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures swing agents (48-50)."""
+    """Haal taken op voor Futures swing agents (48-50)."""
     tasks = []
 
     if "swing_head" in agents:
@@ -919,9 +919,9 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Regime-aware sizing + clear invalidation. "
-                    "Adjust position size to market conditions."
+                    "Adjust position size naar market conditions."
                 ),
-                expected_output="Directional trade thesis with leverage plan.",
+                expected_output="Directional trade thesis met leverage plan.",
                 agent=agent,
             ),
             # TASK-A48-02
@@ -936,8 +936,8 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A48-03
             create_task(
                 description=(
-                    "Work with macro/regime input. "
-                    "Align trades with macro view."
+                    "Work met macro/regime input. "
+                    "Align trades met macro view."
                 ),
                 expected_output="Macro-aligned trade plan.",
                 agent=agent,
@@ -945,7 +945,7 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A48-04
             create_task(
                 description=(
-                    "Pyramid into strong trends: add to winning position on pullbacks with built-up profit "
+                    "Pyramid into strong trends: add naar winning position op pullbacks met built-up profit "
                     "(update stop), increasing profit potential without extra own-capital risk."
                 ),
                 expected_output="Trend pyramiding report.",
@@ -977,7 +977,7 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A49-03
             create_task(
                 description=(
-                    "Maintain stops/targets discipline. "
+                    "Onderhoud stops/targets discipline. "
                     "No moving stops outside plan."
                 ),
                 expected_output="Discipline compliance report.",
@@ -987,7 +987,7 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "At clear range extremes take slightly larger position than normal (still small enough). "
-                    "Split position to take partial profit and let rest mean revert."
+                    "Split position naar take partial profit en let rest mean revert."
                 ),
                 expected_output="Range extreme positioning report.",
                 agent=agent,
@@ -1000,7 +1000,7 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A50-01
             create_task(
                 description=(
-                    "Identify curve anomalies; execute spreads with low slippage. "
+                    "Identificeer curve anomalies; execute spreads met low slippage. "
                     "Futures curve trading."
                 ),
                 expected_output="Curve spread execution log.",
@@ -1018,17 +1018,17 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A50-03
             create_task(
                 description=(
-                    "Define capacity + exit plans. "
-                    "Document position limits and exits."
+                    "Definieer capacity + exit plans. "
+                    "Documenteer position limits en exits."
                 ),
-                expected_output="Capacity and exit planning.",
+                expected_output="Capacity en exit planning.",
                 agent=agent,
             ),
             # TASK-A50-04
             create_task(
                 description=(
-                    "Exploit new contracts: if new futures (extra expiries) launch with dislocations, "
-                    "test those spreads small-scale and scale up if liquidity proves adequate."
+                    "Exploit new contracts: if new futures (extra expiries) launch met dislocations, "
+                    "test those spreads small-scale en scale up if liquidity proves adequate."
                 ),
                 expected_output="New contract opportunity report.",
                 agent=agent,
@@ -1039,7 +1039,7 @@ def get_futures_swing_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures risk agents (57-59)."""
+    """Haal taken op voor Futures risk agents (57-59)."""
     tasks = []
 
     if "risk_monitor" in agents:
@@ -1051,7 +1051,7 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
                     "Monitor net/gross exposure, leverage, concentration, scenario shocks. "
                     "Comprehensive risk monitoring."
                 ),
-                expected_output="Margin and liquidation monitoring report.",
+                expected_output="Margin en liquidation monitoring report.",
                 agent=agent,
             ),
             # TASK-A57-02
@@ -1066,8 +1066,8 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A57-03
             create_task(
                 description=(
-                    "Support risk-adjusted allocation input. "
-                    "Provide data for allocation decisions."
+                    "Ondersteun risk-adjusted allocation input. "
+                    "Lever data voor allocation decisions."
                 ),
                 expected_output="Risk-adjusted allocation support.",
                 agent=agent,
@@ -1075,8 +1075,8 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A57-04
             create_task(
                 description=(
-                    "Proactively signal room for more risk: if exposures are low and market conditions favorable, "
-                    "suggest increasing leverage/positions for more profit potential (with CRO approval)."
+                    "Proactively signal room voor more risk: if exposures are low en market conditions favorable, "
+                    "suggest increasing leverage/positions voor more profit potential (with CRO approval)."
                 ),
                 expected_output="Risk capacity advisory.",
                 agent=agent,
@@ -1089,7 +1089,7 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A58-01
             create_task(
                 description=(
-                    "Define collateral buffers + liquidation distance targets. "
+                    "Definieer collateral buffers + liquidation distance targets. "
                     "Set margin safety levels."
                 ),
                 expected_output="Margin optimization report.",
@@ -1116,8 +1116,8 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A58-04
             create_task(
                 description=(
-                    "Simulate flash crashes & venue outages: test if collaterals are sufficient and procedures work. "
-                    "Adjust collateral buffers or war-room procedures based on simulation findings."
+                    "Simulate flash crashes & venue outages: test if collaterals are sufficient en procedures work. "
+                    "Adjust collateral buffers of war-room procedures based op simulation findings."
                 ),
                 expected_output="Flash crash simulation report.",
                 agent=agent,
@@ -1139,7 +1139,7 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A59-02
             create_task(
                 description=(
-                    "Post-launch review on drift + regime dependency. "
+                    "Post-launch review op drift + regime dependency. "
                     "Ongoing strategy monitoring."
                 ),
                 expected_output="Post-launch review report.",
@@ -1148,8 +1148,8 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A59-03
             create_task(
                 description=(
-                    "Maintain audit trail of approvals. "
-                    "Document all decisions."
+                    "Onderhoud audit trail of approvals. "
+                    "Documenteer all decisions."
                 ),
                 expected_output="Approval audit trail.",
                 agent=agent,
@@ -1157,8 +1157,8 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A59-04
             create_task(
                 description=(
-                    "Keep eye on potential: don't blindly block high-risk strategy, but require mitigations "
-                    "(e.g., smaller size, extra hedges) so promising ideas can be tested without uncontrolled risk."
+                    "Keep eye op potential: don't blindly block high-risk strategy, but require mitigations "
+                    "(e.g., smaller size, extra hedges) zodat veelbelovende ideeën getest kunnen worden zonder ongecontroleerd risico."
                 ),
                 expected_output="Controlled risk approval framework.",
                 agent=agent,
@@ -1169,7 +1169,7 @@ def get_futures_risk_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get tasks for Futures operations agents (60-64)."""
+    """Haal taken op voor Futures operations agents (60-64)."""
     tasks = []
 
     if "controller" in agents:
@@ -1181,13 +1181,13 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
                     "Reconcile positions, funding, fees; PnL attribution per pod. "
                     "Accurate financial tracking."
                 ),
-                expected_output="Daily position reconciliation.",
+                expected_output="Dagelijkse position reconciliation.",
                 agent=agent,
             ),
             # TASK-A60-02
             create_task(
                 description=(
-                    "Signal breaks directly to COO/CRO. "
+                    "Signal breaks directly naar COO/CRO. "
                     "Immediate escalation."
                 ),
                 expected_output="Break escalation report.",
@@ -1199,14 +1199,14 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
                     "Monitor funding misbookings/venue issues. "
                     "Data quality monitoring."
                 ),
-                expected_output="Funding and venue issue log.",
+                expected_output="Funding en venue issue log.",
                 agent=agent,
             ),
             # TASK-A60-04
             create_task(
                 description=(
-                    "Dissect PnL daily: which part came from price movement vs funding vs fees. "
-                    "Signal notable costs (like unexpectedly high fees) so team can act (e.g., tier upgrade)."
+                    "Dissect PnL dagelijkse: which part came van price movement vs funding vs fees. "
+                    "Signaleer opmerkelijke kosten (zoals onverwacht hoge fees) zodat team kan handelen (e.g., tier upgrade)."
                 ),
                 expected_output="PnL attribution analysis.",
                 agent=agent,
@@ -1219,8 +1219,8 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A61-01
             create_task(
                 description=(
-                    "Manage buffers per venue; optimize idle vs safety. "
-                    "Balance liquidity and returns."
+                    "Beheer buffers per venue; optimize idle vs safety. "
+                    "Balanceer liquidity en returns."
                 ),
                 expected_output="Venue buffer management.",
                 agent=agent,
@@ -1228,7 +1228,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A61-02
             create_task(
                 description=(
-                    "Coordinate collateral moves via approvals. "
+                    "Coördineer collateral moves via approvals. "
                     "Secure fund transfers."
                 ),
                 expected_output="Collateral movement log.",
@@ -1237,7 +1237,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A61-03
             create_task(
                 description=(
-                    "Prepare for weekend risk + funding spikes. "
+                    "Prepare voor weekend risk + funding spikes. "
                     "Weekend contingency planning."
                 ),
                 expected_output="Weekend risk preparation.",
@@ -1246,8 +1246,8 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A61-04
             create_task(
                 description=(
-                    "Give idle collateral a useful role: if possible put surplus margin to work "
-                    "(e.g., via low-risk earn/lending) to earn something on unused funds (CRO approval needed)."
+                    "Give idle collateral a useful role: if possible put surplus margin naar work "
+                    "(e.g., via low-risk earn/lending) naar earn something op unused funds (CRO approval needed)."
                 ),
                 expected_output="Idle collateral yield report.",
                 agent=agent,
@@ -1278,7 +1278,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A62-03
             create_task(
                 description=(
-                    "Prevent fat-finger via permissions + controls. "
+                    "Voorkom fat-finger via permissions + controls. "
                     "Error prevention."
                 ),
                 expected_output="Fat-finger prevention report.",
@@ -1287,7 +1287,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A62-04
             create_task(
                 description=(
-                    "Adapt API key management for high-frequency: use segmented keys per strategy with limited rights "
+                    "Adapt API key management voor high-frequency: use segmented keys per strategy met limited rights "
                     "and frequent rotation, so potential compromise causes minimal damage."
                 ),
                 expected_output="API key security report.",
@@ -1310,7 +1310,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A63-02
             create_task(
                 description=(
-                    "Monitor compliance with venue rules + internal leverage policy. "
+                    "Monitor compliance met venue rules + internal leverage policy. "
                     "Rule enforcement."
                 ),
                 expected_output="Rule compliance report.",
@@ -1319,17 +1319,17 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A63-03
             create_task(
                 description=(
-                    "Ensure documentation/recordkeeping. "
+                    "Zorg documentation/recordkeeping. "
                     "Audit trail maintenance."
                 ),
-                expected_output="Documentation compliance.",
+                expected_output="Documenteeration compliance.",
                 agent=agent,
             ),
             # TASK-A63-04
             create_task(
                 description=(
-                    "Watch aggressive trades vs market rules: prevent intensive strategies from crossing "
-                    "market abuse lines (spoofing, squeezes) and intervene immediately on doubt."
+                    "Watch aggressive trades vs market rules: prevent intensive strategies van crossing "
+                    "market abuse lines (spoofing, squeezes) en intervene immediately op doubt."
                 ),
                 expected_output="Market abuse prevention report.",
                 agent=agent,
@@ -1342,7 +1342,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A64-01
             create_task(
                 description=(
-                    "Funding/fees processing; resolve breaks; coordinate with controller/treasury. "
+                    "Funding/fees processing; resolve breaks; coordinate met controller/treasury. "
                     "Operational workflow."
                 ),
                 expected_output="Operational processing log.",
@@ -1351,7 +1351,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A64-02
             create_task(
                 description=(
-                    "Support during volatility spikes + venue incidents. "
+                    "Ondersteun during volatility spikes + venue incidents. "
                     "Crisis support."
                 ),
                 expected_output="Volatility support report.",
@@ -1360,7 +1360,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             # TASK-A64-03
             create_task(
                 description=(
-                    "Ensure trading can continue during ops friction. "
+                    "Zorg trading can continue during ops friction. "
                     "Business continuity."
                 ),
                 expected_output="Business continuity report.",
@@ -1370,7 +1370,7 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
             create_task(
                 description=(
                     "Automate monitoring: detect every deviation (missing funding posting, trade break) immediately "
-                    "so you resolve it before it affects PnL or trader focus."
+                    "so you resolve it before it affects PnL of trader focus."
                 ),
                 expected_output="Automated monitoring report.",
                 agent=agent,
@@ -1381,13 +1381,13 @@ def get_futures_operations_tasks(agents: dict[str, Agent]) -> list[Task]:
 
 
 def get_futures_tasks(agents: dict[str, Agent]) -> list[Task]:
-    """Get all Futures desk tasks given a dictionary of agents.
+    """Haal alle Futures desk taken op gegeven een dictionary van agents.
 
     Args:
-        agents: Dictionary mapping agent keys to Agent instances.
+        agents: Dictionary die agent keys mapt naar Agent instances.
 
     Returns:
-        List of all Futures desk tasks.
+        Lijst van alle Futures desk taken.
     """
     tasks = []
     tasks.extend(get_futures_leadership_tasks(agents))

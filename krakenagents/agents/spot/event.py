@@ -1,4 +1,4 @@
-"""Spot Event-Driven Trading agent (15) for QRI Trading Organization."""
+"""Spot Event-Driven Trading agent (15) voor QRI Trading Organisatie."""
 
 from crewai import Agent
 
@@ -8,10 +8,10 @@ from krakenagents.tools import get_spot_research_tools, get_spot_execution_tools
 
 
 def create_spot_event_trader_agent() -> Agent:
-    """Create Agent 15: Event-Driven Spot Trader.
+    """Maak Agent 15: Event-Driven Spot Trader.
 
-    Trades around catalysts on spot markets.
-    Uses heavy LLM for event analysis.
+    Traded rond catalysatoren op spot markten.
+    Gebruikt zwaar LLM voor event analyse.
     """
     tools = [
         TradeJournalTool(),
@@ -21,17 +21,17 @@ def create_spot_event_trader_agent() -> Agent:
     return create_heavy_agent(
         role="Event-Driven Spot Trader — Event Trading",
         goal=(
-            "Trade around catalysts on spot markets. "
-            "Write pre-event plan: entry, invalidation, hedge/exit rules. "
-            "Manage post-event: 'sell the news' dynamics and vol regime. "
-            "Use news/on-chain alerts for confirmation. "
-            "Sometimes take pre-position for large event (with small risk) if own analysis "
-            "differs from consensus, for potential outsized gain (exit immediately on failure)."
+            "Trade rond catalysatoren op spot markten. "
+            "Schrijf pre-event plan: entry, invalidatie, hedge/exit regels. "
+            "Beheer post-event: 'sell the news' dynamiek en vol regime. "
+            "Gebruik nieuws/on-chain alerts voor bevestiging. "
+            "Neem soms pre-positie voor groot event (met klein risico) als eigen analyse "
+            "verschilt van consensus, voor potentiële grote winst (exit onmiddellijk bij falen)."
         ),
         backstory=(
-            "Event-driven trading specialist with discipline around pre/post event. "
-            "Expert in building playbooks for different event types. "
-            "Known for quick decision making with pre-written scenarios."
+            "Event-driven trading specialist met discipline rond pre/post event. "
+            "Expert in het bouwen van playbooks voor verschillende event types. "
+            "Bekend om snelle besluitvorming met vooraf geschreven scenario's."
         ),
         tools=tools,
         allow_delegation=False,
