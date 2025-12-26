@@ -49,7 +49,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.7.0",
+    "crewai-tools==1.7.2",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -84,7 +84,7 @@ bedrock = [
     "boto3~=1.40.45",
 ]
 google-genai = [
-    "google-genai~=1.2.0",
+    "google-genai~=1.49.0",
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",

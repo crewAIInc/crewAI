@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Reply with just
-      the word: SUCCESS"}],"model":"claude-3-5-haiku-20241022","stream":false}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Reply with just the word: SUCCESS"}],"model":"claude-3-5-haiku-20241022","stream":false}'
     headers:
       accept:
       - application/json
@@ -41,19 +40,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJDLasMwEEX/5a5lsF1nUe1KCARCu6gpFEoRgzTEamzJ1qNNCf734tDQ
-        F10N3HNmBu4JgzfcQ0L3lA0XV8Wq6MgeclGXdVOVdQ0BayAxxL0qq9rcXm/vb2g37ehtc+xeHu+m
-        4xYC6X3kxeIYac8QCL5fAorRxkQuQUB7l9glyKfTxU98XMh5SLQP6/WmbTE/C8TkRxWYoneQYGdU
-        ysHhE0SeMjvNkC73vUA+f5UnWDfmpJI/sIuQVSOgSXesdGBK1jv1UygvPDCZ/9hld7nPY8cDB+rV
-        avjrf9Gq+01nAZ/T96gRiBxerWaVLAdILE0ZCgbz/AEAAP//AwA4VVIcmwEAAA==
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_012dM9HRAaKqKawExhjXNqxH","type":"message","role":"assistant","content":[{"type":"text","text":"SUCCESS"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":14,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":4,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9997ac4cbfb443fa-EWR
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

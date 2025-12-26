@@ -33,6 +33,7 @@ crewAI에서 crew는 일련의 작업을 달성하기 위해 함께 협력하는
 | **Planning** *(선택사항)*              | `planning`             | Crew에 계획 수립 기능을 추가. 활성화하면 각 Crew 반복 전에 모든 Crew 데이터를 AgentPlanner로 전송하여 작업계획을 세우고, 이 계획이 각 작업 설명에 추가됨.                                                     |
 | **Planning LLM** *(선택사항)*          | `planning_llm`         | 계획 과정에서 AgentPlanner가 사용하는 언어 모델.                                                                                                                                                                 |
 | **Knowledge Sources** _(선택사항)_     | `knowledge_sources`    | crew 수준에서 사용 가능한 지식 소스. 모든 agent가 접근 가능.                                                                                                                                                             |
+| **Stream** _(선택사항)_                | `stream`               | 스트리밍 출력을 활성화하여 crew 실행 중 실시간 업데이트를 받을 수 있습니다. 청크를 반복할 수 있는 `CrewStreamingOutput` 객체를 반환합니다. 기본값은 `False`.                                                                    |
 
 <Tip>
 **Crew Max RPM**: `max_rpm` 속성은 crew가 분당 처리할 수 있는 최대 요청 수를 설정하며, 개별 agent의 `max_rpm` 설정을 crew 단위로 지정할 경우 오버라이드합니다.
@@ -306,12 +307,27 @@ print(result)
 
 ### Crew를 시작하는 다양한 방법
 
-crew가 구성되면, 적절한 시작 방법으로 workflow를 시작하세요. CrewAI는 kickoff 프로세스를 더 잘 제어할 수 있도록 여러 방법을 제공합니다: `kickoff()`, `kickoff_for_each()`, `kickoff_async()`, 그리고 `kickoff_for_each_async()`.
+crew가 구성되면, 적절한 시작 방법으로 workflow를 시작하세요. CrewAI는 kickoff 프로세스를 더 잘 제어할 수 있도록 여러 방법을 제공합니다.
+
+#### 동기 메서드
 
 - `kickoff()`: 정의된 process flow에 따라 실행 프로세스를 시작합니다.
 - `kickoff_for_each()`: 입력 이벤트나 컬렉션 내 각 항목에 대해 순차적으로 task를 실행합니다.
-- `kickoff_async()`: 비동기적으로 workflow를 시작합니다.
-- `kickoff_for_each_async()`: 입력 이벤트나 각 항목에 대해 비동기 처리를 활용하여 task를 동시에 실행합니다.
+
+#### 비동기 메서드
+
+CrewAI는 비동기 실행을 위해 두 가지 접근 방식을 제공합니다:
+
+| 메서드 | 타입 | 설명 |
+|--------|------|-------------|
+| `akickoff()` | 네이티브 async | 전체 실행 체인에서 진정한 async/await 사용 |
+| `akickoff_for_each()` | 네이티브 async | 리스트의 각 입력에 대해 네이티브 async 실행 |
+| `kickoff_async()` | 스레드 기반 | 동기 실행을 `asyncio.to_thread`로 래핑 |
+| `kickoff_for_each_async()` | 스레드 기반 | 리스트의 각 입력에 대해 스레드 기반 async |
+
+<Note>
+고동시성 워크로드의 경우 `akickoff()` 및 `akickoff_for_each()`가 권장됩니다. 이들은 작업 실행, 메모리 작업, 지식 검색에 네이티브 async를 사용합니다.
+</Note>
 
 ```python Code
 # Start the crew's task execution
@@ -324,19 +340,53 @@ results = my_crew.kickoff_for_each(inputs=inputs_array)
 for result in results:
     print(result)
 
-# Example of using kickoff_async
+# Example of using native async with akickoff
+inputs = {'topic': 'AI in healthcare'}
+async_result = await my_crew.akickoff(inputs=inputs)
+print(async_result)
+
+# Example of using native async with akickoff_for_each
+inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
+async_results = await my_crew.akickoff_for_each(inputs=inputs_array)
+for async_result in async_results:
+    print(async_result)
+
+# Example of using thread-based kickoff_async
 inputs = {'topic': 'AI in healthcare'}
 async_result = await my_crew.kickoff_async(inputs=inputs)
 print(async_result)
 
-# Example of using kickoff_for_each_async
+# Example of using thread-based kickoff_for_each_async
 inputs_array = [{'topic': 'AI in healthcare'}, {'topic': 'AI in finance'}]
 async_results = await my_crew.kickoff_for_each_async(inputs=inputs_array)
 for async_result in async_results:
     print(async_result)
 ```
 
-이러한 메서드는 crew 내에서 task를 관리하고 실행하는 데 유연성을 제공하며, 동기 및 비동기 workflow 모두 필요에 맞게 사용할 수 있도록 지원합니다.
+이러한 메서드는 crew 내에서 task를 관리하고 실행하는 데 유연성을 제공하며, 동기 및 비동기 workflow 모두 필요에 맞게 사용할 수 있도록 지원합니다. 자세한 비동기 예제는 [Crew 비동기 시작](/ko/learn/kickoff-async) 가이드를 참조하세요.
+
+### 스트리밍 Crew 실행
+
+crew 실행을 실시간으로 확인하려면 스트리밍을 활성화하여 출력이 생성되는 대로 받을 수 있습니다:
+
+```python Code
+# 스트리밍 활성화
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    stream=True
+)
+
+# 스트리밍 출력을 반복
+streaming = crew.kickoff(inputs={"topic": "AI"})
+for chunk in streaming:
+    print(chunk.content, end="", flush=True)
+
+# 최종 결과 접근
+result = streaming.result
+```
+
+스트리밍에 대한 자세한 내용은 [스트리밍 Crew 실행](/ko/learn/streaming-crew-execution) 가이드를 참조하세요.
 
 ### 특정 Task에서 다시 실행하기
 

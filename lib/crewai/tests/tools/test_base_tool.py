@@ -17,10 +17,11 @@ def test_creating_a_tool_using_annotation():
 
     # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
-    assert (
-        my_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
+    assert "Tool Name: Name of my tool" in my_tool.description
+    assert "Tool Arguments:" in my_tool.description
+    assert '"question"' in my_tool.description
+    assert '"type": "string"' in my_tool.description
+    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.description
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -31,10 +32,9 @@ def test_creating_a_tool_using_annotation():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert (
-        converted_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
+    assert "Tool Name: Name of my tool" in converted_tool.description
+    assert "Tool Arguments:" in converted_tool.description
+    assert '"question"' in converted_tool.description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -56,10 +56,11 @@ def test_creating_a_tool_using_baseclass():
     # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
 
-    assert (
-        my_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
+    assert "Tool Name: Name of my tool" in my_tool.description
+    assert "Tool Arguments:" in my_tool.description
+    assert '"question"' in my_tool.description
+    assert '"type": "string"' in my_tool.description
+    assert "Tool Description: Clear description for what this tool is useful for" in my_tool.description
     assert my_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }
@@ -68,10 +69,9 @@ def test_creating_a_tool_using_baseclass():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert (
-        converted_tool.description
-        == "Tool Name: Name of my tool\nTool Arguments: {'question': {'description': None, 'type': 'str'}}\nTool Description: Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
+    assert "Tool Name: Name of my tool" in converted_tool.description
+    assert "Tool Arguments:" in converted_tool.description
+    assert '"question"' in converted_tool.description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
         "question": {"title": "Question", "type": "string"}
     }

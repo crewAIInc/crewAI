@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":10,"messages":[{"role":"user","content":"Write a very long
-      story about a dragon."}],"model":"claude-sonnet-4-0","stream":false}'
+    body: '{"max_tokens":10,"messages":[{"role":"user","content":"Write a very long story about a dragon."}],"model":"claude-sonnet-4-0","stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -43,19 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBNS8RADIb/SonXKbRLu8ic/TjoTRFBZBin2e3gNFMnqbvL0v8us1hk
-        FU+BPE+SlxxhiB0G0OCCnTosORKhlE25qlZt1dYNKPAdaBh4a6r6chfp+vnmdnfl67f1MDR37aEX
-        UCCHEbOFzHaLoCDFkBuW2bNYyo6LJEgC+uW4+IL703QuGi6Kxx6Le8tSPETaFnFTPFkM0h8Y5lcF
-        LHE0CS1Hyrfs3kh8R2L4RowfE5JD0DSFoGA6ZdFH8DROssi6Xitw1vVoXEIrPpI5F6qFJ7Tdf2yZ
-        zftx7HHAZINph7/+D63733RWECc5S1cpYEyf3qERjwk05Ad2NnUwz18AAAD//wMAo6EHIbEBAAA=
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_018wonEXFGwDi1b6mm4K5yht","type":"message","role":"assistant","content":[{"type":"text","text":"# The Last Song of Vaelthys"}],"stop_reason":"max_tokens","stop_sequence":null,"usage":{"input_tokens":16,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":10,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -100,8 +92,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens":10,"messages":[{"role":"user","content":"Write a very long
-      story about a dragon."}],"model":"claude-sonnet-4-0","stream":false}'
+    body: '{"max_tokens":10,"messages":[{"role":"user","content":"Write a very long story about a dragon."}],"model":"claude-sonnet-4-0","stream":false}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -143,19 +134,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJDBasMwDIZfJWhXF5LS9uDboLeFXdatgzGMcbTE1JEzSxntSt59uCyM
-        buwk0PdJ+tEZ+thgAA0u2LHBBUcilMVqsSyX63JdrUCBb0BDz60pq9u7z229ve9P6B/r/ap7ftrU
-        ewEFchowW8hsWwQFKYbcsMyexVJ2XCRBEtAv59kXPF6mc9FwU+w6LGrLUjxEaov4Vuw6G/KOSDC9
-        KmCJg0loOVK+Zo9G4gGJ4Rsxvo9IDkHTGIKC8ZJGn8HTMMos62qjwFnXoXEJrfhI5looZ57QNv+x
-        eTbvx6HDHpMNZt3/9X9o1f2mk4I4ylW6UgFj+vAOjXhMoCG/sLGpgWn6AgAA//8DANbGCpGzAQAA
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01AKzDLDNmyeiULW4hXV6LWt","type":"message","role":"assistant","content":[{"type":"text","text":"# The Last Song of Thalassion"}],"stop_reason":"max_tokens","stop_sequence":null,"usage":{"input_tokens":16,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":10,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

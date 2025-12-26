@@ -40,22 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJJBT+MwEIXv+RXWnBvUltBCr0iAVisth+WEUOTak8TU8XjtCbBC/e/I
-        SWnCLkhcfPA3b/zeeF4zIcBo2AhQjWTVeptfNuHuavfY7upaXnU/fv55vnn6tcT6xdxe38EsKWj7
-        iIrfVSeKWm+RDbkBq4CSMXVdrFfF2epiXZz2oCWNNslqz3lBeWucyZfzZZHP1/ni/KBuyCiMsBH3
-        mRBCvPZn8uk0vsBGzGfvNy3GKGuEzbFICAhk0w3IGE1k6RhmI1TkGF1v/TdGPpmygFUXZfLnOmsn
-        QDpHLFO+3tXDgeyPPizVPtA2/iOFyjgTmzKgjOTSm5HJQ0/3mRAPfd7uQwTwgVrPJdMO++cWxdAO
-        ximPcHlgTCztRLOafdKs1MjS2DgZFyipGtSjcpyt7LShCcgmkf/38lnvIbZx9Xfaj0Ap9Iy69AG1
-        UR/zjmUB0wp+VXYccW8YIoYno7BkgyF9g8ZKdnZYDIh/I2NbVsbVGHwww3ZUvjxb6O15ISu5hWyf
-        vQEAAP//AwDSVh+sKwMAAA==
+      string: "{\n  \"id\": \"chatcmpl-ChrUFkjmkggaFuJLqwHvO2egxiPGU\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764569743,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Test.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 14,\n    \"completion_tokens\": 2,\n    \"total_tokens\": 16,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_51db84afab\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
