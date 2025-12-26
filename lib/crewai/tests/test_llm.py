@@ -877,3 +877,62 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+
+def test_prepare_completion_params_excludes_empty_stop():
+    """Test that _prepare_completion_params excludes stop when it's empty.
+
+    This is a regression test for issue #4149 where models like gpt-5.1
+    don't support the stop parameter at all, and passing an empty list
+    would cause an error.
+    """
+    llm = LLM(model="gpt-4o", is_litellm=True)
+    # By default, stop is initialized to an empty list
+    assert llm.stop == []
+
+    params = llm._prepare_completion_params("Hello")
+    # stop should not be in params when it's empty
+    assert "stop" not in params
+
+
+def test_prepare_completion_params_includes_stop_when_provided():
+    """Test that _prepare_completion_params includes stop when it has values."""
+    llm = LLM(model="gpt-4o", stop=["Observation:"], is_litellm=True)
+    assert llm.stop == ["Observation:"]
+
+    params = llm._prepare_completion_params("Hello")
+    # stop should be in params when it has values
+    assert "stop" in params
+    assert params["stop"] == ["Observation:"]
+
+
+def test_prepare_completion_params_excludes_stop_when_in_drop_params():
+    """Test that _prepare_completion_params excludes stop when it's in additional_drop_params.
+
+    This ensures the retry logic works correctly when a model doesn't support stop.
+    """
+    llm = LLM(
+        model="gpt-4o",
+        stop=["Observation:"],
+        additional_drop_params=["stop"],
+        is_litellm=True,
+    )
+    assert llm.stop == ["Observation:"]
+
+    params = llm._prepare_completion_params("Hello")
+    # stop should not be in params when it's in additional_drop_params
+    assert "stop" not in params
+
+
+def test_prepare_completion_params_excludes_stop_with_existing_drop_params():
+    """Test that stop is excluded when additional_drop_params already has other params."""
+    llm = LLM(
+        model="gpt-4o",
+        stop=["Observation:"],
+        additional_drop_params=["another_param", "stop"],
+        is_litellm=True,
+    )
+
+    params = llm._prepare_completion_params("Hello")
+    # stop should not be in params
+    assert "stop" not in params
