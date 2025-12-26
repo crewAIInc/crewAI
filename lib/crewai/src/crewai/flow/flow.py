@@ -459,7 +459,10 @@ class FlowMeta(type):
                 ):
                     routers.add(attr_name)
                     # Get router paths from the decorator attribute
-                    if hasattr(attr_value, "__router_paths__") and attr_value.__router_paths__:
+                    if (
+                        hasattr(attr_value, "__router_paths__")
+                        and attr_value.__router_paths__
+                    ):
                         router_paths[attr_name] = attr_value.__router_paths__
                     else:
                         possible_returns = get_possible_return_constants(attr_value)
@@ -501,6 +504,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
+        suppress_flow_events: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -508,6 +512,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Args:
             persistence: Optional persistence backend for storing flow states
             tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
+            suppress_flow_events: Whether to suppress flow event emissions (internal use)
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -526,6 +531,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.human_feedback_history: list[HumanFeedbackResult] = []
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
+        self.suppress_flow_events: bool = suppress_flow_events
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -539,13 +545,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         if kwargs:
             self._initialize_state(kwargs)
 
-        crewai_event_bus.emit(
-            self,
-            FlowCreatedEvent(
-                type="flow_created",
-                flow_name=self.name or self.__class__.__name__,
-            ),
-        )
+        if not self.suppress_flow_events:
+            crewai_event_bus.emit(
+                self,
+                FlowCreatedEvent(
+                    type="flow_created",
+                    flow_name=self.name or self.__class__.__name__,
+                ),
+            )
 
         # Register all flow-related methods
         for method_name in dir(self):
@@ -671,6 +678,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 flow = MyFlow.from_pending(flow_id)
                 result = flow.resume(feedback)
                 return result
+
 
             # In an async handler, use resume_async instead:
             async def handle_feedback_async(flow_id: str, feedback: str):
@@ -1307,19 +1315,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     self._initialize_state(filtered_inputs)
 
             # Emit FlowStartedEvent and log the start of the flow.
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self.name or self.__class__.__name__,
-                    inputs=inputs,
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
-            self._log_flow_event(
-                f"Flow started with ID: {self.flow_id}", color="bold magenta"
-            )
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    FlowStartedEvent(
+                        type="flow_started",
+                        flow_name=self.name or self.__class__.__name__,
+                        inputs=inputs,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
+                self._log_flow_event(
+                    f"Flow started with ID: {self.flow_id}", color="bold magenta"
+                )
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
@@ -1391,17 +1400,18 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
-            future = crewai_event_bus.emit(
-                self,
-                FlowFinishedEvent(
-                    type="flow_finished",
-                    flow_name=self.name or self.__class__.__name__,
-                    result=final_output,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    FlowFinishedEvent(
+                        type="flow_finished",
+                        flow_name=self.name or self.__class__.__name__,
+                        result=final_output,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             if self._event_futures:
                 await asyncio.gather(
@@ -1537,18 +1547,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 kwargs or {}
             )
 
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionStartedEvent(
-                    type="method_execution_started",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    params=dumped_params,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionStartedEvent(
+                        type="method_execution_started",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        params=dumped_params,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             result = (
                 await method(*args, **kwargs)
@@ -1563,41 +1574,32 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             self._completed_methods.add(method_name)
 
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_and_serialize_state(),
-                    result=result,
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
-
-            return result
-        except Exception as e:
-            # Check if this is a HumanFeedbackPending exception (paused, not failed)
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
-            if isinstance(e, HumanFeedbackPending):
-                # Emit paused event instead of failed
+            if not self.suppress_flow_events:
                 future = crewai_event_bus.emit(
                     self,
-                    MethodExecutionPausedEvent(
-                        type="method_execution_paused",
+                    MethodExecutionFinishedEvent(
+                        type="method_execution_finished",
                         method_name=method_name,
                         flow_name=self.name or self.__class__.__name__,
                         state=self._copy_and_serialize_state(),
-                        flow_id=e.context.flow_id,
-                        message=e.context.message,
-                        emit=e.context.emit,
+                        result=result,
                     ),
                 )
                 if future:
                     self._event_futures.append(future)
-                raise e
+
+            return result
+        except Exception as e:
+            if not self.suppress_flow_events:
+                # Check if this is a HumanFeedbackPending exception (paused, not failed)
+                from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+                if isinstance(e, HumanFeedbackPending):
+                    # Auto-save pending feedback (create default persistence if needed)
+                    if self._persistence is None:
+                        from crewai.flow.persistence import SQLiteFlowPersistence
+
+                        self._persistence = SQLiteFlowPersistence()
 
             # Regular failure
             future = crewai_event_bus.emit(
@@ -1644,7 +1646,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
-        router_result_to_feedback: dict[str, Any] = {}  # Map outcome -> HumanFeedbackResult
+        router_result_to_feedback: dict[
+            str, Any
+        ] = {}  # Map outcome -> HumanFeedbackResult
         current_trigger = trigger_method
         current_result = result  # Track the result to pass to each router
 
@@ -1963,7 +1967,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             # Show message and prompt for feedback
             formatter.console.print(message, style="yellow")
-            formatter.console.print("(Press Enter to skip, or type your feedback)\n", style="cyan")
+            formatter.console.print(
+                "(Press Enter to skip, or type your feedback)\n", style="cyan"
+            )
 
             feedback = input("Your feedback: ").strip()
 
