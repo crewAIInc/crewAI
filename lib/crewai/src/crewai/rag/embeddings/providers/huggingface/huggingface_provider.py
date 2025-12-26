@@ -1,11 +1,11 @@
 """HuggingFace embeddings provider."""
 
-from chromadb.utils.embedding_functions.huggingface_embedding_function import (
-    HuggingFaceEmbeddingFunction,
-)
 from pydantic import AliasChoices, Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+from crewai.rag.embeddings.providers.huggingface.embedding_callable import (
+    HuggingFaceEmbeddingFunction,
+)
 
 
 class HuggingFaceProvider(BaseEmbeddingsProvider[HuggingFaceEmbeddingFunction]):
