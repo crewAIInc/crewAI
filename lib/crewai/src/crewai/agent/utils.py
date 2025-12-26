@@ -251,6 +251,10 @@ def prepare_tools(
 ) -> list[BaseTool]:
     """Prepare tools for task execution and create agent executor.
 
+    This function prepares tools for task execution, including injecting MCP tools
+    if the agent has MCP server configurations. MCP tools are merged with existing
+    tools, with MCP tools replacing any existing tools with the same name.
+
     Args:
         agent: The agent instance.
         tools: Optional list of tools.
@@ -259,7 +263,25 @@ def prepare_tools(
     Returns:
         The list of tools to use.
     """
-    final_tools = tools or agent.tools or []
+    # Create a copy to avoid mutating the original list
+    final_tools = list(tools or agent.tools or [])
+
+    # Inject MCP tools if agent has mcps configured
+    if hasattr(agent, "mcps") and agent.mcps:
+        try:
+            mcp_tools = agent.get_mcp_tools(agent.mcps)
+            if mcp_tools:
+                # Merge tools: MCP tools replace existing tools with the same name
+                mcp_tool_names = {tool.name for tool in mcp_tools}
+                final_tools = [
+                    tool for tool in final_tools if tool.name not in mcp_tool_names
+                ]
+                final_tools.extend(mcp_tools)
+        except Exception as e:
+            agent._logger.log(
+                "warning", f"Failed to get MCP tools, continuing without them: {e}"
+            )
+
     agent.create_agent_executor(tools=final_tools, task=task)
     return final_tools
 
