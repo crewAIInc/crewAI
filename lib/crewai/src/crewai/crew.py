@@ -112,6 +112,17 @@ from crewai.utilities.streaming import (
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+# Type hints voor organization imports (alleen bij type checking)
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai.organization.hierarchy import OrganisatieHierarchie
+    from crewai.organization.role import Rol
+    from crewai.governance.access_control import ToegangsControle
+    from crewai.governance.escalation import EscalatieManager
+    from crewai.communication.directives import OpdrachtManager, Opdracht
+    from crewai.communication.reports import RapportManager
+
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -350,6 +361,60 @@ class Crew(FlowTrackable, BaseModel):
         description="Sub-crews die door deze crew kunnen worden aangestuurd via delegatie tools.",
     )
 
+    # ============================================================
+    # ORGANISATIE INTEGRATIE - Enterprise Hiërarchie
+    # ============================================================
+
+    afdeling_id: uuid.UUID | None = Field(
+        default=None,
+        description="ID van de afdeling waar deze crew toe behoort.",
+    )
+
+    organisatie: Any | None = Field(
+        default=None,
+        description="Referentie naar OrganisatieHierarchie voor hiërarchische controle.",
+    )
+
+    rapporteert_aan: list[uuid.UUID] = Field(
+        default_factory=list,
+        description="IDs van crews/agents waar deze crew aan rapporteert.",
+    )
+
+    ontvangt_rapporten_van: list[uuid.UUID] = Field(
+        default_factory=list,
+        description="IDs van crews die aan deze crew rapporteren.",
+    )
+
+    # Toegangscontrole
+    toegangscontrole: Any | None = Field(
+        default=None,
+        description="ToegangsControle voor permissiecontrole binnen de crew.",
+    )
+
+    # Escalatie
+    escalatie_manager: Any | None = Field(
+        default=None,
+        description="EscalatieManager voor automatische en handmatige escalaties.",
+    )
+
+    # Opdrachten
+    opdracht_manager: Any | None = Field(
+        default=None,
+        description="OpdrachtManager voor het beheren van opdrachten.",
+    )
+
+    # Rapportages
+    rapport_manager: Any | None = Field(
+        default=None,
+        description="RapportManager voor het beheren van rapportages.",
+    )
+
+    # Isolatie modus
+    isolatie_modus: str = Field(
+        default="open",
+        description="Isolatie niveau: 'open', 'afdeling', of 'strikt'.",
+    )
+
     @field_validator("id", mode="before")
     @classmethod
     def _deny_user_set_id(cls, v: UUID4 | None) -> None:
@@ -373,6 +438,27 @@ class Crew(FlowTrackable, BaseModel):
 
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+
+    @field_validator("isolatie_modus", mode="before")
+    @classmethod
+    def check_isolatie_modus(cls, v: str) -> str:
+        """Valideer isolatie modus waarde.
+
+        Args:
+            v: De isolatie modus waarde.
+
+        Returns:
+            De gevalideerde waarde.
+
+        Raises:
+            ValueError: Als de waarde ongeldig is.
+        """
+        geldige_waarden = ("open", "afdeling", "strikt")
+        if v not in geldige_waarden:
+            raise ValueError(
+                f"isolatie_modus moet een van {geldige_waarden} zijn, niet '{v}'"
+            )
+        return v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
@@ -2462,3 +2548,580 @@ To enable tracing, do any one of these:
             padding=(1, 2),
         )
         console.print(panel)
+
+    # ============================================================
+    # ORGANISATIE METHODEN - Enterprise Hiërarchie
+    # ============================================================
+
+    def ontvang_opdracht(
+        self,
+        opdracht: Any,
+        voer_direct_uit: bool = False,
+    ) -> bool:
+        """Ontvang en verwerk een opdracht van management.
+
+        Deze methode accepteert een opdracht, bepaalt de geschikte agent(s),
+        en voert de taak uit indien gewenst.
+
+        Args:
+            opdracht: De opdracht om te verwerken (Opdracht instance).
+            voer_direct_uit: Of de opdracht direct moet worden uitgevoerd.
+
+        Returns:
+            True als de opdracht is geaccepteerd (en uitgevoerd indien gevraagd).
+        """
+        # Registreer opdracht indien manager beschikbaar
+        if self.opdracht_manager is not None:
+            try:
+                self.opdracht_manager.accepteer_opdracht(opdracht.id)
+            except Exception as e:
+                self._logger.log(
+                    level="warning",
+                    message=f"Kon opdracht niet registreren: {str(e)}",
+                    color="yellow",
+                )
+
+        # Log de ontvangst
+        self._logger.log(
+            level="info",
+            message=f"Opdracht ontvangen: {getattr(opdracht, 'titel', 'Onbekend')}",
+            color="green",
+        )
+
+        if not voer_direct_uit:
+            return True
+
+        # Voer opdracht direct uit
+        try:
+            # Bepaal geschikte agent(s)
+            geselecteerde_agent = self._selecteer_agent_voor_opdracht(opdracht)
+
+            if geselecteerde_agent is None:
+                self._logger.log(
+                    level="warning",
+                    message="Geen geschikte agent gevonden - gebruik eerste agent",
+                    color="yellow",
+                )
+                geselecteerde_agent = self.agents[0] if self.agents else None
+
+            if geselecteerde_agent is None:
+                self._logger.log(
+                    level="error",
+                    message="Geen agents beschikbaar voor opdracht",
+                    color="red",
+                )
+                return False
+
+            # Maak dynamische taak aan
+            opdracht_beschrijving = getattr(opdracht, "beschrijving", str(opdracht))
+            opdracht_context = getattr(opdracht, "context", {})
+            verwachte_output = opdracht_context.get(
+                "verwachte_output",
+                "Lever het resultaat van de opdracht."
+            )
+
+            from crewai.task import Task
+
+            dynamische_taak = Task(
+                description=opdracht_beschrijving,
+                expected_output=verwachte_output,
+                agent=geselecteerde_agent,
+            )
+
+            # Voeg taak toe aan taken en voer uit
+            originele_taken = self.tasks.copy()
+            self.tasks = [dynamische_taak]
+
+            try:
+                # Update opdracht status naar in uitvoering
+                if self.opdracht_manager is not None:
+                    try:
+                        from crewai.communication.directives import OpdrachtStatus
+                        self.opdracht_manager.rapporteer_voortgang(
+                            opdracht.id,
+                            OpdrachtStatus.IN_UITVOERING,
+                        )
+                    except Exception:
+                        pass
+
+                # Voer taak uit
+                resultaat = self.kickoff(inputs=opdracht_context)
+
+                # Update opdracht status naar voltooid
+                if self.opdracht_manager is not None:
+                    try:
+                        resultaat_tekst = (
+                            str(resultaat.raw) if hasattr(resultaat, "raw") else str(resultaat)
+                        )
+                        self.opdracht_manager.voltooi_opdracht(
+                            opdracht.id,
+                            resultaat=resultaat_tekst,
+                        )
+                    except Exception:
+                        pass
+
+                self._logger.log(
+                    level="info",
+                    message=f"Opdracht voltooid: {getattr(opdracht, 'titel', 'Onbekend')}",
+                    color="green",
+                )
+
+                return True
+
+            finally:
+                # Herstel originele taken
+                self.tasks = originele_taken
+
+        except Exception as e:
+            self._logger.log(
+                level="error",
+                message=f"Fout bij uitvoeren opdracht: {str(e)}",
+                color="red",
+            )
+
+            # Update opdracht status naar geescaleerd
+            if self.opdracht_manager is not None:
+                try:
+                    from crewai.communication.directives import OpdrachtStatus
+                    self.opdracht_manager.rapporteer_voortgang(
+                        opdracht.id,
+                        OpdrachtStatus.GEESCALEERD,
+                        resultaat=f"Fout: {str(e)}",
+                    )
+                except Exception:
+                    pass
+
+            return False
+
+    def _selecteer_agent_voor_opdracht(self, opdracht: Any) -> Any | None:
+        """Selecteer de beste agent voor een opdracht.
+
+        Selecteert op basis van:
+        1. Expliciete agent_rol in opdracht context
+        2. Agent capaciteiten/rol matching
+        3. Eerste beschikbare agent
+
+        Args:
+            opdracht: De opdracht waarvoor een agent moet worden geselecteerd.
+
+        Returns:
+            De geselecteerde agent, of None als geen geschikt.
+        """
+        if not self.agents:
+            return None
+
+        opdracht_context = getattr(opdracht, "context", {})
+
+        # 1. Check expliciete agent_rol specificatie
+        gewenste_rol = opdracht_context.get("agent_rol")
+        if gewenste_rol:
+            for agent in self.agents:
+                agent_rol = getattr(agent, "role", "").lower()
+                if gewenste_rol.lower() in agent_rol:
+                    return agent
+
+        # 2. Check agent namen
+        gewenste_agent = opdracht_context.get("agent_naam")
+        if gewenste_agent:
+            for agent in self.agents:
+                agent_naam = getattr(agent, "name", "") or getattr(agent, "role", "")
+                if gewenste_agent.lower() in agent_naam.lower():
+                    return agent
+
+        # 3. Match op basis van opdracht beschrijving en agent goal
+        opdracht_beschrijving = getattr(opdracht, "beschrijving", "").lower()
+        if opdracht_beschrijving:
+            beste_match = None
+            beste_score = 0
+
+            for agent in self.agents:
+                agent_goal = getattr(agent, "goal", "").lower()
+                agent_rol = getattr(agent, "role", "").lower()
+
+                # Simpele keyword matching
+                score = 0
+                woorden = opdracht_beschrijving.split()
+                for woord in woorden:
+                    if len(woord) > 3:  # Skip korte woorden
+                        if woord in agent_goal:
+                            score += 2
+                        if woord in agent_rol:
+                            score += 1
+
+                if score > beste_score:
+                    beste_score = score
+                    beste_match = agent
+
+            if beste_match and beste_score > 0:
+                return beste_match
+
+        # 4. Fallback: eerste agent
+        return self.agents[0]
+
+    def stuur_rapport(
+        self,
+        naar_ids: list[uuid.UUID] | None = None,
+        type: str = "status",
+        titel: str = "",
+        inhoud: str = "",
+        prioriteit: str = "normaal",
+    ) -> Any | None:
+        """Stuur een rapport naar management.
+
+        Args:
+            naar_ids: IDs van ontvangers. Als None, gebruik rapporteert_aan.
+            type: Type rapport (status, probleem, resultaat, voortgang, aanbeveling).
+            titel: Titel van het rapport.
+            inhoud: Inhoud van het rapport.
+            prioriteit: Prioriteit (info, normaal, belangrijk, urgent).
+
+        Returns:
+            Het aangemaakte Rapport object, of None bij fout.
+        """
+        ontvangers = naar_ids or self.rapporteert_aan
+
+        if not ontvangers:
+            self._logger.log(
+                level="warning",
+                message="Geen ontvangers geconfigureerd voor rapport",
+                color="yellow",
+            )
+            return None
+
+        if self.rapport_manager is None:
+            self._logger.log(
+                level="warning",
+                message="Geen rapport_manager geconfigureerd",
+                color="yellow",
+            )
+            return None
+
+        try:
+            from crewai.communication.reports import RapportPrioriteit, RapportType
+
+            rapport = self.rapport_manager.stuur_rapport(
+                van_id=self.id,
+                naar_ids=ontvangers,
+                type=RapportType(type),
+                titel=titel,
+                samenvatting=inhoud[:200] + ("..." if len(inhoud) > 200 else ""),
+                details={"volledige_inhoud": inhoud},
+                prioriteit=RapportPrioriteit(prioriteit),
+            )
+
+            self._logger.log(
+                level="info",
+                message=f"Rapport verstuurd: {titel}",
+                color="green",
+            )
+
+            return rapport
+
+        except Exception as e:
+            self._logger.log(
+                level="error",
+                message=f"Fout bij versturen rapport: {str(e)}",
+                color="red",
+            )
+            return None
+
+    def escaleer(
+        self,
+        reden: str,
+        context: dict[str, Any] | None = None,
+        urgentie: str = "normaal",
+    ) -> Any | None:
+        """Escaleer een probleem naar management.
+
+        Args:
+            reden: Reden voor de escalatie.
+            context: Extra context informatie.
+            urgentie: Urgentie niveau (laag, normaal, hoog, kritiek).
+
+        Returns:
+            De aangemaakte Escalatie, of None bij fout.
+        """
+        if self.escalatie_manager is None:
+            self._logger.log(
+                level="warning",
+                message="Geen escalatie_manager geconfigureerd",
+                color="yellow",
+            )
+            return None
+
+        try:
+            escalatie = self.escalatie_manager.escaleer(
+                bron_id=self.id,
+                bron_type="crew",
+                regel=None,  # Handmatige escalatie
+                reden=reden,
+                context={
+                    **(context or {}),
+                    "urgentie": urgentie,
+                    "handmatige_escalatie": True,
+                },
+            )
+
+            self._logger.log(
+                level="warning",
+                message=f"Escalatie aangemaakt: {reden}",
+                color="yellow",
+            )
+
+            return escalatie
+
+        except Exception as e:
+            self._logger.log(
+                level="error",
+                message=f"Fout bij escaleren: {str(e)}",
+                color="red",
+            )
+            return None
+
+    def controleer_toegang(
+        self,
+        actie: str,
+        resource_id: uuid.UUID | None = None,
+    ) -> bool:
+        """Controleer of een actie is toegestaan.
+
+        Args:
+            actie: De actie om te controleren (lezen, schrijven, uitvoeren, etc.).
+            resource_id: Optionele resource ID om toegang voor te controleren.
+
+        Returns:
+            True als de actie is toegestaan, False anders.
+        """
+        # Zonder toegangscontrole is alles toegestaan
+        if self.toegangscontrole is None:
+            return True
+
+        try:
+            toegestaan, reden = self.toegangscontrole.controleer_toegang(
+                principal_id=self.id,
+                resource_id=resource_id or self.id,
+                actie=actie,
+            )
+
+            if not toegestaan:
+                self._logger.log(
+                    level="warning",
+                    message=f"Toegang geweigerd voor actie '{actie}': {reden}",
+                    color="yellow",
+                )
+
+            return toegestaan
+
+        except Exception as e:
+            self._logger.log(
+                level="error",
+                message=f"Fout bij toegangscontrole: {str(e)}",
+                color="red",
+            )
+            # Bij fout, weiger toegang (fail-safe)
+            return False
+
+    def krijg_organisatie_tools(self) -> list[BaseTool]:
+        """Krijg alle organisatie-tools voor deze crew.
+
+        Returns:
+            Lijst met BaseTool instances voor organisatie-interactie.
+        """
+        try:
+            from crewai.tools.organization_tools import OrganizationTools
+
+            # Verzamel ondergeschikten (sub_crews)
+            ondergeschikten: dict[str, uuid.UUID] = {}
+            if self.sub_crews:
+                for naam, crew in self.sub_crews.items():
+                    ondergeschikten[naam] = crew.id
+
+            # Verzamel managers (rapporteert_aan)
+            managers: dict[str, uuid.UUID] = {}
+            for i, manager_id in enumerate(self.rapporteert_aan[:3]):
+                managers[f"manager_{i+1}"] = manager_id
+
+            org_tools = OrganizationTools(
+                agent_id=self.id,
+                organisatie=self.organisatie,
+                opdracht_manager=self.opdracht_manager,
+                rapport_manager=self.rapport_manager,
+                escalatie_manager=self.escalatie_manager,
+                ondergeschikten=ondergeschikten,
+                managers=managers,
+            )
+
+            return org_tools.tools()
+
+        except ImportError:
+            self._logger.log(
+                level="warning",
+                message="OrganizationTools module niet beschikbaar",
+                color="yellow",
+            )
+            return []
+        except Exception as e:
+            self._logger.log(
+                level="error",
+                message=f"Fout bij laden organisatie tools: {str(e)}",
+                color="red",
+            )
+            return []
+
+    def aggregeer_rapporten(
+        self,
+        periode: str = "dag",
+        stuur_naar_management: bool = True,
+    ) -> Any | None:
+        """Aggregeer alle rapporten van agents/sub-crews tot één crew rapport.
+
+        Deze methode verzamelt alle rapporten van ondergeschikte agents
+        en/of sub-crews en maakt een geconsolideerd rapport.
+
+        Args:
+            periode: Periode voor het rapport (dag, week, maand).
+            stuur_naar_management: Of het rapport naar management gestuurd moet worden.
+
+        Returns:
+            Het geaggregeerde Rapport object, of None bij fout.
+
+        Voorbeeld:
+            ```python
+            # Aggregeer dagelijkse rapporten
+            rapport = crew.aggregeer_rapporten(
+                periode="dag",
+                stuur_naar_management=True
+            )
+
+            # Alleen consolideren, niet versturen
+            rapport = crew.aggregeer_rapporten(
+                periode="week",
+                stuur_naar_management=False
+            )
+            ```
+        """
+        onderdelen = []
+        totaal_items = 0
+
+        # 1. Verzamel rapporten van sub-crews
+        if self.sub_crews:
+            for crew_naam, sub_crew in self.sub_crews.items():
+                if hasattr(sub_crew, "rapport_manager") and sub_crew.rapport_manager:
+                    try:
+                        # Krijg recente rapporten
+                        rapporten = sub_crew.rapport_manager.krijg_rapporten_van(
+                            sub_crew.id
+                        )
+                        if rapporten:
+                            onderdelen.append(
+                                f"\n## {crew_naam.upper()}\n"
+                                f"Aantal rapporten: {len(rapporten)}"
+                            )
+                            for rapport in rapporten[-5:]:  # Laatste 5
+                                onderdelen.append(
+                                    f"- [{rapport.type.value}] {rapport.titel}"
+                                )
+                            totaal_items += len(rapporten)
+                    except Exception:
+                        pass
+
+        # 2. Verzamel taak resultaten van eigen agents
+        if self.tasks:
+            voltooide_taken = [t for t in self.tasks if t.output is not None]
+            if voltooide_taken:
+                onderdelen.append(f"\n## CREW TAKEN\n"
+                                  f"Voltooide taken: {len(voltooide_taken)}/{len(self.tasks)}")
+                for taak in voltooide_taken[-5:]:
+                    agent_naam = getattr(taak.agent, "role", "Onbekend") if taak.agent else "Onbekend"
+                    onderdelen.append(f"- {agent_naam}: {taak.description[:50]}...")
+                totaal_items += len(voltooide_taken)
+
+        # 3. Verzamel execution logs
+        if self.execution_logs:
+            recente_logs = self.execution_logs[-10:]
+            onderdelen.append(f"\n## UITVOERINGSLOG\n"
+                              f"Recente activiteiten: {len(recente_logs)}")
+            for log in recente_logs:
+                if isinstance(log, dict):
+                    onderdelen.append(f"- {log.get('task', 'Onbekend')[:40]}")
+
+        # Maak samenvatting
+        if not onderdelen:
+            samenvatting = f"Geen activiteiten te rapporteren voor periode: {periode}"
+        else:
+            samenvatting = f"""Geaggregeerde {periode}rapportage voor {self.name}
+
+Totaal gerapporteerde items: {totaal_items}
+Sub-crews: {len(self.sub_crews) if self.sub_crews else 0}
+Agents: {len(self.agents)}
+
+{"".join(onderdelen)}
+"""
+
+        # Stuur rapport indien gewenst
+        if stuur_naar_management and self.rapporteert_aan:
+            return self.stuur_rapport(
+                type="voortgang",
+                titel=f"Geaggregeerde {periode}rapportage - {self.name}",
+                inhoud=samenvatting,
+                prioriteit="normaal",
+            )
+
+        # Anders maak lokaal rapport
+        if self.rapport_manager is not None:
+            try:
+                from crewai.communication.reports import RapportPrioriteit, RapportType
+
+                rapport = self.rapport_manager.stuur_rapport(
+                    van_id=self.id,
+                    naar_ids=[self.id],  # Naar zichzelf
+                    type=RapportType.VOORTGANG,
+                    titel=f"Geaggregeerde {periode}rapportage - {self.name}",
+                    samenvatting=samenvatting[:200],
+                    details={"volledige_inhoud": samenvatting},
+                    prioriteit=RapportPrioriteit.NORMAAL,
+                    afzender_type="crew",
+                )
+                return rapport
+            except Exception as e:
+                self._logger.log(
+                    level="error",
+                    message=f"Fout bij maken geaggregeerd rapport: {str(e)}",
+                    color="red",
+                )
+                return None
+
+        return None
+
+    def _consolideer_rapporten(self, rapporten: list[Any]) -> str:
+        """Consolideer een lijst rapporten tot een samenvatting.
+
+        Args:
+            rapporten: Lijst met rapport objecten.
+
+        Returns:
+            Geconsolideerde samenvatting als string.
+        """
+        if not rapporten:
+            return "Geen rapporten om te consolideren."
+
+        secties = []
+
+        # Groepeer per type
+        per_type: dict[str, list[Any]] = {}
+        for rapport in rapporten:
+            type_naam = getattr(rapport, "type", "onbekend")
+            if hasattr(type_naam, "value"):
+                type_naam = type_naam.value
+            type_naam = str(type_naam)
+            if type_naam not in per_type:
+                per_type[type_naam] = []
+            per_type[type_naam].append(rapport)
+
+        for type_naam, type_rapporten in per_type.items():
+            secties.append(f"\n### {type_naam.upper()} ({len(type_rapporten)} items)")
+            for rapport in type_rapporten[:5]:
+                titel = getattr(rapport, "titel", "Zonder titel")
+                secties.append(f"- {titel}")
+
+        return "\n".join(secties)

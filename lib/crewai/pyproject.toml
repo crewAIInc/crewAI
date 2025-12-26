@@ -1,9 +1,10 @@
 [project]
-name = "crewai"
+name = "crewai247"
 dynamic = ["version"]
-description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
+description = "Enterprise AI Agent Framework - Fork van CrewAI met Nederlandse ondersteuning, hiërarchisch crew management, opdrachten/rapportages systeem en 24/7 operatie. Gebaseerd op CrewAI van Joao Moura."
 readme = "README.md"
 authors = [
+    { name = "Charaf Chnioune" },
     { name = "Joao Moura", email = "joao@crewai.com" }
 ]
 requires-python = ">=3.10, <3.14"
@@ -42,9 +43,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://crewai.com"
-Documentation = "https://docs.crewai.com"
-Repository = "https://github.com/crewAIInc/crewAI"
+Homepage = "https://github.com/CharafChnioune/crewAI247"
+Documentation = "https://github.com/CharafChnioune/crewAI247#readme"
+Repository = "https://github.com/CharafChnioune/crewAI247"
+Original = "https://github.com/crewAIInc/crewAI"
 
 
 [project.optional-dependencies]

@@ -35,3 +35,5 @@ krakenagents/**/__pycache__/
 dashboard/.next/
 dashboard/node_modules/
 dashboard/.env.local
+
+testapp/*

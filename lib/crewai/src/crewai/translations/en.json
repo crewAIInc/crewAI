@@ -32,7 +32,18 @@
     "knowledge_search_query": "De oorspronkelijke query is: {task_prompt}.",
     "knowledge_search_query_system_prompt": "Je doel is om de gebruikersquery te herschrijven zodat deze geoptimaliseerd is voor het ophalen uit een vectordatabase. Overweeg hoe de query wordt gebruikt om relevante documenten te vinden, en streef ernaar deze specifieker en contextbewuster te maken. \n\n Voeg geen andere tekst toe dan de herschreven query, vooral geen inleiding of afsluiting en voeg alleen verwacht outputformaat toe als dit relevant is voor de herschreven query. \n\n Focus op de kernwoorden van de beoogde taak en om de meest relevante informatie op te halen. \n\n Er zal wat extra context worden gegeven die mogelijk moet worden verwijderd zoals expected_output formaten, structured_outputs en andere instructies.",
     "risk_taking_behavior": "\n\nJe bent een professional die HANDELT. Je analyseert kort en DOET dan.\n\nKRITIEK GEDRAG:\n- NEEM BESLISSINGEN en voer ze direct UIT\n- Vraag NIET om toestemming voor elke actie\n- Gebruik je tools om DAADWERKELIJK acties uit te voeren\n- Een klein verlies is acceptabel; NIETS doen is NIET acceptabel\n- Je bent aangesteld om te DOEN, niet alleen om te rapporteren\n- Wacht niet op perfecte informatie, handel met wat je hebt\n",
-    "employee_mindset": "\n\nJe werkt als een echte medewerker in een bedrijf:\n- Je hebt een DOEL: {goal}\n- Je wacht NIET op instructies\n- Je neemt INITIATIEF\n- Je lost problemen ZELF op\n- Je escaleert alleen beslissingen die boven je bevoegdheid liggen\n- Je werkt naar resultaten, niet naar rapporten\n"
+    "employee_mindset": "\n\nJe werkt als een echte medewerker in een bedrijf:\n- Je hebt een DOEL: {goal}\n- Je wacht NIET op instructies\n- Je neemt INITIATIEF\n- Je lost problemen ZELF op\n- Je escaleert alleen beslissingen die boven je bevoegdheid liggen\n- Je werkt naar resultaten, niet naar rapporten\n",
+    "opdracht_ontvangen": "Je hebt een nieuwe opdracht ontvangen van {afzender}:\n\nTitel: {titel}\nBeschrijving: {beschrijving}\nPrioriteit: {prioriteit}\nDeadline: {deadline}\n\nVoer deze opdracht uit en rapporteer je voortgang.",
+    "rapportage_instructie": "Rapporteer regelmatig je voortgang aan je manager. Gebruik de Rapporteer tool om status updates te sturen.",
+    "escalatie_instructie": "Als je een probleem tegenkomt dat je niet zelf kunt oplossen, escaleer dan naar je manager met de Escaleer tool.",
+    "organisatie_context": "Je bent onderdeel van de afdeling {afdeling}. Je rapporteert aan {manager}. Je mag opdrachten ontvangen van {opdracht_gevers}.",
+    "toegang_geweigerd": "Je hebt geen toegang tot deze resource. Vraag toestemming aan je manager of escaleer indien nodig.",
+    "manager_opdracht_instructie": "\n\nAls manager heb je de volgende verantwoordelijkheden:\n- Geef duidelijke opdrachten aan je teamleden\n- Monitor de voortgang van lopende taken\n- Ontvang en verwerk rapporten van je team\n- Escaleer problemen die boven je bevoegdheid liggen\n- Neem beslissingen binnen je mandaat\n",
+    "ondergeschikte_instructie": "\n\nAls teamlid heb je de volgende verantwoordelijkheden:\n- Voer opdrachten van je manager uit\n- Rapporteer regelmatig over je voortgang\n- Escaleer problemen die je niet zelf kunt oplossen\n- Werk proactief naar de gestelde doelen\n",
+    "afdeling_isolatie_waarschuwing": "Let op: Je afdeling opereert in '{isolatie_niveau}' modus. Communicatie met andere afdelingen kan beperkt zijn.",
+    "budget_overschreden": "Waarschuwing: Het budget voor deze actie is overschreden. Goedkeuring van hoger management is vereist.",
+    "deadline_waarschuwing": "Let op: De deadline voor deze opdracht nadert. Prioriteer deze taak.",
+    "continue_modus_instructie": "\n\nJe opereert in CONTINUE MODUS:\n- Je stopt NOOIT met werken\n- Je geeft NOOIT een 'Eindantwoord'\n- Je blijft continu naar je doel werken\n- Je onderneem DIRECT actie bij kansen\n- Je monitort actief de situatie\n- Je rapporteert kort en focust op acties\n"
   },
   "errors": {
     "force_final_answer_error": "Je kunt niet doorgaan, hier is het beste eindantwoord dat je gegenereerd hebt:\n\n {formatted_answer}",
@@ -53,12 +64,37 @@
       "name": "Afbeelding toevoegen aan inhoud",
       "description": "Bekijk afbeelding om de inhoud te begrijpen, je kunt optioneel een vraag stellen over de afbeelding",
       "default_action": "Geef alsjeblieft een gedetailleerde beschrijving van deze afbeelding, inclusief alle visuele elementen, context en opvallende details die je kunt waarnemen."
-    }
+    },
+    "geef_opdracht": "Geef een opdracht aan een ondergeschikte. Input moet bevatten: ontvanger (naam), opdracht (beschrijving), context (achtergrond), prioriteit (laag/normaal/hoog/kritiek).",
+    "rapporteer": "Rapporteer aan je management. Input moet bevatten: type (status/probleem/resultaat), titel, inhoud.",
+    "escaleer": "Escaleer een probleem naar hoger management. Input moet bevatten: reden, context, urgentie.",
+    "delegeer_naar_crew": "Delegeer een opdracht naar een andere crew. Input moet bevatten: crew_name (naam van de crew), directive (de opdracht), context (alle benodigde informatie)."
   },
   "reasoning": {
     "initial_plan": "Je bent {role}, een professional met de volgende achtergrond: {backstory}\n\nJe primaire doel is: {goal}\n\nAls {role} maak je een strategisch plan voor een taak die je expertise en unieke perspectief vereist.",
     "refine_plan": "Je bent {role}, een professional met de volgende achtergrond: {backstory}\n\nJe primaire doel is: {goal}\n\nAls {role} verfijn je een strategisch plan voor een taak die je expertise en unieke perspectief vereist.",
     "create_plan_prompt": "Je bent {role} met deze achtergrond: {backstory}\n\nJe primaire doel is: {goal}\n\nJe hebt de volgende taak gekregen:\n{description}\n\nVerwachte output:\n{expected_output}\n\nBeschikbare tools: {tools}\n\nVoordat je deze taak uitvoert, maak een gedetailleerd plan dat je expertise als {role} benut en beschrijft:\n1. Je begrip van de taak vanuit je professionele perspectief\n2. De belangrijkste stappen die je neemt om het te voltooien, gebruikmakend van je achtergrond en vaardigheden\n3. Hoe je uitdagingen aanpakt die kunnen ontstaan, rekening houdend met je expertise\n4. Hoe je de beschikbare tools strategisch gebruikt op basis van je ervaring, precies welke tools te gebruiken en hoe\n5. Het verwachte resultaat en hoe het aansluit bij je doel\n\nNa het maken van je plan, beoordeel of je klaar bent om de taak uit te voeren of dat je het beter kunt doen.\nSluit af met één van deze uitspraken:\n- \"KLAAR: Ik ben klaar om de taak uit te voeren.\"\n- \"NIET KLAAR: Ik moet mijn plan verfijnen omdat [specifieke reden].\"",
     "refine_plan_prompt": "Je bent {role} met deze achtergrond: {backstory}\n\nJe primaire doel is: {goal}\n\nJe maakte het volgende plan voor deze taak:\n{current_plan}\n\nEchter, je gaf aan dat je nog niet klaar bent om de taak uit te voeren.\n\nVerfijn je plan verder, gebruikmakend van je expertise als {role} om eventuele hiaten of onzekerheden aan te pakken. Terwijl je je plan verfijnt, wees specifiek over welke beschikbare tools je zult gebruiken, hoe je ze zult gebruiken, en waarom ze de beste keuzes zijn voor elke stap. Beschrijf duidelijk je tool-gebruiksstrategie als onderdeel van je verbeterde plan.\n\nNa het verfijnen van je plan, beoordeel of je klaar bent om de taak uit te voeren.\nSluit af met één van deze uitspraken:\n- \"KLAAR: Ik ben klaar om de taak uit te voeren.\"\n- \"NIET KLAAR: Ik moet mijn plan verder verfijnen omdat [specifieke reden].\""
+  },
+  "organization": {
+    "permissie_geweigerd": "Je hebt geen toestemming om deze actie uit te voeren. Neem contact op met je manager.",
+    "opdracht_niet_gevonden": "Opdracht met ID '{opdracht_id}' niet gevonden.",
+    "crew_niet_gevonden": "Crew '{crew_name}' niet gevonden. Beschikbare crews: {beschikbare_crews}",
+    "agent_niet_gevonden": "Agent met ID '{agent_id}' niet gevonden in de organisatie.",
+    "afdeling_niet_gevonden": "Afdeling '{afdeling}' niet gevonden.",
+    "manager_niet_gevonden": "Geen manager gevonden voor deze agent.",
+    "escalatie_mislukt": "Escalatie naar '{doel}' is mislukt: {reden}",
+    "rapport_verzonden": "Rapport '{titel}' is succesvol verzonden naar {ontvangers}.",
+    "opdracht_geaccepteerd": "Opdracht '{titel}' is geaccepteerd en wordt uitgevoerd.",
+    "opdracht_voltooid": "Opdracht '{titel}' is succesvol voltooid.",
+    "opdracht_geweigerd": "Opdracht '{titel}' is geweigerd: {reden}",
+    "geen_ondergeschikten": "Je hebt geen ondergeschikten om opdrachten aan te geven.",
+    "geen_managers": "Je hebt geen managers om aan te rapporteren.",
+    "isolatie_blokkade": "Communicatie met afdeling '{afdeling}' is geblokkeerd vanwege isolatie-instellingen.",
+    "budget_limiet": "Deze actie overschrijdt je budget limiet van {limiet}. Huidige uitgave: {uitgave}.",
+    "goedkeuring_vereist": "Deze actie vereist goedkeuring van {niveau}.",
+    "rol_niet_toegewezen": "Je hebt geen rol toegewezen in de organisatie.",
+    "hierarchie_fout": "Fout in organisatiehiërarchie: {details}",
+    "rapportagelijn_ontbreekt": "Er is geen rapportagelijn gedefinieerd voor deze agent."
   }
 }

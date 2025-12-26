@@ -86,6 +86,14 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
+    # Organisatie imports
+    from crewai.organization.hierarchy import OrganisatieHierarchie
+    from crewai.organization.role import Rol
+    from crewai.governance.access_control import ToegangsControle
+    from crewai.governance.escalation import EscalatieManager
+    from crewai.communication.directives import OpdrachtManager
+    from crewai.communication.reports import RapportManager
+
 
 # MCP Connection timeout constants (in seconds)
 MCP_CONNECTION_TIMEOUT: Final[int] = 10
@@ -220,6 +228,35 @@ class Agent(BaseAgent):
     a2a: list[A2AConfig] | A2AConfig | None = Field(
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+    )
+
+    # ============================================================
+    # ORGANISATIE VELDEN - Enterprise Hiërarchie
+    # ============================================================
+
+    rol: Any | None = Field(
+        default=None,
+        description="Rol van deze agent in de organisatie (bepaalt permissies).",
+    )
+
+    afdeling_id: Any | None = Field(
+        default=None,
+        description="UUID van de afdeling waar deze agent werkt.",
+    )
+
+    manager_id: Any | None = Field(
+        default=None,
+        description="UUID van de directe manager van deze agent.",
+    )
+
+    organisatie: Any | None = Field(
+        default=None,
+        description="Referentie naar OrganisatieHierarchie.",
+    )
+
+    kan_opdrachten_ontvangen_van: list[Any] = Field(
+        default_factory=list,
+        description="UUIDs van agents/crews die opdrachten mogen geven aan deze agent.",
     )
 
     @model_validator(mode="before")
@@ -1594,3 +1631,97 @@ class Agent(BaseAgent):
         )
 
         return await lite_agent.kickoff_async(messages)
+
+    # ============================================================
+    # ORGANISATIE METHODEN - Enterprise Hiërarchie
+    # ============================================================
+
+    def mag_opdracht_ontvangen_van(self, afzender_id: Any) -> bool:
+        """Controleer of deze agent opdrachten mag ontvangen van een afzender.
+
+        Args:
+            afzender_id: UUID van de potentiële afzender.
+
+        Returns:
+            True als opdrachten van deze afzender zijn toegestaan.
+        """
+        # Als expliciet geconfigureerd, check tegen lijst
+        if self.kan_opdrachten_ontvangen_van:
+            return afzender_id in self.kan_opdrachten_ontvangen_van
+
+        # Check via organisatie indien beschikbaar
+        if self.organisatie is not None:
+            return self.organisatie.mag_opdracht_geven(afzender_id, self.id)
+
+        # Check via rol indien beschikbaar
+        if self.rol is not None:
+            # Rol bepaalt van welke niveaus opdrachten zijn toegestaan
+            return len(getattr(self.rol, "ontvangt_opdrachten_van", [])) > 0
+
+        # Standaard: toegestaan van manager
+        if self.manager_id is not None:
+            return afzender_id == self.manager_id
+
+        return True
+
+    def krijg_permissie_niveau(self) -> str:
+        """Krijg het permissie niveau van deze agent.
+
+        Returns:
+            String met het permissie niveau, of 'uitvoerend' als standaard.
+        """
+        if self.rol is not None:
+            return getattr(self.rol, "niveau", "uitvoerend")
+
+        if self.organisatie is not None:
+            rol = self.organisatie.krijg_rol(self.id)
+            if rol is not None:
+                return rol.niveau
+
+        return "uitvoerend"
+
+    def kan_delegeren(self) -> bool:
+        """Controleer of deze agent mag delegeren.
+
+        Returns:
+            True als delegeren is toegestaan.
+        """
+        if self.rol is not None:
+            return getattr(self.rol, "kan_delegeren", False)
+
+        if self.organisatie is not None:
+            rol = self.organisatie.krijg_rol(self.id)
+            if rol is not None:
+                return rol.kan_delegeren
+
+        return self.allow_delegation
+
+    def krijg_directe_manager(self) -> Any | None:
+        """Krijg de directe manager van deze agent.
+
+        Returns:
+            UUID van de manager, of None als er geen is.
+        """
+        if self.manager_id is not None:
+            return self.manager_id
+
+        if self.organisatie is not None:
+            return self.organisatie.krijg_directe_manager(self.id)
+
+        return None
+
+    def krijg_afdeling_naam(self) -> str | None:
+        """Krijg de naam van de afdeling waar deze agent werkt.
+
+        Returns:
+            Naam van de afdeling, of None.
+        """
+        if self.afdeling_id is None:
+            return None
+
+        if self.organisatie is not None:
+            afdeling = self.organisatie.afdelingen.get(self.afdeling_id)
+            if afdeling is not None:
+                return afdeling.naam
+
+        return None
