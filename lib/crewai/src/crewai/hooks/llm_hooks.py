@@ -14,6 +14,14 @@ if TYPE_CHECKING:
     from crewai.utilities.types import LLMMessage
 
 
+class LLMCallBlockedError(Exception):
+    """Raised when a before_llm_call hook blocks the LLM call.
+
+    This exception is intentionally NOT retried by the agent,
+    as it represents an intentional block by the hook.
+    """
+
+
 class LLMCallHookContext:
     """Context object passed to LLM call hooks.
 
@@ -131,6 +139,7 @@ class LLMCallHookContext:
             ...         if response.lower() == "no":
             ...             print("LLM call skipped by user")
         """
+        # from crewai.events.event_listener import event_listener
 
         printer = Printer()
         event_listener.formatter.pause_live_updates()

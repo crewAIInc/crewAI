@@ -34,6 +34,7 @@ from crewai.utilities.agent_utils import (
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
+    handle_llm_call_blocked_error,
     handle_max_iterations_exceeded,
     handle_output_parser_exception,
     handle_unknown_error,
@@ -284,7 +285,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     log_error_after=self.log_error_after,
                     printer=self._printer,
                 )
-
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from crewai.hooks import clear_all_llm_call_hooks, unregister_after_llm_call_hook, unregister_before_llm_call_hook
+from crewai.hooks import (
+    LLMCallBlockedError,
+    clear_all_llm_call_hooks,
+    unregister_after_llm_call_hook,
+    unregister_before_llm_call_hook,
+)
 import pytest
 
 from crewai.hooks.llm_hooks import (
@@ -86,6 +91,86 @@ class TestLLMCallHookContext:
         # Check that executor.messages is also modified
         assert new_message in mock_executor.messages
         assert len(mock_executor.messages) == 2
+
+    def test_before_hook_returning_false_gracefully_finishes(self) -> None:
+        """Test that when before_llm_call hook returns False, agent gracefully finishes."""
+        from crewai import Agent, Crew, Task
+
+        hook_called = {"before": False}
+
+        def blocking_hook(context: LLMCallHookContext) -> bool:
+            """Hook that blocks all LLM calls."""
+            hook_called["before"] = True
+            return False
+
+        register_before_llm_call_hook(blocking_hook)
+
+        try:
+            agent = Agent(
+                role="Test Agent",
+                goal="Answer questions",
+                backstory="You are a test agent",
+                verbose=True,
+            )
+
+            task = Task(
+                description="Say hello",
+                expected_output="A greeting",
+                agent=agent,
+            )
+
+            with pytest.raises(LLMCallBlockedError):
+                crew = Crew(agents=[agent], tasks=[task], verbose=True)
+                crew.kickoff()
+        finally:
+            unregister_before_llm_call_hook(blocking_hook)
+
+    def test_direct_llm_call_raises_blocked_error_when_hook_returns_false(self) -> None:
+        """Test that direct LLM.call() raises LLMCallBlockedError when hook returns False."""
+        from crewai.hooks import LLMCallBlockedError
+        from crewai.llm import LLM
+
+
+        hook_called = {"before": False}
+
+        def blocking_hook(context: LLMCallHookContext) -> bool:
+            """Hook that blocks all LLM calls."""
+            hook_called["before"] = True
+            return False
+
+        register_before_llm_call_hook(blocking_hook)
+
+        try:
+            llm = LLM(model="gpt-4o-mini")
+
+            with pytest.raises(LLMCallBlockedError) as exc_info:
+                llm.call([{"role": "user", "content": "Say hello"}])
+
+            assert hook_called["before"] is True, "Before hook should have been called"
+
+            assert "blocked" in str(exc_info.value).lower()
+
+        finally:
+            unregister_before_llm_call_hook(blocking_hook)
+
+    def test_raises_with_llm_call_blocked_exception(self) -> None:
+        """Test that the LLM call raises an exception when the hook raises an exception."""
+        from crewai.hooks import LLMCallBlockedError
+        from crewai.llm import LLM
+
+        def blocking_hook(context: LLMCallHookContext) -> bool:
+            raise LLMCallBlockedError("llm call blocked")
+        register_before_llm_call_hook(blocking_hook)
+
+        try:
+            llm = LLM(model="gpt-4o-mini")
+            with pytest.raises(LLMCallBlockedError) as exc_info:
+                llm.call([{"role": "user", "content": "Say hello"}])
+            assert "blocked" in str(exc_info.value).lower()
+        finally:
+            unregister_before_llm_call_hook(blocking_hook)
+
+
 
 
 class TestBeforeLLMCallHooks:

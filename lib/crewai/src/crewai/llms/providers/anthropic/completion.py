@@ -5,7 +5,6 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from anthropic.types import ThinkingBlock
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
@@ -197,8 +196,7 @@ class AnthropicCompletion(BaseLLM):
                 messages
             )
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            self._invoke_before_llm_call_hooks(formatted_messages, from_agent)
 
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(

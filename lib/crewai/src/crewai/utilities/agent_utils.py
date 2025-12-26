@@ -16,6 +16,7 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.cli.config import Settings
+from crewai.hooks import LLMCallBlockedError
 from crewai.llms.base_llm import BaseLLM
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -260,8 +261,7 @@ def get_llm_response(
     """
 
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+        _setup_before_llm_call_hooks(executor_context, printer)  # Raises if blocked
         messages = executor_context.messages
 
     try:
@@ -314,8 +314,7 @@ async def aget_llm_response(
         ValueError: If the response is None or empty.
     """
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+        _setup_before_llm_call_hooks(executor_context, printer)  # Raises if blocked
         messages = executor_context.messages
 
     try:
@@ -459,6 +458,18 @@ def handle_output_parser_exception(
         )
 
     return formatted_answer
+
+
+def handle_llm_call_blocked_error(
+    e: LLMCallBlockedError,
+    messages: list[LLMMessage],
+) -> AgentFinish:
+    messages.append({"role": "user", "content": str(e)})
+    return AgentFinish(
+        thought="",
+        output=str(e),
+        text=str(e),
+    )
 
 
 def is_context_length_exceeded(exception: Exception) -> bool:
@@ -728,15 +739,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
 def _setup_before_llm_call_hooks(
     executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
-) -> bool:
+) -> None:
     """Setup and invoke before_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
         printer: Printer instance for error logging.
 
-    Returns:
-        True if LLM execution should proceed, False if blocked by a hook.
+    Raises:
+        LLMCallBlockedError: If any hook returns False to block the LLM call.
     """
     if executor_context and executor_context.before_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -752,7 +763,11 @@ def _setup_before_llm_call_hooks(
                         content="LLM call blocked by before_llm_call hook",
                         color="yellow",
                     )
-                    return False
+                    raise LLMCallBlockedError(
+                        "LLM call blocked by before_llm_call hook"
+                    )
+        except LLMCallBlockedError:
+            raise
         except Exception as e:
             printer.print(
                 content=f"Error in before_llm_call hook: {e}",
@@ -772,8 +787,6 @@ def _setup_before_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
-
-    return True
 
 
 def _setup_after_llm_call_hooks(

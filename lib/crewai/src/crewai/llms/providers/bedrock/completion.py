@@ -315,10 +315,9 @@ class BedrockCompletion(BaseLLM):
                 messages
             )
 
-            if not self._invoke_before_llm_call_hooks(
+            self._invoke_before_llm_call_hooks(
                 cast(list[LLMMessage], formatted_messages), from_agent
-            ):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+            )
 
             # Prepare request body
             body: BedrockConverseRequestBody = {

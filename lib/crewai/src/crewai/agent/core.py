@@ -44,6 +44,8 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.events.types.task_events import TaskFailedEvent
+from crewai.hooks import LLMCallBlockedError
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent import LiteAgent
@@ -409,6 +411,15 @@ class Agent(BaseAgent):
                     ),
                 )
                 raise e
+            if isinstance(e, LLMCallBlockedError):
+                crewai_event_bus.emit(
+                    self,
+                    event=TaskFailedEvent(  # type: ignore[no-untyped-call]
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 crewai_event_bus.emit(
@@ -610,6 +621,15 @@ class Agent(BaseAgent):
                     self,
                     event=AgentExecutionErrorEvent(
                         agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            if isinstance(e, LLMCallBlockedError):
+                crewai_event_bus.emit(
+                    self,
+                    event=TaskFailedEvent(  # type: ignore[no-untyped-call]
                         task=task,
                         error=str(e),
                     ),
