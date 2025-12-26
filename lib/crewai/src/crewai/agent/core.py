@@ -439,6 +439,12 @@ class Agent(BaseAgent):
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
 
+        This method uses cooperative cancellation to ensure clean thread cleanup.
+        When a timeout occurs:
+        1. The executor's deadline is set, causing the worker to check and exit
+        2. The executor is shut down with wait=False to return control promptly
+        3. The worker thread will exit cleanly when it checks the deadline
+
         Args:
             task_prompt: The prompt to send to the agent.
             task: The task being executed.
@@ -453,7 +459,11 @@ class Agent(BaseAgent):
         """
         import concurrent.futures
 
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        if self.agent_executor:
+            self.agent_executor.set_execution_deadline(timeout)
+
+        executor = concurrent.futures.ThreadPoolExecutor(thread_name_prefix="crewai_task")
+        try:
             future = executor.submit(
                 self._execute_without_timeout, task_prompt=task_prompt, task=task
             )
@@ -468,6 +478,10 @@ class Agent(BaseAgent):
             except Exception as e:
                 future.cancel()
                 raise RuntimeError(f"Task execution failed: {e!s}") from e
+        finally:
+            if self.agent_executor:
+                self.agent_executor.clear_execution_deadline()
+            executor.shutdown(wait=False)
 
     def _execute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout.
@@ -647,6 +661,12 @@ class Agent(BaseAgent):
     ) -> Any:
         """Execute a task with a timeout asynchronously.
 
+        This method uses cooperative cancellation to ensure clean task cleanup.
+        When a timeout occurs:
+        1. The executor's deadline is set, causing the worker to check and exit
+        2. asyncio.wait_for cancels the coroutine
+        3. The worker will exit cleanly when it checks the deadline
+
         Args:
             task_prompt: The prompt to send to the agent.
             task: The task being executed.
@@ -659,6 +679,9 @@ class Agent(BaseAgent):
             TimeoutError: If execution exceeds the timeout.
             RuntimeError: If execution fails for other reasons.
         """
+        if self.agent_executor:
+            self.agent_executor.set_execution_deadline(timeout)
+
         try:
             return await asyncio.wait_for(
                 self._aexecute_without_timeout(task_prompt, task),
@@ -669,6 +692,9 @@ class Agent(BaseAgent):
                 f"Task '{task.description}' execution timed out after {timeout} seconds. "
                 "Consider increasing max_execution_time or optimizing the task."
             ) from e
+        finally:
+            if self.agent_executor:
+                self.agent_executor.clear_execution_deadline()
 
     async def _aexecute_without_timeout(self, task_prompt: str, task: Task) -> Any:
         """Execute a task without a timeout asynchronously.
