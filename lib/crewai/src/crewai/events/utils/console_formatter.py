@@ -453,41 +453,48 @@ To enable tracing, do any one of these:
         if flow_tree is None:
             return
 
+        # Determine status-specific labels and styles
+        if status == "completed":
+            label_prefix = "✅ Flow Finished:"
+            style = "green"
+            node_text = "✅ Flow Completed"
+            content_text = "Flow Execution Completed"
+            panel_title = "Flow Completion"
+        elif status == "paused":
+            label_prefix = "⏳ Flow Paused:"
+            style = "cyan"
+            node_text = "⏳ Waiting for Human Feedback"
+            content_text = "Flow Paused - Waiting for Feedback"
+            panel_title = "Flow Paused"
+        else:
+            label_prefix = "❌ Flow Failed:"
+            style = "red"
+            node_text = "❌ Flow Failed"
+            content_text = "Flow Execution Failed"
+            panel_title = "Flow Failure"
+
         # Update main flow label
         self.update_tree_label(
             flow_tree,
-            "✅ Flow Finished:" if status == "completed" else "❌ Flow Failed:",
+            label_prefix,
             flow_name,
-            "green" if status == "completed" else "red",
+            style,
         )
 
         # Update initialization node status
         for child in flow_tree.children:
             if "Starting Flow" in str(child.label):
-                child.label = Text(
-                    (
-                        "✅ Flow Completed"
-                        if status == "completed"
-                        else "❌ Flow Failed"
-                    ),
-                    style="green" if status == "completed" else "red",
-                )
+                child.label = Text(node_text, style=style)
                 break
 
         content = self.create_status_content(
-            (
-                "Flow Execution Completed"
-                if status == "completed"
-                else "Flow Execution Failed"
-            ),
+            content_text,
             flow_name,
-            "green" if status == "completed" else "red",
+            style,
             ID=flow_id,
         )
         self.print(flow_tree)
-        self.print_panel(
-            content, "Flow Completion", "green" if status == "completed" else "red"
-        )
+        self.print_panel(content, panel_title, style)
 
     def update_method_status(
         self,
@@ -507,6 +514,12 @@ To enable tracing, do any one of these:
             for child in flow_tree.children:
                 if "Starting Flow" in str(child.label):
                     child.label = Text("Flow Method Step", style="white")
+                    break
+        elif status == "paused":
+            prefix, style = "⏳ Paused:", "cyan"
+            for child in flow_tree.children:
+                if "Starting Flow" in str(child.label):
+                    child.label = Text("⏳ Waiting for Feedback", style="cyan")
                     break
         else:
             prefix, style = "❌ Failed:", "red"
