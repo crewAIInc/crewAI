@@ -9,6 +9,7 @@ class TaskStartedEvent(BaseEvent):
 
     type: str = "task_started"
     context: str | None
+    # TODO: Type this correctly with 'Task' type, currently impossible due to circular dependency
     task: Any | None = None
 
     def __init__(self, **data):
