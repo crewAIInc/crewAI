@@ -267,6 +267,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 response_model=self.response_model,
                 executor_context=self,
             )
+            print(f"lorenze answer: {answer}")
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
@@ -386,7 +387,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "initialized"
 
     @listen(or_("agent_finished", "tool_result_is_final"))
-    def finalize(self) -> str:
+    def finalize(self) -> Literal["completed", "skipped"]:
         """Finalize execution and emit completion logs."""
         if self.state.current_answer is None:
             skip_text = Text()
