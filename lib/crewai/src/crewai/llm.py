@@ -308,6 +308,7 @@ DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
+    "openai_responses",
     "anthropic",
     "claude",
     "azure",
@@ -367,6 +368,7 @@ class LLM(BaseLLM):
 
             provider_mapping = {
                 "openai": "openai",
+                "openai_responses": "openai_responses",
                 "anthropic": "anthropic",
                 "claude": "anthropic",
                 "azure": "azure",
@@ -434,7 +436,7 @@ class LLM(BaseLLM):
         """
         model_lower = model.lower()
 
-        if provider == "openai":
+        if provider == "openai" or provider == "openai_responses":
             return any(
                 model_lower.startswith(prefix)
                 for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
@@ -477,7 +479,7 @@ class LLM(BaseLLM):
         Returns:
             True if the model exists in constants or matches provider patterns, False otherwise
         """
-        if provider == "openai" and model in OPENAI_MODELS:
+        if (provider == "openai" or provider == "openai_responses") and model in OPENAI_MODELS:
             return True
 
         if (
@@ -536,6 +538,13 @@ class LLM(BaseLLM):
             from crewai.llms.providers.openai.completion import OpenAICompletion
 
             return OpenAICompletion
+
+        if provider == "openai_responses":
+            from crewai.llms.providers.openai.responses import (
+                OpenAIResponsesCompletion,
+            )
+
+            return OpenAIResponsesCompletion
 
         if provider == "anthropic" or provider == "claude":
             from crewai.llms.providers.anthropic.completion import (
