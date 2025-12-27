@@ -12,6 +12,7 @@ from rich.console import Console
 from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
 from crewai.cli.config import Settings
+from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.utils import (
     build_env_with_tool_repository_credentials,
     extract_available_exports,
@@ -131,10 +132,13 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         self._validate_response(publish_response)
 
         published_handle = publish_response.json()["handle"]
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+
         console.print(
             f"Successfully published `{published_handle}` ({project_version}).\n\n"
             + "⚠️ Security checks are running in the background. Your tool will be available once these are complete.\n"
-            + f"You can monitor the status or access your tool here:\nhttps://app.crewai.com/crewai_plus/tools/{published_handle}",
+            + f"You can monitor the status or access your tool here:\n{base_url}/crewai_plus/tools/{published_handle}",
             style="bold green",
         )
 

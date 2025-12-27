@@ -565,6 +565,55 @@ Fourth method running
 
 이 Flow를 실행하면, `start_method`에서 생성된 랜덤 불리언 값에 따라 출력값이 달라집니다.
 
+### Human in the Loop (인간 피드백)
+
+`@human_feedback` 데코레이터는 인간의 피드백을 수집하기 위해 플로우 실행을 일시 중지하는 human-in-the-loop 워크플로우를 가능하게 합니다. 이는 승인 게이트, 품질 검토, 인간의 판단이 필요한 결정 지점에 유용합니다.
+
+```python Code
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
+
+class ReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="이 콘텐츠를 승인하시겠습니까?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    def generate_content(self):
+        return "검토할 콘텐츠..."
+
+    @listen("approved")
+    def on_approval(self, result: HumanFeedbackResult):
+        print(f"승인됨! 피드백: {result.feedback}")
+
+    @listen("rejected")
+    def on_rejection(self, result: HumanFeedbackResult):
+        print(f"거부됨. 이유: {result.feedback}")
+```
+
+`emit`이 지정되면, 인간의 자유 형식 피드백이 LLM에 의해 해석되어 지정된 outcome 중 하나로 매핑되고, 해당 `@listen` 데코레이터를 트리거합니다.
+
+라우팅 없이 단순히 피드백만 수집할 수도 있습니다:
+
+```python Code
+@start()
+@human_feedback(message="이 출력에 대한 코멘트가 있으신가요?")
+def my_method(self):
+    return "검토할 출력"
+
+@listen(my_method)
+def next_step(self, result: HumanFeedbackResult):
+    # result.feedback로 피드백에 접근
+    # result.output으로 원래 출력에 접근
+    pass
+```
+
+플로우 실행 중 수집된 모든 피드백은 `self.last_human_feedback` (가장 최근) 또는 `self.human_feedback_history` (리스트 형태의 모든 피드백)를 통해 접근할 수 있습니다.
+
+플로우에서의 인간 피드백에 대한 완전한 가이드는 비동기/논블로킹 피드백과 커스텀 프로바이더(Slack, 웹훅 등)를 포함하여 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows)을 참조하세요.
+
 ## 플로우에 에이전트 추가하기
 
 에이전트는 플로우에 원활하게 통합할 수 있으며, 단순하고 집중된 작업 실행이 필요할 때 전체 Crew의 경량 대안으로 활용됩니다. 아래는 에이전트를 플로우 내에서 사용하여 시장 조사를 수행하는 예시입니다:
