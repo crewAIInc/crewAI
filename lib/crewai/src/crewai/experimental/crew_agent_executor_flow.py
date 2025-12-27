@@ -232,7 +232,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "initialized"
 
     @listen("force_final_answer")
-    def force_final_answer(self) -> str:
+    def force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
@@ -249,7 +249,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "agent_finished"
 
     @listen("continue_reasoning")
-    def call_llm_and_parse(self) -> str:
+    def call_llm_and_parse(self) -> Literal["parsed", "parser_error", "context_error"]:
         """Execute LLM call with hooks and parse the response.
 
         Returns routing decision based on parsing result.
@@ -267,7 +267,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 response_model=self.response_model,
                 executor_context=self,
             )
-            print(f"lorenze answer: {answer}")
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
@@ -305,14 +304,14 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise
 
     @router(call_llm_and_parse)
-    def route_by_answer_type(self) -> str:
+    def route_by_answer_type(self) -> Literal["execute_tool", "agent_finished"]:
         """Route based on whether answer is AgentAction or AgentFinish."""
         if isinstance(self.state.current_answer, AgentAction):
             return "execute_tool"
         return "agent_finished"
 
     @listen("execute_tool")
-    def execute_tool_action(self) -> str:
+    def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
         """Execute the tool action and handle the result."""
         try:
             action = cast(AgentAction, self.state.current_answer)
@@ -369,19 +368,21 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise
 
     @listen("initialized")
-    def continue_iteration(self) -> str:
+    def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))
-    def check_max_iterations(self) -> str:
+    def check_max_iterations(
+        self,
+    ) -> Literal["force_final_answer", "continue_reasoning"]:
         """Check if max iterations reached before proceeding with reasoning."""
         if has_reached_max_iterations(self.state.iterations, self.max_iter):
             return "force_final_answer"
         return "continue_reasoning"
 
     @router(execute_tool_action)
-    def increment_and_continue(self) -> str:
+    def increment_and_continue(self) -> Literal["initialized"]:
         """Increment iteration counter and loop back for next iteration."""
         self.state.iterations += 1
         return "initialized"
@@ -415,7 +416,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "completed"
 
     @listen("parser_error")
-    def recover_from_parser_error(self) -> str:
+    def recover_from_parser_error(self) -> Literal["initialized"]:
         """Recover from output parser errors and retry."""
         formatted_answer = handle_output_parser_exception(
             e=self._last_parser_error,
@@ -433,12 +434,12 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "initialized"
 
     @listen("context_error")
-    def recover_from_context_length(self) -> str:
+    def recover_from_context_length(self) -> Literal["initialized"]:
         """Recover from context length errors and retry."""
         handle_context_length(
             respect_context_window=self.respect_context_window,
             printer=self._printer,
-            messages=list(self.state.messages),
+            messages=self.state.messages,
             llm=self.llm,
             callbacks=self.callbacks,
             i18n=self._i18n,
@@ -550,7 +551,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         return handle_agent_action_core(
             formatted_answer=formatted_answer,
             tool_result=tool_result,
-            messages=list(self.state.messages),
+            messages=self.state.messages,
             step_callback=self.step_callback,
             show_logs=self._show_logs,
         )
