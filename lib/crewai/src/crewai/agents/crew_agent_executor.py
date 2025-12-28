@@ -91,6 +91,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
         response_model: type[BaseModel] | None = None,
+        i18n: I18N | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -114,7 +115,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
             response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = get_i18n()
+        self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
