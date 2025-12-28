@@ -912,12 +912,14 @@ class Agent(BaseAgent):
                 url=mcp_config.url,
                 headers=mcp_config.headers,
                 streamable=mcp_config.streamable,
+                verify=mcp_config.verify,
             )
             server_name = self._extract_server_name(mcp_config.url)
         elif isinstance(mcp_config, MCPServerSSE):
             transport = SSETransport(
                 url=mcp_config.url,
                 headers=mcp_config.headers,
+                verify=mcp_config.verify,
             )
             server_name = self._extract_server_name(mcp_config.url)
         else:

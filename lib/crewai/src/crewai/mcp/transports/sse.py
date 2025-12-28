@@ -28,6 +28,7 @@ class SSETransport(BaseTransport):
         self,
         url: str,
         headers: dict[str, str] | None = None,
+        verify: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize SSE transport.
@@ -35,11 +36,13 @@ class SSETransport(BaseTransport):
         Args:
             url: Server URL (e.g., "https://api.example.com/mcp/sse").
             headers: Optional HTTP headers.
+            verify: Whether to verify SSL certificates (default: True).
             **kwargs: Additional transport options.
         """
         super().__init__(**kwargs)
         self.url = url
         self.headers = headers or {}
+        self.verify = verify
         self._transport_context: Any = None
 
     @property
@@ -66,6 +69,7 @@ class SSETransport(BaseTransport):
             self._transport_context = sse_client(
                 self.url,
                 headers=self.headers if self.headers else None,
+                verify=self.verify,
             )
 
             read, write = await self._transport_context.__aenter__()
