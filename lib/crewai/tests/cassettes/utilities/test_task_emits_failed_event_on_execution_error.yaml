@@ -1,0 +1,992 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1303'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0ceNVvGO3iTja3ZJM0GHPp7fptc6\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488271,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 261,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 283,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 91187efd98829e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg;
+        path=/; expires=Thu, 13-Feb-25 23:41:12 GMT; domain=.api.openai.com; HttpOnly;
+        Secure; SameSite=None
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '782'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999697'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_67df2b150e90b637ec98ad5796dfe71d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '2362'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0ceOtrUJ80V8Li7rmZaP56XCp37M\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488272,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 494,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 516,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-RAY:
+      - 91187f05197b9e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:12 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '545'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999447'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_d7c1f2c3bae845e5083c5092852e051f
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '3421'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0cePLitBGIhHl5SUU1C8s7cmjIEX\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 727,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 749,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-RAY:
+      - 91187f098ead9e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:13 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '632'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999196'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_6c82a00bbf8ab599a6a6cf521cb4bf52
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '4480'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0cePDnVjWCsyTlSfvSmP1uUWVqJV\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 960,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 982,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 91187f0e0bd19e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:14 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '757'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998945'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_83956b8df7f7137fec9ae6450f3c9a7b
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      CqIiCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS+SEKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKkBwoQy3yskK/xR1Awm7D0OKZhbxIIH0xxCLM8S5cqDENyZXcgQ3JlYXRlZDABOXBZ
+      LLZd5yMYQYCpOrZd5yMYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTAwLjFKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhj
+      NzQ2MjhjSjEKB2NyZXdfaWQSJgokOGQ4NDY3OGYtMDU0NC00MWFiLWIwMjQtMTFkYTRhMTgxNzhj
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrRAgoLY3Jl
+      d19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiYWQxNTMxNjFjNWM1YTg1NmFhMGQwNmIyNDljNGM2NGEi
+      LCAiaWQiOiAiYWQ5OTg5ZTEtNDY5YS00YmQxLTg0ZjQtZWVlNjZhYTBiMjk3IiwgInJvbGUiOiAi
+      YmFzZV9hZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyNSwgIm1heF9ycG0i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdf
+      dGFza3MS8AEK7QFbeyJrZXkiOiAiMWIxNWVmMjM5MTViMjc1NWU4OWEwZWMzYjI2YTEzZDIiLCAi
+      aWQiOiAiNWUyMWIxOTQtMzE5Ni00NDBhLTg3ZTAtMWEyOGJkZjUxMGUzIiwgImFzeW5jX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJiYXNl
+      X2FnZW50IiwgImFnZW50X2tleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2YjI0OWM0YzY0YSIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCvtNCi6SXalRPxb+3e9KHyEggbtBZr
+      f+eAqioMVGFzayBDcmVhdGVkMAE5oJFLtl3nIxhBkOdLtl3nIxhKLgoIY3Jld19rZXkSIgogZTU4
+      MDcwMWQ1MmViNjVhZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiQ4ZDg0Njc4Zi0wNTQ0
+      LTQxYWItYjAyNC0xMWRhNGExODE3OGNKLgoIdGFza19rZXkSIgogMWIxNWVmMjM5MTViMjc1NWU4
+      OWEwZWMzYjI2YTEzZDJKMQoHdGFza19pZBImCiQ1ZTIxYjE5NC0zMTk2LTQ0MGEtODdlMC0xYTI4
+      YmRmNTEwZTN6AhgBhQEAAQAAEqQHChBgHAng7xhBnfS2/GYvkdYbEggsqqZdYq4kICoMQ3JldyBD
+      cmVhdGVkMAE5MC09t13nIxhBMPdFt13nIxhKGwoOY3Jld2FpX3ZlcnNpb24SCQoHMC4xMDAuMUoa
+      Cg5weXRob25fdmVyc2lvbhIICgYzLjEyLjhKLgoIY3Jld19rZXkSIgogZTU4MDcwMWQ1MmViNjVh
+      ZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiRiMDQ0Njk5NC1jNzMxLTQ4MTQtYjQ0Zi04
+      MGUzNmY0NmVlNjdKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
+      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
+      AhgBStECCgtjcmV3X2FnZW50cxLBAgq+Alt7ImtleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2
+      YjI0OWM0YzY0YSIsICJpZCI6ICJhZDk5ODllMS00NjlhLTRiZDEtODRmNC1lZWU2NmFhMGIyOTci
+      LCAicm9sZSI6ICJiYXNlX2FnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDI1
+      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdw
+      dC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
+      XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICIxYjE1ZWYyMzkxNWIyNzU1ZTg5YTBlYzNi
+      MjZhMTNkMiIsICJpZCI6ICI1ZTIxYjE5NC0zMTk2LTQ0MGEtODdlMC0xYTI4YmRmNTEwZTMiLCAi
+      YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9y
+      b2xlIjogImJhc2VfYWdlbnQiLCAiYWdlbnRfa2V5IjogImFkMTUzMTYxYzVjNWE4NTZhYTBkMDZi
+      MjQ5YzRjNjRhIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEPPkDbccpJ9jDuUl
+      rzqUoqQSCL6irICbXoxyKgxUYXNrIENyZWF0ZWQwATn4sVm3XecjGEGIF1q3XecjGEouCghjcmV3
+      X2tleRIiCiBlNTgwNzAxZDUyZWI2NWFmZjI0ZWVmZTc4Yzc0NjI4Y0oxCgdjcmV3X2lkEiYKJGIw
+      NDQ2OTk0LWM3MzEtNDgxNC1iNDRmLTgwZTM2ZjQ2ZWU2N0ouCgh0YXNrX2tleRIiCiAxYjE1ZWYy
+      MzkxNWIyNzU1ZTg5YTBlYzNiMjZhMTNkMkoxCgd0YXNrX2lkEiYKJDVlMjFiMTk0LTMxOTYtNDQw
+      YS04N2UwLTFhMjhiZGY1MTBlM3oCGAGFAQABAAASpAcKEOZUZG2c1vI5V6bNLpPk3ygSCIKZQpuE
+      HMQfKgxDcmV3IENyZWF0ZWQwATlwnAC4XecjGEGQMQq4XecjGEobCg5jcmV3YWlfdmVyc2lvbhIJ
+      CgcwLjEwMC4xShoKDnB5dGhvbl92ZXJzaW9uEggKBjMuMTIuOEouCghjcmV3X2tleRIiCiBlNTgw
+      NzAxZDUyZWI2NWFmZjI0ZWVmZTc4Yzc0NjI4Y0oxCgdjcmV3X2lkEiYKJGM2ZGQ0OTYwLTU3ZTMt
+      NGQ5Mi1iZTQzLTg3OTQ0N2NmZjJjNEocCgxjcmV3X3Byb2Nlc3MSDAoKc2VxdWVudGlhbEoRCgtj
+      cmV3X21lbW9yeRICEABKGgoUY3Jld19udW1iZXJfb2ZfdGFza3MSAhgBShsKFWNyZXdfbnVtYmVy
+      X29mX2FnZW50cxICGAFK0QIKC2NyZXdfYWdlbnRzEsECCr4CW3sia2V5IjogImFkMTUzMTYxYzVj
+      NWE4NTZhYTBkMDZiMjQ5YzRjNjRhIiwgImlkIjogImFkOTk4OWUxLTQ2OWEtNGJkMS04NGY0LWVl
+      ZTY2YWEwYjI5NyIsICJyb2xlIjogImJhc2VfYWdlbnQiLCAidmVyYm9zZT8iOiBmYWxzZSwgIm1h
+      eF9pdGVyIjogMjUsICJtYXhfcnBtIjogbnVsbCwgImZ1bmN0aW9uX2NhbGxpbmdfbGxtIjogIiIs
+      ICJsbG0iOiAiZ3B0LTRvLW1pbmkiLCAiZGVsZWdhdGlvbl9lbmFibGVkPyI6IGZhbHNlLCAiYWxs
+      b3dfY29kZV9leGVjdXRpb24/IjogZmFsc2UsICJtYXhfcmV0cnlfbGltaXQiOiAyLCAidG9vbHNf
+      bmFtZXMiOiBbXX1dSv8BCgpjcmV3X3Rhc2tzEvABCu0BW3sia2V5IjogIjFiMTVlZjIzOTE1YjI3
+      NTVlODlhMGVjM2IyNmExM2QyIiwgImlkIjogIjVlMjFiMTk0LTMxOTYtNDQwYS04N2UwLTFhMjhi
+      ZGY1MTBlMyIsICJhc3luY19leGVjdXRpb24/IjogZmFsc2UsICJodW1hbl9pbnB1dD8iOiBmYWxz
+      ZSwgImFnZW50X3JvbGUiOiAiYmFzZV9hZ2VudCIsICJhZ2VudF9rZXkiOiAiYWQxNTMxNjFjNWM1
+      YTg1NmFhMGQwNmIyNDljNGM2NGEiLCAidG9vbHNfbmFtZXMiOiBbXX1degIYAYUBAAEAABKOAgoQ
+      vhlU4CgyTyrgPRf0wlb8eRIIqtS4lWPuJuYqDFRhc2sgQ3JlYXRlZDABOSA9Gbhd5yMYQWiuGbhd
+      5yMYSi4KCGNyZXdfa2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhjNzQ2MjhjSjEKB2Ny
+      ZXdfaWQSJgokYzZkZDQ5NjAtNTdlMy00ZDkyLWJlNDMtODc5NDQ3Y2ZmMmM0Si4KCHRhc2tfa2V5
+      EiIKIDFiMTVlZjIzOTE1YjI3NTVlODlhMGVjM2IyNmExM2QySjEKB3Rhc2tfaWQSJgokNWUyMWIx
+      OTQtMzE5Ni00NDBhLTg3ZTAtMWEyOGJkZjUxMGUzegIYAYUBAAEAABKOAgoQr7izSc/LzkAmDVE4
+      TCRtVxIIlEdWL3gr4vAqDFRhc2sgQ3JlYXRlZDABOajMq7hd5yMYQUCErLhd5yMYSi4KCGNyZXdf
+      a2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhjNzQ2MjhjSjEKB2NyZXdfaWQSJgokYzZk
+      ZDQ5NjAtNTdlMy00ZDkyLWJlNDMtODc5NDQ3Y2ZmMmM0Si4KCHRhc2tfa2V5EiIKIDFiMTVlZjIz
+      OTE1YjI3NTVlODlhMGVjM2IyNmExM2QySjEKB3Rhc2tfaWQSJgokYmNhMmRkYmMtZmM4MC00ZTM4
+      LWE2ZTAtNTU0MmM2OTIzYTE5egIYAYUBAAEAABJpChAW++bDmEo222QymLgbmnOnEggC9Fj1KYqp
+      iCoQVG9vbCBVc2FnZSBFcnJvcjABOQja5wRe5yMYQdjm+wRe5yMYShsKDmNyZXdhaV92ZXJzaW9u
+      EgkKBzAuMTAwLjF6AhgBhQEAAQAAEmkKEOeYSHtVxHT42vgh6qJWipASCG4YjIxTPsQrKhBUb29s
+      IFVzYWdlIEVycm9yMAE58JKtL17nIxhBeEy8L17nIxhKGwoOY3Jld2FpX3ZlcnNpb24SCQoHMC4x
+      MDAuMXoCGAGFAQABAAASaQoQd2xGQ0N0fRjEAZb3m591vhII9yEmZE84dukqEFRvb2wgVXNhZ2Ug
+      RXJyb3IwATkIXzBaXucjGEHgTEJaXucjGEobCg5jcmV3YWlfdmVyc2lvbhIJCgcwLjEwMC4xegIY
+      AYUBAAEAABJpChCuKrUoVTHcaqSma3csnzpOEgjdvJJFFn7JYioQVG9vbCBVc2FnZSBFcnJvcjAB
+      OVjIbJFe5yMYQTgIf5Fe5yMYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTAwLjF6AhgBhQEAAQAA
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '4389'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Thu, 13 Feb 2025 23:11:15 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '5539'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0ceQN5mVVSLXPfYhoXL7kYKYC7js\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488274,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
+      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
+      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1193,\n    \"completion_tokens\":
+      22,\n    \"total_tokens\": 1215,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-RAY:
+      - 91187f13fb279e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:15 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '615'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998695'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_732a192814669f7e2fce3f349a4b1b8d
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
+      ONLY have access to the following tools, and should NEVER make up tools that
+      are not listed here:\n\nTool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error\n\nIMPORTANT: Use the following format in your
+      response:\n\n```\nThought: you should always think about what to do\nAction:
+      the action to take, only one name of [Say Hi], just the name, exactly as it''s
+      written.\nAction Input: the input to the action, just a simple JSON object,
+      enclosed in curly braces, using \" to wrap keys and values.\nObservation: the
+      result of the action\n```\n\nOnce all necessary information is gathered, return
+      the following format:\n\n```\nThought: I now know the final answer\nFinal Answer:
+      the final answer to the original input question\n```"}, {"role": "user", "content":
+      "\nCurrent Task: Just say hi\n\nThis is the expected criteria for your final
+      answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}, {"role":
+      "assistant", "content": "```\nThought: you should always think about what to
+      do\nAction: Say Hi\nAction Input: {}\nObservation: \nI encountered an error
+      while trying to use the tool. This was the error: Simulated tool error.\n Tool
+      Say Hi accepts these inputs: Tool Name: Say Hi\nTool Arguments: {}\nTool Description:
+      This tool always raises an error.\nMoving on then. I MUST either use a tool
+      (use one at time) OR give my best final answer not both at the same time. When
+      responding, I must use the following format:\n\n```\nThought: you should always
+      think about what to do\nAction: the action to take, should be one of [Say Hi]\nAction
+      Input: the input to the action, dictionary enclosed in curly braces\nObservation:
+      the result of the action\n```\nThis Thought/Action/Action Input/Result can repeat
+      N times. Once I know the final answer, I must return the following format:\n\n```\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described\n\n```"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '6598'
+      content-type:
+      - application/json
+      cookie:
+      - _cfuvid=eFYG1.FIv9a4z_Uqb0svvrE60EPh73_2qTAnZyFX9lA-1739488272138-0.0.1.1-604800000;
+        __cf_bm=XgZ48Kh_Np19KQZFMcdhitEO1hYoQQZmGISmqGQyAew-1739488272-1.0.1.1-71ljflXRwwgMFHqNdbWAIPe5U0Svfer60TB92nqmufsvx_NnPNO.ShrjIwdWBpJ6cQIh6szfk6FrIoioemqHgg
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-B0ceRVoFzoUPmiO0sOZVNpLbXD41f\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1739488275,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
+      Answer: hi\\n```\",\n        \"refusal\": null\n      },\n      \"logprobs\":
+      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      1426,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 1443,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 1024,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 91187f1b3b1e9e74-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 13 Feb 2025 23:11:16 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '618'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149998444'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_b12d08242d920f524028f18e6eb2ef1a
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

@@ -15,6 +15,8 @@ class TestAuthenticationCommand:
     def setup_method(self):
         self.auth_command = AuthenticationCommand()
 
+    # TODO: these expectations are reading from the actual settings, we should mock them.
+    # E.g. if you change the client_id locally, this test will fail.
     @pytest.mark.parametrize(
         "user_provider,expected_urls",
         [
@@ -53,7 +55,7 @@ class TestAuthenticationCommand:
         self.auth_command.login()
 
         mock_console_print.assert_called_once_with(
-            "Signing in to CrewAI AMP...\n", style="bold blue"
+            "Signing in to CrewAI AOP...\n", style="bold blue"
         )
         mock_get_device.assert_called_once()
         mock_display.assert_called_once_with(
@@ -181,7 +183,7 @@ class TestAuthenticationCommand:
             ),
             call("Success!\n", style="bold green"),
             call(
-                "You are authenticated to the tool repository as [bold cyan]'Test Org'[/bold cyan] (test-uuid-123)",
+                "You are now authenticated to the tool repository for organization [bold cyan]'Test Org'[/bold cyan]",
                 style="green",
             ),
         ]
@@ -234,6 +236,7 @@ class TestAuthenticationCommand:
             "https://example.com/device"
         )
         self.auth_command.oauth2_provider.get_audience.return_value = "test_audience"
+        self.auth_command.oauth2_provider.get_oauth_scopes.return_value = ["openid", "profile", "email"]
 
         result = self.auth_command._get_device_code()
 
@@ -241,7 +244,7 @@ class TestAuthenticationCommand:
             url="https://example.com/device",
             data={
                 "client_id": "test_client",
-                "scope": "openid",
+                "scope": "openid profile email",
                 "audience": "test_audience",
             },
             timeout=20,
@@ -298,7 +301,7 @@ class TestAuthenticationCommand:
             expected_calls = [
                 call("\nWaiting for authentication... ", style="bold blue", end=""),
                 call("Success!", style="bold green"),
-                call("\n[bold green]Welcome to CrewAI AMP![/bold green]\n"),
+                call("\n[bold green]Welcome to CrewAI AOP![/bold green]\n"),
             ]
             mock_console_print.assert_has_calls(expected_calls)
 

@@ -1,0 +1,102 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Research Assistant. You are a helpful research assistant.\nYour personal goal is: Find information about the population of Tokyo\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Find information about the population of Tokyo\n\nThis is the expected criteria for your final answer: The population of Tokyo is 10 million\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '927'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CQLewKydvz9iZlf298xCelWUOCyAJ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1760395822,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: The population of Tokyo, including both its metropolitan area and the 23 special wards that make up the central city, is significantly larger than 10 million. As of the most recent data, Tokyo is one of the most populous cities in the world, with the Greater Tokyo Area having a population of over 37 million people, making it the most populous metropolitan area in the world. The 23 special wards of Tokyo, which are the equivalent of a city, have a combined population that exceeds 9 million people.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\": 116,\n    \"total_tokens\": 289,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_eb3c3cb84d\"\n}\n"
+    headers:
+      CF-RAY:
+      - 98e26542adbbce40-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 13 Oct 2025 22:50:26 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=ZOY3aTF4ZQGyq1Ai5bME5tI2L4FUKjdaM76hKUktVgg-1760395826-1.0.1.1-6MNmhofBsqJxHCGxkDDtTbJUi9JDiJwdeBOsfQEvrMTovTmf8eAYxjskKbAxY0ZicvPhqx2bOD64cOAPUfREUiFdzz1oh3uKuy4_AL9Vma0; path=/; expires=Mon, 13-Oct-25 23:20:26 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=ETABAP9icJoaIxhFazEUuSnHhwqlBentj3YJUS501.w-1760395826352-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '3572'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3756'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-project-requests:
+      - '10000'
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-project-requests:
+      - '9999'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999798'
+      x-ratelimit-reset-project-requests:
+      - 6ms
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_3676b4edd10244929526ceb64a623a88
+    status:
+      code: 200
+      message: OK
+version: 1

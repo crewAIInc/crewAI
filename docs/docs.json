@@ -253,7 +253,8 @@
                     "pages": [
                       "en/tools/integration/overview",
                       "en/tools/integration/bedrockinvokeagenttool",
-                      "en/tools/integration/crewaiautomationtool"
+                      "en/tools/integration/crewaiautomationtool",
+                      "en/tools/integration/mergeagenthandlertool"
                     ]
                   },
                   {
@@ -307,13 +308,17 @@
                   "en/learn/hierarchical-process",
                   "en/learn/human-input-on-execution",
                   "en/learn/human-in-the-loop",
+                  "en/learn/human-feedback-in-flows",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
                   "en/learn/multimodal-agents",
                   "en/learn/replay-tasks-from-latest-crew-kickoff",
                   "en/learn/sequential-process",
-                  "en/learn/using-annotations"
+                  "en/learn/using-annotations",
+                  "en/learn/execution-hooks",
+                  "en/learn/llm-hooks",
+                  "en/learn/tool-hooks"
                 ]
               },
               {
@@ -323,7 +328,7 @@
             ]
           },
           {
-            "tab": "AMP",
+            "tab": "AOP",
             "icon": "briefcase",
             "groups": [
               {
@@ -731,13 +736,17 @@
                   "pt-BR/learn/hierarchical-process",
                   "pt-BR/learn/human-input-on-execution",
                   "pt-BR/learn/human-in-the-loop",
+                  "pt-BR/learn/human-feedback-in-flows",
                   "pt-BR/learn/kickoff-async",
                   "pt-BR/learn/kickoff-for-each",
                   "pt-BR/learn/llm-connections",
                   "pt-BR/learn/multimodal-agents",
                   "pt-BR/learn/replay-tasks-from-latest-crew-kickoff",
                   "pt-BR/learn/sequential-process",
-                  "pt-BR/learn/using-annotations"
+                  "pt-BR/learn/using-annotations",
+                  "pt-BR/learn/execution-hooks",
+                  "pt-BR/learn/llm-hooks",
+                  "pt-BR/learn/tool-hooks"
                 ]
               },
               {
@@ -747,7 +756,7 @@
             ]
           },
           {
-            "tab": "AMP",
+            "tab": "AOP",
             "icon": "briefcase",
             "groups": [
               {
@@ -1164,13 +1173,17 @@
                   "ko/learn/hierarchical-process",
                   "ko/learn/human-input-on-execution",
                   "ko/learn/human-in-the-loop",
+                  "ko/learn/human-feedback-in-flows",
                   "ko/learn/kickoff-async",
                   "ko/learn/kickoff-for-each",
                   "ko/learn/llm-connections",
                   "ko/learn/multimodal-agents",
                   "ko/learn/replay-tasks-from-latest-crew-kickoff",
                   "ko/learn/sequential-process",
-                  "ko/learn/using-annotations"
+                  "ko/learn/using-annotations",
+                  "ko/learn/execution-hooks",
+                  "ko/learn/llm-hooks",
+                  "ko/learn/tool-hooks"
                 ]
               },
               {

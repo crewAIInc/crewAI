@@ -1,0 +1,130 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are researcher. You''re
+      an expert researcher, specialized in technology\nYour personal goal is: make
+      the best research and analysis on content about AI and AI agents\nTo give my
+      best complete final answer to the task use the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: share your take on AI Agents\n\nThis is the expect criteria for your final
+      answer: Your best answer to your coworker asking you this, accounting for the
+      context shared.\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is the context you''re working with:\nI heard you hate
+      them\n\nBegin! This is VERY important to you, use the tools available and give
+      your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1027'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=rb61BZH2ejzD5YPmLaEJqI7km71QqyNJGTVdNxBq6qk-1727213194-1.0.1.1-pJ49onmgX9IugEMuYQMralzD7oj_6W.CHbSu4Su1z3NyjTGYg.rhgJZWng8feFYah._oSnoYlkTjpK1Wd2C9FA;
+        _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.47.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.47.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.7
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AB7WbKt7If02iTLuH5cJJjeYo9uDi\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1727213897,\n  \"model\": \"gpt-4o-2024-05-13\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+      Answer: I understand why you might think I dislike AI agents, but my perspective
+      is more nuanced. AI agents, in essence, are incredibly versatile tools designed
+      to perform specific tasks autonomously or semi-autonomously. They harness various
+      artificial intelligence techniques, such as machine learning, natural language
+      processing, and computer vision, to interpret data, understand tasks, and execute
+      them efficiently. \\n\\nFrom a technological standpoint, AI agents have revolutionized
+      numerous industries. In customer service, for instance, AI agents like chatbots
+      and virtual assistants handle customer inquiries 24/7, providing quick and efficient
+      solutions. In healthcare, AI agents can assist in diagnosing diseases, managing
+      patient data, and even predicting outbreaks. The automation capabilities of
+      AI agents also enhance productivity in areas such as logistics, finance, and
+      cybersecurity by identifying patterns and anomalies at speeds far beyond human
+      capabilities.\\n\\nHowever, it's important to acknowledge the potential downsides
+      and challenges associated with AI agents. Ethical considerations are paramount.
+      Issues such as data privacy, security, and biases in AI algorithms need to be
+      carefully managed. There is also the human aspect to consider\u2014over-reliance
+      on AI agents might lead to job displacement in certain sectors, and ensuring
+      a fair transition for affected workers is crucial.\\n\\nMy concerns generally
+      stem from these ethical and societal implications rather than from the technology
+      itself. I advocate for responsible AI development, which includes transparency,
+      fairness, and accountability. By addressing these concerns, we can harness the
+      full potential of AI agents while mitigating the associated risks.\\n\\nSo,
+      to clarify, I don't hate AI agents; I recognize their immense potential and
+      the significant benefits they bring to various fields. However, I am equally
+      aware of the challenges they present and advocate for a balanced approach to
+      their development and deployment.\",\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\": 359,\n
+      \   \"total_tokens\": 559,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    headers:
+      CF-Cache-Status:
+      - DYNAMIC
+      CF-RAY:
+      - 8c85ebaa5c061cf3-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 24 Sep 2024 21:38:22 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4928'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '30000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '29999755'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_761796305026b5adfbb5a6237f14e32a
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1

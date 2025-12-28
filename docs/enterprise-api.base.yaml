@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: CrewAI AMP API
+  title: CrewAI AOP API
   description: |
-    REST API for interacting with your deployed CrewAI crews on CrewAI AMP.
+    REST API for interacting with your deployed CrewAI crews on CrewAI AOP.
 
     ## Getting Started
 
-    1. **Find your crew URL**: Get your unique crew URL from the CrewAI AMP dashboard
+    1. **Find your crew URL**: Get your unique crew URL from the CrewAI AOP dashboard
     2. **Copy examples**: Use the code examples from each endpoint page as templates
     3. **Replace placeholders**: Update URLs and tokens with your actual values
     4. **Test with your tools**: Use cURL, Postman, or your preferred API client
@@ -18,7 +18,7 @@ info:
     - **Bearer Token**: Organization-level token for full crew operations
     - **User Bearer Token**: User-scoped token for individual access with limited permissions
 
-    You can find your bearer tokens in the Status tab of your crew's detail page in the CrewAI AMP dashboard.
+    You can find your bearer tokens in the Status tab of your crew's detail page in the CrewAI AOP dashboard.
 
     ## Reference Documentation
 
@@ -35,7 +35,7 @@ info:
 
     1. **Discover inputs** using `GET /inputs`
     2. **Start execution** using `POST /kickoff`
-    3. **Monitor progress** using `GET /status/{kickoff_id}`
+    3. **Monitor progress** using `GET /{kickoff_id}/status`
   version: 1.0.0
   contact:
     name: CrewAI Support
@@ -43,7 +43,7 @@ info:
     url: https://crewai.com
 servers:
   - url: https://your-actual-crew-name.crewai.com
-    description: Replace with your actual deployed crew URL from the CrewAI AMP dashboard
+    description: Replace with your actual deployed crew URL from the CrewAI AOP dashboard
   - url: https://my-travel-crew.crewai.com
     description: Example travel planning crew (replace with your URL)
   - url: https://content-creation-crew.crewai.com
@@ -63,7 +63,7 @@ paths:
         Use this endpoint to discover what inputs you need to provide when starting a crew execution.
       operationId: getRequiredInputs
       responses:
-        '200':
+        "200":
           description: Successfully retrieved required inputs
           content:
             application/json:
@@ -84,13 +84,21 @@ paths:
                 outreach_crew:
                   summary: Outreach crew inputs
                   value:
-                    inputs: ["name", "title", "company", "industry", "our_product", "linkedin_url"]
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-        '500':
-          $ref: '#/components/responses/ServerError'
+                    inputs:
+                      [
+                        "name",
+                        "title",
+                        "company",
+                        "industry",
+                        "our_product",
+                        "linkedin_url",
+                      ]
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          $ref: "#/components/responses/NotFoundError"
+        "500":
+          $ref: "#/components/responses/ServerError"
 
   /kickoff:
     post:
@@ -170,7 +178,7 @@ paths:
                   taskWebhookUrl: "https://api.example.com/webhooks/task"
                   crewWebhookUrl: "https://api.example.com/webhooks/crew"
       responses:
-        '200':
+        "200":
           description: Crew execution started successfully
           content:
             application/json:
@@ -182,24 +190,24 @@ paths:
                     format: uuid
                     description: Unique identifier for tracking this execution
                     example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
-        '400':
+        "400":
           description: Invalid request body or missing required inputs
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '422':
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "422":
           description: Validation error - ensure all required inputs are provided
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-        '500':
-          $ref: '#/components/responses/ServerError'
+                $ref: "#/components/schemas/ValidationError"
+        "500":
+          $ref: "#/components/responses/ServerError"
 
-  /status/{kickoff_id}:
+  /{kickoff_id}/status:
     get:
       summary: Get Execution Status
       description: |
@@ -222,15 +230,15 @@ paths:
             format: uuid
             example: "abcd1234-5678-90ef-ghij-klmnopqrstuv"
       responses:
-        '200':
+        "200":
           description: Successfully retrieved execution status
           content:
             application/json:
               schema:
                 oneOf:
-                  - $ref: '#/components/schemas/ExecutionRunning'
-                  - $ref: '#/components/schemas/ExecutionCompleted'
-                  - $ref: '#/components/schemas/ExecutionError'
+                  - $ref: "#/components/schemas/ExecutionRunning"
+                  - $ref: "#/components/schemas/ExecutionCompleted"
+                  - $ref: "#/components/schemas/ExecutionError"
               examples:
                 running:
                   summary: Execution in progress
@@ -262,19 +270,19 @@ paths:
                     status: "error"
                     error: "Task execution failed: Invalid API key for external service"
                     execution_time: 23.1
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
           description: Kickoff ID not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Execution not found"
                 message: "No execution found with ID: abcd1234-5678-90ef-ghij-klmnopqrstuv"
-        '500':
-          $ref: '#/components/responses/ServerError'
+        "500":
+          $ref: "#/components/responses/ServerError"
 
   /resume:
     post:
@@ -354,7 +362,7 @@ paths:
                   taskWebhookUrl: "https://api.example.com/webhooks/task"
                   crewWebhookUrl: "https://api.example.com/webhooks/crew"
       responses:
-        '200':
+        "200":
           description: Execution resumed successfully
           content:
             application/json:
@@ -381,28 +389,28 @@ paths:
                   value:
                     status: "retrying"
                     message: "Task will be retried with your feedback"
-        '400':
+        "400":
           description: Invalid request body or execution not in pending state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Invalid Request"
                 message: "Execution is not in pending human input state"
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '404':
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
           description: Execution ID or Task ID not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Not Found"
                 message: "Execution ID not found"
-        '500':
-          $ref: '#/components/responses/ServerError'
+        "500":
+          $ref: "#/components/responses/ServerError"
 
 components:
   securitySchemes:
@@ -412,7 +420,7 @@ components:
       description: |
         **📋 Reference Documentation** - *The tokens shown in examples are placeholders for reference only.*
 
-        Use your actual Bearer Token or User Bearer Token from the CrewAI AMP dashboard for real API calls.
+        Use your actual Bearer Token or User Bearer Token from the CrewAI AOP dashboard for real API calls.
 
         **Bearer Token**: Organization-level access for full crew operations
         **User Bearer Token**: User-scoped access with limited permissions
@@ -458,7 +466,7 @@ components:
             tasks:
               type: array
               items:
-                $ref: '#/components/schemas/TaskResult'
+                $ref: "#/components/schemas/TaskResult"
         execution_time:
           type: number
           description: Total execution time in seconds
@@ -536,7 +544,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "Unauthorized"
             message: "Invalid or missing bearer token"
@@ -546,7 +554,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "Not Found"
             message: "The requested resource was not found"
@@ -556,7 +564,7 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: "#/components/schemas/Error"
           example:
             error: "Internal Server Error"
             message: "An unexpected error occurred"

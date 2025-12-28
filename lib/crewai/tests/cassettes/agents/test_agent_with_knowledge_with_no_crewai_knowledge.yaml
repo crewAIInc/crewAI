@@ -1,0 +1,135 @@
+interactions:
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "Your goal is to rewrite the user query so that it is optimized for retrieval
+      from a vector database. Consider how the query will be used to find relevant
+      documents, and aim to make it more specific and context-aware. \n\n Do not include
+      any other text than the rewritten query, especially any preamble or postamble
+      and only add expected output format if its relevant to the rewritten query.
+      \n\n Focus on the key words of the intended task and to retrieve the most relevant
+      information. \n\n There will be some extra context provided that might need
+      to be removed such as expected_output formats structured_outputs and other instructions."},
+      {"role": "user", "content": "The original query is: What is Vidit''s favorite
+      color?\n\nThis is the expected criteria for your final answer: Vidit''s favorclearite
+      color.\nyou MUST return the actual complete content as the final answer, not
+      a summary.."}], "stream": false, "stop": ["\nObservation:"], "usage": {"include":
+      true}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1045'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: '{"error":{"message":"No cookie auth credentials found","code":401}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:34:22 GMT
+      Permissions-Policy:
+      - PERMISSIONS-POLICY-XXX
+      Referrer-Policy:
+      - REFERRER-POLICY-XXX
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 401
+      message: Unauthorized
+- request:
+    body: '{"model": "openai/gpt-4o-mini", "messages": [{"role": "system", "content":
+      "You are Information Agent. You have access to specific knowledge sources.\nYour
+      personal goal is: Provide information based on knowledge sources\nTo give my
+      best complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent
+      Task: What is Vidit''s favorite color?\n\nThis is the expected criteria for
+      your final answer: Vidit''s favorclearite color.\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nBegin! This is VERY
+      important to you, use the tools available and give your best Final Answer, your
+      job depends on it!\n\nThought:"}], "stream": false, "stop": ["\nObservation:"],
+      "usage": {"include": true}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '979'
+      content-type:
+      - application/json
+      host:
+      - openrouter.ai
+      http-referer:
+      - https://litellm.ai
+      x-title:
+      - liteLLM
+    method: POST
+    uri: https://openrouter.ai/api/v1/chat/completions
+  response:
+    body:
+      string: '{"error":{"message":"No cookie auth credentials found","code":401}}'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:34:22 GMT
+      Permissions-Policy:
+      - PERMISSIONS-POLICY-XXX
+      Referrer-Policy:
+      - REFERRER-POLICY-XXX
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

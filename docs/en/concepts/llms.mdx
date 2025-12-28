@@ -283,11 +283,54 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
 
+    **Extended Thinking (Claude Sonnet 4 and Beyond):**
+
+    CrewAI supports Anthropic's Extended Thinking feature, which allows Claude to think through problems in a more human-like way before responding. This is particularly useful for complex reasoning, analysis, and problem-solving tasks.
+
+    ```python Code
+    from crewai import LLM
+
+    # Enable extended thinking with default settings
+    llm = LLM(
+        model="anthropic/claude-sonnet-4",
+        thinking={"type": "enabled"},
+        max_tokens=10000
+    )
+
+    # Configure thinking with budget control
+    llm = LLM(
+        model="anthropic/claude-sonnet-4",
+        thinking={
+            "type": "enabled",
+            "budget_tokens": 5000  # Limit thinking tokens
+        },
+        max_tokens=10000
+    )
+    ```
+
+    **Thinking Configuration Options:**
+    - `type`: Set to `"enabled"` to activate extended thinking mode
+    - `budget_tokens` (optional): Maximum tokens to use for thinking (helps control costs)
+
+    **Models Supporting Extended Thinking:**
+    - `claude-sonnet-4` and newer models
+    - `claude-3-7-sonnet` (with extended thinking capabilities)
+
+    **When to Use Extended Thinking:**
+    - Complex reasoning and multi-step problem solving
+    - Mathematical calculations and proofs
+    - Code analysis and debugging
+    - Strategic planning and decision making
+    - Research and analytical tasks
+
+    **Note:** Extended thinking consumes additional tokens but can significantly improve response quality for complex tasks.
+
     **Supported Environment Variables:**
     - `ANTHROPIC_API_KEY`: Your Anthropic API key (required)
 
     **Features:**
     - Native tool use support for Claude 3+ models
+    - Extended Thinking support for Claude Sonnet 4+
     - Streaming support for real-time responses
     - Automatic system message handling
     - Stop sequences for controlled output
@@ -305,6 +348,7 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     | Model                        | Context Window | Best For                                      |
     |------------------------------|----------------|-----------------------------------------------|
+    | claude-sonnet-4              | 200,000 tokens | Latest with extended thinking capabilities    |
     | claude-3-7-sonnet            | 200,000 tokens | Advanced reasoning and agentic tasks          |
     | claude-3-5-sonnet-20241022   | 200,000 tokens | Latest Sonnet with best performance           |
     | claude-3-5-haiku             | 200,000 tokens | Fast, compact model for quick responses       |
@@ -1035,7 +1079,7 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
     ```
 
     <Tip>
-      [Click here](https://docs.crewai.com/concepts/event-listener#event-listeners) for more details
+      [Click here](/en/concepts/event-listener#event-listeners) for more details
     </Tip>
   </Tab>
 
@@ -1086,6 +1130,50 @@ CrewAI supports streaming responses from LLMs, allowing your application to rece
       - Auditing which agents are making what types of LLM calls
       - Performance monitoring of specific tasks
     </Info>
+  </Tab>
+</Tabs>
+
+## Async LLM Calls
+
+CrewAI supports asynchronous LLM calls for improved performance and concurrency in your AI workflows. Async calls allow you to run multiple LLM requests concurrently without blocking, making them ideal for high-throughput applications and parallel agent operations.
+
+<Tabs>
+  <Tab title="Basic Usage">
+    Use the `acall` method for asynchronous LLM requests:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def main():
+        llm = LLM(model="openai/gpt-4o")
+
+        # Single async call
+        response = await llm.acall("What is the capital of France?")
+        print(response)
+
+    asyncio.run(main())
+    ```
+
+    The `acall` method supports all the same parameters as the synchronous `call` method, including messages, tools, and callbacks.
+  </Tab>
+
+  <Tab title="With Streaming">
+    Combine async calls with streaming for real-time concurrent responses:
+
+    ```python
+    import asyncio
+    from crewai import LLM
+
+    async def stream_async():
+        llm = LLM(model="openai/gpt-4o", stream=True)
+
+        response = await llm.acall("Write a short story about AI")
+
+        print(response)
+
+    asyncio.run(stream_async())
+    ```
   </Tab>
 </Tabs>
 

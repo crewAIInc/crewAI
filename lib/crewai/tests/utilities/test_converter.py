@@ -16,16 +16,8 @@ from crewai.utilities.converter import (
     handle_partial_json,
     validate_model,
 )
-from crewai.utilities.pydantic_schema_parser import PydanticSchemaParser
 from pydantic import BaseModel
 import pytest
-
-
-@pytest.fixture(scope="module")
-def vcr_config(request: pytest.FixtureRequest) -> dict[str, str]:
-    return {
-        "cassette_library_dir": os.path.join(os.path.dirname(__file__), "cassettes"),
-    }
 
 
 # Sample Pydantic models for testing
@@ -352,7 +344,7 @@ def test_generate_model_description_dict_field() -> None:
     assert description["json_schema"]["strict"] is True
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_convert_with_instructions() -> None:
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: Alice, Age: 30"
@@ -374,7 +366,7 @@ def test_convert_with_instructions() -> None:
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_converter_with_llama3_2_model() -> None:
     llm = LLM(model="openrouter/meta-llama/llama-3.2-3b-instruct")
     sample_text = "Name: Alice Llama, Age: 30"
@@ -410,7 +402,7 @@ def test_converter_with_llama3_1_model() -> None:
     assert output.age == 30
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr()
 def test_converter_with_nested_model() -> None:
     llm = LLM(model="gpt-4o-mini")
     sample_text = "Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"

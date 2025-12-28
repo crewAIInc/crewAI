@@ -194,8 +194,6 @@ interactions:
       - 8f9721053d1eb9f1-SEA
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

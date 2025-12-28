@@ -38,6 +38,8 @@ from crewai.events.types.agent_events import (
 )
 from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
+from crewai.hooks.llm_hooks import get_after_llm_call_hooks, get_before_llm_call_hooks
+from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -155,6 +157,12 @@ class LiteAgent(FlowTrackable, BaseModel):
     _guardrail: GuardrailCallable | None = PrivateAttr(default=None)
     _guardrail_retry_count: int = PrivateAttr(default=0)
     _callbacks: list[TokenCalcHandler] = PrivateAttr(default_factory=list)
+    _before_llm_call_hooks: list[BeforeLLMCallHookType] = PrivateAttr(
+        default_factory=get_before_llm_call_hooks
+    )
+    _after_llm_call_hooks: list[AfterLLMCallHookType] = PrivateAttr(
+        default_factory=get_after_llm_call_hooks
+    )
 
     @model_validator(mode="after")
     def setup_llm(self) -> Self:
@@ -245,6 +253,26 @@ class LiteAgent(FlowTrackable, BaseModel):
     def _original_role(self) -> str:
         """Return the original role for compatibility with tool interfaces."""
         return self.role
+
+    @property
+    def before_llm_call_hooks(self) -> list[BeforeLLMCallHookType]:
+        """Get the before_llm_call hooks for this agent."""
+        return self._before_llm_call_hooks
+
+    @property
+    def after_llm_call_hooks(self) -> list[AfterLLMCallHookType]:
+        """Get the after_llm_call hooks for this agent."""
+        return self._after_llm_call_hooks
+
+    @property
+    def messages(self) -> list[LLMMessage]:
+        """Get the messages list for hook context compatibility."""
+        return self._messages
+
+    @property
+    def iterations(self) -> int:
+        """Get the current iteration count for hook context compatibility."""
+        return self._iterations
 
     def kickoff(
         self,
@@ -504,7 +532,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             AgentFinish: The final result of the agent execution.
         """
         # Execute the agent loop
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
@@ -526,6 +554,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         callbacks=self._callbacks,
                         printer=self._printer,
                         from_agent=self,
+                        executor_context=self,
                     )
 
                 except Exception as e:
@@ -542,6 +571,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                             agent_key=self.key,
                             agent_role=self.role,
                             agent=self.original_agent,
+                            crew=None,
                         )
                     except Exception as e:
                         raise e

@@ -388,8 +388,8 @@ crew = Crew(
     agents=[sales_agent, tech_agent, support_agent],
     tasks=[...],
     embedder={  # Fallback embedder for agents without their own
-        "provider": "google",
-        "config": {"model": "text-embedding-004"}
+        "provider": "google-generativeai",
+        "config": {"model_name": "gemini-embedding-001"}
     }
 )
 
@@ -629,9 +629,9 @@ agent = Agent(
     backstory="Expert researcher",
     knowledge_sources=[knowledge_source],
     embedder={
-        "provider": "google",
+        "provider": "google-generativeai",
         "config": {
-            "model": "models/text-embedding-004",
+            "model_name": "gemini-embedding-001",
             "api_key": "your-google-key"
         }
     }
@@ -739,7 +739,7 @@ class KnowledgeMonitorListener(BaseEventListener):
 knowledge_monitor = KnowledgeMonitorListener()
 ```
 
-For more information on using events, see the [Event Listeners](https://docs.crewai.com/concepts/event-listener) documentation.
+For more information on using events, see the [Event Listeners](/en/concepts/event-listener) documentation.
 
 ### Custom Knowledge Sources
 

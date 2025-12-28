@@ -10,13 +10,14 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.event_bus import CrewAIEventsBus
-from crewai.events.utils.console_formatter import ConsoleFormatter
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
-from crewai.events.listeners.tracing.utils import safe_serialize_to_dict
+from crewai.events.listeners.tracing.utils import (
+    safe_serialize_to_dict,
+)
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -70,6 +71,7 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
+from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -80,6 +82,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.events.utils.console_formatter import ConsoleFormatter
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -157,6 +160,7 @@ class TraceCollectionListener(BaseEventListener):
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
+        self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
 
@@ -456,6 +460,15 @@ class TraceCollectionListener(BaseEventListener):
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
 
+    def _register_system_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
+        """Register handlers for system signal events (SIGTERM, SIGINT, etc.)."""
+
+        @on_signal
+        def handle_signal(source: Any, event: SignalEvent) -> None:
+            """Flush trace batch on system signals to prevent data loss."""
+            if self.batch_manager.is_batch_initialized():
+                self.batch_manager.finalize_batch()
+
     def _initialize_crew_batch(self, source: Any, event: Any) -> None:
         """Initialize trace batch.
 
@@ -627,3 +640,35 @@ class TraceCollectionListener(BaseEventListener):
             "event": safe_serialize_to_dict(event),
             "source": source,
         }
+
+    def _show_tracing_disabled_message(self) -> None:
+        """Show a message when tracing is disabled."""
+        from rich.console import Console
+        from rich.panel import Panel
+
+        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Crew/Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)

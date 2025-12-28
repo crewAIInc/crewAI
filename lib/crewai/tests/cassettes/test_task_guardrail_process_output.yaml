@@ -1,10 +1,6 @@
 interactions:
 - request:
-    body: '{"trace_id": "00000000-0000-0000-0000-000000000000", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T22:19:56.074812+00:00"}}'
+    body: '{"trace_id": "00000000-0000-0000-0000-000000000000", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.3.0", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-11-05T22:19:56.074812+00:00"}}'
     headers:
       Accept:
       - '*/*'
@@ -37,37 +33,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       expires:
       - '0'
       permissions-policy:
@@ -96,39 +64,9 @@ interactions:
       code: 401
       message: Unauthorized
 - request:
-    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
-      You are a expert at validating the output of a task. By providing effective
-      feedback if the output is not valid.\\nYour personal goal is: Validate the output
-      of the task\\n\\nTo give my best complete final answer to the task respond using
-      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\\n\\nI MUST use these formats, my job depends
-      on it!Ensure your final answer strictly adheres to the following OpenAPI schema:
-      {\\n  \\\"type\\\": \\\"json_schema\\\",\\n  \\\"json_schema\\\": {\\n    \\\"name\\\":
-      \\\"LLMGuardrailResult\\\",\\n    \\\"strict\\\": true,\\n    \\\"schema\\\":
-      {\\n      \\\"properties\\\": {\\n        \\\"valid\\\": {\\n          \\\"description\\\":
-      \\\"Whether the task output complies with the guardrail\\\",\\n          \\\"title\\\":
-      \\\"Valid\\\",\\n          \\\"type\\\": \\\"boolean\\\"\\n        },\\n        \\\"feedback\\\":
-      {\\n          \\\"anyOf\\\": [\\n            {\\n              \\\"type\\\":
-      \\\"string\\\"\\n            },\\n            {\\n              \\\"type\\\":
-      \\\"null\\\"\\n            }\\n          ],\\n          \\\"default\\\": null,\\n
-      \         \\\"description\\\": \\\"A feedback about the task output if it is
-      not valid\\\",\\n          \\\"title\\\": \\\"Feedback\\\"\\n        }\\n      },\\n
-      \     \\\"required\\\": [\\n        \\\"valid\\\",\\n        \\\"feedback\\\"\\n
-      \     ],\\n      \\\"title\\\": \\\"LLMGuardrailResult\\\",\\n      \\\"type\\\":
-      \\\"object\\\",\\n      \\\"additionalProperties\\\": false\\n    }\\n  }\\n}\\n\\nDo
-      not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\"},{\"role\":\"user\",\"content\":\"\\n
-      \       Ensure the following task result complies with the given guardrail.\\n\\n
-      \       Task result:\\n        \\n        Lorem Ipsum is simply dummy text of
-      the printing and typesetting industry. Lorem Ipsum has been the industry's standard
-      dummy text ever\\n        \\n\\n        Guardrail:\\n        Ensure the result
-      has less than 10 words\\n\\n        Your task:\\n        - Confirm if the Task
-      result complies with the guardrail.\\n        - If not, provide clear feedback
-      explaining what is wrong (e.g., by how much it violates the rule, or what specific
-      part fails).\\n        - Focus only on identifying issues \u2014 do not propose
-      corrections.\\n        - If the Task result complies with the guardrail, saying
-      that is valid\\n        \"}],\"model\":\"gpt-4o\"}"
+    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
+      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        \n        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry''s standard dummy text ever\n        \n\n        Guardrail:\n        Ensure
+      the result has less than 10 words\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        - Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -166,24 +104,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFPBjtowEL3zFSOfYUXowkJubaWq7aUV2kvVrKLBniQujp3akwBC/Hvl
-        wG5gu5V68WHezPObeTPHEYDQSqQgZIUs68ZMPv4oV4u1PszWX9d7++Fz59bf2u2h/r7adUGMY4Xb
-        /CLJz1V30tWNIdbOnmHpCZkia/KwmL1bJslq0QO1U2RiWdnw5N5NZtPZ/WS6nEwXl8LKaUlBpPBz
-        BABw7N8o0SraixSm4+dITSFgSSJ9SQIQ3pkYERiCDoyWxXgApbNMtlf9WLm2rDiFL2CJFLADWZHc
-        gi6AKwLGsAVPoTUMNRGHPurpd6s91WQZXAEVdtqWYChEGC0kU9g5r8JdZjP7SVs08N6GHfkUjpkF
-        yESHRqtMpFCgCTQ+BwsitUG5jfFMPL76PqpGbQPUztPtP2PotDPIUUXUV7bolUdt7qBnoT1D412n
-        FamBBzeuZZglz1pFZk/XY/JUtAGjS7Y15gpAax1jdLk36OmCnF4sMa5svNuEV6Wi0FaHKveEwdk4
-        /sCuET16GgE89da3N26Kxru64Zzdlvrv7perM58Ylm1AF8kFZMdohvh8flmYW75cEaM24Wp5hERZ
-        kRpKh03DVml3BYyuuv5bzVvc5861Lf+HfgCkpIZJ5Y0npeVtx0Oap3iL/0p7mXIvWATynZaUsyYf
-        nVBUYGvOZyLCITDVeaFtSb7x+nwrRZPLTZE8LOfzxYMYnUZ/AAAA//8DAK3pA/U0BAAA
+      string: "{\n  \"id\": \"chatcmpl-CYg96Riy2RJRxnBHvoROukymP9wvs\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381196,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I need to check if the task result meets the requirement of having less than 10 words.\\n\\nFinal Answer: {\\n  \\\"valid\\\": false,\\n  \\\"feedback\\\": \\\"The task result contains more than 10 words, violating the guardrail. The text provided contains about 21 words.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 489,\n    \"completion_tokens\": 61,\n    \"total_tokens\": 550,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_cbf1785567\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -191,11 +118,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Wed, 05-Nov-25 22:49:58 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:49:58 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -238,24 +162,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
-      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
-      {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\":
-      {\n      \"properties\": {\n        \"valid\": {\n          \"description\":
-      \"Whether the task output complies with the guardrail\",\n          \"title\":
-      \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\":
-      {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\":
-      \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\":
-      \"A feedback about the task output if it is not valid\",\n          \"title\":
-      \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\":
-      \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
-      Ensure the final output does not include any code block markers like ```json
-      or ```python."},{"role":"user","content":"{\n  \"valid\": false,\n  \"feedback\":
-      \"The task result contains more than 10 words, violating the guardrail. The
-      text provided contains about 21 words.\"\n}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
-      the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
-      feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\n  \"valid\": false,\n  \"feedback\": \"The task result contains more than 10 words, violating the guardrail. The text provided contains about 21 words.\"\n}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
@@ -268,8 +176,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED;
-        _cfuvid=REDACTED
+      - __cf_bm=REDACTED; _cfuvid=REDACTED
       host:
       - api.openai.com
       user-agent:
@@ -298,23 +205,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFNBbtswELzrFQueZcNyHFnWNbcCLRDAhzRVINDkSmJNkQS5chMY/nsh
-        ybGUNgV64WFnZzg7S54jAKYky4GJhpNonV48fK932aN+zr7t/WO6S7fpV/f09PZgn7/sMxb3DHv4
-        iYLeWUthW6eRlDUjLDxywl412abruyxJdtkAtFai7mm1o8XGLtar9Waxyhar9EpsrBIYWA4/IgCA
-        83D2Fo3EV5bDKn6vtBgCr5HltyYA5q3uK4yHoAJxQyyeQGENoRlcnwt24lrJguUV1wHjglWI8sDF
-        sWB5wfYNAvFwBI+h0wQ9lSsToLUegRpuIFnBL+tliOGkrOakTA3UINQd99JzpZcwqOArgfP2pCTK
-        SYcfbEewTkaNZcEuc6ceqy7wPijTaT0DuDGWeB/0kNHLFbncUtG2dt4ewh9UVimjQlN65MGaPoFA
-        1rEBvUQAL0P63YdAmfO2dVSSPeJw3d12M+qxad8zdH0FyRLXU32zSuNP9EqJxJUOs/0xwUWDcqJO
-        y+adVHYGRLOp/3bzmfY4uTL1/8hPgBDoCGXpPEolPk48tXnsv8O/2m4pD4ZZQH9SAktS6PtNSKx4
-        p8eXysJbIGzLSpkavfNqfK6VK8WhSrbZ/X26ZdEl+g0AAP//AwAJs8yXtwMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CYg98QlZ8NTrQ69676MpXXyCoZJT8\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381198,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The task result contains more than 10 words, violating the guardrail. The text provided contains about 21 words.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 374,\n    \"completion_tokens\": 32,\n    \"total_tokens\": 406,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n\
+        \  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_cbf1785567\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -363,39 +260,9 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
-      You are a expert at validating the output of a task. By providing effective
-      feedback if the output is not valid.\\nYour personal goal is: Validate the output
-      of the task\\n\\nTo give my best complete final answer to the task respond using
-      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
-      Answer: Your final answer must be the great and the most complete as possible,
-      it must be outcome described.\\n\\nI MUST use these formats, my job depends
-      on it!Ensure your final answer strictly adheres to the following OpenAPI schema:
-      {\\n  \\\"type\\\": \\\"json_schema\\\",\\n  \\\"json_schema\\\": {\\n    \\\"name\\\":
-      \\\"LLMGuardrailResult\\\",\\n    \\\"strict\\\": true,\\n    \\\"schema\\\":
-      {\\n      \\\"properties\\\": {\\n        \\\"valid\\\": {\\n          \\\"description\\\":
-      \\\"Whether the task output complies with the guardrail\\\",\\n          \\\"title\\\":
-      \\\"Valid\\\",\\n          \\\"type\\\": \\\"boolean\\\"\\n        },\\n        \\\"feedback\\\":
-      {\\n          \\\"anyOf\\\": [\\n            {\\n              \\\"type\\\":
-      \\\"string\\\"\\n            },\\n            {\\n              \\\"type\\\":
-      \\\"null\\\"\\n            }\\n          ],\\n          \\\"default\\\": null,\\n
-      \         \\\"description\\\": \\\"A feedback about the task output if it is
-      not valid\\\",\\n          \\\"title\\\": \\\"Feedback\\\"\\n        }\\n      },\\n
-      \     \\\"required\\\": [\\n        \\\"valid\\\",\\n        \\\"feedback\\\"\\n
-      \     ],\\n      \\\"title\\\": \\\"LLMGuardrailResult\\\",\\n      \\\"type\\\":
-      \\\"object\\\",\\n      \\\"additionalProperties\\\": false\\n    }\\n  }\\n}\\n\\nDo
-      not include the OpenAPI schema in the final output. Ensure the final output
-      does not include any code block markers like ```json or ```python.\"},{\"role\":\"user\",\"content\":\"\\n
-      \       Ensure the following task result complies with the given guardrail.\\n\\n
-      \       Task result:\\n        \\n        Lorem Ipsum is simply dummy text of
-      the printing and typesetting industry. Lorem Ipsum has been the industry's standard
-      dummy text ever\\n        \\n\\n        Guardrail:\\n        Ensure the result
-      has less than 500 words\\n\\n        Your task:\\n        - Confirm if the Task
-      result complies with the guardrail.\\n        - If not, provide clear feedback
-      explaining what is wrong (e.g., by how much it violates the rule, or what specific
-      part fails).\\n        - Focus only on identifying issues \u2014 do not propose
-      corrections.\\n        - If the Task result complies with the guardrail, saying
-      that is valid\\n        \"}],\"model\":\"gpt-4o\"}"
+    body: '{"messages":[{"role":"system","content":"You are Guardrail Agent. You are a expert at validating the output of a task. By providing effective feedback if the output is not valid.\nYour personal goal is: Validate the output of the task\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\":
+      [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\": false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"\n        Ensure the following task result complies with the given guardrail.\n\n        Task result:\n        \n        Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry''s standard dummy text ever\n        \n\n        Guardrail:\n        Ensure
+      the result has less than 500 words\n\n        Your task:\n        - Confirm if the Task result complies with the guardrail.\n        - If not, provide clear feedback explaining what is wrong (e.g., by how much it violates the rule, or what specific part fails).\n        - Focus only on identifying issues — do not propose corrections.\n        - If the Task result complies with the guardrail, saying that is valid\n        "}],"model":"gpt-4o"}'
     headers:
       accept:
       - application/json
@@ -433,23 +300,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA4ySTW/bMAyG7/4VBM/JkDif860dNmAfvQ0thqUwGIm2tcqSJsnpuiL/vZCTxunW
-        AbsYMB++FF+SjxkAKokFoGgoitbp8btv9eXV9bLqVu931/nlz99X8hN9fvhyUU9vbnCUFHb7g0V8
-        Vr0RtnWao7LmgIVnipyqTlfLfLaezmbLHrRWsk6y2sXx3I7zST4fT9bjyfIobKwSHLCA7xkAwGP/
-        TS0ayb+wgMnoOdJyCFQzFqckAPRWpwhSCCpEMhFHAxTWRDZ9118b29VNLOAjGHsPggzUasdAUKfW
-        gUy4Z78xH5QhDRf9XwGPG9yRVnKDBUTf8Qg2WDHLLYm7FDOd1vvzFz1XXSB9RGeAjLGR0sB6r7dH
-        sj+507Z23m7DH1KslFGhKT1TsCY5CdE67Ok+A7jtp9i9GAw6b1sXy2jvuH9uvn57qIfD3gaaz44w
-        2kh6iC+m+eiVeqXkSEqHsz2gINGwHKTD0qiTyp6B7Mz13928VvvgXJn6f8oPQAh2kWXpPEslXjoe
-        0jyns/5X2mnKfcMY2O+U4DIq9mkTkivq9OHiMDyEyG1ZKVOzd14dzq5ypdhW09V6sViuMNtnTwAA
-        AP//AwA2fPW9fwMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CYgBMV6fu7EvV2BqzMdJaKyLAg1WW\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381336,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: {\\\"valid\\\": true, \\\"feedback\\\": null}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 489,\n    \"completion_tokens\": 23,\n    \"total_tokens\": 512,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_cbf1785567\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -457,11 +314,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=REDACTED;
-        path=/; expires=Wed, 05-Nov-25 22:52:16 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=REDACTED;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=REDACTED; path=/; expires=Wed, 05-Nov-25 22:52:16 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=REDACTED; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:
@@ -504,22 +358,8 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
-      adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
-      {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\":
-      {\n      \"properties\": {\n        \"valid\": {\n          \"description\":
-      \"Whether the task output complies with the guardrail\",\n          \"title\":
-      \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\":
-      {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\":
-      \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\":
-      \"A feedback about the task output if it is not valid\",\n          \"title\":
-      \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\":
-      \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
-      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
-      Ensure the final output does not include any code block markers like ```json
-      or ```python."},{"role":"user","content":"{\"valid\": true, \"feedback\": null}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
-      the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
-      feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\": {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\": {\n      \"properties\": {\n        \"valid\": {\n          \"description\": \"Whether the task output complies with the guardrail\",\n          \"title\": \"Valid\",\n          \"type\": \"boolean\"\n        },\n        \"feedback\": {\n          \"anyOf\": [\n            {\n              \"type\": \"string\"\n            },\n            {\n              \"type\": \"null\"\n            }\n          ],\n          \"default\": null,\n          \"description\": \"A feedback about the task output if it is not valid\",\n          \"title\": \"Feedback\"\n        }\n      },\n      \"required\": [\n        \"valid\",\n        \"feedback\"\n      ],\n      \"title\": \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output. Ensure the final output does not include any code block markers like ```json or ```python."},{"role":"user","content":"{\"valid\": true, \"feedback\": null}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
@@ -532,8 +372,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=REDACTED;
-        _cfuvid=REDACTED
+      - __cf_bm=REDACTED; _cfuvid=REDACTED
       host:
       - api.openai.com
       user-agent:
@@ -562,22 +401,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJJBj9MwEIXv+RXWnBOUtmlacgMOe4EeKiGE6Cpy7Ulq1rGNPalAVf87
-        ctJtsrBIXHzwN+/5zXguCWOgJFQMxImT6JzOPnxt33/6vMz3xfrHwwP/uCvPu3fdl8VuX+xLSKPC
-        Hr+joGfVG2E7p5GUNSMWHjlhdF1syuVqu1itygF0VqKOstZRVthsmS+LLN9m+c1XnKwSGKBi3xLG
-        GLsMZ4xoJP6EiuXp802HIfAWoboXMQbe6ngDPAQViBuCdILCGkIzpL4c4My1kgeoyPeYHqBBlEcu
-        ng5QmV7r61zosekDj7kjmgFujCUe+x4iP97I9R5S29Z5ewx/SKFRRoVT7ZEHa2KgQNbBQK8JY4/D
-        MPoX/YHztnNUk33C4blVsRn9YBr/RN/eGFnieiZal+krdrVE4kqH2TRBcHFCOUmn0fNeKjsDyazp
-        v8O85j02rkz7P/YTEAIdoaydR6nEy4anMo9xOf9Vdh/yEBgC+rMSWJNCHz9CYsN7Pe4NhF+BsKsb
-        ZVr0zqtxeRpXi2Oz2GzX63IDyTX5DQAA//8DAMF71y1FAwAA
+      string: "{\n  \"id\": \"chatcmpl-CYgBMU20R45qGGaLN6vNAmW1NR4R6\",\n  \"object\": \"chat.completion\",\n  \"created\": 1762381336,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 347,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 356,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_cbf1785567\"\n}\n"
     headers:
       CF-RAY:
       - REDACTED-RAY
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

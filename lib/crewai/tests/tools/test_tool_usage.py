@@ -107,25 +107,20 @@ def test_tool_usage_render():
 
     rendered = tool_usage._render()
 
-    # Updated checks to match the actual output
+    # Check that the rendered output contains the expected tool information
     assert "Tool Name: Random Number Generator" in rendered
     assert "Tool Arguments:" in rendered
-    assert (
-        "'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}"
-        in rendered
-    )
-    assert (
-        "'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}"
-        in rendered
-    )
     assert (
         "Tool Description: Generates a random number within a specified range"
         in rendered
     )
-    assert (
-        "Tool Name: Random Number Generator\nTool Arguments: {'min_value': {'description': 'The minimum value of the range (inclusive)', 'type': 'int'}, 'max_value': {'description': 'The maximum value of the range (inclusive)', 'type': 'int'}}\nTool Description: Generates a random number within a specified range"
-        in rendered
-    )
+
+    # Check that the JSON schema format is used (proper JSON schema types)
+    assert '"min_value"' in rendered
+    assert '"max_value"' in rendered
+    assert '"type": "integer"' in rendered
+    assert '"description": "The minimum value of the range (inclusive)"' in rendered
+    assert '"description": "The maximum value of the range (inclusive)"' in rendered
 
 
 def test_validate_tool_input_booleans_and_none():
@@ -564,15 +559,22 @@ def test_tool_validate_input_error_event():
         patch("json_repair.repair_json", side_effect=Exception("Failed to repair")),
     ):
         received_events = []
+        condition = threading.Condition()
 
         @crewai_event_bus.on(ToolValidateInputErrorEvent)
         def event_handler(source, event):
-            received_events.append(event)
+            with condition:
+                received_events.append(event)
+                condition.notify()
 
         # Test invalid input
         invalid_input = "invalid json {[}"
         with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
+
+        with condition:
+            if not received_events:
+                condition.wait(timeout=5)
 
         # Verify event was emitted
         assert len(received_events) == 1, "Expected one event to be emitted"

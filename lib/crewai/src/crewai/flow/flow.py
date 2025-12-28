@@ -7,12 +7,13 @@ for building event-driven workflows with conditional execution and routing.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 import copy
 import inspect
 import logging
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     Generic,
@@ -26,22 +27,27 @@ from uuid import uuid4
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
 from pydantic import BaseModel, Field, ValidationError
+from rich.console import Console
+from rich.panel import Panel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import (
     TraceCollectionListener,
 )
 from crewai.events.listeners.tracing.utils import (
-    is_tracing_enabled,
-    should_auto_collect_first_time_traces,
+    has_user_declined_tracing,
+    set_tracing_enabled,
+    should_enable_tracing,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
+    FlowPausedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
@@ -66,8 +72,22 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
+
+if TYPE_CHECKING:
+    from crewai.flow.async_feedback.types import PendingFeedbackContext
+    from crewai.flow.human_feedback import HumanFeedbackResult
+    from crewai.llms.base_llm import BaseLLM
+
 from crewai.flow.visualization import build_flow_structure, render_interactive
-from crewai.utilities.printer import Printer, PrinterColor
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.streaming import (
+    TaskInfo,
+    create_async_chunk_generator,
+    create_chunk_generator,
+    create_streaming_state,
+    signal_end,
+    signal_error,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -431,6 +451,23 @@ class FlowMeta(type):
                         else:
                             router_paths[attr_name] = []
 
+                # Handle start methods that are also routers (e.g., @human_feedback with emit)
+                if (
+                    hasattr(attr_value, "__is_start_method__")
+                    and hasattr(attr_value, "__is_router__")
+                    and attr_value.__is_router__
+                ):
+                    routers.add(attr_name)
+                    # Get router paths from the decorator attribute
+                    if hasattr(attr_value, "__router_paths__") and attr_value.__router_paths__:
+                        router_paths[attr_name] = attr_value.__router_paths__
+                    else:
+                        possible_returns = get_possible_return_constants(attr_value)
+                        if possible_returns:
+                            router_paths[attr_name] = possible_returns
+                        else:
+                            router_paths[attr_name] = []
+
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
         cls._routers = routers  # type: ignore[attr-defined]
@@ -444,15 +481,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
 
-    _printer: ClassVar[Printer] = Printer()
-
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
     initial_state: type[T] | T | None = None
     name: str | None = None
-    tracing: bool | None = False
+    tracing: bool | None = None
+    stream: bool = False
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -464,13 +500,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def __init__(
         self,
         persistence: FlowPersistence | None = None,
-        tracing: bool | None = False,
+        tracing: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
 
         Args:
             persistence: Optional persistence backend for storing flow states
+            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             **kwargs: Additional state values to initialize or override
         """
         # Initialize basic instance attributes
@@ -485,16 +522,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._is_execution_resuming: bool = False
         self._event_futures: list[Future[None]] = []
 
+        # Human feedback storage
+        self.human_feedback_history: list[HumanFeedbackResult] = []
+        self.last_human_feedback: HumanFeedbackResult | None = None
+        self._pending_feedback_context: PendingFeedbackContext | None = None
+
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
-        if (
-            is_tracing_enabled()
-            or self.tracing
-            or should_auto_collect_first_time_traces()
-        ):
-            trace_listener = TraceCollectionListener()
-            trace_listener.setup_listeners(crewai_event_bus)
+        tracing_enabled = should_enable_tracing(override=self.tracing)
+        set_tracing_enabled(tracing_enabled)
+
+        trace_listener = TraceCollectionListener()
+        trace_listener.setup_listeners(crewai_event_bus)
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -517,6 +557,295 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
 
+    @classmethod
+    def from_pending(
+        cls,
+        flow_id: str,
+        persistence: FlowPersistence | None = None,
+        **kwargs: Any,
+    ) -> "Flow[Any]":
+        """Create a Flow instance from a pending feedback state.
+
+        This classmethod is used to restore a flow that was paused waiting
+        for async human feedback. It loads the persisted state and pending
+        feedback context, then returns a flow instance ready to resume.
+
+        Args:
+            flow_id: The unique identifier of the paused flow (from state.id)
+            persistence: The persistence backend where the state was saved.
+                If not provided, defaults to SQLiteFlowPersistence().
+            **kwargs: Additional keyword arguments passed to the Flow constructor
+
+        Returns:
+            A new Flow instance with restored state, ready to call resume()
+
+        Raises:
+            ValueError: If no pending feedback exists for the given flow_id
+
+        Example:
+            ```python
+            # Simple usage with default persistence:
+            flow = MyFlow.from_pending("abc-123")
+            result = flow.resume("looks good!")
+
+            # Or with custom persistence:
+            persistence = SQLiteFlowPersistence("custom.db")
+            flow = MyFlow.from_pending("abc-123", persistence)
+            result = flow.resume("looks good!")
+            ```
+        """
+        if persistence is None:
+            from crewai.flow.persistence import SQLiteFlowPersistence
+
+            persistence = SQLiteFlowPersistence()
+
+        # Load pending feedback context and state
+        loaded = persistence.load_pending_feedback(flow_id)
+        if loaded is None:
+            raise ValueError(f"No pending feedback found for flow_id: {flow_id}")
+
+        state_data, pending_context = loaded
+
+        # Create flow instance with persistence
+        instance = cls(persistence=persistence, **kwargs)
+
+        # Restore state
+        instance._initialize_state(state_data)
+
+        # Store pending context for resume
+        instance._pending_feedback_context = pending_context
+
+        # Mark that we're resuming execution
+        instance._is_execution_resuming = True
+
+        # Mark the method as completed (it ran before pausing)
+        instance._completed_methods.add(FlowMethodName(pending_context.method_name))
+
+        return instance
+
+    @property
+    def pending_feedback(self) -> "PendingFeedbackContext | None":
+        """Get the pending feedback context if this flow is waiting for feedback.
+
+        Returns:
+            The PendingFeedbackContext if the flow is paused waiting for feedback,
+            None otherwise.
+
+        Example:
+            ```python
+            flow = MyFlow.from_pending("abc-123", persistence)
+            if flow.pending_feedback:
+                print(f"Waiting for feedback on: {flow.pending_feedback.method_name}")
+            ```
+        """
+        return self._pending_feedback_context
+
+    def resume(self, feedback: str = "") -> Any:
+        """Resume flow execution, optionally with human feedback.
+
+        This method continues flow execution after a flow was paused for
+        async human feedback. It processes the feedback (including LLM-based
+        outcome collapsing if emit was specified), stores the result, and
+        triggers downstream listeners.
+
+        Note:
+            If called from within an async context (running event loop),
+            use `await flow.resume_async(feedback)` instead.
+
+        Args:
+            feedback: The human's feedback as a string. If empty, uses
+                default_outcome or the first emit option.
+
+        Returns:
+            The final output from the flow execution, or HumanFeedbackPending
+            if another feedback point is reached.
+
+        Raises:
+            ValueError: If no pending feedback context exists (flow wasn't paused)
+            RuntimeError: If called from within a running event loop (use resume_async instead)
+
+        Example:
+            ```python
+            # In a sync webhook handler:
+            def handle_feedback(flow_id: str, feedback: str):
+                flow = MyFlow.from_pending(flow_id)
+                result = flow.resume(feedback)
+                return result
+
+            # In an async handler, use resume_async instead:
+            async def handle_feedback_async(flow_id: str, feedback: str):
+                flow = MyFlow.from_pending(flow_id)
+                result = await flow.resume_async(feedback)
+                return result
+            ```
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None:
+            raise RuntimeError(
+                "resume() cannot be called from within an async context. "
+                "Use 'await flow.resume_async(feedback)' instead."
+            )
+
+        return asyncio.run(self.resume_async(feedback))
+
+    async def resume_async(self, feedback: str = "") -> Any:
+        """Async version of resume.
+
+        Resume flow execution, optionally with human feedback asynchronously.
+
+        Args:
+            feedback: The human's feedback as a string. If empty, uses
+                default_outcome or the first emit option.
+
+        Returns:
+            The final output from the flow execution, or HumanFeedbackPending
+            if another feedback point is reached.
+
+        Raises:
+            ValueError: If no pending feedback context exists
+        """
+        from crewai.flow.human_feedback import HumanFeedbackResult
+        from datetime import datetime
+
+        if self._pending_feedback_context is None:
+            raise ValueError(
+                "No pending feedback context. Use from_pending() to restore a paused flow."
+            )
+
+        context = self._pending_feedback_context
+        emit = context.emit
+        default_outcome = context.default_outcome
+        llm = context.llm
+
+        # Determine outcome
+        collapsed_outcome: str | None = None
+
+        if not feedback.strip():
+            # Empty feedback
+            if default_outcome:
+                collapsed_outcome = default_outcome
+            elif emit:
+                # No default and no feedback - use first outcome
+                collapsed_outcome = emit[0]
+        elif emit:
+            # Collapse feedback to outcome using LLM
+            collapsed_outcome = self._collapse_to_outcome(
+                feedback=feedback,
+                outcomes=emit,
+                llm=llm,
+            )
+
+        # Create result
+        result = HumanFeedbackResult(
+            output=context.method_output,
+            feedback=feedback,
+            outcome=collapsed_outcome,
+            timestamp=datetime.now(),
+            method_name=context.method_name,
+            metadata=context.metadata,
+        )
+
+        # Store in flow instance
+        self.human_feedback_history.append(result)
+        self.last_human_feedback = result
+
+        # Clear pending context after processing
+        self._pending_feedback_context = None
+
+        # Clear pending feedback from persistence
+        if self._persistence:
+            self._persistence.clear_pending_feedback(context.flow_id)
+
+        # Emit feedback received event
+        crewai_event_bus.emit(
+            self,
+            MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=context.method_name,
+                result=collapsed_outcome if emit else result,
+                state=self._state,
+            ),
+        )
+
+        # Clear resumption flag before triggering listeners
+        # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
+        self._is_execution_resuming = False
+
+        # Determine what to pass to listeners
+        try:
+            if emit and collapsed_outcome:
+                # Router behavior - the outcome itself triggers listeners
+                # First, add the outcome to method outputs as a router would
+                self._method_outputs.append(collapsed_outcome)
+
+                # Then trigger listeners for the outcome (e.g., "approved" triggers @listen("approved"))
+                final_result = await self._execute_listeners(
+                    FlowMethodName(collapsed_outcome),  # Use outcome as trigger
+                    result,  # Pass HumanFeedbackResult to listeners
+                )
+            else:
+                # Normal behavior - pass the HumanFeedbackResult
+                final_result = await self._execute_listeners(
+                    FlowMethodName(context.method_name),
+                    result,
+                )
+        except Exception as e:
+            # Check if flow was paused again for human feedback (loop case)
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if isinstance(e, HumanFeedbackPending):
+                # Auto-save pending feedback (create default persistence if needed)
+                if self._persistence is None:
+                    from crewai.flow.persistence import SQLiteFlowPersistence
+
+                    self._persistence = SQLiteFlowPersistence()
+
+                state_data = (
+                    self._state
+                    if isinstance(self._state, dict)
+                    else self._state.model_dump()
+                )
+                self._persistence.save_pending_feedback(
+                    flow_uuid=e.context.flow_id,
+                    context=e.context,
+                    state_data=state_data,
+                )
+
+                # Emit flow paused event
+                crewai_event_bus.emit(
+                    self,
+                    FlowPausedEvent(
+                        type="flow_paused",
+                        flow_name=self.name or self.__class__.__name__,
+                        flow_id=e.context.flow_id,
+                        method_name=e.context.method_name,
+                        state=self._copy_and_serialize_state(),
+                        message=e.context.message,
+                        emit=e.context.emit,
+                    ),
+                )
+                # Return the pending exception instead of raising
+                return e
+            raise
+
+        # Emit flow finished
+        crewai_event_bus.emit(
+            self,
+            FlowFinishedEvent(
+                type="flow_finished",
+                flow_name=self.name or self.__class__.__name__,
+                result=final_result,
+                state=self._state,
+            ),
+        )
+
+        return final_result
+
     def _create_initial_state(self) -> T:
         """Create and initialize flow state with UUID and default values.
 
@@ -532,19 +861,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    # Create instance without id, then set it
+                    # Create instance - FlowState auto-generates id via default_factory
                     instance = state_type()
-                    if not hasattr(instance, "id"):
-                        instance.id = str(uuid4())
+                    # Ensure id is set - generate UUID if empty
+                    if not getattr(instance, "id", None):
+                        object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if issubclass(state_type, BaseModel):
-                    # Create a new type that includes the ID field
-                    class StateWithId(state_type, FlowState):  # type: ignore
+                    # Create a new type with FlowState first for proper id default
+                    class StateWithId(FlowState, state_type):  # type: ignore
                         pass
 
                     instance = StateWithId()
-                    if not hasattr(instance, "id"):
-                        instance.id = str(uuid4())
+                    # Ensure id is set - generate UUID if empty
+                    if not getattr(instance, "id", None):
+                        object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
@@ -562,7 +893,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_fields = getattr(self.initial_state, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
                     raise ValueError("Flow state model must have an 'id' field")
-                return self.initial_state()  # Uses model defaults
+                instance = self.initial_state()
+                # Ensure id is set - generate UUID if empty
+                if not getattr(instance, "id", None):
+                    object.__setattr__(instance, "id", str(uuid4()))
+                return instance
             if self.initial_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -591,6 +926,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 state_dict = {
                     k: v for k, v in model.__dict__.items() if not k.startswith("_")
                 }
+
+            # Ensure id is set - generate UUID if empty
+            if not state_dict.get("id"):
+                state_dict["id"] = str(uuid4())
 
             # Create new instance of the same class
             model_class = type(model)
@@ -674,16 +1013,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
             TypeError: If state is neither BaseModel nor dictionary
         """
         if isinstance(self._state, dict):
-            # For dict states, preserve existing fields unless overridden
+            # For dict states, update with inputs
+            # If inputs contains an id, use it (for restoring from persistence)
+            # Otherwise preserve the current id or generate a new one
             current_id = self._state.get("id")
-            # Only update specified fields
+            inputs_has_id = "id" in inputs
+
+            # Update specified fields
             for k, v in inputs.items():
                 self._state[k] = v
-            # Ensure ID is preserved or generated
-            if current_id:
-                self._state["id"] = current_id
-            elif "id" not in self._state:
-                self._state["id"] = str(uuid4())
+
+            # Ensure ID is set: prefer inputs id, then current id, then generate
+            if not inputs_has_id:
+                if current_id:
+                    self._state["id"] = current_id
+                elif "id" not in self._state:
+                    self._state["id"] = str(uuid4())
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
@@ -820,20 +1165,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
-    def kickoff(self, inputs: dict[str, Any] | None = None) -> Any:
+    def kickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=False
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = self.kickoff(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e)
+                finally:
+                    self.stream = True
+                    signal_end(state)
+
+            streaming_output = FlowStreamingOutput(
+                sync_iterator=create_chunk_generator(state, run_flow, output_holder)
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
 
         async def _run_flow() -> Any:
             return await self.kickoff_async(inputs)
 
         return asyncio.run(_run_flow())
 
-    async def kickoff_async(self, inputs: dict[str, Any] | None = None) -> Any:
+    async def kickoff_async(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
         """
         Start the flow execution asynchronously.
 
@@ -848,6 +1229,41 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if self.stream:
+            result_holder: list[Any] = []
+            current_task_info: TaskInfo = {
+                "index": 0,
+                "name": "",
+                "id": "",
+                "agent_role": "",
+                "agent_id": "",
+            }
+
+            state = create_streaming_state(
+                current_task_info, result_holder, use_async=True
+            )
+            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
+
+            async def run_flow() -> None:
+                try:
+                    self.stream = False
+                    result = await self.kickoff_async(inputs=inputs)
+                    result_holder.append(result)
+                except Exception as e:
+                    signal_error(state, e, is_async=True)
+                finally:
+                    self.stream = True
+                    signal_end(state, is_async=True)
+
+            streaming_output = FlowStreamingOutput(
+                async_iterator=create_async_chunk_generator(
+                    state, run_flow, output_holder
+                )
+            )
+            output_holder.append(streaming_output)
+
+            return streaming_output
+
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         flow_token = attach(ctx)
 
@@ -902,17 +1318,73 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             self._log_flow_event(
-                f"Flow started with ID: {self.flow_id}", color="bold_magenta"
+                f"Flow started with ID: {self.flow_id}", color="bold magenta"
             )
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
 
-            tasks = [
-                self._execute_start_method(start_method)
-                for start_method in self._start_methods
-            ]
-            await asyncio.gather(*tasks)
+            try:
+                tasks = [
+                    self._execute_start_method(start_method)
+                    for start_method in self._start_methods
+                ]
+                await asyncio.gather(*tasks)
+            except Exception as e:
+                # Check if flow was paused for human feedback
+                from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+                if isinstance(e, HumanFeedbackPending):
+                    # Auto-save pending feedback (create default persistence if needed)
+                    if self._persistence is None:
+                        from crewai.flow.persistence import SQLiteFlowPersistence
+
+                        self._persistence = SQLiteFlowPersistence()
+
+                    state_data = (
+                        self._state
+                        if isinstance(self._state, dict)
+                        else self._state.model_dump()
+                    )
+                    self._persistence.save_pending_feedback(
+                        flow_uuid=e.context.flow_id,
+                        context=e.context,
+                        state_data=state_data,
+                    )
+
+                    # Emit flow paused event
+                    future = crewai_event_bus.emit(
+                        self,
+                        FlowPausedEvent(
+                            type="flow_paused",
+                            flow_name=self.name or self.__class__.__name__,
+                            flow_id=e.context.flow_id,
+                            method_name=e.context.method_name,
+                            state=self._copy_and_serialize_state(),
+                            message=e.context.message,
+                            emit=e.context.emit,
+                        ),
+                    )
+                    if future and isinstance(future, Future):
+                        self._event_futures.append(future)
+
+                    # Wait for events to be processed
+                    if self._event_futures:
+                        await asyncio.gather(
+                            *[
+                                asyncio.wrap_future(f)
+                                for f in self._event_futures
+                                if isinstance(f, Future)
+                            ]
+                        )
+                        self._event_futures.clear()
+
+                    # Return the pending exception instead of raising
+                    # This allows the caller to handle the paused state gracefully
+                    return e
+
+                # Re-raise other exceptions
+                raise
 
             # Clear the resumption flag after initial execution completes
             self._is_execution_resuming = False
@@ -925,6 +1397,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     type="flow_finished",
                     flow_name=self.name or self.__class__.__name__,
                     result=final_output,
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -936,22 +1409,31 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            if (
-                is_tracing_enabled()
-                or self.tracing
-                or should_auto_collect_first_time_traces()
-            ):
-                trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
             return final_output
         finally:
             detach(flow_token)
+
+    async def akickoff(
+        self, inputs: dict[str, Any] | None = None
+    ) -> Any | FlowStreamingOutput:
+        """Native async method to start the flow execution. Alias for kickoff_async.
+
+
+        Args:
+            inputs: Optional dictionary containing input values and/or a state ID for restoration.
+
+        Returns:
+            The final output from the flow, which is the result of the last executed method.
+        """
+        return await self.kickoff_async(inputs)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
@@ -982,7 +1464,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
         enhanced_method = self._inject_trigger_payload_for_start_method(method)
 
         result = await self._execute_method(start_method_name, enhanced_method)
-        await self._execute_listeners(start_method_name, result)
+
+        # If start method is a router, use its result as an additional trigger
+        if start_method_name in self._routers and result is not None:
+            # Execute listeners for the start method name first
+            await self._execute_listeners(start_method_name, result)
+            # Then execute listeners for the router result (e.g., "approved")
+            router_result_trigger = FlowMethodName(str(result))
+            listeners_for_result = self._find_triggered_methods(
+                router_result_trigger, router_only=False
+            )
+            if listeners_for_result:
+                # Pass the HumanFeedbackResult if available
+                listener_result = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not None
+                    else result
+                )
+                tasks = [
+                    self._execute_single_listener(listener_name, listener_result)
+                    for listener_name in listeners_for_result
+                ]
+                await asyncio.gather(*tasks)
+        else:
+            await self._execute_listeners(start_method_name, result)
 
     def _inject_trigger_payload_for_start_method(
         self, original_method: Callable[..., Any]
@@ -1031,6 +1536,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionStartedEvent(
@@ -1038,7 +1544,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
                     params=dumped_params,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                 ),
             )
             if future:
@@ -1056,13 +1562,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
             self._completed_methods.add(method_name)
+
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
                     flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_state(),
+                    state=self._copy_and_serialize_state(),
                     result=result,
                 ),
             )
@@ -1071,6 +1578,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return result
         except Exception as e:
+            # Check if this is a HumanFeedbackPending exception (paused, not failed)
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if isinstance(e, HumanFeedbackPending):
+                # Emit paused event instead of failed
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionPausedEvent(
+                        type="method_execution_paused",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        state=self._copy_and_serialize_state(),
+                        flow_id=e.context.flow_id,
+                        message=e.context.message,
+                        emit=e.context.emit,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
+                raise e
+
+            # Regular failure
             future = crewai_event_bus.emit(
                 self,
                 MethodExecutionFailedEvent(
@@ -1083,6 +1612,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if future:
                 self._event_futures.append(future)
             raise e
+
+    def _copy_and_serialize_state(self) -> dict[str, Any]:
+        state_copy = self._copy_state()
+        if isinstance(state_copy, BaseModel):
+            try:
+                return state_copy.model_dump(mode="json")
+            except Exception:
+                return state_copy.model_dump()
+        else:
+            return state_copy
 
     async def _execute_listeners(
         self, trigger_method: FlowMethodName, result: Any
@@ -1105,7 +1644,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
+        router_result_to_feedback: dict[str, Any] = {}  # Map outcome -> HumanFeedbackResult
         current_trigger = trigger_method
+        current_result = result  # Track the result to pass to each router
 
         while True:
             routers_triggered = self._find_triggered_methods(
@@ -1115,13 +1656,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 break
 
             for router_name in routers_triggered:
-                await self._execute_single_listener(router_name, result)
+                # For routers triggered by a router outcome, pass the HumanFeedbackResult
+                router_input = router_result_to_feedback.get(
+                    str(current_trigger), current_result
+                )
+                await self._execute_single_listener(router_name, router_input)
                 # After executing router, the router's result is the path
                 router_result = (
                     self._method_outputs[-1] if self._method_outputs else None
                 )
                 if router_result:  # Only add non-None results
                     router_results.append(router_result)
+                    # If this was a human_feedback router, map the outcome to the feedback
+                    if self.last_human_feedback is not None:
+                        router_result_to_feedback[str(router_result)] = (
+                            self.last_human_feedback
+                        )
                 current_trigger = (
                     FlowMethodName(str(router_result))
                     if router_result is not None
@@ -1137,8 +1687,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
+                    # Determine what result to pass to listeners
+                    # For router outcomes, pass the HumanFeedbackResult if available
+                    listener_result = router_result_to_feedback.get(
+                        str(current_trigger), result
+                    )
                     tasks = [
-                        self._execute_single_listener(listener_name, result)
+                        self._execute_single_listener(listener_name, listener_result)
                         for listener_name in listeners_triggered
                     ]
                     await asyncio.gather(*tasks)
@@ -1330,14 +1885,223 @@ class Flow(Generic[T], metaclass=FlowMeta):
             # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(listener_name, listener_result)
 
+            # If this listener is also a router (e.g., has @human_feedback with emit),
+            # we need to trigger listeners for the router result as well
+            if listener_name in self._routers and listener_result is not None:
+                router_result_trigger = FlowMethodName(str(listener_result))
+                listeners_for_result = self._find_triggered_methods(
+                    router_result_trigger, router_only=False
+                )
+                if listeners_for_result:
+                    # Pass the HumanFeedbackResult if available
+                    feedback_result = (
+                        self.last_human_feedback
+                        if self.last_human_feedback is not None
+                        else listener_result
+                    )
+                    tasks = [
+                        self._execute_single_listener(name, feedback_result)
+                        for name in listeners_for_result
+                    ]
+                    await asyncio.gather(*tasks)
+
         except Exception as e:
-            logger.error(f"Error executing listener {listener_name}: {e}")
+            # Don't log HumanFeedbackPending as an error - it's expected control flow
+            from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+            if not isinstance(e, HumanFeedbackPending):
+                logger.error(f"Error executing listener {listener_name}: {e}")
             raise
+
+    def _request_human_feedback(
+        self,
+        message: str,
+        output: Any,
+        metadata: dict[str, Any] | None = None,
+        emit: Sequence[str] | None = None,
+    ) -> str:
+        """Request feedback from a human.
+        Args:
+            message: The message to display when requesting feedback.
+            output: The method output to show the human for review.
+            metadata: Optional metadata for enterprise integrations.
+            emit: Optional list of possible outcomes for routing.
+
+        Returns:
+            The human's feedback as a string. Empty string if no feedback provided.
+        """
+        from crewai.events.event_listener import event_listener
+        from crewai.events.types.flow_events import (
+            HumanFeedbackReceivedEvent,
+            HumanFeedbackRequestedEvent,
+        )
+
+        # Emit feedback requested event
+        crewai_event_bus.emit(
+            self,
+            HumanFeedbackRequestedEvent(
+                type="human_feedback_requested",
+                flow_name=self.name or self.__class__.__name__,
+                method_name="",  # Will be set by decorator if needed
+                output=output,
+                message=message,
+                emit=list(emit) if emit else None,
+            ),
+        )
+
+        # Pause live updates during human input
+        formatter = event_listener.formatter
+        formatter.pause_live_updates()
+
+        try:
+            # Display output with formatting using centralized Rich console
+            formatter.console.print("\n" + "═" * 50, style="bold cyan")
+            formatter.console.print("  OUTPUT FOR REVIEW", style="bold cyan")
+            formatter.console.print("═" * 50 + "\n", style="bold cyan")
+            formatter.console.print(output)
+            formatter.console.print("\n" + "═" * 50 + "\n", style="bold cyan")
+
+            # Show message and prompt for feedback
+            formatter.console.print(message, style="yellow")
+            formatter.console.print("(Press Enter to skip, or type your feedback)\n", style="cyan")
+
+            feedback = input("Your feedback: ").strip()
+
+            # Emit feedback received event
+            crewai_event_bus.emit(
+                self,
+                HumanFeedbackReceivedEvent(
+                    type="human_feedback_received",
+                    flow_name=self.name or self.__class__.__name__,
+                    method_name="",  # Will be set by decorator if needed
+                    feedback=feedback,
+                    outcome=None,  # Will be determined after collapsing
+                ),
+            )
+
+            return feedback
+        finally:
+            # Resume live updates
+            formatter.resume_live_updates()
+
+    def _collapse_to_outcome(
+        self,
+        feedback: str,
+        outcomes: Sequence[str],
+        llm: str | BaseLLM,
+    ) -> str:
+        """Collapse free-form feedback to a predefined outcome using LLM.
+
+        This method uses the specified LLM to interpret the human's feedback
+        and map it to one of the predefined outcomes for routing purposes.
+
+        Uses structured outputs (function calling) when supported by the LLM
+        to guarantee the response is one of the valid outcomes. Falls back
+        to simple prompting if structured outputs fail.
+
+        Args:
+            feedback: The raw human feedback text.
+            outcomes: Sequence of valid outcome strings to choose from.
+            llm: The LLM model to use. Can be a model string or BaseLLM instance.
+
+        Returns:
+            One of the outcome strings that best matches the feedback intent.
+        """
+        from typing import Literal
+
+        from pydantic import BaseModel, Field
+
+        from crewai.llm import LLM
+        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+        from crewai.utilities.i18n import get_i18n
+
+        # Get or create LLM instance
+        if isinstance(llm, str):
+            llm_instance = LLM(model=llm)
+        elif isinstance(llm, BaseLLMClass):
+            llm_instance = llm
+        else:
+            raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
+
+        # Dynamically create a Pydantic model with constrained outcomes
+        outcomes_tuple = tuple(outcomes)
+
+        class FeedbackOutcome(BaseModel):
+            """The outcome that best matches the human's feedback intent."""
+
+            outcome: Literal[outcomes_tuple] = Field(  # type: ignore[valid-type]
+                description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
+            )
+
+        # Load prompt from translations (using cached instance)
+        i18n = get_i18n()
+        prompt_template = i18n.slice("human_feedback_collapse")
+
+        prompt = prompt_template.format(
+            feedback=feedback,
+            outcomes=", ".join(outcomes),
+        )
+
+        try:
+            # Try structured output first (function calling)
+            # Note: LLM.call with response_model returns JSON string, not Pydantic model
+            response = llm_instance.call(
+                messages=[{"role": "user", "content": prompt}],
+                response_model=FeedbackOutcome,
+            )
+
+            # Parse the response - LLM returns JSON string when using response_model
+            if isinstance(response, str):
+                import json
+
+                try:
+                    parsed = json.loads(response)
+                    return parsed.get("outcome", outcomes[0])
+                except json.JSONDecodeError:
+                    # Not valid JSON, might be raw outcome string
+                    response_clean = response.strip()
+                    for outcome in outcomes:
+                        if outcome.lower() == response_clean.lower():
+                            return outcome
+                    return outcomes[0]
+            elif isinstance(response, FeedbackOutcome):
+                return response.outcome
+            elif hasattr(response, "outcome"):
+                return response.outcome
+            else:
+                # Unexpected type, fall back to first outcome
+                logger.warning(f"Unexpected response type: {type(response)}")
+                return outcomes[0]
+
+        except Exception as e:
+            # Fallback to simple prompting if structured output fails
+            logger.warning(
+                f"Structured output failed, falling back to simple prompting: {e}"
+            )
+            response = llm_instance.call(messages=prompt)
+            response_clean = str(response).strip()
+
+            # Exact match (case-insensitive)
+            for outcome in outcomes:
+                if outcome.lower() == response_clean.lower():
+                    return outcome
+
+            # Partial match
+            for outcome in outcomes:
+                if outcome.lower() in response_clean.lower():
+                    return outcome
+
+            # Fallback to first outcome
+            logger.warning(
+                f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
+                f"Falling back to first outcome: {outcomes[0]}"
+            )
+            return outcomes[0]
 
     def _log_flow_event(
         self,
         message: str,
-        color: PrinterColor = "yellow",
+        color: str = "yellow",
         level: Literal["info", "warning"] = "info",
     ) -> None:
         """Centralized logging method for flow events.
@@ -1347,20 +2111,22 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Args:
             message: The message to log
-            color: Color to use for console output (default: yellow)
-                  Available colors: purple, red, bold_green, bold_purple,
-                  bold_blue, yellow, yellow
+            color: Rich style for console output (default: "yellow")
+                  Examples: "yellow", "red", "bold green", "bold magenta"
             level: Log level to use (default: info)
                   Supported levels: info, warning
 
         Note:
-            This method uses the Printer utility for colored console output
+            This method uses the centralized Rich console formatter for output
             and the standard logging module for log level support.
         """
-        self._printer.print(message, color=color)
+        from crewai.events.event_listener import event_listener
+
+        event_listener.formatter.console.print(message, style=color)
         if level == "info":
             logger.info(message)
-        logger.warning(message)
+        else:
+            logger.warning(message)
 
     def plot(self, filename: str = "crewai_flow.html", show: bool = True) -> str:
         """Create interactive HTML visualization of Flow structure.
@@ -1381,3 +2147,32 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
         structure = build_flow_structure(self)
         return render_interactive(structure, filename=filename, show=show)
+
+    @staticmethod
+    def _show_tracing_disabled_message() -> None:
+        """Show a message when tracing is disabled."""
+
+        console = Console()
+
+        if has_user_declined_tracing():
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+        else:
+            message = """Info: Tracing is disabled.
+
+To enable tracing, do any one of these:
+• Set tracing=True in your Flow code
+• Set CREWAI_TRACING_ENABLED=true in your project's .env file
+• Run: crewai traces enable"""
+
+        panel = Panel(
+            message,
+            title="Tracing Status",
+            border_style="blue",
+            padding=(1, 2),
+        )
+        console.print(panel)

@@ -1,5 +1,5 @@
 """Crewai Enterprise Tools."""
-
+import os
 import json
 import re
 from typing import Any, Optional, Union, cast, get_origin
@@ -432,7 +432,11 @@ class CrewAIPlatformActionTool(BaseTool):
             payload = cleaned_kwargs
 
             response = requests.post(
-                url=api_url, headers=headers, json=payload, timeout=60
+                url=api_url,
+                headers=headers,
+                json=payload,
+                timeout=60,
+                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
 
             data = response.json()

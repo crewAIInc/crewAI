@@ -20,11 +20,11 @@ The repository is not a version control system. Use Git to track code changes an
 
 Before using the Tool Repository, ensure you have:
 
-- A [CrewAI AMP](https://app.crewai.com) account
-- [CrewAI CLI](https://docs.crewai.com/concepts/cli#cli) installed
+- A [CrewAI AOP](https://app.crewai.com) account
+- [CrewAI CLI](/en/concepts/cli#cli) installed
 - uv>=0.5.0 installed. Check out [how to upgrade](https://docs.astral.sh/uv/getting-started/installation/#upgrading-uv)
 - [Git](https://git-scm.com) installed and configured
-- Access permissions to publish or install tools in your CrewAI AMP organization
+- Access permissions to publish or install tools in your CrewAI AOP organization
 
 ## Installing Tools
 
@@ -54,11 +54,11 @@ researcher = Agent(
 
 ## Adding other packages after installing a tool
 
-After installing a tool from the CrewAI AMP Tool Repository, you need to use the `crewai uv` command to add other packages to your project.
+After installing a tool from the CrewAI AOP Tool Repository, you need to use the `crewai uv` command to add other packages to your project.
 Using pure `uv` commands will fail due to authentication to tool repository being handled by the CLI. By using the `crewai uv` command, you can add other packages to your project without having to worry about authentication.
 Any `uv` command can be used with the `crewai uv` command, making it a powerful tool for managing your project's dependencies without the hassle of managing authentication through environment variables or other methods.
 
-Say that you have installed a custom tool from the CrewAI AMP Tool Repository called "my-tool":
+Say that you have installed a custom tool from the CrewAI AOP Tool Repository called "my-tool":
 
 ```bash
 crewai tool install my-tool
@@ -112,7 +112,7 @@ By default, tools are published as private. To make a tool public:
 crewai tool publish --public
 ```
 
-For more details on how to build tools, see [Creating your own tools](https://docs.crewai.com/concepts/tools#creating-your-own-tools).
+For more details on how to build tools, see [Creating your own tools](/en/concepts/tools#creating-your-own-tools).
 
 ## Updating Tools
 
@@ -131,7 +131,7 @@ crewai tool publish
 
 To delete a tool:
 
-1. Go to [CrewAI AMP](https://app.crewai.com)
+1. Go to [CrewAI AOP](https://app.crewai.com)
 2. Navigate to **Tools**
 3. Select the tool
 4. Click **Delete**
@@ -146,10 +146,8 @@ Every published version undergoes automated security checks, and are only availa
 
 You can check the security check status of a tool at:
 
-`CrewAI AMP > Tools > Your Tool > Versions`
+`CrewAI AOP > Tools > Your Tool > Versions`
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
   Contact our support team for assistance with API integration or troubleshooting.
 </Card>
-
-

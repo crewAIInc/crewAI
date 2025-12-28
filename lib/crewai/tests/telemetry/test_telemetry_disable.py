@@ -27,10 +27,16 @@ def cleanup_telemetry():
 )
 def test_telemetry_environment_variables(env_var, value, expected_ready):
     """Test telemetry state with different environment variable configurations."""
-    with patch.dict(os.environ, {env_var: value}):
-        with patch("crewai.telemetry.telemetry.TracerProvider"):
-            telemetry = Telemetry()
-            assert telemetry.ready is expected_ready
+    # Clear all telemetry-related env vars first, then set the one under test
+    clean_env = {
+        "OTEL_SDK_DISABLED": "false",
+        "CREWAI_DISABLE_TELEMETRY": "false",
+        "CREWAI_DISABLE_TRACKING": "false",
+        env_var: value,
+    }
+    with patch.dict(os.environ, clean_env):
+        telemetry = Telemetry()
+        assert telemetry.ready is expected_ready
 
 
 @pytest.mark.telemetry

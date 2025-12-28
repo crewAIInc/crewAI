@@ -1,0 +1,311 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
+      a helpful assistant that just says hi\nYour personal goal is: Just say hi\nTo
+      give my best complete final answer to the task respond using the exact following
+      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
+      answer must be the great and the most complete as possible, it must be outcome
+      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
+      "content": "\nCurrent Task: Just say hi\n\nThis is the expect criteria for your
+      final answer: hi\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}], "model":
+      "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '836'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4s6sWmJ49B9F_wNc1STtdZF1nikfl6uN9_ov3Xzfa8U-1738698987-1.0.1.1-lmbRRS1MHrDbnU93Gh16CP3qNczxxIrQnyBU7vpHSwNf6PdmuWOHKd1mkl5SBx6rg7p1NLaNUMyqDDcE0Mvjzw;
+        _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJK2OCJSkUj1plgbj59b4dC39QV2\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738698990,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
+      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
+      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90cd396c0ab71698-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 19:56:30 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '951'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999810'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_2c3cb5caed61ccd1e058ef3e6301c691
+    http_version: HTTP/1.1
+    status_code: 200
+- request:
+    body: !!binary |
+      Cq0TCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkShBMKEgoQY3Jld2FpLnRl
+      bGVtZXRyeRKkBwoQzBQBWCz+GLuI1awj3OPWrRIIGpT16t5bk6MqDENyZXcgQ3JlYXRlZDABOUBz
+      OyuEGSEYQYDBSCuEGSEYShsKDmNyZXdhaV92ZXJzaW9uEgkKBzAuMTAwLjBKGgoOcHl0aG9uX3Zl
+      cnNpb24SCAoGMy4xMi44Si4KCGNyZXdfa2V5EiIKIGU1ODA3MDFkNTJlYjY1YWZmMjRlZWZlNzhj
+      NzQ2MjhjSjEKB2NyZXdfaWQSJgokMDE3NjQ5ZWMtYTBlMS00MzYxLWFlNjgtYzA1N2E3ZGM5YzI5
+      ShwKDGNyZXdfcHJvY2VzcxIMCgpzZXF1ZW50aWFsShEKC2NyZXdfbWVtb3J5EgIQAEoaChRjcmV3
+      X251bWJlcl9vZl90YXNrcxICGAFKGwoVY3Jld19udW1iZXJfb2ZfYWdlbnRzEgIYAUrRAgoLY3Jl
+      d19hZ2VudHMSwQIKvgJbeyJrZXkiOiAiYWQxNTMxNjFjNWM1YTg1NmFhMGQwNmIyNDljNGM2NGEi
+      LCAiaWQiOiAiOGU3NzgyN2QtN2Y2OC00ZDA2LWI2YTctOWI4YjRkMGE0YzMzIiwgInJvbGUiOiAi
+      YmFzZV9hZ2VudCIsICJ2ZXJib3NlPyI6IGZhbHNlLCAibWF4X2l0ZXIiOiAyMCwgIm1heF9ycG0i
+      OiBudWxsLCAiZnVuY3Rpb25fY2FsbGluZ19sbG0iOiAiIiwgImxsbSI6ICJncHQtNG8tbWluaSIs
+      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
+      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNyZXdf
+      dGFza3MS8AEK7QFbeyJrZXkiOiAiMWIxNWVmMjM5MTViMjc1NWU4OWEwZWMzYjI2YTEzZDIiLCAi
+      aWQiOiAiOTJiZDIzMWYtYzAxMC00ZDI3LWIxNGYtZjE5NjEyZTBmZTkzIiwgImFzeW5jX2V4ZWN1
+      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJiYXNl
+      X2FnZW50IiwgImFnZW50X2tleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2YjI0OWM0YzY0YSIs
+      ICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChC22Au0eMkAAjV6cfU1NrNIEggxb1Bq
+      Xnll/ioMVGFzayBDcmVhdGVkMAE5IOJaK4QZIRhBwG5bK4QZIRhKLgoIY3Jld19rZXkSIgogZTU4
+      MDcwMWQ1MmViNjVhZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiQwMTc2NDllYy1hMGUx
+      LTQzNjEtYWU2OC1jMDU3YTdkYzljMjlKLgoIdGFza19rZXkSIgogMWIxNWVmMjM5MTViMjc1NWU4
+      OWEwZWMzYjI2YTEzZDJKMQoHdGFza19pZBImCiQ5MmJkMjMxZi1jMDEwLTRkMjctYjE0Zi1mMTk2
+      MTJlMGZlOTN6AhgBhQEAAQAAEqQHChC63jCLGR8RP8RmYiHrdNVeEggZ39ffmGm5xyoMQ3JldyBD
+      cmVhdGVkMAE5GFEe04QZIRhBELEq04QZIRhKGwoOY3Jld2FpX3ZlcnNpb24SCQoHMC4xMDAuMEoa
+      Cg5weXRob25fdmVyc2lvbhIICgYzLjEyLjhKLgoIY3Jld19rZXkSIgogZTU4MDcwMWQ1MmViNjVh
+      ZmYyNGVlZmU3OGM3NDYyOGNKMQoHY3Jld19pZBImCiQ5MTY4YmQxNC0yN2Q2LTQ3NWMtODljOC01
+      NjJjOTAyMGIxOTBKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkS
+      AhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMS
+      AhgBStECCgtjcmV3X2FnZW50cxLBAgq+Alt7ImtleSI6ICJhZDE1MzE2MWM1YzVhODU2YWEwZDA2
+      YjI0OWM0YzY0YSIsICJpZCI6ICI4ZTc3ODI3ZC03ZjY4LTRkMDYtYjZhNy05YjhiNGQwYTRjMzMi
+      LCAicm9sZSI6ICJiYXNlX2FnZW50IiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDIw
+      LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdw
+      dC00by1taW5pIiwgImRlbGVnYXRpb25fZW5hYmxlZD8iOiBmYWxzZSwgImFsbG93X2NvZGVfZXhl
+      Y3V0aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119
+      XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICIxYjE1ZWYyMzkxNWIyNzU1ZTg5YTBlYzNi
+      MjZhMTNkMiIsICJpZCI6ICI5MmJkMjMxZi1jMDEwLTRkMjctYjE0Zi1mMTk2MTJlMGZlOTMiLCAi
+      YXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9y
+      b2xlIjogImJhc2VfYWdlbnQiLCAiYWdlbnRfa2V5IjogImFkMTUzMTYxYzVjNWE4NTZhYTBkMDZi
+      MjQ5YzRjNjRhIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEOo6FGs7r9hHrN+f
+      qhMTUysSCJgbYV+vQMbCKgxUYXNrIENyZWF0ZWQwATlAxjrThBkhGEEYIDvThBkhGEouCghjcmV3
+      X2tleRIiCiBlNTgwNzAxZDUyZWI2NWFmZjI0ZWVmZTc4Yzc0NjI4Y0oxCgdjcmV3X2lkEiYKJDkx
+      NjhiZDE0LTI3ZDYtNDc1Yy04OWM4LTU2MmM5MDIwYjE5MEouCgh0YXNrX2tleRIiCiAxYjE1ZWYy
+      MzkxNWIyNzU1ZTg5YTBlYzNiMjZhMTNkMkoxCgd0YXNrX2lkEiYKJDkyYmQyMzFmLWMwMTAtNGQy
+      Ny1iMTRmLWYxOTYxMmUwZmU5M3oCGAGFAQABAAA=
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2480'
+      Content-Type:
+      - application/x-protobuf
+      User-Agent:
+      - OTel-OTLP-Exporter-Python/1.27.0
+    method: POST
+    uri: https://telemetry.crewai.com:4319/v1/traces
+  response:
+    body:
+      string: "\n\0"
+    headers:
+      Content-Length:
+      - '2'
+      Content-Type:
+      - application/x-protobuf
+      Date:
+      - Tue, 04 Feb 2025 19:56:31 GMT
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
+      completed based on the description, expected output, and actual results.\n\nTask
+      Description:\nJust say hi\n\nExpected Output:\nhi\n\nActual Output:\nhi\n\nPlease
+      provide:\n- Bullet points suggestions to improve future similar tasks\n- A score
+      from 0 to 10 evaluating on completion, quality, and overall performance- Entities
+      extracted from the task output, if any, their type, description, and relationships"}],
+      "model": "gpt-4o-mini", "tool_choice": {"type": "function", "function": {"name":
+      "TaskEvaluation"}}, "tools": [{"type": "function", "function": {"name": "TaskEvaluation",
+      "description": "Correctly extracted `TaskEvaluation` with all the required parameters
+      with correct types", "parameters": {"$defs": {"Entity": {"properties": {"name":
+      {"description": "The name of the entity.", "title": "Name", "type": "string"},
+      "type": {"description": "The type of the entity.", "title": "Type", "type":
+      "string"}, "description": {"description": "Description of the entity.", "title":
+      "Description", "type": "string"}, "relationships": {"description": "Relationships
+      of the entity.", "items": {"type": "string"}, "title": "Relationships", "type":
+      "array"}}, "required": ["name", "type", "description", "relationships"], "title":
+      "Entity", "type": "object"}}, "properties": {"suggestions": {"description":
+      "Suggestions to improve future similar tasks.", "items": {"type": "string"},
+      "title": "Suggestions", "type": "array"}, "quality": {"description": "A score
+      from 0 to 10 evaluating on completion, quality, and overall performance, all
+      taking into account the task description, expected output, and the result of
+      the task.", "title": "Quality", "type": "number"}, "entities": {"description":
+      "Entities extracted from the task output.", "items": {"$ref": "#/$defs/Entity"},
+      "title": "Entities", "type": "array"}}, "required": ["entities", "quality",
+      "suggestions"], "type": "object"}}}]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1962'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=4s6sWmJ49B9F_wNc1STtdZF1nikfl6uN9_ov3Xzfa8U-1738698987-1.0.1.1-lmbRRS1MHrDbnU93Gh16CP3qNczxxIrQnyBU7vpHSwNf6PdmuWOHKd1mkl5SBx6rg7p1NLaNUMyqDDcE0Mvjzw;
+        _cfuvid=Cl48aI8.jSRja0Pqr6Jrh3mAnigd4rDn6lhGicyjMPY-1738698987673-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.61.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.61.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.8
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    content: "{\n  \"id\": \"chatcmpl-AxJK3bJiyqGhPeqdCcCjoeNavGHrR\",\n  \"object\":
+      \"chat.completion\",\n  \"created\": 1738698991,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+      \           \"id\": \"call_uAFkclWHIRqgrXFrQFcEoUIS\",\n            \"type\":
+      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
+      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Include additional
+      context for the greeting to make it more meaningful.\\\",\\\"Specify if you
+      want a casual or formal tone for greetings.\\\",\\\"Provide examples of variations
+      of the greeting if necessary.\\\"],\\\"quality\\\":10,\\\"entities\\\":[],\\\"relationships\\\":[]}\"\n
+      \           }\n          }\n        ],\n        \"refusal\": null\n      },\n
+      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+      \ \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 50,\n
+      \   \"total_tokens\": 323,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
+      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    headers:
+      CF-RAY:
+      - 90cd3973589f1698-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 04 Feb 2025 19:56:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1408'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999876'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_519fd27ca3d5da4d541c4331654e0520
+    http_version: HTTP/1.1
+    status_code: 200
+version: 1
