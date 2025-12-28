@@ -38,9 +38,11 @@ from crewai.events.types.crew_events import (
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
     FlowFinishedEvent,
+    FlowPausedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
+    MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.knowledge_events import (
@@ -362,6 +364,28 @@ class EventListener(BaseEventListener):
                 "failed",
             )
             self.method_branches[event.method_name] = updated_branch
+
+        @crewai_event_bus.on(MethodExecutionPausedEvent)
+        def on_method_execution_paused(
+            _: Any, event: MethodExecutionPausedEvent
+        ) -> None:
+            method_branch = self.method_branches.get(event.method_name)
+            updated_branch = self.formatter.update_method_status(
+                method_branch,
+                self.formatter.current_flow_tree,
+                event.method_name,
+                "paused",
+            )
+            self.method_branches[event.method_name] = updated_branch
+
+        @crewai_event_bus.on(FlowPausedEvent)
+        def on_flow_paused(_: Any, event: FlowPausedEvent) -> None:
+            self.formatter.update_flow_status(
+                self.formatter.current_flow_tree,
+                event.flow_name,
+                event.flow_id,
+                "paused",
+            )
 
         # ----------- TOOL USAGE EVENTS -----------
 
