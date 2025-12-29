@@ -1,7 +1,8 @@
-import json
-from typing import Any
+from __future__ import annotations
 
-from crewai.agent import Agent
+import json
+from typing import TYPE_CHECKING, Any
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation.base_evaluator import (
     BaseEvaluator,
@@ -11,6 +12,10 @@ from crewai.experimental.evaluation.base_evaluator import (
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ToolSelectionEvaluator(BaseEvaluator):
