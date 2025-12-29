@@ -85,8 +85,9 @@ To enable tracing, do any one of these:
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
-        content.append("Tool Args: ", style="white")
-        content.append(f"{tool_args}\n", style=status_style)
+        if tool_args:
+            content.append("Tool Args: ", style="white")
+            content.append(f"{tool_args}\n", style=status_style)
 
         return content
 
@@ -183,8 +184,6 @@ To enable tracing, do any one of these:
         content.append(f"{display_name}\n", style="yellow")
         content.append("ID: ", style="white")
         content.append(f"{task_id}\n", style="yellow ")
-        content.append("Status: ", style="white")
-        content.append("Executing...", style="yellow")
 
         self.print_panel(content, "📋 Task Started", "yellow")
 
@@ -336,14 +335,9 @@ To enable tracing, do any one of these:
         iteration = self.tool_usage_counts[tool_name]
 
         content = Text()
-        content.append("Tool Started\n", style="yellow bold")
         content.append("Tool: ", style="white")
         content.append(f"{tool_name}\n", style="yellow bold")
-        content.append("Iteration: ", style="white")
-        content.append(f"{iteration}\n", style="yellow")
-        if run_attempts is not None:
-            content.append("Attempt: ", style="white")
-            content.append(f"{run_attempts}\n", style="yellow")
+
         if tool_args:
             content.append("Args: ", style="white")
             args_str = (
@@ -353,7 +347,7 @@ To enable tracing, do any one of these:
             )
             content.append(f"{args_str}\n", style="yellow ")
 
-        self.print_panel(content, f"🔧 Tool Execution (#{iteration})", "yellow")
+        self.print_panel(content, f"🔧 Tool Execution Started (#{iteration})", "yellow")
 
     def handle_tool_usage_error(
         self,
@@ -622,7 +616,9 @@ To enable tracing, do any one of these:
                 fields["Error"] = error
             self.update_lite_agent_status(lite_agent_role, status, **fields)
 
-    def handle_knowledge_retrieval_started(self) -> None:
+    def handle_knowledge_retrieval_started(
+        self,
+    ) -> None:
         """Handle knowledge retrieval started event with panel display."""
         if not self.verbose:
             return
@@ -637,20 +633,23 @@ To enable tracing, do any one of these:
     def handle_knowledge_retrieval_completed(
         self,
         retrieved_knowledge: Any,
+        search_query: str,
     ) -> None:
         """Handle knowledge retrieval completed event with panel display."""
         if not self.verbose:
             return
 
         content = Text()
-        content.append("Knowledge Retrieval Completed\n", style="green bold")
-
+        content.append("Search Query:\n", style="white")
+        content.append(f"{search_query}\n", style="green")
+        content.append("Knowledge Retrieved: \n", style="white")
         if retrieved_knowledge:
             knowledge_text = str(retrieved_knowledge)
             if len(knowledge_text) > 500:
                 knowledge_text = knowledge_text[:497] + "..."
-            content.append("Retrieved: ", style="white")
             content.append(f"{knowledge_text}\n", style="green ")
+        else:
+            content.append("No knowledge retrieved\n", style="yellow")
 
         self.print_panel(content, "📚 Knowledge Retrieved", "green")
 

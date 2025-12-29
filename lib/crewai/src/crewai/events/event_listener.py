@@ -191,7 +191,13 @@ class EventListener(BaseEventListener):
             span = self._telemetry.task_started(crew=source.agent.crew, task=source)
             self.execution_spans[source] = span
 
-            task_name = source.name if hasattr(source, "name") and source.name else None
+            task_name = (
+                source.name
+                if hasattr(source, "name") and source.name
+                else source.description
+                if hasattr(source, "description") and source.description
+                else None
+            )
             self.formatter.handle_task_started(source.id, task_name)
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -449,6 +455,7 @@ class EventListener(BaseEventListener):
             self.knowledge_retrieval_in_progress = False
             self.formatter.handle_knowledge_retrieval_completed(
                 event.retrieved_knowledge,
+                event.query,
             )
 
         @crewai_event_bus.on(KnowledgeQueryFailedEvent)
