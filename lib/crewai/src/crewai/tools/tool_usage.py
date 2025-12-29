@@ -148,7 +148,6 @@ class ToolUsage:
             and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
         ):
             try:
-                self._run_attempts += 1
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
             except Exception as e:
