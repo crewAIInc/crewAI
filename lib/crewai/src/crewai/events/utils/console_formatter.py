@@ -900,9 +900,8 @@ To enable tracing, do any one of these:
 
         if memory_content:
             memory_text = str(memory_content)
-            if len(memory_text) > 500:
-                memory_text = memory_text[:497] + "..."
-            content.append("Content: ", style="white")
+
+            content.append("Content: \n", style="white")
             content.append(f"{memory_text}\n", style="green ")
 
         self.print_panel(content, "🧠 Memory Retrieved", "green")
