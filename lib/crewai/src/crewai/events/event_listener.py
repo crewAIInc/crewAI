@@ -186,18 +186,21 @@ class EventListener(BaseEventListener):
 
         # ----------- TASK EVENTS -----------
 
-        @crewai_event_bus.on(TaskStartedEvent)
-        def on_task_started(source: Any, event: TaskStartedEvent) -> None:
-            span = self._telemetry.task_started(crew=source.agent.crew, task=source)
-            self.execution_spans[source] = span
-
-            task_name = (
+        def get_task_name(source: Any) -> str | None:
+            return (
                 source.name
                 if hasattr(source, "name") and source.name
                 else source.description
                 if hasattr(source, "description") and source.description
                 else None
             )
+
+        @crewai_event_bus.on(TaskStartedEvent)
+        def on_task_started(source: Any, event: TaskStartedEvent) -> None:
+            span = self._telemetry.task_started(crew=source.agent.crew, task=source)
+            self.execution_spans[source] = span
+
+            task_name = get_task_name(source)
             self.formatter.handle_task_started(source.id, task_name)
 
         @crewai_event_bus.on(TaskCompletedEvent)
@@ -209,7 +212,7 @@ class EventListener(BaseEventListener):
             self.execution_spans[source] = None
 
             # Pass task name if it exists
-            task_name = source.name if hasattr(source, "name") and source.name else None
+            task_name = get_task_name(source)
             self.formatter.handle_task_status(
                 source.id, source.agent.role, "completed", task_name
             )
@@ -223,7 +226,7 @@ class EventListener(BaseEventListener):
                 self.execution_spans[source] = None
 
             # Pass task name if it exists
-            task_name = source.name if hasattr(source, "name") and source.name else None
+            task_name = get_task_name(source)
             self.formatter.handle_task_status(
                 source.id, source.agent.role, "failed", task_name
             )
