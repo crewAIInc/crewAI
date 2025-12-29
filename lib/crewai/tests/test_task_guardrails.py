@@ -752,3 +752,162 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_output_file_contains_guardrail_modified_raw_result(tmp_path, monkeypatch):
+    """Test that output file contains the result after guardrail modification for raw output."""
+    monkeypatch.chdir(tmp_path)
+    output_file = tmp_path / "output.txt"
+
+    def modify_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, "MODIFIED BY GUARDRAIL")
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "original result"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrails=[modify_guardrail],
+        output_file="output.txt",
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.raw == "MODIFIED BY GUARDRAIL"
+    assert output_file.read_text() == "MODIFIED BY GUARDRAIL"
+
+
+def test_output_file_contains_guardrail_modified_json_result(tmp_path, monkeypatch):
+    """Test that output file contains the result after guardrail modification for JSON output."""
+    import json
+
+    from pydantic import BaseModel
+
+    monkeypatch.chdir(tmp_path)
+
+    class TestModel(BaseModel):
+        message: str
+
+    output_file = tmp_path / "output.json"
+
+    def modify_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, '{"message": "modified by guardrail"}')
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = '{"message": "original"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrails=[modify_guardrail],
+        output_json=TestModel,
+        output_file="output.json",
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.json_dict == {"message": "modified by guardrail"}
+    file_content = json.loads(output_file.read_text())
+    assert file_content == {"message": "modified by guardrail"}
+
+
+def test_output_file_contains_guardrail_modified_pydantic_result(tmp_path, monkeypatch):
+    """Test that output file contains the result after guardrail modification for pydantic output."""
+    import json
+
+    from pydantic import BaseModel
+
+    monkeypatch.chdir(tmp_path)
+
+    class TestModel(BaseModel):
+        message: str
+
+    output_file = tmp_path / "output.json"
+
+    def modify_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, '{"message": "modified by guardrail"}')
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = '{"message": "original"}'
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrails=[modify_guardrail],
+        output_pydantic=TestModel,
+        output_file="output.json",
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.pydantic is not None
+    assert result.pydantic.message == "modified by guardrail"
+    file_content = json.loads(output_file.read_text())
+    assert file_content == {"message": "modified by guardrail"}
+
+
+def test_output_file_with_single_guardrail_modification(tmp_path, monkeypatch):
+    """Test that output file contains the result after single guardrail modification."""
+    monkeypatch.chdir(tmp_path)
+    output_file = tmp_path / "output.txt"
+
+    def modify_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, result.raw.upper())
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "hello world"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrail=modify_guardrail,
+        output_file="output.txt",
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.raw == "HELLO WORLD"
+    assert output_file.read_text() == "HELLO WORLD"
+
+
+def test_output_file_with_multiple_guardrails_chained_modifications(tmp_path, monkeypatch):
+    """Test that output file contains the final result after multiple guardrail modifications."""
+    monkeypatch.chdir(tmp_path)
+    output_file = tmp_path / "output.txt"
+
+    def first_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, f"[FIRST] {result.raw}")
+
+    def second_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (True, f"{result.raw} [SECOND]")
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = "original"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test task",
+        expected_output="Output",
+        guardrails=[first_guardrail, second_guardrail],
+        output_file="output.txt",
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert result.raw == "[FIRST] original [SECOND]"
+    assert output_file.read_text() == "[FIRST] original [SECOND]"
