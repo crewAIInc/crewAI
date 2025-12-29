@@ -1,7 +1,7 @@
 """Trace collection listener for orchestrating trace collection."""
 
 import os
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 import uuid
 
 from typing_extensions import Self
@@ -105,7 +105,7 @@ class TraceCollectionListener(BaseEventListener):
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-        return cls._instance
+        return cast(Self, cls._instance)
 
     def __init__(
         self,
@@ -319,21 +319,12 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: MemoryQueryCompletedEvent
         ) -> None:
             self._handle_action_event("memory_query_completed", source, event)
-            if self.formatter and self.memory_retrieval_in_progress:
-                self.formatter.handle_memory_query_completed(
-                    self.formatter.current_agent_branch,
-                    event.source_type or "memory",
-                    event.query_time_ms,
-                    self.formatter.current_crew_tree,
-                )
 
         @event_bus.on(MemoryQueryFailedEvent)
         def on_memory_query_failed(source: Any, event: MemoryQueryFailedEvent) -> None:
             self._handle_action_event("memory_query_failed", source, event)
             if self.formatter and self.memory_retrieval_in_progress:
                 self.formatter.handle_memory_query_failed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.error,
                     event.source_type or "memory",
                 )
@@ -347,10 +338,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_save_in_progress = True
 
-                self.formatter.handle_memory_save_started(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
-                )
+                self.formatter.handle_memory_save_started()
 
         @event_bus.on(MemorySaveCompletedEvent)
         def on_memory_save_completed(
@@ -364,8 +352,6 @@ class TraceCollectionListener(BaseEventListener):
                 self.memory_save_in_progress = False
 
                 self.formatter.handle_memory_save_completed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.save_time_ms,
                     event.source_type or "memory",
                 )
@@ -375,10 +361,8 @@ class TraceCollectionListener(BaseEventListener):
             self._handle_action_event("memory_save_failed", source, event)
             if self.formatter and self.memory_save_in_progress:
                 self.formatter.handle_memory_save_failed(
-                    self.formatter.current_agent_branch,
                     event.error,
                     event.source_type or "memory",
-                    self.formatter.current_crew_tree,
                 )
 
         @event_bus.on(MemoryRetrievalStartedEvent)
@@ -391,10 +375,7 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_retrieval_in_progress = True
 
-                self.formatter.handle_memory_retrieval_started(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
-                )
+                self.formatter.handle_memory_retrieval_started()
 
         @event_bus.on(MemoryRetrievalCompletedEvent)
         def on_memory_retrieval_completed(
@@ -406,8 +387,6 @@ class TraceCollectionListener(BaseEventListener):
 
                 self.memory_retrieval_in_progress = False
                 self.formatter.handle_memory_retrieval_completed(
-                    self.formatter.current_agent_branch,
-                    self.formatter.current_crew_tree,
                     event.memory_content,
                     event.retrieval_time_ms,
                 )

@@ -148,6 +148,7 @@ class ToolUsage:
             and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
         ):
             try:
+                self._run_attempts += 1
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
             except Exception as e:
@@ -249,6 +250,7 @@ class ToolUsage:
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
                 "agent": self.agent,
+                "run_attempts": self._run_attempts,
             }
 
             if self.agent.fingerprint:  # type: ignore
@@ -435,6 +437,7 @@ class ToolUsage:
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
                 "agent": self.agent,
+                "run_attempts": self._run_attempts,
             }
 
             # TODO: Investigate fingerprint attribute availability on BaseAgent/LiteAgent
