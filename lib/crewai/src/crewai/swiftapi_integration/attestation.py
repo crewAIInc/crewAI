@@ -162,12 +162,18 @@ class SwiftAPIAttestationProvider(AttestationProvider):
                 )
 
             elif response.status_code == 403:
-                data = response.json()
-                detail = data.get("detail", {})
-                if isinstance(detail, dict):
-                    reason = detail.get("message") or detail.get("reason") or "Policy denied this action"
-                else:
-                    reason = str(detail) or data.get("reason", "Policy denied this action")
+                # 403 = explicit policy denial. NEVER bypass, even with fail_open.
+                # Handle malformed JSON gracefully - denial still stands.
+                try:
+                    data = response.json()
+                    detail = data.get("detail", {})
+                    if isinstance(detail, dict):
+                        reason = detail.get("message") or detail.get("reason") or "Policy denied this action"
+                    else:
+                        reason = str(detail) or data.get("reason", "Policy denied this action")
+                except (json.JSONDecodeError, ValueError):
+                    # Malformed response body doesn't change the denial
+                    reason = response.text[:200] if response.text else "Policy denied this action"
                 raise PolicyViolationError(
                     f"Action denied by SwiftAPI policy: {reason}",
                     denial_reason=reason,
