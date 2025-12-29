@@ -98,6 +98,24 @@ To enable tracing, do any one of these:
             return
         self.console.print(*args, **kwargs)
 
+    def pause_live_updates(self) -> None:
+        """Pause Live session updates to allow for human input without interference.
+
+        This stops any active streaming Live session to prevent console refresh
+        interference during HITL (Human-in-the-Loop) user input.
+        """
+        if self._streaming_live:
+            self._streaming_live.stop()
+            self._streaming_live = None
+
+    def resume_live_updates(self) -> None:
+        """Resume Live session updates after human input is complete.
+
+        New streaming sessions will be created on-demand when needed.
+        This method exists for API compatibility with HITL callers.
+        """
+        pass
+
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
     ) -> None:
