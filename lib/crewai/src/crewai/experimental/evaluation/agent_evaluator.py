@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from collections.abc import Sequence
 import threading
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -26,6 +27,10 @@ from crewai.experimental.evaluation.evaluation_listener import (
     create_evaluation_callbacks,
 )
 from crewai.task import Task
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ExecutionState:
