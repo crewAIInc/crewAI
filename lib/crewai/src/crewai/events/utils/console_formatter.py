@@ -77,16 +77,16 @@ To enable tracing, do any one of these:
         """Create standardized status content with consistent formatting."""
         content = Text()
         content.append(f"{title}\n", style=f"{status_style} bold")
-        content.append("Name: ", style="white")
+        content.append("Name: \n", style="white")
         content.append(f"{name}\n", style=status_style)
 
         for label, value in fields.items():
-            content.append(f"{label}: ", style="white")
+            content.append(f"{label}: \n", style="white")
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
         if tool_args:
-            content.append("Tool Args: ", style="white")
+            content.append("Tool Args: \n", style="white")
             content.append(f"{tool_args}\n", style=status_style)
 
         return content
@@ -1255,8 +1255,6 @@ To enable tracing, do any one of these:
         content = Text()
         reconnect_text = " (Reconnecting)" if is_reconnect else ""
         content.append(f"MCP Connection Started{reconnect_text}\n\n", style="cyan bold")
-        content.append("Server: ", style="white")
-        content.append(f"{server_name}\n", style="cyan")
 
         if server_url:
             content.append("URL: ", style="white")
@@ -1359,49 +1357,14 @@ To enable tracing, do any one of these:
             return
 
         content = self.create_status_content(
-            "MCP Tool Execution Started",
+            "MCP Tool Started",
             tool_name,
             "yellow",
             tool_args=tool_args or {},
             Server=server_name,
         )
 
-        panel = self.create_panel(content, "🔧 MCP Tool", "yellow")
-        self.print(panel)
-        self.print()
-
-    def handle_mcp_tool_execution_completed(
-        self,
-        server_name: str,
-        tool_name: str,
-        tool_args: dict[str, Any] | None = None,
-        result: Any | None = None,
-        execution_duration_ms: float | None = None,
-    ) -> None:
-        """Handle MCP tool execution completed event."""
-        if not self.verbose:
-            return
-
-        content = self.create_status_content(
-            "MCP Tool Execution Completed",
-            tool_name,
-            "green",
-            tool_args=tool_args or {},
-            Server=server_name,
-        )
-
-        if execution_duration_ms is not None:
-            content.append("Duration: ", style="white")
-            content.append(f"{execution_duration_ms:.2f}ms\n", style="green")
-
-        if result is not None:
-            result_str = str(result)
-            if len(result_str) > 500:
-                result_str = result_str[:497] + "..."
-            content.append("\nResult: ", style="white bold")
-            content.append(f"{result_str}\n", style="green")
-
-        panel = self.create_panel(content, "✅ MCP Tool Completed", "green")
+        panel = self.create_panel(content, "🔧 MCP Tool Started", "yellow")
         self.print(panel)
         self.print()
 

@@ -621,18 +621,6 @@ class EventListener(BaseEventListener):
                 event.tool_args,
             )
 
-        @crewai_event_bus.on(MCPToolExecutionCompletedEvent)
-        def on_mcp_tool_execution_completed(
-            _: Any, event: MCPToolExecutionCompletedEvent
-        ) -> None:
-            self.formatter.handle_mcp_tool_execution_completed(
-                event.server_name,
-                event.tool_name,
-                event.tool_args,
-                event.result,
-                event.execution_duration_ms,
-            )
-
         @crewai_event_bus.on(MCPToolExecutionFailedEvent)
         def on_mcp_tool_execution_failed(
             _: Any, event: MCPToolExecutionFailedEvent
