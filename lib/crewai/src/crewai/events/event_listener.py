@@ -218,10 +218,9 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
             # Handle telemetry
-            span = self.execution_spans.get(source)
+            span = self.execution_spans.pop(source, None)
             if span:
                 self._telemetry.task_ended(span, source, source.agent.crew)
-            self.execution_spans[source] = None
 
             # Pass task name if it exists
             task_name = source.name if hasattr(source, "name") and source.name else None
@@ -235,11 +234,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
-            span = self.execution_spans.get(source)
+            span = self.execution_spans.pop(source, None)
             if span:
                 if source.agent and source.agent.crew:
                     self._telemetry.task_ended(span, source, source.agent.crew)
-                self.execution_spans[source] = None
 
             # Pass task name if it exists
             task_name = source.name if hasattr(source, "name") and source.name else None
