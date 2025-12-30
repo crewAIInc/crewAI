@@ -7,6 +7,7 @@ and memory management.
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, GetCoreSchemaHandler
@@ -50,6 +51,8 @@ from crewai.utilities.tool_utils import (
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
@@ -541,7 +544,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
-        crewai_event_bus.emit(
+        future = crewai_event_bus.emit(
             self.agent,
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
@@ -550,6 +553,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
         )
+
+        if future is not None:
+            try:
+                future.result(timeout=5.0)
+            except Exception as e:
+                logger.error(f"Failed to show logs for agent execution event: {e}")
 
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: str | None = None
