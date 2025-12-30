@@ -19,7 +19,7 @@ class TestSentinelSafetyTool:
         assert tool.name == "Sentinel Get Safety Seed"
         assert "THSP" in tool.description
 
-    @patch("crewai_tools.tools.sentinel_safety_tool.sentinel_safety_tool.get_seed")
+    @patch("sentinelseed.get_seed")
     def test_get_seed_standard(self, mock_get_seed):
         """Test getting standard seed variant."""
         mock_get_seed.return_value = "# SENTINEL ALIGNMENT SEED..."
@@ -30,7 +30,7 @@ class TestSentinelSafetyTool:
         mock_get_seed.assert_called_once_with("v2", "standard")
         assert "SENTINEL" in result
 
-    @patch("crewai_tools.tools.sentinel_safety_tool.sentinel_safety_tool.get_seed")
+    @patch("sentinelseed.get_seed")
     def test_get_seed_minimal(self, mock_get_seed):
         """Test getting minimal seed variant."""
         mock_get_seed.return_value = "# SENTINEL MINIMAL..."
@@ -67,7 +67,7 @@ class TestSentinelAnalyzeTool:
         result = tool._run(content="")
         assert "Error" in result
 
-    @patch("crewai_tools.tools.sentinel_safety_tool.sentinel_safety_tool.SentinelGuard")
+    @patch("sentinelseed.SentinelGuard")
     def test_analyze_safe_content(self, mock_guard_class):
         """Test analyzing safe content."""
         mock_guard = MagicMock()
@@ -90,7 +90,7 @@ class TestSentinelAnalyzeTool:
         assert "SAFE" in result
         assert "All gates passed" in result
 
-    @patch("crewai_tools.tools.sentinel_safety_tool.sentinel_safety_tool.SentinelGuard")
+    @patch("sentinelseed.SentinelGuard")
     def test_analyze_unsafe_content(self, mock_guard_class):
         """Test analyzing unsafe content."""
         mock_guard = MagicMock()
