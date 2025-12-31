@@ -7,6 +7,7 @@ and memory management.
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel, GetCoreSchemaHandler
@@ -51,6 +52,8 @@ from crewai.utilities.tool_utils import (
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
@@ -91,6 +94,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         request_within_rpm_limit: Callable[[], bool] | None = None,
         callbacks: list[Any] | None = None,
         response_model: type[BaseModel] | None = None,
+        i18n: I18N | None = None,
     ) -> None:
         """Initialize executor.
 
@@ -114,7 +118,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
             response_model: Optional Pydantic model for structured outputs.
         """
-        self._i18n: I18N = get_i18n()
+        self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
         self.task = task
         self.agent = agent
@@ -540,7 +544,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
-        crewai_event_bus.emit(
+        future = crewai_event_bus.emit(
             self.agent,
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
@@ -549,6 +553,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
         )
+
+        if future is not None:
+            try:
+                future.result(timeout=5.0)
+            except Exception as e:
+                logger.error(f"Failed to show logs for agent execution event: {e}")
 
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: str | None = None

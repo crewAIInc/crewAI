@@ -1,16 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. An agent
-      created for testing purposes\nYour personal goal is: Complete test tasks successfully\nTo
-      give my best complete final answer to the task respond using the exact following
-      format:\n\nThought: I now can give a great answer\nFinal Answer: Your final
-      answer must be the great and the most complete as possible, it must be outcome
-      described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user",
-      "content": "\nCurrent Task: Test task description\n\nThis is the expected criteria
-      for your final answer: Expected test output\nyou MUST return the actual complete
-      content as the final answer, not a summary.\n\nBegin! This is VERY important
-      to you, use the tools available and give your best Final Answer, your job depends
-      on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. An agent created for testing purposes\nYour personal goal is: Complete test tasks successfully\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Test task description\n\nThis is the expected criteria for your final answer: Expected test output\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
     headers:
       accept:
       - application/json
@@ -50,27 +40,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFTBbhtHDL3rK4g5rwRbtaNYt9RoEaNoUaBODm0DgZnh7jKe5WyHXDmO
-        4X8vZiRLcupDLwvsPPLxPQ45jzMAx8GtwfkezQ9jnP9oeLv98N5+vfl9+4v89Mf76+XV7XDz8Yc/
-        r39T15SM9PkLeXvOWvg0jJGMk+xgnwmNCuv56nJ5+XZ1tbqswJACxZLWjTa/SPOBhefLs+XF/Gw1
-        P3+7z+4Te1K3hr9mAACP9Vt0SqCvbg1nzfPJQKrYkVsfggBcTrGcOFRlNRRzzRH0SYykSr8BSffg
-        UaDjLQFCV2QDit5TBvhbfmbBCO/q/xpue1ZgBesJ6OtI3iiAkRqkycbJGrjv2ffgk5S6CqkFhECG
-        HClAIPWZx9Kkgtz3aJVq37vChXoH2qcpBogp3UHkO1rAbU/QViW7Os8hLD5OgQBjBCFfOpEfgKVN
-        ecBSpoFAQxK1jMbSgY+Y2R6aWjJTT6K8JSHVBlACYOgpk3gCS4DyADqS55YpQDdxoMhCuoCbgwKf
-        tpSB0PeAJdaKseKpOsn0z8SZBhJrgESnXERY8S0JRsxWulkoilkKkDJ0JJQx8jcKi13DX3pWyuWm
-        FPDQN8jU7mW3KRfdSaj2r5ZLMEmgXOYg7K5OlcQYI1Cs4vSFavSVmLWnsDgdnEztpFiGV6YYTwAU
-        SVYbXkf20x55OgxpTN2Y02f9LtW1LKz9JhNqkjKQaml0FX2aAXyqyzC9mG835jSMtrF0R7Xc+Zvz
-        HZ877uARvXqzBy0ZxuP58nLVvMK32Q2rnqyT8+h7CsfU4+7hFDidALMT1/9V8xr3zjlL93/oj4D3
-        NBqFzZgpsH/p+BiW6Utd0dfDDl2ugl2ZK/a0MaZcbiJQi1PcPRxOH9Ro2LQsHeUxc309yk3Onmb/
-        AgAA//8DAAbYfvVABQAA
+      string: "{\n  \"id\": \"chatcmpl-BtaTvUHtMIPvKnESHC29TmIV3ZCNs\",\n  \"object\": \"chat.completion\",\n  \"created\": 1752587975,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: This is the expected test output, which consists of a detailed description of what the completed task should look like. The final output should include all necessary information, demonstrating clarity, comprehensiveness, and adherence to any specified guidelines. It should cover each aspect of the task requirement, ensuring that no part is overlooked or generalized. This output should serve as a complete reference for anyone looking to understand the essential elements of the task accomplished.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"\
+        usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 96,\n    \"total_tokens\": 257,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-RAY:
       - 95f9c7ffa8331b11-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -78,11 +54,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=J_xe1AP.B5P6D2GVMCesyioeS5E9DnYT34rbwQUefFc-1752587978-1.0.1.1-5Dflk5cAj6YCsOSVbCFWWSpXpw_mXsczIdzWzs2h2OwDL01HQbduE5LAToy67sfjFjHeeO4xRrqPLUQpySy2QqyHXbI_fzX4UAt3.UdwHxU;
-        path=/; expires=Tue, 15-Jul-25 14:29:38 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=0rTD8RMpxBQQy42jzmum16_eoRtWNfaZMG_TJkhGS7I-1752587978437-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=J_xe1AP.B5P6D2GVMCesyioeS5E9DnYT34rbwQUefFc-1752587978-1.0.1.1-5Dflk5cAj6YCsOSVbCFWWSpXpw_mXsczIdzWzs2h2OwDL01HQbduE5LAToy67sfjFjHeeO4xRrqPLUQpySy2QqyHXbI_fzX4UAt3.UdwHxU; path=/; expires=Tue, 15-Jul-25 14:29:38 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=0rTD8RMpxBQQy42jzmum16_eoRtWNfaZMG_TJkhGS7I-1752587978437-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
@@ -121,12 +94,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"trace_id": "b0237c14-8cd1-4453-920d-608a63d4b7ef", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0b2", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-18T15:21:00.300365+00:00"},
-      "ephemeral_trace_id": "b0237c14-8cd1-4453-920d-608a63d4b7ef"}'
+    body: '{"trace_id": "b0237c14-8cd1-4453-920d-608a63d4b7ef", "execution_type": "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null, "crew_name": "crew", "flow_name": null, "crewai_version": "1.0.0b2", "privacy_level": "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count": 0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2025-10-18T15:21:00.300365+00:00"}, "ephemeral_trace_id": "b0237c14-8cd1-4453-920d-608a63d4b7ef"}'
     headers:
       Accept:
       - '*/*'
@@ -161,37 +129,9 @@ interactions:
       cache-control:
       - no-store
       content-security-policy:
-      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self''
-        ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts
-        https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js
-        https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map
-        https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com
-        https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com
-        https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com
-        https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/
-        https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net
-        https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net
-        https://js.hscollectedforms.net https://js.usemessages.com https://snap.licdn.com
-        https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com
-        https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com
-        app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data:
-        *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com
-        https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com
-        https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com;
-        connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com
-        https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/*
-        https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io
-        https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com
-        https://api.hubspot.com https://forms.hscollectedforms.net https://api.hubapi.com
-        https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509
-        https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect
-        https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self''
-        *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com
-        https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com
-        https://drive.google.com https://slides.google.com https://accounts.google.com
-        https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/
-        https://www.youtube.com https://share.descript.com'
+      - 'default-src ''self'' *.app.crewai.com app.crewai.com; script-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts https://www.gstatic.com https://run.pstmn.io https://apis.google.com https://apis.google.com/js/api.js https://accounts.google.com https://accounts.google.com/gsi/client https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css.map https://*.google.com https://docs.google.com https://slides.google.com https://js.hs-scripts.com https://js.sentry-cdn.com https://browser.sentry-cdn.com https://www.googletagmanager.com https://js-na1.hs-scripts.com https://js.hubspot.com http://js-na1.hs-scripts.com https://bat.bing.com https://cdn.amplitude.com https://cdn.segment.com https://d1d3n03t5zntha.cloudfront.net/ https://descriptusercontent.com https://edge.fullstory.com https://googleads.g.doubleclick.net https://js.hs-analytics.net https://js.hs-banner.com https://js.hsadspixel.net https://js.hscollectedforms.net
+        https://js.usemessages.com https://snap.licdn.com https://static.cloudflareinsights.com https://static.reo.dev https://www.google-analytics.com https://share.descript.com/; style-src ''self'' ''unsafe-inline'' *.app.crewai.com app.crewai.com https://cdn.jsdelivr.net/npm/apexcharts; img-src ''self'' data: *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://dashboard.tools.crewai.com https://cdn.jsdelivr.net https://forms.hsforms.com https://track.hubspot.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://www.google.com https://www.google.com.br; font-src ''self'' data: *.app.crewai.com app.crewai.com; connect-src ''self'' *.app.crewai.com app.crewai.com https://zeus.tools.crewai.com https://connect.useparagon.com/ https://zeus.useparagon.com/* https://*.useparagon.com/* https://run.pstmn.io https://connect.tools.crewai.com/ https://*.sentry.io https://www.google-analytics.com https://edge.fullstory.com https://rs.fullstory.com https://api.hubspot.com
+        https://forms.hscollectedforms.net https://api.hubapi.com https://px.ads.linkedin.com https://px4.ads.linkedin.com https://google.com/pagead/form-data/16713662509 https://google.com/ccm/form-data/16713662509 https://www.google.com/ccm/collect https://worker-actionkit.tools.crewai.com https://api.reo.dev; frame-src ''self'' *.app.crewai.com app.crewai.com https://connect.useparagon.com/ https://zeus.tools.crewai.com https://zeus.useparagon.com/* https://connect.tools.crewai.com/ https://docs.google.com https://drive.google.com https://slides.google.com https://accounts.google.com https://*.google.com https://app.hubspot.com/ https://td.doubleclick.net https://www.googletagmanager.com/ https://www.youtube.com https://share.descript.com'
       etag:
       - W/"9e9becfaa0607314159093ffcadb0713"
       expires:

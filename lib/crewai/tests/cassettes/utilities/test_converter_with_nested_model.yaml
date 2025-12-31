@@ -1,12 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"Please convert the following text
-      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
-      must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int,\n    address:
-      Address\n    {\n        street: str,\n        city: str,\n        zip_code:
-      str\n    }\n}\n```"},{"role":"user","content":"Name: John Doe\nAge: 30\nAddress:
-      123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip
-      Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"Please convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int,\n    address: Address\n    {\n        street: str,\n        city: str,\n        zip_code: str\n    }\n}\n```"},{"role":"user","content":"Name: John Doe\nAge: 30\nAddress: 123 Main St, Anytown, 12345"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"$defs":{"Address":{"properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zip_code":{"title":"Zip Code","type":"string"}},"required":["street","city","zip_code"],"title":"Address","type":"object","additionalProperties":false}},"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"$ref":"#/$defs/Address"}},"required":["name","age","address"],"title":"Person","type":"object","additionalProperties":false},"name":"Person","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
@@ -46,23 +40,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJPLbtswEEX3+gpi1lYhP+TXrk0apAVaoEiBBKgCgSFHMmuJJMhxW9fw
-        vweUZEtOE6AbLebMvZoXDxFjoCSsGYgNJ1HbKr66f/iWfJrf3hU335f8Ovnwtb6/+Xi7nV5t1QOM
-        gsI8/URBJ9U7YWpbISmjWywccsLgOl7Mx8tFslpNGlAbiVWQlZbimYlrpVU8SSazOFnE42Wn3hgl
-        0MOa/YgYY+zQfEOdWuIfWLNkdIrU6D0vEdbnJMbAmSpEgHuvPHFNMOqhMJpQN6UfMh1CGWheYwZr
-        lsFns9Hs2mAGoxPkZcOmSR+R0qH3IdpZtHFPDpFao/Fkyr5wpdkdnb3aLKFo3+a813syv/UL/lfZ
-        XBiJZ59ZmkGbcMz0cdiLw2LneZin3lXVAHCtDfGwj2aKjx05nudWmdI68+RfSKFQWvlN7pB7o8OM
-        PBkLDT1GjD02+9ldjBysM7WlnMwWm99NklXrB/1Z9DQdd5AM8WqgmndbvfTLJRJXlR9sGAQXG5S9
-        tD8HvpPKDEA06Prfal7zbjtXuvwf+x4IgZZQ5tahVOKy4z7NYXg1b6Wdp9wUDB7dLyUwJ4UubEJi
-        wXdVe8vg956wzgulS3TWqfagC5un84QXc0zTFUTH6BkAAP//AwDQ4LiL3gMAAA==
+      string: "{\n  \"id\": \"chatcmpl-CWXQ0I6HSfFT8aD0BNmWFEHk3CkiX\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761870992,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n    \\\"name\\\": \\\"John Doe\\\",\\n    \\\"age\\\": 30,\\n    \\\"address\\\": {\\n        \\\"street\\\": \\\"123 Main St\\\",\\n        \\\"city\\\": \\\"Anytown\\\",\\n        \\\"zip_code\\\": \\\"12345\\\"\\n    }\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 209,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 260,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 996f14274966b937-MXP
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -70,11 +54,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=Ky4svfN6lhcQM6_crJFh23VuIuexOT5hNS6bhEbr7Qw-1761870993-1.0.1.1-p4Z6TA9wRLlEmiM83sZcdaHZbTds.ZzUr2lEGCtUkU2kP2WdalMAAsExqn9B0k9Okf1SUq3vKTfFK2UC4a8NtjDpRaLru0DDiJJbp9VFOfQ;
-        path=/; expires=Fri, 31-Oct-25 01:06:33 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=vvK_iahsZb8gVwsnRdmPfAjYUYT08lth_CtAEZuGCGY-1761870993906-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=Ky4svfN6lhcQM6_crJFh23VuIuexOT5hNS6bhEbr7Qw-1761870993-1.0.1.1-p4Z6TA9wRLlEmiM83sZcdaHZbTds.ZzUr2lEGCtUkU2kP2WdalMAAsExqn9B0k9Okf1SUq3vKTfFK2UC4a8NtjDpRaLru0DDiJJbp9VFOfQ; path=/; expires=Fri, 31-Oct-25 01:06:33 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=vvK_iahsZb8gVwsnRdmPfAjYUYT08lth_CtAEZuGCGY-1761870993906-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

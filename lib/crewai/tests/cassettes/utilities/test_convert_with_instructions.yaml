@@ -1,9 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"Please convert the following text
-      into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON
-      must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int\n}\n```"},{"role":"user","content":"Name:
-      Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
+    body: '{"messages":[{"role":"system","content":"Please convert the following text into valid JSON.\n\nOutput ONLY the valid JSON and nothing else.\n\nThe JSON must follow this schema exactly:\n```json\n{\n    name: str,\n    age: int\n}\n```"},{"role":"user","content":"Name: Alice, Age: 30"}],"model":"gpt-4o-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"}},"required":["name","age"],"title":"SimpleModel","type":"object","additionalProperties":false},"name":"SimpleModel","strict":true}},"stream":false}'
     headers:
       accept:
       - application/json
@@ -43,22 +40,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJJNa9wwEIbv/hViznaRN/vpW9tDCbmEQkmgDkaRxl519YUkl6bL/vci
-        e7N2vqAXH+aZd/y+ozlmhIAUUBHgexa5dqr4end/+7d84nf0dkG71eH6x5dveGPu9fLw/QrypLCP
-        v5DHZ9UnbrVTGKU1I+YeWcQ0tdysy+2G7nblALQVqJKsc7FY2kJLI4sFXSwLuinK7Vm9t5JjgIr8
-        zAgh5Dh8k08j8A9UhObPFY0hsA6hujQRAt6qVAEWggyRmQj5BLk1Ec1g/ViDYRprqGr4rCTHGvIa
-        WJcqV/Q0V3ls+8CSc9MrNQPMGBtZSj74fTiT08Whsp3z9jG8kkIrjQz7xiML1iQ3IVoHAz1lhDwM
-        m+hfhAPnrXaxifaAw+9Kuh3nwfQAE92dWbSRqZmo3OTvjGsERiZVmK0SOON7FJN02jvrhbQzkM1C
-        vzXz3uwxuDTd/4yfAOfoIorGeRSSvww8tXlM5/lR22XJg2EI6H9Ljk2U6NNDCGxZr8ajgfAUIuqm
-        laZD77wcL6d1zWpNWbvG1WoH2Sn7BwAA//8DAFzfDxVHAwAA
+      string: "{\n  \"id\": \"chatcmpl-CWXPz1ycW0P20g5kIUBGeKnXm4kR3\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761870991,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\\"name\\\":\\\"Alice\\\",\\\"age\\\":30}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 108,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 117,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
     headers:
       CF-RAY:
       - 996f142248320e95-MXP
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -66,11 +53,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=EsqV2uuHnkXCOCTW4ZgAmdmEKc4Mm3rVQw8twE209RI-1761870992-1.0.1.1-9xJoNnZ.Dpd56yJgZXGBk6iT6jSA7DBzzX2o7PVGP0baco7.cdHEcyfEimiAqgD6HguvoiO.P6i.fx.aeHfpa6fmsTSTXeC5pUlCU_yJcRA;
-        path=/; expires=Fri, 31-Oct-25 01:06:32 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=KGFXdIUU9WK3qTOFK_oSCA_E_JdqnOONwqzgqMuyGto-1761870992424-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=EsqV2uuHnkXCOCTW4ZgAmdmEKc4Mm3rVQw8twE209RI-1761870992-1.0.1.1-9xJoNnZ.Dpd56yJgZXGBk6iT6jSA7DBzzX2o7PVGP0baco7.cdHEcyfEimiAqgD6HguvoiO.P6i.fx.aeHfpa6fmsTSTXeC5pUlCU_yJcRA; path=/; expires=Fri, 31-Oct-25 01:06:32 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=KGFXdIUU9WK3qTOFK_oSCA_E_JdqnOONwqzgqMuyGto-1761870992424-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

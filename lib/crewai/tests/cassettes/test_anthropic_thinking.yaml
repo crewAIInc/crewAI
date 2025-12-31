@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather
-      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
+    body: '{"max_tokens":10000,"messages":[{"role":"user","content":"What is the weather in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"thinking":{"type":"enabled","budget_tokens":5000}}'
     headers:
       accept:
       - application/json
@@ -41,35 +40,13 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//hJNdr6o4GIX/SsPNXIjbD/xAk3OhiIiyZasI4uxkUmkFBFpsy4f75Pz3
-        CU72PjOTyZyrNm/WWu9K0+e7lFGEU2kqBSksEG5zSggW7UF72O53+8PupD+RZClG0lTKePhHtzeo
-        vMQjm621jXbB3apfy6MTbyRZEo8cNyrMOQyxJEuMps0Ach5zAYmQZCmgRGAipOnv3z/1IopJEpOw
-        Sfi8TiUnwqDgmIGYA8ibIcgwgBdaCCAiDIKCMUwEqDAUUSMjwKHJg76AFa1wiZkMTIAo+U2ACJYY
-        wCDAnANBAcMwbYs4wyAmV8oyKGJKZBCTIC1Qs+ff0QElKG5E/AWYgEe0SBFI8bNHBhJCKyAiKIAJ
-        AtjsyxktY/RfFb/WAUgQ4EUYYi5A9AzADxA8k68xQUBEMf+74UWSJR6HBIqCNY+ms2ShJb6pRaG2
-        SRYxKo4IGeFJ88ywQ4ptYvST/ai6kfRUWkZy7GgByjU9+ugeNMtZwbi/qm19TY38SJR0LLbWSHGx
-        07MyVd3ODVsYt4Uefhw42u+9QutPWpfwEnG4WIR6vP6YxC70t7hUiWZWSydeP4I7bUX9JOrtkJJk
-        W9VLbgfDHSmm+qhIoYxXd7O3UtTOCfOQ3CLYJYwNB2dFW/Y295nG3BmZ7V6z1ezijBkcdWsbovTi
-        ozl8qOb6TrpZy7xdnVw7l4OROuK0YMVB25da2FuuD+Ftm26LnZLYnRPOjGprCe1YuaWXtd7Ouj9z
-        W/PCNy3DCvhmtwwYsxfeil6KfWtvJZdKqz+83B7ekxQRmrVUdDesszLcLOqxPTg583l/fbtk+n2j
-        L2Z1NkrXTgdmV66og+H89Co67jLprVl5K7eHFJdmHYyx0XH7kbtfDpA6r52ra9rzYbgx/OH4auuW
-        r78Nc3j3rkd/sIJqy1F07VR4F19bmG8t1PU8pYv2+0FL7O4DrF1VcVQ1Ha3z0l5lll/Dw80IcN7P
-        B8GEr6+FueP2Yuzl+s7P6t79sRlN5gGH/Gzs3XNkcMUux841JxVx+ditJxd2sm5vNTyIdc4mxGDG
-        TP8m/ZB/QonrBtfnMZV+SdLnF0dQQBlw+sWCwGkKHrT4BbPv5J04FIRY/C81V8r+csjPzCcv03fS
-        BlqEg+TLUuELjwXmII2Tr24vAc3kpnzxjwFlX4KQlk3WAUMWROBPusqlJYIYCMJ/JfRJYVhcHwhz
-        EY8KHvW0EppMMZM104l5KIvMf5fMOD7xmq86VXSgsqPZaaU7qnFZDiotHNJbQR24T1D8ac4hKC81
-        X1Rh8IvkwSa79NYtBxZ1hwwfvfO9NezUdQ8xhzW3OtqPvOn9Zh+O62JuUp2MqO61IXsFl9YuXELO
-        61YDXJgX82rzcEXTY0Mp+6AjOHmhliCdziUKfYCE5wIxoFaKcw2VubjbN7ISStbZP0EStednDRk2
-        A7SJmF9C/xScrDyCu//YOlvvRxgwIrLTF+Nf/RfdDr/p1JAv+fvR9vK0oYT4Yg10tojUUv1uOo4d
-        TdM7AAAA//8DANemNnfhBgAA
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_014wWkWnKNLNhQcqLxMvUTiK","type":"message","role":"assistant","content":[{"type":"thinking","thinking":"The user is asking me about the current weather in Tokyo. However, I don''t have access to real-time information, including current weather conditions. I should let them know that I can''t provide current weather information and suggest how they could find this information.","signature":"ErkDCkYIChgCKkDiduUddGgXCWIg/nuNkG2kR6wjnlXvLGkU/CcdpCEhz0SCLTHai2HxOEJoGpUn3l7tNL63VeT1Lm88NBGOtGjDEgzSsdRRWuC29+bgbhsaDDgEiJz9iVaYNev8nCIwFTiJycqo+h2kh1Qd3kmN8WkjSGV63I8ywnu37HqI1H38/Xesgnjha0nrr54Z3CF1KqACrVAnAQMmHAbT7ra60xOadlbYdBay8IJqn0m+IjfTpCZv4686souruSCRvCg1FJSgjNlNuQ3kO/XemGwNLtCUwVvWm+PZEYAV+BuYILGLcsKQFcrrODWHobuR+RLkbwCxzWpO5qkldnom+8dqGLZ35KDx7O4XTBB2JjbmEqKEDAxm6lJT/amfs3845BXMt/VFk1JrvjvNSlevIxc7eG/V2hVRF4d8BxTfVIOB5gKGY57fOELYEP5paqWfUY4Ha8+T3ECXuWbYCDIP+d0WW30dRR4+tQq4eCf8tU8CEdJpvOHmLYxaSjGcep2p4c9sJfuIQsOD7WpEQYmx1qyK69BcsasZGRVZhGs3Ov7TfpnwnVs7Vx9brXLjPxaStJpr9nGrGAE="},{"type":"text","text":"I
+        don''t have access to real-time weather data, so I can''t tell you the current weather in Tokyo. \n\nTo get current weather information for Tokyo, you could:\n- Check weather websites like weather.com, accuweather.com, or weather.gov\n- Search \"Tokyo weather\" in any search engine\n- Use a weather app on your phone\n- Visit the Japan Meteorological Agency website (jma.go.jp)\n\nIs there anything else about Tokyo I can help you with?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":43,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":172,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - 9a4b033548b28ea2-SJC
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

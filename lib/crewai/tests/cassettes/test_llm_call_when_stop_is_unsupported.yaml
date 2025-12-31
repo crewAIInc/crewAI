@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
-      "model": "o1-mini", "stop": ["stop"]}'
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}], "model": "o1-mini", "stop": ["stop"]}'
     headers:
       accept:
       - application/json
@@ -41,9 +40,7 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"error\": {\n    \"message\": \"Unsupported parameter: 'stop'
-        is not supported with this model.\",\n    \"type\": \"invalid_request_error\",\n
-        \   \"param\": \"stop\",\n    \"code\": \"unsupported_parameter\"\n  }\n}"
+      string: "{\n  \"error\": {\n    \"message\": \"Unsupported parameter: 'stop' is not supported with this model.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": \"stop\",\n    \"code\": \"unsupported_parameter\"\n  }\n}"
     headers:
       CF-RAY:
       - 961215744c94cb45-GIG
@@ -58,11 +55,8 @@ interactions:
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4;
-        path=/; expires=Fri, 18-Jul-25 13:16:46 GMT; domain=.api.openai.com; HttpOnly;
-        Secure; SameSite=None
-      - _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000;
-        path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4; path=/; expires=Fri, 18-Jul-25 13:16:46 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
       X-Content-Type-Options:
       - nosniff
       access-control-expose-headers:
@@ -101,8 +95,7 @@ interactions:
       code: 400
       message: Bad Request
 - request:
-    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
-      "model": "o1-mini"}'
+    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}], "model": "o1-mini"}'
     headers:
       accept:
       - application/json
@@ -115,8 +108,7 @@ interactions:
       content-type:
       - application/json
       cookie:
-      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4;
-        _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000
+      - __cf_bm=KwJ1K47OHX4n2TZN8bMW37yKzKyK__S4HbTiCfyWjXM-1752842806-1.0.1.1-lweHFR7Kv2v7hT5I6xxYVz_7Ruu6aBdEgpJrSWrMxi_ficAeWC0oDeQ.0w2Lr1WRejIjqqcwSgdl6RixF2qEkjJZfS0pz_Vjjqexe44ayp4; _cfuvid=zv09c6bwcgNsYU80ah3wXzqeaIKyt_h61EAh_XRA87I-1752842806652-0.0.1.1-604800000
       host:
       - api.openai.com
       user-agent:
@@ -145,22 +137,12 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAA3RSwU7jMBC95ytGPlYNakJhQ2/sgSsg7QUhFA32pJni2JHtwFao/76yC3XQwsWH
-        efOe35uZ9wJAsBIbELLHIIdRl78nGvaqOt/dPDxf71/fdg/9bXO3e5ETXt+LZWTY5x3J8Mk6k3YY
-        NQW25ghLRxgoqla/LupmXTeXqwQMVpGONFuVAxsu61W9LldXZVV/MHvLkrzYwGMBAPCe3ujRKPor
-        NpB0UmUg73FLYnNqAhDO6lgR6D37gCaIZQalNYFMsv2nJ5A4ckANtoMbh0YSsIfF4g4d+8XibM50
-        1E0eo3MzaT0D0BgbMCZPnp8+kMPJZceGfd86Qm9N/NkHO4qEHgqAp5R6+hJEjM4OY2iDfaEkW62P
-        ciLPOYPNJxhsQJ3rV83yG7VWUUDWfjY1IVH2pDIzjxgnxXYGFLNs/5v5TvuYm802q1yuf9TPgJQ0
-        BlLt6Eix/Jo4tzmKZ/hT22nIybHw5F5ZUhuYXFyEog4nfTwQ4fc+0NB2bLbkRsfpSuKui0PxDwAA
-        //8DAN7IUy8kAwAA
+      string: "{\n  \"id\": \"chatcmpl-Buemyd13jFYbAyvwjYhO8PjkcuaAQ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1752842860,\n  \"model\": \"o1-mini-2024-09-12\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"The capital of France is **Paris**.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 14,\n    \"completion_tokens\": 84,\n    \"total_tokens\": 98,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-RAY:
       - 961216c3f9837e07-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

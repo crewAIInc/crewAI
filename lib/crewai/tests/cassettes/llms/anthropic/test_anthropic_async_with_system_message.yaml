@@ -1,7 +1,6 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You
-      are a helpful assistant."}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You are a helpful assistant."}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -43,19 +42,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJBdS8QwEEX/SrmvZqHttggBXxZkffJBRESREJNhm7VNajIRdel/ly6u
-        X4tPA/ecmYG7wxAs9ZAwvc6WFil4T7xoFnVZt2VbNRBwFhJD2qiyurwYV9vl7dVN+35+d908bten
-        brWGAL+NNFuUkt4QBGLo50Cn5BJrzxAwwTN5hrzfHXym15nsh0RdnBR1cVY0mB4EEodRRdIpeEiQ
-        t4pz9PgEiZ4zeUOQPve9QN7/lTs4P2ZWHJ7IJ8i6FDDadKRMJM0uePVb+OKRtP2PHXbn+zR2NFDU
-        vWqHY/+bVt1fOgmEzD+jaimQKL44Q4odRUjMZVkdLabpAwAA//8DAJXQ8cKdAQAA
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01NHpBj3XRV5zEZT4bjG7iBG","type":"message","role":"assistant","content":[{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":20,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":13,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -100,8 +92,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You
-      are a helpful assistant."}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is 2+2?"}],"model":"claude-sonnet-4-0","stream":false,"system":"You are a helpful assistant."}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -143,19 +134,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//dJDLasMwEEV/xdxtZbBdeyPoIpu2dNduSxFCGhITe6RIoz4I/vfi0PRJ
-        VwP3nJmBe8QcPE3QcJMtnuocmEnqvu6abmiGtofC6KEx561p2k33ch1vStzEu+Gwf9jc93SbPBTk
-        LdJqUc52S1BIYVoDm/OYxbJAwQUWYoF+PJ59odeVnIZGV11UXXVV9VieFLKEaBLZHBgaxN5ISYwP
-        kOlQiB1Bc5kmhXL6q48YORYxEvbEGbprFJx1OzIukZUxsPkpfPJE1v/HzrvrfYo7minZyQzzX/+L
-        trvfdFEIRb5H7aVCpvQ8OjIyUoLGWpa3yWNZ3gEAAP//AwAKNgjwnQEAAA==
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01A2wFpGupApJ5qkRAQ4eHrd","type":"message","role":"assistant","content":[{"type":"text","text":"2 + 2 = 4"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":20,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":13,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

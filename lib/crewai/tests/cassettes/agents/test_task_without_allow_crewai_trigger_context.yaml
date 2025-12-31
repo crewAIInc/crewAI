@@ -1,15 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
-      personal goal is: test goal\nTo give my best complete final answer to the task
-      respond using the exact following format:\n\nThought: I now can give a great
-      answer\nFinal Answer: Your final answer must be the great and the most complete
-      as possible, it must be outcome described.\n\nI MUST use these formats, my job
-      depends on it!"},{"role":"user","content":"\nCurrent Task: Analyze the data\n\nThis
-      is the expected criteria for your final answer: Analysis report\nyou MUST return
-      the actual complete content as the final answer, not a summary.\n\nBegin! This
-      is VERY important to you, use the tools available and give your best Final Answer,
-      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour personal goal is: test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Analyze the data\n\nThis is the expected criteria for your final answer: Analysis report\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -49,46 +40,15 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        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
-        AwCRywLr0Q4AAA==
+      string: "{\n  \"id\": \"chatcmpl-CjDrgqaRhLfzAxoEC6DDSEscZit5j\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894092,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer:\\n\\nAnalysis Report\\n\\nIntroduction:\\nThe task assigned is to analyze the data provided. Since no specific dataset or details are included in the prompt, I will provide a general framework and methodology for performing data analysis, along with hypothetical examples illustrating key points.\\n\\n1. Understanding the Data:\\nThe first step in data analysis is to understand the nature of the data collected. This includes identifying data types (numerical, categorical, time series), the size of the dataset, and the source of data. For instance, if the data contains sales records, each record may include fields such as date, product\
+        \ category, units sold, and revenue.\\n\\n2. Data Cleaning and Preparation:\\nBefore analysis, the data must be cleaned to remove errors, handle missing values, and normalize data formats. For example, missing sales numbers can be imputed based on averages or removed if insignificant. Incorrect formatting of dates must be standardized to a single format.\\n\\n3. Exploratory Data Analysis (EDA):\\nEDA involves summarizing main characteristics with statistical measures and visualizations:\\n- Descriptive Statistics: Compute mean, median, mode, standard deviation to understand distributions.\\n- Visualization: Use histograms, box plots to find outliers; scatter plots to find correlations.\\nExample: Analyzing sales data might reveal peak sales in specific months and identify the most profitable product categories.\\n\\n4. Identification of Trends and Patterns:\\nLook for trends over time or relationships between variables:\\n- Time Series Analysis: Analyze sales trends monthly, quarterly.\\\
+        n- Correlation Analysis: Identify whether variables like advertising spend correlate with sales.\\n- Segmentation: Cluster data subsets based on similar attributes.\\n\\n5. Hypothesis Testing:\\nTest assumptions using statistical methods such as t-tests, chi-square tests to verify relationships or differences in data groups.\\n\\n6. Predictive Analytics (if applicable):\\nUse regression analysis, machine learning models to predict future values or classify data points.\\n\\n7. Interpretation and Insights:\\nInterpret the statistical outputs in business context. For example, if sales are positively correlated with advertising spend, increasing the budget may boost sales.\\n\\n8. Reporting:\\nCompile findings into a comprehensive report including methodology, results, visualizations, and actionable recommendations.\\n\\nConclusion:\\nA complete data analysis involves systematic steps from data understanding, cleaning, exploratory analysis, statistical testing, to interpretation and\
+        \ reporting. Without specific data, this framework guides thorough and insightful analysis that can be tailored to actual datasets.\\n\\nIf specific data is provided, I can perform concrete quantitative analysis and detailed reporting. Please provide the dataset or data structure for a precise evaluation.\\n\\nEnd of Analysis Report.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 520,\n    \"total_tokens\": 675,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_9766e549b2\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
