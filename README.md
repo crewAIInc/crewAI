@@ -57,7 +57,7 @@
 > It empowers developers with both high-level simplicity and precise low-level control, ideal for creating autonomous AI agents tailored to any scenario.
 
 - **CrewAI Crews**: Optimize for autonomy and collaborative intelligence.
-- **CrewAI Flows**: Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
+- **CrewAI Flows**: The **enterprise and production architecture** for building and deploying multi-agent systems. Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
 
 With over 100,000 developers certified through our community courses at [learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
 standard for enterprise-ready AI automation.
@@ -166,13 +166,13 @@ Ensure you have Python >=3.10 <3.14 installed on your system. CrewAI uses [UV](h
 First, install CrewAI:
 
 ```shell
-pip install crewai
+uv pip install crewai
 ```
 
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
-pip install 'crewai[tools]'
+uv pip install 'crewai[tools]'
 ```
 
 The command above installs the basic package and also adds extra components which require more dependencies to function.
@@ -185,14 +185,14 @@ If you encounter issues during installation or usage, here are some common solut
 
 1. **ModuleNotFoundError: No module named 'tiktoken'**
 
-   - Install tiktoken explicitly: `pip install 'crewai[embeddings]'`
-   - If using embedchain or other tools: `pip install 'crewai[tools]'`
+   - Install tiktoken explicitly: `uv pip install 'crewai[embeddings]'`
+   - If using embedchain or other tools: `uv pip install 'crewai[tools]'`
 2. **Failed building wheel for tiktoken**
 
    - Ensure Rust compiler is installed (see installation steps above)
    - For Windows: Verify Visual C++ Build Tools are installed
-   - Try upgrading pip: `pip install --upgrade pip`
-   - If issues persist, use a pre-built wheel: `pip install tiktoken --prefer-binary`
+   - Try upgrading pip: `uv pip install --upgrade pip`
+   - If issues persist, use a pre-built wheel: `uv pip install tiktoken --prefer-binary`
 
 ### 2. Setting Up Your Crew with the YAML Configuration
 
@@ -611,7 +611,7 @@ uv build
 ### Installing Locally
 
 ```bash
-pip install dist/*.tar.gz
+uv pip install dist/*.tar.gz
 ```
 
 ## Telemetry
@@ -687,13 +687,13 @@ A: CrewAI is a standalone, lean, and fast Python framework built specifically fo
 A: Install CrewAI using pip:
 
 ```shell
-pip install crewai
+uv pip install crewai
 ```
 
 For additional tools, use:
 
 ```shell
-pip install 'crewai[tools]'
+uv pip install 'crewai[tools]'
 ```
 
 ### Q: Does CrewAI depend on LangChain?
