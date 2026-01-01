@@ -531,9 +531,16 @@ def _delegate_to_a2a(
     agent_config = next(filter(lambda x: x.endpoint == agent_id, a2a_agents))
     task_config = task.config or {}
     context_id = task_config.get("context_id")
-    task_id_config = task_config.get("task_id")
     metadata = task_config.get("metadata")
     extensions = task_config.get("extensions")
+
+    # Use endpoint-scoped task IDs to prevent reusing task IDs across different A2A agents
+    # This fixes the issue where delegating to a second A2A agent fails because the task_id
+    # from the first agent is in "completed" state
+    a2a_task_ids_by_endpoint: dict[str, str] = task_config.get(
+        "a2a_task_ids_by_endpoint", {}
+    )
+    task_id_config = a2a_task_ids_by_endpoint.get(agent_id)
 
     reference_task_ids = task_config.get("reference_task_ids", [])
 
@@ -576,6 +583,8 @@ def _delegate_to_a2a(
                 latest_message = conversation_history[-1]
                 if latest_message.task_id is not None:
                     task_id_config = latest_message.task_id
+                    # Store the task_id scoped to this endpoint for multi-turn conversations
+                    a2a_task_ids_by_endpoint[agent_id] = task_id_config
                 if latest_message.context_id is not None:
                     context_id = latest_message.context_id
 
@@ -584,13 +593,15 @@ def _delegate_to_a2a(
                     a2a_result["status"] == "completed"
                     and agent_config.trust_remote_completion_status
                 ):
+                    if task.config is None:
+                        task.config = {}
+                    # Persist endpoint-scoped task IDs for future delegations
+                    task.config["a2a_task_ids_by_endpoint"] = a2a_task_ids_by_endpoint
                     if (
                         task_id_config is not None
                         and task_id_config not in reference_task_ids
                     ):
                         reference_task_ids.append(task_id_config)
-                        if task.config is None:
-                            task.config = {}
                         task.config["reference_task_ids"] = reference_task_ids
 
                     result_text = a2a_result.get("result", "")
