@@ -537,8 +537,9 @@ def _delegate_to_a2a(
     # Use endpoint-scoped task IDs to prevent reusing task IDs across different A2A agents
     # This fixes the issue where delegating to a second A2A agent fails because the task_id
     # from the first agent is in "completed" state
-    a2a_task_ids_by_endpoint: dict[str, str] = task_config.get(
-        "a2a_task_ids_by_endpoint", {}
+    # Make a defensive copy to avoid in-place mutation of task.config
+    a2a_task_ids_by_endpoint: dict[str, str] = dict(
+        task_config.get("a2a_task_ids_by_endpoint", {})
     )
     task_id_config = a2a_task_ids_by_endpoint.get(agent_id)
 
@@ -582,9 +583,9 @@ def _delegate_to_a2a(
             if conversation_history:
                 latest_message = conversation_history[-1]
                 if latest_message.task_id is not None:
+                    # Update task_id_config for the current loop iteration only
+                    # Don't persist to a2a_task_ids_by_endpoint yet - wait until we know the status
                     task_id_config = latest_message.task_id
-                    # Store the task_id scoped to this endpoint for multi-turn conversations
-                    a2a_task_ids_by_endpoint[agent_id] = task_id_config
                 if latest_message.context_id is not None:
                     context_id = latest_message.context_id
 
@@ -593,10 +594,11 @@ def _delegate_to_a2a(
                     a2a_result["status"] == "completed"
                     and agent_config.trust_remote_completion_status
                 ):
+                    # Don't persist completed task IDs - they can't be reused
+                    # (A2A protocol rejects task IDs in terminal state)
+                    # Only add to reference_task_ids for tracking purposes
                     if task.config is None:
                         task.config = {}
-                    # Persist endpoint-scoped task IDs for future delegations
-                    task.config["a2a_task_ids_by_endpoint"] = a2a_task_ids_by_endpoint
                     if (
                         task_id_config is not None
                         and task_id_config not in reference_task_ids
