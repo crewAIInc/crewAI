@@ -538,8 +538,10 @@ def _delegate_to_a2a(
     # This fixes the issue where delegating to a second A2A agent fails because the task_id
     # from the first agent is in "completed" state
     # Make a defensive copy to avoid in-place mutation of task.config
-    a2a_task_ids_by_endpoint: dict[str, str] = dict(
-        task_config.get("a2a_task_ids_by_endpoint", {})
+    # Handle case where value is explicitly None (e.g., from JSON/YAML config)
+    existing_task_ids = task_config.get("a2a_task_ids_by_endpoint")
+    a2a_task_ids_by_endpoint: dict[str, str] = (
+        dict(existing_task_ids) if existing_task_ids else {}
     )
     task_id_config = a2a_task_ids_by_endpoint.get(agent_id)
 
