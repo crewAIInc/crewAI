@@ -956,15 +956,20 @@ class Crew(FlowTrackable, BaseModel):
                 )
                 
                 # Wrap task execution to capture tokens immediately after completion
-                async def _wrapped_task_execution():
-                    result = await task.aexecute_sync(
-                        agent=exec_data.agent,
-                        context=context,
-                        tools=exec_data.tools,
+                # Use default arguments to capture values at definition time (avoid late-binding closure issue)
+                async def _wrapped_task_execution(
+                    _task=task,
+                    _exec_data=exec_data,
+                    _context=context
+                ):
+                    result = await _task.aexecute_sync(
+                        agent=_exec_data.agent,
+                        context=_context,
+                        tools=_exec_data.tools,
                     )
                     # Capture tokens immediately after task completes
                     # This reduces (but doesn't eliminate) race conditions
-                    tokens_after = self._get_agent_token_usage(exec_data.agent)
+                    tokens_after = self._get_agent_token_usage(_exec_data.agent)
                     return result, tokens_after
                 
                 async_task = asyncio.create_task(_wrapped_task_execution())
