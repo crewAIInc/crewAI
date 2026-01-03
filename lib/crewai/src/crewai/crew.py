@@ -1183,11 +1183,36 @@ class Crew(FlowTrackable, BaseModel):
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
                 )
-                future = task.execute_async(
-                    agent=exec_data.agent,
-                    context=context,
-                    tools=exec_data.tools,
-                )
+                
+                # Create a wrapper that captures tokens immediately after task completion
+                # to avoid race conditions with concurrent tasks from the same agent
+                # Use default arguments to capture values at definition time (avoid late-binding)
+                def _wrapped_sync_task_execution(
+                    _task=task,
+                    _exec_data=exec_data,
+                    _context=context,
+                    _self=self
+                ):
+                    result = _task.execute_sync(
+                        agent=_exec_data.agent,
+                        context=_context,
+                        tools=_exec_data.tools,
+                    )
+                    # Capture tokens immediately after task completes within the thread
+                    tokens_after = _self._get_agent_token_usage(_exec_data.agent)
+                    return result, tokens_after
+                
+                # Submit to thread pool and get future
+                future: Future[tuple[TaskOutput, Any]] = Future()
+                def _run_in_thread():
+                    try:
+                        result = _wrapped_sync_task_execution()
+                        future.set_result(result)
+                    except Exception as e:
+                        future.set_exception(e)
+                
+                import threading
+                threading.Thread(daemon=True, target=_run_in_thread).start()
                 futures.append((task, future, task_index, exec_data.agent, tokens_before))
             else:
                 if futures:
@@ -1223,7 +1248,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         task: ConditionalTask,
         task_outputs: list[TaskOutput],
-        futures: list[tuple[Task, Future[TaskOutput], int, Any, Any]],
+        futures: list[tuple[Task, Future[tuple[TaskOutput, Any]], int, Any, Any]],
         task_index: int,
         was_replayed: bool,
     ) -> TaskOutput | None:
@@ -1455,26 +1480,21 @@ class Crew(FlowTrackable, BaseModel):
 
     def _process_async_tasks(
         self,
-        futures: list[tuple[Task, Future[TaskOutput], int, Any, Any]],
+        futures: list[tuple[Task, Future[tuple[TaskOutput, Any]], int, Any, Any]],
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
-        """Process async tasks executed via ThreadPoolExecutor.
+        """Process async tasks executed via threading.
         
-        Note: There is a known race condition when multiple concurrent tasks
-        from the same agent run in parallel. tokens_after is captured after
-        future.result() returns, outside the task execution context. This means
-        token attribution may be inaccurate for concurrent tasks from the same agent.
-        This is tracked by issue #4168. Use akickoff() for more accurate async
-        task token tracking.
+        Each future returns a tuple of (TaskOutput, tokens_after) where tokens_after
+        was captured immediately after task completion within the thread to avoid
+        race conditions.
         """
         task_outputs: list[TaskOutput] = []
         for future_task, future, task_index, agent, tokens_before in futures:
-            task_output = future.result()
+            # Unwrap the result which includes both output and tokens_after
+            task_output, tokens_after = future.result()
             
-            # Capture token usage after async task execution and attach to task output
-            # Note: This has a race condition for concurrent tasks from the same agent
-            # See issue #4168 for details
-            tokens_after = self._get_agent_token_usage(agent)
+            # Attach token metrics using the captured tokens_after
             task_output = self._attach_task_token_metrics(
                 task_output, future_task, agent, tokens_before, tokens_after
             )
