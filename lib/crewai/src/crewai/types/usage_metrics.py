@@ -48,7 +48,7 @@ class UsageMetrics(BaseModel):
 
 class AgentTokenMetrics(BaseModel):
     """Token usage metrics for a specific agent.
-    
+
     Attributes:
         agent_name: Name/role of the agent
         agent_id: Unique identifier for the agent
@@ -57,7 +57,7 @@ class AgentTokenMetrics(BaseModel):
         completion_tokens: Completion tokens used by this agent
         successful_requests: Number of successful LLM requests
     """
-    
+
     agent_name: str = Field(description="Name/role of the agent")
     agent_id: str | None = Field(default=None, description="Unique identifier for the agent")
     total_tokens: int = Field(default=0, description="Total tokens used by this agent")
@@ -69,7 +69,7 @@ class AgentTokenMetrics(BaseModel):
 
 class TaskTokenMetrics(BaseModel):
     """Token usage metrics for a specific task.
-    
+
     Attributes:
         task_name: Name of the task
         task_id: Unique identifier for the task
@@ -79,7 +79,7 @@ class TaskTokenMetrics(BaseModel):
         completion_tokens: Completion tokens used for this task
         successful_requests: Number of successful LLM requests
     """
-    
+
     task_name: str = Field(description="Name of the task")
     task_id: str | None = Field(default=None, description="Unique identifier for the task")
     agent_name: str = Field(description="Name of the agent that executed the task")
@@ -92,7 +92,7 @@ class TaskTokenMetrics(BaseModel):
 
 class WorkflowTokenMetrics(BaseModel):
     """Complete token usage metrics for a crew workflow.
-    
+
     Attributes:
         total_tokens: Total tokens used across entire workflow
         prompt_tokens: Total prompt tokens used
@@ -101,7 +101,7 @@ class WorkflowTokenMetrics(BaseModel):
         per_agent: Dictionary mapping agent names to their token metrics
         per_task: Dictionary mapping task names to their token metrics
     """
-    
+
     total_tokens: int = Field(default=0, description="Total tokens used across entire workflow")
     prompt_tokens: int = Field(default=0, description="Total prompt tokens used")
     cached_prompt_tokens: int = Field(default=0, description="Total cached prompt tokens used")
