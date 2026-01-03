@@ -11,6 +11,7 @@ from pathlib import Path
 import threading
 from typing import (
     Any,
+    Callable,
     ClassVar,
     cast,
     get_args,
@@ -476,13 +477,34 @@ class Task(BaseModel):
         agent: BaseAgent | None = None,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> Future[TaskOutput]:
-        """Execute the task asynchronously."""
-        future: Future[TaskOutput] = Future()
+        token_capture_callback: Callable[[], Any] | None = None,
+        agent_execution_lock: threading.Lock | None = None,
+    ) -> Future[TaskOutput | tuple[TaskOutput, Any, Any]]:
+        """Execute the task asynchronously.
+        
+        Args:
+            agent: The agent to execute the task.
+            context: Context for the task execution.
+            tools: Tools available for the task.
+            token_capture_callback: Optional callback to capture token usage.
+                If provided, the future will return a tuple of
+                (TaskOutput, tokens_before, tokens_after) instead of just TaskOutput.
+                The callback is called twice: once before task execution (after
+                acquiring the lock if one is provided) and once after task completion.
+            agent_execution_lock: Optional lock to serialize task execution for
+                the same agent. This is used to ensure accurate per-task token
+                tracking when multiple async tasks from the same agent run
+                concurrently.
+        
+        Returns:
+            Future containing TaskOutput, or tuple of (TaskOutput, tokens_before, tokens_after)
+            if token_capture_callback is provided.
+        """
+        future: Future[TaskOutput | tuple[TaskOutput, Any, Any]] = Future()
         threading.Thread(
             daemon=True,
             target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            args=(agent, context, tools, future, token_capture_callback, agent_execution_lock),
         ).start()
         return future
 
@@ -491,14 +513,45 @@ class Task(BaseModel):
         agent: BaseAgent | None,
         context: str | None,
         tools: list[Any] | None,
-        future: Future[TaskOutput],
+        future: Future[TaskOutput | tuple[TaskOutput, Any, Any]],
+        token_capture_callback: Callable[[], Any] | None = None,
+        agent_execution_lock: threading.Lock | None = None,
     ) -> None:
-        """Execute the task asynchronously with context handling."""
+        """Execute the task asynchronously with context handling.
+        
+        If agent_execution_lock is provided, the task execution will be
+        serialized with other tasks using the same lock. This ensures
+        accurate per-task token tracking by:
+        1. Capturing tokens_before after acquiring the lock
+        2. Executing the task
+        3. Capturing tokens_after immediately after completion
+        4. Releasing the lock
+        
+        If token_capture_callback is provided, it will be called twice:
+        once before task execution and once after, both while holding the lock.
+        """
         try:
-          result = self._execute_core(agent, context, tools)
-          future.set_result(result)
+            if agent_execution_lock:
+                with agent_execution_lock:
+                    if token_capture_callback:
+                        tokens_before = token_capture_callback()
+                    result = self._execute_core(agent, context, tools)
+                    if token_capture_callback:
+                        tokens_after = token_capture_callback()
+                        future.set_result((result, tokens_before, tokens_after))
+                    else:
+                        future.set_result(result)
+            else:
+                if token_capture_callback:
+                    tokens_before = token_capture_callback()
+                result = self._execute_core(agent, context, tools)
+                if token_capture_callback:
+                    tokens_after = token_capture_callback()
+                    future.set_result((result, tokens_before, tokens_after))
+                else:
+                    future.set_result(result)
         except Exception as e:
-          future.set_exception(e)
+            future.set_exception(e)
 
     async def aexecute_sync(
         self,

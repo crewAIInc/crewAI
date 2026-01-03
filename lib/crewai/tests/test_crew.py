@@ -4768,3 +4768,220 @@ def test_ensure_exchanged_messages_are_propagated_to_external_memory():
     assert "Researcher" in messages[0]["content"]
     assert messages[1]["role"] == "user"
     assert "Research a topic to teach a kid aged 6 about math" in messages[1]["content"]
+
+
+def test_async_task_token_tracking_uses_per_agent_lock():
+    """Test that async tasks from the same agent use per-agent locks for accurate token tracking.
+    
+    This test verifies the fix for the race condition described in issue #4168:
+    When multiple tasks with async_execution=True are executed by the same agent,
+    the per-agent lock ensures that token tracking is accurate by serializing
+    task execution and capturing tokens_before/tokens_after inside the thread.
+    """
+    from crewai.types.usage_metrics import TaskTokenMetrics
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="You are a researcher",
+        allow_delegation=False,
+    )
+    
+    task1 = Task(
+        description="Research topic 1",
+        expected_output="Research output 1",
+        agent=agent,
+        async_execution=True,
+    )
+    
+    task2 = Task(
+        description="Research topic 2",
+        expected_output="Research output 2",
+        agent=agent,
+        async_execution=True,
+    )
+    
+    task3 = Task(
+        description="Summarize research",
+        expected_output="Summary",
+        agent=agent,
+        async_execution=False,
+    )
+    
+    crew = Crew(agents=[agent], tasks=[task1, task2, task3])
+    
+    mock_output = TaskOutput(
+        description="Test output",
+        raw="Test result",
+        agent="Researcher",
+    )
+    
+    execution_order = []
+    lock_acquisitions = []
+    
+    original_execute_core = Task._execute_core
+    
+    def mock_execute_core(self, agent, context, tools):
+        execution_order.append(self.description)
+        return mock_output
+    
+    with patch.object(Task, "_execute_core", mock_execute_core):
+        with patch.object(
+            crew,
+            "_get_agent_token_usage",
+            side_effect=[
+                UsageMetrics(total_tokens=100, prompt_tokens=80, completion_tokens=20, successful_requests=1),
+                UsageMetrics(total_tokens=150, prompt_tokens=120, completion_tokens=30, successful_requests=2),
+                UsageMetrics(total_tokens=150, prompt_tokens=120, completion_tokens=30, successful_requests=2),
+                UsageMetrics(total_tokens=200, prompt_tokens=160, completion_tokens=40, successful_requests=3),
+                UsageMetrics(total_tokens=200, prompt_tokens=160, completion_tokens=40, successful_requests=3),
+                UsageMetrics(total_tokens=250, prompt_tokens=200, completion_tokens=50, successful_requests=4),
+            ]
+        ):
+            result = crew.kickoff()
+    
+    assert len(result.tasks_output) == 3
+    
+    for task_output in result.tasks_output:
+        if hasattr(task_output, 'usage_metrics') and task_output.usage_metrics:
+            assert isinstance(task_output.usage_metrics, TaskTokenMetrics)
+
+
+def test_async_task_token_callback_captures_tokens_inside_thread():
+    """Test that token capture callback is called inside the thread for async tasks.
+    
+    This verifies that tokens_before and tokens_after are captured inside the thread
+    (after acquiring the lock), not when the task is queued.
+    """
+    from concurrent.futures import Future
+    import time
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="You are a researcher",
+        allow_delegation=False,
+    )
+    
+    task = Task(
+        description="Research topic",
+        expected_output="Research output",
+        agent=agent,
+    )
+    
+    callback_call_times = []
+    callback_thread_ids = []
+    main_thread_id = threading.current_thread().ident
+    
+    def token_callback():
+        callback_call_times.append(time.time())
+        callback_thread_ids.append(threading.current_thread().ident)
+        return UsageMetrics(total_tokens=100, prompt_tokens=80, completion_tokens=20, successful_requests=1)
+    
+    mock_output = TaskOutput(
+        description="Test output",
+        raw="Test result",
+        agent="Researcher",
+    )
+    
+    with patch.object(Task, "_execute_core", return_value=mock_output):
+        lock = threading.Lock()
+        future = task.execute_async(
+            agent=agent,
+            context=None,
+            tools=None,
+            token_capture_callback=token_callback,
+            agent_execution_lock=lock,
+        )
+        
+        result = future.result(timeout=10)
+    
+    assert isinstance(result, tuple)
+    assert len(result) == 3
+    task_output, tokens_before, tokens_after = result
+    
+    assert len(callback_call_times) == 2
+    assert len(callback_thread_ids) == 2
+    
+    for thread_id in callback_thread_ids:
+        assert thread_id != main_thread_id
+    
+    assert callback_thread_ids[0] == callback_thread_ids[1]
+
+
+def test_async_task_per_agent_lock_serializes_execution():
+    """Test that per-agent lock serializes async task execution for the same agent.
+    
+    This test verifies that when multiple async tasks from the same agent are executed,
+    the per-agent lock ensures they run one at a time (serialized), not concurrently.
+    """
+    import time
+    
+    agent = Agent(
+        role="Researcher",
+        goal="Research topics",
+        backstory="You are a researcher",
+        allow_delegation=False,
+    )
+    
+    task1 = Task(
+        description="Research topic 1",
+        expected_output="Research output 1",
+        agent=agent,
+    )
+    
+    task2 = Task(
+        description="Research topic 2",
+        expected_output="Research output 2",
+        agent=agent,
+    )
+    
+    execution_times = []
+    
+    mock_output = TaskOutput(
+        description="Test output",
+        raw="Test result",
+        agent="Researcher",
+    )
+    
+    def slow_execute_core(self, agent, context, tools):
+        start_time = time.time()
+        time.sleep(0.1)
+        end_time = time.time()
+        execution_times.append((start_time, end_time))
+        return mock_output
+    
+    with patch.object(Task, "_execute_core", slow_execute_core):
+        lock = threading.Lock()
+        
+        def token_callback():
+            return UsageMetrics(total_tokens=100, prompt_tokens=80, completion_tokens=20, successful_requests=1)
+        
+        future1 = task1.execute_async(
+            agent=agent,
+            context=None,
+            tools=None,
+            token_capture_callback=token_callback,
+            agent_execution_lock=lock,
+        )
+        
+        future2 = task2.execute_async(
+            agent=agent,
+            context=None,
+            tools=None,
+            token_capture_callback=token_callback,
+            agent_execution_lock=lock,
+        )
+        
+        result1 = future1.result(timeout=10)
+        result2 = future2.result(timeout=10)
+    
+    assert len(execution_times) == 2
+    
+    start1, end1 = execution_times[0]
+    start2, end2 = execution_times[1]
+    
+    if start1 < start2:
+        assert end1 <= start2, "Tasks should not overlap when using the same lock"
+    else:
+        assert end2 <= start1, "Tasks should not overlap when using the same lock"

@@ -7,6 +7,7 @@ from copy import copy as shallow_copy
 from hashlib import md5
 import json
 import re
+import threading
 from typing import (
     Any,
     cast,
@@ -1153,8 +1154,13 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         task_outputs: list[TaskOutput] = []
-        futures: list[tuple[Task, Future[TaskOutput], int]] = []
+        futures: list[tuple[Task, Future[TaskOutput | tuple[TaskOutput, Any]], int, Any, Any]] = []
         last_sync_output: TaskOutput | None = None
+        
+        # Per-agent locks to serialize async task execution for accurate token tracking
+        # This ensures that when multiple async tasks from the same agent run,
+        # they execute one at a time so token deltas can be accurately attributed
+        agent_locks: dict[str, threading.Lock] = {}
 
         for task_index, task in enumerate(tasks):
             exec_data, task_outputs, last_sync_output = prepare_task_execution(
@@ -1172,18 +1178,32 @@ class Crew(FlowTrackable, BaseModel):
                     continue
 
             if task.async_execution:
-                # Capture token usage before async task execution
-                tokens_before = self._get_agent_token_usage(exec_data.agent)
-                
                 context = self._get_context(
                     task, [last_sync_output] if last_sync_output else []
                 )
+                
+                # Get or create a lock for this agent to serialize async task execution
+                # This ensures accurate per-task token tracking
+                agent_id = str(getattr(exec_data.agent, 'id', id(exec_data.agent)))
+                if agent_id not in agent_locks:
+                    agent_locks[agent_id] = threading.Lock()
+                agent_lock = agent_locks[agent_id]
+                
+                # Create a token capture callback that will be called inside the thread
+                # after task completion (while still holding the lock)
+                def create_token_callback(agent: Any = exec_data.agent) -> Any:
+                    return self._get_agent_token_usage(agent)
+                
                 future = task.execute_async(
                     agent=exec_data.agent,
                     context=context,
                     tools=exec_data.tools,
+                    token_capture_callback=create_token_callback,
+                    agent_execution_lock=agent_lock,
                 )
-                futures.append((task, future, task_index, exec_data.agent, tokens_before))
+                # Note: tokens_before is no longer captured here since it will be
+                # captured inside the thread after acquiring the lock
+                futures.append((task, future, task_index, exec_data.agent, None))
             else:
                 if futures:
                     task_outputs = self._process_async_tasks(futures, was_replayed)
@@ -1218,7 +1238,7 @@ class Crew(FlowTrackable, BaseModel):
         self,
         task: ConditionalTask,
         task_outputs: list[TaskOutput],
-        futures: list[tuple[Task, Future[TaskOutput], int, Any, Any]],
+        futures: list[tuple[Task, Future[TaskOutput | tuple[TaskOutput, Any, Any]], int, Any, Any]],
         task_index: int,
         was_replayed: bool,
     ) -> TaskOutput | None:
@@ -1450,18 +1470,32 @@ class Crew(FlowTrackable, BaseModel):
 
     def _process_async_tasks(
         self,
-        futures: list[tuple[Task, Future[TaskOutput], int, Any, Any]],
+        futures: list[tuple[Task, Future[TaskOutput | tuple[TaskOutput, Any, Any]], int, Any, Any]],
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
+        """Process completed async tasks and attach token metrics.
+        
+        The futures contain either:
+        - TaskOutput (if no token tracking was enabled)
+        - tuple of (TaskOutput, tokens_before, tokens_after) (if token tracking was enabled)
+        
+        Token tracking is enabled when the task was executed with a token_capture_callback
+        and agent_execution_lock, which ensures accurate per-task token attribution even
+        when multiple async tasks from the same agent run concurrently.
+        """
         task_outputs: list[TaskOutput] = []
-        for future_task, future, task_index, agent, tokens_before in futures:
-            task_output = future.result()
+        for future_task, future, task_index, agent, _ in futures:
+            result = future.result()
             
-            # Capture token usage after async task execution and attach to task output
-            tokens_after = self._get_agent_token_usage(agent)
-            task_output = self._attach_task_token_metrics(
-                task_output, future_task, agent, tokens_before, tokens_after
-            )
+            # Check if result is a tuple (token tracking enabled) or just TaskOutput
+            if isinstance(result, tuple) and len(result) == 3:
+                task_output, tokens_before, tokens_after = result
+                task_output = self._attach_task_token_metrics(
+                    task_output, future_task, agent, tokens_before, tokens_after
+                )
+            else:
+                # No token tracking - result is just TaskOutput
+                task_output = result
             
             task_outputs.append(task_output)
             self._process_task_result(future_task, task_output)
