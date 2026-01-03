@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from concurrent.futures import Future
 from copy import copy as shallow_copy
 import datetime
@@ -11,7 +12,6 @@ from pathlib import Path
 import threading
 from typing import (
     Any,
-    Callable,
     ClassVar,
     cast,
     get_args,
@@ -481,7 +481,7 @@ class Task(BaseModel):
         agent_execution_lock: threading.Lock | None = None,
     ) -> Future[TaskOutput | tuple[TaskOutput, Any, Any]]:
         """Execute the task asynchronously.
-        
+
         Args:
             agent: The agent to execute the task.
             context: Context for the task execution.
@@ -495,7 +495,7 @@ class Task(BaseModel):
                 the same agent. This is used to ensure accurate per-task token
                 tracking when multiple async tasks from the same agent run
                 concurrently.
-        
+
         Returns:
             Future containing TaskOutput, or tuple of (TaskOutput, tokens_before, tokens_after)
             if token_capture_callback is provided.
@@ -518,7 +518,7 @@ class Task(BaseModel):
         agent_execution_lock: threading.Lock | None = None,
     ) -> None:
         """Execute the task asynchronously with context handling.
-        
+
         If agent_execution_lock is provided, the task execution will be
         serialized with other tasks using the same lock. This ensures
         accurate per-task token tracking by:
@@ -526,7 +526,7 @@ class Task(BaseModel):
         2. Executing the task
         3. Capturing tokens_after immediately after completion
         4. Releasing the lock
-        
+
         If token_capture_callback is provided, it will be called twice:
         once before task execution and once after, both while holding the lock.
         """
