@@ -1458,11 +1458,22 @@ class Crew(FlowTrackable, BaseModel):
         futures: list[tuple[Task, Future[TaskOutput], int, Any, Any]],
         was_replayed: bool = False,
     ) -> list[TaskOutput]:
+        """Process async tasks executed via ThreadPoolExecutor.
+        
+        Note: There is a known race condition when multiple concurrent tasks
+        from the same agent run in parallel. tokens_after is captured after
+        future.result() returns, outside the task execution context. This means
+        token attribution may be inaccurate for concurrent tasks from the same agent.
+        This is tracked by issue #4168. Use akickoff() for more accurate async
+        task token tracking.
+        """
         task_outputs: list[TaskOutput] = []
         for future_task, future, task_index, agent, tokens_before in futures:
             task_output = future.result()
             
             # Capture token usage after async task execution and attach to task output
+            # Note: This has a race condition for concurrent tasks from the same agent
+            # See issue #4168 for details
             tokens_after = self._get_agent_token_usage(agent)
             task_output = self._attach_task_token_metrics(
                 task_output, future_task, agent, tokens_before, tokens_after
@@ -1775,7 +1786,8 @@ class Crew(FlowTrackable, BaseModel):
                     completion_tokens=token_sum.completion_tokens,
                     successful_requests=token_sum.successful_requests
                 )
-                workflow_metrics.per_agent[manager_role] = manager_metrics
+                # Key by manager_id to be consistent with regular agents
+                workflow_metrics.per_agent[manager_id] = manager_metrics
 
             if (
                 hasattr(self.manager_agent, "llm")
@@ -1788,13 +1800,13 @@ class Crew(FlowTrackable, BaseModel):
 
                 total_usage_metrics.add_usage_metrics(llm_usage)
                 
-                # Update or create manager metrics
-                if manager_role in workflow_metrics.per_agent:
-                    workflow_metrics.per_agent[manager_role].total_tokens += llm_usage.total_tokens
-                    workflow_metrics.per_agent[manager_role].prompt_tokens += llm_usage.prompt_tokens
-                    workflow_metrics.per_agent[manager_role].cached_prompt_tokens += llm_usage.cached_prompt_tokens
-                    workflow_metrics.per_agent[manager_role].completion_tokens += llm_usage.completion_tokens
-                    workflow_metrics.per_agent[manager_role].successful_requests += llm_usage.successful_requests
+                # Update or create manager metrics (key by manager_id for consistency)
+                if manager_id in workflow_metrics.per_agent:
+                    workflow_metrics.per_agent[manager_id].total_tokens += llm_usage.total_tokens
+                    workflow_metrics.per_agent[manager_id].prompt_tokens += llm_usage.prompt_tokens
+                    workflow_metrics.per_agent[manager_id].cached_prompt_tokens += llm_usage.cached_prompt_tokens
+                    workflow_metrics.per_agent[manager_id].completion_tokens += llm_usage.completion_tokens
+                    workflow_metrics.per_agent[manager_id].successful_requests += llm_usage.successful_requests
                 else:
                     manager_metrics = AgentTokenMetrics(
                         agent_name=manager_role,
@@ -1805,7 +1817,7 @@ class Crew(FlowTrackable, BaseModel):
                         completion_tokens=llm_usage.completion_tokens,
                         successful_requests=llm_usage.successful_requests
                     )
-                    workflow_metrics.per_agent[manager_role] = manager_metrics
+                    workflow_metrics.per_agent[manager_id] = manager_metrics
 
         # Set workflow-level totals
         workflow_metrics.total_tokens = total_usage_metrics.total_tokens
