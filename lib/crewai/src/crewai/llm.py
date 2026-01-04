@@ -1145,7 +1145,7 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = litellm.completion(**params)
             
-            if hasattr(response,"usage") and isinstance(response.usage, dict):
+            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1273,7 +1273,7 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
-            if hasattr(response,"usage") and isinstance(response.usage, dict):
+            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
