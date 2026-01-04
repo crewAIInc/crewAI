@@ -925,11 +925,12 @@ class LLM(BaseLLM):
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
 
+            # Track token usage and log callbacks if available in streaming mode
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
+
             if not tool_calls or not available_functions:
-                # Track token usage and log callbacks if available in streaming mode
-                if usage_info:
-                    self._track_token_usage_internal(usage_info)
-                self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
@@ -962,12 +963,7 @@ class LLM(BaseLLM):
             if tool_result is not None:
                 return tool_result
 
-            # --- 10) Track token usage and log callbacks if available in streaming mode
-            if usage_info:
-                self._track_token_usage_internal(usage_info)
-            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
-
-            # --- 11) Emit completion event and return response
+            # --- 10) Emit completion event and return response
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1148,6 +1144,10 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
+            
+            if hasattr(response,"usage") and not isinstance(response.usage, type):
+                usage_info = response.usage
+                self._track_token_usage_internal(usage_info)
 
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
@@ -1272,6 +1272,10 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
+
+            if hasattr(response,"usage") and not isinstance(response.usage, type):
+                usage_info = response.usage
+                self._track_token_usage_internal(usage_info)
 
         except ContextWindowExceededError as e:
             raise LLMContextLengthExceededError(str(e)) from e
@@ -1443,6 +1447,9 @@ class LLM(BaseLLM):
                             start_time=0,
                             end_time=0,
                         )
+
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
 
             if accumulated_tool_args and available_functions:
                 # Convert accumulated tool args to ChatCompletionDeltaToolCall objects
