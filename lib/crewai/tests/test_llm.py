@@ -1069,10 +1069,7 @@ async def test_usage_info_streaming_with_acall():
 
             raise StopAsyncIteration
 
-    with patch(
-        "litellm.acompletion",
-        new=AsyncMock(return_value=FakeAsyncStream()),
-    ) as mock_acompletion:
+    with patch("litellm.acompletion",new=AsyncMock(return_value=FakeAsyncStream())) as mock_acompletion:
         result = await llm.acall("Tell me a joke.")
         mock_acompletion.assert_awaited_once()
 
