@@ -13,7 +13,7 @@ Enable your agents to manage companies and contacts within HubSpot. Create new r
 
 Before using the HubSpot integration, ensure you have:
 
-- A [CrewAI AOP](https://app.crewai.com) account with an active subscription.
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription.
 - A HubSpot account with appropriate permissions.
 - Connected your HubSpot account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors).
 
@@ -21,7 +21,7 @@ Before using the HubSpot integration, ensure you have:
 
 ### 1. Connect Your HubSpot Account
 
-1. Navigate to [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors).
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors).
 2. Find **HubSpot** in the Authentication Integrations section.
 3. Click **Connect** and complete the OAuth flow.
 4. Grant the necessary permissions for company and contact management.
@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -115,6 +117,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `web_technologies` (string, optional): Web Technologies used. Must be one of the predefined values.
     - `website` (string, optional): Website URL.
     - `founded_year` (string, optional): Year Founded.
+
   </Accordion>
 
   <Accordion title="hubspot/create_contact">
@@ -214,6 +217,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_whatsapp_phone_number` (string, optional): WhatsApp Phone Number.
     - `work_email` (string, optional): Work email.
     - `hs_googleplusid` (string, optional): googleplus ID.
+
   </Accordion>
 
   <Accordion title="hubspot/create_deal">
@@ -229,6 +233,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dealtype` (string, optional): The type of deal. Available values: `newbusiness`, `existingbusiness`.
     - `description` (string, optional): A description of the deal.
     - `hs_priority` (string, optional): The priority of the deal. Available values: `low`, `medium`, `high`.
+
   </Accordion>
 
   <Accordion title="hubspot/create_record_engagements">
@@ -246,6 +251,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_meeting_body` (string, optional): The description for the meeting. (Used for `MEETING`)
     - `hs_meeting_start_time` (string, optional): The start time of the meeting. (Used for `MEETING`)
     - `hs_meeting_end_time` (string, optional): The end time of the meeting. (Used for `MEETING`)
+
   </Accordion>
 
   <Accordion title="hubspot/update_company">
@@ -263,6 +269,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `numberofemployees` (number, optional): Number of Employees.
     - `annualrevenue` (number, optional): Annual Revenue.
     - `description` (string, optional): Description.
+
   </Accordion>
 
   <Accordion title="hubspot/create_record_any">
@@ -271,6 +278,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `recordType` (string, required): The object type ID of the custom object.
     - Additional parameters depend on the custom object's schema.
+
   </Accordion>
 
   <Accordion title="hubspot/update_contact">
@@ -285,6 +293,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `company` (string, optional): Company Name.
     - `jobtitle` (string, optional): Job Title.
     - `lifecyclestage` (string, optional): Lifecycle Stage.
+
   </Accordion>
 
   <Accordion title="hubspot/update_deal">
@@ -298,6 +307,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pipeline` (string, optional): The pipeline the deal belongs to.
     - `closedate` (string, optional): The date the deal is expected to close.
     - `dealtype` (string, optional): The type of deal.
+
   </Accordion>
 
   <Accordion title="hubspot/update_record_engagements">
@@ -309,6 +319,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_task_subject` (string, optional): The title of the task.
     - `hs_task_body` (string, optional): The notes for the task.
     - `hs_task_status` (string, optional): The status of the task.
+
   </Accordion>
 
   <Accordion title="hubspot/update_record_any">
@@ -318,6 +329,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `recordId` (string, required): The ID of the record to update.
     - `recordType` (string, required): The object type ID of the custom object.
     - Additional parameters depend on the custom object's schema.
+
   </Accordion>
 
   <Accordion title="hubspot/list_companies">
@@ -325,6 +337,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/list_contacts">
@@ -332,6 +345,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/list_deals">
@@ -339,6 +353,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/get_records_engagements">
@@ -347,6 +362,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `objectName` (string, required): The type of engagement to fetch (e.g., "notes").
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/get_records_any">
@@ -355,6 +371,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `recordType` (string, required): The object type ID of the custom object.
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/get_company">
@@ -362,6 +379,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the company to retrieve.
+
   </Accordion>
 
   <Accordion title="hubspot/get_contact">
@@ -369,6 +387,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the contact to retrieve.
+
   </Accordion>
 
   <Accordion title="hubspot/get_deal">
@@ -376,6 +395,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the deal to retrieve.
+
   </Accordion>
 
   <Accordion title="hubspot/get_record_by_id_engagements">
@@ -383,6 +403,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the engagement to retrieve.
+
   </Accordion>
 
   <Accordion title="hubspot/get_record_by_id_any">
@@ -391,6 +412,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `recordType` (string, required): The object type ID of the custom object.
     - `recordId` (string, required): The ID of the record to retrieve.
+
   </Accordion>
 
   <Accordion title="hubspot/search_companies">
@@ -399,6 +421,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/search_contacts">
@@ -407,6 +430,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/search_deals">
@@ -415,6 +439,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `filterFormula` (object, optional): A filter in disjunctive normal form (OR of ANDs).
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/search_records_engagements">
@@ -423,6 +448,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `engagementFilterFormula` (object, optional): A filter for engagements.
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/search_records_any">
@@ -432,6 +458,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `recordType` (string, required): The object type ID to search.
     - `filterFormula` (string, optional): The filter formula to apply.
     - `paginationParameters` (object, optional): Use `pageCursor` to fetch subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_companies">
@@ -439,6 +466,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the company to delete.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_contacts">
@@ -446,6 +474,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the contact to delete.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_deals">
@@ -453,6 +482,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the deal to delete.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_engagements">
@@ -460,6 +490,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `recordId` (string, required): The ID of the engagement to delete.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_any">
@@ -468,6 +499,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `recordType` (string, required): The object type ID of the custom object.
     - `recordId` (string, required): The ID of the record to delete.
+
   </Accordion>
 
   <Accordion title="hubspot/get_contacts_by_list_id">
@@ -476,6 +508,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `listId` (string, required): The ID of the list to get contacts from.
     - `paginationParameters` (object, optional): Use `pageCursor` for subsequent pages.
+
   </Accordion>
 
   <Accordion title="hubspot/describe_action_schema">
@@ -484,6 +517,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `recordType` (string, required): The object type ID (e.g., 'companies').
     - `operation` (string, required): The operation type (e.g., 'CREATE_RECORD').
+
   </Accordion>
 </AccordionGroup>
 
@@ -577,5 +611,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with HubSpot integration setup or troubleshooting.
+  Contact our support team for assistance with HubSpot integration setup or
+  troubleshooting.
 </Card>

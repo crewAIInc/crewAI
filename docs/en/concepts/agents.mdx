@@ -8,6 +8,7 @@ mode: "wide"
 ## Overview of an Agent
 
 In the CrewAI framework, an `Agent` is an autonomous unit that can:
+
 - Perform specific tasks
 - Make decisions based on its role and goal
 - Use tools to accomplish objectives
@@ -16,15 +17,19 @@ In the CrewAI framework, an `Agent` is an autonomous unit that can:
 - Delegate tasks when allowed
 
 <Tip>
-Think of an agent as a specialized team member with specific skills, expertise, and responsibilities. For example, a `Researcher` agent might excel at gathering and analyzing information, while a `Writer` agent might be better at creating content.
+  Think of an agent as a specialized team member with specific skills,
+  expertise, and responsibilities. For example, a `Researcher` agent might excel
+  at gathering and analyzing information, while a `Writer` agent might be better
+  at creating content.
 </Tip>
 
 <Note type="info" title="Enterprise Enhancement: Visual Agent Builder">
-CrewAI AOP includes a Visual Agent Builder that simplifies agent creation and configuration without writing code. Design your agents visually and test them in real-time.
+CrewAI AMP includes a Visual Agent Builder that simplifies agent creation and configuration without writing code. Design your agents visually and test them in real-time.
 
 ![Visual Agent Builder Screenshot](/images/enterprise/crew-studio-interface.png)
 
 The Visual Agent Builder enables:
+
 - Intuitive agent configuration with form-based interfaces
 - Real-time testing and validation
 - Template library with pre-configured agent types
@@ -33,36 +38,36 @@ The Visual Agent Builder enables:
 
 ## Agent Attributes
 
-| Attribute                               | Parameter                | Type                          | Description                                                                                                          |
-| :-------------------------------------- | :----------------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
-| **Role**                                | `role`                   | `str`                         | Defines the agent's function and expertise within the crew.                                                           |
-| **Goal**                                | `goal`                   | `str`                         | The individual objective that guides the agent's decision-making.                                                     |
-| **Backstory**                           | `backstory`              | `str`                         | Provides context and personality to the agent, enriching interactions.                                                |
-| **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`        | Language model that powers the agent. Defaults to the model specified in `OPENAI_MODEL_NAME` or "gpt-4".              |
-| **Tools** _(optional)_                  | `tools`                  | `List[BaseTool]`              | Capabilities or functions available to the agent. Defaults to an empty list.                                          |
-| **Function Calling LLM** _(optional)_   | `function_calling_llm`   | `Optional[Any]`               | Language model for tool calling, overrides crew's LLM if specified.                                                   |
-| **Max Iterations** _(optional)_         | `max_iter`               | `int`                         | Maximum iterations before the agent must provide its best answer. Default is 20.                                      |
-| **Max RPM** _(optional)_                | `max_rpm`                | `Optional[int]`               | Maximum requests per minute to avoid rate limits.                                                                     |
-| **Max Execution Time** _(optional)_     | `max_execution_time`     | `Optional[int]`               | Maximum time (in seconds) for task execution.                                                                         |
-| **Verbose** _(optional)_                | `verbose`                | `bool`                        | Enable detailed execution logs for debugging. Default is False.                                                       |
-| **Allow Delegation** _(optional)_       | `allow_delegation`       | `bool`                        | Allow the agent to delegate tasks to other agents. Default is False.                                                  |
-| **Step Callback** _(optional)_          | `step_callback`          | `Optional[Any]`               | Function called after each agent step, overrides crew callback.                                                       |
-| **Cache** _(optional)_                  | `cache`                  | `bool`                        | Enable caching for tool usage. Default is True.                                                                       |
-| **System Template** _(optional)_        | `system_template`        | `Optional[str]`               | Custom system prompt template for the agent.                                                                          |
-| **Prompt Template** _(optional)_        | `prompt_template`        | `Optional[str]`               | Custom prompt template for the agent.                                                                                 |
-| **Response Template** _(optional)_      | `response_template`      | `Optional[str]`               | Custom response template for the agent.                                                                               |
-| **Allow Code Execution** _(optional)_   | `allow_code_execution`   | `Optional[bool]`              | Enable code execution for the agent. Default is False.                                                                |
-| **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                         | Maximum number of retries when an error occurs. Default is 2.                                                         |
-| **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                        | Keep messages under context window size by summarizing. Default is True.                                              |
-| **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`   | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                               |
-| **Multimodal** _(optional)_             | `multimodal`             | `bool`                        | Whether the agent supports multimodal capabilities. Default is False.                                                  |
-| **Inject Date** _(optional)_            | `inject_date`            | `bool`                        | Whether to automatically inject the current date into tasks. Default is False.                                         |
-| **Date Format** _(optional)_            | `date_format`            | `str`                         | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                               |
-| **Reasoning** _(optional)_              | `reasoning`              | `bool`                        | Whether the agent should reflect and create a plan before executing a task. Default is False.                         |
-| **Max Reasoning Attempts** _(optional)_ | `max_reasoning_attempts` | `Optional[int]`               | Maximum number of reasoning attempts before executing the task. If None, will try until ready.                         |
-| **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`    | Configuration for the embedder used by the agent.                                                                     |
-| **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                     |
-| **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`              | Whether to use system prompt (for o1 model support). Default is True.                                                 |
+| Attribute                               | Parameter                | Type                                  | Description                                                                                              |
+| :-------------------------------------- | :----------------------- | :------------------------------------ | :------------------------------------------------------------------------------------------------------- |
+| **Role**                                | `role`                   | `str`                                 | Defines the agent's function and expertise within the crew.                                              |
+| **Goal**                                | `goal`                   | `str`                                 | The individual objective that guides the agent's decision-making.                                        |
+| **Backstory**                           | `backstory`              | `str`                                 | Provides context and personality to the agent, enriching interactions.                                   |
+| **LLM** _(optional)_                    | `llm`                    | `Union[str, LLM, Any]`                | Language model that powers the agent. Defaults to the model specified in `OPENAI_MODEL_NAME` or "gpt-4". |
+| **Tools** _(optional)_                  | `tools`                  | `List[BaseTool]`                      | Capabilities or functions available to the agent. Defaults to an empty list.                             |
+| **Function Calling LLM** _(optional)_   | `function_calling_llm`   | `Optional[Any]`                       | Language model for tool calling, overrides crew's LLM if specified.                                      |
+| **Max Iterations** _(optional)_         | `max_iter`               | `int`                                 | Maximum iterations before the agent must provide its best answer. Default is 20.                         |
+| **Max RPM** _(optional)_                | `max_rpm`                | `Optional[int]`                       | Maximum requests per minute to avoid rate limits.                                                        |
+| **Max Execution Time** _(optional)_     | `max_execution_time`     | `Optional[int]`                       | Maximum time (in seconds) for task execution.                                                            |
+| **Verbose** _(optional)_                | `verbose`                | `bool`                                | Enable detailed execution logs for debugging. Default is False.                                          |
+| **Allow Delegation** _(optional)_       | `allow_delegation`       | `bool`                                | Allow the agent to delegate tasks to other agents. Default is False.                                     |
+| **Step Callback** _(optional)_          | `step_callback`          | `Optional[Any]`                       | Function called after each agent step, overrides crew callback.                                          |
+| **Cache** _(optional)_                  | `cache`                  | `bool`                                | Enable caching for tool usage. Default is True.                                                          |
+| **System Template** _(optional)_        | `system_template`        | `Optional[str]`                       | Custom system prompt template for the agent.                                                             |
+| **Prompt Template** _(optional)_        | `prompt_template`        | `Optional[str]`                       | Custom prompt template for the agent.                                                                    |
+| **Response Template** _(optional)_      | `response_template`      | `Optional[str]`                       | Custom response template for the agent.                                                                  |
+| **Allow Code Execution** _(optional)_   | `allow_code_execution`   | `Optional[bool]`                      | Enable code execution for the agent. Default is False.                                                   |
+| **Max Retry Limit** _(optional)_        | `max_retry_limit`        | `int`                                 | Maximum number of retries when an error occurs. Default is 2.                                            |
+| **Respect Context Window** _(optional)_ | `respect_context_window` | `bool`                                | Keep messages under context window size by summarizing. Default is True.                                 |
+| **Code Execution Mode** _(optional)_    | `code_execution_mode`    | `Literal["safe", "unsafe"]`           | Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct). Default is 'safe'.                  |
+| **Multimodal** _(optional)_             | `multimodal`             | `bool`                                | Whether the agent supports multimodal capabilities. Default is False.                                    |
+| **Inject Date** _(optional)_            | `inject_date`            | `bool`                                | Whether to automatically inject the current date into tasks. Default is False.                           |
+| **Date Format** _(optional)_            | `date_format`            | `str`                                 | Format string for date when inject_date is enabled. Default is "%Y-%m-%d" (ISO format).                  |
+| **Reasoning** _(optional)_              | `reasoning`              | `bool`                                | Whether the agent should reflect and create a plan before executing a task. Default is False.            |
+| **Max Reasoning Attempts** _(optional)_ | `max_reasoning_attempts` | `Optional[int]`                       | Maximum number of reasoning attempts before executing the task. If None, will try until ready.           |
+| **Embedder** _(optional)_               | `embedder`               | `Optional[Dict[str, Any]]`            | Configuration for the embedder used by the agent.                                                        |
+| **Knowledge Sources** _(optional)_      | `knowledge_sources`      | `Optional[List[BaseKnowledgeSource]]` | Knowledge sources available to the agent.                                                                |
+| **Use System Prompt** _(optional)_      | `use_system_prompt`      | `Optional[bool]`                      | Whether to use system prompt (for o1 model support). Default is True.                                    |
 
 ## Creating Agents
 
@@ -137,7 +142,8 @@ class LatestAiDevelopmentCrew():
 ```
 
 <Note>
-The names you use in your YAML files (`agents.yaml`) should match the method names in your Python code.
+  The names you use in your YAML files (`agents.yaml`) should match the method
+  names in your Python code.
 </Note>
 
 ### Direct Code Definition
@@ -184,6 +190,7 @@ agent = Agent(
 Let's break down some key parameter combinations for common use cases:
 
 #### Basic Research Agent
+
 ```python Code
 research_agent = Agent(
     role="Research Analyst",
@@ -195,6 +202,7 @@ research_agent = Agent(
 ```
 
 #### Code Development Agent
+
 ```python Code
 dev_agent = Agent(
     role="Senior Python Developer",
@@ -208,6 +216,7 @@ dev_agent = Agent(
 ```
 
 #### Long-Running Analysis Agent
+
 ```python Code
 analysis_agent = Agent(
     role="Data Analyst",
@@ -221,6 +230,7 @@ analysis_agent = Agent(
 ```
 
 #### Custom Template Agent
+
 ```python Code
 custom_agent = Agent(
     role="Customer Service Representative",
@@ -236,6 +246,7 @@ custom_agent = Agent(
 ```
 
 #### Date-Aware Agent with Reasoning
+
 ```python Code
 strategic_agent = Agent(
     role="Market Analyst",
@@ -250,6 +261,7 @@ strategic_agent = Agent(
 ```
 
 #### Reasoning Agent
+
 ```python Code
 reasoning_agent = Agent(
     role="Strategic Planner",
@@ -263,6 +275,7 @@ reasoning_agent = Agent(
 ```
 
 #### Multimodal Agent
+
 ```python Code
 multimodal_agent = Agent(
     role="Visual Content Analyst",
@@ -276,52 +289,64 @@ multimodal_agent = Agent(
 ### Parameter Details
 
 #### Critical Parameters
+
 - `role`, `goal`, and `backstory` are required and shape the agent's behavior
 - `llm` determines the language model used (default: OpenAI's GPT-4)
 
 #### Memory and Context
+
 - `memory`: Enable to maintain conversation history
 - `respect_context_window`: Prevents token limit issues
 - `knowledge_sources`: Add domain-specific knowledge bases
 
 #### Execution Control
+
 - `max_iter`: Maximum attempts before giving best answer
 - `max_execution_time`: Timeout in seconds
 - `max_rpm`: Rate limiting for API calls
 - `max_retry_limit`: Retries on error
 
 #### Code Execution
+
 - `allow_code_execution`: Must be True to run code
 - `code_execution_mode`:
   - `"safe"`: Uses Docker (recommended for production)
   - `"unsafe"`: Direct execution (use only in trusted environments)
 
 <Note>
-  This runs a default Docker image. If you want to configure the docker image, the checkout the Code Interpreter Tool in the tools section.
-  Add the code interpreter tool as a tool in the agent as a tool parameter.
-  </Note>
+  This runs a default Docker image. If you want to configure the docker image,
+  the checkout the Code Interpreter Tool in the tools section. Add the code
+  interpreter tool as a tool in the agent as a tool parameter.
+</Note>
 
 #### Advanced Features
+
 - `multimodal`: Enable multimodal capabilities for processing text and visual content
 - `reasoning`: Enable agent to reflect and create plans before executing tasks
 - `inject_date`: Automatically inject current date into task descriptions
 
 #### Templates
+
 - `system_template`: Defines agent's core behavior
 - `prompt_template`: Structures input format
 - `response_template`: Formats agent responses
 
 <Note>
-When using custom templates, ensure that both `system_template` and `prompt_template` are defined. The `response_template` is optional but recommended for consistent output formatting.
+  When using custom templates, ensure that both `system_template` and
+  `prompt_template` are defined. The `response_template` is optional but
+  recommended for consistent output formatting.
 </Note>
 
 <Note>
-When using custom templates, you can use variables like `{role}`, `{goal}`, and `{backstory}` in your templates. These will be automatically populated during execution.
+  When using custom templates, you can use variables like `{role}`, `{goal}`,
+  and `{backstory}` in your templates. These will be automatically populated
+  during execution.
 </Note>
 
 ## Agent Tools
 
 Agents can be equipped with various tools to enhance their capabilities. CrewAI supports tools from:
+
 - [CrewAI Toolkit](https://github.com/joaomdmoura/crewai-tools)
 - [LangChain Tools](https://python.langchain.com/docs/integrations/tools)
 
@@ -360,7 +385,8 @@ analyst = Agent(
 ```
 
 <Note>
-When `memory` is enabled, the agent will maintain context across multiple interactions, improving its ability to handle complex, multi-step tasks.
+  When `memory` is enabled, the agent will maintain context across multiple
+  interactions, improving its ability to handle complex, multi-step tasks.
 </Note>
 
 ## Context Window Management
@@ -390,6 +416,7 @@ smart_agent = Agent(
 ```
 
 **What happens when context limits are exceeded:**
+
 - ⚠️ **Warning message**: `"Context length exceeded. Summarizing content to fit the model context window."`
 - 🔄 **Automatic summarization**: CrewAI intelligently summarizes the conversation history
 - ✅ **Continued execution**: Task execution continues seamlessly with the summarized context
@@ -411,6 +438,7 @@ strict_agent = Agent(
 ```
 
 **What happens when context limits are exceeded:**
+
 - ❌ **Error message**: `"Context length exceeded. Consider using smaller text or RAG tools from crewai_tools."`
 - 🛑 **Execution stops**: Task execution halts immediately
 - 🔧 **Manual intervention required**: You need to modify your approach
@@ -418,6 +446,7 @@ strict_agent = Agent(
 ### Choosing the Right Setting
 
 #### Use `respect_context_window=True` (Default) when:
+
 - **Processing large documents** that might exceed context limits
 - **Long-running conversations** where some summarization is acceptable
 - **Research tasks** where general context is more important than exact details
@@ -436,6 +465,7 @@ document_processor = Agent(
 ```
 
 #### Use `respect_context_window=False` when:
+
 - **Precision is critical** and information loss is unacceptable
 - **Legal or medical tasks** requiring complete context
 - **Code review** where missing details could introduce bugs
@@ -458,6 +488,7 @@ precision_agent = Agent(
 When dealing with very large datasets, consider these strategies:
 
 #### 1. Use RAG Tools
+
 ```python Code
 from crewai_tools import RagTool
 
@@ -475,6 +506,7 @@ rag_agent = Agent(
 ```
 
 #### 2. Use Knowledge Sources
+
 ```python Code
 # Use knowledge sources instead of large prompts
 knowledge_agent = Agent(
@@ -498,6 +530,7 @@ knowledge_agent = Agent(
 ### Troubleshooting Context Issues
 
 **If you're getting context limit errors:**
+
 ```python Code
 # Quick fix: Enable automatic handling
 agent.respect_context_window = True
@@ -511,6 +544,7 @@ agent.tools = [RagTool()]
 ```
 
 **If automatic summarization loses important information:**
+
 ```python Code
 # Disable auto-summarization and use RAG instead
 agent = Agent(
@@ -524,7 +558,10 @@ agent = Agent(
 ```
 
 <Note>
-The context window management feature works automatically in the background. You don't need to call any special functions - just set `respect_context_window` to your preferred behavior and CrewAI handles the rest!
+  The context window management feature works automatically in the background.
+  You don't need to call any special functions - just set
+  `respect_context_window` to your preferred behavior and CrewAI handles the
+  rest!
 </Note>
 
 ## Direct Agent Interaction with `kickoff()`
@@ -556,10 +593,10 @@ print(result.raw)
 
 ### Parameters and Return Values
 
-| Parameter         | Type                                | Description                                                               |
-| :---------------- | :---------------------------------- | :------------------------------------------------------------------------ |
-| `messages`        | `Union[str, List[Dict[str, str]]]`  | Either a string query or a list of message dictionaries with role/content |
-| `response_format` | `Optional[Type[Any]]`               | Optional Pydantic model for structured output                             |
+| Parameter         | Type                               | Description                                                               |
+| :---------------- | :--------------------------------- | :------------------------------------------------------------------------ |
+| `messages`        | `Union[str, List[Dict[str, str]]]` | Either a string query or a list of message dictionaries with role/content |
+| `response_format` | `Optional[Type[Any]]`              | Optional Pydantic model for structured output                             |
 
 The method returns a `LiteAgentOutput` object with the following properties:
 
@@ -621,28 +658,34 @@ asyncio.run(main())
 ```
 
 <Note>
-The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler execution flow while preserving all of the agent's configuration (role, goal, backstory, tools, etc.).
+  The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler
+  execution flow while preserving all of the agent's configuration (role, goal,
+  backstory, tools, etc.).
 </Note>
 
 ## Important Considerations and Best Practices
 
 ### Security and Code Execution
+
 - When using `allow_code_execution`, be cautious with user input and always validate it
 - Use `code_execution_mode: "safe"` (Docker) in production environments
 - Consider setting appropriate `max_execution_time` limits to prevent infinite loops
 
 ### Performance Optimization
+
 - Use `respect_context_window: true` to prevent token limit issues
 - Set appropriate `max_rpm` to avoid rate limiting
 - Enable `cache: true` to improve performance for repetitive tasks
 - Adjust `max_iter` and `max_retry_limit` based on task complexity
 
 ### Memory and Context Management
+
 - Leverage `knowledge_sources` for domain-specific information
 - Configure `embedder` when using custom embedding models
 - Use custom templates (`system_template`, `prompt_template`, `response_template`) for fine-grained control over agent behavior
 
 ### Advanced Features
+
 - Enable `reasoning: true` for agents that need to plan and reflect before executing complex tasks
 - Set appropriate `max_reasoning_attempts` to control planning iterations (None for unlimited attempts)
 - Use `inject_date: true` to provide agents with current date awareness for time-sensitive tasks
@@ -650,6 +693,7 @@ The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler e
 - Enable `multimodal: true` for agents that need to process both text and visual content
 
 ### Agent Collaboration
+
 - Enable `allow_delegation: true` when agents need to work together
 - Use `step_callback` to monitor and log agent interactions
 - Consider using different LLMs for different purposes:
@@ -657,6 +701,7 @@ The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler e
   - `function_calling_llm` for efficient tool usage
 
 ### Date Awareness and Reasoning
+
 - Use `inject_date: true` to provide agents with current date awareness for time-sensitive tasks
 - Customize the date format with `date_format` using standard Python datetime format codes
 - Valid format codes include: %Y (year), %m (month), %d (day), %B (full month name), etc.
@@ -664,22 +709,26 @@ The `kickoff()` method uses a `LiteAgent` internally, which provides a simpler e
 - Enable `reasoning: true` for complex tasks that benefit from upfront planning and reflection
 
 ### Model Compatibility
+
 - Set `use_system_prompt: false` for older models that don't support system messages
 - Ensure your chosen `llm` supports the features you need (like function calling)
 
 ## Troubleshooting Common Issues
 
 1. **Rate Limiting**: If you're hitting API rate limits:
+
    - Implement appropriate `max_rpm`
    - Use caching for repetitive operations
    - Consider batching requests
 
 2. **Context Window Errors**: If you're exceeding context limits:
+
    - Enable `respect_context_window`
    - Use more efficient prompts
    - Clear agent memory periodically
 
 3. **Code Execution Issues**: If code execution fails:
+
    - Verify Docker is installed for safe mode
    - Check execution permissions
    - Review code sandbox settings

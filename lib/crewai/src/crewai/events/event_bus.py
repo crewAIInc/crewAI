@@ -327,6 +327,7 @@ class CrewAIEventsBus:
             ...     # or future.result(timeout=5.0) in sync code
         """
         event_type = type(event)
+        print(f"Emitting event: {event_type}")
 
         with self._rwlock.r_locked():
             if self._shutting_down:
