@@ -307,6 +307,55 @@ Os métodos `third_method` e `fourth_method` escutam a saída do `second_method`
 
 Ao executar esse Flow, a saída será diferente dependendo do valor booleano aleatório gerado pelo `start_method`.
 
+### Human in the Loop (feedback humano)
+
+O decorador `@human_feedback` permite fluxos de trabalho human-in-the-loop, pausando a execução do flow para coletar feedback de um humano. Isso é útil para portões de aprovação, revisão de qualidade e pontos de decisão que requerem julgamento humano.
+
+```python Code
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
+
+class ReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="Você aprova este conteúdo?",
+        emit=["approved", "rejected", "needs_revision"],
+        llm="gpt-4o-mini",
+        default_outcome="needs_revision",
+    )
+    def generate_content(self):
+        return "Conteúdo para revisão..."
+
+    @listen("approved")
+    def on_approval(self, result: HumanFeedbackResult):
+        print(f"Aprovado! Feedback: {result.feedback}")
+
+    @listen("rejected")
+    def on_rejection(self, result: HumanFeedbackResult):
+        print(f"Rejeitado. Motivo: {result.feedback}")
+```
+
+Quando `emit` é especificado, o feedback livre do humano é interpretado por um LLM e mapeado para um dos outcomes especificados, que então dispara o decorador `@listen` correspondente.
+
+Você também pode usar `@human_feedback` sem roteamento para simplesmente coletar feedback:
+
+```python Code
+@start()
+@human_feedback(message="Algum comentário sobre esta saída?")
+def my_method(self):
+    return "Saída para revisão"
+
+@listen(my_method)
+def next_step(self, result: HumanFeedbackResult):
+    # Acesse o feedback via result.feedback
+    # Acesse a saída original via result.output
+    pass
+```
+
+Acesse todo o feedback coletado durante um flow via `self.last_human_feedback` (mais recente) ou `self.human_feedback_history` (todo o feedback em uma lista).
+
+Para um guia completo sobre feedback humano em flows, incluindo feedback assíncrono/não-bloqueante com providers customizados (Slack, webhooks, etc.), veja [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
+
 ## Adicionando Agentes aos Flows
 
 Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:

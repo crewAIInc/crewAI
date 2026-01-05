@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
+from crewai.agents.parser import AgentFinish
 from crewai.events.event_listener import event_listener
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
@@ -29,7 +30,7 @@ class CrewAgentExecutorMixin:
     _i18n: I18N
     _printer: Printer = Printer()
 
-    def _create_short_term_memory(self, output) -> None:
+    def _create_short_term_memory(self, output: AgentFinish) -> None:
         """Create and save a short-term memory item if conditions are met."""
         if (
             self.crew
@@ -53,7 +54,7 @@ class CrewAgentExecutorMixin:
                     "error", f"Failed to add to short term memory: {e}"
                 )
 
-    def _create_external_memory(self, output) -> None:
+    def _create_external_memory(self, output: AgentFinish) -> None:
         """Create and save a external-term memory item if conditions are met."""
         if (
             self.crew
@@ -75,7 +76,7 @@ class CrewAgentExecutorMixin:
                     "error", f"Failed to add to external memory: {e}"
                 )
 
-    def _create_long_term_memory(self, output) -> None:
+    def _create_long_term_memory(self, output: AgentFinish) -> None:
         """Create and save long-term and entity memory items based on evaluation."""
         if (
             self.crew
@@ -136,40 +137,50 @@ class CrewAgentExecutorMixin:
             )
 
     def _ask_human_input(self, final_answer: str) -> str:
-        """Prompt human input with mode-appropriate messaging."""
-        event_listener.formatter.pause_live_updates()
-        try:
-            self._printer.print(
-                content=f"\033[1m\033[95m ## Final Result:\033[00m \033[92m{final_answer}\033[00m"
-            )
+        """Prompt human input with mode-appropriate messaging.
 
+        Note: The final answer is already displayed via the AgentLogsExecutionEvent
+        panel, so we only show the feedback prompt here.
+        """
+        from rich.panel import Panel
+        from rich.text import Text
+
+        formatter = event_listener.formatter
+        formatter.pause_live_updates()
+
+        try:
             # Training mode prompt (single iteration)
             if self.crew and getattr(self.crew, "_train", False):
-                prompt = (
-                    "\n\n=====\n"
-                    "## TRAINING MODE: Provide feedback to improve the agent's performance.\n"
+                prompt_text = (
+                    "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
                     "This will be used to train better versions of the agent.\n"
-                    "Please provide detailed feedback about the result quality and reasoning process.\n"
-                    "=====\n"
+                    "Please provide detailed feedback about the result quality and reasoning process."
                 )
+                title = "🎓 Training Feedback Required"
             # Regular human-in-the-loop prompt (multiple iterations)
             else:
-                prompt = (
-                    "\n\n=====\n"
-                    "## HUMAN FEEDBACK: Provide feedback on the Final Result and Agent's actions.\n"
-                    "Please follow these guidelines:\n"
-                    " - If you are happy with the result, simply hit Enter without typing anything.\n"
-                    " - Otherwise, provide specific improvement requests.\n"
-                    " - You can provide multiple rounds of feedback until satisfied.\n"
-                    "=====\n"
+                prompt_text = (
+                    "Provide feedback on the Final Result above.\n\n"
+                    "• If you are happy with the result, simply hit Enter without typing anything.\n"
+                    "• Otherwise, provide specific improvement requests.\n"
+                    "• You can provide multiple rounds of feedback until satisfied."
                 )
+                title = "💬 Human Feedback Required"
 
-            self._printer.print(content=prompt, color="bold_yellow")
+            content = Text()
+            content.append(prompt_text, style="yellow")
+
+            prompt_panel = Panel(
+                content,
+                title=title,
+                border_style="yellow",
+                padding=(1, 2),
+            )
+            formatter.console.print(prompt_panel)
+
             response = input()
             if response.strip() != "":
-                self._printer.print(
-                    content="\nProcessing your feedback...", color="cyan"
-                )
+                formatter.console.print("\n[cyan]Processing your feedback...[/cyan]")
             return response
         finally:
-            event_listener.formatter.resume_live_updates()
+            formatter.resume_live_updates()

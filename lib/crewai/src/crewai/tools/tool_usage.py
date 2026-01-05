@@ -249,6 +249,7 @@ class ToolUsage:
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
                 "agent": self.agent,
+                "run_attempts": self._run_attempts,
             }
 
             if self.agent.fingerprint:  # type: ignore
@@ -435,6 +436,7 @@ class ToolUsage:
                 "tool_args": self.action.tool_input,
                 "tool_class": self.action.tool,
                 "agent": self.agent,
+                "run_attempts": self._run_attempts,
             }
 
             # TODO: Investigate fingerprint attribute availability on BaseAgent/LiteAgent

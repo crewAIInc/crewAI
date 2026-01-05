@@ -1,6 +1,6 @@
 from typing import Any
 from urllib.parse import urljoin
-
+import os
 import requests
 
 from crewai.cli.config import Settings
@@ -33,9 +33,7 @@ class PlusAPI:
         if settings.org_uuid:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
 
-        self.base_url = (
-            str(settings.enterprise_base_url) or DEFAULT_CREWAI_ENTERPRISE_URL
-        )
+        self.base_url = os.getenv("CREWAI_PLUS_URL") or str(settings.enterprise_base_url) or DEFAULT_CREWAI_ENTERPRISE_URL
 
     def _make_request(
         self, method: str, endpoint: str, **kwargs: Any

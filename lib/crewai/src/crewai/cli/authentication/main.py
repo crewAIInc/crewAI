@@ -149,7 +149,9 @@ class AuthenticationCommand:
                 return
 
             if token_data["error"] not in ("authorization_pending", "slow_down"):
-                raise requests.HTTPError(token_data["error_description"])
+                raise requests.HTTPError(
+                    token_data.get("error_description") or token_data.get("error")
+                )
 
             time.sleep(device_code_data["interval"])
             attempts += 1

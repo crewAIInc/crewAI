@@ -1,5 +1,5 @@
 from typing import Any
-
+import os
 from crewai.tools import BaseTool
 import requests
 
@@ -37,6 +37,7 @@ class CrewaiPlatformToolBuilder:
                 headers=headers,
                 timeout=30,
                 params={"apps": ",".join(self._apps)},
+                verify=os.environ.get("CREWAI_FACTORY", "false").lower() != "true",
             )
             response.raise_for_status()
         except Exception:
