@@ -235,6 +235,7 @@ def execute_a2a_delegation(
     agent_branch: Any | None = None,
     response_model: type[BaseModel] | None = None,
     turn_number: int | None = None,
+    transport_protocol: TransportProtocol | None = None,
 ) -> dict[str, Any]:
     """Execute a task delegation to a remote A2A agent with multi-turn support.
 
@@ -262,7 +263,7 @@ def execute_a2a_delegation(
         agent_branch: Optional agent tree branch for logging
         response_model: Optional Pydantic model for structured outputs
         turn_number: Optional turn number for multi-turn conversations
-
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
     Returns:
         Dictionary with:
         - status: "completed", "input_required", "failed", etc.
@@ -311,6 +312,7 @@ def execute_a2a_delegation(
                 agent_id=agent_id,
                 agent_role=agent_role,
                 response_model=response_model,
+                transport_protocol=transport_protocol,
             )
         )
 
@@ -347,6 +349,7 @@ async def _execute_a2a_delegation_async(
     agent_id: str | None = None,
     agent_role: str | None = None,
     response_model: type[BaseModel] | None = None,
+    transport_protocol: TransportProtocol | None = None,
 ) -> dict[str, Any]:
     """Async implementation of A2A delegation with multi-turn support.
 
@@ -368,6 +371,7 @@ async def _execute_a2a_delegation_async(
         agent_id: Agent identifier for logging
         agent_role: Agent role for logging
         response_model: Optional Pydantic model for structured outputs
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
 
     Returns:
         Dictionary with status, result/error, and new history
@@ -446,7 +450,7 @@ async def _execute_a2a_delegation_async(
         extensions=extensions,
     )
 
-    transport_protocol = TransportProtocol("JSONRPC")
+    transport_protocol = transport_protocol or TransportProtocol("JSONRPC")
     new_messages: list[Message] = [*conversation_history, message]
     crewai_event_bus.emit(
         None,

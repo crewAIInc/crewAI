@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
+from a2a.types import TransportProtocol
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -61,4 +62,8 @@ class A2AConfig(BaseModel):
     trust_remote_completion_status: bool = Field(
         default=False,
         description='If True, return the A2A agent\'s result directly when status is "completed" without asking the server agent to respond. If False, always ask the server agent to respond, allowing it to potentially delegate again.',
+    )
+    transport_protocol: TransportProtocol | None = Field(
+        default=None,
+        description="Optional A2A transport protocol (grpc, jsonrpc, http+json)",
     )
