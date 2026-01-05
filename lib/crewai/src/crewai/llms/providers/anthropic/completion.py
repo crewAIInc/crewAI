@@ -598,6 +598,8 @@ class AnthropicCompletion(BaseLLM):
         # (the SDK sets it internally)
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        current_tool_calls: dict[int, dict[str, Any]] = {}
+
         # Make streaming API call
         with self.client.messages.stream(**stream_params) as stream:
             for event in stream:
@@ -609,6 +611,55 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        block_index = event.index
+                        current_tool_calls[block_index] = {
+                            "id": block.id,
+                            "name": block.name,
+                            "arguments": "",
+                            "index": block_index,
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk="",
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": block.id,
+                                "function": {
+                                    "name": block.name,
+                                    "arguments": "",
+                                },
+                                "type": "function",
+                                "index": block_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "input_json_delta":
+                        block_index = event.index
+                        partial_json = event.delta.partial_json
+                        if block_index in current_tool_calls and partial_json:
+                            current_tool_calls[block_index]["arguments"] += partial_json
+                            self._emit_stream_chunk_event(
+                                chunk=partial_json,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": current_tool_calls[block_index]["id"],
+                                    "function": {
+                                        "name": current_tool_calls[block_index]["name"],
+                                        "arguments": current_tool_calls[block_index][
+                                            "arguments"
+                                        ],
+                                    },
+                                    "type": "function",
+                                    "index": block_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
 
             final_message: Message = stream.get_final_message()
 
@@ -941,6 +992,8 @@ class AnthropicCompletion(BaseLLM):
 
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        current_tool_calls: dict[int, dict[str, Any]] = {}
+
         async with self.async_client.messages.stream(**stream_params) as stream:
             async for event in stream:
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
@@ -951,6 +1004,55 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        block_index = event.index
+                        current_tool_calls[block_index] = {
+                            "id": block.id,
+                            "name": block.name,
+                            "arguments": "",
+                            "index": block_index,
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk="",
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": block.id,
+                                "function": {
+                                    "name": block.name,
+                                    "arguments": "",
+                                },
+                                "type": "function",
+                                "index": block_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "input_json_delta":
+                        block_index = event.index
+                        partial_json = event.delta.partial_json
+                        if block_index in current_tool_calls and partial_json:
+                            current_tool_calls[block_index]["arguments"] += partial_json
+                            self._emit_stream_chunk_event(
+                                chunk=partial_json,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": current_tool_calls[block_index]["id"],
+                                    "function": {
+                                        "name": current_tool_calls[block_index]["name"],
+                                        "arguments": current_tool_calls[block_index][
+                                            "arguments"
+                                        ],
+                                    },
+                                    "type": "function",
+                                    "index": block_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
 
             final_message: Message = await stream.get_final_message()
 

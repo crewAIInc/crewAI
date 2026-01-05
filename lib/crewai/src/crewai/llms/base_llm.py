@@ -354,8 +354,17 @@ class BaseLLM(ABC):
         from_task: Task | None = None,
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
+        call_type: LLMCallType | None = None,
     ) -> None:
-        """Emit stream chunk event."""
+        """Emit stream chunk event.
+
+        Args:
+            chunk: The text content of the chunk.
+            from_task: The task that initiated the call.
+            from_agent: The agent that initiated the call.
+            tool_call: Tool call information if this is a tool call chunk.
+            call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
+        """
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
 
@@ -366,6 +375,7 @@ class BaseLLM(ABC):
                 tool_call=tool_call,
                 from_task=from_task,
                 from_agent=from_agent,
+                call_type=call_type,
             ),
         )
 
