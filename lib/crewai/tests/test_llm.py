@@ -877,3 +877,207 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+@pytest.mark.vcr(
+    record_mode="once",
+    decode_compressed_response=True
+)
+def test_usage_info_non_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_handle_non_streaming_response", wraps=llm._handle_non_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.vcr(
+    record_mode="once",
+    decode_compressed_response=True
+)
+def test_usage_info_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_handle_streaming_response", wraps=llm._handle_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.asyncio
+async def test_usage_info_non_streaming_with_acall():
+    from unittest.mock import AsyncMock, patch
+    from litellm import ModelResponse
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+
+    fake_response = ModelResponse(
+        id="test-id",
+        model="gpt-4o-mini",
+        choices=[
+            {
+                "message": {"role": "assistant", "content": "Why did the chicken cross the road?"},
+                "finish_reason": "stop",
+            }
+        ],
+        usage={
+            "prompt_tokens": 5,
+            "completion_tokens": 7,
+            "total_tokens": 12,
+        },
+    )
+
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch("litellm.acompletion",new=AsyncMock(return_value=fake_response)) as mock_acompletion:
+        result = await llm.acall("Tell me a joke.")
+        mock_acompletion.assert_awaited_once()
+
+    assert llm._token_usage["prompt_tokens"] == 5
+    assert llm._token_usage["completion_tokens"] == 7
+    assert llm._token_usage["total_tokens"] == 12
+    assert llm._token_usage["successful_requests"] == 1
+    assert "Why did the chicken cross the road?" in result
+
+
+@pytest.mark.asyncio
+async def test_usage_info_streaming_with_acall():
+    from unittest.mock import AsyncMock, patch
+    from litellm import ModelResponse
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    fake_response = ModelResponse(
+        id="test-id",
+        model="gpt-4o-mini",
+        choices=[
+            {
+                "message": {"role": "assistant", "content": "Why did the chicken cross the road?"},
+                "finish_reason": "stop",
+            }
+        ],
+        usage={
+            "prompt_tokens": 5,
+            "completion_tokens": 7,
+            "total_tokens": 12,
+        },
+    )
+
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch("litellm.acompletion",new=AsyncMock(return_value=fake_response)) as mock_acompletion:
+        result = await llm.acall("Tell me a joke.")
+        mock_acompletion.assert_awaited_once()
+
+    assert llm._token_usage["prompt_tokens"] == 5
+    assert llm._token_usage["completion_tokens"] == 7
+    assert llm._token_usage["total_tokens"] == 12
+    assert llm._token_usage["successful_requests"] == 1
+    assert "Why did the chicken cross the road?" in result
+
+
+@pytest.mark.asyncio
+async def test_usage_info_streaming_with_acall():
+    from unittest.mock import AsyncMock, patch
+    from types import SimpleNamespace
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    def chunk(*, delta=None, finish_reason=None, usage=None):
+        return SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    index=0,
+                    delta=delta or {},
+                    finish_reason=finish_reason,
+                )
+            ],
+            usage=usage,
+        )
+
+    class FakeAsyncStream:
+        def __aiter__(self):
+            self._i = 0
+            return self
+
+        async def __anext__(self):
+            if self._i == 0:
+                self._i += 1
+                return chunk(
+                    delta={
+                        "role": "assistant",
+                        "content": "Why did the chicken cross the road?",
+                    }
+                )
+
+            if self._i == 1:
+                self._i += 1
+                return chunk(
+                    finish_reason="stop",
+                    usage={
+                        "prompt_tokens": 5,
+                        "completion_tokens": 7,
+                        "total_tokens": 12,
+                    },
+                )
+
+            raise StopAsyncIteration
+
+    with patch(
+        "litellm.acompletion",
+        new=AsyncMock(return_value=FakeAsyncStream()),
+    ) as mock_acompletion:
+        result = await llm.acall("Tell me a joke.")
+        mock_acompletion.assert_awaited_once()
+
+    assert llm._token_usage["prompt_tokens"] == 5
+    assert llm._token_usage["completion_tokens"] == 7
+    assert llm._token_usage["total_tokens"] == 12
+    assert llm._token_usage["successful_requests"] == 1
+    assert "Why did the chicken cross the road?" in result
