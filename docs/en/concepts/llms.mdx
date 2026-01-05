@@ -993,26 +993,62 @@ In this section, you'll find detailed examples that help you select, configure, 
     </Info>
   </Accordion>
 
-  <Accordion title="Open Router">
-    Set the following environment variables in your `.env` file:
+  <Accordion title="OpenRouter">
+    [OpenRouter](https://openrouter.ai) provides unified access to 300+ models from OpenAI, Anthropic, Google, Meta, and other providers through a single API.
+
     ```toml Code
-    OPENROUTER_API_KEY=<your-api-key>
+    # Required
+    OPENROUTER_API_KEY=sk-or-...
     ```
 
-    Example usage in your CrewAI project:
+    **Basic Usage:**
     ```python Code
+    from crewai import LLM
+
+    # Use any model with the openrouter/ prefix
     llm = LLM(
-        model="openrouter/deepseek/deepseek-r1",
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
+        model="openrouter/anthropic/claude-3.5-sonnet",
+        api_key="sk-or-...",  # Or set OPENROUTER_API_KEY
     )
     ```
 
-    <Info>
-      Open Router models:
-      - openrouter/deepseek/deepseek-r1
-      - openrouter/deepseek/deepseek-chat
-    </Info>
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/anthropic/claude-3.5-sonnet",
+        api_key="sk-or-...",
+        temperature=0.7,
+        max_tokens=4000,
+        top_p=0.9,
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `OPENROUTER_API_KEY`: Your OpenRouter API key (required)
+
+    **Features:**
+    - Access to 300+ models from multiple providers
+    - Single API key for all models
+    - Automatic fallbacks between providers
+    - Cost tracking and usage analytics
+    - Provider routing preferences
+
+    **Popular Models:**
+
+    | Model                                    | Context Window | Best For                          |
+    |------------------------------------------|----------------|-----------------------------------|
+    | openrouter/anthropic/claude-sonnet-4     | 200K tokens    | Complex reasoning, coding         |
+    | openrouter/anthropic/claude-3.5-sonnet   | 200K tokens    | Balanced performance              |
+    | openrouter/openai/gpt-4o                 | 128K tokens    | General purpose, multimodal       |
+    | openrouter/google/gemini-2.0-flash       | 1M tokens      | Fast, large context               |
+    | openrouter/meta-llama/llama-3.3-70b      | 128K tokens    | Open source, cost-effective       |
+    | openrouter/deepseek/deepseek-chat-v3     | 64K tokens     | Efficient, code-focused           |
+
+    For the full list of available models, see [OpenRouter Models](https://openrouter.ai/models).
+
+    Get your API key at [openrouter.ai/keys](https://openrouter.ai/keys).
   </Accordion>
 
   <Accordion title="Nebius AI Studio">
