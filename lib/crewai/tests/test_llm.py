@@ -970,54 +970,12 @@ async def test_usage_info_non_streaming_with_acall():
 
 
 @pytest.mark.asyncio
-async def test_usage_info_non_streaming_with_acall():
-    from unittest.mock import AsyncMock, patch
-    from litellm import ModelResponse
-
-    llm = LLM(model="gpt-4o-mini", is_litellm=True)
-    assert llm.stream is False
-
-    fake_response = ModelResponse(
-        id="test-id",
-        model="gpt-4o-mini",
-        choices=[
-            {
-                "message": {"role": "assistant", "content": "Why did the chicken cross the road?"},
-                "finish_reason": "stop",
-            }
-        ],
-        usage={
-            "prompt_tokens": 5,
-            "completion_tokens": 7,
-            "total_tokens": 12,
-        },
-    )
-
-    assert llm._token_usage == {
-        "total_tokens": 0,
-        "prompt_tokens": 0,
-        "completion_tokens": 0,
-        "successful_requests": 0,
-        "cached_prompt_tokens": 0,
-    }
-
-    with patch("litellm.acompletion",new=AsyncMock(return_value=fake_response)) as mock_acompletion:
-        result = await llm.acall("Tell me a joke.")
-        mock_acompletion.assert_awaited_once()
-
-    assert llm._token_usage["prompt_tokens"] == 5
-    assert llm._token_usage["completion_tokens"] == 7
-    assert llm._token_usage["total_tokens"] == 12
-    assert llm._token_usage["successful_requests"] == 1
-    assert "Why did the chicken cross the road?" in result
-
-
-@pytest.mark.asyncio
 async def test_usage_info_streaming_with_acall():
     from unittest.mock import AsyncMock, patch
     from types import SimpleNamespace
 
     llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    assert llm.stream is True
 
     assert llm._token_usage == {
         "total_tokens": 0,
