@@ -878,10 +878,7 @@ def test_validate_model_in_constants():
         is True
     )
 
-@pytest.mark.vcr(
-    record_mode="once",
-    decode_compressed_response=True
-)
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
 def test_usage_info_non_streaming_with_call():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
     assert llm._token_usage == {
@@ -891,6 +888,7 @@ def test_usage_info_non_streaming_with_call():
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
     }
+    assert llm.stream is False
 
     with patch.object(
         llm, "_handle_non_streaming_response", wraps=llm._handle_non_streaming_response
@@ -904,10 +902,7 @@ def test_usage_info_non_streaming_with_call():
     assert llm._token_usage["successful_requests"] == 1
 
 
-@pytest.mark.vcr(
-    record_mode="once",
-    decode_compressed_response=True
-)
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
 def test_usage_info_streaming_with_call():
     llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
     assert llm._token_usage == {
@@ -917,6 +912,7 @@ def test_usage_info_streaming_with_call():
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
     }
+    assert llm.stream is True
 
     with patch.object(
         llm, "_handle_streaming_response", wraps=llm._handle_streaming_response
@@ -936,6 +932,7 @@ async def test_usage_info_non_streaming_with_acall():
     from litellm import ModelResponse
 
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    assert llm.stream is False
 
     fake_response = ModelResponse(
         id="test-id",
@@ -973,11 +970,12 @@ async def test_usage_info_non_streaming_with_acall():
 
 
 @pytest.mark.asyncio
-async def test_usage_info_streaming_with_acall():
+async def test_usage_info_non_streaming_with_acall():
     from unittest.mock import AsyncMock, patch
     from litellm import ModelResponse
 
-    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    assert llm.stream is False
 
     fake_response = ModelResponse(
         id="test-id",
