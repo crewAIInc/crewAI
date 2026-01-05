@@ -730,6 +730,7 @@ class AzureCompletion(BaseLLM):
                                 "arguments": tool_calls[idx]["arguments"],
                             },
                             "type": "function",
+                            "index": idx,
                         },
                         call_type=LLMCallType.TOOL_CALL,
                     )

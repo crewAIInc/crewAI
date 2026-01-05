@@ -195,3 +195,97 @@ class TestMixedStreamingEvents:
         for event in tool_call_events:
             assert event.call_type == LLMCallType.TOOL_CALL
             assert event.tool_call is not None
+
+
+class TestGeminiToolCallStreaming:
+    """Tests for Gemini provider tool call streaming events."""
+
+    @pytest.mark.vcr()
+    def test_gemini_streaming_emits_tool_call_events(
+        self, get_temperature_tool_schema: dict[str, Any], mock_emit: MagicMock
+    ) -> None:
+        """Test that Gemini streaming emits tool call events with correct call_type."""
+        llm = LLM(model="gemini/gemini-2.0-flash", stream=True)
+
+        llm.call(
+            messages=[
+                {"role": "user", "content": "What is the temperature in San Francisco?"},
+            ],
+            tools=[get_temperature_tool_schema],
+            available_functions={
+                "get_current_temperature": lambda city: f"The temperature in {city} is 72°F"
+            },
+        )
+
+        tool_call_events = get_tool_call_events(mock_emit)
+
+        assert len(tool_call_events) > 0, "Should receive tool call streaming events"
+
+        first_tool_call_event = tool_call_events[0]
+        assert first_tool_call_event.call_type == LLMCallType.TOOL_CALL
+        assert first_tool_call_event.tool_call is not None
+        assert isinstance(first_tool_call_event.tool_call, ToolCall)
+        assert first_tool_call_event.tool_call.function is not None
+        assert first_tool_call_event.tool_call.function.name == "get_current_temperature"
+        assert first_tool_call_event.tool_call.type == "function"
+
+    @pytest.mark.vcr()
+    def test_gemini_streaming_multiple_tool_calls_unique_ids(
+        self, get_temperature_tool_schema: dict[str, Any], mock_emit: MagicMock
+    ) -> None:
+        """Test that Gemini streaming assigns unique IDs to multiple tool calls."""
+        llm = LLM(model="gemini/gemini-2.0-flash", stream=True)
+
+        llm.call(
+            messages=[
+                {"role": "user", "content": "What is the temperature in Paris and London?"},
+            ],
+            tools=[get_temperature_tool_schema],
+            available_functions={
+                "get_current_temperature": lambda city: f"The temperature in {city} is 72°F"
+            },
+        )
+
+        tool_call_events = get_tool_call_events(mock_emit)
+
+        assert len(tool_call_events) >= 2, "Should receive at least 2 tool call events"
+
+        tool_ids = [
+            evt.tool_call.id
+            for evt in tool_call_events
+            if evt.tool_call is not None and evt.tool_call.id
+        ]
+        assert len(set(tool_ids)) >= 2, "Each tool call should have a unique ID"
+
+
+class TestAzureToolCallStreaming:
+    """Tests for Azure provider tool call streaming events."""
+
+    @pytest.mark.vcr()
+    def test_azure_streaming_emits_tool_call_events(
+        self, get_temperature_tool_schema: dict[str, Any], mock_emit: MagicMock
+    ) -> None:
+        """Test that Azure streaming emits tool call events with correct call_type."""
+        llm = LLM(model="azure/gpt-4o-mini", stream=True)
+
+        llm.call(
+            messages=[
+                {"role": "user", "content": "What is the temperature in San Francisco?"},
+            ],
+            tools=[get_temperature_tool_schema],
+            available_functions={
+                "get_current_temperature": lambda city: f"The temperature in {city} is 72°F"
+            },
+        )
+
+        tool_call_events = get_tool_call_events(mock_emit)
+
+        assert len(tool_call_events) > 0, "Should receive tool call streaming events"
+
+        first_tool_call_event = tool_call_events[0]
+        assert first_tool_call_event.call_type == LLMCallType.TOOL_CALL
+        assert first_tool_call_event.tool_call is not None
+        assert isinstance(first_tool_call_event.tool_call, ToolCall)
+        assert first_tool_call_event.tool_call.function is not None
+        assert first_tool_call_event.tool_call.function.name == "get_current_temperature"
+        assert first_tool_call_event.tool_call.type == "function"
