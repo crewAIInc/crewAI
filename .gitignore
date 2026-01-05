@@ -1,16 +1,28 @@
-# Python virtual environment
-venv/
-.venv/
-
-# Python cache
-__pycache__/
-*.pyc
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# OS files
 .DS_Store
-Thumbs.db
+.pytest_cache
+__pycache__
+dist/
+.env
+assets/*
+.idea
+test/
+docs_crew/
+chroma.sqlite3
+old_en.json
+db/
+test.py
+rc-tests/*
+*.pkl
+temp/*
+.vscode/*
+crew_tasks_output.json
+.codesight
+.mypy_cache
+.ruff_cache
+.venv
+test_flow.html
+crewairules.mdc
+plan.md
+conceptual_plan.md
+build_image
+chromadb-*.lock
