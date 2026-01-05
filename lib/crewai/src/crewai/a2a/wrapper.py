@@ -9,13 +9,14 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import wraps
 from types import MethodType
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
-from a2a.types import Role
+from a2a.types import Role, TaskState
 from pydantic import BaseModel, ValidationError
 
 from crewai.a2a.config import A2AConfig
 from crewai.a2a.extensions.base import ExtensionRegistry
+from crewai.a2a.task_helpers import TaskStateResult
 from crewai.a2a.templates import (
     AVAILABLE_AGENTS_TEMPLATE,
     CONVERSATION_TURN_INFO_TEMPLATE,
@@ -346,7 +347,7 @@ IMPORTANT: You have the ability to delegate this task to remote A2A agents.
 
 def _parse_agent_response(
     raw_result: str | dict[str, Any], agent_response_model: type[BaseModel]
-) -> BaseModel | str:
+) -> BaseModel | str | dict[str, Any]:
     """Parse LLM output as AgentResponse or return raw agent response.
 
     Args:
@@ -354,7 +355,7 @@ def _parse_agent_response(
         agent_response_model: The agent response model
 
     Returns:
-        Parsed AgentResponse or string
+        Parsed AgentResponse, or raw result if parsing fails
     """
     if agent_response_model:
         try:
@@ -363,13 +364,13 @@ def _parse_agent_response(
             if isinstance(raw_result, dict):
                 return agent_response_model.model_validate(raw_result)
         except ValidationError:
-            return cast(str, raw_result)
-    return cast(str, raw_result)
+            return raw_result
+    return raw_result
 
 
 def _handle_agent_response_and_continue(
     self: Agent,
-    a2a_result: dict[str, Any],
+    a2a_result: TaskStateResult,
     agent_id: str,
     agent_cards: dict[str, AgentCard] | None,
     a2a_agents: list[A2AConfig],
@@ -568,6 +569,7 @@ def _delegate_to_a2a(
                 agent_branch=agent_branch,
                 response_model=agent_config.response_model,
                 turn_number=turn_num + 1,
+                updates=agent_config.updates,
             )
 
             conversation_history = a2a_result.get("history", [])
@@ -579,11 +581,8 @@ def _delegate_to_a2a(
                 if latest_message.context_id is not None:
                     context_id = latest_message.context_id
 
-            if a2a_result["status"] in ["completed", "input_required"]:
-                if (
-                    a2a_result["status"] == "completed"
-                    and agent_config.trust_remote_completion_status
-                ):
+            if a2a_result["status"] in [TaskState.completed, TaskState.input_required]:
+                if a2a_result["status"] == TaskState.completed:
                     if (
                         task_id_config is not None
                         and task_id_config not in reference_task_ids
@@ -592,7 +591,12 @@ def _delegate_to_a2a(
                         if task.config is None:
                             task.config = {}
                         task.config["reference_task_ids"] = reference_task_ids
+                    task_id_config = None
 
+                if (
+                    a2a_result["status"] == TaskState.completed
+                    and agent_config.trust_remote_completion_status
+                ):
                     result_text = a2a_result.get("result", "")
                     final_turn_number = turn_num + 1
                     crewai_event_bus.emit(
@@ -604,7 +608,7 @@ def _delegate_to_a2a(
                             total_turns=final_turn_number,
                         ),
                     )
-                    return cast(str, result_text)
+                    return str(result_text)
 
                 final_result, next_request = _handle_agent_response_and_continue(
                     self=self,
