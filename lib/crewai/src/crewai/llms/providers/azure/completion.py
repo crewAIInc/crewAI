@@ -702,19 +702,19 @@ class AzureCompletion(BaseLLM):
                 )
 
             if choice.delta and choice.delta.tool_calls:
-                for idx, tool_call in enumerate(choice.delta.tool_calls):
-                    call_id = tool_call.id or "default"
-                    if call_id not in tool_calls:
-                        tool_calls[call_id] = {
+                for tool_call in choice.delta.tool_calls:
+                    tool_id = tool_call.id
+                    if tool_id not in tool_calls:
+                        tool_calls[tool_id] = {
+                            "id": tool_id,
                             "name": "",
                             "arguments": "",
-                            "index": idx,
                         }
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[call_id]["name"] = tool_call.function.name
+                        tool_calls[tool_id]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[call_id]["arguments"] += tool_call.function.arguments
+                        tool_calls[tool_id]["arguments"] += tool_call.function.arguments
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -723,13 +723,12 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": call_id,
+                            "id": tool_calls[tool_id]["id"],
                             "function": {
-                                "name": tool_calls[call_id]["name"],
-                                "arguments": tool_calls[call_id]["arguments"],
+                                "name": tool_calls[tool_id]["name"],
+                                "arguments": tool_calls[tool_id]["arguments"],
                             },
                             "type": "function",
-                            "index": tool_calls[call_id]["index"],
                         },
                         call_type=LLMCallType.TOOL_CALL,
                     )
