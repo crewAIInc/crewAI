@@ -674,7 +674,7 @@ class AzureCompletion(BaseLLM):
         self,
         update: StreamingChatCompletionsUpdate,
         full_response: str,
-        tool_calls: dict[str, dict[str, Any]],
+        tool_calls: dict[int, dict[str, Any]],
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
@@ -702,19 +702,20 @@ class AzureCompletion(BaseLLM):
                 )
 
             if choice.delta and choice.delta.tool_calls:
-                for tool_call in choice.delta.tool_calls:
-                    tool_id = tool_call.id
-                    if tool_id not in tool_calls:
-                        tool_calls[tool_id] = {
-                            "id": tool_id,
+                for idx, tool_call in enumerate(choice.delta.tool_calls):
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {
+                            "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
+                    elif tool_call.id and not tool_calls[idx]["id"]:
+                        tool_calls[idx]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[tool_id]["name"] = tool_call.function.name
+                        tool_calls[idx]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[tool_id]["arguments"] += tool_call.function.arguments
+                        tool_calls[idx]["arguments"] += tool_call.function.arguments
 
                     self._emit_stream_chunk_event(
                         chunk=tool_call.function.arguments
@@ -723,10 +724,10 @@ class AzureCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         tool_call={
-                            "id": tool_calls[tool_id]["id"],
+                            "id": tool_calls[idx]["id"],
                             "function": {
-                                "name": tool_calls[tool_id]["name"],
-                                "arguments": tool_calls[tool_id]["arguments"],
+                                "name": tool_calls[idx]["name"],
+                                "arguments": tool_calls[idx]["arguments"],
                             },
                             "type": "function",
                         },
@@ -738,7 +739,7 @@ class AzureCompletion(BaseLLM):
     def _finalize_streaming_response(
         self,
         full_response: str,
-        tool_calls: dict[str, dict[str, Any]],
+        tool_calls: dict[int, dict[str, Any]],
         usage_data: dict[str, int],
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
@@ -822,7 +823,7 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle streaming chat completion."""
         full_response = ""
-        tool_calls: dict[str, dict[str, Any]] = {}
+        tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data = {"total_tokens": 0}
         for update in self.client.complete(**params):  # type: ignore[arg-type]
@@ -888,7 +889,7 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle streaming chat completion asynchronously."""
         full_response = ""
-        tool_calls: dict[str, dict[str, Any]] = {}
+        tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data = {"total_tokens": 0}
 
