@@ -54,6 +54,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
       backstory: >
         Você é um analista meticuloso com um olhar atento aos detalhes. É conhecido por sua capacidade de transformar dados complexos em relatórios claros e concisos, facilitando o entendimento e a tomada de decisão por parte dos outros.
     ```
+
   </Step>
   <Step title="Modifique seu arquivo `tasks.yaml`">
     ```yaml tasks.yaml
@@ -76,6 +77,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
       agent: reporting_analyst
       output_file: report.md
     ```
+
   </Step>
   <Step title="Modifique seu arquivo `crew.py`">
     ```python crew.py
@@ -131,6 +133,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
           verbose=True,
         )
     ```
+
   </Step>
   <Step title="[Opcional] Adicione funções de pré e pós execução da tripulação">
     ```python crew.py
@@ -155,6 +158,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
 
       # ... remaining code
     ```
+
   </Step>
   <Step title="Fique à vontade para passar entradas personalizadas para sua tripulação">
   Por exemplo, você pode passar o input `topic` para sua tripulação para personalizar a pesquisa e o relatório.
@@ -173,6 +177,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
       }
       LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
     ```
+
   </Step>
   <Step title="Defina suas variáveis de ambiente">
   Antes de executar sua tripulação, certifique-se de ter as seguintes chaves configuradas como variáveis de ambiente no seu arquivo `.env`:
@@ -204,24 +209,24 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
   </Step>
 
   <Step title="Alternativa para Empresas: Crie no Crew Studio">
-  Para usuários do CrewAI AOP, você pode criar a mesma tripulação sem escrever código:
+  Para usuários do CrewAI AMP, você pode criar a mesma tripulação sem escrever código:
 
-  1. Faça login na sua conta CrewAI AOP (crie uma conta gratuita em [app.crewai.com](https://app.crewai.com))
-  2. Abra o Crew Studio
-  3. Digite qual automação deseja construir
-  4. Crie suas tarefas visualmente e conecte-as em sequência
-  5. Configure seus inputs e clique em "Download Code" ou "Deploy"
+1. Faça login na sua conta CrewAI AMP (crie uma conta gratuita em [app.crewai.com](https://app.crewai.com))
+2. Abra o Crew Studio
+3. Digite qual automação deseja construir
+4. Crie suas tarefas visualmente e conecte-as em sequência
+5. Configure seus inputs e clique em "Download Code" ou "Deploy"
 
-  ![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
+![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
 
-  <Card title="Experimente o CrewAI AOP" icon="rocket" href="https://app.crewai.com">
-    Comece sua conta gratuita no CrewAI AOP
+  <Card title="Experimente o CrewAI AMP" icon="rocket" href="https://app.crewai.com">
+    Comece sua conta gratuita no CrewAI AMP
   </Card>
   </Step>
   <Step title="Veja seu relatório final">
   Você verá a saída no console e o arquivo `report.md` deve ser criado na raiz do seu projeto com o relatório final.
 
-  Veja um exemplo de como o relatório deve ser:
+Veja um exemplo de como o relatório deve ser:
 
   <CodeGroup>
     ```markdown output/report.md
@@ -284,6 +289,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
     ## 8. Conclusion
     The emergence of AI agents is undeniably reshaping the workplace landscape in 5. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
     ```
+
   </CodeGroup>
   </Step>
 </Steps>
@@ -292,6 +298,7 @@ Siga os passos abaixo para começar a tripular! 🚣‍♂️
 Parabéns!
 
 Você configurou seu projeto de tripulação com sucesso e está pronto para começar a construir seus próprios fluxos de trabalho baseados em agentes!
+
 </Check>
 
 ### Observação sobre Consistência nos Nomes
@@ -303,41 +310,44 @@ Essa consistência de nomes permite que a CrewAI conecte automaticamente suas co
 #### Exemplos de Referências
 
 <Tip>
-  Observe como usamos o mesmo nome para o agente no arquivo `agents.yaml` (`email_summarizer`) e no método do arquivo `crew.py` (`email_summarizer`).
+  Observe como usamos o mesmo nome para o agente no arquivo `agents.yaml`
+  (`email_summarizer`) e no método do arquivo `crew.py` (`email_summarizer`).
 </Tip>
 
 ```yaml agents.yaml
 email_summarizer:
-    role: >
-      Email Summarizer
-    goal: >
-      Summarize emails into a concise and clear summary
-    backstory: >
-      You will create a 5 bullet point summary of the report
-    llm: provider/model-id  # Add your choice of model here
+  role: >
+    Email Summarizer
+  goal: >
+    Summarize emails into a concise and clear summary
+  backstory: >
+    You will create a 5 bullet point summary of the report
+  llm: provider/model-id # Add your choice of model here
 ```
 
 <Tip>
-  Observe como usamos o mesmo nome para a tarefa no arquivo `tasks.yaml` (`email_summarizer_task`) e no método no arquivo `crew.py` (`email_summarizer_task`).
+  Observe como usamos o mesmo nome para a tarefa no arquivo `tasks.yaml`
+  (`email_summarizer_task`) e no método no arquivo `crew.py`
+  (`email_summarizer_task`).
 </Tip>
 
 ```yaml tasks.yaml
 email_summarizer_task:
-    description: >
-      Summarize the email into a 5 bullet point summary
-    expected_output: >
-      A 5 bullet point summary of the email
-    agent: email_summarizer
-    context:
-      - reporting_task
-      - research_task
+  description: >
+    Summarize the email into a 5 bullet point summary
+  expected_output: >
+    A 5 bullet point summary of the email
+  agent: email_summarizer
+  context:
+    - reporting_task
+    - research_task
 ```
 
 ## Fazendo o Deploy da Sua Tripulação
 
-A forma mais fácil de fazer deploy da sua tripulação em produção é através da [CrewAI AOP](http://app.crewai.com).
+A forma mais fácil de fazer deploy da sua tripulação em produção é através da [CrewAI AMP](http://app.crewai.com).
 
-Assista a este vídeo tutorial para uma demonstração detalhada de como fazer deploy da sua tripulação na [CrewAI AOP](http://app.crewai.com) usando a CLI.
+Assista a este vídeo tutorial para uma demonstração detalhada de como fazer deploy da sua tripulação na [CrewAI AMP](http://app.crewai.com) usando a CLI.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -349,18 +359,16 @@ Assista a este vídeo tutorial para uma demonstração detalhada de como fazer d
 ></iframe>
 
 <CardGroup cols={2}>
-  <Card
-    title="Deploy no Enterprise"
-    icon="rocket"
-    href="http://app.crewai.com"
-  >
-    Comece com o CrewAI AOP e faça o deploy da sua tripulação em ambiente de produção com apenas alguns cliques.
+  <Card title="Deploy no Enterprise" icon="rocket" href="http://app.crewai.com">
+    Comece com o CrewAI AMP e faça o deploy da sua tripulação em ambiente de
+    produção com apenas alguns cliques.
   </Card>
   <Card
     title="Junte-se à Comunidade"
     icon="comments"
     href="https://community.crewai.com"
   >
-    Participe da nossa comunidade open source para discutir ideias, compartilhar seus projetos e conectar-se com outros desenvolvedores CrewAI.
+    Participe da nossa comunidade open source para discutir ideias, compartilhar
+    seus projetos e conectar-se com outros desenvolvedores CrewAI.
   </Card>
 </CardGroup>
