@@ -289,3 +289,36 @@ class TestAzureToolCallStreaming:
         assert first_tool_call_event.tool_call.function is not None
         assert first_tool_call_event.tool_call.function.name == "get_current_temperature"
         assert first_tool_call_event.tool_call.type == "function"
+
+
+class TestAnthropicToolCallStreaming:
+    """Tests for Anthropic provider tool call streaming events."""
+
+    @pytest.mark.vcr()
+    def test_anthropic_streaming_emits_tool_call_events(
+        self, get_temperature_tool_schema: dict[str, Any], mock_emit: MagicMock
+    ) -> None:
+        """Test that Anthropic streaming emits tool call events with correct call_type."""
+        llm = LLM(model="anthropic/claude-3-5-haiku-latest", stream=True)
+
+        llm.call(
+            messages=[
+                {"role": "user", "content": "What is the temperature in San Francisco?"},
+            ],
+            tools=[get_temperature_tool_schema],
+            available_functions={
+                "get_current_temperature": lambda city: f"The temperature in {city} is 72°F"
+            },
+        )
+
+        tool_call_events = get_tool_call_events(mock_emit)
+
+        assert len(tool_call_events) > 0, "Should receive tool call streaming events"
+
+        first_tool_call_event = tool_call_events[0]
+        assert first_tool_call_event.call_type == LLMCallType.TOOL_CALL
+        assert first_tool_call_event.tool_call is not None
+        assert isinstance(first_tool_call_event.tool_call, ToolCall)
+        assert first_tool_call_event.tool_call.function is not None
+        assert first_tool_call_event.tool_call.function.name == "get_current_temperature"
+        assert first_tool_call_event.tool_call.type == "function"
