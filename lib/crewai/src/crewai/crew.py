@@ -1189,6 +1189,8 @@ class Crew(FlowTrackable, BaseModel):
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
+        task_agent = task.agent or agent
+        
         # Add delegation tools if agent allows delegation
         if hasattr(agent, "allow_delegation") and getattr(
             agent, "allow_delegation", False
@@ -1217,10 +1219,10 @@ class Crew(FlowTrackable, BaseModel):
         ):
             tools = self._add_multimodal_tools(agent, tools)
 
-        if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
+        if task_agent and (hasattr(task_agent, "apps") and getattr(task_agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
 
-        if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
+        if task_agent and (hasattr(task_agent, "mcps") and getattr(task_agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
         # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
