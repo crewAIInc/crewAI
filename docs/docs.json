@@ -116,6 +116,7 @@
                   "en/concepts/tasks",
                   "en/concepts/crews",
                   "en/concepts/flows",
+                  "en/concepts/production-architecture",
                   "en/concepts/knowledge",
                   "en/concepts/llms",
                   "en/concepts/processes",
@@ -560,6 +561,7 @@
                   "pt-BR/concepts/tasks",
                   "pt-BR/concepts/crews",
                   "pt-BR/concepts/flows",
+                  "pt-BR/concepts/production-architecture",
                   "pt-BR/concepts/knowledge",
                   "pt-BR/concepts/llms",
                   "pt-BR/concepts/processes",
@@ -704,6 +706,7 @@
               {
                 "group": "Observabilidade",
                 "pages": [
+                  "pt-BR/observability/tracing",
                   "pt-BR/observability/overview",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/braintrust",
@@ -985,6 +988,7 @@
                   "ko/concepts/tasks",
                   "ko/concepts/crews",
                   "ko/concepts/flows",
+                  "ko/concepts/production-architecture",
                   "ko/concepts/knowledge",
                   "ko/concepts/llms",
                   "ko/concepts/processes",
@@ -1141,6 +1145,7 @@
               {
                 "group": "Observability",
                 "pages": [
+                  "ko/observability/tracing",
                   "ko/observability/overview",
                   "ko/observability/arize-phoenix",
                   "ko/observability/braintrust",
