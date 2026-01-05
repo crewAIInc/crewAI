@@ -736,3 +736,51 @@ def test_search_method_with_none_vector_store():
 
         assert len(results) == 1
         assert results[0]["content"] == "Result 1"
+
+
+def test_search_method_with_memory_client_and_valkey_config():
+    """Test that MemoryClient (cloud) with valkey config does NOT flatten filters"""
+    mock_memory_client = MagicMock(spec=MemoryClient)
+    mock_results = {
+        "results": [
+            {"score": 0.9, "memory": "Result 1"},
+        ]
+    }
+
+    # This is the problematic scenario: MEM0_API_KEY is set (so MemoryClient is used)
+    # but local_mem0_config with valkey provider is also present
+    config = {
+        "agent_id": "agent-123",
+        "api_key": "test-api-key",  # This causes MemoryClient to be used
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "valkey",  # This would trigger flattening in the old code
+                "config": {
+                    "valkey_url": "valkey://localhost:6379",
+                    "collection_name": "test_collection",
+                    "embedding_model_dims": 1536,
+                },
+            },
+        },
+    }
+
+    with patch.object(MemoryClient, "__new__", return_value=mock_memory_client):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        mem0_storage.memory.search = MagicMock(return_value=mock_results)
+
+        results = mem0_storage.search("test query", limit=5, score_threshold=0.5)
+
+        # For MemoryClient (cloud), filters should NOT be flattened even with valkey config
+        # The cloud API expects AND/OR structure
+        mem0_storage.memory.search.assert_called_once_with(
+            query="test query",
+            limit=5,
+            metadata={"type": "external"},
+            version="v2",
+            output_format="v1.1",
+            filters={"AND": [{"agent_id": "agent-123"}]},  # Should NOT be flattened
+            threshold=0.5,
+        )
+
+        assert len(results) == 1
+        assert results[0]["content"] == "Result 1"
