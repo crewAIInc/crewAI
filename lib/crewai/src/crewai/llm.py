@@ -316,6 +316,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "openrouter",
 ]
 
 
@@ -375,6 +376,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "openrouter": "openrouter",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -558,6 +560,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "openrouter":
+            from crewai.llms.providers.openrouter.completion import OpenRouterCompletion
+
+            return OpenRouterCompletion
 
         return None
 
