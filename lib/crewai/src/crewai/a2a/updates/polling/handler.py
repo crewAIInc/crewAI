@@ -21,13 +21,13 @@ from crewai.a2a.task_helpers import (
     TERMINAL_STATES,
     TaskStateResult,
     process_task_state,
+    send_message_and_get_task_id,
 )
 from crewai.a2a.updates.base import PollingHandlerKwargs
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2APollingStartedEvent,
     A2APollingStatusEvent,
-    A2AResponseReceivedEvent,
 )
 
 
@@ -81,10 +81,7 @@ async def _poll_task_until_complete(
             ),
         )
 
-        if task.status.state in TERMINAL_STATES:
-            return task
-
-        if task.status.state in ACTIONABLE_STATES:
+        if task.status.state in TERMINAL_STATES | ACTIONABLE_STATES:
             return task
 
         if elapsed > polling_timeout:
@@ -133,57 +130,19 @@ class PollingHandler:
         history_length = kwargs.get("history_length", 100)
         max_polls = kwargs.get("max_polls")
 
-        task_id: str | None = None
+        result_or_task_id = await send_message_and_get_task_id(
+            event_stream=client.send_message(message),
+            new_messages=new_messages,
+            agent_card=agent_card,
+            turn_number=turn_number,
+            is_multiturn=is_multiturn,
+            agent_role=agent_role,
+        )
 
-        async for event in client.send_message(message):
-            if isinstance(event, Message):
-                new_messages.append(event)
-                result_parts = [
-                    part.root.text for part in event.parts if part.root.kind == "text"
-                ]
-                response_text = " ".join(result_parts) if result_parts else ""
+        if not isinstance(result_or_task_id, str):
+            return result_or_task_id
 
-                crewai_event_bus.emit(
-                    None,
-                    A2AResponseReceivedEvent(
-                        response=response_text,
-                        turn_number=turn_number,
-                        is_multiturn=is_multiturn,
-                        status="completed",
-                        agent_role=agent_role,
-                    ),
-                )
-
-                return TaskStateResult(
-                    status=TaskState.completed,
-                    result=response_text,
-                    history=new_messages,
-                    agent_card=agent_card,
-                )
-
-            if isinstance(event, tuple):
-                a2a_task, _ = event
-                task_id = a2a_task.id
-
-                if a2a_task.status.state in TERMINAL_STATES | ACTIONABLE_STATES:
-                    result = process_task_state(
-                        a2a_task=a2a_task,
-                        new_messages=new_messages,
-                        agent_card=agent_card,
-                        turn_number=turn_number,
-                        is_multiturn=is_multiturn,
-                        agent_role=agent_role,
-                    )
-                    if result:
-                        return result
-                break
-
-        if not task_id:
-            return TaskStateResult(
-                status=TaskState.failed,
-                error="No task ID received from initial message",
-                history=new_messages,
-            )
+        task_id = result_or_task_id
 
         crewai_event_bus.emit(
             agent_branch,
