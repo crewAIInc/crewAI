@@ -171,3 +171,42 @@ class A2APollingStatusEvent(A2AEventBase):
     state: str
     elapsed_seconds: float
     poll_count: int
+
+
+class A2APushNotificationRegisteredEvent(A2AEventBase):
+    """Event emitted when push notification callback is registered.
+
+    Attributes:
+        task_id: A2A task ID for which callback is registered
+        callback_url: URL where agent will send push notifications
+    """
+
+    type: str = "a2a_push_notification_registered"
+    task_id: str
+    callback_url: str
+
+
+class A2APushNotificationReceivedEvent(A2AEventBase):
+    """Event emitted when a push notification is received.
+
+    Attributes:
+        task_id: A2A task ID from the notification
+        state: Current task state from the notification
+    """
+
+    type: str = "a2a_push_notification_received"
+    task_id: str
+    state: str
+
+
+class A2APushNotificationTimeoutEvent(A2AEventBase):
+    """Event emitted when push notification wait times out.
+
+    Attributes:
+        task_id: A2A task ID that timed out
+        timeout_seconds: Timeout duration in seconds
+    """
+
+    type: str = "a2a_push_notification_timeout"
+    task_id: str
+    timeout_seconds: float
