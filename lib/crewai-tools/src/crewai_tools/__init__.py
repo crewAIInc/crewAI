@@ -177,7 +177,7 @@ from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
-    TavilyExtractorTool,
+    TavilyExtractTool,
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
@@ -279,7 +279,7 @@ __all__ = [
     "SpiderTool",
     "StagehandTool",
     "TXTSearchTool",
-    "TavilyExtractorTool",
+    "TavilyExtractTool",
     "TavilySearchTool",
     "VisionTool",
     "WeaviateVectorSearchTool",
