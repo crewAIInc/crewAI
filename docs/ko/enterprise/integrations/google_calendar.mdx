@@ -13,7 +13,7 @@ mode: "wide"
 
 Google Calendar 통합을 사용하기 전에 다음을 준비해야 합니다:
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - Google Calendar에 접근 가능한 Google 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Google 계정을 연결 완료
 
@@ -21,7 +21,7 @@ Google Calendar 통합을 사용하기 전에 다음을 준비해야 합니다:
 
 ### 1. Google 계정 연결하기
 
-1. [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **Google Calendar**를 찾습니다.
 3. **Connect**를 클릭하고 OAuth 과정을 완료합니다.
 4. 캘린더 및 연락처 접근 권한을 허용합니다.
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -65,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `eventDescription` (string, 선택): 이벤트 설명.
     - `eventId` (string, 선택): 이벤트 ID - 이 이벤트와 연결할 애플리케이션의 ID입니다. 이후 이 ID를 사용하여 이벤트를 동기화할 수 있습니다.
     - `includeMeetLink` (boolean, 선택): Google Meet 링크 포함 여부? - 이 이벤트에 대해 Google Meet 컨퍼런스 링크를 자동으로 생성합니다.
+
   </Accordion>
 
   <Accordion title="google_calendar/update_event">
@@ -79,6 +81,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `attendees` (string, 선택): 참석자 - 이메일 주소 배열 또는 쉼표로 구분된 이메일 주소 허용.
     - `eventLocation` (string, 선택): 이벤트 위치.
     - `eventDescription` (string, 선택): 이벤트 설명.
+
   </Accordion>
 
   <Accordion title="google_calendar/view_events">
@@ -88,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
     - `after` (string, 선택): 이후 - 제공된 날짜 이후에 시작하는 이벤트를 필터링합니다 (밀리초 단위의 Unix 또는 ISO 타임스탬프). (예시: "2025-04-12T10:00:00Z 또는 1712908800000").
     - `before` (string, 선택): 이전 - 제공된 날짜 이전에 종료되는 이벤트를 필터링합니다 (밀리초 단위의 Unix 또는 ISO 타임스탬프). (예시: "2025-04-12T10:00:00Z 또는 1712908800000").
+
   </Accordion>
 
   <Accordion title="google_calendar/get_event_by_id">
@@ -96,6 +100,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `eventId` (string, 필수): 이벤트 ID.
     - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+
   </Accordion>
 
   <Accordion title="google_calendar/delete_event">
@@ -104,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `eventId` (string, 필수): 이벤트 ID - 삭제할 캘린더 이벤트의 ID입니다.
     - `calendar` (string, 선택): 캘린더 - Connect Portal Workflow Settings를 사용하여 사용자가 이벤트를 추가할 캘린더를 선택할 수 있도록 합니다. 비워두면 사용자의 기본 캘린더로 기본 설정됩니다.
+
   </Accordion>
 
   <Accordion title="google_calendar/get_contacts">
@@ -116,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_contacts">
@@ -123,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
+
   </Accordion>
 
   <Accordion title="google_calendar/list_directory_people">
@@ -135,6 +143,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_directory_people">
@@ -148,6 +157,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/list_other_contacts">
@@ -160,6 +170,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_other_contacts">
@@ -167,6 +178,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `query` (string, 선택): 연락처를 검색할 검색 쿼리.
+
   </Accordion>
 
   <Accordion title="google_calendar/get_availability">
@@ -187,6 +199,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         }
       ]
       ```
+
   </Accordion>
 </AccordionGroup>
 
@@ -348,33 +361,43 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Google 계정에 캘린더 접근에 필요한 권한이 있는지 확인하세요
 - OAuth 연결에 Google Calendar API에 필요한 모든 범위가 포함되어 있는지 확인하세요
 - 캘린더 공유 설정이 필요한 접근 수준을 허용하는지 확인하세요
 
 **이벤트 생성 문제**
+
 - 시간 형식이 올바른지(ISO8601 또는 Unix 타임스탬프) 확인하세요
 - 참석자 이메일 주소가 올바르게 형식화되어 있는지 확인하세요
 - 대상 캘린더가 존재하며 접근 가능한지 확인하세요
 - 올바른 시간대가 지정되어 있는지 확인하세요
 
 **가용성 및 시간 충돌**
+
 - 가용성 확인 시 시간 범위에 올바른 ISO 형식을 사용하세요
 - 모든 작업에서 시간대가 일관성 있는지 확인하세요
 - 여러 캘린더를 확인할 때 캘린더 ID가 올바른지 확인하세요
 
 **연락처 및 사용자 검색**
+
 - 검색 쿼리가 올바르게 형식화되어 있는지 확인하세요
 - 디렉터리 접근 권한이 부여되었는지 확인하세요
 - 연락처 정보가 최신이며 접근 가능한지 확인하세요
 
 **이벤트 업데이트 및 삭제**
+
 - 이벤트 ID가 올바르며 이벤트가 존재하는지 확인하세요
 - 이벤트를 편집할 수 있는 권한이 있는지 확인하세요
 - 캘린더 소유권이 수정 작업을 허용하는지 확인하세요
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Google Calendar 연동 설정 또는 문제 해결에 대한 지원이 필요하면 저희 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Google Calendar 연동 설정 또는 문제 해결에 대한 지원이 필요하면 저희 지원팀에
+  문의하세요.
 </Card>

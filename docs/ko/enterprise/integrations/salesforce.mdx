@@ -13,7 +13,7 @@ mode: "wide"
 
 Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 Salesforce 계정
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Salesforce 계정 연결
 
@@ -21,7 +21,7 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Salesforce 계정 연결
 
-1. [CrewAI AOP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
 2. 인증 통합 섹션에서 **Salesforce**를 찾습니다.
 3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
 4. CRM 및 영업 관리에 필요한 권한을 부여합니다.
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -65,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Title` (string, 선택): 담당자의 직함(예: CEO 또는 Vice President 등)
     - `Description` (string, 선택): Contact에 대한 설명
     - `additionalFields` (object, 선택): 사용자 정의 Contact 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_lead">
@@ -81,6 +83,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Status` (string, 선택): 리드 상태 - 리드 상태를 선택하려면 Connect Portal Workflow 설정을 사용하세요
     - `Description` (string, 선택): Lead에 대한 설명
     - `additionalFields` (object, 선택): 사용자 정의 Lead 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_opportunity">
@@ -96,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `OwnerId` (string, 선택): 이 Opportunity를 담당하는 Salesforce 사용자
     - `NextStep` (string, 선택): Opportunity 마감을 위한 다음 작업의 설명
     - `additionalFields` (object, 선택): 사용자 정의 Opportunity 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_task">
@@ -114,6 +118,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `isReminderSet` (boolean, 선택): 알림 설정 여부
     - `reminderDateTime` (string, 선택): 알림 날짜/시간(ISO 형식)
     - `additionalFields` (object, 선택): 사용자 정의 Task 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_account">
@@ -126,12 +131,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Phone` (string, 선택): 전화번호
     - `Description` (string, 선택): Account 설명
     - `additionalFields` (object, 선택): 사용자 정의 Account 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_any">
     **설명:** Salesforce에서 모든 오브젝트 유형의 레코드를 생성합니다.
 
     **참고:** 이 기능은 사용자 정의 또는 알려지지 않은 오브젝트 유형의 레코드를 생성할 때 유연하게 사용할 수 있습니다.
+
   </Accordion>
 </AccordionGroup>
 
@@ -150,6 +157,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Title` (string, 선택): 연락처의 직함
     - `Description` (string, 선택): 연락처에 대한 설명
     - `additionalFields` (object, 선택): 커스텀 연락처 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_lead">
@@ -167,6 +175,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Status` (string, 선택): 리드 상태
     - `Description` (string, 선택): 리드에 대한 설명
     - `additionalFields` (object, 선택): 커스텀 리드 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_opportunity">
@@ -183,6 +192,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `OwnerId` (string, 선택): 이 기회를 담당하는 Salesforce 사용자
     - `NextStep` (string, 선택): 기회 마감을 위한 다음 작업의 설명
     - `additionalFields` (object, 선택): 커스텀 기회 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_task">
@@ -201,6 +211,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `isReminderSet` (boolean, 선택): 알림 설정 여부
     - `reminderDateTime` (string, 선택): 알림 날짜/시간 (ISO 형식)
     - `additionalFields` (object, 선택): 커스텀 작업 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_account">
@@ -214,12 +225,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `Phone` (string, 선택): 전화번호
     - `Description` (string, 선택): 계정 설명
     - `additionalFields` (object, 선택): 커스텀 계정 필드를 위한 JSON 형식의 추가 필드
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_any">
     **설명:** Salesforce에서 어떤 객체 유형이든 레코드를 업데이트합니다.
 
     **참고:** 이는 커스텀 또는 미확인 객체 유형의 레코드 업데이트를 위한 유연한 도구입니다.
+
   </Accordion>
 </AccordionGroup>
 
@@ -231,6 +244,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): Contact의 레코드 ID
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_lead">
@@ -238,6 +252,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): Lead의 레코드 ID
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_opportunity">
@@ -245,6 +260,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): Opportunity의 레코드 ID
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_task">
@@ -252,6 +268,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): Task의 레코드 ID
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_account">
@@ -259,6 +276,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): Account의 레코드 ID
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_any">
@@ -267,6 +285,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 레코드 유형 (예: "CustomObject__c")
     - `recordId` (string, 필수): 레코드 ID
+
   </Accordion>
 </AccordionGroup>
 
@@ -282,6 +301,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_lead">
@@ -293,6 +313,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_opportunity">
@@ -304,6 +325,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_task">
@@ -315,6 +337,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_account">
@@ -326,6 +349,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sortDirection` (string, 선택): 정렬 방향 - 옵션: ASC, DESC
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_any">
@@ -336,6 +360,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `filterFormula` (string, 선택): 필터 검색 조건
     - `includeAllFields` (boolean, 선택): 결과에 모든 필드를 포함
     - `paginationParameters` (object, 선택): pageCursor를 포함한 페이지네이션 설정
+
   </Accordion>
 </AccordionGroup>
 
@@ -348,6 +373,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_lead">
@@ -356,6 +382,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_opportunity">
@@ -364,6 +391,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_task">
@@ -372,6 +400,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_account">
@@ -380,6 +409,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_any">
@@ -389,6 +419,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `recordType` (string, 필수): 레코드 유형
     - `listViewId` (string, 필수): 리스트 뷰 ID
     - `paginationParameters` (object, 선택): pageCursor와 함께 사용하는 페이지네이션 설정
+
   </Accordion>
 </AccordionGroup>
 
@@ -409,6 +440,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, 선택): 필드 설명
     - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
     - `defaultFieldValue` (string, 선택): 필드의 기본값
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_lead">
@@ -425,6 +457,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, 선택): 필드 설명
     - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
     - `defaultFieldValue` (string, 선택): 필드의 기본값
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_opportunity">
@@ -441,6 +474,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, 선택): 필드 설명
     - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
     - `defaultFieldValue` (string, 선택): 필드의 기본값
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_task">
@@ -457,6 +491,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, 선택): 필드 설명
     - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
     - `defaultFieldValue` (string, 선택): 필드의 기본값
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_account">
@@ -473,12 +508,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `description` (string, 선택): 필드 설명
     - `helperText` (string, 선택): 마우스를 올렸을 때 표시되는 도움말 텍스트
     - `defaultFieldValue` (string, 선택): 필드의 기본값
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_any">
     **설명:** 모든 오브젝트 타입에 대한 커스텀 필드를 배포합니다.
 
     **참고:** 커스텀 또는 미지의 오브젝트 타입에 커스텀 필드를 생성할 수 있는 유연한 도구입니다.
+
   </Accordion>
 </AccordionGroup>
 
@@ -490,6 +527,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `query` (string, 필수): SOQL 쿼리 (예: "SELECT Id, Name FROM Account WHERE Name = 'Example'")
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_object">
@@ -500,6 +538,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pluralLabel` (string, 필수): 복수형 라벨 (예: "Accounts")
     - `description` (string, 선택): 커스텀 오브젝트에 대한 설명
     - `recordName` (string, 필수): 레이아웃과 검색에 표시되는 레코드 이름 (예: "Account Name")
+
   </Accordion>
 
   <Accordion title="salesforce/describe_action_schema">
@@ -510,6 +549,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `operation` (string, 필수): 작업 타입 (예: "CREATE_RECORD" 또는 "UPDATE_RECORD")
 
     **참고:** 커스텀 오브젝트 작업 시, 해당 스키마를 이해하기 위해 제일 먼저 이 기능을 사용하세요.
+
   </Accordion>
 </AccordionGroup>
 
@@ -637,6 +677,10 @@ crew.kickoff()
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
   Salesforce 통합 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
 </Card>
