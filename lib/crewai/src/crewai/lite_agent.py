@@ -582,7 +582,19 @@ class LiteAgent(FlowTrackable, BaseModel):
                         show_logs=self._show_logs,
                     )
 
-                self._append_message(formatted_answer.text, role="assistant")
+                # Properly attribute messages to avoid LLM hallucination of observations:
+                # - LLM's response goes as assistant message
+                # - Tool observation goes as user message (not assistant)
+                if isinstance(formatted_answer, AgentAction) and formatted_answer.llm_response:
+                    # For tool use: append LLM response as assistant, observation as user
+                    self._append_message(formatted_answer.llm_response, role="assistant")
+                    if formatted_answer.result:
+                        self._append_message(
+                            f"Observation: {formatted_answer.result}", role="user"
+                        )
+                else:
+                    # For final answer or other cases: append text as assistant
+                    self._append_message(formatted_answer.text, role="assistant")
             except OutputParserError as e:  # noqa: PERF203
                 self._printer.print(
                     content="Failed to parse LLM output. Retrying...",

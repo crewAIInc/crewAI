@@ -278,7 +278,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
 
                 self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
+
+                # Properly attribute messages to avoid LLM hallucination of observations:
+                # - LLM's response goes as assistant message
+                # - Tool observation goes as user message (not assistant)
+                if isinstance(formatted_answer, AgentAction) and formatted_answer.llm_response:
+                    # For tool use: append LLM response as assistant, observation as user
+                    self._append_message(formatted_answer.llm_response)
+                    if formatted_answer.result:
+                        self._append_message(
+                            f"Observation: {formatted_answer.result}", role="user"
+                        )
+                else:
+                    # For final answer or other cases: append text as assistant
+                    self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -431,7 +444,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
 
                 self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
+
+                # Properly attribute messages to avoid LLM hallucination of observations:
+                # - LLM's response goes as assistant message
+                # - Tool observation goes as user message (not assistant)
+                if isinstance(formatted_answer, AgentAction) and formatted_answer.llm_response:
+                    # For tool use: append LLM response as assistant, observation as user
+                    self._append_message(formatted_answer.llm_response)
+                    if formatted_answer.result:
+                        self._append_message(
+                            f"Observation: {formatted_answer.result}", role="user"
+                        )
+                else:
+                    # For final answer or other cases: append text as assistant
+                    self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -481,13 +507,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Updated action or final answer.
         """
         # Special case for add_image_tool
+        # Note: Even for add_image_tool, we should not attribute tool output to assistant
+        # to avoid LLM hallucination. The LLM's action is stored as assistant message,
+        # and the tool result (image) is stored as user message.
         add_image_tool = self._i18n.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         ):
-            self.messages.append({"role": "assistant", "content": tool_result.result})
+            # Store original LLM response for proper message attribution
+            formatted_answer.llm_response = formatted_answer.text
+            formatted_answer.result = tool_result.result
             return formatted_answer
 
         return handle_agent_action_core(
