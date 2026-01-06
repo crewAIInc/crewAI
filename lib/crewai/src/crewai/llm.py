@@ -1185,6 +1185,8 @@ class LLM(BaseLLM):
                             start_time=0,
                             end_time=0,
                         )
+                        self._track_token_usage_internal(usage_info)
+
         # --- 4) Check for tool calls
         tool_calls = getattr(response_message, "tool_calls", [])
 

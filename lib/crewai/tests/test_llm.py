@@ -72,6 +72,9 @@ def test_llm_call_with_string_input_and_callbacks():
     assert len(result.strip()) > 0
     assert usage_metrics.successful_requests == 1
 
+    usage_metrics_internal = llm.get_token_usage_summary()
+    assert usage_metrics_internal == usage_metrics
+
 
 @pytest.mark.vcr()
 def test_llm_call_with_message_list():
