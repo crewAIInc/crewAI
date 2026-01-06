@@ -501,6 +501,15 @@ async def _execute_a2a_delegation_async(
                 "max_polls": updates.max_polls,
             }
         )
+    elif isinstance(updates, PushNotificationConfig):
+        handler_kwargs.update(
+            {
+                "config": updates,
+                "result_store": updates.result_store,
+                "polling_timeout": updates.timeout or float(timeout),
+                "polling_interval": updates.interval,
+            }
+        )
 
     async with _create_a2a_client(
         agent_card=agent_card,
