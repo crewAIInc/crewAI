@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any, Unpack
+from typing import TYPE_CHECKING, Any
 
 from a2a.client import Client
 from a2a.types import (
@@ -13,6 +13,7 @@ from a2a.types import (
     TaskQueryParams,
     TaskState,
 )
+from typing_extensions import Unpack
 
 from crewai.a2a.errors import A2APollingTimeoutError
 from crewai.a2a.task_helpers import (

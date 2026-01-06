@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Unpack
 import uuid
 
 from a2a.client import Client
@@ -17,6 +16,7 @@ from a2a.types import (
     TaskStatusUpdateEvent,
     TextPart,
 )
+from typing_extensions import Unpack
 
 from crewai.a2a.task_helpers import (
     ACTIONABLE_STATES,
