@@ -135,6 +135,15 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
         os.environ["OPENAI_API_BASE"] = "https://generativelanguage.googleapis.com/v1beta/openai/"
         os.environ["OPENAI_MODEL_NAME"] = "openai/gemini-2.0-flash"  # Add your Gemini model here, under openai/
         ```
+
+        ```python AI Badgr
+        import os
+
+        # Example using AI Badgr (Budget/Utility, OpenAI-compatible)
+        os.environ["OPENAI_API_KEY"] = "your-aibadgr-api-key"
+        os.environ["OPENAI_API_BASE"] = "https://aibadgr.com/api/v1"
+        os.environ["OPENAI_MODEL_NAME"] = "openai/premium"  # Use tier-based names: basic, normal, or premium
+        ```
         </CodeGroup>
     </Tab>
     <Tab title="Using LLM Class Attributes">
@@ -154,6 +163,16 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
                 model="openai/gemini-2.0-flash",
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
                 api_key="your-gemini-key",  # Should start with AIza...
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+
+            ```python AI Badgr
+            # Example using AI Badgr (Budget/Utility, OpenAI-compatible)
+            llm = LLM(
+                model="openai/premium",  # Use tier-based names: basic, normal, or premium
+                base_url="https://aibadgr.com/api/v1",
+                api_key="your-aibadgr-api-key",
             )
             agent = Agent(llm=llm, ...)
             ```
