@@ -13,7 +13,7 @@ Permita que seus agentes gerenciem relacionamentos com clientes, processos de ve
 
 Antes de usar a integração Salesforce, certifique-se de que você possui:
 
-- Uma conta [CrewAI AOP](https://app.crewai.com) com assinatura ativa
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
 - Uma conta Salesforce com permissões apropriadas
 - Sua conta Salesforce conectada via a [página de Integrações](https://app.crewai.com/integrations)
 
@@ -21,7 +21,7 @@ Antes de usar a integração Salesforce, certifique-se de que você possui:
 
 ### 1. Conecte sua Conta Salesforce
 
-1. Acesse [CrewAI AOP Integrações](https://app.crewai.com/crewai_plus/connectors)
+1. Acesse [CrewAI AMP Integrações](https://app.crewai.com/crewai_plus/connectors)
 2. Encontre **Salesforce** na seção Integrações de Autenticação
 3. Clique em **Conectar** e complete o fluxo OAuth
 4. Conceda as permissões necessárias para gerenciamento de CRM e vendas
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -65,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Title` (string, opcional): Cargo do contato, como CEO ou Vice-presidente
     - `Description` (string, opcional): Descrição do contato
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Contato
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_lead">
@@ -81,6 +83,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Status` (string, opcional): Status do Lead - Use as Configurações de Workflow do Connect Portal para selecionar o status do Lead
     - `Description` (string, opcional): Descrição do lead
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Lead
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_opportunity">
@@ -96,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `OwnerId` (string, opcional): Usuário Salesforce designado para esta Oportunidade
     - `NextStep` (string, opcional): Descrição da próxima tarefa no fechamento da Oportunidade
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Oportunidade
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_task">
@@ -114,6 +118,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `isReminderSet` (boolean, opcional): Se o lembrete está definido
     - `reminderDateTime` (string, opcional): Data/Hora do lembrete no formato ISO
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Tarefa
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_account">
@@ -126,12 +131,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Phone` (string, opcional): Número de telefone
     - `Description` (string, opcional): Descrição da conta
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Conta
+
   </Accordion>
 
   <Accordion title="salesforce/create_record_any">
     **Descrição:** Crie um registro de qualquer tipo de objeto no Salesforce.
 
     **Nota:** Esta é uma ferramenta flexível para criar registros de tipos de objetos personalizados ou desconhecidos.
+
   </Accordion>
 </AccordionGroup>
 
@@ -150,6 +157,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Title` (string, opcional): Cargo do contato
     - `Description` (string, opcional): Descrição do contato
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Contato
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_lead">
@@ -167,6 +175,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Status` (string, opcional): Status do Lead
     - `Description` (string, opcional): Descrição do lead
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Lead
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_opportunity">
@@ -183,6 +192,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `OwnerId` (string, opcional): Usuário Salesforce responsável por esta Oportunidade
     - `NextStep` (string, opcional): Descrição da próxima tarefa no fechamento da Oportunidade
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Oportunidade
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_task">
@@ -201,6 +211,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `isReminderSet` (boolean, opcional): Se o lembrete está definido
     - `reminderDateTime` (string, opcional): Data/Hora do lembrete em formato ISO
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Tarefa
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_account">
@@ -214,12 +225,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `Phone` (string, opcional): Número de telefone
     - `Description` (string, opcional): Descrição da conta
     - `additionalFields` (object, opcional): Campos adicionais no formato JSON para campos personalizados de Conta
+
   </Accordion>
 
   <Accordion title="salesforce/update_record_any">
     **Descrição:** Atualize um registro de qualquer tipo de objeto no Salesforce.
 
     **Nota:** Esta é uma ferramenta flexível para atualizar registros de tipos de objetos personalizados ou desconhecidos.
+
   </Accordion>
 </AccordionGroup>
 
@@ -231,6 +244,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do registro do Contato
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_lead">
@@ -238,6 +252,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do registro do Lead
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_opportunity">
@@ -245,6 +260,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do registro da Oportunidade
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_task">
@@ -252,6 +268,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do registro da Tarefa
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_account">
@@ -259,6 +276,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `recordId` (string, obrigatório): ID do registro da Conta
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_id_any">
@@ -267,6 +285,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `recordType` (string, obrigatório): Tipo do registro (ex.: "CustomObject__c")
     - `recordId` (string, obrigatório): ID do registro
+
   </Accordion>
 </AccordionGroup>
 
@@ -282,6 +301,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_lead">
@@ -293,6 +313,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_opportunity">
@@ -304,6 +325,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_task">
@@ -315,6 +337,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_account">
@@ -326,6 +349,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sortDirection` (string, opcional): Direção da ordenação - Opções: ASC, DESC
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/search_records_any">
@@ -336,6 +360,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `filterFormula` (string, opcional): Critérios de busca por filtro
     - `includeAllFields` (boolean, opcional): Incluir todos os campos nos resultados
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 </AccordionGroup>
 
@@ -348,6 +373,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_lead">
@@ -356,6 +382,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_opportunity">
@@ -364,6 +391,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_task">
@@ -372,6 +400,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_account">
@@ -380,6 +409,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 
   <Accordion title="salesforce/get_record_by_view_id_any">
@@ -389,6 +419,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `recordType` (string, obrigatório): Tipo do registro
     - `listViewId` (string, obrigatório): ID do List View
     - `paginationParameters` (object, opcional): Configurações de paginação com pageCursor
+
   </Accordion>
 </AccordionGroup>
 
@@ -409,6 +440,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `description` (string, opcional): Descrição do campo
     - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
     - `defaultFieldValue` (string, opcional): Valor padrão do campo
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_lead">
@@ -425,6 +457,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `description` (string, opcional): Descrição do campo
     - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
     - `defaultFieldValue` (string, opcional): Valor padrão do campo
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_opportunity">
@@ -441,6 +474,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `description` (string, opcional): Descrição do campo
     - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
     - `defaultFieldValue` (string, opcional): Valor padrão do campo
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_task">
@@ -457,6 +491,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `description` (string, opcional): Descrição do campo
     - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
     - `defaultFieldValue` (string, opcional): Valor padrão do campo
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_account">
@@ -473,12 +508,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `description` (string, opcional): Descrição do campo
     - `helperText` (string, opcional): Texto de ajuda exibido ao passar o mouse
     - `defaultFieldValue` (string, opcional): Valor padrão do campo
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_field_any">
     **Descrição:** Crie campos personalizados para qualquer tipo de objeto.
 
     **Nota:** Esta é uma ferramenta flexível para criar campos personalizados para tipos de objetos personalizados ou desconhecidos.
+
   </Accordion>
 </AccordionGroup>
 
@@ -490,6 +527,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `query` (string, obrigatório): Consulta SOQL (ex.: "SELECT Id, Name FROM Account WHERE Name = 'Exemplo'")
+
   </Accordion>
 
   <Accordion title="salesforce/create_custom_object">
@@ -500,6 +538,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `pluralLabel` (string, obrigatório): Rótulo plural (ex.: "Contas")
     - `description` (string, opcional): Uma descrição do Objeto Personalizado
     - `recordName` (string, obrigatório): Nome do registro exibido em layouts e buscas (ex.: "Nome da Conta")
+
   </Accordion>
 
   <Accordion title="salesforce/describe_action_schema">
@@ -510,6 +549,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `operation` (string, obrigatório): Tipo de Operação (ex.: "CREATE_RECORD" ou "UPDATE_RECORD")
 
     **Nota:** Use esta função primeiro ao trabalhar com objetos personalizados para entender seu schema antes de realizar operações.
+
   </Accordion>
 </AccordionGroup>
 
@@ -644,5 +684,6 @@ Esta documentação abrangente cobre todas as ferramentas Salesforce organizadas
 ### Precisa de ajuda?
 
 <Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência na configuração da integração com Salesforce ou para resolução de problemas.
+  Entre em contato com nossa equipe de suporte para assistência na configuração
+  da integração com Salesforce ou para resolução de problemas.
 </Card>

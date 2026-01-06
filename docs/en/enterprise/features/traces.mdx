@@ -11,7 +11,7 @@ Traces provide comprehensive visibility into your crew executions, helping you m
 
 ## What are Traces?
 
-Traces in CrewAI AOP are detailed execution records that capture every aspect of your crew's operation, from initial inputs to final outputs. They record:
+Traces in CrewAI AMP are detailed execution records that capture every aspect of your crew's operation, from initial inputs to final outputs. They record:
 
 - Agent thoughts and reasoning
 - Task execution details
@@ -20,15 +20,13 @@ Traces in CrewAI AOP are detailed execution records that capture every aspect of
 - Execution times
 - Cost estimates
 
-<Frame>
-  ![Traces Overview](/images/enterprise/traces-overview.png)
-</Frame>
+<Frame>![Traces Overview](/images/enterprise/traces-overview.png)</Frame>
 
 ## Accessing Traces
 
 <Steps>
   <Step title="Navigate to the Traces Tab">
-    Once in your CrewAI AOP dashboard, click on the **Traces** to view all execution records.
+    Once in your CrewAI AMP dashboard, click on the **Traces** to view all execution records.
   </Step>
 
   <Step title="Select an Execution">
@@ -51,9 +49,7 @@ The top section displays high-level metrics about the execution:
 - **Execution Time**: Total duration of the crew run
 - **Estimated Cost**: Approximate cost based on token usage
 
-<Frame>
-  ![Execution Summary](/images/enterprise/trace-summary.png)
-</Frame>
+<Frame>![Execution Summary](/images/enterprise/trace-summary.png)</Frame>
 
 ### 2. Tasks & Agents
 
@@ -64,33 +60,25 @@ This section shows all tasks and agents that were part of the crew execution:
 - Status (completed/failed)
 - Individual execution time of the task
 
-<Frame>
-  ![Task List](/images/enterprise/trace-tasks.png)
-</Frame>
+<Frame>![Task List](/images/enterprise/trace-tasks.png)</Frame>
 
 ### 3. Final Output
 
 Displays the final result produced by the crew after all tasks are completed.
 
-<Frame>
-  ![Final Output](/images/enterprise/final-output.png)
-</Frame>
+<Frame>![Final Output](/images/enterprise/final-output.png)</Frame>
 
 ### 4. Execution Timeline
 
 A visual representation of when each task started and ended, helping you identify bottlenecks or parallel execution patterns.
 
-<Frame>
-  ![Execution Timeline](/images/enterprise/trace-timeline.png)
-</Frame>
+<Frame>![Execution Timeline](/images/enterprise/trace-timeline.png)</Frame>
 
 ### 5. Detailed Task View
 
 When you click on a specific task in the timeline or task list, you'll see:
 
-<Frame>
-  ![Detailed Task View](/images/enterprise/trace-detailed-task.png)
-</Frame>
+<Frame>![Detailed Task View](/images/enterprise/trace-detailed-task.png)</Frame>
 
 - **Task Key**: Unique identifier for the task
 - **Task ID**: Technical identifier in the system
@@ -103,7 +91,6 @@ When you click on a specific task in the timeline or task list, you'll see:
 - **Expected Output**: What output format was requested
 - **Input**: Any input provided to this task from previous tasks
 - **Output**: The actual result produced by the agent
-
 
 ## Using Traces for Debugging
 
@@ -121,6 +108,7 @@ Traces are invaluable for troubleshooting issues with your crews:
     <Frame>
       ![Failure Points](/images/enterprise/failure.png)
     </Frame>
+
   </Step>
 
   <Step title="Optimize Performance">
@@ -130,6 +118,7 @@ Traces are invaluable for troubleshooting issues with your crews:
     - Excessive token usage
     - Redundant tool operations
     - Unnecessary API calls
+
   </Step>
 
   <Step title="Improve Cost Efficiency">
@@ -139,6 +128,7 @@ Traces are invaluable for troubleshooting issues with your crews:
     - Refine prompts to be more concise
     - Cache frequently accessed information
     - Structure tasks to minimize redundant operations
+
   </Step>
 </Steps>
 
@@ -153,5 +143,6 @@ CrewAI batches trace uploads to reduce overhead on high-volume runs:
 This yields more stable tracing under load while preserving detailed task/agent telemetry.
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with trace analysis or any other CrewAI AOP features.
+  Contact our support team for assistance with trace analysis or any other
+  CrewAI AMP features.
 </Card>
