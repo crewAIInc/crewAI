@@ -315,7 +315,7 @@ agent = Agent(
     a2a=A2AConfig(
         endpoint="https://research.example.com/.well-known/agent-card.json",
         updates=PushNotificationConfig(
-            url="https://your-server.com/webhook",
+            url={base_url}/a2a/callback",
             token="your-validation-token",
             timeout=300.0
         )

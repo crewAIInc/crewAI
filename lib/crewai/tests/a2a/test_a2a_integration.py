@@ -172,12 +172,12 @@ class TestA2APushNotificationHandler:
         )
 
     @pytest.mark.asyncio
-    async def test_push_handler_registers_callback_and_waits(
+    async def test_push_handler_waits_for_result(
         self,
         mock_agent_card: AgentCard,
         mock_task,
     ) -> None:
-        """Test that push handler registers callback and waits for result."""
+        """Test that push handler waits for result from store."""
         from unittest.mock import AsyncMock, MagicMock
 
         from a2a.types import Task, TaskStatus
@@ -201,7 +201,6 @@ class TestA2APushNotificationHandler:
 
         mock_client = MagicMock()
         mock_client.send_message = mock_send_message
-        mock_client.set_task_callback = AsyncMock()
 
         config = PushNotificationConfig(
             url=AnyHttpUrl("http://localhost:8080/a2a/callback"),
@@ -228,7 +227,6 @@ class TestA2APushNotificationHandler:
             polling_interval=1.0,
         )
 
-        mock_client.set_task_callback.assert_called_once()
         mock_store.wait_for_result.assert_called_once_with(
             task_id="task-123",
             timeout=30.0,
@@ -265,7 +263,6 @@ class TestA2APushNotificationHandler:
 
         mock_client = MagicMock()
         mock_client.send_message = mock_send_message
-        mock_client.set_task_callback = AsyncMock()
 
         config = PushNotificationConfig(
             url=AnyHttpUrl("http://localhost:8080/a2a/callback"),
