@@ -220,6 +220,7 @@ async def _fetch_agent_card_async(
 
 def execute_a2a_delegation(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -235,7 +236,6 @@ def execute_a2a_delegation(
     agent_branch: Any | None = None,
     response_model: type[BaseModel] | None = None,
     turn_number: int | None = None,
-    transport_protocol: TransportProtocol | None = None,
 ) -> dict[str, Any]:
     """Execute a task delegation to a remote A2A agent with multi-turn support.
 
@@ -248,6 +248,7 @@ def execute_a2a_delegation(
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL)
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
         auth: Optional AuthScheme for authentication (Bearer, OAuth2, API Key, HTTP Basic/Digest)
         timeout: Request timeout in seconds
         task_description: The task to delegate
@@ -263,7 +264,6 @@ def execute_a2a_delegation(
         agent_branch: Optional agent tree branch for logging
         response_model: Optional Pydantic model for structured outputs
         turn_number: Optional turn number for multi-turn conversations
-        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
     Returns:
         Dictionary with:
         - status: "completed", "input_required", "failed", etc.
@@ -333,6 +333,7 @@ def execute_a2a_delegation(
 
 async def _execute_a2a_delegation_async(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -349,12 +350,12 @@ async def _execute_a2a_delegation_async(
     agent_id: str | None = None,
     agent_role: str | None = None,
     response_model: type[BaseModel] | None = None,
-    transport_protocol: TransportProtocol | None = None,
 ) -> dict[str, Any]:
     """Async implementation of A2A delegation with multi-turn support.
 
     Args:
         endpoint: A2A agent endpoint URL
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
         auth: Optional AuthScheme for authentication
         timeout: Request timeout in seconds
         task_description: Task to delegate
@@ -371,7 +372,6 @@ async def _execute_a2a_delegation_async(
         agent_id: Agent identifier for logging
         agent_role: Agent role for logging
         response_model: Optional Pydantic model for structured outputs
-        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
 
     Returns:
         Dictionary with status, result/error, and new history
