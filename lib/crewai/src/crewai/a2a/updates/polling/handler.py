@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Unpack
 
 from a2a.client import Client
 from a2a.types import (
@@ -15,7 +15,13 @@ from a2a.types import (
 )
 
 from crewai.a2a.errors import A2APollingTimeoutError
-from crewai.a2a.task_helpers import TaskStateResult, process_task_state
+from crewai.a2a.task_helpers import (
+    ACTIONABLE_STATES,
+    TERMINAL_STATES,
+    TaskStateResult,
+    process_task_state,
+)
+from crewai.a2a.updates.base import PollingHandlerKwargs
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2APollingStartedEvent,
@@ -28,15 +34,7 @@ if TYPE_CHECKING:
     from a2a.types import Task as A2ATask
 
 
-TERMINAL_STATES = {
-    TaskState.completed,
-    TaskState.failed,
-    TaskState.rejected,
-    TaskState.canceled,
-}
-
-
-async def poll_task_until_complete(
+async def _poll_task_until_complete(
     client: Client,
     task_id: str,
     polling_interval: float,
@@ -85,7 +83,7 @@ async def poll_task_until_complete(
         if task.status.state in TERMINAL_STATES:
             return task
 
-        if task.status.state in {TaskState.input_required, TaskState.auth_required}:
+        if task.status.state in ACTIONABLE_STATES:
             return task
 
         if elapsed > polling_timeout:
@@ -101,128 +99,123 @@ async def poll_task_until_complete(
         await asyncio.sleep(polling_interval)
 
 
-async def execute_polling_delegation(
-    client: Client,
-    message: Message,
-    polling_interval: float,
-    polling_timeout: float,
-    endpoint: str,
-    agent_branch: Any | None,
-    turn_number: int,
-    is_multiturn: bool,
-    agent_role: str | None,
-    new_messages: list[Message],
-    agent_card: AgentCard,
-    history_length: int = 100,
-    max_polls: int | None = None,
-) -> TaskStateResult:
-    """Execute A2A delegation using polling for updates.
+class PollingHandler:
+    """Polling-based update handler."""
 
-    Args:
-        client: A2A client instance
-        message: Message to send
-        polling_interval: Seconds between poll attempts
-        polling_timeout: Max seconds before timeout
-        endpoint: A2A agent endpoint URL
-        agent_branch: Agent tree branch for logging
-        turn_number: Current turn number
-        is_multiturn: Whether this is a multi-turn conversation
-        agent_role: Agent role for logging
-        new_messages: List to collect messages
-        agent_card: The agent card
-        history_length: Number of messages to retrieve per poll
-        max_polls: Max number of poll attempts (None = unlimited)
+    @staticmethod
+    async def execute(
+        client: Client,
+        message: Message,
+        new_messages: list[Message],
+        agent_card: AgentCard,
+        **kwargs: Unpack[PollingHandlerKwargs],
+    ) -> TaskStateResult:
+        """Execute A2A delegation using polling for updates.
 
-    Returns:
-        Dictionary with status, result/error, and history
-    """
-    task_id: str | None = None
+        Args:
+            client: A2A client instance.
+            message: Message to send.
+            new_messages: List to collect messages.
+            agent_card: The agent card.
+            **kwargs: Polling-specific parameters.
 
-    async for event in client.send_message(message):
-        if isinstance(event, Message):
-            new_messages.append(event)
-            result_parts = [
-                part.root.text for part in event.parts if part.root.kind == "text"
-            ]
-            response_text = " ".join(result_parts) if result_parts else ""
+        Returns:
+            Dictionary with status, result/error, and history.
+        """
+        polling_interval = kwargs.get("polling_interval", 2.0)
+        polling_timeout = kwargs.get("polling_timeout", 300.0)
+        endpoint = kwargs.get("endpoint", "")
+        agent_branch = kwargs.get("agent_branch")
+        turn_number = kwargs.get("turn_number", 0)
+        is_multiturn = kwargs.get("is_multiturn", False)
+        agent_role = kwargs.get("agent_role")
+        history_length = kwargs.get("history_length", 100)
+        max_polls = kwargs.get("max_polls")
 
-            crewai_event_bus.emit(
-                None,
-                A2AResponseReceivedEvent(
-                    response=response_text,
-                    turn_number=turn_number,
-                    is_multiturn=is_multiturn,
-                    status="completed",
-                    agent_role=agent_role,
-                ),
-            )
+        task_id: str | None = None
 
-            return TaskStateResult(
-                status=TaskState.completed,
-                result=response_text,
-                history=new_messages,
-                agent_card=agent_card,
-            )
+        async for event in client.send_message(message):
+            if isinstance(event, Message):
+                new_messages.append(event)
+                result_parts = [
+                    part.root.text for part in event.parts if part.root.kind == "text"
+                ]
+                response_text = " ".join(result_parts) if result_parts else ""
 
-        if isinstance(event, tuple):
-            a2a_task, _ = event
-            task_id = a2a_task.id
-
-            if a2a_task.status.state in TERMINAL_STATES | {
-                TaskState.input_required,
-                TaskState.auth_required,
-            }:
-                result = process_task_state(
-                    a2a_task=a2a_task,
-                    new_messages=new_messages,
-                    agent_card=agent_card,
-                    turn_number=turn_number,
-                    is_multiturn=is_multiturn,
-                    agent_role=agent_role,
+                crewai_event_bus.emit(
+                    None,
+                    A2AResponseReceivedEvent(
+                        response=response_text,
+                        turn_number=turn_number,
+                        is_multiturn=is_multiturn,
+                        status="completed",
+                        agent_role=agent_role,
+                    ),
                 )
-                if result:
-                    return result
-            break
 
-    if not task_id:
-        return TaskStateResult(
-            status=TaskState.failed,
-            error="No task ID received from initial message",
-            history=new_messages,
+                return TaskStateResult(
+                    status=TaskState.completed,
+                    result=response_text,
+                    history=new_messages,
+                    agent_card=agent_card,
+                )
+
+            if isinstance(event, tuple):
+                a2a_task, _ = event
+                task_id = a2a_task.id
+
+                if a2a_task.status.state in TERMINAL_STATES | ACTIONABLE_STATES:
+                    result = process_task_state(
+                        a2a_task=a2a_task,
+                        new_messages=new_messages,
+                        agent_card=agent_card,
+                        turn_number=turn_number,
+                        is_multiturn=is_multiturn,
+                        agent_role=agent_role,
+                    )
+                    if result:
+                        return result
+                break
+
+        if not task_id:
+            return TaskStateResult(
+                status=TaskState.failed,
+                error="No task ID received from initial message",
+                history=new_messages,
+            )
+
+        crewai_event_bus.emit(
+            agent_branch,
+            A2APollingStartedEvent(
+                task_id=task_id,
+                polling_interval=polling_interval,
+                endpoint=endpoint,
+            ),
         )
 
-    crewai_event_bus.emit(
-        agent_branch,
-        A2APollingStartedEvent(
+        final_task = await _poll_task_until_complete(
+            client=client,
             task_id=task_id,
             polling_interval=polling_interval,
-            endpoint=endpoint,
-        ),
-    )
+            polling_timeout=polling_timeout,
+            agent_branch=agent_branch,
+            history_length=history_length,
+            max_polls=max_polls,
+        )
 
-    final_task = await poll_task_until_complete(
-        client=client,
-        task_id=task_id,
-        polling_interval=polling_interval,
-        polling_timeout=polling_timeout,
-        agent_branch=agent_branch,
-        history_length=history_length,
-        max_polls=max_polls,
-    )
+        result = process_task_state(
+            a2a_task=final_task,
+            new_messages=new_messages,
+            agent_card=agent_card,
+            turn_number=turn_number,
+            is_multiturn=is_multiturn,
+            agent_role=agent_role,
+        )
+        if result:
+            return result
 
-    result = process_task_state(
-        a2a_task=final_task,
-        new_messages=new_messages,
-        agent_card=agent_card,
-        turn_number=turn_number,
-        is_multiturn=is_multiturn,
-        agent_role=agent_role,
-    )
-    if result:
-        return result
-
-    return TaskStateResult(
-        status=TaskState.failed,
-        error=f"Unexpected task state: {final_task.status.state}",
-        history=new_messages,
-    )
+        return TaskStateResult(
+            status=TaskState.failed,
+            error=f"Unexpected task state: {final_task.status.state}",
+            history=new_messages,
+        )

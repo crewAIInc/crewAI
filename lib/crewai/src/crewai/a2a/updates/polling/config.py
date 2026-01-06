@@ -15,9 +15,11 @@ class PollingConfig(BaseModel):
         history_length: Number of messages to retrieve per poll.
     """
 
-    interval: float = Field(default=2.0, description="Seconds between poll attempts")
-    timeout: float | None = Field(default=None, description="Max seconds to poll")
-    max_polls: int | None = Field(default=None, description="Max poll attempts")
+    interval: float = Field(
+        default=2.0, gt=0, description="Seconds between poll attempts"
+    )
+    timeout: float | None = Field(default=None, gt=0, description="Max seconds to poll")
+    max_polls: int | None = Field(default=None, gt=0, description="Max poll attempts")
     history_length: int = Field(
-        default=100, description="Messages to retrieve per poll"
+        default=100, gt=0, description="Messages to retrieve per poll"
     )

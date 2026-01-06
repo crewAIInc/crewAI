@@ -15,6 +15,23 @@ if TYPE_CHECKING:
     from a2a.types import Task as A2ATask
 
 
+TERMINAL_STATES: frozenset[TaskState] = frozenset(
+    {
+        TaskState.completed,
+        TaskState.failed,
+        TaskState.rejected,
+        TaskState.canceled,
+    }
+)
+
+ACTIONABLE_STATES: frozenset[TaskState] = frozenset(
+    {
+        TaskState.input_required,
+        TaskState.auth_required,
+    }
+)
+
+
 class TaskStateResult(TypedDict):
     """Result dictionary from processing A2A task state."""
 
@@ -154,8 +171,8 @@ def process_task_state(
                 role=Role.agent,
                 message_id=str(uuid.uuid4()),
                 parts=[Part(root=TextPart(text=response_text))],
-                context_id=getattr(a2a_task, "context_id", None),
-                task_id=getattr(a2a_task, "task_id", None),
+                context_id=a2a_task.context_id,
+                task_id=a2a_task.id,
             )
             new_messages.append(agent_message)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, Field
 
 from crewai.a2a.auth.schemas import AuthScheme
 
@@ -17,7 +17,7 @@ class PushNotificationConfig(BaseModel):
         authentication: Auth scheme for the callback endpoint.
     """
 
-    url: str = Field(description="Callback URL for push notifications")
+    url: AnyHttpUrl = Field(description="Callback URL for push notifications")
     id: str | None = Field(default=None, description="Unique config identifier")
     token: str | None = Field(default=None, description="Validation token")
     authentication: AuthScheme | None = Field(

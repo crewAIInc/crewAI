@@ -34,9 +34,15 @@ from crewai.a2a.auth.utils import (
 from crewai.a2a.config import A2AConfig
 from crewai.a2a.task_helpers import TaskStateResult
 from crewai.a2a.types import PartsDict, PartsMetadataDict
-from crewai.a2a.updates import PollingConfig, UpdateConfig
-from crewai.a2a.updates.polling.handler import execute_polling_delegation
-from crewai.a2a.updates.streaming.handler import execute_streaming_delegation
+from crewai.a2a.updates import (
+    PollingConfig,
+    PollingHandler,
+    PushNotificationConfig,
+    PushNotificationHandler,
+    StreamingConfig,
+    StreamingHandler,
+    UpdateConfig,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationStartedEvent,
@@ -51,6 +57,31 @@ if TYPE_CHECKING:
     from a2a.types import Message
 
     from crewai.a2a.auth.schemas import AuthScheme
+
+
+HandlerType = (
+    type[PollingHandler] | type[StreamingHandler] | type[PushNotificationHandler]
+)
+
+HANDLER_REGISTRY: dict[type[UpdateConfig], HandlerType] = {
+    PollingConfig: PollingHandler,
+    StreamingConfig: StreamingHandler,
+    PushNotificationConfig: PushNotificationHandler,
+}
+
+
+def get_handler(config: UpdateConfig | None) -> HandlerType:
+    """Get the handler class for a given update config.
+
+    Args:
+        config: Update mechanism configuration.
+
+    Returns:
+        Handler class for the config type, defaults to StreamingHandler.
+    """
+    if config is None:
+        return StreamingHandler
+    return HANDLER_REGISTRY.get(type(config), StreamingHandler)
 
 
 @lru_cache()
@@ -448,14 +479,28 @@ async def _execute_a2a_delegation_async(
         ),
     )
 
-    polling_config = updates if isinstance(updates, PollingConfig) else None
-    use_polling = polling_config is not None
-    polling_interval = polling_config.interval if polling_config else 2.0
-    effective_polling_timeout = (
-        polling_config.timeout
-        if polling_config and polling_config.timeout
-        else float(timeout)
-    )
+    handler = get_handler(updates)
+    use_polling = isinstance(updates, PollingConfig)
+
+    handler_kwargs: dict[str, Any] = {
+        "turn_number": turn_number,
+        "is_multiturn": is_multiturn,
+        "agent_role": agent_role,
+        "context_id": context_id,
+        "task_id": task_id,
+        "endpoint": endpoint,
+        "agent_branch": agent_branch,
+    }
+
+    if isinstance(updates, PollingConfig):
+        handler_kwargs.update(
+            {
+                "polling_interval": updates.interval,
+                "polling_timeout": updates.timeout or float(timeout),
+                "history_length": updates.history_length,
+                "max_polls": updates.max_polls,
+            }
+        )
 
     async with _create_a2a_client(
         agent_card=agent_card,
@@ -466,33 +511,12 @@ async def _execute_a2a_delegation_async(
         auth=auth,
         use_polling=use_polling,
     ) as client:
-        if use_polling and polling_config:
-            return await execute_polling_delegation(
-                client=client,
-                message=message,
-                polling_interval=polling_interval,
-                polling_timeout=effective_polling_timeout,
-                endpoint=endpoint,
-                agent_branch=agent_branch,
-                turn_number=turn_number,
-                is_multiturn=is_multiturn,
-                agent_role=agent_role,
-                new_messages=new_messages,
-                agent_card=agent_card,
-                history_length=polling_config.history_length,
-                max_polls=polling_config.max_polls,
-            )
-
-        return await execute_streaming_delegation(
+        return await handler.execute(
             client=client,
             message=message,
-            context_id=context_id,
-            task_id=task_id,
-            turn_number=turn_number,
-            is_multiturn=is_multiturn,
-            agent_role=agent_role,
             new_messages=new_messages,
             agent_card=agent_card,
+            **handler_kwargs,
         )
 
 
