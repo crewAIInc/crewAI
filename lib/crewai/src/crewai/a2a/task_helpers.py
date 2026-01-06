@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import TYPE_CHECKING, NotRequired, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 import uuid
 
 from a2a.types import (
@@ -17,6 +17,7 @@ from a2a.types import (
     TaskStatusUpdateEvent,
     TextPart,
 )
+from typing_extensions import NotRequired
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import A2AResponseReceivedEvent
