@@ -13,7 +13,7 @@ mode: "wide"
 
 Microsoft Outlook 통합을 사용하기 전에 다음 사항을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - Outlook 액세스 권한이 있는 Microsoft 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 Microsoft 계정 연결
 
@@ -21,7 +21,7 @@ Microsoft Outlook 통합을 사용하기 전에 다음 사항을 확인하세요
 
 ### 1. Microsoft 계정 연결
 
-1. [CrewAI AOP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동
 2. 인증 통합 섹션에서 **Microsoft Outlook** 찾기
 3. **연결**을 클릭하고 OAuth 플로우 완료
 4. 이메일, 캘린더 및 연락처 액세스에 필요한 권한 부여
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -62,6 +63,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `orderby` (string, 선택사항): 필드별 정렬 (예: "receivedDateTime desc"). 기본값: "receivedDateTime desc".
     - `select` (string, 선택사항): 반환할 특정 속성 선택.
     - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
+
   </Accordion>
 
   <Accordion title="microsoft_outlook/send_email">
@@ -77,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `importance` (string, 선택사항): 메시지 중요도 수준. 옵션: low, normal, high. 기본값: normal.
     - `reply_to` (array, 선택사항): 회신용 이메일 주소 배열.
     - `save_to_sent_items` (boolean, 선택사항): 보낸 편지함 폴더에 메시지를 저장할지 여부. 기본값: true.
+
   </Accordion>
 
   <Accordion title="microsoft_outlook/get_calendar_events">
@@ -87,6 +90,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `skip` (integer, 선택사항): 건너뛸 이벤트 수. 기본값: 0.
     - `filter` (string, 선택사항): OData 필터 표현식 (예: "start/dateTime ge '2024-01-01T00:00:00Z'").
     - `orderby` (string, 선택사항): 필드별 정렬 (예: "start/dateTime asc"). 기본값: "start/dateTime asc".
+
   </Accordion>
 
   <Accordion title="microsoft_outlook/create_calendar_event">
@@ -100,6 +104,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `timezone` (string, 선택사항): 시간대 (예: 'Pacific Standard Time'). 기본값: UTC.
     - `location` (string, 선택사항): 이벤트 위치.
     - `attendees` (array, 선택사항): 참석자의 이메일 주소 배열.
+
   </Accordion>
 
   <Accordion title="microsoft_outlook/get_contacts">
@@ -110,6 +115,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `skip` (integer, 선택사항): 건너뛸 연락처 수. 기본값: 0.
     - `filter` (string, 선택사항): OData 필터 표현식.
     - `orderby` (string, 선택사항): 필드별 정렬 (예: "displayName asc"). 기본값: "displayName asc".
+
   </Accordion>
 
   <Accordion title="microsoft_outlook/create_contact">
@@ -124,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `homePhones` (array, 선택사항): 집 전화번호 배열.
     - `jobTitle` (string, 선택사항): 연락처의 직책.
     - `companyName` (string, 선택사항): 연락처의 회사 이름.
+
   </Accordion>
 </AccordionGroup>
 
@@ -163,15 +170,22 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Microsoft 계정이 이메일, 캘린더 및 연락처 액세스에 필요한 권한을 가지고 있는지 확인하세요.
 - 필요한 범위: `Mail.Read`, `Mail.Send`, `Calendars.Read`, `Calendars.ReadWrite`, `Contacts.Read`, `Contacts.ReadWrite`.
 
 **이메일 보내기 문제**
+
 - `send_email`에 `to_recipients`, `subject`, `body`가 제공되는지 확인하세요.
 - 이메일 주소가 올바르게 형식화되어 있는지 확인하세요.
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Microsoft Outlook 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft Outlook 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
 </Card>

@@ -10,17 +10,21 @@ mode: "wide"
 Automate responses when Outlook delivers a new message or when an event is removed from the calendar. Teams commonly route escalations, file tickets, or alert attendees of cancellations.
 
 <Tip>
-  Connect Outlook in **Tools & Integrations** and ensure the trigger is enabled for your deployment.
+  Connect Outlook in **Tools & Integrations** and ensure the trigger is enabled
+  for your deployment.
 </Tip>
 
 ## Enabling the Outlook Trigger
 
-1. Open your deployment in CrewAI AOP
+1. Open your deployment in CrewAI AMP
 2. Go to the **Triggers** tab
 3. Locate **Outlook** and switch the toggle to enable
 
 <Frame caption="Microsoft Outlook trigger connection">
-  <img src="/images/enterprise/outlook-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/outlook-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize a new email
@@ -51,7 +55,9 @@ crewai triggers run microsoft_outlook/email_received
 O comando `crewai triggers run` executará sua crew com um payload completo do Outlook, permitindo que você teste sua lógica de parsing antes do deployment.
 
 <Warning>
-  Use `crewai triggers run microsoft_outlook/email_received` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+  Use `crewai triggers run microsoft_outlook/email_received` (não `crewai run`)
+  para simular execução de trigger durante o desenvolvimento. Após o deployment,
+  sua crew receberá automaticamente o payload do trigger.
 </Warning>
 
 ## Troubleshooting
