@@ -1,6 +1,6 @@
 ---
 title: CrewAI Tracing
-description: CrewAI AOP 플랫폼을 사용한 CrewAI Crews 및 Flows의 내장 추적
+description: CrewAI AMP 플랫폼을 사용한 CrewAI Crews 및 Flows의 내장 추적
 icon: magnifying-glass-chart
 mode: "wide"
 ---
@@ -9,7 +9,7 @@ mode: "wide"
 
 CrewAI는 Crews와 Flows를 실시간으로 모니터링하고 디버깅할 수 있는 내장 추적 기능을 제공합니다. 이 가이드는 CrewAI의 통합 관측 가능성 플랫폼을 사용하여 **Crews**와 **Flows** 모두에 대한 추적을 활성화하는 방법을 보여줍니다.
 
-> **CrewAI Tracing이란?** CrewAI의 내장 추적은 agent 결정, 작업 실행 타임라인, 도구 사용, LLM 호출을 포함한 AI agent에 대한 포괄적인 관측 가능성을 제공하며, 모두 [CrewAI AOP 플랫폼](https://app.crewai.com)을 통해 액세스할 수 있습니다.
+> **CrewAI Tracing이란?** CrewAI의 내장 추적은 agent 결정, 작업 실행 타임라인, 도구 사용, LLM 호출을 포함한 AI agent에 대한 포괄적인 관측 가능성을 제공하며, 모두 [CrewAI AMP 플랫폼](https://app.crewai.com)을 통해 액세스할 수 있습니다.
 
 ![CrewAI Tracing Interface](/images/crewai-tracing.png)
 
@@ -17,7 +17,7 @@ CrewAI는 Crews와 Flows를 실시간으로 모니터링하고 디버깅할 수 
 
 CrewAI 추적을 사용하기 전에 다음이 필요합니다:
 
-1. **CrewAI AOP 계정**: [app.crewai.com](https://app.crewai.com)에서 무료 계정에 가입하세요
+1. **CrewAI AMP 계정**: [app.crewai.com](https://app.crewai.com)에서 무료 계정에 가입하세요
 2. **CLI 인증**: CrewAI CLI를 사용하여 로컬 환경을 인증하세요
 
 ```bash
@@ -26,9 +26,9 @@ crewai login
 
 ## 설정 지침
 
-### 1단계: CrewAI AOP 계정 생성
+### 1단계: CrewAI AMP 계정 생성
 
-[app.crewai.com](https://app.crewai.com)을 방문하여 무료 계정을 만드세요. 이를 통해 추적, 메트릭을 보고 crews를 관리할 수 있는 CrewAI AOP 플랫폼에 액세스할 수 있습니다.
+[app.crewai.com](https://app.crewai.com)을 방문하여 무료 계정을 만드세요. 이를 통해 추적, 메트릭을 보고 crews를 관리할 수 있는 CrewAI AMP 플랫폼에 액세스할 수 있습니다.
 
 ### 2단계: CrewAI CLI 설치 및 인증
 
@@ -38,16 +38,17 @@ crewai login
 uv add crewai[tools]
 ```
 
-그런 다음 CrewAI AOP 계정으로 CLI를 인증하세요:
+그런 다음 CrewAI AMP 계정으로 CLI를 인증하세요:
 
 ```bash
 crewai login
 ```
 
 이 명령은 다음을 수행합니다:
+
 1. 브라우저에서 인증 페이지를 엽니다
 2. 장치 코드를 입력하라는 메시지를 표시합니다
-3. CrewAI AOP 계정으로 로컬 환경을 인증합니다
+3. CrewAI AMP 계정으로 로컬 환경을 인증합니다
 4. 로컬 개발을 위한 추적 기능을 활성화합니다
 
 ### 3단계: Crew에서 추적 활성화
@@ -147,12 +148,11 @@ flow = ExampleFlow(tracing=True)
 result = flow.kickoff()
 ```
 
-### 5단계: CrewAI AOP 대시보드에서 추적 보기
+### 5단계: CrewAI AMP 대시보드에서 추적 보기
 
-crew 또는 flow를 실행한 후 CrewAI AOP 대시보드에서 CrewAI 애플리케이션이 생성한 추적을 볼 수 있습니다. agent 상호 작용, 도구 사용 및 LLM 호출의 세부 단계를 볼 수 있습니다.
+crew 또는 flow를 실행한 후 CrewAI AMP 대시보드에서 CrewAI 애플리케이션이 생성한 추적을 볼 수 있습니다. agent 상호 작용, 도구 사용 및 LLM 호출의 세부 단계를 볼 수 있습니다.
 아래 링크를 클릭하여 추적을 보거나 대시보드의 추적 탭으로 이동하세요 [여기](https://app.crewai.com/crewai_plus/trace_batches)
 ![CrewAI Tracing Interface](/images/view-traces.png)
-
 
 ### 대안: 환경 변수 구성
 
@@ -172,7 +172,7 @@ CREWAI_TRACING_ENABLED=true
 
 ## 추적 보기
 
-### CrewAI AOP 대시보드 액세스
+### CrewAI AMP 대시보드 액세스
 
 1. [app.crewai.com](https://app.crewai.com)을 방문하여 계정에 로그인하세요
 2. 프로젝트 대시보드로 이동하세요
@@ -190,6 +190,7 @@ CrewAI 추적은 다음에 대한 포괄적인 가시성을 제공합니다:
 - **오류 추적**: 세부 오류 정보 및 스택 추적
 
 ### 추적 기능
+
 - **실행 타임라인**: 실행의 다양한 단계를 클릭하여 확인하세요
 - **세부 로그**: 디버깅을 위한 포괄적인 로그에 액세스하세요
 - **성능 분석**: 실행 패턴을 분석하고 성능을 최적화하세요

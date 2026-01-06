@@ -14,11 +14,12 @@ Tasks provide all necessary details for execution, such as a description, the ag
 Tasks within CrewAI can be collaborative, requiring multiple agents to work together. This is managed through the task properties and orchestrated by the Crew's process, enhancing teamwork and efficiency.
 
 <Note type="info" title="Enterprise Enhancement: Visual Task Builder">
-CrewAI AOP includes a Visual Task Builder in Crew Studio that simplifies complex task creation and chaining. Design your task flows visually and test them in real-time without writing code.
+CrewAI AMP includes a Visual Task Builder in Crew Studio that simplifies complex task creation and chaining. Design your task flows visually and test them in real-time without writing code.
 
 ![Task Builder Screenshot](/images/enterprise/crew-studio-interface.png)
 
 The Visual Task Builder enables:
+
 - Drag-and-drop task creation
 - Visual task dependencies and flow
 - Real-time testing and validation
@@ -28,10 +29,12 @@ The Visual Task Builder enables:
 ### Task Execution Flow
 
 Tasks can be executed in two ways:
+
 - **Sequential**: Tasks are executed in the order they are defined
 - **Hierarchical**: Tasks are assigned to agents based on their roles and expertise
 
 The execution flow is defined when creating the crew:
+
 ```python Code
 crew = Crew(
     agents=[agent1, agent2],
@@ -42,30 +45,31 @@ crew = Crew(
 
 ## Task Attributes
 
-| Attribute                        | Parameters        | Type                          | Description                                                                                                          |
-| :------------------------------- | :---------------- | :---------------------------- | :------------------------------------------------------------------------------------------------------------------- |
-| **Description**                  | `description`     | `str`                         | A clear, concise statement of what the task entails.                                                                 |
-| **Expected Output**              | `expected_output` | `str`                         | A detailed description of what the task's completion looks like.                                                     |
-| **Name** _(optional)_            | `name`            | `Optional[str]`               | A name identifier for the task.                                                                                      |
-| **Agent** _(optional)_           | `agent`           | `Optional[BaseAgent]`         | The agent responsible for executing the task.                                                                        |
-| **Tools** _(optional)_           | `tools`           | `List[BaseTool]`              | The tools/resources the agent is limited to use for this task.                                                       |
-| **Context** _(optional)_         | `context`         | `Optional[List["Task"]]`      | Other tasks whose outputs will be used as context for this task.                                                     |
-| **Async Execution** _(optional)_ | `async_execution` | `Optional[bool]`              | Whether the task should be executed asynchronously. Defaults to False.                                               |
-| **Human Input** _(optional)_     | `human_input`     | `Optional[bool]`              | Whether the task should have a human review the final answer of the agent. Defaults to False.                        |
-| **Markdown** _(optional)_        | `markdown`        | `Optional[bool]`              | Whether the task should instruct the agent to return the final answer formatted in Markdown. Defaults to False.      |
-| **Config** _(optional)_          | `config`          | `Optional[Dict[str, Any]]`    | Task-specific configuration parameters.                                                                              |
-| **Output File** _(optional)_     | `output_file`     | `Optional[str]`               | File path for storing the task output.                                                                               |
-| **Create Directory** _(optional)_ | `create_directory` | `Optional[bool]`             | Whether to create the directory for output_file if it doesn't exist. Defaults to True.                               |
-| **Output JSON** _(optional)_     | `output_json`     | `Optional[Type[BaseModel]]`   | A Pydantic model to structure the JSON output.                                                                       |
-| **Output Pydantic** _(optional)_ | `output_pydantic` | `Optional[Type[BaseModel]]`   | A Pydantic model for task output.                                                                                    |
-| **Callback** _(optional)_        | `callback`        | `Optional[Any]`               | Function/object to be executed after task completion.                                                                |
-| **Guardrail** _(optional)_       | `guardrail`       | `Optional[Callable]`             | Function to validate task output before proceeding to next task.                                                  |
-| **Guardrails** _(optional)_       | `guardrails`       | `Optional[List[Callable] | List[str]]` | List of guardrails to validate task output before proceeding to next task.                                      |
-| **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`     | Maximum number of retries when guardrail validation fails. Defaults to 3.                                         |
+| Attribute                              | Parameters              | Type                        | Description                                                                                                     |
+| :------------------------------------- | :---------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Description**                        | `description`           | `str`                       | A clear, concise statement of what the task entails.                                                            |
+| **Expected Output**                    | `expected_output`       | `str`                       | A detailed description of what the task's completion looks like.                                                |
+| **Name** _(optional)_                  | `name`                  | `Optional[str]`             | A name identifier for the task.                                                                                 |
+| **Agent** _(optional)_                 | `agent`                 | `Optional[BaseAgent]`       | The agent responsible for executing the task.                                                                   |
+| **Tools** _(optional)_                 | `tools`                 | `List[BaseTool]`            | The tools/resources the agent is limited to use for this task.                                                  |
+| **Context** _(optional)_               | `context`               | `Optional[List["Task"]]`    | Other tasks whose outputs will be used as context for this task.                                                |
+| **Async Execution** _(optional)_       | `async_execution`       | `Optional[bool]`            | Whether the task should be executed asynchronously. Defaults to False.                                          |
+| **Human Input** _(optional)_           | `human_input`           | `Optional[bool]`            | Whether the task should have a human review the final answer of the agent. Defaults to False.                   |
+| **Markdown** _(optional)_              | `markdown`              | `Optional[bool]`            | Whether the task should instruct the agent to return the final answer formatted in Markdown. Defaults to False. |
+| **Config** _(optional)_                | `config`                | `Optional[Dict[str, Any]]`  | Task-specific configuration parameters.                                                                         |
+| **Output File** _(optional)_           | `output_file`           | `Optional[str]`             | File path for storing the task output.                                                                          |
+| **Create Directory** _(optional)_      | `create_directory`      | `Optional[bool]`            | Whether to create the directory for output_file if it doesn't exist. Defaults to True.                          |
+| **Output JSON** _(optional)_           | `output_json`           | `Optional[Type[BaseModel]]` | A Pydantic model to structure the JSON output.                                                                  |
+| **Output Pydantic** _(optional)_       | `output_pydantic`       | `Optional[Type[BaseModel]]` | A Pydantic model for task output.                                                                               |
+| **Callback** _(optional)_              | `callback`              | `Optional[Any]`             | Function/object to be executed after task completion.                                                           |
+| **Guardrail** _(optional)_             | `guardrail`             | `Optional[Callable]`        | Function to validate task output before proceeding to next task.                                                |
+| **Guardrails** _(optional)_            | `guardrails`            | `Optional[List[Callable]    | List[str]]`                                                                                                     | List of guardrails to validate task output before proceeding to next task. |
+| **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`             | Maximum number of retries when guardrail validation fails. Defaults to 3.                                       |
 
 <Note type="warning" title="Deprecated: max_retries">
   The task attribute `max_retries` is deprecated and will be removed in v1.0.0.
-  Use `guardrail_max_retries` instead to control retry attempts when a guardrail fails.
+  Use `guardrail_max_retries` instead to control retry attempts when a guardrail
+  fails.
 </Note>
 
 ## Creating Tasks
@@ -87,7 +91,7 @@ crew.kickoff(inputs={'topic': 'AI Agents'})
 
 Here's an example of how to configure tasks using YAML:
 
-```yaml tasks.yaml
+````yaml tasks.yaml
 research_task:
   description: >
     Conduct a thorough research about {topic}
@@ -107,7 +111,7 @@ reporting_task:
   agent: reporting_analyst
   markdown: true
   output_file: report.md
-```
+````
 
 To use this YAML configuration in your code, create a crew class that inherits from `CrewBase`:
 
@@ -165,7 +169,8 @@ class LatestAiDevelopmentCrew():
 ```
 
 <Note>
-The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should match the method names in your Python code.
+  The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should
+  match the method names in your Python code.
 </Note>
 
 ### Direct Code Definition (Alternative)
@@ -202,7 +207,8 @@ reporting_task = Task(
 ```
 
 <Tip>
-  Directly specify an `agent` for assignment or let the `hierarchical` CrewAI's process decide based on roles, availability, etc.
+  Directly specify an `agent` for assignment or let the `hierarchical` CrewAI's
+  process decide based on roles, availability, etc.
 </Tip>
 
 ## Task Output
@@ -224,7 +230,7 @@ By default, the `TaskOutput` will only include the `raw` output. A `TaskOutput` 
 | **JSON Dict**     | `json_dict`     | `Optional[Dict[str, Any]]` | A dictionary representing the JSON output of the task.                                             |
 | **Agent**         | `agent`         | `str`                      | The agent that executed the task.                                                                  |
 | **Output Format** | `output_format` | `OutputFormat`             | The format of the task output, with options including RAW, JSON, and Pydantic. The default is RAW. |
-| **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                           |
+| **Messages**      | `messages`      | `list[LLMMessage]`         | The messages from the last task execution.                                                         |
 
 ### Task Methods and Properties
 
@@ -287,12 +293,13 @@ formatted_task = Task(
 ```
 
 When `markdown=True`, the agent will receive additional instructions to format the output using:
+
 - `#` for headers
 - `**text**` for bold text
 - `*text*` for italic text
 - `-` or `*` for bullet points
 - `` `code` `` for inline code
-- ``` ```language ``` for code blocks
+- ` `language ``` for code blocks
 
 ### YAML Configuration with Markdown
 
@@ -303,7 +310,7 @@ analysis_task:
   expected_output: >
     A comprehensive analysis with charts and key findings
   agent: analyst
-  markdown: true  # Enable markdown formatting
+  markdown: true # Enable markdown formatting
   output_file: analysis.md
 ```
 
@@ -315,7 +322,9 @@ analysis_task:
 - **Cross-Platform Compatibility**: Markdown is universally supported
 
 <Note>
-The markdown formatting instructions are automatically added to the task prompt when `markdown=True`, so you don't need to specify formatting requirements in your task description.
+  The markdown formatting instructions are automatically added to the task
+  prompt when `markdown=True`, so you don't need to specify formatting
+  requirements in your task description.
 </Note>
 
 ## Task Dependencies and Context
@@ -383,6 +392,7 @@ blog_task = Task(
 Instead of writing custom validation functions, you can use string descriptions that leverage LLM-based validation. When you provide a string to the `guardrail` or `guardrails` parameter, CrewAI automatically creates an `LLMGuardrail` that uses the agent's LLM to validate the output based on your description.
 
 **Requirements**:
+
 - The task must have an `agent` assigned (the guardrail uses the agent's LLM)
 - Provide a clear, descriptive string explaining the validation criteria
 
@@ -399,11 +409,13 @@ blog_task = Task(
 ```
 
 LLM-based guardrails are particularly useful for:
+
 - **Complex validation logic** that's difficult to express programmatically
 - **Subjective criteria** like tone, style, or quality assessments
 - **Natural language requirements** that are easier to describe than code
 
 The LLM guardrail will:
+
 1. Analyze the task output against your description
 2. Return `(True, output)` if the output complies with the criteria
 3. Return `(False, feedback)` with specific feedback if validation fails
@@ -431,6 +443,7 @@ research_task = Task(
 You can apply multiple guardrails to a task using the `guardrails` parameter. Multiple guardrails are executed sequentially, with each guardrail receiving the output from the previous one. This allows you to chain validation and transformation steps.
 
 The `guardrails` parameter accepts:
+
 - A list of guardrail functions or string descriptions
 - A single guardrail function or string (same as `guardrail`)
 
@@ -480,6 +493,7 @@ blog_task = Task(
 ```
 
 In this example, the guardrails execute in order:
+
 1. `validate_word_count` checks the word count
 2. `validate_no_profanity` checks for inappropriate language (using the output from step 1)
 3. `format_output` formats the final result (using the output from step 2)
@@ -522,6 +536,7 @@ This approach combines the precision of programmatic validation with the flexibi
 ### Guardrail Function Requirements
 
 1. **Function Signature**:
+
    - Must accept exactly one parameter (the task output)
    - Should return a tuple of `(bool, Any)`
    - Type hints are recommended but optional
@@ -530,11 +545,10 @@ This approach combines the precision of programmatic validation with the flexibi
    - On success: it returns a tuple of `(bool, Any)`. For example: `(True, validated_result)`
    - On Failure: it returns a tuple of `(bool, str)`. For example: `(False, "Error message explain the failure")`
 
-
-
 ### Error Handling Best Practices
 
 1. **Structured Error Responses**:
+
 ```python Code
 from crewai import TaskOutput, LLMGuardrail
 
@@ -550,11 +564,13 @@ def validate_with_context(result: TaskOutput) -> Tuple[bool, Any]:
 ```
 
 2. **Error Categories**:
+
    - Use specific error codes
    - Include relevant context
    - Provide actionable feedback
 
 3. **Validation Chain**:
+
 ```python Code
 from typing import Any, Dict, List, Tuple, Union
 from crewai import TaskOutput
@@ -581,6 +597,7 @@ def complex_validation(result: TaskOutput) -> Tuple[bool, Any]:
 ### Handling Guardrail Results
 
 When a guardrail returns `(False, error)`:
+
 1. The error is sent back to the agent
 2. The agent attempts to fix the issue
 3. The process repeats until:
@@ -588,6 +605,7 @@ When a guardrail returns `(False, error)`:
    - Maximum retries are reached (`guardrail_max_retries`)
 
 Example with retry handling:
+
 ```python Code
 from typing import Optional, Tuple, Union
 from crewai import TaskOutput, Task
@@ -613,10 +631,12 @@ task = Task(
 ## Getting Structured Consistent Outputs from Tasks
 
 <Note>
-It's also important to note that the output of the final task of a crew becomes the final output of the actual crew itself.
+  It's also important to note that the output of the final task of a crew
+  becomes the final output of the actual crew itself.
 </Note>
 
 ### Using `output_pydantic`
+
 The `output_pydantic` property allows you to define a Pydantic model that the task output should conform to. This ensures that the output is not only structured but also validated according to the Pydantic model.
 
 Here's an example demonstrating how to use output_pydantic:
@@ -686,18 +706,22 @@ print("Accessing Properties - Option 5")
 print("Blog:", result)
 
 ```
+
 In this example:
-* A Pydantic model Blog is defined with title and content fields.
-* The task task1 uses the output_pydantic property to specify that its output should conform to the Blog model.
-* After executing the crew, you can access the structured output in multiple ways as shown.
+
+- A Pydantic model Blog is defined with title and content fields.
+- The task task1 uses the output_pydantic property to specify that its output should conform to the Blog model.
+- After executing the crew, you can access the structured output in multiple ways as shown.
 
 #### Explanation of Accessing the Output
-1. Dictionary-Style Indexing: You can directly access the fields using result["field_name"]. This works because the CrewOutput class implements the __getitem__ method.
+
+1. Dictionary-Style Indexing: You can directly access the fields using result["field_name"]. This works because the CrewOutput class implements the **getitem** method.
 2. Directly from Pydantic Model: Access the attributes directly from the result.pydantic object.
 3. Using to_dict() Method: Convert the output to a dictionary and access the fields.
 4. Printing the Entire Object: Simply print the result object to see the structured output.
 
 ### Using `output_json`
+
 The `output_json` property allows you to define the expected output in JSON format. This ensures that the task's output is a valid JSON structure that can be easily parsed and used in your application.
 
 Here's an example demonstrating how to use `output_json`:
@@ -757,14 +781,15 @@ print("Blog:", result)
 ```
 
 In this example:
-* A Pydantic model Blog is defined with title and content fields, which is used to specify the structure of the JSON output.
-* The task task1 uses the output_json property to indicate that it expects a JSON output conforming to the Blog model.
-* After executing the crew, you can access the structured JSON output in two ways as shown.
+
+- A Pydantic model Blog is defined with title and content fields, which is used to specify the structure of the JSON output.
+- The task task1 uses the output_json property to indicate that it expects a JSON output conforming to the Blog model.
+- After executing the crew, you can access the structured JSON output in two ways as shown.
 
 #### Explanation of Accessing the Output
 
-1. Accessing Properties Using Dictionary-Style Indexing: You can access the fields directly using result["field_name"]. This is possible because the CrewOutput class implements the __getitem__ method, allowing you to treat the output like a dictionary. In this option, we're retrieving the title and content from the result.
-2. Printing the Entire Blog Object: By printing result, you get the string representation of the CrewOutput object. Since the __str__ method is implemented to return the JSON output, this will display the entire output as a formatted string representing the Blog object.
+1. Accessing Properties Using Dictionary-Style Indexing: You can access the fields directly using result["field_name"]. This is possible because the CrewOutput class implements the **getitem** method, allowing you to treat the output like a dictionary. In this option, we're retrieving the title and content from the result.
+2. Printing the Entire Blog Object: By printing result, you get the string representation of the CrewOutput object. Since the **str** method is implemented to return the JSON output, this will display the entire output as a formatted string representing the Blog object.
 
 ---
 
@@ -954,8 +979,6 @@ While creating and executing tasks, certain validation mechanisms are in place t
 
 These validations help in maintaining the consistency and reliability of task executions within the crewAI framework.
 
-
-
 ## Creating Directories when Saving Files
 
 The `create_directory` parameter controls whether CrewAI should automatically create directories when saving task outputs to files. This feature is particularly useful for organizing outputs and ensuring that file paths are correctly structured, especially when working with complex project hierarchies.
@@ -1002,7 +1025,7 @@ analysis_task:
     A comprehensive financial report with quarterly insights
   agent: financial_analyst
   output_file: reports/quarterly/q4_2024_analysis.pdf
-  create_directory: true  # Automatically create 'reports/quarterly/' directory
+  create_directory: true # Automatically create 'reports/quarterly/' directory
 
 audit_task:
   description: >
@@ -1011,18 +1034,20 @@ audit_task:
     A compliance audit report
   agent: auditor
   output_file: audit/compliance_report.md
-  create_directory: false  # Directory must already exist
+  create_directory: false # Directory must already exist
 ```
 
 ### Use Cases
 
 **Automatic Directory Creation (`create_directory=True`):**
+
 - Development and prototyping environments
 - Dynamic report generation with date-based folders
 - Automated workflows where directory structure may vary
 - Multi-tenant applications with user-specific folders
 
 **Manual Directory Management (`create_directory=False`):**
+
 - Production environments with strict file system controls
 - Security-sensitive applications where directories must be pre-configured
 - Systems with specific permission requirements

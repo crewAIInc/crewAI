@@ -10,7 +10,9 @@ mode: "wide"
 A integração DSL (Domain Specific Language) MCP do CrewAI oferece a **forma mais simples** de conectar seus agentes aos servidores MCP (Model Context Protocol). Basta adicionar um campo `mcps` ao seu agente e o CrewAI cuida de toda a complexidade automaticamente.
 
 <Info>
-Esta é a **abordagem recomendada** para a maioria dos casos de uso de MCP. Para cenários avançados que requerem gerenciamento manual de conexão, veja [MCPServerAdapter](/pt-BR/mcp/overview#advanced-mcpserveradapter).
+  Esta é a **abordagem recomendada** para a maioria dos casos de uso de MCP.
+  Para cenários avançados que requerem gerenciamento manual de conexão, veja
+  [MCPServerAdapter](/pt-BR/mcp/overview#advanced-mcpserveradapter).
 </Info>
 
 ## Uso Básico
@@ -60,9 +62,9 @@ Use a sintaxe `#` para selecionar ferramentas específicas de um servidor:
 "https://mcp.exa.ai/mcp?api_key=sua_chave#web_search_exa"
 ```
 
-### Marketplace CrewAI AOP
+### Marketplace CrewAI AMP
 
-Acesse ferramentas do marketplace CrewAI AOP:
+Acesse ferramentas do marketplace CrewAI AMP:
 
 ```python
 # Serviço completo com todas as ferramentas
@@ -97,7 +99,7 @@ agente_multi_fonte = Agent(
         "https://mcp.exa.ai/mcp?api_key=sua_chave_exa&profile=pesquisa",
         "https://weather.api.com/mcp#get_current_conditions",
 
-        # Marketplace CrewAI AOP
+        # Marketplace CrewAI AMP
         "crewai-amp:financial-insights",
         "crewai-amp:academic-research#pubmed_search",
         "crewai-amp:market-intelligence#competitor_analysis"

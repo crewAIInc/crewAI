@@ -10,17 +10,21 @@ mode: "wide"
 Use the Google Calendar trigger to launch automations whenever calendar events change. Common use cases include briefing a team before a meeting, notifying stakeholders when a critical event is cancelled, or summarizing daily schedules.
 
 <Tip>
-  Make sure Google Calendar is connected in **Tools & Integrations** and enabled for the deployment you want to automate.
+  Make sure Google Calendar is connected in **Tools & Integrations** and enabled
+  for the deployment you want to automate.
 </Tip>
 
 ## Enabling the Google Calendar Trigger
 
-1. Open your deployment in CrewAI AOP
+1. Open your deployment in CrewAI AMP
 2. Go to the **Triggers** tab
 3. Locate **Google Calendar** and switch the toggle to enable
 
 <Frame>
-  <img src="/images/enterprise/calendar-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/calendar-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize meeting details
@@ -54,7 +58,9 @@ crewai triggers run google_calendar/event_changed
 The `crewai triggers run` command will execute your crew with a complete Calendar payload, allowing you to test your parsing logic before deployment.
 
 <Warning>
-  Use `crewai triggers run google_calendar/event_changed` (not `crewai run`) to simulate trigger execution during development. After deployment, your crew will automatically receive the trigger payload.
+  Use `crewai triggers run google_calendar/event_changed` (not `crewai run`) to
+  simulate trigger execution during development. After deployment, your crew
+  will automatically receive the trigger payload.
 </Warning>
 
 ## Monitoring Executions
@@ -62,7 +68,10 @@ The `crewai triggers run` command will execute your crew with a complete Calenda
 The **Executions** list in the deployment dashboard tracks every triggered run and surfaces payload metadata, output summaries, and errors.
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Troubleshooting

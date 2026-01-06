@@ -315,9 +315,7 @@ class BedrockCompletion(BaseLLM):
                 messages
             )
 
-            if not self._invoke_before_llm_call_hooks(
-                cast(list[LLMMessage], formatted_messages), from_agent
-            ):
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
             # Prepare request body
@@ -361,7 +359,7 @@ class BedrockCompletion(BaseLLM):
 
             if self.stream:
                 return self._handle_streaming_converse(
-                    cast(list[LLMMessage], formatted_messages),
+                    formatted_messages,
                     body,
                     available_functions,
                     from_task,
@@ -369,7 +367,7 @@ class BedrockCompletion(BaseLLM):
                 )
 
             return self._handle_converse(
-                cast(list[LLMMessage], formatted_messages),
+                formatted_messages,
                 body,
                 available_functions,
                 from_task,
@@ -433,7 +431,7 @@ class BedrockCompletion(BaseLLM):
             )
 
             formatted_messages, system_message = self._format_messages_for_converse(
-                messages  # type: ignore[arg-type]
+                messages
             )
 
             body: BedrockConverseRequestBody = {
@@ -687,8 +685,10 @@ class BedrockCompletion(BaseLLM):
     ) -> str:
         """Handle streaming converse API call with comprehensive event handling."""
         full_response = ""
-        current_tool_use = None
-        tool_use_id = None
+        current_tool_use: dict[str, Any] | None = None
+        tool_use_id: str | None = None
+        tool_use_index = 0
+        accumulated_tool_input = ""
 
         try:
             response = self.client.converse_stream(
@@ -709,9 +709,30 @@ class BedrockCompletion(BaseLLM):
 
                     elif "contentBlockStart" in event:
                         start = event["contentBlockStart"].get("start", {})
+                        content_block_index = event["contentBlockStart"].get(
+                            "contentBlockIndex", 0
+                        )
                         if "toolUse" in start:
-                            current_tool_use = start["toolUse"]
+                            tool_use_block = start["toolUse"]
+                            current_tool_use = cast(dict[str, Any], tool_use_block)
                             tool_use_id = current_tool_use.get("toolUseId")
+                            tool_use_index = content_block_index
+                            accumulated_tool_input = ""
+                            self._emit_stream_chunk_event(
+                                chunk="",
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": tool_use_id or "",
+                                    "function": {
+                                        "name": current_tool_use.get("name", ""),
+                                        "arguments": "",
+                                    },
+                                    "type": "function",
+                                    "index": tool_use_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
                         logging.debug(
                             f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
                         )
@@ -730,7 +751,23 @@ class BedrockCompletion(BaseLLM):
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
                             if tool_input:
+                                accumulated_tool_input += tool_input
                                 logging.debug(f"Tool input delta: {tool_input}")
+                                self._emit_stream_chunk_event(
+                                    chunk=tool_input,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                    tool_call={
+                                        "id": tool_use_id or "",
+                                        "function": {
+                                            "name": current_tool_use.get("name", ""),
+                                            "arguments": accumulated_tool_input,
+                                        },
+                                        "type": "function",
+                                        "index": tool_use_index,
+                                    },
+                                    call_type=LLMCallType.TOOL_CALL,
+                                )
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
                         if current_tool_use and available_functions:
@@ -848,7 +885,7 @@ class BedrockCompletion(BaseLLM):
 
     async def _ahandle_converse(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1013,7 +1050,7 @@ class BedrockCompletion(BaseLLM):
 
     async def _ahandle_streaming_converse(
         self,
-        messages: list[dict[str, Any]],
+        messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1021,8 +1058,10 @@ class BedrockCompletion(BaseLLM):
     ) -> str:
         """Handle async streaming converse API call."""
         full_response = ""
-        current_tool_use = None
-        tool_use_id = None
+        current_tool_use: dict[str, Any] | None = None
+        tool_use_id: str | None = None
+        tool_use_index = 0
+        accumulated_tool_input = ""
 
         try:
             async_client = await self._ensure_async_client()
@@ -1044,9 +1083,30 @@ class BedrockCompletion(BaseLLM):
 
                     elif "contentBlockStart" in event:
                         start = event["contentBlockStart"].get("start", {})
+                        content_block_index = event["contentBlockStart"].get(
+                            "contentBlockIndex", 0
+                        )
                         if "toolUse" in start:
-                            current_tool_use = start["toolUse"]
+                            tool_use_block = start["toolUse"]
+                            current_tool_use = cast(dict[str, Any], tool_use_block)
                             tool_use_id = current_tool_use.get("toolUseId")
+                            tool_use_index = content_block_index
+                            accumulated_tool_input = ""
+                            self._emit_stream_chunk_event(
+                                chunk="",
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": tool_use_id or "",
+                                    "function": {
+                                        "name": current_tool_use.get("name", ""),
+                                        "arguments": "",
+                                    },
+                                    "type": "function",
+                                    "index": tool_use_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
                             logging.debug(
                                 f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
                             )
@@ -1065,7 +1125,23 @@ class BedrockCompletion(BaseLLM):
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
                             if tool_input:
+                                accumulated_tool_input += tool_input
                                 logging.debug(f"Tool input delta: {tool_input}")
+                                self._emit_stream_chunk_event(
+                                    chunk=tool_input,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                    tool_call={
+                                        "id": tool_use_id or "",
+                                        "function": {
+                                            "name": current_tool_use.get("name", ""),
+                                            "arguments": accumulated_tool_input,
+                                        },
+                                        "type": "function",
+                                        "index": tool_use_index,
+                                    },
+                                    call_type=LLMCallType.TOOL_CALL,
+                                )
 
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
@@ -1174,7 +1250,7 @@ class BedrockCompletion(BaseLLM):
 
     def _format_messages_for_converse(
         self, messages: str | list[LLMMessage]
-    ) -> tuple[list[dict[str, Any]], str | None]:
+    ) -> tuple[list[LLMMessage], str | None]:
         """Format messages for Converse API following AWS documentation.
 
         Note: Returns dict[str, Any] instead of LLMMessage because Bedrock uses
@@ -1184,7 +1260,7 @@ class BedrockCompletion(BaseLLM):
         # Use base class formatting first
         formatted_messages = self._format_messages(messages)
 
-        converse_messages: list[dict[str, Any]] = []
+        converse_messages: list[LLMMessage] = []
         system_message: str | None = None
 
         for message in formatted_messages:

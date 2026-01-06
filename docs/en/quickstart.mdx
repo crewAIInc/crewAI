@@ -58,6 +58,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
         your ability to turn complex data into clear and concise reports, making
         it easy for others to understand and act on the information you provide.
     ```
+
   </Step>
   <Step title="Modify your `tasks.yaml` file">
     ```yaml tasks.yaml
@@ -81,6 +82,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
       agent: reporting_analyst
       output_file: report.md
     ```
+
   </Step>
   <Step title="Modify your `crew.py` file">
     ```python crew.py
@@ -136,6 +138,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
           verbose=True,
         )
     ```
+
   </Step>
   <Step title="[Optional] Add before and after crew functions">
     ```python crew.py
@@ -160,6 +163,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
 
       # ... remaining code
     ```
+
   </Step>
   <Step title="Feel free to pass custom inputs to your crew">
   For example, you can pass the `topic` input to your crew to customize the research and reporting.
@@ -178,6 +182,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
       }
       LatestAiDevelopmentCrew().crew().kickoff(inputs=inputs)
     ```
+
   </Step>
   <Step title="Set your environment variables">
   Before running your crew, make sure you have the following keys set as environment variables in your `.env` file:
@@ -209,24 +214,24 @@ Follow the steps below to get Crewing! 🚣‍♂️
   </Step>
 
   <Step title="Enterprise Alternative: Create in Crew Studio">
-  For CrewAI AOP users, you can create the same crew without writing code:
+  For CrewAI AMP users, you can create the same crew without writing code:
 
-  1. Log in to your CrewAI AOP account (create a free account at [app.crewai.com](https://app.crewai.com))
-  2. Open Crew Studio
-  3. Type what is the automation you're trying to build
-  4. Create your tasks visually and connect them in sequence
-  5. Configure your inputs and click "Download Code" or "Deploy"
+1. Log in to your CrewAI AMP account (create a free account at [app.crewai.com](https://app.crewai.com))
+2. Open Crew Studio
+3. Type what is the automation you're trying to build
+4. Create your tasks visually and connect them in sequence
+5. Configure your inputs and click "Download Code" or "Deploy"
 
-  ![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
+![Crew Studio Quickstart](/images/enterprise/crew-studio-interface.png)
 
-  <Card title="Try CrewAI AOP" icon="rocket" href="https://app.crewai.com">
-    Start your free account at CrewAI AOP
+  <Card title="Try CrewAI AMP" icon="rocket" href="https://app.crewai.com">
+    Start your free account at CrewAI AMP
   </Card>
   </Step>
   <Step title="View your final report">
   You should see the output in the console and the `report.md` file should be created in the root of your project with the final report.
 
-  Here's an example of what the report should look like:
+Here's an example of what the report should look like:
 
   <CodeGroup>
     ```markdown output/report.md
@@ -289,6 +294,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
     ## 8. Conclusion
     The emergence of AI agents is undeniably reshaping the workplace landscape in 5. With their ability to automate tasks, enhance efficiency, and improve decision-making, AI agents are critical in driving operational success. Organizations must embrace and adapt to AI developments to thrive in an increasingly digital business environment.
     ```
+
   </CodeGroup>
   </Step>
 </Steps>
@@ -297,6 +303,7 @@ Follow the steps below to get Crewing! 🚣‍♂️
 Congratulations!
 
 You have successfully set up your crew project and are ready to start building your own agentic workflows!
+
 </Check>
 
 ### Note on Consistency in Naming
@@ -308,41 +315,45 @@ This naming consistency allows CrewAI to automatically link your configurations 
 #### Example References
 
 <Tip>
-  Note how we use the same name for the agent in the `agents.yaml` (`email_summarizer`) file as the method name in the `crew.py` (`email_summarizer`) file.
+  Note how we use the same name for the agent in the `agents.yaml`
+  (`email_summarizer`) file as the method name in the `crew.py`
+  (`email_summarizer`) file.
 </Tip>
 
 ```yaml agents.yaml
 email_summarizer:
-    role: >
-      Email Summarizer
-    goal: >
-      Summarize emails into a concise and clear summary
-    backstory: >
-      You will create a 5 bullet point summary of the report
-    llm: provider/model-id  # Add your choice of model here
+  role: >
+    Email Summarizer
+  goal: >
+    Summarize emails into a concise and clear summary
+  backstory: >
+    You will create a 5 bullet point summary of the report
+  llm: provider/model-id # Add your choice of model here
 ```
 
 <Tip>
-  Note how we use the same name for the task in the `tasks.yaml` (`email_summarizer_task`) file as the method name in the `crew.py` (`email_summarizer_task`) file.
+  Note how we use the same name for the task in the `tasks.yaml`
+  (`email_summarizer_task`) file as the method name in the `crew.py`
+  (`email_summarizer_task`) file.
 </Tip>
 
 ```yaml tasks.yaml
 email_summarizer_task:
-    description: >
-      Summarize the email into a 5 bullet point summary
-    expected_output: >
-      A 5 bullet point summary of the email
-    agent: email_summarizer
-    context:
-      - reporting_task
-      - research_task
+  description: >
+    Summarize the email into a 5 bullet point summary
+  expected_output: >
+    A 5 bullet point summary of the email
+  agent: email_summarizer
+  context:
+    - reporting_task
+    - research_task
 ```
 
 ## Deploying Your Crew
 
-The easiest way to deploy your crew to production is through [CrewAI AOP](http://app.crewai.com).
+The easiest way to deploy your crew to production is through [CrewAI AMP](http://app.crewai.com).
 
-Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI AOP](http://app.crewai.com) using the CLI.
+Watch this video tutorial for a step-by-step demonstration of deploying your crew to [CrewAI AMP](http://app.crewai.com) using the CLI.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -354,18 +365,16 @@ Watch this video tutorial for a step-by-step demonstration of deploying your cre
 ></iframe>
 
 <CardGroup cols={2}>
-  <Card
-    title="Deploy on Enterprise"
-    icon="rocket"
-    href="http://app.crewai.com"
-  >
-    Get started with CrewAI AOP and deploy your crew in a production environment with just a few clicks.
+  <Card title="Deploy on Enterprise" icon="rocket" href="http://app.crewai.com">
+    Get started with CrewAI AMP and deploy your crew in a production environment
+    with just a few clicks.
   </Card>
   <Card
     title="Join the Community"
     icon="comments"
     href="https://community.crewai.com"
   >
-    Join our open source community to discuss ideas, share your projects, and connect with other CrewAI developers.
+    Join our open source community to discuss ideas, share your projects, and
+    connect with other CrewAI developers.
   </Card>
 </CardGroup>

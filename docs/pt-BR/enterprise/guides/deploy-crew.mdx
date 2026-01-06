@@ -1,12 +1,15 @@
 ---
 title: "Deploy Crew"
-description: "Implantando um Crew na CrewAI AOP"
+description: "Implantando um Crew na CrewAI AMP"
 icon: "rocket"
 mode: "wide"
 ---
 
 <Note>
-Depois de criar um crew localmente ou pelo Crew Studio, o próximo passo é implantá-lo na plataforma CrewAI AOP. Este guia cobre múltiplos métodos de implantação para ajudá-lo a escolher a melhor abordagem para o seu fluxo de trabalho.
+  Depois de criar um crew localmente ou pelo Crew Studio, o próximo passo é
+  implantá-lo na plataforma CrewAI AMP. Este guia cobre múltiplos métodos de
+  implantação para ajudá-lo a escolher a melhor abordagem para o seu fluxo de
+  trabalho.
 </Note>
 
 ## Pré-requisitos
@@ -16,7 +19,8 @@ Depois de criar um crew localmente ou pelo Crew Studio, o próximo passo é impl
     Você deve ter um crew funcional, criado localmente ou pelo Crew Studio
   </Card>
   <Card title="Repositório GitHub" icon="github">
-    O código do seu crew deve estar em um repositório do GitHub (para o método de integração com GitHub)
+    O código do seu crew deve estar em um repositório do GitHub (para o método
+    de integração com GitHub)
   </Card>
 </CardGroup>
 
@@ -39,10 +43,10 @@ A CLI fornece a maneira mais rápida de implantar crews desenvolvidos localmente
   </Step>
 
   <Step title="Autentique-se na Plataforma Enterprise">
-    Primeiro, você precisa autenticar sua CLI com a plataforma CrewAI AOP:
+    Primeiro, você precisa autenticar sua CLI com a plataforma CrewAI AMP:
 
     ```bash
-    # Se já possui uma conta CrewAI AOP, ou deseja criar uma:
+    # Se já possui uma conta CrewAI AMP, ou deseja criar uma:
     crewai login
     ```
 
@@ -105,38 +109,38 @@ A CLI fornece a maneira mais rápida de implantar crews desenvolvidos localmente
 
 O CrewAI CLI oferece vários comandos para gerenciar suas implantações:
 
-  ```bash
-  # Liste todas as suas implantações
-  crewai deploy list
+```bash
+# Liste todas as suas implantações
+crewai deploy list
 
-  # Consulte o status de uma implantação
-  crewai deploy status
+# Consulte o status de uma implantação
+crewai deploy status
 
-  # Veja os logs da implantação
-  crewai deploy logs
+# Veja os logs da implantação
+crewai deploy logs
 
-  # Envie atualizações após alterações no código
-  crewai deploy push
+# Envie atualizações após alterações no código
+crewai deploy push
 
-  # Remova uma implantação
-  crewai deploy remove <deployment_id>
-  ```
+# Remova uma implantação
+crewai deploy remove <deployment_id>
+```
 
 ## Opção 2: Implantar Diretamente pela Interface Web
 
-Você também pode implantar seus crews diretamente pela interface web da CrewAI AOP conectando sua conta do GitHub. Esta abordagem não requer utilizar a CLI na sua máquina local.
+Você também pode implantar seus crews diretamente pela interface web da CrewAI AMP conectando sua conta do GitHub. Esta abordagem não requer utilizar a CLI na sua máquina local.
 
 <Steps>
 
   <Step title="Enviar no GitHub">
 
-  Você precisa subir seu crew para um repositório do GitHub. Caso ainda não tenha criado um crew, você pode [seguir este tutorial](/pt-BR/quickstart).
+Você precisa subir seu crew para um repositório do GitHub. Caso ainda não tenha criado um crew, você pode [seguir este tutorial](/pt-BR/quickstart).
 
   </Step>
 
-  <Step title="Conectando o GitHub ao CrewAI AOP">
+  <Step title="Conectando o GitHub ao CrewAI AMP">
 
-    1. Faça login em [CrewAI AOP](https://app.crewai.com)
+    1. Faça login em [CrewAI AMP](https://app.crewai.com)
     2. Clique no botão "Connect GitHub"
 
     <Frame>
@@ -190,7 +194,9 @@ Você também pode implantar seus crews diretamente pela interface web da CrewAI
 ## ⚠️ Requisitos de Segurança para Variáveis de Ambiente
 
 <Warning>
-**Importante**: A CrewAI AOP possui restrições de segurança sobre os nomes de variáveis de ambiente que podem causar falha na implantação caso não sejam seguidas.
+  **Importante**: A CrewAI AMP possui restrições de segurança sobre os nomes de
+  variáveis de ambiente que podem causar falha na implantação caso não sejam
+  seguidas.
 </Warning>
 
 ### Padrões de Variáveis de Ambiente Bloqueados
@@ -198,12 +204,14 @@ Você também pode implantar seus crews diretamente pela interface web da CrewAI
 Por motivos de segurança, os seguintes padrões de nome de variável de ambiente são **automaticamente filtrados** e causarão problemas de implantação:
 
 **Padrões Bloqueados:**
+
 - Variáveis terminando em `_TOKEN` (ex: `MY_API_TOKEN`)
 - Variáveis terminando em `_PASSWORD` (ex: `DB_PASSWORD`)
 - Variáveis terminando em `_SECRET` (ex: `API_SECRET`)
 - Variáveis terminando em `_KEY` em certos contextos
 
 **Variáveis Bloqueadas Específicas:**
+
 - `GITHUB_USER`, `GITHUB_TOKEN`
 - `AWS_REGION`, `AWS_DEFAULT_REGION`
 - Diversas variáveis internas do sistema CrewAI
@@ -211,6 +219,7 @@ Por motivos de segurança, os seguintes padrões de nome de variável de ambient
 ### Exceções Permitidas
 
 Algumas variáveis são explicitamente permitidas mesmo coincidindo com os padrões bloqueados:
+
 - `AZURE_AD_TOKEN`
 - `AZURE_OPENAI_AD_TOKEN`
 - `ENTERPRISE_ACTION_TOKEN`
@@ -240,7 +249,9 @@ API_CONFIG=segredo123
 4. **Documente as mudanças**: Mantenha registro das variáveis renomeadas para seu time
 
 <Tip>
-Se você se deparar com falhas de implantação com erros enigmáticos de variáveis de ambiente, confira primeiro os nomes das variáveis em relação a esses padrões.
+  Se você se deparar com falhas de implantação com erros enigmáticos de
+  variáveis de ambiente, confira primeiro os nomes das variáveis em relação a
+  esses padrões.
 </Tip>
 
 ### Interaja com Seu Crew Implantado
@@ -248,6 +259,7 @@ Se você se deparar com falhas de implantação com erros enigmáticos de variá
 Após a implantação, você pode acessar seu crew por meio de:
 
 1. **REST API**: A plataforma gera um endpoint HTTPS exclusivo com estas rotas principais:
+
    - `/inputs`: Lista os parâmetros de entrada requeridos
    - `/kickoff`: Inicia uma execução com os inputs fornecidos
    - `/status/{kickoff_id}`: Consulta o status da execução
@@ -287,5 +299,6 @@ A plataforma Enterprise também oferece:
 - **Crew Studio**: Monte crews via interface de chat sem escrever código
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para ajuda com questões de implantação ou dúvidas sobre a plataforma Enterprise.
+  Entre em contato com nossa equipe de suporte para ajuda com questões de
+  implantação ou dúvidas sobre a plataforma Enterprise.
 </Card>

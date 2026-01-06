@@ -13,7 +13,7 @@ Enable your agents to access and manage SharePoint sites, lists, and document li
 
 Before using the Microsoft SharePoint integration, ensure you have:
 
-- A [CrewAI AOP](https://app.crewai.com) account with an active subscription
+- A [CrewAI AMP](https://app.crewai.com) account with an active subscription
 - A Microsoft 365 account with SharePoint access
 - Connected your Microsoft account through the [Integrations page](https://app.crewai.com/crewai_plus/connectors)
 
@@ -21,7 +21,7 @@ Before using the Microsoft SharePoint integration, ensure you have:
 
 ### 1. Connect Your Microsoft Account
 
-1. Navigate to [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)
+1. Navigate to [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)
 2. Find **Microsoft SharePoint** in the Authentication Integrations section
 3. Click **Connect** and complete the OAuth flow
 4. Grant the necessary permissions for SharePoint sites and content access
@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -63,6 +65,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `top` (integer, optional): Number of items to return. Minimum: 1, Maximum: 999
     - `skip` (integer, optional): Number of items to skip. Minimum: 0
     - `orderby` (string, optional): Order results by specified properties (e.g., 'displayName desc')
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_site">
@@ -72,6 +75,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `site_id` (string, required): The ID of the SharePoint site
     - `select` (string, optional): Select specific properties to return (e.g., 'displayName,id,webUrl,drives')
     - `expand` (string, optional): Expand related resources inline (e.g., 'drives,lists')
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_site_lists">
@@ -79,6 +83,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `site_id` (string, required): The ID of the SharePoint site
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_list">
@@ -87,6 +92,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `site_id` (string, required): The ID of the SharePoint site
     - `list_id` (string, required): The ID of the list
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_list_items">
@@ -96,6 +102,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `site_id` (string, required): The ID of the SharePoint site
     - `list_id` (string, required): The ID of the list
     - `expand` (string, optional): Expand related data (e.g., 'fields')
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/create_list_item">
@@ -112,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "Status": "Active"
       }
       ```
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/update_list_item">
@@ -128,6 +136,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "Status": "Completed"
       }
       ```
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/delete_list_item">
@@ -137,6 +146,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `site_id` (string, required): The ID of the SharePoint site
     - `list_id` (string, required): The ID of the list
     - `item_id` (string, required): The ID of the item to delete
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/upload_file_to_library">
@@ -146,6 +156,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `site_id` (string, required): The ID of the SharePoint site
     - `file_path` (string, required): The path where to upload the file (e.g., 'folder/filename.txt')
     - `content` (string, required): The file content to upload
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_drive_items">
@@ -153,6 +164,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `site_id` (string, required): The ID of the SharePoint site
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/delete_drive_item">
@@ -161,6 +173,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `site_id` (string, required): The ID of the SharePoint site
     - `item_id` (string, required): The ID of the file or folder to delete
+
   </Accordion>
 </AccordionGroup>
 
@@ -363,36 +376,43 @@ crew.kickoff()
 ### Common Issues
 
 **Permission Errors**
+
 - Ensure your Microsoft account has appropriate permissions for SharePoint sites
 - Verify that the OAuth connection includes required scopes (Sites.Read.All, Sites.ReadWrite.All)
 - Check that you have access to the specific sites and lists you're trying to access
 
 **Site and List ID Issues**
+
 - Verify that site IDs and list IDs are correct and properly formatted
 - Ensure that sites and lists exist and are accessible to your account
 - Use the get_sites and get_site_lists actions to discover valid IDs
 
 **Field and Schema Issues**
+
 - Ensure field names match exactly with the SharePoint list schema
 - Verify that required fields are included when creating or updating list items
 - Check that field types and values are compatible with the list column definitions
 
 **File Upload Issues**
+
 - Ensure file paths are properly formatted and don't contain invalid characters
 - Verify that you have write permissions to the target document library
 - Check that file content is properly encoded for upload
 
 **OData Query Issues**
+
 - Use proper OData syntax for filter, select, expand, and orderby parameters
 - Verify that property names used in queries exist in the target resources
 - Test simple queries before building complex filter expressions
 
 **Pagination and Performance**
+
 - Use top and skip parameters appropriately for large result sets
 - Implement proper pagination for lists with many items
 - Consider using select parameters to return only needed properties
 
 **Document Library Operations**
+
 - Ensure you have proper permissions for document library operations
 - Verify that drive item IDs are correct when deleting files or folders
 - Check that file paths don't conflict with existing content
@@ -400,5 +420,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Microsoft SharePoint integration setup or troubleshooting.
+  Contact our support team for assistance with Microsoft SharePoint integration
+  setup or troubleshooting.
 </Card>

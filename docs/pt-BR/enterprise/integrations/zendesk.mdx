@@ -13,7 +13,7 @@ Permita que seus agentes gerenciem operações de suporte ao cliente através do
 
 Antes de usar a integração com o Zendesk, certifique-se de que você possui:
 
-- Uma conta [CrewAI AOP](https://app.crewai.com) com uma assinatura ativa
+- Uma conta [CrewAI AMP](https://app.crewai.com) com uma assinatura ativa
 - Uma conta Zendesk com permissões apropriadas de API
 - Sua conta Zendesk conectada através da [página de Integrações](https://app.crewai.com/integrations)
 
@@ -21,7 +21,7 @@ Antes de usar a integração com o Zendesk, certifique-se de que você possui:
 
 ### 1. Conecte sua Conta Zendesk
 
-1. Acesse [CrewAI AOP Integrações](https://app.crewai.com/crewai_plus/connectors)
+1. Acesse [CrewAI AMP Integrações](https://app.crewai.com/crewai_plus/connectors)
 2. Encontre **Zendesk** na seção Integrações de Autenticação
 3. Clique em **Conectar** e complete o fluxo OAuth
 4. Conceda as permissões necessárias para gerenciamento de tickets e usuários
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -70,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `ticketTags` (string, opcional): Array de tags a aplicar (ex.: `["enterprise", "outra_tag"]`)
     - `ticketExternalId` (string, opcional): ID externo para vincular tickets a registros locais
     - `ticketCustomFields` (object, opcional): Valores de campos personalizados em formato JSON
+
   </Accordion>
 
   <Accordion title="zendesk/update_ticket">
@@ -88,6 +90,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `ticketTags` (string, opcional): Array de tags atualizadas
     - `ticketExternalId` (string, opcional): Novo ID externo
     - `ticketCustomFields` (object, opcional): Valores atualizados dos campos personalizados
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_by_id">
@@ -95,6 +98,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `ticketId` (string, obrigatório): ID do ticket a ser recuperado (ex.: "35436")
+
   </Accordion>
 
   <Accordion title="zendesk/add_comment_to_ticket">
@@ -105,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `commentBody` (string, obrigatório): Mensagem do comentário (aceita texto simples ou HTML, ex.: "Obrigado pela sua ajuda!")
     - `isInternalNote` (boolean, opcional): Defina como verdadeiro para notas internas ao invés de respostas públicas (padrão é falso)
     - `isPublic` (boolean, opcional): Verdadeiro para comentários públicos, falso para notas internas
+
   </Accordion>
 
   <Accordion title="zendesk/search_tickets">
@@ -126,6 +131,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `dueDate` (object, opcional): Filtrar por data de vencimento com operador e valor
     - `sort_by` (string, opcional): Campo de ordenação - Opções: created_at, updated_at, priority, status, ticket_type
     - `sort_order` (string, opcional): Direção da ordenação - Opções: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -143,6 +149,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `externalId` (string, opcional): Identificador único de outro sistema
     - `details` (string, opcional): Detalhes adicionais do usuário
     - `notes` (string, opcional): Notas internas sobre o usuário
+
   </Accordion>
 
   <Accordion title="zendesk/update_user">
@@ -157,6 +164,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `externalId` (string, opcional): Novo ID externo
     - `details` (string, opcional): Novos detalhes do usuário
     - `notes` (string, opcional): Novas notas internas
+
   </Accordion>
 
   <Accordion title="zendesk/get_user_by_id">
@@ -164,6 +172,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `userId` (string, obrigatório): ID do usuário a ser recuperado
+
   </Accordion>
 
   <Accordion title="zendesk/search_users">
@@ -176,6 +185,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `externalId` (string, opcional): Filtrar por ID externo
     - `sort_by` (string, opcional): Campo de ordenação - Opções: created_at, updated_at
     - `sort_order` (string, opcional): Direção de ordenação - Opções: asc, desc
+
   </Accordion>
 </AccordionGroup>
 
@@ -188,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `paginationParameters` (object, opcional): Configurações de paginação
       - `pageCursor` (string, opcional): Cursor de página para paginação
+
   </Accordion>
 
   <Accordion title="zendesk/get_ticket_audits">
@@ -197,6 +208,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `ticketId` (string, opcional): Obtenha auditorias para um ticket específico (se vazio, recupera auditorias de todos os tickets não arquivados, ex.: "1234")
     - `paginationParameters` (object, opcional): Configurações de paginação
       - `pageCursor` (string, opcional): Cursor de página para paginação
+
   </Accordion>
 </AccordionGroup>
 

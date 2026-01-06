@@ -1,6 +1,6 @@
 ---
 title: CrewAI Tracing
-description: Rastreamento integrado para Crews e Flows do CrewAI com a plataforma CrewAI AOP
+description: Rastreamento integrado para Crews e Flows do CrewAI com a plataforma CrewAI AMP
 icon: magnifying-glass-chart
 mode: "wide"
 ---
@@ -9,7 +9,7 @@ mode: "wide"
 
 O CrewAI fornece recursos de rastreamento integrados que permitem monitorar e depurar seus Crews e Flows em tempo real. Este guia demonstra como habilitar o rastreamento para **Crews** e **Flows** usando a plataforma de observabilidade integrada do CrewAI.
 
-> **O que é o CrewAI Tracing?** O rastreamento integrado do CrewAI fornece observabilidade abrangente para seus agentes de IA, incluindo decisões de agentes, cronogramas de execução de tarefas, uso de ferramentas e chamadas de LLM - tudo acessível através da [plataforma CrewAI AOP](https://app.crewai.com).
+> **O que é o CrewAI Tracing?** O rastreamento integrado do CrewAI fornece observabilidade abrangente para seus agentes de IA, incluindo decisões de agentes, cronogramas de execução de tarefas, uso de ferramentas e chamadas de LLM - tudo acessível através da [plataforma CrewAI AMP](https://app.crewai.com).
 
 ![CrewAI Tracing Interface](/images/crewai-tracing.png)
 
@@ -17,7 +17,7 @@ O CrewAI fornece recursos de rastreamento integrados que permitem monitorar e de
 
 Antes de usar o rastreamento do CrewAI, você precisa:
 
-1. **Conta CrewAI AOP**: Cadastre-se para uma conta gratuita em [app.crewai.com](https://app.crewai.com)
+1. **Conta CrewAI AMP**: Cadastre-se para uma conta gratuita em [app.crewai.com](https://app.crewai.com)
 2. **Autenticação CLI**: Use a CLI do CrewAI para autenticar seu ambiente local
 
 ```bash
@@ -26,9 +26,9 @@ crewai login
 
 ## Instruções de Configuração
 
-### Passo 1: Crie sua Conta CrewAI AOP
+### Passo 1: Crie sua Conta CrewAI AMP
 
-Visite [app.crewai.com](https://app.crewai.com) e crie sua conta gratuita. Isso lhe dará acesso à plataforma CrewAI AOP, onde você pode visualizar rastreamentos, métricas e gerenciar seus crews.
+Visite [app.crewai.com](https://app.crewai.com) e crie sua conta gratuita. Isso lhe dará acesso à plataforma CrewAI AMP, onde você pode visualizar rastreamentos, métricas e gerenciar seus crews.
 
 ### Passo 2: Instale a CLI do CrewAI e Autentique
 
@@ -38,16 +38,17 @@ Se você ainda não o fez, instale o CrewAI com as ferramentas CLI:
 uv add crewai[tools]
 ```
 
-Em seguida, autentique sua CLI com sua conta CrewAI AOP:
+Em seguida, autentique sua CLI com sua conta CrewAI AMP:
 
 ```bash
 crewai login
 ```
 
 Este comando irá:
+
 1. Abrir seu navegador na página de autenticação
 2. Solicitar que você insira um código de dispositivo
-3. Autenticar seu ambiente local com sua conta CrewAI AOP
+3. Autenticar seu ambiente local com sua conta CrewAI AMP
 4. Habilitar recursos de rastreamento para seu desenvolvimento local
 
 ### Passo 3: Habilite o Rastreamento em seu Crew
@@ -147,12 +148,11 @@ flow = ExampleFlow(tracing=True)
 result = flow.kickoff()
 ```
 
-### Passo 5: Visualize os Rastreamentos no Painel CrewAI AOP
+### Passo 5: Visualize os Rastreamentos no Painel CrewAI AMP
 
-Após executar o crew ou flow, você pode visualizar os rastreamentos gerados pela sua aplicação CrewAI no painel CrewAI AOP. Você verá etapas detalhadas das interações dos agentes, usos de ferramentas e chamadas de LLM.
+Após executar o crew ou flow, você pode visualizar os rastreamentos gerados pela sua aplicação CrewAI no painel CrewAI AMP. Você verá etapas detalhadas das interações dos agentes, usos de ferramentas e chamadas de LLM.
 Basta clicar no link abaixo para visualizar os rastreamentos ou ir para a aba de rastreamentos no painel [aqui](https://app.crewai.com/crewai_plus/trace_batches)
 ![CrewAI Tracing Interface](/images/view-traces.png)
-
 
 ### Alternativa: Configuração de Variável de Ambiente
 
@@ -172,7 +172,7 @@ Quando esta variável de ambiente estiver definida, todos os Crews e Flows terã
 
 ## Visualizando seus Rastreamentos
 
-### Acesse o Painel CrewAI AOP
+### Acesse o Painel CrewAI AMP
 
 1. Visite [app.crewai.com](https://app.crewai.com) e faça login em sua conta
 2. Navegue até o painel do seu projeto
@@ -190,6 +190,7 @@ O rastreamento do CrewAI fornece visibilidade abrangente sobre:
 - **Rastreamento de Erros**: Informações detalhadas de erros e rastreamentos de pilha
 
 ### Recursos de Rastreamento
+
 - **Cronograma de Execução**: Clique através de diferentes estágios de execução
 - **Logs Detalhados**: Acesse logs abrangentes para depuração
 - **Análise de Desempenho**: Analise padrões de execução e otimize o desempenho

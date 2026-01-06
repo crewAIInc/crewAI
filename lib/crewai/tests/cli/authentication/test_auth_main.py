@@ -55,7 +55,7 @@ class TestAuthenticationCommand:
         self.auth_command.login()
 
         mock_console_print.assert_called_once_with(
-            "Signing in to CrewAI AOP...\n", style="bold blue"
+            "Signing in to CrewAI AMP...\n", style="bold blue"
         )
         mock_get_device.assert_called_once()
         mock_display.assert_called_once_with(
@@ -301,7 +301,7 @@ class TestAuthenticationCommand:
             expected_calls = [
                 call("\nWaiting for authentication... ", style="bold blue", end=""),
                 call("Success!", style="bold green"),
-                call("\n[bold green]Welcome to CrewAI AOP![/bold green]\n"),
+                call("\n[bold green]Welcome to CrewAI AMP![/bold green]\n"),
             ]
             mock_console_print.assert_has_calls(expected_calls)
 

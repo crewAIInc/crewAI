@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: CrewAI AOP API
+  title: CrewAI AMP API
   description: |
-    REST API para interagir com suas crews implantadas no CrewAI AOP.
+    REST API para interagir com suas crews implantadas no CrewAI AMP.
 
     ## Introdução
 
-    1. **Encontre a URL da sua crew**: Obtenha sua URL única no painel do CrewAI AOP
+    1. **Encontre a URL da sua crew**: Obtenha sua URL única no painel do CrewAI AMP
     2. **Copie os exemplos**: Use os exemplos de cada endpoint como modelo
     3. **Substitua os placeholders**: Atualize URLs e tokens com seus valores reais
     4. **Teste com suas ferramentas**: Use cURL, Postman ou seu cliente preferido
@@ -18,7 +18,7 @@ info:
     - **Bearer Token**: Token em nível de organização para operações completas
     - **User Bearer Token**: Token com escopo de usuário com permissões limitadas
 
-    Você encontra os tokens na aba Status da sua crew no painel do CrewAI AOP.
+    Você encontra os tokens na aba Status da sua crew no painel do CrewAI AMP.
 
     ## Documentação de Referência
 
@@ -43,7 +43,7 @@ info:
     url: https://crewai.com
 servers:
   - url: https://your-actual-crew-name.crewai.com
-    description: Substitua pela URL real da sua crew no painel do CrewAI AOP
+    description: Substitua pela URL real da sua crew no painel do CrewAI AMP
 security:
   - BearerAuth: []
 paths:
@@ -291,7 +291,7 @@ components:
       scheme: bearer
       description: |
         **📋 Referência** - *Os tokens mostrados são apenas exemplos.*
-        Use seus tokens reais do painel do CrewAI AOP.
+        Use seus tokens reais do painel do CrewAI AMP.
 
   schemas:
     ExecutionRunning:

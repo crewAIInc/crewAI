@@ -1,11 +1,11 @@
 ---
 title: "트리거 개요"
-description: "CrewAI AOP 트리거의 동작 방식과 관리 방법, 그리고 통합별 플레이북을 한눈에 확인하세요"
+description: "CrewAI AMP 트리거의 동작 방식과 관리 방법, 그리고 통합별 플레이북을 한눈에 확인하세요"
 icon: "bolt"
 mode: "wide"
 ---
 
-CrewAI AOP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 이벤트와 자동화를 연결합니다. 폴링이나 수동 실행 대신, 트리거는 새로운 이메일, 캘린더 업데이트, CRM 상태 변화 등을 감지하여 지정한 크루 또는 플로우를 즉시 실행합니다.
+CrewAI AMP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 이벤트와 자동화를 연결합니다. 폴링이나 수동 실행 대신, 트리거는 새로운 이메일, 캘린더 업데이트, CRM 상태 변화 등을 감지하여 지정한 크루 또는 플로우를 즉시 실행합니다.
 
 <iframe
   className="w-full aspect-video rounded-xl"
@@ -25,37 +25,61 @@ CrewAI AOP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 �
     <a href="/ko/enterprise/guides/gmail-trigger">새로운 이메일이나 스레드 업데이트에 맞춰 크루를 실행하세요.</a>
   </Card>
 
-  <Card title="Google Calendar 트리거" icon="calendar-days">
-    <a href="/ko/enterprise/guides/google-calendar-trigger">캘린더 이벤트 생성, 수정, 취소에 대응하세요.</a>
-  </Card>
+{" "}
+<Card title="Google Calendar 트리거" icon="calendar-days">
+  <a href="/ko/enterprise/guides/google-calendar-trigger">
+    캘린더 이벤트 생성, 수정, 취소에 대응하세요.
+  </a>
+</Card>
 
-  <Card title="Google Drive 트리거" icon="folder-open">
-    <a href="/ko/enterprise/guides/google-drive-trigger">Drive 파일 업로드, 수정, 삭제를 감시하세요.</a>
-  </Card>
+{" "}
+<Card title="Google Drive 트리거" icon="folder-open">
+  <a href="/ko/enterprise/guides/google-drive-trigger">
+    Drive 파일 업로드, 수정, 삭제를 감시하세요.
+  </a>
+</Card>
 
-  <Card title="Outlook 트리거" icon="envelope-open">
-    <a href="/ko/enterprise/guides/outlook-trigger">Outlook의 새로운 메일이나 삭제된 이벤트에 대응하세요.</a>
-  </Card>
+{" "}
+<Card title="Outlook 트리거" icon="envelope-open">
+  <a href="/ko/enterprise/guides/outlook-trigger">
+    Outlook의 새로운 메일이나 삭제된 이벤트에 대응하세요.
+  </a>
+</Card>
 
-  <Card title="OneDrive 트리거" icon="cloud">
-    <a href="/ko/enterprise/guides/onedrive-trigger">OneDrive 파일 활동 및 공유 변경 사항을 감사하세요.</a>
-  </Card>
+{" "}
+<Card title="OneDrive 트리거" icon="cloud">
+  <a href="/ko/enterprise/guides/onedrive-trigger">
+    OneDrive 파일 활동 및 공유 변경 사항을 감사하세요.
+  </a>
+</Card>
 
-  <Card title="Microsoft Teams 트리거" icon="comments">
-    <a href="/ko/enterprise/guides/microsoft-teams-trigger">새로운 Teams 채팅이 생성될 때 워크플로우를 시작하세요.</a>
-  </Card>
+{" "}
+<Card title="Microsoft Teams 트리거" icon="comments">
+  <a href="/ko/enterprise/guides/microsoft-teams-trigger">
+    새로운 Teams 채팅이 생성될 때 워크플로우를 시작하세요.
+  </a>
+</Card>
 
-  <Card title="HubSpot 트리거" icon="hubspot">
-    <a href="/ko/enterprise/guides/hubspot-trigger">HubSpot 워크플로우와 라이프사이클 이벤트에서 자동화를 실행하세요.</a>
-  </Card>
+{" "}
+<Card title="HubSpot 트리거" icon="hubspot">
+  <a href="/ko/enterprise/guides/hubspot-trigger">
+    HubSpot 워크플로우와 라이프사이클 이벤트에서 자동화를 실행하세요.
+  </a>
+</Card>
 
-  <Card title="Salesforce 트리거" icon="salesforce">
-    <a href="/ko/enterprise/guides/salesforce-trigger">Salesforce 프로세스를 CrewAI 크루와 연결해 CRM 자동화를 구현하세요.</a>
-  </Card>
+{" "}
+<Card title="Salesforce 트리거" icon="salesforce">
+  <a href="/ko/enterprise/guides/salesforce-trigger">
+    Salesforce 프로세스를 CrewAI 크루와 연결해 CRM 자동화를 구현하세요.
+  </a>
+</Card>
 
-  <Card title="Slack 트리거" icon="slack">
-    <a href="/ko/enterprise/guides/slack-trigger">Slack 슬래시 명령으로 크루를 바로 실행하세요.</a>
-  </Card>
+{" "}
+<Card title="Slack 트리거" icon="slack">
+  <a href="/ko/enterprise/guides/slack-trigger">
+    Slack 슬래시 명령으로 크루를 바로 실행하세요.
+  </a>
+</Card>
 
   <Card title="Zapier 트리거" icon="bolt">
     <a href="/ko/enterprise/guides/zapier-trigger">CrewAI를 수천 개의 Zapier 지원 앱과 연동하세요.</a>
@@ -77,7 +101,10 @@ CrewAI AOP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 �
 2. **Triggers** 탭을 클릭하여 사용 가능한 통합을 확인합니다.
 
 <Frame>
-  <img src="/images/enterprise/list-available-triggers.png" alt="사용 가능한 트리거 목록" />
+  <img
+    src="/images/enterprise/list-available-triggers.png"
+    alt="사용 가능한 트리거 목록"
+  />
 </Frame>
 
 ### 트리거 활성화/비활성화
@@ -123,6 +150,7 @@ crewai triggers list
 ```
 
 이 명령은 연결된 통합을 기반으로 사용 가능한 모든 트리거를 표시합니다:
+
 - 통합 이름 및 연결 상태
 - 사용 가능한 트리거 유형
 - 트리거 이름 및 설명
@@ -142,6 +170,7 @@ crewai triggers run microsoft_onedrive/file_changed
 ```
 
 이 명령은:
+
 - 로컬에서 크루를 실행합니다
 - 완전하고 실제적인 트리거 payload를 전달합니다
 - 프로덕션에서 크루가 호출되는 방식을 정확히 시뮬레이션합니다
@@ -221,17 +250,20 @@ def delegate_to_crew(self, crewai_trigger_payload: dict = None):
 ## 문제 해결
 
 **트리거가 실행되지 않나요?**
+
 - 배포의 Triggers 탭에서 트리거가 활성화되어 있는지 확인하세요
 - Tools & Integrations에서 통합 연결 상태를 확인하세요
 - 필요한 모든 환경 변수가 올바르게 구성되어 있는지 확인하세요
 
 **실행 중 오류가 발생하나요?**
+
 - 실행 로그에서 오류 세부 정보를 확인하세요
 - `crewai triggers run <트리거_이름>`을 사용하여 로컬에서 테스트하고 정확한 payload 구조를 확인하세요
 - 크루가 `crewai_trigger_payload` 매개변수를 처리할 수 있는지 확인하세요
 - 크루가 트리거 payload에 포함되지 않은 매개변수를 기대하지 않는지 확인하세요
 
 **개발 문제:**
+
 - 배포하기 전에 항상 `crewai triggers run <trigger>`로 테스트하여 전체 payload를 확인하세요
 - `crewai run`은 트리거 호출을 시뮬레이션하지 않으므로 `crewai triggers run`을 대신 사용하세요
 - `crewai triggers list`를 사용하여 연결된 통합에 사용 가능한 트리거를 확인하세요

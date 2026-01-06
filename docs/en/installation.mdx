@@ -6,6 +6,7 @@ mode: "wide"
 ---
 
 ## Video Tutorial
+
 Watch this video tutorial for a step-by-step demonstration of the installation process:
 
 <iframe
@@ -18,21 +19,25 @@ Watch this video tutorial for a step-by-step demonstration of the installation p
 ></iframe>
 
 ## Text Tutorial
+
 <Note>
   **Python Version Requirements**
 
-  CrewAI requires `Python >=3.10 and <3.14`. Here's how to check your version:
-  ```bash
-  python3 --version
-  ```
+CrewAI requires `Python >=3.10 and <3.14`. Here's how to check your version:
 
-  If you need to update Python, visit [python.org/downloads](https://python.org/downloads)
+```bash
+python3 --version
+```
+
+If you need to update Python, visit [python.org/downloads](https://python.org/downloads)
+
 </Note>
 
 <Note>
   **OpenAI SDK Requirement**
 
-  CrewAI 0.175.0 requires `openai >= 1.13.3`. If you manage dependencies yourself, ensure your environment satisfies this constraint to avoid import/runtime issues.
+CrewAI 0.175.0 requires `openai >= 1.13.3`. If you manage dependencies yourself, ensure your environment satisfies this constraint to avoid import/runtime issues.
+
 </Note>
 
 CrewAI uses the `uv` as its dependency management and package handling tool. It simplifies project setup and execution, offering a seamless experience.
@@ -95,6 +100,7 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
         ```
       <Check>Installation successful! You're ready to create your first crew! 🎉</Check>
     </Step>
+
 </Steps>
 
 # Creating a CrewAI Project
@@ -128,6 +134,7 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
                   ├── agents.yaml
                   └── tasks.yaml
       ```
+
   </Step>
 
   <Step title="Customize Your Project">
@@ -144,6 +151,7 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
 
     - Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
     - Keep sensitive information like API keys in `.env`.
+
   </Step>
 
   <Step title="Run your Crew">
@@ -167,13 +175,15 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
 <Note type="info">
 For teams and organizations, CrewAI offers enterprise deployment options that eliminate setup complexity:
 
-### CrewAI AOP (SaaS)
+### CrewAI AMP (SaaS)
+
 - Zero installation required - just sign up for free at [app.crewai.com](https://app.crewai.com)
 - Automatic updates and maintenance
 - Managed infrastructure and scaling
 - Build Crews with no Code
 
 ### CrewAI Factory (Self-hosted)
+
 - Containerized deployment for your infrastructure
 - Supports any hyperscaler including on prem deployments
 - Integration with your existing security systems
@@ -186,12 +196,9 @@ For teams and organizations, CrewAI offers enterprise deployment options that el
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card
-    title="Build Your First Agent"
-    icon="code"
-    href="/en/quickstart"
-  >
-    Follow our quickstart guide to create your first CrewAI agent and get hands-on experience.
+  <Card title="Build Your First Agent" icon="code" href="/en/quickstart">
+    Follow our quickstart guide to create your first CrewAI agent and get
+    hands-on experience.
   </Card>
   <Card
     title="Join the Community"

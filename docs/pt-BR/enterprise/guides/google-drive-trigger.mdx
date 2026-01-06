@@ -10,17 +10,21 @@ mode: "wide"
 Trigger your automations when files are created, updated, or removed in Google Drive. Typical workflows include summarizing newly uploaded content, enforcing sharing policies, or notifying owners when critical files change.
 
 <Tip>
-  Connect Google Drive in **Tools & Integrations** and confirm the trigger is enabled for the automation you want to monitor.
+  Connect Google Drive in **Tools & Integrations** and confirm the trigger is
+  enabled for the automation you want to monitor.
 </Tip>
 
 ## Enabling the Google Drive Trigger
 
-1. Open your deployment in CrewAI AOP
+1. Open your deployment in CrewAI AMP
 2. Go to the **Triggers** tab
 3. Locate **Google Drive** and switch the toggle to enable
 
 <Frame>
-  <img src="/images/enterprise/gdrive-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/gdrive-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize file activity
@@ -51,7 +55,9 @@ crewai triggers run google_drive/file_changed
 O comando `crewai triggers run` executará sua crew com um payload completo do Drive, permitindo que você teste sua lógica de parsing antes do deployment.
 
 <Warning>
-  Use `crewai triggers run google_drive/file_changed` (não `crewai run`) para simular execução de trigger durante o desenvolvimento. Após o deployment, sua crew receberá automaticamente o payload do trigger.
+  Use `crewai triggers run google_drive/file_changed` (não `crewai run`) para
+  simular execução de trigger durante o desenvolvimento. Após o deployment, sua
+  crew receberá automaticamente o payload do trigger.
 </Warning>
 
 ## Monitoring Executions
@@ -59,7 +65,10 @@ O comando `crewai triggers run` executará sua crew com um payload completo do D
 Track history and performance of triggered runs with the **Executions** list in the deployment dashboard.
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Troubleshooting

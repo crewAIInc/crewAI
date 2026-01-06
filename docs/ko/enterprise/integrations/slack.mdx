@@ -13,7 +13,7 @@ mode: "wide"
 
 Slack 통합을 사용하기 전에 다음을 확인하십시오:
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 Slack 워크스페이스
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Slack 워크스페이스를 연결함
 
@@ -21,7 +21,7 @@ Slack 통합을 사용하기 전에 다음을 확인하십시오:
 
 ### 1. Slack 워크스페이스 연결
 
-1. [CrewAI AOP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
 2. 인증 통합 섹션에서 **Slack**을 찾습니다.
 3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
 4. 팀 커뮤니케이션에 필요한 권한을 부여합니다.
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -59,6 +60,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - 파라미터 없음 - 모든 채널 멤버를 조회합니다
+
   </Accordion>
 
   <Accordion title="slack/get_user_by_email">
@@ -66,6 +68,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `email` (string, 필수): 워크스페이스 내 사용자의 이메일 주소
+
   </Accordion>
 
   <Accordion title="slack/get_users_by_name">
@@ -76,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `displayName` (string, 필수): 검색할 사용자의 표시 이름
     - `paginationParameters` (object, 선택): 페이지네이션 설정
       - `pageCursor` (string, 선택): 페이지네이션을 위한 페이지 커서
+
   </Accordion>
 </AccordionGroup>
 
@@ -87,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - 파라미터가 필요하지 않습니다 - 접근 가능한 모든 채널을 조회합니다
+
   </Accordion>
 </AccordionGroup>
 
@@ -103,6 +108,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `botIcon` (string, 필수): 봇 아이콘 - 이미지 URL 또는 이모지(e.g., ":dog:") 모두 가능합니다.
     - `blocks` (object, 선택): 첨부파일 및 인터랙티브 요소 등이 포함된 풍부한 메시지 포맷팅을 위한 Slack Block Kit JSON
     - `authenticatedUser` (boolean, 선택): true이면 메시지가 애플리케이션이 아니라 인증된 Slack 사용자로부터 보낸 것처럼 표시됩니다(기본값은 false)
+
   </Accordion>
 
   <Accordion title="slack/send_direct_message">
@@ -115,6 +121,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `botIcon` (string, 필수): 봇 아이콘 - 이미지 URL 또는 이모지(e.g., ":dog:") 모두 가능합니다.
     - `blocks` (object, 선택): 첨부파일 및 인터랙티브 요소 등이 포함된 풍부한 메시지 포맷팅을 위한 Slack Block Kit JSON
     - `authenticatedUser` (boolean, 선택): true이면 메시지가 애플리케이션이 아니라 인증된 Slack 사용자로부터 보낸 것처럼 표시됩니다(기본값은 false)
+
   </Accordion>
 </AccordionGroup>
 
@@ -132,6 +139,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `from:@john in:#general` - #general 채널에서 John이 보낸 메시지 검색
     - `has:link after:2023-01-01` - 2023년 1월 1일 이후에 링크가 포함된 메시지 검색
     - `in:@channel before:yesterday` - 특정 채널에서 어제 이전에 작성된 메시지 검색
+
   </Accordion>
 </AccordionGroup>
 
@@ -140,6 +148,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 Slack의 Block Kit을 사용하면 풍부하고 상호작용이 가능한 메시지를 생성할 수 있습니다. 다음은 `blocks` 매개변수를 사용하는 방법에 대한 몇 가지 예시입니다:
 
 ### 첨부 파일이 있는 간단한 텍스트
+
 ```json
 [
   {
@@ -154,6 +163,7 @@ Slack의 Block Kit을 사용하면 풍부하고 상호작용이 가능한 메시
 ```
 
 ### 섹션을 활용한 리치 포매팅
+
 ```json
 [
   {
@@ -298,6 +308,10 @@ crew.kickoff()
 
 ## 지원 문의
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
   Slack 연동 설정 또는 문제 해결에 대해 지원팀에 문의하세요.
 </Card>
