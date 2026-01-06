@@ -56,8 +56,7 @@ class PushNotificationResultStore(Protocol):
     """Protocol for storing and retrieving push notification results.
 
     This protocol defines the interface for a result store that the
-    PushNotificationHandler uses to wait for task completion. Enterprise
-    implementations can use Redis, in-memory storage, or other backends.
+    PushNotificationHandler uses to wait for task completion.
     """
 
     @classmethod
