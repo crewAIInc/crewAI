@@ -15,6 +15,7 @@ from a2a.types import (
     AgentCard,
     Message,
     Part,
+    PushNotificationConfig as A2APushNotificationConfig,
     Role,
     TextPart,
     TransportProtocol,
@@ -511,14 +512,21 @@ async def _execute_a2a_delegation_async(
             }
         )
 
+    push_config_for_client = (
+        updates if isinstance(updates, PushNotificationConfig) else None
+    )
+
+    use_streaming = not use_polling and push_config_for_client is None
+
     async with _create_a2a_client(
         agent_card=agent_card,
         transport_protocol=transport_protocol,
         timeout=timeout,
         headers=headers,
-        streaming=not use_polling,
+        streaming=use_streaming,
         auth=auth,
         use_polling=use_polling,
+        push_notification_config=push_config_for_client,
     ) as client:
         return await handler.execute(
             client=client,
@@ -538,6 +546,7 @@ async def _create_a2a_client(
     streaming: bool,
     auth: AuthScheme | None = None,
     use_polling: bool = False,
+    push_notification_config: PushNotificationConfig | None = None,
 ) -> AsyncIterator[Client]:
     """Create and configure an A2A client.
 
@@ -549,6 +558,7 @@ async def _create_a2a_client(
         streaming: Enable streaming responses
         auth: Optional AuthScheme for client configuration
         use_polling: Enable polling mode
+        push_notification_config: Optional push notification config to include in requests
 
     Yields:
         Configured A2A client instance
@@ -561,12 +571,24 @@ async def _create_a2a_client(
         if auth and isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
             configure_auth_client(auth, httpx_client)
 
+        push_configs: list[A2APushNotificationConfig] = []
+        if push_notification_config is not None:
+            push_configs.append(
+                A2APushNotificationConfig(
+                    url=str(push_notification_config.url),
+                    id=push_notification_config.id,
+                    token=push_notification_config.token,
+                    authentication=push_notification_config.authentication,
+                )
+            )
+
         config = ClientConfig(
             httpx_client=httpx_client,
             supported_transports=[str(transport_protocol.value)],
             streaming=streaming and not use_polling,
             polling=use_polling,
             accepted_output_modes=["application/json"],
+            push_notification_configs=push_configs,
         )
 
         factory = ClientFactory(config)
@@ -605,7 +627,7 @@ def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
         is_a2a=(
             bool,
             Field(
-                description="Set to true to continue the conversation by sending this message to the A2A agent and awaiting their response. Set to false ONLY when you are completely done and providing your final answer (not when asking questions)."
+                description="Set to false when the remote agent has answered your question - extract their answer and return it as your final message. Set to true ONLY if you need to ask a NEW, DIFFERENT question. NEVER repeat the same request - if the conversation history shows the agent already answered, set is_a2a=false immediately."
             ),
         ),
         __base__=BaseModel,

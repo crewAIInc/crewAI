@@ -9,8 +9,6 @@ from a2a.client import Client
 from a2a.types import (
     AgentCard,
     Message,
-    PushNotificationConfig as A2APushNotificationConfig,
-    TaskPushNotificationConfig,
     TaskState,
 )
 from typing_extensions import Unpack
@@ -34,27 +32,8 @@ from crewai.events.types.a2a_events import (
 if TYPE_CHECKING:
     from a2a.types import Task as A2ATask
 
-    from crewai.a2a.updates.push_notifications.config import PushNotificationConfig
-
 
 logger = logging.getLogger(__name__)
-
-
-def _build_a2a_push_config(config: PushNotificationConfig) -> A2APushNotificationConfig:
-    """Convert our config to A2A SDK's PushNotificationConfig.
-
-    Args:
-        config: Our PushNotificationConfig.
-
-    Returns:
-        A2A SDK PushNotificationConfig.
-    """
-    return A2APushNotificationConfig(
-        url=str(config.url),
-        id=config.id,
-        token=config.token,
-        authentication=config.authentication,
-    )
 
 
 async def _wait_for_push_result(
@@ -143,6 +122,10 @@ class PushNotificationHandler:
                 history=new_messages,
             )
 
+        # Note: Push notification config is now included in the initial send_message
+        # request via ClientConfig.push_notification_configs, so no separate
+        # set_task_callback call is needed. This avoids race conditions where
+        # the task completes before the callback is registered.
         result_or_task_id = await send_message_and_get_task_id(
             event_stream=client.send_message(message),
             new_messages=new_messages,
@@ -157,14 +140,6 @@ class PushNotificationHandler:
 
         task_id = result_or_task_id
 
-        a2a_push_config = _build_a2a_push_config(config)
-        await client.set_task_callback(
-            TaskPushNotificationConfig(
-                task_id=task_id,
-                push_notification_config=a2a_push_config,
-            )
-        )
-
         crewai_event_bus.emit(
             agent_branch,
             A2APushNotificationRegisteredEvent(
@@ -174,7 +149,7 @@ class PushNotificationHandler:
         )
 
         logger.debug(
-            "Registered push notification callback for task %s at %s",
+            "Push notification callback for task %s configured at %s (via initial request)",
             task_id,
             config.url,
         )

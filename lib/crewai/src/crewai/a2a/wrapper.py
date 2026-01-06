@@ -21,6 +21,7 @@ from crewai.a2a.templates import (
     AVAILABLE_AGENTS_TEMPLATE,
     CONVERSATION_TURN_INFO_TEMPLATE,
     PREVIOUS_A2A_CONVERSATION_TEMPLATE,
+    REMOTE_AGENT_COMPLETED_NOTICE,
     UNAVAILABLE_AGENTS_NOTICE_TEMPLATE,
 )
 from crewai.a2a.types import AgentResponseProtocol
@@ -256,6 +257,7 @@ def _augment_prompt_with_a2a(
     max_turns: int | None = None,
     failed_agents: dict[str, str] | None = None,
     extension_registry: ExtensionRegistry | None = None,
+    remote_task_completed: bool = False,
 ) -> tuple[str, bool]:
     """Add A2A delegation instructions to prompt.
 
@@ -328,12 +330,15 @@ def _augment_prompt_with_a2a(
             warning=warning,
         )
 
+    completion_notice = ""
+    if remote_task_completed and conversation_history:
+        completion_notice = REMOTE_AGENT_COMPLETED_NOTICE
+
     augmented_prompt = f"""{task_description}
 
 IMPORTANT: You have the ability to delegate this task to remote A2A agents.
 {agents_text}
-{history_text}{turn_info}
-
+{history_text}{turn_info}{completion_notice}
 
 """
 
@@ -383,6 +388,7 @@ def _handle_agent_response_and_continue(
     context: str | None,
     tools: list[BaseTool] | None,
     agent_response_model: type[BaseModel],
+    remote_task_completed: bool = False,
 ) -> tuple[str | None, str | None]:
     """Handle A2A result and get CrewAI agent's response.
 
@@ -418,6 +424,7 @@ def _handle_agent_response_and_continue(
         turn_num=turn_num,
         max_turns=max_turns,
         agent_cards=agent_cards_dict,
+        remote_task_completed=remote_task_completed,
     )
 
     original_response_model = task.response_model
@@ -625,6 +632,7 @@ def _delegate_to_a2a(
                     context=context,
                     tools=tools,
                     agent_response_model=agent_response_model,
+                    remote_task_completed=(a2a_result["status"] == TaskState.completed),
                 )
 
                 if final_result is not None:
@@ -652,6 +660,7 @@ def _delegate_to_a2a(
                 context=context,
                 tools=tools,
                 agent_response_model=agent_response_model,
+                remote_task_completed=False,
             )
 
             if final_result is not None:
