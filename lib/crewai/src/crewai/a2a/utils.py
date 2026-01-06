@@ -450,7 +450,6 @@ async def _execute_a2a_delegation_async(
         extensions=extensions,
     )
 
-    transport_protocol = transport_protocol or TransportProtocol("JSONRPC")
     new_messages: list[Message] = [*conversation_history, message]
     crewai_event_bus.emit(
         None,
