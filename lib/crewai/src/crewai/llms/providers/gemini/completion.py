@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -24,7 +25,7 @@ try:
     from google import genai
     from google.genai import types
     from google.genai.errors import APIError
-    from google.genai.types import GenerateContentResponse, Schema
+    from google.genai.types import GenerateContentResponse
 except ImportError:
     raise ImportError(
         'Google Gen AI native provider not available, to install: uv add "crewai[google-genai]"'
@@ -434,11 +435,8 @@ class GeminiCompletion(BaseLLM):
             function_declaration = types.FunctionDeclaration(
                 name=name,
                 description=description,
+                parameters=parameters if parameters else None,
             )
-
-            # Add parameters if present - ensure parameters is a dict
-            if parameters and isinstance(parameters, Schema):
-                function_declaration.parameters = parameters
 
             gemini_tool = types.Tool(function_declarations=[function_declaration])
             gemini_tools.append(gemini_tool)
@@ -609,7 +607,7 @@ class GeminiCompletion(BaseLLM):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
                 for part in candidate.content.parts:
-                    if hasattr(part, "function_call") and part.function_call:
+                    if part.function_call:
                         function_name = part.function_call.name
                         if function_name is None:
                             continue
@@ -645,17 +643,17 @@ class GeminiCompletion(BaseLLM):
         self,
         chunk: GenerateContentResponse,
         full_response: str,
-        function_calls: dict[str, dict[str, Any]],
+        function_calls: dict[int, dict[str, Any]],
         usage_data: dict[str, int],
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> tuple[str, dict[str, dict[str, Any]], dict[str, int]]:
+    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
         """Process a single streaming chunk.
 
         Args:
             chunk: The streaming chunk response
             full_response: Accumulated response text
-            function_calls: Accumulated function calls
+            function_calls: Accumulated function calls keyed by sequential index
             usage_data: Accumulated usage data
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
@@ -678,22 +676,44 @@ class GeminiCompletion(BaseLLM):
             candidate = chunk.candidates[0]
             if candidate.content and candidate.content.parts:
                 for part in candidate.content.parts:
-                    if hasattr(part, "function_call") and part.function_call:
-                        call_id = part.function_call.name or "default"
-                        if call_id not in function_calls:
-                            function_calls[call_id] = {
-                                "name": part.function_call.name,
-                                "args": dict(part.function_call.args)
-                                if part.function_call.args
-                                else {},
-                            }
+                    if part.function_call:
+                        call_index = len(function_calls)
+                        call_id = f"call_{call_index}"
+                        args_dict = (
+                            dict(part.function_call.args)
+                            if part.function_call.args
+                            else {}
+                        )
+                        args_json = json.dumps(args_dict)
+
+                        function_calls[call_index] = {
+                            "id": call_id,
+                            "name": part.function_call.name,
+                            "args": args_dict,
+                        }
+
+                        self._emit_stream_chunk_event(
+                            chunk=args_json,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": call_id,
+                                "function": {
+                                    "name": part.function_call.name or "",
+                                    "arguments": args_json,
+                                },
+                                "type": "function",
+                                "index": call_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
 
         return full_response, function_calls, usage_data
 
     def _finalize_streaming_response(
         self,
         full_response: str,
-        function_calls: dict[str, dict[str, Any]],
+        function_calls: dict[int, dict[str, Any]],
         usage_data: dict[str, int],
         contents: list[types.Content],
         available_functions: dict[str, Any] | None = None,
@@ -800,7 +820,7 @@ class GeminiCompletion(BaseLLM):
     ) -> str:
         """Handle streaming content generation."""
         full_response = ""
-        function_calls: dict[str, dict[str, Any]] = {}
+        function_calls: dict[int, dict[str, Any]] = {}
         usage_data = {"total_tokens": 0}
 
         # The API accepts list[Content] but mypy is overly strict about variance
@@ -878,7 +898,7 @@ class GeminiCompletion(BaseLLM):
     ) -> str:
         """Handle async streaming content generation."""
         full_response = ""
-        function_calls: dict[str, dict[str, Any]] = {}
+        function_calls: dict[int, dict[str, Any]] = {}
         usage_data = {"total_tokens": 0}
 
         # The API accepts list[Content] but mypy is overly strict about variance

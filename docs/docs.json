@@ -116,6 +116,7 @@
                   "en/concepts/tasks",
                   "en/concepts/crews",
                   "en/concepts/flows",
+                  "en/concepts/production-architecture",
                   "en/concepts/knowledge",
                   "en/concepts/llms",
                   "en/concepts/processes",
@@ -309,6 +310,7 @@
                   "en/learn/hierarchical-process",
                   "en/learn/human-input-on-execution",
                   "en/learn/human-in-the-loop",
+                  "en/learn/human-feedback-in-flows",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
@@ -328,7 +330,7 @@
             ]
           },
           {
-            "tab": "AOP",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -559,6 +561,7 @@
                   "pt-BR/concepts/tasks",
                   "pt-BR/concepts/crews",
                   "pt-BR/concepts/flows",
+                  "pt-BR/concepts/production-architecture",
                   "pt-BR/concepts/knowledge",
                   "pt-BR/concepts/llms",
                   "pt-BR/concepts/processes",
@@ -703,6 +706,7 @@
               {
                 "group": "Observabilidade",
                 "pages": [
+                  "pt-BR/observability/tracing",
                   "pt-BR/observability/overview",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/braintrust",
@@ -736,6 +740,7 @@
                   "pt-BR/learn/hierarchical-process",
                   "pt-BR/learn/human-input-on-execution",
                   "pt-BR/learn/human-in-the-loop",
+                  "pt-BR/learn/human-feedback-in-flows",
                   "pt-BR/learn/kickoff-async",
                   "pt-BR/learn/kickoff-for-each",
                   "pt-BR/learn/llm-connections",
@@ -755,7 +760,7 @@
             ]
           },
           {
-            "tab": "AOP",
+            "tab": "AMP",
             "icon": "briefcase",
             "groups": [
               {
@@ -983,6 +988,7 @@
                   "ko/concepts/tasks",
                   "ko/concepts/crews",
                   "ko/concepts/flows",
+                  "ko/concepts/production-architecture",
                   "ko/concepts/knowledge",
                   "ko/concepts/llms",
                   "ko/concepts/processes",
@@ -1139,6 +1145,7 @@
               {
                 "group": "Observability",
                 "pages": [
+                  "ko/observability/tracing",
                   "ko/observability/overview",
                   "ko/observability/arize-phoenix",
                   "ko/observability/braintrust",
@@ -1172,6 +1179,7 @@
                   "ko/learn/hierarchical-process",
                   "ko/learn/human-input-on-execution",
                   "ko/learn/human-in-the-loop",
+                  "ko/learn/human-feedback-in-flows",
                   "ko/learn/kickoff-async",
                   "ko/learn/kickoff-for-each",
                   "ko/learn/llm-connections",
