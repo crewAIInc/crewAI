@@ -4,6 +4,7 @@ from crewai.a2a.updates.base import (
     BaseHandlerKwargs,
     PollingHandlerKwargs,
     PushNotificationHandlerKwargs,
+    PushNotificationResultStore,
     StreamingHandlerKwargs,
     UpdateHandler,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "PushNotificationConfig",
     "PushNotificationHandler",
     "PushNotificationHandlerKwargs",
+    "PushNotificationResultStore",
     "StreamingConfig",
     "StreamingHandler",
     "StreamingHandlerKwargs",
