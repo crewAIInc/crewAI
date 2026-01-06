@@ -30,7 +30,8 @@ class TaskEvaluation(BaseModel):
         description="Suggestions to improve future similar tasks."
     )
     quality: float = Field(
-        description="A score from 0 to 10 evaluating on completion, quality, and overall performance, all taking into account the task description, expected output, and the result of the task."
+        default=5.0,
+        description="A score from 0 to 10 evaluating on completion, quality, and overall performance, all taking into account the task description, expected output, and the result of the task. Defaults to 5.0 if not provided."
     )
     entities: list[Entity] = Field(
         description="Entities extracted from the task output."
@@ -88,9 +89,9 @@ class TaskEvaluator:
             f"Task Description:\n{task.description}\n\n"
             f"Expected Output:\n{task.expected_output}\n\n"
             f"Actual Output:\n{output}\n\n"
-            "Please provide:\n"
+            "Please provide ALL of the following (all fields are required):\n"
             "- Bullet points suggestions to improve future similar tasks\n"
-            "- A score from 0 to 10 evaluating on completion, quality, and overall performance"
+            "- A quality score from 0 to 10 evaluating on completion, quality, and overall performance (REQUIRED - must be a numeric value)\n"
             "- Entities extracted from the task output, if any, their type, description, and relationships"
         )
 
