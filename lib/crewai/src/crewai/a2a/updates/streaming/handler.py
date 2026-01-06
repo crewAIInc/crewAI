@@ -133,6 +133,11 @@ class StreamingHandler:
                 history=new_messages,
             )
 
+        finally:
+            aclose = getattr(event_stream, "aclose", None)
+            if aclose:
+                await aclose()
+
         if final_result:
             return final_result
 
