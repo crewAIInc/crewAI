@@ -53,6 +53,7 @@ def _build_a2a_push_config(config: PushNotificationConfig) -> A2APushNotificatio
         url=str(config.url),
         id=config.id,
         token=config.token,
+        authentication=config.authentication,
     )
 
 
