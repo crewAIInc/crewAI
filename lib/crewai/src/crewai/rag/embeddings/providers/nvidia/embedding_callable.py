@@ -1,5 +1,6 @@
 """NVIDIA embedding callable implementation."""
 
+import os
 from typing import cast
 
 import httpx
@@ -18,7 +19,7 @@ class NvidiaEmbeddingFunction(EmbeddingFunction[Documents]):
 
     def __init__(
         self,
-        api_key: str,
+        api_key: str | None = None,
         model_name: str = "nvidia/nv-embed-v1",
         api_base: str = "https://integrate.api.nvidia.com/v1",
         input_type: str = "query",
@@ -28,7 +29,7 @@ class NvidiaEmbeddingFunction(EmbeddingFunction[Documents]):
         """Initialize NVIDIA embedding function.
 
         Args:
-            api_key: NVIDIA API key
+            api_key: NVIDIA API key (or use NVIDIA_API_KEY/NVIDIA_NIM_API_KEY environment variable)
             model_name: NVIDIA embedding model name (e.g., 'nvidia/nv-embed-v1')
             api_base: Base URL for NVIDIA API
             input_type: Type of input for asymmetric models ('query' or 'passage')
@@ -37,6 +38,15 @@ class NvidiaEmbeddingFunction(EmbeddingFunction[Documents]):
             truncate: Truncation strategy ('NONE', 'START', 'END')
             **kwargs: Additional parameters
         """
+        # Validate and get API key from environment if not provided
+        if api_key is None:
+            api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")
+            if api_key is None:
+                raise ValueError(
+                    "NVIDIA_API_KEY or NVIDIA_NIM_API_KEY is required for embeddings. "
+                    "Get your API key from https://build.nvidia.com/"
+                )
+
         self._api_key = api_key
         self._model_name = model_name
         self._api_base = api_base.rstrip("/")
