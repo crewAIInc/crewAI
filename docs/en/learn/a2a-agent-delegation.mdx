@@ -87,6 +87,10 @@ The `A2AConfig` class accepts the following parameters:
   When `True`, returns the A2A agent's result directly when it signals completion. When `False`, allows the server agent to review the result and potentially continue the conversation.
 </ParamField>
 
+<ParamField path="updates" type="UpdateConfig" default="StreamingConfig()">
+  Update mechanism for receiving task status. Options: `StreamingConfig`, `PollingConfig`, or `PushNotificationConfig`.
+</ParamField>
+
 ## Authentication
 
 For A2A agents that require authentication, use one of the provided auth schemes:
@@ -252,6 +256,74 @@ When `fail_fast=False`:
 - If some agents fail, the LLM is informed which agents are unavailable and can delegate to working agents
 - If all agents fail, the LLM receives a notice about unavailable agents and handles the task directly
 - Connection errors are captured and included in the context for better decision-making
+
+## Update Mechanisms
+
+Control how your agent receives task status updates from remote A2A agents:
+
+<Tabs>
+  <Tab title="Streaming (Default)">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.updates import StreamingConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks",
+    backstory="Expert at delegation",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://research.example.com/.well-known/agent-card.json",
+        updates=StreamingConfig()
+    )
+)
+    ```
+  </Tab>
+
+  <Tab title="Polling">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.updates import PollingConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks",
+    backstory="Expert at delegation",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://research.example.com/.well-known/agent-card.json",
+        updates=PollingConfig(
+            interval=2.0,
+            timeout=300.0,
+            max_polls=100
+        )
+    )
+)
+    ```
+  </Tab>
+
+  <Tab title="Push Notifications">
+    ```python Code
+from crewai.a2a import A2AConfig
+from crewai.a2a.updates import PushNotificationConfig
+
+agent = Agent(
+    role="Research Coordinator",
+    goal="Coordinate research tasks",
+    backstory="Expert at delegation",
+    llm="gpt-4o",
+    a2a=A2AConfig(
+        endpoint="https://research.example.com/.well-known/agent-card.json",
+        updates=PushNotificationConfig(
+            url={base_url}/a2a/callback",
+            token="your-validation-token",
+            timeout=300.0
+        )
+    )
+)
+    ```
+  </Tab>
+</Tabs>
 
 ## Best Practices
 

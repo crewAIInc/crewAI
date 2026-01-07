@@ -27,3 +27,14 @@ UNAVAILABLE_AGENTS_NOTICE_TEMPLATE: Final[Template] = Template(
     "     $unavailable_agents"
     "\n</A2A_AGENTS_STATUS>\n"
 )
+REMOTE_AGENT_COMPLETED_NOTICE: Final[str] = """
+<REMOTE_AGENT_STATUS>
+STATUS: COMPLETED
+The remote agent has finished processing your request. Their response is in the conversation history above.
+You MUST now:
+1. Extract the answer from the conversation history
+2. Set is_a2a=false
+3. Return the answer as your final message
+DO NOT send another request - the task is already done.
+</REMOTE_AGENT_STATUS>
+"""

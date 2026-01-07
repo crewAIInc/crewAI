@@ -15,7 +15,7 @@ class A2AEventBase(BaseEvent):
     from_task: Any | None = None
     from_agent: Any | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """Initialize A2A event, extracting task and agent metadata."""
         if data.get("from_task"):
             task = data["from_task"]
@@ -139,3 +139,74 @@ class A2AConversationCompletedEvent(A2AEventBase):
     final_result: str | None = None
     error: str | None = None
     total_turns: int
+
+
+class A2APollingStartedEvent(A2AEventBase):
+    """Event emitted when polling mode begins for A2A delegation.
+
+    Attributes:
+        task_id: A2A task ID being polled
+        polling_interval: Seconds between poll attempts
+        endpoint: A2A agent endpoint URL
+    """
+
+    type: str = "a2a_polling_started"
+    task_id: str
+    polling_interval: float
+    endpoint: str
+
+
+class A2APollingStatusEvent(A2AEventBase):
+    """Event emitted on each polling iteration.
+
+    Attributes:
+        task_id: A2A task ID being polled
+        state: Current task state from remote agent
+        elapsed_seconds: Time since polling started
+        poll_count: Number of polls completed
+    """
+
+    type: str = "a2a_polling_status"
+    task_id: str
+    state: str
+    elapsed_seconds: float
+    poll_count: int
+
+
+class A2APushNotificationRegisteredEvent(A2AEventBase):
+    """Event emitted when push notification callback is registered.
+
+    Attributes:
+        task_id: A2A task ID for which callback is registered
+        callback_url: URL where agent will send push notifications
+    """
+
+    type: str = "a2a_push_notification_registered"
+    task_id: str
+    callback_url: str
+
+
+class A2APushNotificationReceivedEvent(A2AEventBase):
+    """Event emitted when a push notification is received.
+
+    Attributes:
+        task_id: A2A task ID from the notification
+        state: Current task state from the notification
+    """
+
+    type: str = "a2a_push_notification_received"
+    task_id: str
+    state: str
+
+
+class A2APushNotificationTimeoutEvent(A2AEventBase):
+    """Event emitted when push notification wait times out.
+
+    Attributes:
+        task_id: A2A task ID that timed out
+        timeout_seconds: Timeout duration in seconds
+    """
+
+    type: str = "a2a_push_notification_timeout"
+    task_id: str
+    timeout_seconds: float

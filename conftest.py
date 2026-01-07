@@ -120,6 +120,8 @@ HEADERS_TO_FILTER = {
     "accept-encoding": "ACCEPT-ENCODING-XXX",
     "x-amzn-requestid": "X-AMZN-REQUESTID-XXX",
     "x-amzn-RequestId": "X-AMZN-REQUESTID-XXX",
+    "x-a2a-notification-token": "X-A2A-NOTIFICATION-TOKEN-XXX",
+    "x-a2a-version": "X-A2A-VERSION-XXX",
 }
 
 
