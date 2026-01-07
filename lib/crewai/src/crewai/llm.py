@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import threading
+import time
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,6 +27,8 @@ from typing_extensions import Self
 
 # Cache for NVIDIA model list to avoid repeated API calls
 _nvidia_models_cache: set[str] | None = None
+_nvidia_cache_timestamp: float | None = None
+_NVIDIA_CACHE_TTL = 3600  # 1 hour cache expiration
 _nvidia_cache_lock = threading.Lock()
 
 from crewai.events.event_bus import crewai_event_bus
@@ -350,22 +353,27 @@ def _get_nvidia_models() -> set[str]:
     Returns:
         Set of model IDs available in NVIDIA's catalog
     """
-    global _nvidia_models_cache
+    global _nvidia_models_cache, _nvidia_cache_timestamp
 
-    # Return cached value if available
-    if _nvidia_models_cache is not None:
-        return _nvidia_models_cache
+    # Check if cache exists and hasn't expired
+    if _nvidia_models_cache is not None and _nvidia_cache_timestamp is not None:
+        if time.time() - _nvidia_cache_timestamp < _NVIDIA_CACHE_TTL:
+            return _nvidia_models_cache
+        # Cache expired - will refresh below
 
     # Thread-safe cache initialization
     with _nvidia_cache_lock:
-        # Double-check after acquiring lock
-        if _nvidia_models_cache is not None:
-            return _nvidia_models_cache
+        # Double-check after acquiring lock (with TTL check)
+        if _nvidia_models_cache is not None and _nvidia_cache_timestamp is not None:
+            if time.time() - _nvidia_cache_timestamp < _NVIDIA_CACHE_TTL:
+                return _nvidia_models_cache
+            # Cache expired - proceed with refresh
 
         # Accept both NVIDIA_API_KEY (build.nvidia.com) and NVIDIA_NIM_API_KEY (cloud endpoints)
         api_key = os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")
         if not api_key:
             _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
             return _nvidia_models_cache
 
         try:
@@ -381,24 +389,29 @@ def _get_nvidia_models() -> set[str]:
                     models = response.json().get("data", [])
                     # Dedupe model IDs (NVIDIA API has some duplicates)
                     _nvidia_models_cache = set([m["id"] for m in models])
+                    _nvidia_cache_timestamp = time.time()
                 else:
                     logging.warning(
                         f"NVIDIA API returned status {response.status_code}"
                     )
                     _nvidia_models_cache = set()
+                    _nvidia_cache_timestamp = time.time()
         except httpx.TimeoutException:
             logging.warning("NVIDIA API request timed out")
             _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
         except httpx.HTTPError as e:
             # Sanitize error message to avoid leaking API keys
             error_msg = str(e).replace(api_key, "***")
             logging.warning(f"NVIDIA API request failed: {error_msg}")
             _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
         except Exception as e:
             # Catch-all for unexpected errors, with API key sanitization
             error_msg = str(e).replace(api_key, "***") if api_key else str(e)
             logging.warning(f"Failed to fetch NVIDIA models: {error_msg}")
             _nvidia_models_cache = set()
+            _nvidia_cache_timestamp = time.time()
 
     return _nvidia_models_cache
 

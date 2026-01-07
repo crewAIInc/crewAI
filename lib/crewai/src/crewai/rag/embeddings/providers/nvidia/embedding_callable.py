@@ -108,7 +108,16 @@ class NvidiaEmbeddingFunction(EmbeddingFunction[Documents]):
 
         # Sort by index and extract embeddings
         embeddings_data = sorted(embeddings_data, key=lambda x: x.get("index", 0))
-        embeddings = [np.array(item["embedding"], dtype=np.float32) for item in embeddings_data]
+
+        # Extract embeddings with error handling for malformed responses
+        embeddings = []
+        for idx, item in enumerate(embeddings_data):
+            if "embedding" not in item:
+                raise ValueError(
+                    f"NVIDIA API returned malformed response: item at index {idx} missing 'embedding' key. "
+                    f"Available keys: {list(item.keys())}"
+                )
+            embeddings.append(np.array(item["embedding"], dtype=np.float32))
 
         return cast(Embeddings, embeddings)
 
