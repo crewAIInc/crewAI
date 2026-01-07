@@ -784,3 +784,51 @@ def test_search_method_with_memory_client_and_valkey_config():
 
         assert len(results) == 1
         assert results[0]["content"] == "Result 1"
+
+
+def test_magicmock_with_spec_passes_isinstance_check():
+    """
+    Test that demonstrates MagicMock(spec=Memory) DOES pass isinstance checks.
+    
+    This test serves as documentation/proof that the reviewer's comment about
+    MagicMock(spec=Memory) not passing isinstance checks is incorrect.
+    
+    In Python's unittest.mock, MagicMock(spec=SomeClass) is specifically designed
+    to pass isinstance(mock, SomeClass) checks to make mocks behave like the
+    specified class for testing purposes.
+    """
+    # Test that MagicMock with spec passes isinstance check
+    mock_memory = MagicMock(spec=Memory)
+    assert isinstance(mock_memory, Memory), "MagicMock(spec=Memory) should pass isinstance check"
+    
+    # Test that regular MagicMock does NOT pass isinstance check
+    regular_mock = MagicMock()
+    assert not isinstance(regular_mock, Memory), "Regular MagicMock should NOT pass isinstance check"
+    
+    # Test that MagicMock with spec passes isinstance check for MemoryClient too
+    mock_memory_client = MagicMock(spec=MemoryClient)
+    assert isinstance(mock_memory_client, MemoryClient), "MagicMock(spec=MemoryClient) should pass isinstance check"
+    
+    # Verify the flattening logic works correctly with MagicMock(spec=Memory)
+    config = {
+        "agent_id": "test-agent",
+        "local_mem0_config": {
+            "vector_store": {
+                "provider": "valkey",
+                "config": {"valkey_url": "valkey://localhost:6379"},
+            },
+        },
+    }
+    
+    with patch("mem0.Memory.from_config", return_value=mock_memory):
+        mem0_storage = Mem0Storage(type="external", config=config)
+        
+        # Verify that isinstance check works in the actual storage class
+        assert isinstance(mem0_storage.memory, Memory), "Storage should recognize mock as Memory instance"
+        
+        # Test that the filter flattening logic is triggered
+        filter_result = mem0_storage._create_filter_for_search()
+        
+        # For valkey provider with single AND condition, filter should be flattened
+        expected_flattened = {"agent_id": "test-agent"}
+        assert filter_result == expected_flattened, f"Filter should be flattened to {expected_flattened}, got {filter_result}"
