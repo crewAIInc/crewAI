@@ -1,0 +1,349 @@
+---
+title: PII Redaction for Traces
+description: "Automatically redact sensitive data from crew and flow execution traces"
+icon: "lock"
+mode: "wide"
+---
+
+## Overview
+
+PII Redaction is an CrewAI AMP feature that automatically detects and masks Personally Identifiable Information (PII) in your crew and flow execution traces. This ensures sensitive data like credit card numbers, social security numbers, email addresses, names and even create custom recognizers for your own data to not be exposed in your CrewAI AMP traces.
+
+<Frame>
+  ![PII Redaction Overview](/images/enterprise/pii_mask_recognizer_trace_example.png)
+</Frame>
+
+
+## Why PII Redaction Matters
+
+When running AI agents in production, sensitive information often flows through your crews:
+
+- Customer data from CRM integrations
+- Financial information from payment processors
+- Personal details from form submissions
+- Internal employee data
+
+Without proper redaction, this data appears in traces, making compliance with regulations like GDPR, HIPAA, and PCI-DSS challenging. PII Redaction solves this by automatically masking sensitive data before it's stored in traces.
+
+## How It Works
+
+PII Redaction uses [Microsoft Presidio](https://microsoft.github.io/presidio/), a state-of-the-art data protection library, to:
+
+1. **Detect** - Scan trace event data for known PII patterns
+2. **Classify** - Identify the type of sensitive data (credit card, SSN, email, etc.)
+3. **Redact** - Replace the sensitive data with masked values based on your configuration
+
+```
+Original: "Contact john.doe@company.com or call 555-123-4567"
+Redacted: "Contact <EMAIL_ADDRESS> or call <PHONE_NUMBER>"
+```
+
+## Enabling PII Redaction
+
+<Info>
+  You must be on the Enterprise plan to use this feature.
+</Info>
+
+<Steps>
+  <Step title="Navigate to Crew Settings">
+    In the CrewAI AOP dashboard, select your deployed crew and go to your one of your deployments / automations (deployed use cases) and go to **Settings** → **PII Protection**.
+  </Step>
+
+  <Step title="Enable PII Protection">
+    Toggle on **PII Redaction for Traces**. This will enable automatic scanning and redaction of trace data.
+
+    <Info>
+      You need to manually enable PII Redaction for each deployment.
+    </Info>
+
+    <Frame>
+      ![Enable PII Redaction](/images/enterprise/pii_mask_recognizer_enable.png)
+    </Frame>
+  </Step>
+
+  <Step title="Configure Entity Types">
+    Select which types of PII to detect and redact. Each entity can be individually enabled or disabled.
+
+    <Frame>
+      ![Configure Entities](/images/enterprise/pii_mask_recognizer_supported_entities.png)
+    </Frame>
+  </Step>
+
+  <Step title="Save">
+    Save your configuration. PII redaction will be active on all subsequent crew executions, no redeployment is needed.
+  </Step>
+</Steps>
+
+## Supported Entity Types
+
+CrewAI supports the following PII entity types, organized by category.
+
+### Global Entities
+
+| Entity | Description | Example |
+|--------|-------------|---------|
+| `CREDIT_CARD` | Credit/debit card numbers | "4111-1111-1111-1111" |
+| `CRYPTO` | Cryptocurrency wallet addresses | "bc1qxy2kgd..." |
+| `DATE_TIME` | Dates and times | "January 15, 2024" |
+| `EMAIL_ADDRESS` | Email addresses | "john@example.com" |
+| `IBAN_CODE` | International bank account numbers | "DE89 3704 0044 0532 0130 00" |
+| `IP_ADDRESS` | IPv4 and IPv6 addresses | "192.168.1.1" |
+| `LOCATION` | Geographic locations | "New York City" |
+| `MEDICAL_LICENSE` | Medical license numbers | "MD12345" |
+| `NRP` | Nationalities, religious, or political groups | - |
+| `PERSON` | Personal names | "John Doe" |
+| `PHONE_NUMBER` | Phone numbers in various formats | "+1 (555) 123-4567" |
+| `URL` | Web URLs | "https://example.com" |
+
+### US-Specific Entities
+
+| Entity | Description | Example |
+|--------|-------------|---------|
+| `US_BANK_NUMBER` | US Bank account numbers | "1234567890" |
+| `US_DRIVER_LICENSE` | US Driver's license numbers | "D1234567" |
+| `US_ITIN` | Individual Taxpayer ID | "900-70-0000" |
+| `US_PASSPORT` | US Passport numbers | "123456789" |
+| `US_SSN` | Social Security Numbers | "123-45-6789" |
+
+## Redaction Actions
+
+For each enabled entity, you can configure how the data is redacted:
+
+| Action | Description | Example Output |
+|--------|-------------|----------------|
+| `mask` | Replace with asterisks | `****-****-****-1111` |
+| `redact` | Completely remove | *(empty)* |
+
+## Custom Recognizers
+
+In addition to built-in entities, you can create **custom recognizers** to detect organization-specific PII patterns.
+
+<Frame>
+  ![Custom Recognizers](/images/enterprise/pii_mask_recognizer.png)
+</Frame>
+
+### Creating a Custom Recognizer
+
+Custom recognizers use regex patterns to detect sensitive data unique to your organization:
+
+<Steps>
+  <Step title="Navigate to Custom Recognizers">
+    Go to **Settings** → **Security** → **Custom Recognizers**.
+  </Step>
+
+  <Step title="Add New Recognizer">
+    Click **Add Recognizer** and configure:
+
+    - **Name**: A descriptive name for the recognizer
+    - **Entity Type**: The entity label (e.g., `EMPLOYEE_ID`, `SALARY`)
+    - **Pattern**: Regex pattern to match the sensitive data
+    - **Score**: Confidence score (0.0-1.0) for matches
+    - **Context Words** (optional): Words that increase detection confidence
+  </Step>
+
+  <Step title="Test and Save">
+    Use the test input to verify your pattern matches correctly, then save.
+  </Step>
+</Steps>
+
+### Custom Recognizer Examples
+
+**Employee ID Pattern:**
+
+```json
+{
+  "name": "EMPLOYEE_ID",
+  "supported_entity": "EMPLOYEE_ID",
+  "supported_language": "en",
+  "patterns": [
+    {
+      "name": "employee_id",
+      "regex": "EMP-\\d{6}",
+      "score": 0.9
+    }
+  ]
+}
+```
+
+**Salary Information:**
+
+```json
+{
+  "name": "SALARY",
+  "supported_entity": "SALARY",
+  "supported_language": "en",
+  "patterns": [
+    {
+      "name": "salary_pattern",
+      "regex": "(?i)(?:salary|pay|compensation)[:\\s]*\\$?\\d{1,3}(?:,\\d{3})*",
+      "score": 0.8
+    }
+  ],
+  "context": ["salary", "pay", "compensation", "wage"]
+}
+```
+
+**Internal Project Codes:**
+
+```json
+{
+  "name": "PROJECT_CODE",
+  "supported_entity": "PROJECT_CODE",
+  "supported_language": "en",
+  "patterns": [
+    {
+      "name": "project_code",
+      "regex": "PRJ-[A-Z]{3}-\\d{4}",
+      "score": 0.95
+    }
+  ]
+}
+```
+
+### Deny-List Recognizers
+
+For exact string matches (like company names or internal codenames), use deny-list recognizers:
+
+```json
+{
+  "name": "INTERNAL_CODENAMES",
+  "supported_entity": "CODENAME",
+  "supported_language": "en",
+  "deny_list": ["Project Alpha", "Operation Beta", "Initiative Gamma"]
+}
+```
+
+## Viewing Redacted Traces
+
+Once PII redaction is enabled, your traces will show redacted values:
+
+<Frame>
+  ![Redacted Traces](/images/enterprise/pii-redacted-traces.png)
+</Frame>
+
+Redacted values are clearly marked to distinguish them from original content, making it easy to understand what data was protected while still allowing you to debug and monitor crew behavior.
+
+## Configuration Reference
+
+The complete PII redaction configuration follows this structure:
+
+```json
+{
+  "entities": {
+    "PERSON": { "enabled": true, "action": "replace" },
+    "CREDIT_CARD": { "enabled": true, "action": "mask" },
+    "EMAIL_ADDRESS": { "enabled": true, "action": "replace" },
+    "US_SSN": { "enabled": true, "action": "redact" }
+  },
+  "mask_recognizers": [
+    {
+      "name": "CUSTOM_ENTITY",
+      "supported_entity": "CUSTOM_ENTITY",
+      "supported_language": "en",
+      "patterns": [
+        { "name": "pattern_name", "regex": "pattern", "score": 0.8 }
+      ],
+      "context": ["optional", "context", "words"]
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Performance Considerations
+
+<Steps>
+  <Step title="Enable Only Needed Entities">
+    Each enabled entity adds processing overhead. Only enable entities relevant to your data.
+  </Step>
+
+  <Step title="Use Specific Patterns">
+    For custom recognizers, use specific patterns to reduce false positives and improve performance.
+  </Step>
+
+  <Step title="Leverage Context Words">
+    Context words improve accuracy by only triggering detection when surrounding text matches.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<Accordion title="PII Not Being Redacted">
+  **Possible Causes:**
+  - Entity type not enabled in configuration
+  - Pattern doesn't match the data format
+  - Custom recognizer has syntax errors
+
+  **Solutions:**
+  - Verify entity is enabled in Settings → Security
+  - Test regex patterns with sample data
+  - Check logs for configuration errors
+</Accordion>
+
+<Accordion title="Too Much Data Being Redacted">
+  **Possible Causes:**
+  - Overly broad entity types enabled (e.g., `DATE_TIME` catches dates everywhere)
+  - Custom recognizer patterns are too general
+
+  **Solutions:**
+  - Disable entities that cause false positives
+  - Make custom patterns more specific
+  - Add context words to improve accuracy
+</Accordion>
+
+<Accordion title="Performance Issues">
+  **Possible Causes:**
+  - Too many entities enabled
+  - NLP-based entities (PERSON, LOCATION, ORGANIZATION) are computationally expensive
+
+  **Solutions:**
+  - Only enable entities you actually need
+  - Consider using pattern-based alternatives where possible
+  - Monitor trace processing times in the dashboard
+</Accordion>
+
+---
+
+### Adding Custom Recognizers
+
+To add support for a new custom recognizer:
+<Frame>
+  ![Custom Recognizers](/images/enterprise/pii_mask_recognizer.png)
+</Frame>
+
+1. Go to your Organization **Settings** → **Organization** → **Add Recognizer**.
+2. Configure the recognizer.
+<Frame>
+  ![Configure Recognizer](/images/enterprise/pii_mask_recognizer_create.png)
+</Frame>
+3. You have two options for recognizers:
+   - Pattern-based recognizer
+     - Pattern-based recognizers use regex patterns to detect sensitive data.
+     - You can configure the pattern and the score.
+     - You can also add context words to improve the accuracy of the recognizer.
+   - Deny-list recognizer
+     - Deny-list recognizers use a list of strings to detect sensitive data.
+     - You can configure the list of strings and the score.
+     - You can also add context words to improve the accuracy of the recognizer.
+3. Save the recognizer.
+
+---
+## Entity Types
+
+Is how custom recognizers will be masked to:
+Example:
+- Entity Type: PERSON
+- Pattern: "John Doe"
+- Score: 0.8
+- Output: `<PERSON>`
+
+
+## Adding Context Words
+You can also add context words to improve the accuracy of the recognizer.
+Example:
+- Context words: "project", "code", "internal" <br />
+- Entity Type: PROJECT_CODE <br />
+- Pattern: "PRJ-\d{4}" <br />
+- Score: 0.8 <br />
+- Output: `<PROJECT_CODE>` <br />
