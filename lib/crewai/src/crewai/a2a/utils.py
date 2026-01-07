@@ -34,13 +34,15 @@ from crewai.a2a.auth.utils import (
 )
 from crewai.a2a.config import A2AConfig
 from crewai.a2a.task_helpers import TaskStateResult
-from crewai.a2a.types import PartsDict, PartsMetadataDict
+from crewai.a2a.types import (
+    HANDLER_REGISTRY,
+    HandlerType,
+    PartsDict,
+    PartsMetadataDict,
+)
 from crewai.a2a.updates import (
     PollingConfig,
-    PollingHandler,
     PushNotificationConfig,
-    PushNotificationHandler,
-    StreamingConfig,
     StreamingHandler,
     UpdateConfig,
 )
@@ -58,17 +60,6 @@ if TYPE_CHECKING:
     from a2a.types import Message
 
     from crewai.a2a.auth.schemas import AuthScheme
-
-
-HandlerType = (
-    type[PollingHandler] | type[StreamingHandler] | type[PushNotificationHandler]
-)
-
-HANDLER_REGISTRY: dict[type[UpdateConfig], HandlerType] = {
-    PollingConfig: PollingHandler,
-    StreamingConfig: StreamingHandler,
-    PushNotificationConfig: PushNotificationHandler,
-}
 
 
 def get_handler(config: UpdateConfig | None) -> HandlerType:
@@ -92,24 +83,14 @@ def _fetch_agent_card_cached(
     timeout: int,
     _ttl_hash: int,
 ) -> AgentCard:
-    """Cached version of fetch_agent_card with auth support.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth_hash: Hash of the auth object
-        timeout: Request timeout
-        _ttl_hash: Time-based hash for cache invalidation
-
-    Returns:
-        Cached AgentCard
-    """
+    """Cached sync version of fetch_agent_card."""
     auth = _auth_store.get(auth_hash)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(
-            _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+            _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
         )
     finally:
         loop.close()
@@ -159,47 +140,74 @@ def fetch_agent_card(
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(
-            _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+            afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
         )
     finally:
         loop.close()
 
 
+async def afetch_agent_card(
+    endpoint: str,
+    auth: AuthScheme | None = None,
+    timeout: int = 30,
+    use_cache: bool = True,
+) -> AgentCard:
+    """Fetch AgentCard from an A2A endpoint asynchronously.
+
+    Native async implementation. Use this when running in an async context.
+
+    Args:
+        endpoint: A2A agent endpoint URL (AgentCard URL).
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        use_cache: Whether to use caching (default True).
+
+    Returns:
+        AgentCard object with agent capabilities and skills.
+
+    Raises:
+        httpx.HTTPStatusError: If the request fails.
+        A2AClientHTTPError: If authentication fails.
+    """
+    if use_cache:
+        if auth:
+            auth_data = auth.model_dump_json(
+                exclude={
+                    "_access_token",
+                    "_token_expires_at",
+                    "_refresh_token",
+                    "_authorization_callback",
+                }
+            )
+            auth_hash = hash((type(auth).__name__, auth_data))
+        else:
+            auth_hash = 0
+        _auth_store[auth_hash] = auth
+        agent_card: AgentCard = await _afetch_agent_card_cached(
+            endpoint, auth_hash, timeout
+        )
+        return agent_card
+
+    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
+
+
 @cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
-async def _fetch_agent_card_async_cached(
+async def _afetch_agent_card_cached(
     endpoint: str,
     auth_hash: int,
     timeout: int,
 ) -> AgentCard:
-    """Cached async implementation of AgentCard fetching.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth_hash: Hash of the auth object
-        timeout: Request timeout in seconds
-
-    Returns:
-        Cached AgentCard object
-    """
+    """Cached async implementation of AgentCard fetching."""
     auth = _auth_store.get(auth_hash)
-    return await _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
 
 
-async def _fetch_agent_card_async(
+async def _afetch_agent_card_impl(
     endpoint: str,
     auth: AuthScheme | None,
     timeout: int,
 ) -> AgentCard:
-    """Async implementation of AgentCard fetching.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth: Optional AuthScheme for authentication
-        timeout: Request timeout in seconds
-
-    Returns:
-        AgentCard object
-    """
+    """Internal async implementation of AgentCard fetching."""
     if "/.well-known/agent-card.json" in endpoint:
         base_url = endpoint.replace("/.well-known/agent-card.json", "")
         agent_card_path = "/.well-known/agent-card.json"
@@ -268,35 +276,114 @@ def execute_a2a_delegation(
     turn_number: int | None = None,
     updates: UpdateConfig | None = None,
 ) -> TaskStateResult:
-    """Execute a task delegation to a remote A2A agent with multi-turn support.
+    """Execute a task delegation to a remote A2A agent synchronously.
+
+    This is the sync wrapper around aexecute_a2a_delegation. For async contexts,
+    use aexecute_a2a_delegation directly.
 
     Args:
-        endpoint: A2A agent endpoint URL
-        auth: Optional AuthScheme for authentication
-        timeout: Request timeout in seconds
-        task_description: The task to delegate
-        context: Optional context information
-        context_id: Context ID for correlating messages/tasks
-        task_id: Specific task identifier
-        reference_task_ids: List of related task IDs
-        metadata: Additional metadata
-        extensions: Protocol extensions for custom fields
-        conversation_history: Previous Message objects from conversation
-        agent_id: Agent identifier for logging
-        agent_role: Role of the CrewAI agent delegating the task
-        agent_branch: Optional agent tree branch for logging
-        response_model: Optional Pydantic model for structured outputs
-        turn_number: Optional turn number for multi-turn conversations
-        updates: Update mechanism config from A2AConfig.updates
+        endpoint: A2A agent endpoint URL.
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        task_description: The task to delegate.
+        context: Optional context information.
+        context_id: Context ID for correlating messages/tasks.
+        task_id: Specific task identifier.
+        reference_task_ids: List of related task IDs.
+        metadata: Additional metadata.
+        extensions: Protocol extensions for custom fields.
+        conversation_history: Previous Message objects from conversation.
+        agent_id: Agent identifier for logging.
+        agent_role: Role of the CrewAI agent delegating the task.
+        agent_branch: Optional agent tree branch for logging.
+        response_model: Optional Pydantic model for structured outputs.
+        turn_number: Optional turn number for multi-turn conversations.
+        updates: Update mechanism config from A2AConfig.updates.
 
     Returns:
-        TaskStateResult with status, result/error, history, and agent_card
+        TaskStateResult with status, result/error, history, and agent_card.
     """
-    is_multiturn = bool(conversation_history and len(conversation_history) > 0)
-    if turn_number is None:
-        turn_number = (
-            len([m for m in (conversation_history or []) if m.role == Role.user]) + 1
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(
+            aexecute_a2a_delegation(
+                endpoint=endpoint,
+                auth=auth,
+                timeout=timeout,
+                task_description=task_description,
+                context=context,
+                context_id=context_id,
+                task_id=task_id,
+                reference_task_ids=reference_task_ids,
+                metadata=metadata,
+                extensions=extensions,
+                conversation_history=conversation_history,
+                agent_id=agent_id,
+                agent_role=agent_role,
+                agent_branch=agent_branch,
+                response_model=response_model,
+                turn_number=turn_number,
+                updates=updates,
+            )
         )
+    finally:
+        loop.close()
+
+
+async def aexecute_a2a_delegation(
+    endpoint: str,
+    auth: AuthScheme | None,
+    timeout: int,
+    task_description: str,
+    context: str | None = None,
+    context_id: str | None = None,
+    task_id: str | None = None,
+    reference_task_ids: list[str] | None = None,
+    metadata: dict[str, Any] | None = None,
+    extensions: dict[str, Any] | None = None,
+    conversation_history: list[Message] | None = None,
+    agent_id: str | None = None,
+    agent_role: Role | None = None,
+    agent_branch: Any | None = None,
+    response_model: type[BaseModel] | None = None,
+    turn_number: int | None = None,
+    updates: UpdateConfig | None = None,
+) -> TaskStateResult:
+    """Execute a task delegation to a remote A2A agent asynchronously.
+
+    Native async implementation with multi-turn support. Use this when running
+    in an async context (e.g., with Crew.akickoff() or agent.aexecute_task()).
+
+    Args:
+        endpoint: A2A agent endpoint URL.
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        task_description: The task to delegate.
+        context: Optional context information.
+        context_id: Context ID for correlating messages/tasks.
+        task_id: Specific task identifier.
+        reference_task_ids: List of related task IDs.
+        metadata: Additional metadata.
+        extensions: Protocol extensions for custom fields.
+        conversation_history: Previous Message objects from conversation.
+        agent_id: Agent identifier for logging.
+        agent_role: Role of the CrewAI agent delegating the task.
+        agent_branch: Optional agent tree branch for logging.
+        response_model: Optional Pydantic model for structured outputs.
+        turn_number: Optional turn number for multi-turn conversations.
+        updates: Update mechanism config from A2AConfig.updates.
+
+    Returns:
+        TaskStateResult with status, result/error, history, and agent_card.
+    """
+    if conversation_history is None:
+        conversation_history = []
+
+    is_multiturn = len(conversation_history) > 0
+    if turn_number is None:
+        turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
+
     crewai_event_bus.emit(
         agent_branch,
         A2ADelegationStartedEvent(
@@ -308,48 +395,41 @@ def execute_a2a_delegation(
         ),
     )
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        result = loop.run_until_complete(
-            _execute_a2a_delegation_async(
-                endpoint=endpoint,
-                auth=auth,
-                timeout=timeout,
-                task_description=task_description,
-                context=context,
-                context_id=context_id,
-                task_id=task_id,
-                reference_task_ids=reference_task_ids,
-                metadata=metadata,
-                extensions=extensions,
-                conversation_history=conversation_history or [],
-                is_multiturn=is_multiturn,
-                turn_number=turn_number,
-                agent_branch=agent_branch,
-                agent_id=agent_id,
-                agent_role=agent_role,
-                response_model=response_model,
-                updates=updates,
-            )
-        )
+    result = await _aexecute_a2a_delegation_impl(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        task_description=task_description,
+        context=context,
+        context_id=context_id,
+        task_id=task_id,
+        reference_task_ids=reference_task_ids,
+        metadata=metadata,
+        extensions=extensions,
+        conversation_history=conversation_history,
+        is_multiturn=is_multiturn,
+        turn_number=turn_number,
+        agent_branch=agent_branch,
+        agent_id=agent_id,
+        agent_role=agent_role,
+        response_model=response_model,
+        updates=updates,
+    )
 
-        crewai_event_bus.emit(
-            agent_branch,
-            A2ADelegationCompletedEvent(
-                status=result["status"],
-                result=result.get("result"),
-                error=result.get("error"),
-                is_multiturn=is_multiturn,
-            ),
-        )
+    crewai_event_bus.emit(
+        agent_branch,
+        A2ADelegationCompletedEvent(
+            status=result["status"],
+            result=result.get("result"),
+            error=result.get("error"),
+            is_multiturn=is_multiturn,
+        ),
+    )
 
-        return result
-    finally:
-        loop.close()
+    return result
 
 
-async def _execute_a2a_delegation_async(
+async def _aexecute_a2a_delegation_impl(
     endpoint: str,
     auth: AuthScheme | None,
     timeout: int,
@@ -361,39 +441,15 @@ async def _execute_a2a_delegation_async(
     metadata: dict[str, Any] | None,
     extensions: dict[str, Any] | None,
     conversation_history: list[Message],
-    is_multiturn: bool = False,
-    turn_number: int = 1,
-    agent_branch: Any | None = None,
-    agent_id: str | None = None,
-    agent_role: str | None = None,
-    response_model: type[BaseModel] | None = None,
-    updates: UpdateConfig | None = None,
+    is_multiturn: bool,
+    turn_number: int,
+    agent_branch: Any | None,
+    agent_id: str | None,
+    agent_role: str | None,
+    response_model: type[BaseModel] | None,
+    updates: UpdateConfig | None,
 ) -> TaskStateResult:
-    """Async implementation of A2A delegation with multi-turn support.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth: Optional AuthScheme for authentication
-        timeout: Request timeout in seconds
-        task_description: Task to delegate
-        context: Optional context
-        context_id: Context ID for correlation
-        task_id: Specific task identifier
-        reference_task_ids: Related task IDs
-        metadata: Additional metadata
-        extensions: Protocol extensions
-        conversation_history: Previous Message objects
-        is_multiturn: Whether this is a multi-turn conversation
-        turn_number: Current turn number
-        agent_branch: Agent tree branch for logging
-        agent_id: Agent identifier for logging
-        agent_role: Agent role for logging
-        response_model: Optional Pydantic model for structured outputs
-        updates: Update mechanism config
-
-    Returns:
-        TaskStateResult with status, result/error, history, and agent_card
-    """
+    """Internal async implementation of A2A delegation."""
     if auth:
         auth_data = auth.model_dump_json(
             exclude={
@@ -407,7 +463,7 @@ async def _execute_a2a_delegation_async(
     else:
         auth_hash = 0
     _auth_store[auth_hash] = auth
-    agent_card = await _fetch_agent_card_async_cached(
+    agent_card = await _afetch_agent_card_cached(
         endpoint=endpoint, auth_hash=auth_hash, timeout=timeout
     )
 

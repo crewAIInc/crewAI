@@ -4,6 +4,16 @@ from typing import Any, Literal, Protocol, TypedDict, runtime_checkable
 
 from typing_extensions import NotRequired
 
+from crewai.a2a.updates import (
+    PollingConfig,
+    PollingHandler,
+    PushNotificationConfig,
+    PushNotificationHandler,
+    StreamingConfig,
+    StreamingHandler,
+    UpdateConfig,
+)
+
 
 @runtime_checkable
 class AgentResponseProtocol(Protocol):
@@ -36,3 +46,16 @@ class PartsDict(TypedDict):
 
     text: str
     metadata: NotRequired[PartsMetadataDict]
+
+
+PollingHandlerType = type[PollingHandler]
+StreamingHandlerType = type[StreamingHandler]
+PushNotificationHandlerType = type[PushNotificationHandler]
+
+HandlerType = PollingHandlerType | StreamingHandlerType | PushNotificationHandlerType
+
+HANDLER_REGISTRY: dict[type[UpdateConfig], HandlerType] = {
+    PollingConfig: PollingHandler,
+    StreamingConfig: StreamingHandler,
+    PushNotificationConfig: PushNotificationHandler,
+}
