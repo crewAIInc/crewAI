@@ -5,33 +5,30 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar
+from importlib.metadata import version
+from typing import ClassVar
 
-from pydantic import (
-    BaseModel,
-    BeforeValidator,
-    ConfigDict,
-    Field,
-    HttpUrl,
-    TypeAdapter,
+from a2a.types import (
+    AgentCapabilities,
+    AgentInterface,
+    AgentProvider,
+    AgentSkill,
+    SecurityScheme,
 )
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import deprecated
 
 from crewai.a2a.auth.schemas import AuthScheme
+from crewai.a2a.types import TransportType, Url
 from crewai.a2a.updates import StreamingConfig, UpdateConfig
 
 
-http_url_adapter = TypeAdapter(HttpUrl)
-
-Url = Annotated[
-    str,
-    BeforeValidator(
-        lambda value: str(http_url_adapter.validate_python(value, strict=True))
-    ),
-]
-
-
+@deprecated("Use A2AClientConfig instead.")
 class A2AConfig(BaseModel):
     """Configuration for A2A protocol integration.
+
+    Deprecated:
+        Use A2AClientConfig instead. This class will be removed in a future version.
 
     Attributes:
         endpoint: A2A agent endpoint URL.
@@ -70,4 +67,136 @@ class A2AConfig(BaseModel):
     updates: UpdateConfig = Field(
         default_factory=StreamingConfig,
         description="Update mechanism config",
+    )
+
+
+class A2AClientConfig(A2AConfig):
+    """Configuration for connecting to remote A2A agents.
+
+    Attributes:
+        endpoint: A2A agent endpoint URL.
+        auth: Authentication scheme.
+        timeout: Request timeout in seconds.
+        max_turns: Maximum conversation turns with A2A agent.
+        response_model: Optional Pydantic model for structured A2A agent responses.
+        fail_fast: If True, raise error when agent unreachable; if False, skip and continue.
+        trust_remote_completion_status: If True, return A2A agent's result directly when completed.
+        updates: Update mechanism config.
+        accepted_output_modes: Media types the client can accept in responses.
+        supported_transports: Ordered list of transport protocols the client supports.
+        use_client_preference: Whether to prioritize client transport preferences over server.
+        extensions: Extension URIs the client supports.
+    """
+
+    accepted_output_modes: list[str] = Field(
+        default_factory=lambda: ["application/json"],
+        description="Media types the client can accept in responses",
+    )
+    supported_transports: list[str] = Field(
+        default_factory=lambda: ["JSONRPC"],
+        description="Ordered list of transport protocols the client supports",
+    )
+    use_client_preference: bool = Field(
+        default=False,
+        description="Whether to prioritize client transport preferences over server",
+    )
+    extensions: list[str] = Field(
+        default_factory=list,
+        description="Extension URIs the client supports",
+    )
+
+
+class A2AServerConfig(BaseModel):
+    """Configuration for exposing a Crew or Agent as an A2A server.
+
+    All fields correspond to A2A AgentCard fields. Fields like name, description,
+    and skills can be auto-derived from the Crew/Agent if not provided.
+
+    Attributes:
+        name: Human-readable name for the agent.
+        description: Human-readable description of the agent.
+        version: Version string for the agent card.
+        skills: List of agent skills/capabilities.
+        default_input_modes: Default supported input MIME types.
+        default_output_modes: Default supported output MIME types.
+        capabilities: Declaration of optional capabilities.
+        preferred_transport: Transport protocol for the preferred endpoint.
+        protocol_version: A2A protocol version this agent supports.
+        provider: Information about the agent's service provider.
+        documentation_url: URL to the agent's documentation.
+        icon_url: URL to an icon for the agent.
+        additional_interfaces: Additional supported interfaces.
+        security: Security requirement objects for all interactions.
+        security_schemes: Security schemes available to authorize requests.
+        supports_authenticated_extended_card: Whether agent provides extended card to authenticated users.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    name: str | None = Field(
+        default=None,
+        description="Human-readable name for the agent. Auto-derived from Crew/Agent if not provided.",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Human-readable description of the agent. Auto-derived from Crew/Agent if not provided.",
+    )
+    version: str = Field(
+        default="1.0.0",
+        description="Version string for the agent card",
+    )
+    skills: list[AgentSkill] = Field(
+        default_factory=list,
+        description="List of agent skills. Auto-derived from tasks/tools if not provided.",
+    )
+    default_input_modes: list[str] = Field(
+        default_factory=lambda: ["text/plain", "application/json"],
+        description="Default supported input MIME types",
+    )
+    default_output_modes: list[str] = Field(
+        default_factory=lambda: ["text/plain", "application/json"],
+        description="Default supported output MIME types",
+    )
+    capabilities: AgentCapabilities = Field(
+        default_factory=lambda: AgentCapabilities(
+            streaming=True,
+            push_notifications=True,
+        ),
+        description="Declaration of optional capabilities supported by the agent",
+    )
+    preferred_transport: TransportType = Field(
+        default="JSONRPC",
+        description="Transport protocol for the preferred endpoint",
+    )
+    protocol_version: str = Field(
+        default_factory=lambda: version("a2a-sdk"),
+        description="A2A protocol version this agent supports",
+    )
+    provider: AgentProvider | None = Field(
+        default=None,
+        description="Information about the agent's service provider",
+    )
+    documentation_url: str | None = Field(
+        default=None,
+        description="URL to the agent's documentation",
+    )
+    icon_url: str | None = Field(
+        default=None,
+        description="URL to an icon for the agent",
+    )
+    additional_interfaces: list[AgentInterface] = Field(
+        default_factory=list,
+        description="Additional supported interfaces (transport and URL combinations)",
+    )
+    security: list[dict[str, list[str]]] = Field(
+        default_factory=list,
+        description="Security requirement objects for all agent interactions",
+    )
+    security_schemes: dict[str, SecurityScheme] = Field(
+        default_factory=dict,
+        description="Security schemes available to authorize requests",
+    )
+    supports_authenticated_extended_card: bool = Field(
+        default=False,
+        description="Whether agent provides extended card to authenticated users",
     )
