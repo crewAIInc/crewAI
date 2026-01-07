@@ -64,6 +64,6 @@ class A2AConfig(BaseModel):
         description='If True, return the A2A agent\'s result directly when status is "completed" without asking the server agent to respond. If False, always ask the server agent to respond, allowing it to potentially delegate again.',
     )
     transport_protocol: TransportProtocol = Field(
-        default_factory=TransportProtocol("JSONRPC"),
+        default_factory=lambda: TransportProtocol("JSONRPC"),
         description="Optional A2A transport protocol (grpc, jsonrpc, http+json)",
     )
