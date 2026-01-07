@@ -928,7 +928,17 @@ class LLM(BaseLLM):
             if not tool_calls or not available_functions:
                 # Track token usage and log callbacks if available in streaming mode
                 if usage_info:
-                    self._track_token_usage_internal(usage_info)
+                    # Convert usage object to dict if needed
+                    if hasattr(usage_info, "__dict__"):
+                        usage_dict = {
+                            "prompt_tokens": getattr(usage_info, "prompt_tokens", 0),
+                            "completion_tokens": getattr(usage_info, "completion_tokens", 0),
+                            "total_tokens": getattr(usage_info, "total_tokens", 0),
+                            "cached_tokens": getattr(usage_info, "cached_tokens", 0),
+                        }
+                    else:
+                        usage_dict = usage_info
+                    self._track_token_usage_internal(usage_dict)
                 self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
                 if response_model and self.is_litellm:
@@ -964,7 +974,17 @@ class LLM(BaseLLM):
 
             # --- 10) Track token usage and log callbacks if available in streaming mode
             if usage_info:
-                self._track_token_usage_internal(usage_info)
+                # Convert usage object to dict if needed
+                if hasattr(usage_info, "__dict__"):
+                    usage_dict = {
+                        "prompt_tokens": getattr(usage_info, "prompt_tokens", 0),
+                        "completion_tokens": getattr(usage_info, "completion_tokens", 0),
+                        "total_tokens": getattr(usage_info, "total_tokens", 0),
+                        "cached_tokens": getattr(usage_info, "cached_tokens", 0),
+                    }
+                else:
+                    usage_dict = usage_info
+                self._track_token_usage_internal(usage_dict)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             # --- 11) Emit completion event and return response
@@ -1173,7 +1193,23 @@ class LLM(BaseLLM):
             0
         ].message
         text_response = response_message.content or ""
-        # --- 3) Handle callbacks with usage info
+
+        # --- 3a) Track token usage internally
+        usage_info = getattr(response, "usage", None)
+        if usage_info:
+            # Convert usage object to dict if needed
+            if hasattr(usage_info, "__dict__"):
+                usage_dict = {
+                    "prompt_tokens": getattr(usage_info, "prompt_tokens", 0),
+                    "completion_tokens": getattr(usage_info, "completion_tokens", 0),
+                    "total_tokens": getattr(usage_info, "total_tokens", 0),
+                    "cached_tokens": getattr(usage_info, "cached_tokens", 0),
+                }
+            else:
+                usage_dict = usage_info
+            self._track_token_usage_internal(usage_dict)
+
+        # --- 3b) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
                 if hasattr(callback, "log_success_event"):
@@ -1293,10 +1329,24 @@ class LLM(BaseLLM):
         ].message
         text_response = response_message.content or ""
 
+        # Track token usage internally
+        usage_info = getattr(response, "usage", None)
+        if usage_info:
+            # Convert usage object to dict if needed
+            if hasattr(usage_info, "__dict__"):
+                usage_dict = {
+                    "prompt_tokens": getattr(usage_info, "prompt_tokens", 0),
+                    "completion_tokens": getattr(usage_info, "completion_tokens", 0),
+                    "total_tokens": getattr(usage_info, "total_tokens", 0),
+                    "cached_tokens": getattr(usage_info, "cached_tokens", 0),
+                }
+            else:
+                usage_dict = usage_info
+            self._track_token_usage_internal(usage_dict)
+
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
                 if hasattr(callback, "log_success_event"):
-                    usage_info = getattr(response, "usage", None)
                     if usage_info:
                         callback.log_success_event(
                             kwargs=params,
@@ -1381,7 +1431,10 @@ class LLM(BaseLLM):
                         if not isinstance(chunk.choices, type):
                             choices = chunk.choices
 
-                    if hasattr(chunk, "usage") and chunk.usage is not None:
+                    # Try to extract usage information if available
+                    if isinstance(chunk, dict) and "usage" in chunk:
+                        usage_info = chunk["usage"]
+                    elif hasattr(chunk, "usage") and chunk.usage is not None:
                         usage_info = chunk.usage
 
                     if choices and len(choices) > 0:
@@ -1433,6 +1486,20 @@ class LLM(BaseLLM):
                             from_agent=from_agent,
                         ),
                     )
+
+            # Track token usage internally
+            if usage_info:
+                # Convert usage object to dict if needed
+                if hasattr(usage_info, "__dict__"):
+                    usage_dict = {
+                        "prompt_tokens": getattr(usage_info, "prompt_tokens", 0),
+                        "completion_tokens": getattr(usage_info, "completion_tokens", 0),
+                        "total_tokens": getattr(usage_info, "total_tokens", 0),
+                        "cached_tokens": getattr(usage_info, "cached_tokens", 0),
+                    }
+                else:
+                    usage_dict = usage_info
+                self._track_token_usage_internal(usage_dict)
 
             if callbacks and len(callbacks) > 0 and usage_info:
                 for callback in callbacks:
