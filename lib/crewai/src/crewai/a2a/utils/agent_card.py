@@ -21,6 +21,7 @@ from crewai.a2a.auth.utils import (
     configure_auth_client,
     retry_on_401,
 )
+from crewai.a2a.config import A2AServerConfig
 from crewai.crew import Crew
 
 
@@ -28,6 +29,26 @@ if TYPE_CHECKING:
     from crewai.a2a.auth.schemas import AuthScheme
     from crewai.agent import Agent
     from crewai.task import Task
+
+
+def _get_server_config(agent: Agent) -> A2AServerConfig | None:
+    """Get A2AServerConfig from an agent's a2a configuration.
+
+    Args:
+        agent: The Agent instance to check.
+
+    Returns:
+        A2AServerConfig if present, None otherwise.
+    """
+    if agent.a2a is None:
+        return None
+    if isinstance(agent.a2a, A2AServerConfig):
+        return agent.a2a
+    if isinstance(agent.a2a, list):
+        for config in agent.a2a:
+            if isinstance(config, A2AServerConfig):
+                return config
+    return None
 
 
 def fetch_agent_card(
@@ -298,6 +319,8 @@ def _crew_to_agent_card(crew: Crew, url: str) -> AgentCard:
 def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     """Generate an A2A AgentCard from an Agent instance.
 
+    Uses A2AServerConfig values when available, falling back to agent properties.
+
     Args:
         agent: The Agent instance to generate a card for.
         url: The base URL where this agent will be exposed.
@@ -305,40 +328,53 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     Returns:
         AgentCard describing the agent's capabilities.
     """
+    server_config = _get_server_config(agent) or A2AServerConfig()
+
+    name = server_config.name or agent.role
+
     description_parts = [agent.goal]
     if agent.backstory:
         description_parts.append(agent.backstory)
+    description = server_config.description or " ".join(description_parts)
 
-    skills: list[AgentSkill] = []
-
-    if agent.tools:
-        for tool in agent.tools:
-            tool_name = getattr(tool, "name", None) or tool.__class__.__name__
-            tool_desc = getattr(tool, "description", None) or f"Tool: {tool_name}"
-            skills.append(_tool_to_skill(tool_name, tool_desc))
+    skills: list[AgentSkill] = (
+        server_config.skills.copy() if server_config.skills else []
+    )
 
     if not skills:
-        skills.append(
-            AgentSkill(
-                id=agent.role.lower().replace(" ", "_"),
-                name=agent.role,
-                description=agent.goal,
-                tags=[agent.role.lower().replace(" ", "-")],
+        if agent.tools:
+            for tool in agent.tools:
+                tool_name = getattr(tool, "name", None) or tool.__class__.__name__
+                tool_desc = getattr(tool, "description", None) or f"Tool: {tool_name}"
+                skills.append(_tool_to_skill(tool_name, tool_desc))
+
+        if not skills:
+            skills.append(
+                AgentSkill(
+                    id=agent.role.lower().replace(" ", "_"),
+                    name=agent.role,
+                    description=agent.goal,
+                    tags=[agent.role.lower().replace(" ", "-")],
+                )
             )
-        )
 
     return AgentCard(
-        name=agent.role,
-        description=" ".join(description_parts),
+        name=name,
+        description=description,
         url=url,
-        version="1.0.0",
-        capabilities=AgentCapabilities(
-            streaming=True,
-            push_notifications=True,
-        ),
-        default_input_modes=["text/plain", "application/json"],
-        default_output_modes=["text/plain", "application/json"],
+        version=server_config.version,
+        capabilities=server_config.capabilities,
+        default_input_modes=server_config.default_input_modes,
+        default_output_modes=server_config.default_output_modes,
         skills=skills,
+        protocol_version=server_config.protocol_version,
+        provider=server_config.provider,
+        documentation_url=server_config.documentation_url,
+        icon_url=server_config.icon_url,
+        additional_interfaces=server_config.additional_interfaces,
+        security=server_config.security,
+        security_schemes=server_config.security_schemes,
+        supports_authenticated_extended_card=server_config.supports_authenticated_extended_card,
     )
 
 
@@ -348,9 +384,14 @@ def inject_a2a_server_methods(target: Crew | Agent) -> None:
     Adds a `to_agent_card(url: str) -> AgentCard` method to the target
     instance that generates an A2A-compliant AgentCard.
 
+    For Agents, this only injects methods if an A2AServerConfig is present.
+    For Crews, methods are always injected.
+
     Args:
         target: The Crew or Agent instance to inject methods onto.
     """
+    if not isinstance(target, Crew) and _get_server_config(target) is None:
+        return
 
     def _to_agent_card(self: Crew | Agent, url: str) -> AgentCard:
         if isinstance(self, Crew):

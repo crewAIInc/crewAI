@@ -81,7 +81,7 @@ class A2AConfig(BaseModel):
     )
 
 
-class A2AClientConfig(A2AConfig):
+class A2AClientConfig(BaseModel):
     """Configuration for connecting to remote A2A agents.
 
     Attributes:
@@ -99,6 +99,33 @@ class A2AClientConfig(A2AConfig):
         extensions: Extension URIs the client supports.
     """
 
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    endpoint: Url = Field(description="A2A agent endpoint URL")
+    auth: AuthScheme | None = Field(
+        default=None,
+        description="Authentication scheme",
+    )
+    timeout: int = Field(default=120, description="Request timeout in seconds")
+    max_turns: int = Field(
+        default=10, description="Maximum conversation turns with A2A agent"
+    )
+    response_model: type[BaseModel] | None = Field(
+        default=None,
+        description="Optional Pydantic model for structured A2A agent responses",
+    )
+    fail_fast: bool = Field(
+        default=True,
+        description="If True, raise error when agent unreachable; if False, skip",
+    )
+    trust_remote_completion_status: bool = Field(
+        default=False,
+        description="If True, return A2A result directly when completed",
+    )
+    updates: UpdateConfig = Field(
+        default_factory=_get_default_update_config,
+        description="Update mechanism config",
+    )
     accepted_output_modes: list[str] = Field(
         default_factory=lambda: ["application/json"],
         description="Media types the client can accept in responses",
