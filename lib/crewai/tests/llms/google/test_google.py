@@ -79,6 +79,7 @@ def test_gemini_tool_use_conversation_flow():
         mock_response.text = "Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature."
         mock_response.usage_metadata = Mock()
         mock_response.usage_metadata.prompt_token_count = 100
+        mock_response.usage_metadata.thoughts_token_count = 50
         mock_response.usage_metadata.candidates_token_count = 50
         mock_response.usage_metadata.total_token_count = 150
 
@@ -630,6 +631,7 @@ def test_gemini_token_usage_tracking():
         mock_response.candidates = []
         mock_response.usage_metadata = MagicMock(
             prompt_token_count=50,
+            thoughts_token_count=25,
             candidates_token_count=25,
             total_token_count=75
         )
@@ -643,6 +645,7 @@ def test_gemini_token_usage_tracking():
         # Verify token usage was extracted
         usage = llm._extract_token_usage(mock_response)
         assert usage["prompt_token_count"] == 50
+        assert usage["thoughts_token_count"] == 25
         assert usage["candidates_token_count"] == 25
         assert usage["total_token_count"] == 75
         assert usage["total_tokens"] == 75
