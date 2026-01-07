@@ -189,6 +189,34 @@ class PollingHandler:
                 history=new_messages,
             )
 
+        except A2APollingTimeoutError as e:
+            error_msg = str(e)
+
+            error_message = Message(
+                role=Role.agent,
+                message_id=str(uuid.uuid4()),
+                parts=[Part(root=TextPart(text=error_msg))],
+                context_id=context_id,
+                task_id=task_id,
+            )
+            new_messages.append(error_message)
+
+            crewai_event_bus.emit(
+                agent_branch,
+                A2AResponseReceivedEvent(
+                    response=error_msg,
+                    turn_number=turn_number,
+                    is_multiturn=is_multiturn,
+                    status="failed",
+                    agent_role=agent_role,
+                ),
+            )
+            return TaskStateResult(
+                status=TaskState.failed,
+                error=error_msg,
+                history=new_messages,
+            )
+
         except A2AClientHTTPError as e:
             error_msg = f"HTTP Error {e.status_code}: {e!s}"
 
