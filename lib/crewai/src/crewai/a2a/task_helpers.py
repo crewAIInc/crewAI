@@ -149,12 +149,14 @@ def process_task_state(
     Returns:
         Result dictionary if terminal/actionable state, None otherwise
     """
+    should_extract = result_parts is None
     if result_parts is None:
         result_parts = []
 
     if a2a_task.status.state == TaskState.completed:
-        extracted_parts = extract_task_result_parts(a2a_task)
-        result_parts.extend(extracted_parts)
+        if should_extract:
+            extracted_parts = extract_task_result_parts(a2a_task)
+            result_parts.extend(extracted_parts)
         if a2a_task.history:
             new_messages.extend(a2a_task.history)
 
