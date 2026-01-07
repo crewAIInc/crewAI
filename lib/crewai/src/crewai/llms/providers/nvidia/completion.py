@@ -121,7 +121,7 @@ class NvidiaCompletion(BaseLLM):
         super().__init__(
             model=model,
             temperature=temperature,
-            api_key=api_key or os.getenv("NVIDIA_API_KEY"),
+            api_key=api_key or os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY"),
             base_url=base_url,
             timeout=timeout,
             provider=provider,
@@ -356,9 +356,9 @@ class NvidiaCompletion(BaseLLM):
             Chat completion response or tool call result
         """
         # Validate API key before making actual API call
-        if not self.api_key and not os.getenv("NVIDIA_API_KEY"):
+        if not self.api_key and not (os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")):
             raise ValueError(
-                "NVIDIA_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
+                "NVIDIA_API_KEY or NVIDIA_NIM_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
             )
 
         try:
@@ -430,9 +430,9 @@ class NvidiaCompletion(BaseLLM):
             Chat completion response or tool call result
         """
         # Validate API key before making actual API call
-        if not self.api_key and not os.getenv("NVIDIA_API_KEY"):
+        if not self.api_key and not (os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")):
             raise ValueError(
-                "NVIDIA_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
+                "NVIDIA_API_KEY or NVIDIA_NIM_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
             )
 
         try:
@@ -446,6 +446,9 @@ class NvidiaCompletion(BaseLLM):
             )
 
             formatted_messages = self._format_messages(messages)
+
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
 
             completion_params = self._prepare_completion_params(
                 messages=formatted_messages, tools=tools
@@ -624,6 +627,8 @@ class NvidiaCompletion(BaseLLM):
                         messages=params["messages"],
                     )
                     return structured_json
+                else:
+                    raise ValueError(f"Structured output parsing returned None for response_model {response_model.__name__}")
 
             response: ChatCompletion = self.client.chat.completions.create(**params)
 
@@ -655,9 +660,9 @@ class NvidiaCompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            # Check reasoning_content first (for reasoning models like DeepSeek R1)
-            # then fall back to regular content
-            content = getattr(message, 'reasoning_content', None) or message.content or ""
+            # Return final answer (message.content) first, fallback to reasoning_content
+            # For reasoning models like DeepSeek R1, message.content is the answer
+            content = message.content or getattr(message, 'reasoning_content', None) or ""
             content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
@@ -921,6 +926,8 @@ class NvidiaCompletion(BaseLLM):
                         messages=params["messages"],
                     )
                     return structured_json
+                else:
+                    raise ValueError(f"Structured output parsing returned None for response_model {response_model.__name__}")
 
             response: ChatCompletion = await self.async_client.chat.completions.create(
                 **params
@@ -954,9 +961,9 @@ class NvidiaCompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            # Check reasoning_content first (for reasoning models like DeepSeek R1)
-            # then fall back to regular content
-            content = getattr(message, 'reasoning_content', None) or message.content or ""
+            # Return final answer (message.content) first, fallback to reasoning_content
+            # For reasoning models like DeepSeek R1, message.content is the answer
+            content = message.content or getattr(message, 'reasoning_content', None) or ""
             content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
@@ -985,6 +992,10 @@ class NvidiaCompletion(BaseLLM):
 
             if usage.get("total_tokens", 0) > 0:
                 logging.info(f"NVIDIA NIM API usage: {usage}")
+
+            content = self._invoke_after_llm_call_hooks(
+                params["messages"], content, from_agent
+            )
         except NotFoundError as e:
             error_msg = f"Model {self.model} not found: {e}"
             logging.error(error_msg)
@@ -1183,7 +1194,9 @@ class NvidiaCompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
 
     async def astream(
         self,
@@ -1219,9 +1232,9 @@ class NvidiaCompletion(BaseLLM):
             LLMContextLengthExceededError: If context window is exceeded
         """
         # Validate API key before making actual API call
-        if not self.api_key and not os.getenv("NVIDIA_API_KEY"):
+        if not self.api_key and not (os.getenv("NVIDIA_API_KEY") or os.getenv("NVIDIA_NIM_API_KEY")):
             raise ValueError(
-                "NVIDIA_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
+                "NVIDIA_API_KEY or NVIDIA_NIM_API_KEY is required for API calls. Get your API key from https://build.nvidia.com/"
             )
 
         try:
