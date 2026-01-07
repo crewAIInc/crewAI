@@ -33,6 +33,7 @@ class AgentAction:
     tool_input: str
     text: str
     result: str | None = None
+    llm_response: str | None = None  # Original LLM response before observation appended
 
 
 @dataclass

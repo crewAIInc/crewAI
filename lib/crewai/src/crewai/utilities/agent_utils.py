@@ -382,10 +382,21 @@ def handle_agent_action_core(
 
     Notes:
         - TODO: Remove messages parameter and its usage.
+        - The observation is appended to formatted_answer.text for logging/trace
+          purposes, but callers should use formatted_answer.llm_response for the
+          assistant message (without observation) and append the observation
+          separately as a user message to avoid LLM hallucination of observations.
     """
     if step_callback:
         step_callback(tool_result)
 
+    # Store the original LLM response before appending observation
+    # This is used by executors to correctly attribute messages:
+    # - llm_response goes as assistant message
+    # - observation goes as user message (to prevent LLM hallucination)
+    formatted_answer.llm_response = formatted_answer.text
+
+    # Append observation to text for logging/trace purposes
     formatted_answer.text += f"\nObservation: {tool_result.result}"
     formatted_answer.result = tool_result.result
 

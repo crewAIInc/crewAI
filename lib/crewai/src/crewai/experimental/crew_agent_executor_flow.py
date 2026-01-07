@@ -349,8 +349,18 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             # Invoke step callback if configured
             self._invoke_step_callback(result)
 
-            # Append result message to conversation state
-            if hasattr(result, "text"):
+            # Properly attribute messages to avoid LLM hallucination of observations:
+            # - LLM's response goes as assistant message
+            # - Tool observation goes as user message (not assistant)
+            if isinstance(result, AgentAction) and result.llm_response:
+                # For tool use: append LLM response as assistant, observation as user
+                self._append_message_to_state(result.llm_response)
+                if result.result:
+                    self._append_message_to_state(
+                        f"Observation: {result.result}", role="user"
+                    )
+            elif hasattr(result, "text"):
+                # For final answer or other cases: append text as assistant
                 self._append_message_to_state(result.text)
 
             # Check if tool result became a final answer (result_as_answer flag)
@@ -537,15 +547,19 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns:
             Updated action or final answer.
         """
+        # Special case for add_image_tool
+        # Note: Even for add_image_tool, we should not attribute tool output to assistant
+        # to avoid LLM hallucination. The LLM's action is stored as assistant message,
+        # and the tool result (image) is stored as user message.
         add_image_tool = self._i18n.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
             == add_image_tool.get("name", "").casefold().strip()
         ):
-            self.state.messages.append(
-                {"role": "assistant", "content": tool_result.result}
-            )
+            # Store original LLM response for proper message attribution
+            formatted_answer.llm_response = formatted_answer.text
+            formatted_answer.result = tool_result.result
             return formatted_answer
 
         return handle_agent_action_core(
