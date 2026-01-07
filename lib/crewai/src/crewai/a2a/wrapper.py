@@ -839,6 +839,7 @@ def _delegate_to_a2a(
                 context=context,
                 tools=tools,
                 agent_response_model=agent_response_model,
+                remote_task_completed=False,
             )
 
             if final_result is not None:
