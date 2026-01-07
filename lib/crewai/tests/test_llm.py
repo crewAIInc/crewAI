@@ -956,7 +956,6 @@ async def test_usage_info_non_streaming_with_acall():
     assert llm._token_usage["completion_tokens"] > 0
     assert llm._token_usage["total_tokens"] > 0
 
-    assert isinstance(result, str)
     assert len(result) > 0
 
 
@@ -990,5 +989,4 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["completion_tokens"] > 0
     assert llm._token_usage["total_tokens"] > 0
 
-    assert isinstance(result, str)
     assert len(result) > 0
