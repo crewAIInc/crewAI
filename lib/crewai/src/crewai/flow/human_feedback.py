@@ -283,11 +283,18 @@ def human_feedback(
                 llm=llm if isinstance(llm, str) else None,
             )
 
-            if provider is not None:
-                # Use custom provider (may raise HumanFeedbackPending)
-                return provider.request_feedback(context, flow_instance)
+            # Determine effective provider:
+            effective_provider = provider
+            if effective_provider is None:
+                from crewai.flow.flow_config import flow_config
+
+                effective_provider = flow_config.hitl_provider
+
+            if effective_provider is not None:
+                # Use provider (may raise HumanFeedbackPending for async providers)
+                return effective_provider.request_feedback(context, flow_instance)
             else:
-                # Use default console input
+                # Use default console input (local development)
                 return flow_instance._request_human_feedback(
                     message=message,
                     output=method_output,
