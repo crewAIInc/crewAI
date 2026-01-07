@@ -511,6 +511,7 @@ def test_openai_streaming_with_response_model():
         mock_chunk1.type = "content.delta"
         mock_chunk1.delta = '{"answer": "test", '
 
+        # Second chunk
         mock_chunk2 = MagicMock()
         mock_chunk2.type = "content.delta"
         mock_chunk2.delta = '"confidence": 0.95}'

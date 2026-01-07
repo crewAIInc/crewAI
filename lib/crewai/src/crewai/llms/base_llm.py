@@ -355,6 +355,7 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
+        response_id: str | None = None
     ) -> None:
         """Emit stream chunk event.
 
@@ -364,6 +365,7 @@ class BaseLLM(ABC):
             from_agent: The agent that initiated the call.
             tool_call: Tool call information if this is a tool call chunk.
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
+            response_id: Unique ID for a particular response, chunks have same response_id.
         """
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
@@ -376,6 +378,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
+                response_id=response_id
             ),
         )
 
