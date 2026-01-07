@@ -98,6 +98,7 @@ class ToolUsage:
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
         self._remember_format_after_usages: int = 3
+        self._tools_reminder_added: bool = False
         self.agent = agent
         self.tools_description = render_text_description_and_args(tools)
         self.tools_names = get_tool_names(tools)
@@ -114,7 +115,6 @@ class ToolUsage:
             and self.function_calling_llm.model in OPENAI_BIGGER_MODELS
         ):
             self._max_parsing_attempts = 2
-            self._remember_format_after_usages = 4
 
     def parse_tool_calling(
         self, tool_string: str
@@ -601,14 +601,11 @@ class ToolUsage:
     def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
-        if self._should_remember_format():
-            result = self._remember_format(result=result)
+            # Add tools reminder message only once when tool usage exceeds threshold
+            if self.task.used_tools >  self._remember_format_after_usages and not self._tools_reminder_added:
+                result = self._remember_format(result=result)
+                self._tools_reminder_added = True
         return str(result)
-
-    def _should_remember_format(self) -> bool:
-        if self.task:
-            return self.task.used_tools % self._remember_format_after_usages == 0
-        return False
 
     def _remember_format(self, result: str) -> str:
         result = str(result)
