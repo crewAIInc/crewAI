@@ -5,7 +5,7 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import Annotated, Any, ClassVar
 
 from pydantic import (
     BaseModel,
@@ -19,8 +19,10 @@ from pydantic import (
 from crewai.a2a.auth.schemas import AuthScheme
 
 
-if TYPE_CHECKING:
+try:
     from crewai.a2a.updates import UpdateConfig
+except ImportError:
+    UpdateConfig = Any  # type: ignore[misc,assignment]
 
 
 http_url_adapter = TypeAdapter(HttpUrl)
