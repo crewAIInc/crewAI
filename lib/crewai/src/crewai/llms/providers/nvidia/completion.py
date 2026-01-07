@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
-from openai.lib.streaming.chat import ChatCompletionStream
+from openai.lib.streaming.chat import AsyncChatCompletionStream, ChatCompletionStream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
@@ -1037,56 +1037,45 @@ class NvidiaCompletion(BaseLLM):
         tool_calls: dict[int, dict[str, Any]] = {}
 
         if response_model:
-            completion_stream: AsyncIterator[
-                ChatCompletionChunk
-            ] = await self.async_client.chat.completions.create(**params)
+            parse_params = {
+                k: v
+                for k, v in params.items()
+                if k not in ("response_format", "stream")
+            }
 
-            accumulated_content = ""
-            usage_data = {"total_tokens": 0}
-            async for chunk in completion_stream:
-                if hasattr(chunk, "usage") and chunk.usage:
-                    usage_data = self._extract_token_usage(chunk)
-                    continue
+            stream: AsyncChatCompletionStream[BaseModel]
+            async with self.async_client.beta.chat.completions.stream(
+                **parse_params, response_format=response_model
+            ) as stream:
+                async for chunk in stream:
+                    if chunk.type == "content.delta":
+                        delta_content = chunk.delta
+                        if delta_content:
+                            self._emit_stream_chunk_event(
+                                chunk=delta_content,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
 
-                if not chunk.choices:
-                    continue
+                final_completion = await stream.get_final_completion()
+                if final_completion:
+                    usage = self._extract_token_usage(final_completion)
+                    self._track_token_usage_internal(usage)
+                    if final_completion.choices:
+                        parsed_result = final_completion.choices[0].message.parsed
+                        if parsed_result:
+                            structured_json = parsed_result.model_dump_json()
+                            self._emit_call_completed_event(
+                                response=structured_json,
+                                call_type=LLMCallType.LLM_CALL,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                messages=params["messages"],
+                            )
+                            return structured_json
 
-                choice = chunk.choices[0]
-                delta: ChoiceDelta = choice.delta
-
-                if delta.content:
-                    accumulated_content += delta.content
-                    self._emit_stream_chunk_event(
-                        chunk=delta.content,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-            self._track_token_usage_internal(usage_data)
-
-            try:
-                parsed_object = response_model.model_validate_json(accumulated_content)
-                structured_json = parsed_object.model_dump_json()
-
-                self._emit_call_completed_event(
-                    response=structured_json,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-
-                return structured_json
-            except Exception as e:
-                logging.error(f"Failed to parse structured output from stream: {e}")
-                self._emit_call_completed_event(
-                    response=accumulated_content,
-                    call_type=LLMCallType.LLM_CALL,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    messages=params["messages"],
-                )
-                return accumulated_content
+            logging.error("Failed to get parsed result from stream")
+            return ""
 
         stream: AsyncIterator[
             ChatCompletionChunk
@@ -1261,56 +1250,42 @@ class NvidiaCompletion(BaseLLM):
 
             # Handle structured output with response_model
             if response_model:
-                completion_stream: AsyncIterator[
-                    ChatCompletionChunk
-                ] = await self.async_client.chat.completions.create(**completion_params)
+                parse_params = {
+                    k: v
+                    for k, v in completion_params.items()
+                    if k not in ("response_format", "stream")
+                }
 
-                accumulated_content = ""
-                usage_data = {"total_tokens": 0}
+                stream: AsyncChatCompletionStream[BaseModel]
+                async with self.async_client.beta.chat.completions.stream(
+                    **parse_params, response_format=response_model
+                ) as stream:
+                    async for chunk in stream:
+                        if chunk.type == "content.delta":
+                            delta_content = chunk.delta
+                            if delta_content:
+                                self._emit_stream_chunk_event(
+                                    chunk=delta_content,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                )
+                                yield delta_content
 
-                async for chunk in completion_stream:
-                    if hasattr(chunk, "usage") and chunk.usage:
-                        usage_data = self._extract_token_usage(chunk)
-                        continue
-
-                    if not chunk.choices:
-                        continue
-
-                    choice = chunk.choices[0]
-                    delta: ChoiceDelta = choice.delta
-
-                    if delta.content:
-                        accumulated_content += delta.content
-                        self._emit_stream_chunk_event(
-                            chunk=delta.content,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
-                        yield delta.content
-
-                self._track_token_usage_internal(usage_data)
-
-                # Validate accumulated content against response_model
-                try:
-                    parsed_object = response_model.model_validate_json(accumulated_content)
-                    structured_json = parsed_object.model_dump_json()
-
-                    self._emit_call_completed_event(
-                        response=structured_json,
-                        call_type=LLMCallType.LLM_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=completion_params["messages"],
-                    )
-                except Exception as e:
-                    logging.error(f"Failed to parse structured output from stream: {e}")
-                    self._emit_call_completed_event(
-                        response=accumulated_content,
-                        call_type=LLMCallType.LLM_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=completion_params["messages"],
-                    )
+                    final_completion = await stream.get_final_completion()
+                    if final_completion:
+                        usage = self._extract_token_usage(final_completion)
+                        self._track_token_usage_internal(usage)
+                        if final_completion.choices:
+                            parsed_result = final_completion.choices[0].message.parsed
+                            if parsed_result:
+                                structured_json = parsed_result.model_dump_json()
+                                self._emit_call_completed_event(
+                                    response=structured_json,
+                                    call_type=LLMCallType.LLM_CALL,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                    messages=completion_params["messages"],
+                                )
 
                 return
 
