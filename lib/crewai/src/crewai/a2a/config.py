@@ -5,9 +5,15 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated, Any
 
-from a2a.types import TransportProtocol
+if TYPE_CHECKING:
+    from a2a.types import TransportProtocol
+else:
+    # At runtime, use Any as fallback when a2a-sdk is not installed
+    # The actual import will happen in _default_transport_protocol() when needed
+    TransportProtocol = Any  # type: ignore[misc,assignment]
+
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -17,6 +23,18 @@ from pydantic import (
 )
 
 from crewai.a2a.auth.schemas import AuthScheme
+
+
+def _default_transport_protocol() -> Any:
+    """Get default transport protocol, handling optional a2a-sdk dependency."""
+    try:
+        from a2a.types import TransportProtocol
+
+        return TransportProtocol("JSONRPC")
+    except ImportError:
+        # Fallback to string when a2a-sdk is not installed
+        # This will be validated when A2A functionality is actually used
+        return "JSONRPC"
 
 
 http_url_adapter = TypeAdapter(HttpUrl)
@@ -64,6 +82,6 @@ class A2AConfig(BaseModel):
         description='If True, return the A2A agent\'s result directly when status is "completed" without asking the server agent to respond. If False, always ask the server agent to respond, allowing it to potentially delegate again.',
     )
     transport_protocol: TransportProtocol = Field(
-        default_factory=lambda: TransportProtocol("JSONRPC"),
+        default_factory=_default_transport_protocol,
         description="Optional A2A transport protocol (grpc, jsonrpc, http+json)",
     )
