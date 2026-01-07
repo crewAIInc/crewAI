@@ -145,4 +145,5 @@ class StreamingHandler:
             status=TaskState.completed,
             result=" ".join(result_parts) if result_parts else "",
             history=new_messages,
+            agent_card=agent_card,
         )
