@@ -877,3 +877,116 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
+def test_usage_info_non_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+    assert llm.stream is False
+
+    with patch.object(
+        llm, "_handle_non_streaming_response", wraps=llm._handle_non_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
+def test_usage_info_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+    assert llm.stream is True
+
+    with patch.object(
+        llm, "_handle_streaming_response", wraps=llm._handle_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+async def test_usage_info_non_streaming_with_acall():
+    llm = LLM(
+        model="openai/gpt-4o-mini", 
+        is_litellm=True,
+        stream=False,
+    )
+
+    # sanity check
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_ahandle_non_streaming_response", wraps=llm._ahandle_non_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    # token usage assertions (robust)
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr(record_mode="none",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+async def test_usage_info_streaming_with_acall():
+    llm = LLM(
+        model="gpt-4o-mini",
+        is_litellm=True,
+        stream=True,
+    )
+
+    assert llm.stream is True
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+    
+    with patch.object(
+        llm, "_ahandle_streaming_response", wraps=llm._ahandle_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0

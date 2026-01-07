@@ -10,16 +10,13 @@ import time
 from typing import TYPE_CHECKING, Any
 import uuid
 
-from a2a.client import Client, ClientConfig, ClientFactory
-from a2a.client.errors import A2AClientHTTPError
+from a2a.client import A2AClientHTTPError, Client, ClientConfig, ClientFactory
 from a2a.types import (
     AgentCard,
     Message,
     Part,
+    PushNotificationConfig as A2APushNotificationConfig,
     Role,
-    TaskArtifactUpdateEvent,
-    TaskState,
-    TaskStatusUpdateEvent,
     TextPart,
     TransportProtocol,
 )
@@ -36,22 +33,47 @@ from crewai.a2a.auth.utils import (
     validate_auth_against_agent_card,
 )
 from crewai.a2a.config import A2AConfig
-from crewai.a2a.types import PartsDict, PartsMetadataDict
+from crewai.a2a.task_helpers import TaskStateResult
+from crewai.a2a.types import (
+    HANDLER_REGISTRY,
+    HandlerType,
+    PartsDict,
+    PartsMetadataDict,
+)
+from crewai.a2a.updates import (
+    PollingConfig,
+    PushNotificationConfig,
+    StreamingHandler,
+    UpdateConfig,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationStartedEvent,
     A2ADelegationCompletedEvent,
     A2ADelegationStartedEvent,
     A2AMessageSentEvent,
-    A2AResponseReceivedEvent,
 )
 from crewai.types.utils import create_literals_from_strings
 
 
 if TYPE_CHECKING:
-    from a2a.types import Message, Task as A2ATask
+    from a2a.types import Message
 
     from crewai.a2a.auth.schemas import AuthScheme
+
+
+def get_handler(config: UpdateConfig | None) -> HandlerType:
+    """Get the handler class for a given update config.
+
+    Args:
+        config: Update mechanism configuration.
+
+    Returns:
+        Handler class for the config type, defaults to StreamingHandler.
+    """
+    if config is None:
+        return StreamingHandler
+    return HANDLER_REGISTRY.get(type(config), StreamingHandler)
 
 
 @lru_cache()
@@ -61,24 +83,14 @@ def _fetch_agent_card_cached(
     timeout: int,
     _ttl_hash: int,
 ) -> AgentCard:
-    """Cached version of fetch_agent_card with auth support.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth_hash: Hash of the auth object
-        timeout: Request timeout
-        _ttl_hash: Time-based hash for cache invalidation
-
-    Returns:
-        Cached AgentCard
-    """
+    """Cached sync version of fetch_agent_card."""
     auth = _auth_store.get(auth_hash)
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(
-            _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+            _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
         )
     finally:
         loop.close()
@@ -128,47 +140,74 @@ def fetch_agent_card(
     asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(
-            _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+            afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
         )
     finally:
         loop.close()
 
 
+async def afetch_agent_card(
+    endpoint: str,
+    auth: AuthScheme | None = None,
+    timeout: int = 30,
+    use_cache: bool = True,
+) -> AgentCard:
+    """Fetch AgentCard from an A2A endpoint asynchronously.
+
+    Native async implementation. Use this when running in an async context.
+
+    Args:
+        endpoint: A2A agent endpoint URL (AgentCard URL).
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        use_cache: Whether to use caching (default True).
+
+    Returns:
+        AgentCard object with agent capabilities and skills.
+
+    Raises:
+        httpx.HTTPStatusError: If the request fails.
+        A2AClientHTTPError: If authentication fails.
+    """
+    if use_cache:
+        if auth:
+            auth_data = auth.model_dump_json(
+                exclude={
+                    "_access_token",
+                    "_token_expires_at",
+                    "_refresh_token",
+                    "_authorization_callback",
+                }
+            )
+            auth_hash = hash((type(auth).__name__, auth_data))
+        else:
+            auth_hash = 0
+        _auth_store[auth_hash] = auth
+        agent_card: AgentCard = await _afetch_agent_card_cached(
+            endpoint, auth_hash, timeout
+        )
+        return agent_card
+
+    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
+
+
 @cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
-async def _fetch_agent_card_async_cached(
+async def _afetch_agent_card_cached(
     endpoint: str,
     auth_hash: int,
     timeout: int,
 ) -> AgentCard:
-    """Cached async implementation of AgentCard fetching.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth_hash: Hash of the auth object
-        timeout: Request timeout in seconds
-
-    Returns:
-        Cached AgentCard object
-    """
+    """Cached async implementation of AgentCard fetching."""
     auth = _auth_store.get(auth_hash)
-    return await _fetch_agent_card_async(endpoint=endpoint, auth=auth, timeout=timeout)
+    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
 
 
-async def _fetch_agent_card_async(
+async def _afetch_agent_card_impl(
     endpoint: str,
     auth: AuthScheme | None,
     timeout: int,
 ) -> AgentCard:
-    """Async implementation of AgentCard fetching.
-
-    Args:
-        endpoint: A2A agent endpoint URL
-        auth: Optional AuthScheme for authentication
-        timeout: Request timeout in seconds
-
-    Returns:
-        AgentCard object
-    """
+    """Internal async implementation of AgentCard fetching."""
     if "/.well-known/agent-card.json" in endpoint:
         base_url = endpoint.replace("/.well-known/agent-card.json", "")
         agent_card_path = "/.well-known/agent-card.json"
@@ -236,15 +275,12 @@ def execute_a2a_delegation(
     agent_branch: Any | None = None,
     response_model: type[BaseModel] | None = None,
     turn_number: int | None = None,
-) -> dict[str, Any]:
-    """Execute a task delegation to a remote A2A agent with multi-turn support.
+    updates: UpdateConfig | None = None,
+) -> TaskStateResult:
+    """Execute a task delegation to a remote A2A agent synchronously.
 
-    Handles:
-    - AgentCard discovery
-    - Authentication setup
-    - Message creation and sending
-    - Response parsing
-    - Multi-turn conversations
+    This is the sync wrapper around aexecute_a2a_delegation. For async contexts,
+    use aexecute_a2a_delegation directly.
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL)
@@ -264,37 +300,32 @@ def execute_a2a_delegation(
         agent_branch: Optional agent tree branch for logging
         response_model: Optional Pydantic model for structured outputs
         turn_number: Optional turn number for multi-turn conversations
+        endpoint: A2A agent endpoint URL.
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        task_description: The task to delegate.
+        context: Optional context information.
+        context_id: Context ID for correlating messages/tasks.
+        task_id: Specific task identifier.
+        reference_task_ids: List of related task IDs.
+        metadata: Additional metadata.
+        extensions: Protocol extensions for custom fields.
+        conversation_history: Previous Message objects from conversation.
+        agent_id: Agent identifier for logging.
+        agent_role: Role of the CrewAI agent delegating the task.
+        agent_branch: Optional agent tree branch for logging.
+        response_model: Optional Pydantic model for structured outputs.
+        turn_number: Optional turn number for multi-turn conversations.
+        updates: Update mechanism config from A2AConfig.updates.
+
     Returns:
-        Dictionary with:
-        - status: "completed", "input_required", "failed", etc.
-        - result: Result string (if completed)
-        - error: Error message (if failed)
-        - history: List of new Message objects from this exchange
-
-    Raises:
-        ImportError: If a2a-sdk is not installed
+        TaskStateResult with status, result/error, history, and agent_card.
     """
-    is_multiturn = bool(conversation_history and len(conversation_history) > 0)
-    if turn_number is None:
-        turn_number = (
-            len([m for m in (conversation_history or []) if m.role == Role.user]) + 1
-        )
-    crewai_event_bus.emit(
-        agent_branch,
-        A2ADelegationStartedEvent(
-            endpoint=endpoint,
-            task_description=task_description,
-            agent_id=agent_id,
-            is_multiturn=is_multiturn,
-            turn_number=turn_number,
-        ),
-    )
-
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        result = loop.run_until_complete(
-            _execute_a2a_delegation_async(
+        return loop.run_until_complete(
+            aexecute_a2a_delegation(
                 endpoint=endpoint,
                 auth=auth,
                 timeout=timeout,
@@ -305,53 +336,44 @@ def execute_a2a_delegation(
                 reference_task_ids=reference_task_ids,
                 metadata=metadata,
                 extensions=extensions,
-                conversation_history=conversation_history or [],
-                is_multiturn=is_multiturn,
-                turn_number=turn_number,
-                agent_branch=agent_branch,
+                conversation_history=conversation_history,
                 agent_id=agent_id,
                 agent_role=agent_role,
+                agent_branch=agent_branch,
                 response_model=response_model,
                 transport_protocol=transport_protocol,
+                turn_number=turn_number,
+                updates=updates,
             )
         )
-
-        crewai_event_bus.emit(
-            agent_branch,
-            A2ADelegationCompletedEvent(
-                status=result["status"],
-                result=result.get("result"),
-                error=result.get("error"),
-                is_multiturn=is_multiturn,
-            ),
-        )
-
-        return result
     finally:
         loop.close()
 
 
-async def _execute_a2a_delegation_async(
+async def aexecute_a2a_delegation(
     endpoint: str,
     transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
-    context: str | None,
-    context_id: str | None,
-    task_id: str | None,
-    reference_task_ids: list[str] | None,
-    metadata: dict[str, Any] | None,
-    extensions: dict[str, Any] | None,
-    conversation_history: list[Message],
-    is_multiturn: bool = False,
-    turn_number: int = 1,
-    agent_branch: Any | None = None,
+    context: str | None = None,
+    context_id: str | None = None,
+    task_id: str | None = None,
+    reference_task_ids: list[str] | None = None,
+    metadata: dict[str, Any] | None = None,
+    extensions: dict[str, Any] | None = None,
+    conversation_history: list[Message] | None = None,
     agent_id: str | None = None,
-    agent_role: str | None = None,
+    agent_role: Role | None = None,
+    agent_branch: Any | None = None,
     response_model: type[BaseModel] | None = None,
-) -> dict[str, Any]:
-    """Async implementation of A2A delegation with multi-turn support.
+    turn_number: int | None = None,
+    updates: UpdateConfig | None = None,
+) -> TaskStateResult:
+    """Execute a task delegation to a remote A2A agent asynchronously.
+
+    Native async implementation with multi-turn support. Use this when running
+    in an async context (e.g., with Crew.akickoff() or agent.aexecute_task()).
 
     Args:
         endpoint: A2A agent endpoint URL
@@ -372,10 +394,100 @@ async def _execute_a2a_delegation_async(
         agent_id: Agent identifier for logging
         agent_role: Agent role for logging
         response_model: Optional Pydantic model for structured outputs
+        endpoint: A2A agent endpoint URL.
+        auth: Optional AuthScheme for authentication.
+        timeout: Request timeout in seconds.
+        task_description: The task to delegate.
+        context: Optional context information.
+        context_id: Context ID for correlating messages/tasks.
+        task_id: Specific task identifier.
+        reference_task_ids: List of related task IDs.
+        metadata: Additional metadata.
+        extensions: Protocol extensions for custom fields.
+        conversation_history: Previous Message objects from conversation.
+        agent_id: Agent identifier for logging.
+        agent_role: Role of the CrewAI agent delegating the task.
+        agent_branch: Optional agent tree branch for logging.
+        response_model: Optional Pydantic model for structured outputs.
+        turn_number: Optional turn number for multi-turn conversations.
+        updates: Update mechanism config from A2AConfig.updates.
 
     Returns:
-        Dictionary with status, result/error, and new history
+        TaskStateResult with status, result/error, history, and agent_card.
     """
+    if conversation_history is None:
+        conversation_history = []
+
+    is_multiturn = len(conversation_history) > 0
+    if turn_number is None:
+        turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
+
+    crewai_event_bus.emit(
+        agent_branch,
+        A2ADelegationStartedEvent(
+            endpoint=endpoint,
+            task_description=task_description,
+            agent_id=agent_id,
+            is_multiturn=is_multiturn,
+            turn_number=turn_number,
+        ),
+    )
+
+    result = await _aexecute_a2a_delegation_impl(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        task_description=task_description,
+        context=context,
+        context_id=context_id,
+        task_id=task_id,
+        reference_task_ids=reference_task_ids,
+        metadata=metadata,
+        extensions=extensions,
+        conversation_history=conversation_history,
+        is_multiturn=is_multiturn,
+        turn_number=turn_number,
+        agent_branch=agent_branch,
+        agent_id=agent_id,
+        agent_role=agent_role,
+        response_model=response_model,
+        updates=updates,
+    )
+
+    crewai_event_bus.emit(
+        agent_branch,
+        A2ADelegationCompletedEvent(
+            status=result["status"],
+            result=result.get("result"),
+            error=result.get("error"),
+            is_multiturn=is_multiturn,
+        ),
+    )
+
+    return result
+
+
+async def _aexecute_a2a_delegation_impl(
+    endpoint: str,
+    auth: AuthScheme | None,
+    timeout: int,
+    task_description: str,
+    context: str | None,
+    context_id: str | None,
+    task_id: str | None,
+    reference_task_ids: list[str] | None,
+    metadata: dict[str, Any] | None,
+    extensions: dict[str, Any] | None,
+    conversation_history: list[Message],
+    is_multiturn: bool,
+    turn_number: int,
+    agent_branch: Any | None,
+    agent_id: str | None,
+    agent_role: str | None,
+    response_model: type[BaseModel] | None,
+    updates: UpdateConfig | None,
+) -> TaskStateResult:
+    """Internal async implementation of A2A delegation."""
     if auth:
         auth_data = auth.model_dump_json(
             exclude={
@@ -389,7 +501,7 @@ async def _execute_a2a_delegation_async(
     else:
         auth_hash = 0
     _auth_store[auth_hash] = auth
-    agent_card = await _fetch_agent_card_async_cached(
+    agent_card = await _afetch_agent_card_cached(
         endpoint=endpoint, auth_hash=auth_hash, timeout=timeout
     )
 
@@ -461,201 +573,61 @@ async def _execute_a2a_delegation_async(
         ),
     )
 
+    handler = get_handler(updates)
+    use_polling = isinstance(updates, PollingConfig)
+
+    handler_kwargs: dict[str, Any] = {
+        "turn_number": turn_number,
+        "is_multiturn": is_multiturn,
+        "agent_role": agent_role,
+        "context_id": context_id,
+        "task_id": task_id,
+        "endpoint": endpoint,
+        "agent_branch": agent_branch,
+    }
+
+    if isinstance(updates, PollingConfig):
+        handler_kwargs.update(
+            {
+                "polling_interval": updates.interval,
+                "polling_timeout": updates.timeout or float(timeout),
+                "history_length": updates.history_length,
+                "max_polls": updates.max_polls,
+            }
+        )
+    elif isinstance(updates, PushNotificationConfig):
+        handler_kwargs.update(
+            {
+                "config": updates,
+                "result_store": updates.result_store,
+                "polling_timeout": updates.timeout or float(timeout),
+                "polling_interval": updates.interval,
+            }
+        )
+
+    push_config_for_client = (
+        updates if isinstance(updates, PushNotificationConfig) else None
+    )
+
+    use_streaming = not use_polling and push_config_for_client is None
+
     async with _create_a2a_client(
         agent_card=agent_card,
         transport_protocol=transport_protocol,
         timeout=timeout,
         headers=headers,
-        streaming=True,
+        streaming=use_streaming,
         auth=auth,
+        use_polling=use_polling,
+        push_notification_config=push_config_for_client,
     ) as client:
-        result_parts: list[str] = []
-        final_result: dict[str, Any] | None = None
-        event_stream = client.send_message(message)
-
-        try:
-            async for event in event_stream:
-                if isinstance(event, Message):
-                    new_messages.append(event)
-                    for part in event.parts:
-                        if part.root.kind == "text":
-                            text = part.root.text
-                            result_parts.append(text)
-
-                elif isinstance(event, tuple):
-                    a2a_task, update = event
-
-                    if isinstance(update, TaskArtifactUpdateEvent):
-                        artifact = update.artifact
-                        result_parts.extend(
-                            part.root.text
-                            for part in artifact.parts
-                            if part.root.kind == "text"
-                        )
-
-                    is_final_update = False
-                    if isinstance(update, TaskStatusUpdateEvent):
-                        is_final_update = update.final
-
-                    if not is_final_update and a2a_task.status.state not in [
-                        TaskState.completed,
-                        TaskState.input_required,
-                        TaskState.failed,
-                        TaskState.rejected,
-                        TaskState.auth_required,
-                        TaskState.canceled,
-                    ]:
-                        continue
-
-                    if a2a_task.status.state == TaskState.completed:
-                        extracted_parts = _extract_task_result_parts(a2a_task)
-                        result_parts.extend(extracted_parts)
-                        if a2a_task.history:
-                            new_messages.extend(a2a_task.history)
-
-                        response_text = " ".join(result_parts) if result_parts else ""
-                        crewai_event_bus.emit(
-                            None,
-                            A2AResponseReceivedEvent(
-                                response=response_text,
-                                turn_number=turn_number,
-                                is_multiturn=is_multiturn,
-                                status="completed",
-                                agent_role=agent_role,
-                            ),
-                        )
-
-                        final_result = {
-                            "status": "completed",
-                            "result": response_text,
-                            "history": new_messages,
-                            "agent_card": agent_card,
-                        }
-                        break
-
-                    if a2a_task.status.state == TaskState.input_required:
-                        if a2a_task.history:
-                            new_messages.extend(a2a_task.history)
-
-                        response_text = _extract_error_message(
-                            a2a_task, "Additional input required"
-                        )
-                        if response_text and not a2a_task.history:
-                            agent_message = Message(
-                                role=Role.agent,
-                                message_id=str(uuid.uuid4()),
-                                parts=[Part(root=TextPart(text=response_text))],
-                                context_id=a2a_task.context_id
-                                if hasattr(a2a_task, "context_id")
-                                else None,
-                                task_id=a2a_task.task_id
-                                if hasattr(a2a_task, "task_id")
-                                else None,
-                            )
-                            new_messages.append(agent_message)
-                        crewai_event_bus.emit(
-                            None,
-                            A2AResponseReceivedEvent(
-                                response=response_text,
-                                turn_number=turn_number,
-                                is_multiturn=is_multiturn,
-                                status="input_required",
-                                agent_role=agent_role,
-                            ),
-                        )
-
-                        final_result = {
-                            "status": "input_required",
-                            "error": response_text,
-                            "history": new_messages,
-                            "agent_card": agent_card,
-                        }
-                        break
-
-                    if a2a_task.status.state in [TaskState.failed, TaskState.rejected]:
-                        error_msg = _extract_error_message(
-                            a2a_task, "Task failed without error message"
-                        )
-                        if a2a_task.history:
-                            new_messages.extend(a2a_task.history)
-                        final_result = {
-                            "status": "failed",
-                            "error": error_msg,
-                            "history": new_messages,
-                        }
-                        break
-
-                    if a2a_task.status.state == TaskState.auth_required:
-                        error_msg = _extract_error_message(
-                            a2a_task, "Authentication required"
-                        )
-                        final_result = {
-                            "status": "auth_required",
-                            "error": error_msg,
-                            "history": new_messages,
-                        }
-                        break
-
-                    if a2a_task.status.state == TaskState.canceled:
-                        error_msg = _extract_error_message(
-                            a2a_task, "Task was canceled"
-                        )
-                        final_result = {
-                            "status": "canceled",
-                            "error": error_msg,
-                            "history": new_messages,
-                        }
-                        break
-        except Exception as e:
-            if isinstance(e, A2AClientHTTPError):
-                error_msg = f"HTTP Error {e.status_code}: {e!s}"
-
-                error_message = Message(
-                    role=Role.agent,
-                    message_id=str(uuid.uuid4()),
-                    parts=[Part(root=TextPart(text=error_msg))],
-                    context_id=context_id,
-                    task_id=task_id,
-                )
-                new_messages.append(error_message)
-
-                crewai_event_bus.emit(
-                    None,
-                    A2AResponseReceivedEvent(
-                        response=error_msg,
-                        turn_number=turn_number,
-                        is_multiturn=is_multiturn,
-                        status="failed",
-                        agent_role=agent_role,
-                    ),
-                )
-                return {
-                    "status": "failed",
-                    "error": error_msg,
-                    "history": new_messages,
-                }
-
-            current_exception: Exception | BaseException | None = e
-            while current_exception:
-                if hasattr(current_exception, "response"):
-                    response = current_exception.response
-                    if hasattr(response, "text"):
-                        break
-                if current_exception and hasattr(current_exception, "__cause__"):
-                    current_exception = current_exception.__cause__
-            raise
-        finally:
-            if hasattr(event_stream, "aclose"):
-                await event_stream.aclose()
-
-    if final_result:
-        return final_result
-
-    return {
-        "status": "completed",
-        "result": " ".join(result_parts) if result_parts else "",
-        "history": new_messages,
-    }
+        return await handler.execute(
+            client=client,
+            message=message,
+            new_messages=new_messages,
+            agent_card=agent_card,
+            **handler_kwargs,
+        )
 
 
 @asynccontextmanager
@@ -666,6 +638,8 @@ async def _create_a2a_client(
     headers: MutableMapping[str, str],
     streaming: bool,
     auth: AuthScheme | None = None,
+    use_polling: bool = False,
+    push_notification_config: PushNotificationConfig | None = None,
 ) -> AsyncIterator[Client]:
     """Create and configure an A2A client.
 
@@ -676,6 +650,8 @@ async def _create_a2a_client(
         headers: HTTP headers (already with auth applied)
         streaming: Enable streaming responses
         auth: Optional AuthScheme for client configuration
+        use_polling: Enable polling mode
+        push_notification_config: Optional push notification config to include in requests
 
     Yields:
         Configured A2A client instance
@@ -688,76 +664,29 @@ async def _create_a2a_client(
         if auth and isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
             configure_auth_client(auth, httpx_client)
 
+        push_configs: list[A2APushNotificationConfig] = []
+        if push_notification_config is not None:
+            push_configs.append(
+                A2APushNotificationConfig(
+                    url=str(push_notification_config.url),
+                    id=push_notification_config.id,
+                    token=push_notification_config.token,
+                    authentication=push_notification_config.authentication,
+                )
+            )
+
         config = ClientConfig(
             httpx_client=httpx_client,
             supported_transports=[str(transport_protocol.value)],
-            streaming=streaming,
+            streaming=streaming and not use_polling,
+            polling=use_polling,
             accepted_output_modes=["application/json"],
+            push_notification_configs=push_configs,
         )
 
         factory = ClientFactory(config)
         client = factory.create(agent_card)
         yield client
-
-
-def _extract_task_result_parts(a2a_task: A2ATask) -> list[str]:
-    """Extract result parts from A2A task history and artifacts.
-
-    Args:
-        a2a_task: A2A Task object with history and artifacts
-
-    Returns:
-        List of result text parts
-    """
-
-    result_parts: list[str] = []
-
-    if a2a_task.history:
-        for history_msg in reversed(a2a_task.history):
-            if history_msg.role == Role.agent:
-                result_parts.extend(
-                    part.root.text
-                    for part in history_msg.parts
-                    if part.root.kind == "text"
-                )
-                break
-
-    if a2a_task.artifacts:
-        result_parts.extend(
-            part.root.text
-            for artifact in a2a_task.artifacts
-            for part in artifact.parts
-            if part.root.kind == "text"
-        )
-
-    return result_parts
-
-
-def _extract_error_message(a2a_task: A2ATask, default: str) -> str:
-    """Extract error message from A2A task.
-
-    Args:
-        a2a_task: A2A Task object
-        default: Default message if no error found
-
-    Returns:
-        Error message string
-    """
-    if a2a_task.status and a2a_task.status.message:
-        msg = a2a_task.status.message
-        if msg:
-            for part in msg.parts:
-                if part.root.kind == "text":
-                    return str(part.root.text)
-        return str(msg)
-
-    if a2a_task.history:
-        for history_msg in reversed(a2a_task.history):
-            for part in history_msg.parts:
-                if part.root.kind == "text":
-                    return str(part.root.text)
-
-    return default
 
 
 def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
@@ -791,7 +720,7 @@ def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
         is_a2a=(
             bool,
             Field(
-                description="Set to true to continue the conversation by sending this message to the A2A agent and awaiting their response. Set to false ONLY when you are completely done and providing your final answer (not when asking questions)."
+                description="Set to false when the remote agent has answered your question - extract their answer and return it as your final message. Set to true ONLY if you need to ask a NEW, DIFFERENT question. NEVER repeat the same request - if the conversation history shows the agent already answered, set is_a2a=false immediately."
             ),
         ),
         __base__=BaseModel,
