@@ -5,7 +5,7 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar
 
 from pydantic import (
     BaseModel,
@@ -16,8 +16,10 @@ from pydantic import (
     TypeAdapter,
 )
 
-from crewai.a2a.auth.schemas import AuthScheme
-from crewai.a2a.updates import StreamingConfig, UpdateConfig
+
+if TYPE_CHECKING:
+    from crewai.a2a.auth.schemas import AuthScheme
+    from crewai.a2a.updates import UpdateConfig
 
 
 http_url_adapter = TypeAdapter(HttpUrl)
@@ -28,6 +30,12 @@ Url = Annotated[
         lambda value: str(http_url_adapter.validate_python(value, strict=True))
     ),
 ]
+
+
+def _get_default_update_config() -> UpdateConfig:
+    from crewai.a2a.updates import StreamingConfig
+
+    return StreamingConfig()
 
 
 class A2AConfig(BaseModel):
@@ -68,6 +76,6 @@ class A2AConfig(BaseModel):
         description="If True, return A2A result directly when completed",
     )
     updates: UpdateConfig = Field(
-        default_factory=StreamingConfig,
+        default_factory=_get_default_update_config,
         description="Update mechanism config",
     )
