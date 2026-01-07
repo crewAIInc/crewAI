@@ -16,9 +16,10 @@ from pydantic import (
     TypeAdapter,
 )
 
+from crewai.a2a.auth.schemas import AuthScheme
+
 
 if TYPE_CHECKING:
-    from crewai.a2a.auth.schemas import AuthScheme
     from crewai.a2a.updates import UpdateConfig
 
 
