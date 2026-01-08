@@ -63,12 +63,12 @@ def _memoize_sync(meth: Callable[P, R]) -> Callable[P, R]:
         )
         cache_key = str((hashable_args, hashable_kwargs))
 
-        cached_result: R | None = cache.read(tool=meth.__name__, input=cache_key)
+        cached_result: R | None = cache.read(tool=meth.__name__, tool_input=cache_key)
         if cached_result is not None:
             return cached_result
 
         result = meth(*args, **kwargs)
-        cache.add(tool=meth.__name__, input=cache_key, output=result)
+        cache.add(tool=meth.__name__, tool_input=cache_key, output=result)
         return result
 
     return cast(Callable[P, R], wrapper)

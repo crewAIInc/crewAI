@@ -462,7 +462,7 @@ class ToolUsage:
                     input_str = str(calling.arguments)
 
             result = self.tools_handler.cache.read(
-                tool=calling.tool_name, input=input_str
+                tool=calling.tool_name, tool_input=input_str
             )  # type: ignore
             from_cache = result is not None
 

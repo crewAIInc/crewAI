@@ -58,7 +58,7 @@ class ToolsHandler:
 
             self.cache.add(
                 tool=calling.tool_name,
-                input=input_str,
+                tool_input=input_str,
                 output=output,
             )
 
