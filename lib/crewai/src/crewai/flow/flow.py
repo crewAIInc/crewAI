@@ -1203,7 +1203,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result = self.kickoff(inputs=inputs)
                     result_holder.append(result)
                 except Exception as e:
-                    signal_error(state, e)
+                    # HumanFeedbackPending is expected control flow, not an error
+                    from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+                    if isinstance(e, HumanFeedbackPending):
+                        result_holder.append(e)
+                    else:
+                        signal_error(state, e)
                 finally:
                     self.stream = True
                     signal_end(state)
@@ -1258,7 +1264,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     result = await self.kickoff_async(inputs=inputs)
                     result_holder.append(result)
                 except Exception as e:
-                    signal_error(state, e, is_async=True)
+                    # HumanFeedbackPending is expected control flow, not an error
+                    from crewai.flow.async_feedback.types import HumanFeedbackPending
+
+                    if isinstance(e, HumanFeedbackPending):
+                        result_holder.append(e)
+                    else:
+                        signal_error(state, e, is_async=True)
                 finally:
                     self.stream = True
                     signal_end(state, is_async=True)
