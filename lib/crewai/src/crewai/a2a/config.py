@@ -5,17 +5,24 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any, ClassVar
 
 from pydantic import (
     BaseModel,
     BeforeValidator,
+    ConfigDict,
     Field,
     HttpUrl,
     TypeAdapter,
 )
 
 from crewai.a2a.auth.schemas import AuthScheme
+
+
+try:
+    from crewai.a2a.updates import UpdateConfig
+except ImportError:
+    UpdateConfig = Any  # type: ignore[misc,assignment]
 
 
 http_url_adapter = TypeAdapter(HttpUrl)
@@ -28,23 +35,32 @@ Url = Annotated[
 ]
 
 
+def _get_default_update_config() -> UpdateConfig:
+    from crewai.a2a.updates import StreamingConfig
+
+    return StreamingConfig()
+
+
 class A2AConfig(BaseModel):
     """Configuration for A2A protocol integration.
 
     Attributes:
         endpoint: A2A agent endpoint URL.
-        auth: Authentication scheme (Bearer, OAuth2, API Key, HTTP Basic/Digest).
-        timeout: Request timeout in seconds (default: 120).
-        max_turns: Maximum conversation turns with A2A agent (default: 10).
+        auth: Authentication scheme.
+        timeout: Request timeout in seconds.
+        max_turns: Maximum conversation turns with A2A agent.
         response_model: Optional Pydantic model for structured A2A agent responses.
-        fail_fast: If True, raise error when agent unreachable; if False, skip and continue (default: True).
-        trust_remote_completion_status: If True, return A2A agent's result directly when status is "completed"; if False, always ask server agent to respond (default: False).
+        fail_fast: If True, raise error when agent unreachable; if False, skip and continue.
+        trust_remote_completion_status: If True, return A2A agent's result directly when completed.
+        updates: Update mechanism config.
     """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     endpoint: Url = Field(description="A2A agent endpoint URL")
     auth: AuthScheme | None = Field(
         default=None,
-        description="Authentication scheme (Bearer, OAuth2, API Key, HTTP Basic/Digest)",
+        description="Authentication scheme",
     )
     timeout: int = Field(default=120, description="Request timeout in seconds")
     max_turns: int = Field(
@@ -52,13 +68,17 @@ class A2AConfig(BaseModel):
     )
     response_model: type[BaseModel] | None = Field(
         default=None,
-        description="Optional Pydantic model for structured A2A agent responses. When specified, the A2A agent is expected to return JSON matching this schema.",
+        description="Optional Pydantic model for structured A2A agent responses",
     )
     fail_fast: bool = Field(
         default=True,
-        description="If True, raise an error immediately when the A2A agent is unreachable. If False, skip the A2A agent and continue execution.",
+        description="If True, raise error when agent unreachable; if False, skip",
     )
     trust_remote_completion_status: bool = Field(
         default=False,
-        description='If True, return the A2A agent\'s result directly when status is "completed" without asking the server agent to respond. If False, always ask the server agent to respond, allowing it to potentially delegate again.',
+        description="If True, return A2A result directly when completed",
+    )
+    updates: UpdateConfig = Field(
+        default_factory=_get_default_update_config,
+        description="Update mechanism config",
     )

@@ -6,15 +6,16 @@ This module provides evaluator implementations for:
 - Thinking-to-action ratio
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from enum import Enum
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation.base_evaluator import (
     BaseEvaluator,
@@ -25,6 +26,10 @@ from crewai.experimental.evaluation.json_parser import extract_json_from_llm_res
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ReasoningPatternType(Enum):

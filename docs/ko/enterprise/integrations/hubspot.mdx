@@ -13,7 +13,7 @@ mode: "wide"
 
 HubSpot 통합을 사용하기 전에 다음을 확인하세요.
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 권한이 있는 HubSpot 계정
 - [통합 페이지](https://app.crewai.com/crewai_plus/connectors)를 통해 HubSpot 계정이 연결되어 있음
 
@@ -21,7 +21,7 @@ HubSpot 통합을 사용하기 전에 다음을 확인하세요.
 
 ### 1. HubSpot 계정 연결하기
 
-1. [CrewAI AOP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
+1. [CrewAI AMP Integrations](https://app.crewai.com/crewai_plus/connectors)로 이동합니다.
 2. 인증 통합 섹션에서 **HubSpot**을 찾습니다.
 3. **Connect**를 클릭하고 OAuth 플로우를 완료합니다.
 4. 회사 및 연락처 관리를 위한 필요한 권한을 부여합니다.
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -115,6 +116,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `web_technologies` (string, 선택): 사용한 웹 기술. 미리 정의된 값 중 하나여야 합니다.
     - `website` (string, 선택): 웹사이트 URL.
     - `founded_year` (string, 선택): 설립 연도.
+
   </Accordion>
 
   <Accordion title="hubspot/create_contact">
@@ -214,6 +216,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_whatsapp_phone_number` (string, 선택): WhatsApp 전화번호.
     - `work_email` (string, 선택): 업무용 이메일.
     - `hs_googleplusid` (string, 선택): googleplus ID.
+
   </Accordion>
 
   <Accordion title="hubspot/create_deal">
@@ -229,6 +232,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dealtype` (string, 선택): 거래 유형. 사용 가능한 값: `newbusiness`, `existingbusiness`.
     - `description` (string, 선택): 거래 설명.
     - `hs_priority` (string, 선택): 거래 우선순위. 사용 가능한 값: `low`, `medium`, `high`.
+
   </Accordion>
 
   <Accordion title="hubspot/create_record_engagements">
@@ -246,6 +250,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_meeting_body` (string, 선택): 미팅 설명. (`MEETING`에서 사용)
     - `hs_meeting_start_time` (string, 선택): 미팅 시작 시간. (`MEETING`에서 사용)
     - `hs_meeting_end_time` (string, 선택): 미팅 종료 시간. (`MEETING`에서 사용)
+
   </Accordion>
 
   <Accordion title="hubspot/update_company">
@@ -263,6 +268,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `numberofemployees` (number, 선택): 직원 수.
     - `annualrevenue` (number, 선택): 연간 매출.
     - `description` (string, 선택): 설명.
+
   </Accordion>
 
   <Accordion title="hubspot/create_record_any">
@@ -271,6 +277,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
     - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
+
   </Accordion>
 
   <Accordion title="hubspot/update_contact">
@@ -285,6 +292,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `company` (string, 선택): 회사명.
     - `jobtitle` (string, 선택): 직책.
     - `lifecyclestage` (string, 선택): 라이프사이클 단계.
+
   </Accordion>
 
   <Accordion title="hubspot/update_deal">
@@ -298,6 +306,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pipeline` (string, 선택): 거래가 속한 파이프라인.
     - `closedate` (string, 선택): 예상 마감일.
     - `dealtype` (string, 선택): 거래 유형.
+
   </Accordion>
 
   <Accordion title="hubspot/update_record_engagements">
@@ -309,6 +318,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `hs_task_subject` (string, 선택): 작업 제목.
     - `hs_task_body` (string, 선택): 작업 노트.
     - `hs_task_status` (string, 선택): 작업 상태.
+
   </Accordion>
 
   <Accordion title="hubspot/update_record_any">
@@ -318,6 +328,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `recordId` (string, 필수): 업데이트할 레코드의 ID.
     - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
     - 추가 파라미터는 커스텀 오브젝트의 스키마에 따라 다릅니다.
+
   </Accordion>
 
   <Accordion title="hubspot/list_companies">
@@ -325,6 +336,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/list_contacts">
@@ -332,6 +344,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/list_deals">
@@ -339,6 +352,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/get_records_engagements">
@@ -347,6 +361,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `objectName` (string, 필수): 가져올 참여 유형(예: "notes").
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/get_records_any">
@@ -355,6 +370,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/get_company">
@@ -362,6 +378,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 회사의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/get_contact">
@@ -369,6 +386,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 연락처의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/get_deal">
@@ -376,6 +394,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 거래의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/get_record_by_id_engagements">
@@ -383,6 +402,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 가져올 참여의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/get_record_by_id_any">
@@ -391,6 +411,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
     - `recordId` (string, 필수): 가져올 레코드의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/search_companies">
@@ -399,6 +420,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/search_contacts">
@@ -407,6 +429,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/search_deals">
@@ -415,6 +438,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `filterFormula` (object, 선택): 분리 정규형(OR of ANDs) 필터.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/search_records_engagements">
@@ -423,6 +447,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `engagementFilterFormula` (object, 선택): 참여 필터.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/search_records_any">
@@ -432,6 +457,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `recordType` (string, 필수): 검색할 오브젝트 타입 ID.
     - `filterFormula` (string, 선택): 적용할 필터 수식.
     - `paginationParameters` (object, 선택): 다음 페이지를 가져오려면 `pageCursor`를 사용하세요.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_companies">
@@ -439,6 +465,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 회사의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_contacts">
@@ -446,6 +473,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 연락처의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_deals">
@@ -453,6 +481,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 거래의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_engagements">
@@ -460,6 +489,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `recordId` (string, 필수): 삭제할 참여의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/delete_record_any">
@@ -468,6 +498,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 커스텀 오브젝트의 오브젝트 타입 ID.
     - `recordId` (string, 필수): 삭제할 레코드의 ID.
+
   </Accordion>
 
   <Accordion title="hubspot/get_contacts_by_list_id">
@@ -476,6 +507,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listId` (string, 필수): 연락처를 가져올 리스트의 ID.
     - `paginationParameters` (object, 선택): 이후 페이지를 위해 `pageCursor` 사용.
+
   </Accordion>
 
   <Accordion title="hubspot/describe_action_schema">
@@ -484,6 +516,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `recordType` (string, 필수): 오브젝트 타입 ID(예: 'companies').
     - `operation` (string, 필수): 작업 유형(예: 'CREATE_RECORD').
+
   </Accordion>
 </AccordionGroup>
 
@@ -577,6 +610,10 @@ crew.kickoff()
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
   HubSpot 연동 설정 또는 문제 해결에 도움이 필요하시면 지원팀에 문의해 주세요.
 </Card>

@@ -1,0 +1,18 @@
+name: Trigger Deployment Tests
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  trigger:
+    name: Trigger deployment tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger deployment tests
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.CREWAI_DEPLOYMENTS_PAT }}
+          repository: ${{ secrets.CREWAI_DEPLOYMENTS_REPOSITORY }}
+          event-type: crewai-release
+          client-payload: '{"release_tag": "${{ github.event.release.tag_name }}", "release_name": "${{ github.event.release.name }}"}'

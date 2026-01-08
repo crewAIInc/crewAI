@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 import shutil
 import subprocess
 import time
@@ -44,6 +44,7 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
 )
+from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent import LiteAgent
@@ -105,7 +106,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor class.
+            agent_executor: An instance of the CrewAgentExecutor or CrewAgentExecutorFlow class.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -220,6 +221,10 @@ class Agent(BaseAgent):
     a2a: list[A2AConfig] | A2AConfig | None = Field(
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+    )
+    executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
+        default=CrewAgentExecutor,
+        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use CrewAgentExecutorFlow.",
     )
 
     @model_validator(mode="before")
@@ -721,28 +726,82 @@ class Agent(BaseAgent):
                 self.response_template.split("{{ .Response }}")[1].strip()
             )
 
-        self.agent_executor = CrewAgentExecutor(
-            llm=self.llm,  # type: ignore[arg-type]
-            task=task,  # type: ignore[arg-type]
-            agent=self,
-            crew=self.crew,
-            tools=parsed_tools,
-            prompt=prompt,
-            original_tools=raw_tools,
-            stop_words=stop_words,
-            max_iter=self.max_iter,
-            tools_handler=self.tools_handler,
-            tools_names=get_tool_names(parsed_tools),
-            tools_description=render_text_description_and_args(parsed_tools),
-            step_callback=self.step_callback,
-            function_calling_llm=self.function_calling_llm,
-            respect_context_window=self.respect_context_window,
-            request_within_rpm_limit=(
-                self._rpm_controller.check_or_wait if self._rpm_controller else None
-            ),
-            callbacks=[TokenCalcHandler(self._token_process)],
-            response_model=task.response_model if task else None,
+        rpm_limit_fn = (
+            self._rpm_controller.check_or_wait if self._rpm_controller else None
         )
+
+        if self.agent_executor is not None:
+            self._update_executor_parameters(
+                task=task,
+                tools=parsed_tools,
+                raw_tools=raw_tools,
+                prompt=prompt,
+                stop_words=stop_words,
+                rpm_limit_fn=rpm_limit_fn,
+            )
+        else:
+            self.agent_executor = self.executor_class(
+                llm=cast(BaseLLM, self.llm),
+                task=task,
+                i18n=self.i18n,
+                agent=self,
+                crew=self.crew,
+                tools=parsed_tools,
+                prompt=prompt,
+                original_tools=raw_tools,
+                stop_words=stop_words,
+                max_iter=self.max_iter,
+                tools_handler=self.tools_handler,
+                tools_names=get_tool_names(parsed_tools),
+                tools_description=render_text_description_and_args(parsed_tools),
+                step_callback=self.step_callback,
+                function_calling_llm=self.function_calling_llm,
+                respect_context_window=self.respect_context_window,
+                request_within_rpm_limit=rpm_limit_fn,
+                callbacks=[TokenCalcHandler(self._token_process)],
+                response_model=task.response_model if task else None,
+            )
+
+    def _update_executor_parameters(
+        self,
+        task: Task | None,
+        tools: list,
+        raw_tools: list[BaseTool],
+        prompt: dict,
+        stop_words: list[str],
+        rpm_limit_fn: Callable | None,
+    ) -> None:
+        """Update executor parameters without recreating instance.
+
+        Args:
+            task: Task to execute.
+            tools: Parsed tools.
+            raw_tools: Original tools.
+            prompt: Generated prompt.
+            stop_words: Stop words list.
+            rpm_limit_fn: RPM limit callback function.
+        """
+        self.agent_executor.task = task
+        self.agent_executor.tools = tools
+        self.agent_executor.original_tools = raw_tools
+        self.agent_executor.prompt = prompt
+        self.agent_executor.stop = stop_words
+        self.agent_executor.tools_names = get_tool_names(tools)
+        self.agent_executor.tools_description = render_text_description_and_args(tools)
+        self.agent_executor.response_model = task.response_model if task else None
+
+        self.agent_executor.tools_handler = self.tools_handler
+        self.agent_executor.request_within_rpm_limit = rpm_limit_fn
+
+        if self.agent_executor.llm:
+            existing_stop = getattr(self.agent_executor.llm, "stop", [])
+            self.agent_executor.llm.stop = list(
+                set(
+                    existing_stop + stop_words
+                    if isinstance(existing_stop, list)
+                    else stop_words
+                )
+            )
 
     def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
@@ -1041,7 +1100,7 @@ class Agent(BaseAgent):
             raise RuntimeError(f"Failed to get native MCP tools: {e}") from e
 
     def _get_amp_mcp_tools(self, amp_ref: str) -> list[BaseTool]:
-        """Get tools from CrewAI AOP MCP marketplace."""
+        """Get tools from CrewAI AMP MCP marketplace."""
         # Parse: "crewai-amp:mcp-name" or "crewai-amp:mcp-name#tool_name"
         amp_part = amp_ref.replace("crewai-amp:", "")
         if "#" in amp_part:
@@ -1296,7 +1355,7 @@ class Agent(BaseAgent):
 
     @staticmethod
     def _fetch_amp_mcp_servers(mcp_name: str) -> list[dict[str, Any]]:
-        """Fetch MCP server configurations from CrewAI AOP API."""
+        """Fetch MCP server configurations from CrewAI AMP API."""
         # TODO: Implement AMP API call to "integrations/mcps" endpoint
         # Should return list of server configs with URLs
         return []
