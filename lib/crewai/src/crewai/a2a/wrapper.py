@@ -771,6 +771,7 @@ def _delegate_to_a2a(
                 response_model=agent_config.response_model,
                 turn_number=turn_num + 1,
                 updates=agent_config.updates,
+                transport_protocol=agent_config.transport_protocol,
             )
 
             conversation_history = a2a_result.get("history", [])

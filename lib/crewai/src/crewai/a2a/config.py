@@ -5,7 +5,7 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated, Any, ClassVar
 
 if TYPE_CHECKING:
     from a2a.types import TransportProtocol
@@ -13,7 +13,6 @@ else:
     # At runtime, use Any as fallback when a2a-sdk is not installed
     # The actual import will happen in _default_transport_protocol() when needed
     TransportProtocol = Any  # type: ignore[misc,assignment]
-from typing import Annotated, Any, ClassVar
 
 from pydantic import (
     BaseModel,
@@ -71,6 +70,7 @@ class A2AConfig(BaseModel):
         fail_fast: If True, raise error when agent unreachable; if False, skip and continue.
         trust_remote_completion_status: If True, return A2A agent's result directly when completed.
         updates: Update mechanism config.
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json).
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")

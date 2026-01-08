@@ -452,6 +452,7 @@ async def aexecute_a2a_delegation(
         agent_role=agent_role,
         response_model=response_model,
         updates=updates,
+        transport_protocol=transport_protocol,
     )
 
     crewai_event_bus.emit(
@@ -469,6 +470,7 @@ async def aexecute_a2a_delegation(
 
 async def _aexecute_a2a_delegation_impl(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
