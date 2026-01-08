@@ -360,3 +360,92 @@ def test_integration_valid_and_invalid():
 
 
 # TODO: ADD TEST TO MAKE SURE ** REMOVAL DOESN'T MESS UP ANYTHING
+
+
+# Tests for Action: None handling (Issue #4186)
+def test_action_none_basic():
+    """Test that 'Action: None' is parsed as AgentFinish."""
+    text = "Thought: I cannot use any tool for this.\nAction: None"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "I cannot use any tool for this." in result.output
+
+
+def test_action_none_with_reason_in_parentheses():
+    """Test 'Action: None (reason)' format."""
+    text = "Thought: The tool is not available.\nAction: None (direct response required)"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "The tool is not available." in result.output
+
+
+def test_action_none_lowercase():
+    """Test that 'Action: none' (lowercase) is handled."""
+    text = "Thought: I should respond directly.\nAction: none"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "I should respond directly." in result.output
+
+
+def test_action_na():
+    """Test that 'Action: N/A' is handled."""
+    text = "Thought: No action needed here.\nAction: N/A"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "No action needed here." in result.output
+
+
+def test_action_na_lowercase():
+    """Test that 'Action: n/a' (lowercase) is handled."""
+    text = "Thought: This requires a direct answer.\nAction: n/a"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "This requires a direct answer." in result.output
+
+
+def test_action_none_with_dash_separator():
+    """Test 'Action: None - reason' format."""
+    text = "Thought: I need to provide a direct response.\nAction: None - direct response"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "I need to provide a direct response." in result.output
+
+
+def test_action_none_with_additional_content():
+    """Test 'Action: None' with additional content after."""
+    text = "Thought: I analyzed the request.\nAction: None\nHere is my direct response to your question."
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "I analyzed the request." in result.output
+
+
+def test_action_no_action():
+    """Test that 'Action: no action' is handled."""
+    text = "Thought: I will respond without using tools.\nAction: no action"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "I will respond without using tools." in result.output
+
+
+def test_action_none_without_thought():
+    """Test 'Action: None' without a thought prefix."""
+    text = "Action: None"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert result.output == "I cannot perform this action with the available tools."
+
+
+def test_action_none_preserves_original_text():
+    """Test that the original text is preserved in the result."""
+    text = "Thought: I cannot delegate this task.\nAction: None"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert result.text == text
+
+
+def test_action_none_with_colon_separator():
+    """Test 'Action: None: reason' format."""
+    text = "Thought: Direct response needed.\nAction: None: providing direct answer"
+    result = parser.parse(text)
+    assert isinstance(result, AgentFinish)
+    assert "Direct response needed." in result.output

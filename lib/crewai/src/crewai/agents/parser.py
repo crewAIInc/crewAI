@@ -12,6 +12,7 @@ from json_repair import repair_json  # type: ignore[import-untyped]
 from crewai.agents.constants import (
     ACTION_INPUT_ONLY_REGEX,
     ACTION_INPUT_REGEX,
+    ACTION_NONE_REGEX,
     ACTION_REGEX,
     FINAL_ANSWER_ACTION,
     MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE,
@@ -117,6 +118,34 @@ def parse(text: str) -> AgentAction | AgentFinish:
         return AgentAction(
             thought=thought, tool=clean_action, tool_input=safe_tool_input, text=text
         )
+
+    # Check for "Action: None" or similar non-action values
+    # This handles cases where the LLM indicates it cannot/should not use a tool
+    action_none_match = ACTION_NONE_REGEX.search(text)
+    if action_none_match:
+        # Extract any additional content after "Action: None"
+        additional_content = action_none_match.group(2)
+        if additional_content:
+            additional_content = additional_content.strip()
+            # Remove trailing parenthesis if present (from patterns like "Action: None (reason)")
+            if additional_content.startswith("(") and ")" in additional_content:
+                additional_content = additional_content.split(")", 1)[-1].strip()
+            elif additional_content.startswith(")"):
+                additional_content = additional_content[1:].strip()
+
+        # Build the final answer from thought and any additional content
+        final_answer = thought
+        if additional_content:
+            if final_answer:
+                final_answer = f"{final_answer}\n\n{additional_content}"
+            else:
+                final_answer = additional_content
+
+        # If we still have no content, use a generic message
+        if not final_answer:
+            final_answer = "I cannot perform this action with the available tools."
+
+        return AgentFinish(thought=thought, output=final_answer, text=text)
 
     if not ACTION_REGEX.search(text):
         raise OutputParserError(

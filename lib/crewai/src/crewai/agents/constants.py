@@ -26,3 +26,9 @@ ACTION_REGEX: Final[re.Pattern[str]] = re.compile(
 ACTION_INPUT_ONLY_REGEX: Final[re.Pattern[str]] = re.compile(
     r"\s*Action\s*\d*\s*Input\s*\d*\s*:\s*(.*)", re.DOTALL
 )
+# Regex to match "Action: None" or similar non-action values (None, N/A, etc.)
+# This captures the action value and any text that follows it
+ACTION_NONE_REGEX: Final[re.Pattern[str]] = re.compile(
+    r"Action\s*\d*\s*:\s*(none|n/a|na|no action|no_action)(?:\s*[-:(]?\s*(.*))?",
+    re.IGNORECASE | re.DOTALL,
+)
