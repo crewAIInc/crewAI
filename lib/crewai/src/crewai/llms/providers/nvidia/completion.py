@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 
 import httpx
 from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
