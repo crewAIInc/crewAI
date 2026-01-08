@@ -26,6 +26,21 @@ from pydantic import (
 from crewai.a2a.auth.schemas import AuthScheme
 
 
+class _FallbackTransportProtocol:
+    """Lightweight fallback with a .value attribute for compatibility.
+
+    This is used only when a2a-sdk is not installed, so that downstream
+    code accessing ``transport_protocol.value`` continues to work without
+    raising AttributeError. Actual A2A usage will still require a2a-sdk.
+    """
+
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def __str__(self) -> str:
+        return self.value
+
+
 def _default_transport_protocol() -> Any:
     """Get default transport protocol, handling optional a2a-sdk dependency."""
     try:
@@ -33,9 +48,9 @@ def _default_transport_protocol() -> Any:
 
         return TransportProtocol("JSONRPC")
     except ImportError:
-        # Fallback to string when a2a-sdk is not installed
-        # This will be validated when A2A functionality is actually used
-        return "JSONRPC"
+        # Fallback to an object with a .value attribute when a2a-sdk is not installed.
+        # This avoids AttributeError in downstream code that expects TransportProtocol.
+        return _FallbackTransportProtocol("JSONRPC")
 try:
     from crewai.a2a.updates import UpdateConfig
 except ImportError:
