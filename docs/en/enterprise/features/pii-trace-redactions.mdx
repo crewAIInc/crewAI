@@ -153,72 +153,6 @@ Custom recognizers use regex patterns to detect sensitive data unique to your or
   </Step>
 </Steps>
 
-### Custom Recognizer Examples
-
-**Employee ID Pattern:**
-
-```json
-{
-  "name": "EMPLOYEE_ID",
-  "supported_entity": "EMPLOYEE_ID",
-  "supported_language": "en",
-  "patterns": [
-    {
-      "name": "employee_id",
-      "regex": "EMP-\\d{6}",
-      "score": 0.9
-    }
-  ]
-}
-```
-
-**Salary Information:**
-
-```json
-{
-  "name": "SALARY",
-  "supported_entity": "SALARY",
-  "supported_language": "en",
-  "patterns": [
-    {
-      "name": "salary_pattern",
-      "regex": "(?i)(?:salary|pay|compensation)[:\\s]*\\$?\\d{1,3}(?:,\\d{3})*",
-      "score": 0.8
-    }
-  ],
-  "context": ["salary", "pay", "compensation", "wage"]
-}
-```
-
-**Internal Project Codes:**
-
-```json
-{
-  "name": "PROJECT_CODE",
-  "supported_entity": "PROJECT_CODE",
-  "supported_language": "en",
-  "patterns": [
-    {
-      "name": "project_code",
-      "regex": "PRJ-[A-Z]{3}-\\d{4}",
-      "score": 0.95
-    }
-  ]
-}
-```
-
-### Deny-List Recognizers
-
-For exact string matches (like company names or internal codenames), use deny-list recognizers:
-
-```json
-{
-  "name": "INTERNAL_CODENAMES",
-  "supported_entity": "CODENAME",
-  "supported_language": "en",
-  "deny_list": ["Project Alpha", "Operation Beta", "Initiative Gamma"]
-}
-```
 
 ## Viewing Redacted Traces
 
@@ -227,31 +161,7 @@ Once PII redaction is enabled, your traces will show redacted values:
 
 Redacted values are clearly marked to distinguish them from original content, making it easy to understand what data was protected while still allowing you to debug and monitor crew behavior.
 
-## Configuration Reference
 
-The complete PII redaction configuration follows this structure:
-
-```json
-{
-  "entities": {
-    "PERSON": { "enabled": true, "action": "replace" },
-    "CREDIT_CARD": { "enabled": true, "action": "mask" },
-    "EMAIL_ADDRESS": { "enabled": true, "action": "replace" },
-    "US_SSN": { "enabled": true, "action": "redact" }
-  },
-  "mask_recognizers": [
-    {
-      "name": "CUSTOM_ENTITY",
-      "supported_entity": "CUSTOM_ENTITY",
-      "supported_language": "en",
-      "patterns": [
-        { "name": "pattern_name", "regex": "pattern", "score": 0.8 }
-      ],
-      "context": ["optional", "context", "words"]
-    }
-  ]
-}
-```
 
 ## Best Practices
 
@@ -263,7 +173,7 @@ The complete PII redaction configuration follows this structure:
   </Step>
 
   <Step title="Use Specific Patterns">
-    For custom recognizers, use specific patterns to reduce false positives and improve performance.
+    For custom recognizers, use specific patterns to reduce false positives and improve performance. Regex patterns are best when identifying specific patterns in the traces such as salary, employee id, project code, etc. Deny-list recognizers are best when identifying exact strings in the traces such as company names, internal codenames, etc.
   </Step>
 
   <Step title="Leverage Context Words">
