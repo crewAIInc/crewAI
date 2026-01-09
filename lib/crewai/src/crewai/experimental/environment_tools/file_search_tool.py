@@ -91,7 +91,9 @@ Examples:
                 matches = [m for m in matches if m.is_dir()]
 
             # Filter out hidden files
-            matches = [m for m in matches if not any(part.startswith(".") for part in m.parts)]
+            matches = [
+                m for m in matches if not any(part.startswith(".") for part in m.parts)
+            ]
 
             # Sort alphabetically
             matches.sort(key=lambda x: str(x).lower())

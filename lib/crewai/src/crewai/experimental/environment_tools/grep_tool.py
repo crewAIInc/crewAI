@@ -120,7 +120,8 @@ Examples:
                 output = result.stdout
                 # Count actual match lines (not context lines)
                 match_lines = [
-                    line for line in output.split("\n")
+                    line
+                    for line in output.split("\n")
                     if line and not line.startswith("--")
                 ]
                 match_count = len(match_lines)
@@ -129,18 +130,19 @@ Examples:
                 header += "=" * 60 + "\n"
                 return header + output
 
-            elif result.returncode == 1:
+            if result.returncode == 1:
                 # No matches found (grep returns 1 for no matches)
                 return f"No matches found for '{pattern}' in {path}"
 
-            else:
-                # Error occurred
-                error_msg = result.stderr.strip() if result.stderr else "Unknown error"
-                return f"Error: {error_msg}"
+            # Error occurred
+            error_msg = result.stderr.strip() if result.stderr else "Unknown error"
+            return f"Error: {error_msg}"
 
         except subprocess.TimeoutExpired:
             return "Error: Search timed out (>30s). Try narrowing the search path."
         except FileNotFoundError:
-            return "Error: grep command not found. Ensure grep is installed on the system."
+            return (
+                "Error: grep command not found. Ensure grep is installed on the system."
+            )
         except Exception as e:
             return f"Error during search: {e}"
