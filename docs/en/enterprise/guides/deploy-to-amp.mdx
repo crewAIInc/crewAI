@@ -289,68 +289,7 @@ For automated deployments in CI/CD pipelines, you can use the CrewAI API to trig
 
   </Steps>
 
-## ⚠️ Environment Variable Security Requirements
-
-<Warning>
-  **Important**: CrewAI AMP has security restrictions on environment variable
-  names that can cause deployment failures if not followed.
-</Warning>
-
-### Blocked Environment Variable Patterns
-
-For security reasons, the following environment variable naming patterns are **automatically filtered** and will cause deployment issues:
-
-**Blocked Patterns:**
-
-- Variables ending with `_TOKEN` (e.g., `MY_API_TOKEN`)
-- Variables ending with `_PASSWORD` (e.g., `DB_PASSWORD`)
-- Variables ending with `_SECRET` (e.g., `API_SECRET`)
-- Variables ending with `_KEY` in certain contexts
-
-**Specific Blocked Variables:**
-
-- `GITHUB_USER`, `GITHUB_TOKEN`
-- `AWS_REGION`, `AWS_DEFAULT_REGION`
-- Various internal CrewAI system variables
-
-### Allowed Exceptions
-
-Some variables are explicitly allowed despite matching blocked patterns:
-
-- `AZURE_AD_TOKEN`
-- `AZURE_OPENAI_AD_TOKEN`
-- `ENTERPRISE_ACTION_TOKEN`
-- `CREWAI_ENTEPRISE_TOOLS_TOKEN`
-
-### How to Fix Naming Issues
-
-If your deployment fails due to environment variable restrictions:
-
-```bash
-# ❌ These will cause deployment failures
-OPENAI_TOKEN=sk-...
-DATABASE_PASSWORD=mypassword
-API_SECRET=secret123
-
-# ✅ Use these naming patterns instead
-OPENAI_API_KEY=sk-...
-DATABASE_CREDENTIALS=mypassword
-API_CONFIG=secret123
-```
-
-### Best Practices
-
-1. **Use standard naming conventions**: `PROVIDER_API_KEY` instead of `PROVIDER_TOKEN`
-2. **Test locally first**: Ensure your crew works with the renamed variables
-3. **Update your code**: Change any references to the old variable names
-4. **Document changes**: Keep track of renamed variables for your team
-
-<Tip>
-  If you encounter deployment failures with cryptic environment variable errors,
-  check your variable names against these patterns first.
-</Tip>
-
-### Interact with Your Deployed Crew
+## Interact with Your Deployed Automation
 
 Once deployment is complete, you can access your crew through:
 
@@ -424,8 +363,9 @@ git push
 
 **Solution**: Verify your project matches the expected structure:
 
-- **Crews**: Must have entry point at `src/project_name/main.py` with a `run()` function
-- **Flows**: Must have entry point at `main.py` (project root) with a `kickoff()` function
+- **Both Crews and Flows**: Must have entry point at `src/project_name/main.py`
+- **Crews**: Use a `run()` function as entry point
+- **Flows**: Use a `kickoff()` function as entry point
 
 See [Prepare for Deployment](/en/enterprise/guides/prepare-for-deployment) for detailed structure diagrams.
 
@@ -481,7 +421,7 @@ type = "flow"
 
 **Solution**:
 1. Verify your LLM provider's API key is correctly set in environment variables
-2. Check that variable names don't match [blocked patterns](#blocked-environment-variable-patterns)
+2. Ensure the environment variable names match what your code expects
 3. Test locally with the exact same environment variables before deploying
 
 #### Crew Execution Errors

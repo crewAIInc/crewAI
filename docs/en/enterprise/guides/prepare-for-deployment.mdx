@@ -13,7 +13,7 @@ mode: "wide"
 
 ## Understanding Automations
 
-In CrewAI AMP, **automations** is the umbrella term for deployable AI projects. An automation can be either:
+In CrewAI AMP, **automations** is the umbrella term for deployable Agentic AI projects. An automation can be either:
 
 - **A Crew**: A standalone team of AI agents working together on tasks
 - **A Flow**: An orchestrated workflow that can combine multiple crews, direct LLM calls, and procedural logic
@@ -24,20 +24,21 @@ Understanding which type you're deploying is essential because they have differe
 
 <CardGroup cols={2}>
   <Card title="Crew Projects" icon="users">
-    Standalone AI agent teams with a nested `src/` structure. Best for focused, collaborative tasks.
+    Standalone AI agent teams with `crew.py` defining agents and tasks. Best for focused, collaborative tasks.
   </Card>
   <Card title="Flow Projects" icon="diagram-project">
-    Orchestrated workflows with root-level `main.py`. Best for complex, multi-stage processes.
+    Orchestrated workflows with embedded crews in a `crews/` folder. Best for complex, multi-stage processes.
   </Card>
 </CardGroup>
 
 | Aspect | Crew | Flow |
 |--------|------|------|
-| **Project structure** | Nested `src/project_name/` | Root-level files |
-| **Main logic location** | `src/project_name/crew.py` | `main.py` at root |
-| **Entry point** | `src/project_name/main.py` | `main.py` at root |
+| **Project structure** | `src/project_name/` with `crew.py` | `src/project_name/` with `crews/` folder |
+| **Main logic location** | `src/project_name/crew.py` | `src/project_name/main.py` (Flow class) |
+| **Entry point function** | `run()` in `main.py` | `kickoff()` in `main.py` |
 | **pyproject.toml type** | `type = "crew"` | `type = "flow"` |
 | **CLI create command** | `crewai create crew name` | `crewai create flow name` |
+| **Config location** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
 | **Can contain other crews** | No | Yes (in `crews/` folder) |
 
 ## Project Structure Reference
@@ -82,20 +83,26 @@ my_flow/
 ├── README.md
 ├── .env
 ├── uv.lock                  # REQUIRED for deployment
-├── main.py                  # Entry point with kickoff() function
-├── crews/                   # Embedded crews
-│   └── research_crew/
-│       ├── config/
-│       │   ├── agents.yaml
-│       │   └── tasks.yaml
-│       └── research_crew.py # Each crew needs @CrewBase decorator
-└── tools/
-    └── custom_tool.py
+└── src/
+    └── my_flow/
+        ├── __init__.py
+        ├── main.py          # Entry point with kickoff() function + Flow class
+        ├── crews/           # Embedded crews folder
+        │   └── poem_crew/
+        │       ├── __init__.py
+        │       ├── poem_crew.py  # Crew with @CrewBase decorator
+        │       └── config/
+        │           ├── agents.yaml
+        │           └── tasks.yaml
+        └── tools/
+            ├── __init__.py
+            └── custom_tool.py
 ```
 
 <Info>
-  Flows have `main.py` at the **root level**, not inside a `src/` folder.
-  This is a key difference from Crew projects.
+  Both Crews and Flows use the `src/project_name/` structure.
+  The key difference is that Flows have a `crews/` folder for embedded crews,
+  while Crews have `crew.py` directly in the project folder.
 </Info>
 
 ## Pre-Deployment Checklist
@@ -197,11 +204,11 @@ class MyCrew():
 
 ### 4. Check Project Entry Points
 
-Verify your project has the correct entry point function:
+Both Crews and Flows have their entry point in `src/project_name/main.py`:
 
 <Tabs>
   <Tab title="For Crews">
-    The entry point is in `src/project_name/main.py`:
+    The entry point uses a `run()` function:
 
     ```python
     # src/my_crew/main.py
@@ -218,17 +225,19 @@ Verify your project has the correct entry point function:
     ```
   </Tab>
   <Tab title="For Flows">
-    The entry point is in `main.py` at the project root:
+    The entry point uses a `kickoff()` function with a Flow class:
 
     ```python
-    # main.py (at project root)
-    from crewai.flow.flow import Flow, listen, start
+    # src/my_flow/main.py
+    from crewai.flow import Flow, listen, start
+    from my_flow.crews.poem_crew.poem_crew import PoemCrew
 
     class MyFlow(Flow):
         @start()
         def begin(self):
             # Flow logic here
-            pass
+            result = PoemCrew().crew().kickoff(inputs={...})
+            return result
 
     def kickoff():
         """Run the flow."""
@@ -246,7 +255,6 @@ Before deployment, ensure you have:
 
 1. **LLM API keys** ready (OpenAI, Anthropic, Google, etc.)
 2. **Tool API keys** if using external tools (Serper, etc.)
-3. Variable names that comply with [security requirements](/en/enterprise/guides/deploy-to-amp#environment-variable-security-requirements)
 
 <Tip>
   Test your project locally with the same environment variables before deploying
@@ -264,14 +272,16 @@ grep -A2 "\[tool.crewai\]" pyproject.toml
 # 2. Verify uv.lock exists
 ls -la uv.lock || echo "ERROR: uv.lock missing! Run 'uv lock'"
 
-# 3. For Crews - verify structure
-ls -la src/*/crew.py 2>/dev/null || echo "No crew.py found in src/"
+# 3. Verify src/ structure exists
+ls -la src/*/main.py 2>/dev/null || echo "No main.py found in src/"
 
-# 4. For Flows - verify structure
-ls -la main.py 2>/dev/null || echo "No main.py at root"
-ls -la crews/ 2>/dev/null || echo "No crews/ folder (optional for flows)"
+# 4. For Crews - verify crew.py exists
+ls -la src/*/crew.py 2>/dev/null || echo "No crew.py (expected for Crews)"
 
-# 5. Check for CrewBase usage
+# 5. For Flows - verify crews/ folder exists
+ls -la src/*/crews/ 2>/dev/null || echo "No crews/ folder (expected for Flows)"
+
+# 6. Check for CrewBase usage
 grep -r "@CrewBase" . --include="*.py"
 ```
 
@@ -282,8 +292,7 @@ grep -r "@CrewBase" . --include="*.py"
 | Missing `uv.lock` | Build fails during dependency resolution | Run `uv lock` and commit |
 | Wrong `type` in pyproject.toml | Build succeeds but runtime fails | Change to correct type |
 | Missing `@CrewBase` decorator | "Config not found" errors | Add decorator to all crew classes |
-| Crew `main.py` at root level | Entry point not found | Move to `src/project_name/` |
-| Flow `main.py` in `src/` | Entry point not found | Move to project root |
+| Files at root instead of `src/` | Entry point not found | Move to `src/project_name/` |
 | Missing `run()` or `kickoff()` | Cannot start automation | Add correct entry function |
 
 ## Next Steps
