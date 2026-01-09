@@ -42,7 +42,7 @@ class ParallelSearchInput(BaseModel):
     )
     source_policy: dict[str, Any] | None = Field(
         default=None,
-        description="Source policy for domain inclusion/exclusion. Example: {'include': ['example.com']} or {'exclude': ['spam.com']}",
+        description="Source policy for domain inclusion/exclusion. Example: {'include_domains': ['example.com']} or {'exclude_domains': ['spam.com']}",
     )
 
 

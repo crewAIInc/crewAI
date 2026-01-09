@@ -83,8 +83,8 @@ tool = ParallelSearchTool(
     max_results=5,
     excerpts={"max_chars_per_result": 5000},
     source_policy={
-        "allow": {"domains": ["un.org"]},
-        # "deny": {"domains": ["example.com"]},  # optional
+        "include_domains": ["un.org"],
+        # "exclude_domains": ["example.com"],  # optional
     },
 )
 
@@ -96,7 +96,7 @@ resp_json = tool.run(
 # Override source_policy and max_results for a specific search
 resp_json = tool.run(
     objective="Latest WHO health guidelines",
-    source_policy={"allow": {"domains": ["who.int"]}},
+    source_policy={"include_domains": ["who.int"]},
     max_results=3,
 )
 ```
