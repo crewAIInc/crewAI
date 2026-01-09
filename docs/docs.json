@@ -411,7 +411,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "en/enterprise/guides/build-crew",
-                  "en/enterprise/guides/deploy-crew",
+                  "en/enterprise/guides/prepare-for-deployment",
+                  "en/enterprise/guides/deploy-to-amp",
                   "en/enterprise/guides/kickoff-crew",
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
@@ -1444,6 +1445,10 @@
     {
       "source": "/enterprise/:path*",
       "destination": "/en/enterprise/:path*"
+    },
+    {
+      "source": "/en/enterprise/guides/deploy-crew",
+      "destination": "/en/enterprise/guides/deploy-to-amp"
     },
     {
       "source": "/api-reference/:path*",
