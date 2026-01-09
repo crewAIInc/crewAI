@@ -108,7 +108,8 @@ Examples:
             cmd.append(str(search_path))
 
             # Execute with timeout
-            result = subprocess.run(
+            # Security: cmd is a list (no shell injection), path is validated above
+            result = subprocess.run(  # noqa: S603
                 cmd,
                 capture_output=True,
                 text=True,

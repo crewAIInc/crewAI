@@ -109,22 +109,21 @@ Examples:
             files = []
 
             for entry in entries:
-                try:
-                    # Get relative path for recursive listings
-                    if recursive:
-                        display_name = str(entry.relative_to(dir_path))
-                    else:
-                        display_name = entry.name
+                # Get relative path for recursive listings
+                if recursive:
+                    display_name = str(entry.relative_to(dir_path))
+                else:
+                    display_name = entry.name
 
-                    if entry.is_dir():
-                        dirs.append(f"📁 {display_name}/")
-                    else:
+                if entry.is_dir():
+                    dirs.append(f"📁 {display_name}/")
+                else:
+                    try:
                         size = entry.stat().st_size
-                        size_str = self._format_size(size)
-                        files.append(f"📄 {display_name} ({size_str})")
-                except (OSError, PermissionError):
-                    # Skip entries we can't access
-                    continue
+                    except (OSError, PermissionError):
+                        continue  # Skip files we can't stat
+                    size_str = self._format_size(size)
+                    files.append(f"📄 {display_name} ({size_str})")
 
             # Output directories first, then files
             if dirs:

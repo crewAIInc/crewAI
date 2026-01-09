@@ -106,19 +106,18 @@ Examples:
             result_lines.append("=" * 60)
 
             for match in matches:
-                try:
-                    # Get relative path from search directory
-                    rel_path = match.relative_to(search_path)
+                # Get relative path from search directory
+                rel_path = match.relative_to(search_path)
 
-                    if match.is_dir():
-                        result_lines.append(f"📁 {rel_path}/")
-                    else:
+                if match.is_dir():
+                    result_lines.append(f"📁 {rel_path}/")
+                else:
+                    try:
                         size = match.stat().st_size
-                        size_str = self._format_size(size)
-                        result_lines.append(f"📄 {rel_path} ({size_str})")
-                except (OSError, PermissionError):
-                    # Skip entries we can't access
-                    continue
+                    except (OSError, PermissionError):
+                        continue  # Skip files we can't stat
+                    size_str = self._format_size(size)
+                    result_lines.append(f"📄 {rel_path} ({size_str})")
 
             return "\n".join(result_lines)
 
