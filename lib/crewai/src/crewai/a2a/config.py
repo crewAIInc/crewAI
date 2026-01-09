@@ -5,14 +5,7 @@ This module is separate from experimental.a2a to avoid circular imports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any, ClassVar
-
-if TYPE_CHECKING:
-    from a2a.types import TransportProtocol
-else:
-    # At runtime, use Any as fallback when a2a-sdk is not installed
-    # The actual import will happen in _default_transport_protocol() when needed
-    TransportProtocol = Any  # type: ignore[misc,assignment]
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -26,31 +19,6 @@ from pydantic import (
 from crewai.a2a.auth.schemas import AuthScheme
 
 
-class _FallbackTransportProtocol:
-    """Lightweight fallback with a .value attribute for compatibility.
-
-    This is used only when a2a-sdk is not installed, so that downstream
-    code accessing ``transport_protocol.value`` continues to work without
-    raising AttributeError. Actual A2A usage will still require a2a-sdk.
-    """
-
-    def __init__(self, value: str) -> None:
-        self.value = value
-
-    def __str__(self) -> str:
-        return self.value
-
-
-def _default_transport_protocol() -> Any:
-    """Get default transport protocol, handling optional a2a-sdk dependency."""
-    try:
-        from a2a.types import TransportProtocol
-
-        return TransportProtocol("JSONRPC")
-    except ImportError:
-        # Fallback to an object with a .value attribute when a2a-sdk is not installed.
-        # This avoids AttributeError in downstream code that expects TransportProtocol.
-        return _FallbackTransportProtocol("JSONRPC")
 try:
     from crewai.a2a.updates import UpdateConfig
 except ImportError:
@@ -115,7 +83,7 @@ class A2AConfig(BaseModel):
         default_factory=_get_default_update_config,
         description="Update mechanism config",
     )
-    transport_protocol: TransportProtocol = Field(
-        default_factory=_default_transport_protocol,
-        description="Optional A2A transport protocol (grpc, jsonrpc, http+json)",
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"] = Field(
+        default="JSONRPC",
+        description="Specified mode of A2A transport protocol",
     )
