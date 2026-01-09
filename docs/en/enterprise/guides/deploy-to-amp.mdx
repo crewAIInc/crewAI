@@ -1,12 +1,12 @@
 ---
-title: "Deploy Crew"
-description: "Deploying a Crew on CrewAI AMP"
+title: "Deploy to AMP"
+description: "Deploy your Crew or Flow to CrewAI AMP"
 icon: "rocket"
 mode: "wide"
 ---
 
 <Note>
-  After creating a crew locally or through Crew Studio, the next step is
+  After creating a Crew or Flow locally (or through Crew Studio), the next step is
   deploying it to the CrewAI AMP platform. This guide covers multiple deployment
   methods to help you choose the best approach for your workflow.
 </Note>
@@ -14,19 +14,26 @@ mode: "wide"
 ## Prerequisites
 
 <CardGroup cols={2}>
-  <Card title="Crew Ready for Deployment" icon="users">
-    You should have a working crew either built locally or created through Crew
-    Studio
+  <Card title="Project Ready for Deployment" icon="check-circle">
+    You should have a working Crew or Flow that runs successfully locally.
+    Follow our [preparation guide](/en/enterprise/guides/prepare-for-deployment) to verify your project structure.
   </Card>
   <Card title="GitHub Repository" icon="github">
-    Your crew code should be in a GitHub repository (for GitHub integration
+    Your code should be in a GitHub repository (for GitHub integration
     method)
   </Card>
 </CardGroup>
 
+<Info>
+  **Crews vs Flows**: Both project types can be deployed as "automations" on CrewAI AMP.
+  The deployment process is the same, but they have different project structures.
+  See [Prepare for Deployment](/en/enterprise/guides/prepare-for-deployment) for details.
+</Info>
+
 ## Option 1: Deploy Using CrewAI CLI
 
-The CLI provides the fastest way to deploy locally developed crews to the Enterprise platform.
+The CLI provides the fastest way to deploy locally developed Crews or Flows to the AMP platform.
+The CLI automatically detects your project type from `pyproject.toml` and builds accordingly.
 
 <Steps>
   <Step title="Install CrewAI CLI">
@@ -128,7 +135,7 @@ crewai deploy remove <deployment_id>
 
 ## Option 2: Deploy Directly via Web Interface
 
-You can also deploy your crews directly through the CrewAI AMP web interface by connecting your GitHub account. This approach doesn't require using the CLI on your local machine.
+You can also deploy your Crews or Flows directly through the CrewAI AMP web interface by connecting your GitHub account. This approach doesn't require using the CLI on your local machine. The platform automatically detects your project type and handles the build appropriately.
 
 <Steps>
 
@@ -387,7 +394,107 @@ The Enterprise platform also offers:
 - **Custom Tools Repository**: Create, share, and install tools
 - **Crew Studio**: Build crews through a chat interface without writing code
 
+## Troubleshooting Deployment Failures
+
+If your deployment fails, check these common issues:
+
+### Build Failures
+
+#### Missing uv.lock File
+
+**Symptom**: Build fails early with dependency resolution errors
+
+**Solution**: Generate and commit the lock file:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+<Warning>
+  The `uv.lock` file is required for all deployments. Without it, the platform
+  cannot reliably install your dependencies.
+</Warning>
+
+#### Wrong Project Structure
+
+**Symptom**: "Could not find entry point" or "Module not found" errors
+
+**Solution**: Verify your project matches the expected structure:
+
+- **Crews**: Must have entry point at `src/project_name/main.py` with a `run()` function
+- **Flows**: Must have entry point at `main.py` (project root) with a `kickoff()` function
+
+See [Prepare for Deployment](/en/enterprise/guides/prepare-for-deployment) for detailed structure diagrams.
+
+#### Missing CrewBase Decorator
+
+**Symptom**: "Crew not found", "Config not found", or agent/task configuration errors
+
+**Solution**: Ensure **all** crew classes use the `@CrewBase` decorator:
+
+```python
+from crewai.project import CrewBase, agent, crew, task
+
+@CrewBase  # This decorator is REQUIRED
+class YourCrew():
+    """Your crew description"""
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    # ... rest of crew definition
+```
+
+<Info>
+  This applies to standalone Crews AND crews embedded inside Flow projects.
+  Every crew class needs the decorator.
+</Info>
+
+#### Incorrect pyproject.toml Type
+
+**Symptom**: Build succeeds but runtime fails, or unexpected behavior
+
+**Solution**: Verify the `[tool.crewai]` section matches your project type:
+
+```toml
+# For Crew projects:
+[tool.crewai]
+type = "crew"
+
+# For Flow projects:
+[tool.crewai]
+type = "flow"
+```
+
+### Runtime Failures
+
+#### LLM Connection Failures
+
+**Symptom**: API key errors, "model not found", or authentication failures
+
+**Solution**:
+1. Verify your LLM provider's API key is correctly set in environment variables
+2. Check that variable names don't match [blocked patterns](#blocked-environment-variable-patterns)
+3. Test locally with the exact same environment variables before deploying
+
+#### Crew Execution Errors
+
+**Symptom**: Crew starts but fails during execution
+
+**Solution**:
+1. Check the execution logs in the AMP dashboard (Traces tab)
+2. Verify all tools have required API keys configured
+3. Ensure agent configurations in `agents.yaml` are valid
+4. Check task configurations in `tasks.yaml` for syntax errors
+
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
   Contact our support team for assistance with deployment issues or questions
-  about the Enterprise platform.
+  about the AMP platform.
 </Card>
