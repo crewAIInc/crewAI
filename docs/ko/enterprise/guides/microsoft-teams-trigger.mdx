@@ -10,17 +10,21 @@ mode: "wide"
 Use the Microsoft Teams trigger to start automations whenever a new chat is created. Common patterns include summarizing inbound requests, routing urgent messages to support teams, or creating follow-up tasks in other systems.
 
 <Tip>
-  Confirm Microsoft Teams is connected under **Tools & Integrations** and enabled in the **Triggers** tab for your deployment.
+  Confirm Microsoft Teams is connected under **Tools & Integrations** and
+  enabled in the **Triggers** tab for your deployment.
 </Tip>
 
 ## Enabling the Microsoft Teams Trigger
 
-1. Open your deployment in CrewAI AOP
+1. Open your deployment in CrewAI AMP
 2. Go to the **Triggers** tab
 3. Locate **Microsoft Teams** and switch the toggle to enable
 
 <Frame caption="Microsoft Teams trigger connection">
-  <img src="/images/enterprise/msteams-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/msteams-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize a new chat thread
@@ -52,7 +56,9 @@ crewai triggers run microsoft_teams/teams_message_created
 `crewai triggers run` 명령은 완전한 Teams payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
 
 <Warning>
-  개발 중에는 `crewai triggers run microsoft_teams/teams_message_created`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+  개발 중에는 `crewai triggers run microsoft_teams/teams_message_created`를
+  사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를
+  받습니다.
 </Warning>
 
 ## Troubleshooting
