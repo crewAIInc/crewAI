@@ -809,7 +809,8 @@
                   "pt-BR/enterprise/features/crew-studio",
                   "pt-BR/enterprise/features/marketplace",
                   "pt-BR/enterprise/features/agent-repositories",
-                  "pt-BR/enterprise/features/tools-and-integrations"
+                  "pt-BR/enterprise/features/tools-and-integrations",
+                  "pt-BR/enterprise/features/pii-trace-redactions"
                 ]
               },
               {
@@ -1269,7 +1270,8 @@
                   "ko/enterprise/features/crew-studio",
                   "ko/enterprise/features/marketplace",
                   "ko/enterprise/features/agent-repositories",
-                  "ko/enterprise/features/tools-and-integrations"
+                  "ko/enterprise/features/tools-and-integrations",
+                  "ko/enterprise/features/pii-trace-redactions"
                 ]
               },
               {
