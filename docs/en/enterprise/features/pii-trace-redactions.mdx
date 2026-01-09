@@ -7,7 +7,7 @@ mode: "wide"
 
 ## Overview
 
-PII Redaction is an CrewAI AMP feature that automatically detects and masks Personally Identifiable Information (PII) in your crew and flow execution traces. This ensures sensitive data like credit card numbers, social security numbers, email addresses, names and even create custom recognizers for your own data to not be exposed in your CrewAI AMP traces.
+PII Redaction is a CrewAI AMP feature that automatically detects and masks Personally Identifiable Information (PII) in your crew and flow execution traces. This ensures sensitive data like credit card numbers, social security numbers, email addresses, and names are not exposed in your CrewAI AMP traces. You can also create custom recognizers to protect organization-specific data.
 
 
 <Info>
@@ -34,8 +34,6 @@ Without proper redaction, this data appears in traces, making compliance with re
 
 ## How It Works
 
-PII Redaction uses [Microsoft Presidio](https://microsoft.github.io/presidio/), a state-of-the-art data protection library, to:
-
 1. **Detect** - Scan trace event data for known PII patterns
 2. **Classify** - Identify the type of sensitive data (credit card, SSN, email, etc.)
 3. **Redact** - Replace the sensitive data with masked values based on your configuration
@@ -53,7 +51,7 @@ Redacted: "Contact <EMAIL_ADDRESS> or call <PHONE_NUMBER>"
 
 <Steps>
   <Step title="Navigate to Crew Settings">
-    In the CrewAI AOP dashboard, select your deployed crew and go to your one of your deployments / automations (deployed use cases) and go to **Settings** → **PII Protection**.
+    In the CrewAI AMP dashboard, select your deployed crew and go to one of your deployments/automations, then navigate to **Settings** → **PII Protection**.
   </Step>
 
   <Step title="Enable PII Protection">
@@ -118,8 +116,8 @@ For each enabled entity, you can configure how the data is redacted:
 
 | Action | Description | Example Output |
 |--------|-------------|----------------|
-| `mask` | Replace with asterisks | `****-****-****-1111` |
-| `redact` | Completely remove | *(empty)* |
+| `mask` | Replace with the entity type label | `<CREDIT_CARD>` |
+| `redact` | Completely remove the text | *(empty)* |
 
 ## Custom Recognizers
 
@@ -129,37 +127,76 @@ In addition to built-in entities, you can create **custom recognizers** to detec
   ![Custom Recognizers](/images/enterprise/pii_mask_recognizer.png)
 </Frame>
 
-### Creating a Custom Recognizer
+### Recognizer Types
 
-Custom recognizers use regex patterns to detect sensitive data unique to your organization:
+You have two options for custom recognizers:
+
+| Type | Best For | Example Use Case |
+|------|----------|------------------|
+| **Pattern-based (Regex)** | Structured data with predictable formats | Salary amounts, employee IDs, project codes |
+| **Deny-list** | Exact string matches | Company names, internal codenames, specific terms |
+
+### Creating a Custom Recognizer
 
 <Steps>
   <Step title="Navigate to Custom Recognizers">
-    Go to **Settings** → **Security** → **Custom Recognizers**.
+    Go to your Organization **Settings** → **Organization** → **Add Recognizer**.
   </Step>
 
-  <Step title="Add New Recognizer">
-    Click **Add Recognizer** and configure:
+  <Step title="Configure the Recognizer">
+    <Frame>
+      ![Configure Recognizer](/images/enterprise/pii_mask_recognizer_create.png)
+    </Frame>
 
+    Configure the following fields:
     - **Name**: A descriptive name for the recognizer
-    - **Entity Type**: The entity label (e.g., `EMPLOYEE_ID`, `SALARY`)
-    - **Pattern**: Regex pattern to match the sensitive data
-    - **Score**: Confidence score (0.0-1.0) for matches
-    - **Context Words** (optional): Words that increase detection confidence
+    - **Entity Type**: The entity label that will appear in redacted output (e.g., `EMPLOYEE_ID`, `SALARY`)
+    - **Type**: Choose between Regex Pattern or Deny List
+    - **Pattern/Values**: Regex pattern or list of strings to match
+    - **Confidence Threshold**: Minimum score (0.0-1.0) required for a match to trigger redaction. Higher values (e.g., 0.8) reduce false positives but may miss some matches. Lower values (e.g., 0.5) catch more matches but may over-redact. Default is 0.8.
+    - **Context Words** (optional): Words that increase detection confidence when found nearby
   </Step>
 
-  <Step title="Test and Save">
-    Use the test input to verify your pattern matches correctly, then save.
+  <Step title="Save">
+    Save the recognizer. It will be available to enable on your deployments.
   </Step>
 </Steps>
+
+### Understanding Entity Types
+
+The **Entity Type** determines how matched content appears in redacted traces:
+
+```
+Entity Type: SALARY
+Pattern: salary:\s*\$\s*\d+
+Input: "Employee salary: $50,000"
+Output: "Employee <SALARY>"
+```
+
+### Using Context Words
+
+Context words improve accuracy by increasing confidence when specific terms appear near the matched pattern:
+
+```
+Context Words: "project", "code", "internal"
+Entity Type: PROJECT_CODE
+Pattern: PRJ-\d{4}
+```
+
+When "project" or "code" appears near "PRJ-1234", the recognizer has higher confidence it's a true match, reducing false positives.
 
 
 ## Viewing Redacted Traces
 
-Once PII redaction is enabled, your traces will show redacted values:
+Once PII redaction is enabled, your traces will show redacted values in place of sensitive data:
 
+```
+Task Output: "Customer <PERSON> placed order #12345.
+Contact email: <EMAIL_ADDRESS>, phone: <PHONE_NUMBER>.
+Payment processed for card ending in <CREDIT_CARD>."
+```
 
-Redacted values are clearly marked to distinguish them from original content, making it easy to understand what data was protected while still allowing you to debug and monitor crew behavior.
+Redacted values are clearly marked with angle brackets and the entity type label (e.g., `<EMAIL_ADDRESS>`), making it easy to understand what data was protected while still allowing you to debug and monitor crew behavior.
 
 
 
@@ -209,7 +246,7 @@ Redacted values are clearly marked to distinguish them from original content, ma
 <Accordion title="Performance Issues">
   **Possible Causes:**
   - Too many entities enabled
-  - NLP-based entities (PERSON, LOCATION, ORGANIZATION) are computationally expensive
+  - NLP-based entities (`PERSON`, `LOCATION`, `NRP`) are computationally expensive as they use machine learning models
 
   **Solutions:**
   - Only enable entities you actually need
@@ -219,45 +256,87 @@ Redacted values are clearly marked to distinguish them from original content, ma
 
 ---
 
-### Adding Custom Recognizers
+## Practical Example: Salary Pattern Matching
 
-To add support for a new custom recognizer:
+This example demonstrates how to create a custom recognizer to detect and mask salary information in your traces.
+
+### Use Case
+
+Your crew processes employee or financial data that includes salary information in formats like:
+- `salary: $50,000`
+- `salary: $125,000.00`
+- `salary:$1,500.50`
+
+You want to automatically mask these values to protect sensitive compensation data.
+
+### Configuration
+
 <Frame>
-  ![Custom Recognizers](/images/enterprise/pii_mask_recognizer.png)
+  ![Salary Recognizer Configuration](/images/enterprise/pii_mask_custom_recognizer_salary.png)
 </Frame>
 
-1. Go to your Organization **Settings** → **Organization** → **Add Recognizer**.
-2. Configure the recognizer.
-<Frame>
-  ![Configure Recognizer](/images/enterprise/pii_mask_recognizer_create.png)
-</Frame>
-3. You have two options for recognizers:
-   - Pattern-based recognizer
-     - Pattern-based recognizers use regex patterns to detect sensitive data.
-     - You can configure the pattern and the score.
-     - You can also add context words to improve the accuracy of the recognizer.
-   - Deny-list recognizer
-     - Deny-list recognizers use a list of strings to detect sensitive data.
-     - You can configure the list of strings and the score.
-     - You can also add context words to improve the accuracy of the recognizer.
-3. Save the recognizer.
+| Field | Value |
+|-------|-------|
+| **Name** | `SALARY` |
+| **Entity Type** | `SALARY` |
+| **Type** | Regex Pattern |
+| **Regex Pattern** | `salary:\s*\$\s*\d{1,3}(,\d{3})*(\.\d{2})?` |
+| **Action** | Mask |
+| **Confidence Threshold** | `0.8` |
+| **Context Words** | `salary, compensation, pay, wage, income` |
 
----
-## Entity Types
+### Regex Pattern Breakdown
 
-Is how custom recognizers will be masked to:
-Example:
-- Entity Type: PERSON
-- Pattern: "John Doe"
-- Score: 0.8
-- Output: `<PERSON>`
+| Pattern Component | Meaning |
+|-------------------|---------|
+| `salary:` | Matches the literal text "salary:" |
+| `\s*` | Matches zero or more whitespace characters |
+| `\$` | Matches the dollar sign (escaped) |
+| `\s*` | Matches zero or more whitespace characters after $ |
+| `\d{1,3}` | Matches 1-3 digits (e.g., "1", "50", "125") |
+| `(,\d{3})*` | Matches comma-separated thousands (e.g., ",000", ",500,000") |
+| `(\.\d{2})?` | Optionally matches cents (e.g., ".00", ".50") |
 
+### Example Results
 
-## Adding Context Words
-You can also add context words to improve the accuracy of the recognizer.
-Example:
-- Context words: "project", "code", "internal" <br />
-- Entity Type: PROJECT_CODE <br />
-- Pattern: "PRJ-\d{4}" <br />
-- Score: 0.8 <br />
-- Output: `<PROJECT_CODE>` <br />
+```
+Original: "Employee record shows salary: $125,000.00 annually"
+Redacted: "Employee record shows <SALARY> annually"
+
+Original: "Base salary:$50,000 with bonus potential"
+Redacted: "Base <SALARY> with bonus potential"
+```
+
+<Tip>
+  Adding context words like "salary", "compensation", "pay", "wage", and "income" helps increase detection confidence when these terms appear near the matched pattern, reducing false positives.
+</Tip>
+
+### Enable the Recognizer for Your Deployments
+
+<Warning>
+  Creating a custom recognizer at the organization level does not automatically enable it for your deployments. You must manually enable each recognizer for every deployment where you want it applied.
+</Warning>
+
+After creating your custom recognizer, enable it for each deployment:
+
+<Steps>
+  <Step title="Navigate to Your Deployment">
+    Go to your deployment/automation and open **Settings** → **PII Protection**.
+  </Step>
+
+  <Step title="Select Custom Recognizers">
+    Under **Mask Recognizers**, you'll see your organization-defined recognizers. Check the box next to the recognizers you want to enable.
+
+    <Frame>
+      ![Enable Custom Recognizer](/images/enterprise/pii_mask_recognizers_options.png)
+    </Frame>
+  </Step>
+
+  <Step title="Save Configuration">
+    Save your changes. The recognizer will be active on all subsequent executions for this deployment.
+  </Step>
+</Steps>
+
+<Info>
+  Repeat this process for each deployment where you need the custom recognizer. This gives you granular control over which recognizers are active in different environments (e.g., development vs. production).
+</Info>
