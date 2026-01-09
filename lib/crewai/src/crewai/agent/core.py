@@ -35,6 +35,11 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -44,10 +49,10 @@ from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.lite_agent import LiteAgent
+from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp import (
     MCPClient,
@@ -70,10 +75,12 @@ from crewai.utilities.agent_utils import (
     render_text_description_and_args,
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.converter import Converter
+from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -82,7 +89,6 @@ if TYPE_CHECKING:
     from crewai_tools import CodeInterpreterTool
 
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
-    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -106,7 +112,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or CrewAgentExecutorFlow class.
+            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -222,9 +228,9 @@ class Agent(BaseAgent):
         default=None,
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
     )
-    executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
+    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
         default=CrewAgentExecutor,
-        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use CrewAgentExecutorFlow.",
+        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
 
     @model_validator(mode="before")
@@ -1573,10 +1579,10 @@ class Agent(BaseAgent):
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
         """
-        Execute the agent with the given messages using a LiteAgent instance.
+        Execute the agent with the given messages using the AgentExecutor.
 
-        This method is useful when you want to use the Agent configuration but
-        with the simpler and more direct execution flow of LiteAgent.
+        This method provides standalone agent execution without requiring a Crew.
+        It supports tools, response formatting, and guardrails.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
@@ -1587,6 +1593,7 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools and self.tools is not None:
@@ -1596,25 +1603,264 @@ class Agent(BaseAgent):
             if mcps and self.tools is not None:
                 self.tools.extend(mcps)
 
-        lite_agent = LiteAgent(
-            id=self.id,
-            role=self.role,
-            goal=self.goal,
-            backstory=self.backstory,
-            llm=self.llm,
-            tools=self.tools or [],
-            max_iterations=self.max_iter,
-            max_execution_time=self.max_execution_time,
-            respect_context_window=self.respect_context_window,
-            verbose=self.verbose,
-            response_format=response_format,
+        # Prepare tools
+        raw_tools: list[BaseTool] = self.tools or []
+        parsed_tools = parse_tools(raw_tools)
+
+        # Build agent_info for backward-compatible event emission
+        agent_info = {
+            "id": self.id,
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": raw_tools,
+            "verbose": self.verbose,
+        }
+
+        # Build prompt for standalone execution
+        prompt = Prompts(
+            agent=self,
+            has_tools=len(raw_tools) > 0,
             i18n=self.i18n,
-            original_agent=self,
-            guardrail=self.guardrail,
-            guardrail_max_retries=self.guardrail_max_retries,
+            use_system_prompt=self.use_system_prompt,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
+
+        # Prepare stop words
+        stop_words = [self.i18n.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        # Get RPM limit function
+        rpm_limit_fn = (
+            self._rpm_controller.check_or_wait if self._rpm_controller else None
         )
 
-        return lite_agent.kickoff(messages)
+        # Create the executor for standalone mode (no crew, no task)
+        executor = AgentExecutor(
+            llm=cast(BaseLLM, self.llm),
+            agent=self,
+            prompt=prompt,
+            max_iter=self.max_iter,
+            tools=parsed_tools,
+            tools_names=get_tool_names(parsed_tools),
+            stop_words=stop_words,
+            tools_description=render_text_description_and_args(parsed_tools),
+            tools_handler=self.tools_handler,
+            task=None,  # Standalone mode
+            crew=None,  # Standalone mode
+            original_tools=raw_tools,
+            step_callback=self.step_callback,
+            function_calling_llm=self.function_calling_llm,
+            respect_context_window=self.respect_context_window,
+            request_within_rpm_limit=rpm_limit_fn,
+            callbacks=[TokenCalcHandler(self._token_process)],
+            response_model=response_format,
+            i18n=self.i18n,
+        )
+
+        # Format messages for the executor
+        if isinstance(messages, str):
+            formatted_messages = messages
+        else:
+            # Convert list of messages to a single input string
+            formatted_messages = "\n".join(
+                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            )
+
+        # Build the input dict for the executor
+        inputs = {
+            "input": formatted_messages,
+            "tool_names": get_tool_names(parsed_tools),
+            "tools": render_text_description_and_args(parsed_tools),
+        }
+
+        try:
+            # Emit started event for backward compatibility with LiteAgent listeners
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=parsed_tools,
+                    messages=messages,
+                ),
+            )
+
+            # Execute and build output
+            output = self._execute_and_build_output(executor, inputs, response_format)
+
+            # Process guardrail if configured
+            if self.guardrail is not None:
+                output = self._process_kickoff_guardrail(
+                    output=output,
+                    executor=executor,
+                    inputs=inputs,
+                    response_format=response_format,
+                )
+
+            # Emit completed event for backward compatibility with LiteAgent listeners
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=output.raw,
+                ),
+            )
+
+            return output
+
+        except Exception as e:
+            # Emit error event for backward compatibility with LiteAgent listeners
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent and build the output object.
+
+        Args:
+            executor: The executor instance.
+            inputs: Input dictionary for execution.
+            response_format: Optional response format.
+
+        Returns:
+            LiteAgentOutput with raw output, formatted result, and metrics.
+        """
+        import json
+
+        # Execute the agent
+        result = executor.invoke(inputs)
+        raw_output = result.get("output", "")
+
+        # Handle response format conversion
+        formatted_result: BaseModel | None = None
+        if response_format:
+            try:
+                model_schema = generate_model_description(response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=raw_output,
+                    model=response_format,
+                    instructions=instructions,
+                )
+
+                conversion_result = converter.to_pydantic()
+                if isinstance(conversion_result, BaseModel):
+                    formatted_result = conversion_result
+            except ConverterError:
+                pass  # Keep raw output if conversion fails
+
+        # Get token usage metrics
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+
+        return LiteAgentOutput(
+            raw=raw_output,
+            pydantic=formatted_result,
+            agent_role=self.role,
+            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=executor.messages,
+        )
+
+    def _process_kickoff_guardrail(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+        retry_count: int = 0,
+    ) -> LiteAgentOutput:
+        """Process guardrail for kickoff execution with retry logic.
+
+        Args:
+            output: Current agent output.
+            executor: The executor instance.
+            inputs: Input dictionary for re-execution.
+            response_format: Optional response format.
+            retry_count: Current retry count.
+
+        Returns:
+            Validated/updated output.
+        """
+        from crewai.utilities.guardrail_types import GuardrailCallable
+
+        # Ensure guardrail is callable
+        guardrail_callable: GuardrailCallable
+        if isinstance(self.guardrail, str):
+            from crewai.tasks.llm_guardrail import LLMGuardrail
+
+            guardrail_callable = cast(
+                GuardrailCallable,
+                LLMGuardrail(description=self.guardrail, llm=cast(BaseLLM, self.llm)),
+            )
+        elif callable(self.guardrail):
+            guardrail_callable = self.guardrail
+        else:
+            # Should not happen if called from kickoff with guardrail check
+            return output
+
+        guardrail_result = process_guardrail(
+            output=output,
+            guardrail=guardrail_callable,
+            retry_count=retry_count,
+            event_source=self,
+            from_agent=self,
+        )
+
+        if not guardrail_result.success:
+            if retry_count >= self.guardrail_max_retries:
+                raise ValueError(
+                    f"Agent's guardrail failed validation after {self.guardrail_max_retries} retries. "
+                    f"Last error: {guardrail_result.error}"
+                )
+
+            # Add feedback and re-execute
+            executor._append_message_to_state(
+                guardrail_result.error or "Guardrail validation failed",
+                role="user",
+            )
+
+            # Re-execute and build new output
+            output = self._execute_and_build_output(executor, inputs, response_format)
+
+            # Recursively retry guardrail
+            return self._process_kickoff_guardrail(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
+                retry_count=retry_count + 1,
+            )
+
+        # Apply guardrail result if available
+        if guardrail_result.result is not None:
+            if isinstance(guardrail_result.result, str):
+                output.raw = guardrail_result.result
+            elif isinstance(guardrail_result.result, BaseModel):
+                output.pydantic = guardrail_result.result
+
+        return output
 
     async def kickoff_async(
         self,
@@ -1622,7 +1868,7 @@ class Agent(BaseAgent):
         response_format: type[Any] | None = None,
     ) -> LiteAgentOutput:
         """
-        Execute the agent asynchronously with the given messages using a LiteAgent instance.
+        Execute the agent asynchronously with the given messages.
 
         This is the async version of the kickoff method.
 
@@ -1635,21 +1881,4 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        lite_agent = LiteAgent(
-            role=self.role,
-            goal=self.goal,
-            backstory=self.backstory,
-            llm=self.llm,
-            tools=self.tools or [],
-            max_iterations=self.max_iter,
-            max_execution_time=self.max_execution_time,
-            respect_context_window=self.respect_context_window,
-            verbose=self.verbose,
-            response_format=response_format,
-            i18n=self.i18n,
-            original_agent=self,
-            guardrail=self.guardrail,
-            guardrail_max_retries=self.guardrail_max_retries,
-        )
-
-        return await lite_agent.kickoff_async(messages)
+        return await asyncio.to_thread(self.kickoff, messages, response_format)

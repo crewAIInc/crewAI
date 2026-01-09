@@ -73,12 +73,16 @@ class AgentReActState(BaseModel):
     ask_for_human_input: bool = Field(default=False)
 
 
-class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
-    """Flow-based executor matching CrewAgentExecutor interface.
+class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
+    """Flow-based agent executor for both standalone and crew-bound execution.
 
     Inherits from:
     - Flow[AgentReActState]: Provides flow orchestration capabilities
     - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
+
+    This executor can operate in two modes:
+    - Standalone mode: When crew and task are None (used by Agent.kickoff())
+    - Crew mode: When crew and task are provided (used by Agent.execute_task())
 
     Note: Multiple instances may be created during agent initialization
     (cache setup, RPM controller setup, etc.) but only the final instance
@@ -88,8 +92,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
     def __init__(
         self,
         llm: BaseLLM,
-        task: Task,
-        crew: Crew,
         agent: Agent,
         prompt: SystemPromptResult | StandardPromptResult,
         max_iter: int,
@@ -98,6 +100,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         stop_words: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
+        task: Task | None = None,
+        crew: Crew | None = None,
         step_callback: Any = None,
         original_tools: list[BaseTool] | None = None,
         function_calling_llm: BaseLLM | Any | None = None,
@@ -111,8 +115,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         Args:
             llm: Language model instance.
-            task: Task to execute.
-            crew: Crew instance.
             agent: Agent to execute.
             prompt: Prompt templates.
             max_iter: Maximum iterations.
@@ -121,6 +123,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             stop_words: Stop word list.
             tools_description: Tool descriptions.
             tools_handler: Tool handler instance.
+            task: Optional task to execute (None for standalone agent execution).
+            crew: Optional crew instance (None for standalone agent execution).
             step_callback: Optional step callback.
             original_tools: Original tool list.
             function_calling_llm: Optional function calling LLM.
@@ -131,9 +135,9 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         """
         self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
-        self.task = task
+        self.task: Task | None = task
         self.agent = agent
-        self.crew = crew
+        self.crew: Crew | None = crew
         self.prompt = prompt
         self.tools = tools
         self.tools_names = tools_names
@@ -621,10 +625,12 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             result: Agent's final output.
             human_feedback: Optional feedback from human.
         """
+        # Early return if no crew (standalone mode)
+        if self.crew is None:
+            return
+
         agent_id = str(self.agent.id)
-        train_iteration = (
-            getattr(self.crew, "_train_iteration", None) if self.crew else None
-        )
+        train_iteration = getattr(self.crew, "_train_iteration", None)
 
         if train_iteration is None or not isinstance(train_iteration, int):
             train_error = Text()
@@ -806,3 +812,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         requiring arbitrary_types_allowed=True.
         """
         return core_schema.any_schema()
+
+
+# Backward compatibility alias (deprecated)
+CrewAgentExecutorFlow = AgentExecutor
