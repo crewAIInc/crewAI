@@ -48,11 +48,12 @@ class EnvironmentTools:
 
         Args:
             allowed_paths: List of paths to restrict operations to.
-                Empty or None allows access to all paths.
+                Defaults to current directory ["."] if None.
+                Pass empty list [] to allow all paths (not recommended).
             include_grep: Whether to include GrepTool (requires grep installed).
             include_search: Whether to include FileSearchTool.
         """
-        self.allowed_paths = allowed_paths or []
+        self.allowed_paths = allowed_paths if allowed_paths is not None else ["."]
         self.include_grep = include_grep
         self.include_search = include_search
 

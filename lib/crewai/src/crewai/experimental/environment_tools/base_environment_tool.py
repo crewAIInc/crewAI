@@ -22,8 +22,8 @@ class BaseEnvironmentTool(BaseTool):
     """
 
     allowed_paths: list[str] = Field(
-        default_factory=list,
-        description="Restrict operations to these paths. Empty list allows all.",
+        default_factory=lambda: ["."],
+        description="Restrict operations to these paths. Defaults to current directory.",
     )
 
     def _validate_path(self, path: str) -> tuple[bool, Path | str]:

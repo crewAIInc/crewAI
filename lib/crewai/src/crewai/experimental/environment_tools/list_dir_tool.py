@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import BaseModel, Field
 
 from crewai.experimental.environment_tools.base_environment_tool import (
@@ -68,6 +70,7 @@ Examples:
         if not valid:
             return f"Error: {result}"
 
+        assert isinstance(result, Path)  # noqa: S101
         dir_path = result
 
         # Check directory exists
