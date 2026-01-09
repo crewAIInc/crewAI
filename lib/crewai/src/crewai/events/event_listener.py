@@ -13,6 +13,8 @@ from crewai.events.types.a2a_events import (
     A2ADelegationCompletedEvent,
     A2ADelegationStartedEvent,
     A2AMessageSentEvent,
+    A2APollingStartedEvent,
+    A2APollingStatusEvent,
     A2AResponseReceivedEvent,
 )
 from crewai.events.types.agent_events import (
@@ -37,6 +39,8 @@ from crewai.events.types.flow_events import (
     FlowFinishedEvent,
     FlowPausedEvent,
     FlowStartedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionPausedEvent,
@@ -67,7 +71,6 @@ from crewai.events.types.mcp_events import (
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
-    MCPToolExecutionCompletedEvent,
     MCPToolExecutionFailedEvent,
     MCPToolExecutionStartedEvent,
 )
@@ -329,6 +332,33 @@ class EventListener(BaseEventListener):
                 "paused",
             )
 
+        # ----------- HUMAN FEEDBACK EVENTS -----------
+        @crewai_event_bus.on(HumanFeedbackRequestedEvent)
+        def on_human_feedback_requested(
+            _: Any, event: HumanFeedbackRequestedEvent
+        ) -> None:
+            """Handle human feedback requested event."""
+            has_routing = event.emit is not None and len(event.emit) > 0
+            self._telemetry.human_feedback_span(
+                event_type="requested",
+                has_routing=has_routing,
+                num_outcomes=len(event.emit) if event.emit else 0,
+            )
+
+        @crewai_event_bus.on(HumanFeedbackReceivedEvent)
+        def on_human_feedback_received(
+            _: Any, event: HumanFeedbackReceivedEvent
+        ) -> None:
+            """Handle human feedback received event."""
+            has_routing = event.outcome is not None
+            self._telemetry.human_feedback_span(
+                event_type="received",
+                has_routing=has_routing,
+                num_outcomes=0,
+                feedback_provided=bool(event.feedback and event.feedback.strip()),
+                outcome=event.outcome,
+            )
+
         # ----------- TOOL USAGE EVENTS -----------
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_usage_started(source: Any, event: ToolUsageStartedEvent) -> None:
@@ -578,6 +608,23 @@ class EventListener(BaseEventListener):
                 event.final_result,
                 event.error,
                 event.total_turns,
+            )
+
+        @crewai_event_bus.on(A2APollingStartedEvent)
+        def on_a2a_polling_started(_: Any, event: A2APollingStartedEvent) -> None:
+            self.formatter.handle_a2a_polling_started(
+                event.task_id,
+                event.polling_interval,
+                event.endpoint,
+            )
+
+        @crewai_event_bus.on(A2APollingStatusEvent)
+        def on_a2a_polling_status(_: Any, event: A2APollingStatusEvent) -> None:
+            self.formatter.handle_a2a_polling_status(
+                event.task_id,
+                event.state,
+                event.elapsed_seconds,
+                event.poll_count,
             )
 
         # ----------- MCP EVENTS -----------
