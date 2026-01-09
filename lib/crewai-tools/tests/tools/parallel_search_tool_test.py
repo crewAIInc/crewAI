@@ -108,14 +108,14 @@ def test_runtime_parameter_override(monkeypatch, mock_parallel_client):
         return_value=mock_parallel_client,
     ):
         tool = ParallelSearchTool(
-            max_results=10, source_policy={"include": ["init.com"]}
+            max_results=10, source_policy={"include_domains": ["init.com"]}
         )
         tool.run(
             objective="test query",
             max_results=5,
-            source_policy={"include": ["runtime.com"]},
+            source_policy={"include_domains": ["runtime.com"]},
         )
 
     call_kwargs = mock_parallel_client.beta.search.call_args.kwargs
     assert call_kwargs["max_results"] == 5
-    assert call_kwargs["source_policy"] == {"include": ["runtime.com"]}
+    assert call_kwargs["source_policy"] == {"include_domains": ["runtime.com"]}
