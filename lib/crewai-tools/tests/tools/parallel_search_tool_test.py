@@ -44,6 +44,7 @@ def test_requires_parallel_web_package(monkeypatch):
             ParallelSearchTool()
 
 
+@pytest.mark.skipif(not PARALLEL_AVAILABLE, reason="parallel-web not installed")
 def test_requires_env_var(monkeypatch, mock_parallel_client):
     """Test that the tool requires PARALLEL_API_KEY to be set."""
     monkeypatch.delenv("PARALLEL_API_KEY", raising=False)
