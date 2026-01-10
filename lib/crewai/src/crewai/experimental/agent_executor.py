@@ -587,11 +587,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
+        if self.task is None:
+            return
+
         crewai_event_bus.emit(
             self.agent,
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
-                task_description=(self.task.description if self.task else "Not Found"),
+                task_description=self.task.description,
                 verbose=self.agent.verbose
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
