@@ -60,8 +60,9 @@ class OpenRouterCompletion(OpenAICompletion):
                       Falls back to OPENROUTER_SITE_NAME env var.
             **kwargs: Additional arguments passed to OpenAICompletion.
         """
-        # Remove base_url if passed (we override it)
+        # Remove base_url and provider if passed (we override them)
         kwargs.pop("base_url", None)
+        kwargs.pop("provider", None)
 
         # Store OpenRouter-specific config before calling super().__init__
         self.site_url = site_url or os.getenv("OPENROUTER_SITE_URL", "")
