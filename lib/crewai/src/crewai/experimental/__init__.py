@@ -1,4 +1,12 @@
 from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
+from crewai.experimental.environment_tools import (
+    BaseEnvironmentTool,
+    EnvironmentTools,
+    FileReadTool,
+    FileSearchTool,
+    GrepTool,
+    ListDirTool,
+)
 from crewai.experimental.evaluation import (
     AgentEvaluationResult,
     AgentEvaluator,
@@ -23,14 +31,20 @@ from crewai.experimental.evaluation import (
 __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
+    "BaseEnvironmentTool",
     "BaseEvaluator",
     "CrewAgentExecutorFlow",
+    "EnvironmentTools",
     "EvaluationScore",
     "EvaluationTraceCallback",
     "ExperimentResult",
     "ExperimentResults",
     "ExperimentRunner",
+    "FileReadTool",
+    "FileSearchTool",
     "GoalAlignmentEvaluator",
+    "GrepTool",
+    "ListDirTool",
     "MetricCategory",
     "ParameterExtractionEvaluator",
     "ReasoningEfficiencyEvaluator",
