@@ -1,4 +1,8 @@
+import gc
+import weakref
+
 import pytest
+
 from crewai.cli.git import Repository
 
 
@@ -99,3 +103,66 @@ def test_origin_url(fp, repository):
         stdout="https://github.com/user/repo.git\n",
     )
     assert repository.origin_url() == "https://github.com/user/repo.git"
+
+
+def test_repository_instances_are_garbage_collected(fp):
+    """Test that Repository instances don't leak memory after going out of scope."""
+    # Register git commands
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    # Track weak references
+    refs = []
+
+    # Create multiple instances
+    for i in range(100):
+        repo = Repository(path=".")
+        refs.append(weakref.ref(repo))
+        del repo
+
+    # Force garbage collection
+    gc.collect()
+
+    # Check that instances were garbage collected
+    alive = sum(1 for ref in refs if ref() is not None)
+    assert alive == 0, f"{alive} Repository instances still alive after gc"
+
+
+def test_is_git_repo_caches_result(fp):
+    """Test that is_git_repo caches its result per instance."""
+    # Register git commands
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo = Repository(path=".")
+
+    # Cache should be populated after __init__ calls is_git_repo
+    assert repo._is_git_repo_cache is True
+
+    # Calling again should use cache (no additional subprocess calls)
+    result = repo.is_git_repo()
+    assert result is True
+
+    # Verify cache is being used
+    assert repo._is_git_repo_cache is True
+
+
+def test_cache_is_per_instance(fp):
+    """Test that cache is per-instance, not global."""
+    # Register git commands
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo1 = Repository(path=".")
+    repo2 = Repository(path=".")
+
+    # Each instance should have its own cache
+    assert repo1._is_git_repo_cache is True
+    assert repo2._is_git_repo_cache is True
+
+    # Modifying one shouldn't affect the other
+    repo1._is_git_repo_cache = False
+    assert repo2._is_git_repo_cache is True
