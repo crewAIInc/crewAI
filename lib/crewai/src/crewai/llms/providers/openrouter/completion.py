@@ -125,22 +125,26 @@ class OpenRouterCompletion(OpenAICompletion):
         """Get the context window size for the model.
 
         OpenRouter supports many models with varying context windows.
-        Returns a conservative default since model capabilities vary.
+        Returns a generic default since model capabilities vary.
 
         Returns:
             The usable context window size in tokens, calculated as
             128000 * CONTEXT_WINDOW_USAGE_RATIO.
 
         Note:
-            The 128K default is chosen because it covers most modern models
-            (Claude 3.x, GPT-4o, Gemini, etc.) while being safe for older models
-            that may have smaller windows. CrewAI uses this for token budgeting,
-            so overestimating is safer than underestimating.
+            The 128K default is chosen because it covers many modern models
+            (Claude 3.x, GPT-4o, Gemini, etc.), but it may be larger than the
+            actual context window for some older or smaller models. Exceeding a
+            model's real context limit can lead to API errors or truncated
+            responses.
 
-            For specific model context limits, check the OpenRouter models page:
+            For accurate limits, always check the OpenRouter models page:
             https://openrouter.ai/models
 
-            Each model's page shows its exact context window size.
+            Each model's page shows its exact context window size. For
+            conservative token budgeting, prefer using the documented limit for
+            your chosen model or a slightly smaller value rather than assuming a
+            larger window.
         """
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
