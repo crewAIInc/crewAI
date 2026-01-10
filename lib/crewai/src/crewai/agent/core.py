@@ -1642,6 +1642,8 @@ class Agent(BaseAgent):
 
         # Create the executor for standalone mode (no crew, no task)
         executor = AgentExecutor(
+            task=None,
+            crew=None,
             llm=cast(BaseLLM, self.llm),
             agent=self,
             prompt=prompt,
@@ -1651,8 +1653,6 @@ class Agent(BaseAgent):
             stop_words=stop_words,
             tools_description=render_text_description_and_args(parsed_tools),
             tools_handler=self.tools_handler,
-            task=None,  # Standalone mode
-            crew=None,  # Standalone mode
             original_tools=raw_tools,
             step_callback=self.step_callback,
             function_calling_llm=self.function_calling_llm,
@@ -1663,7 +1663,6 @@ class Agent(BaseAgent):
             i18n=self.i18n,
         )
 
-        # Format messages for the executor
         if isinstance(messages, str):
             formatted_messages = messages
         else:
@@ -1693,7 +1692,6 @@ class Agent(BaseAgent):
             # Execute and build output
             output = self._execute_and_build_output(executor, inputs, response_format)
 
-            # Process guardrail if configured
             if self.guardrail is not None:
                 output = self._process_kickoff_guardrail(
                     output=output,
@@ -1702,7 +1700,6 @@ class Agent(BaseAgent):
                     response_format=response_format,
                 )
 
-            # Emit completed event for backward compatibility with LiteAgent listeners
             crewai_event_bus.emit(
                 self,
                 event=LiteAgentExecutionCompletedEvent(
@@ -1714,7 +1711,6 @@ class Agent(BaseAgent):
             return output
 
         except Exception as e:
-            # Emit error event for backward compatibility with LiteAgent listeners
             crewai_event_bus.emit(
                 self,
                 event=LiteAgentExecutionErrorEvent(
