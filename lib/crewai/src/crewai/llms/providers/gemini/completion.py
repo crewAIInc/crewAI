@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from pydantic import BaseModel
 
@@ -24,7 +25,7 @@ try:
     from google import genai
     from google.genai import types
     from google.genai.errors import APIError
-    from google.genai.types import GenerateContentResponse, Schema
+    from google.genai.types import GenerateContentResponse
 except ImportError:
     raise ImportError(
         'Google Gen AI native provider not available, to install: uv add "crewai[google-genai]"'
@@ -105,6 +106,7 @@ class GeminiCompletion(BaseLLM):
         self.stream = stream
         self.safety_settings = safety_settings or {}
         self.stop_sequences = stop_sequences or []
+        self.tools: list[dict[str, Any]] | None = None
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
@@ -223,10 +225,11 @@ class GeminiCompletion(BaseLLM):
         Args:
             messages: Input messages for the chat completion
             tools: List of tool/function definitions
-            callbacks: Callback functions (not used as token counts are handled by the reponse)
+            callbacks: Callback functions (not used as token counts are handled by the response)
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            response_model: Response model to use.
 
         Returns:
             Chat completion response or tool call result
@@ -267,7 +270,6 @@ class GeminiCompletion(BaseLLM):
 
             return self._handle_completion(
                 formatted_content,
-                system_instruction,
                 config,
                 available_functions,
                 from_task,
@@ -309,6 +311,7 @@ class GeminiCompletion(BaseLLM):
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            response_model: Response model to use.
 
         Returns:
             Chat completion response or tool call result
@@ -344,7 +347,6 @@ class GeminiCompletion(BaseLLM):
 
             return await self._ahandle_completion(
                 formatted_content,
-                system_instruction,
                 config,
                 available_functions,
                 from_task,
@@ -433,11 +435,8 @@ class GeminiCompletion(BaseLLM):
             function_declaration = types.FunctionDeclaration(
                 name=name,
                 description=description,
+                parameters=parameters if parameters else None,
             )
-
-            # Add parameters if present - ensure parameters is a dict
-            if parameters and isinstance(parameters, Schema):
-                function_declaration.parameters = parameters
 
             gemini_tool = types.Tool(function_declarations=[function_declaration])
             gemini_tools.append(gemini_tool)
@@ -497,40 +496,118 @@ class GeminiCompletion(BaseLLM):
 
         return contents, system_instruction
 
-    def _handle_completion(
+    def _validate_and_emit_structured_output(
         self,
+        content: str,
+        response_model: type[BaseModel],
+        messages_for_event: list[LLMMessage],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Validate content against response model and emit completion event.
+
+        Args:
+            content: Response content to validate
+            response_model: Pydantic model for validation
+            messages_for_event: Messages to include in event
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Validated and serialized JSON string
+
+        Raises:
+            ValueError: If validation fails
+        """
+        try:
+            structured_data = response_model.model_validate_json(content)
+            structured_json = structured_data.model_dump_json()
+
+            self._emit_call_completed_event(
+                response=structured_json,
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=messages_for_event,
+            )
+
+            return structured_json
+        except Exception as e:
+            error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
+            logging.error(error_msg)
+            raise ValueError(error_msg) from e
+
+    def _finalize_completion_response(
+        self,
+        content: str,
         contents: list[types.Content],
-        system_instruction: str | None,
-        config: types.GenerateContentConfig,
+        response_model: type[BaseModel] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> str:
+        """Finalize completion response with validation and event emission.
+
+        Args:
+            content: The response content
+            contents: Original contents for event conversion
+            response_model: Pydantic model for structured output validation
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Final response content after processing
+        """
+        messages_for_event = self._convert_contents_to_dict(contents)
+
+        # Handle structured output validation
+        if response_model:
+            return self._validate_and_emit_structured_output(
+                content=content,
+                response_model=response_model,
+                messages_for_event=messages_for_event,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+        self._emit_call_completed_event(
+            response=content,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=messages_for_event,
+        )
+
+        return self._invoke_after_llm_call_hooks(
+            messages_for_event, content, from_agent
+        )
+
+    def _process_response_with_tools(
+        self,
+        response: GenerateContentResponse,
+        contents: list[types.Content],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
-        """Handle non-streaming content generation."""
-        try:
-            # The API accepts list[Content] but mypy is overly strict about variance
-            contents_for_api: Any = contents
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=contents_for_api,
-                config=config,
-            )
+        """Process response, execute function calls, and finalize completion.
 
-            usage = self._extract_token_usage(response)
-        except Exception as e:
-            if is_context_length_exceeded(e):
-                logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededError(str(e)) from e
-            raise e from e
+        Args:
+            response: The completion response
+            contents: Original contents for event conversion
+            available_functions: Available functions for function calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output validation
 
-        self._track_token_usage_internal(usage)
-
+        Returns:
+            Final response content or function call result
+        """
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
                 for part in candidate.content.parts:
-                    if hasattr(part, "function_call") and part.function_call:
+                    if part.function_call:
                         function_name = part.function_call.name
                         if function_name is None:
                             continue
@@ -554,61 +631,112 @@ class GeminiCompletion(BaseLLM):
         content = response.text or ""
         content = self._apply_stop_words(content)
 
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=content,
-            call_type=LLMCallType.LLM_CALL,
+        return self._finalize_completion_response(
+            content=content,
+            contents=contents,
+            response_model=response_model,
             from_task=from_task,
             from_agent=from_agent,
-            messages=messages_for_event,
         )
 
-        return self._invoke_after_llm_call_hooks(
-            messages_for_event, content, from_agent
-        )
-
-    def _handle_streaming_completion(
+    def _process_stream_chunk(
         self,
+        chunk: GenerateContentResponse,
+        full_response: str,
+        function_calls: dict[int, dict[str, Any]],
+        usage_data: dict[str, int],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
+        """Process a single streaming chunk.
+
+        Args:
+            chunk: The streaming chunk response
+            full_response: Accumulated response text
+            function_calls: Accumulated function calls keyed by sequential index
+            usage_data: Accumulated usage data
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Tuple of (updated full_response, updated function_calls, updated usage_data)
+        """
+        if chunk.usage_metadata:
+            usage_data = self._extract_token_usage(chunk)
+
+        if chunk.text:
+            full_response += chunk.text
+            self._emit_stream_chunk_event(
+                chunk=chunk.text,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+        if chunk.candidates:
+            candidate = chunk.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if part.function_call:
+                        call_index = len(function_calls)
+                        call_id = f"call_{call_index}"
+                        args_dict = (
+                            dict(part.function_call.args)
+                            if part.function_call.args
+                            else {}
+                        )
+                        args_json = json.dumps(args_dict)
+
+                        function_calls[call_index] = {
+                            "id": call_id,
+                            "name": part.function_call.name,
+                            "args": args_dict,
+                        }
+
+                        self._emit_stream_chunk_event(
+                            chunk=args_json,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": call_id,
+                                "function": {
+                                    "name": part.function_call.name or "",
+                                    "arguments": args_json,
+                                },
+                                "type": "function",
+                                "index": call_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
+
+        return full_response, function_calls, usage_data
+
+    def _finalize_streaming_response(
+        self,
+        full_response: str,
+        function_calls: dict[int, dict[str, Any]],
+        usage_data: dict[str, int],
         contents: list[types.Content],
-        config: types.GenerateContentConfig,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str:
-        """Handle streaming content generation."""
-        full_response = ""
-        function_calls: dict[str, dict[str, Any]] = {}
+        """Finalize streaming response with usage tracking, function execution, and events.
 
-        # The API accepts list[Content] but mypy is overly strict about variance
-        contents_for_api: Any = contents
-        for chunk in self.client.models.generate_content_stream(
-            model=self.model,
-            contents=contents_for_api,
-            config=config,
-        ):
-            if chunk.text:
-                full_response += chunk.text
-                self._emit_stream_chunk_event(
-                    chunk=chunk.text,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
+        Args:
+            full_response: The complete streamed response content
+            function_calls: Dictionary of function calls accumulated during streaming
+            usage_data: Token usage data from the stream
+            contents: Original contents for event conversion
+            available_functions: Available functions for function calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output validation
 
-            if chunk.candidates:
-                candidate = chunk.candidates[0]
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        if hasattr(part, "function_call") and part.function_call:
-                            call_id = part.function_call.name or "default"
-                            if call_id not in function_calls:
-                                function_calls[call_id] = {
-                                    "name": part.function_call.name,
-                                    "args": dict(part.function_call.args)
-                                    if part.function_call.args
-                                    else {},
-                                }
+        Returns:
+            Final response content after processing
+        """
+        self._track_token_usage_internal(usage_data)
 
         # Handle completed function calls
         if function_calls and available_functions:
@@ -636,24 +764,95 @@ class GeminiCompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
+        return self._finalize_completion_response(
+            content=full_response,
+            contents=contents,
+            response_model=response_model,
             from_task=from_task,
             from_agent=from_agent,
-            messages=messages_for_event,
         )
 
-        return self._invoke_after_llm_call_hooks(
-            messages_for_event, full_response, from_agent
+    def _handle_completion(
+        self,
+        contents: list[types.Content],
+        config: types.GenerateContentConfig,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming content generation."""
+        try:
+            # The API accepts list[Content] but mypy is overly strict about variance
+            contents_for_api: Any = contents
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=contents_for_api,
+                config=config,
+            )
+
+            usage = self._extract_token_usage(response)
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                logging.error(f"Context window exceeded: {e}")
+                raise LLMContextLengthExceededError(str(e)) from e
+            raise e from e
+
+        self._track_token_usage_internal(usage)
+
+        return self._process_response_with_tools(
+            response=response,
+            contents=contents,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
+
+    def _handle_streaming_completion(
+        self,
+        contents: list[types.Content],
+        config: types.GenerateContentConfig,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str:
+        """Handle streaming content generation."""
+        full_response = ""
+        function_calls: dict[int, dict[str, Any]] = {}
+        usage_data = {"total_tokens": 0}
+
+        # The API accepts list[Content] but mypy is overly strict about variance
+        contents_for_api: Any = contents
+        for chunk in self.client.models.generate_content_stream(
+            model=self.model,
+            contents=contents_for_api,
+            config=config,
+        ):
+            full_response, function_calls, usage_data = self._process_stream_chunk(
+                chunk=chunk,
+                full_response=full_response,
+                function_calls=function_calls,
+                usage_data=usage_data,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            function_calls=function_calls,
+            usage_data=usage_data,
+            contents=contents,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
         )
 
     async def _ahandle_completion(
         self,
         contents: list[types.Content],
-        system_instruction: str | None,
         config: types.GenerateContentConfig,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -679,45 +878,14 @@ class GeminiCompletion(BaseLLM):
 
         self._track_token_usage_internal(usage)
 
-        if response.candidates and (self.tools or available_functions):
-            candidate = response.candidates[0]
-            if candidate.content and candidate.content.parts:
-                for part in candidate.content.parts:
-                    if hasattr(part, "function_call") and part.function_call:
-                        function_name = part.function_call.name
-                        if function_name is None:
-                            continue
-                        function_args = (
-                            dict(part.function_call.args)
-                            if part.function_call.args
-                            else {}
-                        )
-
-                        result = self._handle_tool_execution(
-                            function_name=function_name,
-                            function_args=function_args,
-                            available_functions=available_functions or {},
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
-
-                        if result is not None:
-                            return result
-
-        content = response.text or ""
-        content = self._apply_stop_words(content)
-
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=content,
-            call_type=LLMCallType.LLM_CALL,
+        return self._process_response_with_tools(
+            response=response,
+            contents=contents,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=messages_for_event,
+            response_model=response_model,
         )
-
-        return content
 
     async def _ahandle_streaming_completion(
         self,
@@ -730,7 +898,8 @@ class GeminiCompletion(BaseLLM):
     ) -> str:
         """Handle async streaming content generation."""
         full_response = ""
-        function_calls: dict[str, dict[str, Any]] = {}
+        function_calls: dict[int, dict[str, Any]] = {}
+        usage_data = {"total_tokens": 0}
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
@@ -740,214 +909,24 @@ class GeminiCompletion(BaseLLM):
             config=config,
         )
         async for chunk in stream:
-            if chunk.text:
-                full_response += chunk.text
-                self._emit_stream_chunk_event(
-                    chunk=chunk.text,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-            if chunk.candidates:
-                candidate = chunk.candidates[0]
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        if hasattr(part, "function_call") and part.function_call:
-                            call_id = part.function_call.name or "default"
-                            if call_id not in function_calls:
-                                function_calls[call_id] = {
-                                    "name": part.function_call.name,
-                                    "args": dict(part.function_call.args)
-                                    if part.function_call.args
-                                    else {},
-                                }
-
-        if function_calls and available_functions:
-            for call_data in function_calls.values():
-                function_name = call_data["name"]
-                function_args = call_data["args"]
-
-                # Skip if function_name is None
-                if not isinstance(function_name, str):
-                    continue
-
-                # Ensure function_args is a dict
-                if not isinstance(function_args, dict):
-                    function_args = {}
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=messages_for_event,
-        )
-
-        return self._invoke_after_llm_call_hooks(
-            messages_for_event, full_response, from_agent
-        )
-
-    async def _ahandle_completion(
-        self,
-        contents: list[types.Content],
-        system_instruction: str | None,
-        config: types.GenerateContentConfig,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-        response_model: type[BaseModel] | None = None,
-    ) -> str | Any:
-        """Handle async non-streaming content generation."""
-        try:
-            # The API accepts list[Content] but mypy is overly strict about variance
-            contents_for_api: Any = contents
-            response = await self.client.aio.models.generate_content(
-                model=self.model,
-                contents=contents_for_api,
-                config=config,
+            full_response, function_calls, usage_data = self._process_stream_chunk(
+                chunk=chunk,
+                full_response=full_response,
+                function_calls=function_calls,
+                usage_data=usage_data,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
-            usage = self._extract_token_usage(response)
-        except Exception as e:
-            if is_context_length_exceeded(e):
-                logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededError(str(e)) from e
-            raise e from e
-
-        self._track_token_usage_internal(usage)
-
-        if response.candidates and (self.tools or available_functions):
-            candidate = response.candidates[0]
-            if candidate.content and candidate.content.parts:
-                for part in candidate.content.parts:
-                    if hasattr(part, "function_call") and part.function_call:
-                        function_name = part.function_call.name
-                        if function_name is None:
-                            continue
-                        function_args = (
-                            dict(part.function_call.args)
-                            if part.function_call.args
-                            else {}
-                        )
-
-                        result = self._handle_tool_execution(
-                            function_name=function_name,
-                            function_args=function_args,
-                            available_functions=available_functions or {},
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
-
-                        if result is not None:
-                            return result
-
-        content = response.text or ""
-        content = self._apply_stop_words(content)
-
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=content,
-            call_type=LLMCallType.LLM_CALL,
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            function_calls=function_calls,
+            usage_data=usage_data,
+            contents=contents,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
-            messages=messages_for_event,
-        )
-
-        return content
-
-    async def _ahandle_streaming_completion(
-        self,
-        contents: list[types.Content],
-        config: types.GenerateContentConfig,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Any | None = None,
-        from_agent: Any | None = None,
-        response_model: type[BaseModel] | None = None,
-    ) -> str:
-        """Handle async streaming content generation."""
-        full_response = ""
-        function_calls: dict[str, dict[str, Any]] = {}
-
-        # The API accepts list[Content] but mypy is overly strict about variance
-        contents_for_api: Any = contents
-        stream = await self.client.aio.models.generate_content_stream(
-            model=self.model,
-            contents=contents_for_api,
-            config=config,
-        )
-        async for chunk in stream:
-            if chunk.text:
-                full_response += chunk.text
-                self._emit_stream_chunk_event(
-                    chunk=chunk.text,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-            if chunk.candidates:
-                candidate = chunk.candidates[0]
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        if hasattr(part, "function_call") and part.function_call:
-                            call_id = part.function_call.name or "default"
-                            if call_id not in function_calls:
-                                function_calls[call_id] = {
-                                    "name": part.function_call.name,
-                                    "args": dict(part.function_call.args)
-                                    if part.function_call.args
-                                    else {},
-                                }
-
-        if function_calls and available_functions:
-            for call_data in function_calls.values():
-                function_name = call_data["name"]
-                function_args = call_data["args"]
-
-                # Skip if function_name is None
-                if not isinstance(function_name, str):
-                    continue
-
-                # Ensure function_args is a dict
-                if not isinstance(function_args, dict):
-                    function_args = {}
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                )
-
-                if result is not None:
-                    return result
-
-        messages_for_event = self._convert_contents_to_dict(contents)
-
-        self._emit_call_completed_event(
-            response=full_response,
-            call_type=LLMCallType.LLM_CALL,
-            from_task=from_task,
-            from_agent=from_agent,
-            messages=messages_for_event,
-        )
-
-        return self._invoke_after_llm_call_hooks(
-            messages_for_event, full_response, from_agent
+            response_model=response_model,
         )
 
     def supports_function_calling(self) -> bool:
@@ -1009,12 +988,12 @@ class GeminiCompletion(BaseLLM):
             }
         return {"total_tokens": 0}
 
+    @staticmethod
     def _convert_contents_to_dict(
-        self,
         contents: list[types.Content],
     ) -> list[LLMMessage]:
         """Convert contents to dict format."""
-        result: list[dict[str, str]] = []
+        result: list[LLMMessage] = []
         for content_obj in contents:
             role = content_obj.role
             if role == "model":
@@ -1027,5 +1006,10 @@ class GeminiCompletion(BaseLLM):
                 part.text for part in parts if hasattr(part, "text") and part.text
             )
 
-            result.append({"role": role, "content": content})
+            result.append(
+                LLMMessage(
+                    role=cast(Literal["user", "assistant", "system"], role),
+                    content=content,
+                )
+            )
         return result

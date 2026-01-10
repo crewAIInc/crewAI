@@ -598,6 +598,8 @@ class AnthropicCompletion(BaseLLM):
         # (the SDK sets it internally)
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        current_tool_calls: dict[int, dict[str, Any]] = {}
+
         # Make streaming API call
         with self.client.messages.stream(**stream_params) as stream:
             for event in stream:
@@ -609,6 +611,55 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        block_index = event.index
+                        current_tool_calls[block_index] = {
+                            "id": block.id,
+                            "name": block.name,
+                            "arguments": "",
+                            "index": block_index,
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk="",
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": block.id,
+                                "function": {
+                                    "name": block.name,
+                                    "arguments": "",
+                                },
+                                "type": "function",
+                                "index": block_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "input_json_delta":
+                        block_index = event.index
+                        partial_json = event.delta.partial_json
+                        if block_index in current_tool_calls and partial_json:
+                            current_tool_calls[block_index]["arguments"] += partial_json
+                            self._emit_stream_chunk_event(
+                                chunk=partial_json,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": current_tool_calls[block_index]["id"],
+                                    "function": {
+                                        "name": current_tool_calls[block_index]["name"],
+                                        "arguments": current_tool_calls[block_index][
+                                            "arguments"
+                                        ],
+                                    },
+                                    "type": "function",
+                                    "index": block_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
 
             final_message: Message = stream.get_final_message()
 
@@ -679,6 +730,49 @@ class AnthropicCompletion(BaseLLM):
             params["messages"], full_response, from_agent
         )
 
+    def _execute_tools_and_collect_results(
+        self,
+        tool_uses: list[ToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> list[dict[str, Any]]:
+        """Execute tools and collect results in Anthropic format.
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            List of tool result dictionaries in Anthropic format
+        """
+        tool_results = []
+
+        for tool_use in tool_uses:
+            function_name = tool_use.name
+            function_args = tool_use.input
+
+            result = self._handle_tool_execution(
+                function_name=function_name,
+                function_args=cast(dict[str, Any], function_args),
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+            tool_result = {
+                "type": "tool_result",
+                "tool_use_id": tool_use.id,
+                "content": str(result)
+                if result is not None
+                else "Tool execution completed",
+            }
+            tool_results.append(tool_result)
+
+        return tool_results
+
     def _handle_tool_use_conversation(
         self,
         initial_response: Message,
@@ -696,33 +790,10 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        # Execute all requested tools and collect results
-        tool_results = []
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            # Execute the tool
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=function_args,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            # Create tool result in Anthropic format
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
-
-        # Prepare follow-up conversation with tool results
         follow_up_params = params.copy()
 
         # Add Claude's tool use response to conversation
@@ -810,7 +881,7 @@ class AnthropicCompletion(BaseLLM):
             logging.error(f"Tool follow-up conversation failed: {e}")
             # Fallback: return the first tool result if follow-up fails
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     async def _ahandle_completion(
@@ -921,6 +992,8 @@ class AnthropicCompletion(BaseLLM):
 
         stream_params = {k: v for k, v in params.items() if k != "stream"}
 
+        current_tool_calls: dict[int, dict[str, Any]] = {}
+
         async with self.async_client.messages.stream(**stream_params) as stream:
             async for event in stream:
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
@@ -931,6 +1004,55 @@ class AnthropicCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                     )
+
+                if event.type == "content_block_start":
+                    block = event.content_block
+                    if block.type == "tool_use":
+                        block_index = event.index
+                        current_tool_calls[block_index] = {
+                            "id": block.id,
+                            "name": block.name,
+                            "arguments": "",
+                            "index": block_index,
+                        }
+                        self._emit_stream_chunk_event(
+                            chunk="",
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            tool_call={
+                                "id": block.id,
+                                "function": {
+                                    "name": block.name,
+                                    "arguments": "",
+                                },
+                                "type": "function",
+                                "index": block_index,
+                            },
+                            call_type=LLMCallType.TOOL_CALL,
+                        )
+                elif event.type == "content_block_delta":
+                    if event.delta.type == "input_json_delta":
+                        block_index = event.index
+                        partial_json = event.delta.partial_json
+                        if block_index in current_tool_calls and partial_json:
+                            current_tool_calls[block_index]["arguments"] += partial_json
+                            self._emit_stream_chunk_event(
+                                chunk=partial_json,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                tool_call={
+                                    "id": current_tool_calls[block_index]["id"],
+                                    "function": {
+                                        "name": current_tool_calls[block_index]["name"],
+                                        "arguments": current_tool_calls[block_index][
+                                            "arguments"
+                                        ],
+                                    },
+                                    "type": "function",
+                                    "index": block_index,
+                                },
+                                call_type=LLMCallType.TOOL_CALL,
+                            )
 
             final_message: Message = await stream.get_final_message()
 
@@ -1003,28 +1125,9 @@ class AnthropicCompletion(BaseLLM):
         3. We send tool results back to Claude
         4. Claude processes results and generates final response
         """
-        tool_results = []
-
-        for tool_use in tool_uses:
-            function_name = tool_use.name
-            function_args = tool_use.input
-
-            result = self._handle_tool_execution(
-                function_name=function_name,
-                function_args=function_args,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
-            tool_result = {
-                "type": "tool_result",
-                "tool_use_id": tool_use.id,
-                "content": str(result)
-                if result is not None
-                else "Tool execution completed",
-            }
-            tool_results.append(tool_result)
+        tool_results = self._execute_tools_and_collect_results(
+            tool_uses, available_functions, from_task, from_agent
+        )
 
         follow_up_params = params.copy()
 
@@ -1079,7 +1182,7 @@ class AnthropicCompletion(BaseLLM):
 
             logging.error(f"Tool follow-up conversation failed: {e}")
             if tool_results:
-                return tool_results[0]["content"]
+                return cast(str, tool_results[0]["content"])
             raise e
 
     def supports_function_calling(self) -> bool:
@@ -1115,7 +1218,8 @@ class AnthropicCompletion(BaseLLM):
         # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_anthropic_token_usage(self, response: Message) -> dict[str, Any]:
+    @staticmethod
+    def _extract_anthropic_token_usage(response: Message) -> dict[str, Any]:
         """Extract token usage from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage

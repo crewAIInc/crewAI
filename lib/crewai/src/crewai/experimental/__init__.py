@@ -1,3 +1,4 @@
+from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
 from crewai.experimental.evaluation import (
     AgentEvaluationResult,
     AgentEvaluator,
@@ -23,6 +24,7 @@ __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
     "BaseEvaluator",
+    "CrewAgentExecutorFlow",
     "EvaluationScore",
     "EvaluationTraceCallback",
     "ExperimentResult",

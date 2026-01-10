@@ -77,8 +77,6 @@ interactions:
       - 8fdcd3fc9a56bf66-ATL
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -204,8 +202,6 @@ interactions:
       - 8fdcd4011938bf66-ATL
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:

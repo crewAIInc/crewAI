@@ -174,9 +174,12 @@ class Telemetry:
 
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
-        self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
-        self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
+        if hasattr(signal, "SIGHUP"):
+            self._register_signal_handler(signal.SIGHUP, SigHupEvent, shutdown=False)
+        if hasattr(signal, "SIGTSTP"):
+            self._register_signal_handler(signal.SIGTSTP, SigTStpEvent, shutdown=False)
+        if hasattr(signal, "SIGCONT"):
+            self._register_signal_handler(signal.SIGCONT, SigContEvent, shutdown=False)
 
     def _register_signal_handler(
         self,
@@ -963,6 +966,38 @@ class Telemetry:
             span = tracer.start_span("Flow Execution")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def human_feedback_span(
+        self,
+        event_type: str,
+        has_routing: bool,
+        num_outcomes: int = 0,
+        feedback_provided: bool | None = None,
+        outcome: str | None = None,
+    ) -> None:
+        """Records human feedback feature usage.
+
+        Args:
+            event_type: Type of event - "requested" or "received".
+            has_routing: Whether emit options were configured for routing.
+            num_outcomes: Number of possible outcomes if routing is used.
+            feedback_provided: Whether user provided feedback or skipped (None if requested).
+            outcome: The collapsed outcome string if routing was used.
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Human Feedback")
+            self._add_attribute(span, "event_type", event_type)
+            self._add_attribute(span, "has_routing", has_routing)
+            self._add_attribute(span, "num_outcomes", num_outcomes)
+            if feedback_provided is not None:
+                self._add_attribute(span, "feedback_provided", feedback_provided)
+            if outcome is not None:
+                self._add_attribute(span, "outcome", outcome)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
