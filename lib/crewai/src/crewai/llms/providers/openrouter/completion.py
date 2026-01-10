@@ -12,6 +12,29 @@ class OpenRouterCompletion(OpenAICompletion):
     OpenRouter provides access to multiple LLM providers through a unified API.
     This class extends OpenAICompletion to use OpenRouter's endpoint while
     supporting OpenRouter-specific headers for attribution and ranking.
+
+    Example:
+        Basic usage with model and API key::
+
+            from crewai.llms.providers.openrouter.completion import OpenRouterCompletion
+
+            llm = OpenRouterCompletion(
+                model="anthropic/claude-3.5-sonnet",
+                api_key="your-openrouter-api-key",  # or set OPENROUTER_API_KEY env var
+            )
+
+        With site attribution for OpenRouter rankings::
+
+            llm = OpenRouterCompletion(
+                model="openai/gpt-4o",
+                site_url="https://myapp.example.com",
+                site_name="My CrewAI App",
+            )
+
+    Note:
+        When using this class directly, provide the full model identifier
+        (e.g., "anthropic/claude-3.5-sonnet"). The "openrouter/" prefix is only
+        used when routing through CrewAI's LLM class and is stripped automatically.
     """
 
     def __init__(
@@ -25,8 +48,12 @@ class OpenRouterCompletion(OpenAICompletion):
         """Initialize OpenRouter client.
 
         Args:
-            model: The model identifier (e.g., "anthropic/claude-3.5-sonnet")
+            model: The model identifier (e.g., "anthropic/claude-3.5-sonnet").
+                Do NOT include the "openrouter/" prefix - that prefix is only
+                used when routing through CrewAI's LLM class and is stripped
+                automatically before reaching this class.
             api_key: OpenRouter API key. Falls back to OPENROUTER_API_KEY env var.
+                     Get your key at https://openrouter.ai/keys
             site_url: Optional URL for OpenRouter rankings attribution.
                      Falls back to OPENROUTER_SITE_URL env var.
             site_name: Optional site name for OpenRouter rankings attribution.
@@ -52,6 +79,7 @@ class OpenRouterCompletion(OpenAICompletion):
             api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
             base_url="https://openrouter.ai/api/v1",
             default_headers=default_headers if default_headers else None,
+            provider="openrouter",
             **kwargs,
         )
 
@@ -63,7 +91,10 @@ class OpenRouterCompletion(OpenAICompletion):
         if self.api_key is None:
             self.api_key = os.getenv("OPENROUTER_API_KEY")
             if self.api_key is None:
-                raise ValueError("OPENROUTER_API_KEY is required")
+                raise ValueError(
+                    "OPENROUTER_API_KEY is required. "
+                    "Get your API key at https://openrouter.ai/keys"
+                )
 
         base_params = {
             "api_key": self.api_key,
@@ -88,6 +119,17 @@ class OpenRouterCompletion(OpenAICompletion):
 
         OpenRouter supports many models with varying context windows.
         Returns a conservative default since model capabilities vary.
+
+        Note:
+            The 128K default is chosen because it covers most modern models
+            (Claude 3.x, GPT-4o, Gemini, etc.) while being safe for older models
+            that may have smaller windows. CrewAI uses this for token budgeting,
+            so overestimating is safer than underestimating.
+
+            For specific model context limits, check the OpenRouter models page:
+            https://openrouter.ai/models
+
+            Each model's page shows its exact context window size.
         """
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
