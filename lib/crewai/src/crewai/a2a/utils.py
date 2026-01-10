@@ -259,6 +259,7 @@ async def _afetch_agent_card_impl(
 
 def execute_a2a_delegation(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -282,6 +283,23 @@ def execute_a2a_delegation(
     use aexecute_a2a_delegation directly.
 
     Args:
+        endpoint: A2A agent endpoint URL (AgentCard URL)
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
+        auth: Optional AuthScheme for authentication (Bearer, OAuth2, API Key, HTTP Basic/Digest)
+        timeout: Request timeout in seconds
+        task_description: The task to delegate
+        context: Optional context information
+        context_id: Context ID for correlating messages/tasks
+        task_id: Specific task identifier
+        reference_task_ids: List of related task IDs
+        metadata: Additional metadata (external_id, request_id, etc.)
+        extensions: Protocol extensions for custom fields
+        conversation_history: Previous Message objects from conversation
+        agent_id: Agent identifier for logging
+        agent_role: Role of the CrewAI agent delegating the task
+        agent_branch: Optional agent tree branch for logging
+        response_model: Optional Pydantic model for structured outputs
+        turn_number: Optional turn number for multi-turn conversations
         endpoint: A2A agent endpoint URL.
         auth: Optional AuthScheme for authentication.
         timeout: Request timeout in seconds.
@@ -323,6 +341,7 @@ def execute_a2a_delegation(
                 agent_role=agent_role,
                 agent_branch=agent_branch,
                 response_model=response_model,
+                transport_protocol=transport_protocol,
                 turn_number=turn_number,
                 updates=updates,
             )
@@ -333,6 +352,7 @@ def execute_a2a_delegation(
 
 async def aexecute_a2a_delegation(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -356,6 +376,24 @@ async def aexecute_a2a_delegation(
     in an async context (e.g., with Crew.akickoff() or agent.aexecute_task()).
 
     Args:
+        endpoint: A2A agent endpoint URL
+        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json)
+        auth: Optional AuthScheme for authentication
+        timeout: Request timeout in seconds
+        task_description: Task to delegate
+        context: Optional context
+        context_id: Context ID for correlation
+        task_id: Specific task identifier
+        reference_task_ids: Related task IDs
+        metadata: Additional metadata
+        extensions: Protocol extensions
+        conversation_history: Previous Message objects
+        is_multiturn: Whether this is a multi-turn conversation
+        turn_number: Current turn number
+        agent_branch: Agent tree branch for logging
+        agent_id: Agent identifier for logging
+        agent_role: Agent role for logging
+        response_model: Optional Pydantic model for structured outputs
         endpoint: A2A agent endpoint URL.
         auth: Optional AuthScheme for authentication.
         timeout: Request timeout in seconds.
@@ -414,6 +452,7 @@ async def aexecute_a2a_delegation(
         agent_role=agent_role,
         response_model=response_model,
         updates=updates,
+        transport_protocol=transport_protocol,
     )
 
     crewai_event_bus.emit(
@@ -431,6 +470,7 @@ async def aexecute_a2a_delegation(
 
 async def _aexecute_a2a_delegation_impl(
     endpoint: str,
+    transport_protocol: TransportProtocol,
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -524,7 +564,6 @@ async def _aexecute_a2a_delegation_impl(
         extensions=extensions,
     )
 
-    transport_protocol = TransportProtocol("JSONRPC")
     new_messages: list[Message] = [*conversation_history, message]
     crewai_event_bus.emit(
         None,
