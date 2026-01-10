@@ -33,13 +33,24 @@ class LongTermMemory(Memory):
             storage = LTMSQLiteStorage(db_path=path) if path else LTMSQLiteStorage()
         super().__init__(storage=storage)
 
-    def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
+    def save(
+        self,
+        value: LongTermMemoryItem,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Save an item to long-term memory.
+
+        Args:
+            value: The LongTermMemoryItem to save.
+            metadata: Optional metadata dict (not used, metadata is extracted from the
+                LongTermMemoryItem). Included for supertype compatibility.
+        """
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
-                value=item.task,
-                metadata=item.metadata,
-                agent_role=item.agent,
+                value=value.task,
+                metadata=value.metadata,
+                agent_role=value.agent,
                 source_type="long_term_memory",
                 from_agent=self.agent,
                 from_task=self.task,
@@ -48,23 +59,23 @@ class LongTermMemory(Memory):
 
         start_time = time.time()
         try:
-            metadata = item.metadata
-            metadata.update(
-                {"agent": item.agent, "expected_output": item.expected_output}
+            item_metadata = value.metadata
+            item_metadata.update(
+                {"agent": value.agent, "expected_output": value.expected_output}
             )
             self.storage.save(
-                task_description=item.task,
-                score=metadata["quality"],
-                metadata=metadata,
-                datetime=item.datetime,
+                task_description=value.task,
+                score=item_metadata["quality"],
+                metadata=item_metadata,
+                datetime=value.datetime,
             )
 
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveCompletedEvent(
-                    value=item.task,
-                    metadata=item.metadata,
-                    agent_role=item.agent,
+                    value=value.task,
+                    metadata=value.metadata,
+                    agent_role=value.agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="long_term_memory",
                     from_agent=self.agent,
@@ -75,25 +86,28 @@ class LongTermMemory(Memory):
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveFailedEvent(
-                    value=item.task,
-                    metadata=item.metadata,
-                    agent_role=item.agent,
+                    value=value.task,
+                    metadata=value.metadata,
+                    agent_role=value.agent,
                     error=str(e),
                     source_type="long_term_memory",
                 ),
             )
             raise
 
-    def search(  # type: ignore[override]
+    def search(
         self,
-        task: str,
-        latest_n: int = 3,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.6,
     ) -> list[dict[str, Any]]:
         """Search long-term memory for relevant entries.
 
         Args:
-            task: The task description to search for.
-            latest_n: Maximum number of results to return.
+            query: The task description to search for.
+            limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results (not used for
+                long-term memory, included for supertype compatibility).
 
         Returns:
             List of matching memory entries.
@@ -101,8 +115,8 @@ class LongTermMemory(Memory):
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(
-                query=task,
-                limit=latest_n,
+                query=query,
+                limit=limit,
                 source_type="long_term_memory",
                 from_agent=self.agent,
                 from_task=self.task,
@@ -111,14 +125,14 @@ class LongTermMemory(Memory):
 
         start_time = time.time()
         try:
-            results = self.storage.load(task, latest_n)
+            results = self.storage.load(query, limit)
 
             crewai_event_bus.emit(
                 self,
                 event=MemoryQueryCompletedEvent(
-                    query=task,
+                    query=query,
                     results=results,
-                    limit=latest_n,
+                    limit=limit,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="long_term_memory",
                     from_agent=self.agent,
@@ -131,26 +145,32 @@ class LongTermMemory(Memory):
             crewai_event_bus.emit(
                 self,
                 event=MemoryQueryFailedEvent(
-                    query=task,
-                    limit=latest_n,
+                    query=query,
+                    limit=limit,
                     error=str(e),
                     source_type="long_term_memory",
                 ),
             )
             raise
 
-    async def asave(self, item: LongTermMemoryItem) -> None:  # type: ignore[override]
+    async def asave(
+        self,
+        value: LongTermMemoryItem,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
         """Save an item to long-term memory asynchronously.
 
         Args:
-            item: The LongTermMemoryItem to save.
+            value: The LongTermMemoryItem to save.
+            metadata: Optional metadata dict (not used, metadata is extracted from the
+                LongTermMemoryItem). Included for supertype compatibility.
         """
         crewai_event_bus.emit(
             self,
             event=MemorySaveStartedEvent(
-                value=item.task,
-                metadata=item.metadata,
-                agent_role=item.agent,
+                value=value.task,
+                metadata=value.metadata,
+                agent_role=value.agent,
                 source_type="long_term_memory",
                 from_agent=self.agent,
                 from_task=self.task,
@@ -159,23 +179,23 @@ class LongTermMemory(Memory):
 
         start_time = time.time()
         try:
-            metadata = item.metadata
-            metadata.update(
-                {"agent": item.agent, "expected_output": item.expected_output}
+            item_metadata = value.metadata
+            item_metadata.update(
+                {"agent": value.agent, "expected_output": value.expected_output}
             )
             await self.storage.asave(
-                task_description=item.task,
-                score=metadata["quality"],
-                metadata=metadata,
-                datetime=item.datetime,
+                task_description=value.task,
+                score=item_metadata["quality"],
+                metadata=item_metadata,
+                datetime=value.datetime,
             )
 
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveCompletedEvent(
-                    value=item.task,
-                    metadata=item.metadata,
-                    agent_role=item.agent,
+                    value=value.task,
+                    metadata=value.metadata,
+                    agent_role=value.agent,
                     save_time_ms=(time.time() - start_time) * 1000,
                     source_type="long_term_memory",
                     from_agent=self.agent,
@@ -186,25 +206,28 @@ class LongTermMemory(Memory):
             crewai_event_bus.emit(
                 self,
                 event=MemorySaveFailedEvent(
-                    value=item.task,
-                    metadata=item.metadata,
-                    agent_role=item.agent,
+                    value=value.task,
+                    metadata=value.metadata,
+                    agent_role=value.agent,
                     error=str(e),
                     source_type="long_term_memory",
                 ),
             )
             raise
 
-    async def asearch(  # type: ignore[override]
+    async def asearch(
         self,
-        task: str,
-        latest_n: int = 3,
+        query: str,
+        limit: int = 3,
+        score_threshold: float = 0.6,
     ) -> list[dict[str, Any]]:
         """Search long-term memory asynchronously.
 
         Args:
-            task: The task description to search for.
-            latest_n: Maximum number of results to return.
+            query: The task description to search for.
+            limit: Maximum number of results to return.
+            score_threshold: Minimum similarity score for results (not used for
+                long-term memory, included for supertype compatibility).
 
         Returns:
             List of matching memory entries.
@@ -212,8 +235,8 @@ class LongTermMemory(Memory):
         crewai_event_bus.emit(
             self,
             event=MemoryQueryStartedEvent(
-                query=task,
-                limit=latest_n,
+                query=query,
+                limit=limit,
                 source_type="long_term_memory",
                 from_agent=self.agent,
                 from_task=self.task,
@@ -222,14 +245,14 @@ class LongTermMemory(Memory):
 
         start_time = time.time()
         try:
-            results = await self.storage.aload(task, latest_n)
+            results = await self.storage.aload(query, limit)
 
             crewai_event_bus.emit(
                 self,
                 event=MemoryQueryCompletedEvent(
-                    query=task,
+                    query=query,
                     results=results,
-                    limit=latest_n,
+                    limit=limit,
                     query_time_ms=(time.time() - start_time) * 1000,
                     source_type="long_term_memory",
                     from_agent=self.agent,
@@ -242,8 +265,8 @@ class LongTermMemory(Memory):
             crewai_event_bus.emit(
                 self,
                 event=MemoryQueryFailedEvent(
-                    query=task,
-                    limit=latest_n,
+                    query=query,
+                    limit=limit,
                     error=str(e),
                     source_type="long_term_memory",
                 ),
