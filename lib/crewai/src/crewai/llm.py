@@ -316,6 +316,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "openrouter",
 ]
 
 
@@ -375,6 +376,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "openrouter": "openrouter",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -495,6 +497,11 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "openrouter":
+            # OpenRouter is a proxy that routes to 300+ models from various providers.
+            # No fixed model list - accept any model identifier.
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -558,6 +565,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "openrouter":
+            from crewai.llms.providers.openrouter.completion import OpenRouterCompletion
+
+            return OpenRouterCompletion
 
         return None
 
@@ -931,7 +943,6 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             if not tool_calls or not available_functions:
-
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -1144,8 +1155,12 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
-            
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1273,7 +1288,11 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1363,7 +1382,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
-        
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
