@@ -87,6 +87,12 @@ class OpenRouterCompletion(OpenAICompletion):
         """Get OpenRouter client parameters.
 
         Overrides parent to use OPENROUTER_API_KEY instead of OPENAI_API_KEY.
+
+        Returns:
+            Dictionary of client initialization parameters for the OpenAI client.
+
+        Raises:
+            ValueError: If OPENROUTER_API_KEY is not set.
         """
         if self.api_key is None:
             self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -119,6 +125,10 @@ class OpenRouterCompletion(OpenAICompletion):
 
         OpenRouter supports many models with varying context windows.
         Returns a conservative default since model capabilities vary.
+
+        Returns:
+            The usable context window size in tokens, calculated as
+            128000 * CONTEXT_WINDOW_USAGE_RATIO.
 
         Note:
             The 128K default is chosen because it covers most modern models
