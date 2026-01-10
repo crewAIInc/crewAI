@@ -569,6 +569,10 @@ class BaseLLM(ABC):
             or usage_data.get("input_tokens")
             or 0
         )
+        + (
+            usage_data.get("thoughts_token_count")
+            or 0
+        )
 
         completion_tokens = (
             usage_data.get("completion_tokens")

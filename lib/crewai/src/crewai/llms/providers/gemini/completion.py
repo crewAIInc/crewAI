@@ -982,6 +982,7 @@ class GeminiCompletion(BaseLLM):
             usage = response.usage_metadata
             return {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
+                "thoughts_token_count": getattr(usage, "thoughts_token_count", 0),
                 "candidates_token_count": getattr(usage, "candidates_token_count", 0),
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
