@@ -1,4 +1,8 @@
+import gc
+import weakref
+
 import pytest
+
 from crewai.cli.git import Repository
 
 
@@ -99,3 +103,82 @@ def test_origin_url(fp, repository):
         stdout="https://github.com/user/repo.git\n",
     )
     assert repository.origin_url() == "https://github.com/user/repo.git"
+
+
+def test_repository_garbage_collection(fp):
+    """Test that Repository instances can be garbage collected.
+
+    This test verifies the fix for the memory leak issue where using
+    @lru_cache on the is_git_repo() method prevented garbage collection
+    of Repository instances.
+    """
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo = Repository(path=".")
+    weak_ref = weakref.ref(repo)
+
+    assert weak_ref() is not None
+
+    del repo
+    gc.collect()
+
+    assert weak_ref() is None, (
+        "Repository instance was not garbage collected. "
+        "This indicates a memory leak, likely from @lru_cache on instance methods."
+    )
+
+
+def test_is_git_repo_caching(fp):
+    """Test that is_git_repo() result is cached at the instance level.
+
+    This verifies that the instance-level caching works correctly,
+    only calling the subprocess once per instance.
+    """
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo = Repository(path=".")
+
+    assert repo._is_git_repo_cache is True
+
+    result1 = repo.is_git_repo()
+    result2 = repo.is_git_repo()
+
+    assert result1 is True
+    assert result2 is True
+    assert repo._is_git_repo_cache is True
+
+
+def test_multiple_repository_instances_independent_caches(fp):
+    """Test that multiple Repository instances have independent caches.
+
+    This verifies that the instance-level caching doesn't share state
+    between different Repository instances.
+    """
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], stdout="")
+
+    repo1 = Repository(path=".")
+    repo2 = Repository(path=".")
+
+    assert repo1._is_git_repo_cache is True
+    assert repo2._is_git_repo_cache is True
+
+    assert repo1._is_git_repo_cache is not repo2._is_git_repo_cache or (
+        repo1._is_git_repo_cache == repo2._is_git_repo_cache
+    )
+
+    weak_ref1 = weakref.ref(repo1)
+    del repo1
+    gc.collect()
+
+    assert weak_ref1() is None
+    assert repo2._is_git_repo_cache is True
