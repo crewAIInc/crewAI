@@ -26,13 +26,12 @@ from crewai.a2a.templates import (
     UNAVAILABLE_AGENTS_NOTICE_TEMPLATE,
 )
 from crewai.a2a.types import AgentResponseProtocol
-from crewai.a2a.utils import (
+from crewai.a2a.utils.agent_card import afetch_agent_card, fetch_agent_card
+from crewai.a2a.utils.delegation import (
     aexecute_a2a_delegation,
-    afetch_agent_card,
     execute_a2a_delegation,
-    fetch_agent_card,
-    get_a2a_agents_and_response_model,
 )
+from crewai.a2a.utils.response_model import get_a2a_agents_and_response_model
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationCompletedEvent,
