@@ -2,8 +2,11 @@ from datetime import datetime
 import json
 import os
 import pickle
+import tempfile
+import threading
 from typing import Any, TypedDict
 
+import portalocker
 from typing_extensions import Unpack
 
 
@@ -123,10 +126,15 @@ class FileHandler:
 
 
 class PickleHandler:
-    """Handler for saving and loading data using pickle.
+    """Thread-safe handler for saving and loading data using pickle.
+
+    This class provides thread-safe file operations using portalocker for
+    cross-process file locking and atomic write operations to prevent
+    data corruption during concurrent access.
 
     Attributes:
         file_path: The path to the pickle file.
+        _lock: Threading lock for thread-safe operations within the same process.
     """
 
     def __init__(self, file_name: str) -> None:
@@ -141,34 +149,62 @@ class PickleHandler:
             file_name += ".pkl"
 
         self.file_path = os.path.join(os.getcwd(), file_name)
+        self._lock = threading.Lock()
 
     def initialize_file(self) -> None:
         """Initialize the file with an empty dictionary and overwrite any existing data."""
         self.save({})
 
     def save(self, data: Any) -> None:
-        """
-        Save the data to the specified file using pickle.
+        """Save the data to the specified file using pickle with thread-safe atomic writes.
+
+        This method uses a two-phase approach for thread safety:
+        1. Threading lock for same-process thread safety
+        2. Atomic write (write to temp file, then rename) for cross-process safety
+           and data integrity
 
         Args:
-          data: The data to be saved to the file.
+            data: The data to be saved to the file.
         """
-        with open(self.file_path, "wb") as f:
-            pickle.dump(obj=data, file=f)
+        with self._lock:
+            dir_name = os.path.dirname(self.file_path) or os.getcwd()
+            fd, temp_path = tempfile.mkstemp(
+                suffix=".pkl.tmp", prefix="pickle_", dir=dir_name
+            )
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    pickle.dump(obj=data, file=f)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(temp_path, self.file_path)
+            except Exception:
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                raise
 
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified file using pickle with thread-safe locking.
+
+        This method uses portalocker for cross-process read locking to ensure
+        data consistency when multiple processes may be accessing the file.
 
         Returns:
-            The data loaded from the file.
+            The data loaded from the file, or an empty dictionary if the file
+            does not exist or is empty.
         """
-        if not os.path.exists(self.file_path) or os.path.getsize(self.file_path) == 0:
-            return {}  # Return an empty dictionary if the file does not exist or is empty
+        with self._lock:
+            if (
+                not os.path.exists(self.file_path)
+                or os.path.getsize(self.file_path) == 0
+            ):
+                return {}
 
-        with open(self.file_path, "rb") as file:
-            try:
-                return pickle.load(file)  # noqa: S301
-            except EOFError:
-                return {}  # Return an empty dictionary if the file is empty or corrupted
-            except Exception:
-                raise  # Raise any other exceptions that occur during loading
+            with portalocker.Lock(
+                self.file_path, "rb", flags=portalocker.LOCK_SH
+            ) as file:
+                try:
+                    return pickle.load(file)  # noqa: S301
+                except EOFError:
+                    return {}
+                except Exception:
+                    raise
