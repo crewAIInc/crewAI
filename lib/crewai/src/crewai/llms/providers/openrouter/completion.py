@@ -68,6 +68,10 @@ class OpenRouterCompletion(OpenAICompletion):
         self.site_url = site_url or os.getenv("OPENROUTER_SITE_URL", "")
         self.site_name = site_name or os.getenv("OPENROUTER_SITE_NAME", "")
 
+        # Resolve OpenRouter API key BEFORE calling super to prevent
+        # parent from falling back to OPENAI_API_KEY
+        openrouter_api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+
         # Build default headers with OpenRouter-specific headers
         default_headers = kwargs.pop("default_headers", None) or {}
         if self.site_url:
@@ -77,12 +81,16 @@ class OpenRouterCompletion(OpenAICompletion):
 
         super().__init__(
             model=model,
-            api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
+            api_key=openrouter_api_key,
             base_url="https://openrouter.ai/api/v1",
             default_headers=default_headers if default_headers else None,
             provider="openrouter",
             **kwargs,
         )
+
+        # Override api_key after super().__init__ to ensure we NEVER use
+        # OPENAI_API_KEY even if parent fell back to it
+        self.api_key = openrouter_api_key
 
     def _get_client_params(self) -> dict[str, Any]:
         """Get OpenRouter client parameters.

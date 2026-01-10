@@ -196,6 +196,34 @@ class TestOpenRouterGetClientParams:
             with pytest.raises(ValueError, match="OPENROUTER_API_KEY is required"):
                 llm._get_client_params()
 
+    def test_openai_api_key_is_never_used(self) -> None:
+        """Test that OPENAI_API_KEY is never used even if set.
+
+        This ensures OpenRouterCompletion doesn't accidentally inherit
+        OpenAI's API key fallback behavior from the parent class.
+        """
+        # Set OPENAI_API_KEY but NOT OPENROUTER_API_KEY
+        env_with_only_openai_key = {
+            k: v
+            for k, v in os.environ.items()
+            if k not in ("OPENROUTER_API_KEY", "OPENAI_API_KEY")
+        }
+        env_with_only_openai_key["OPENAI_API_KEY"] = "sk-openai-should-not-be-used"
+
+        with patch.dict(os.environ, env_with_only_openai_key, clear=True):
+            with patch("crewai.llms.providers.openai.completion.OpenAI"):
+                with patch("crewai.llms.providers.openai.completion.AsyncOpenAI"):
+                    llm = OpenRouterCompletion(
+                        model="anthropic/claude-3.5-sonnet",
+                    )
+
+            # api_key should be None, NOT the OPENAI_API_KEY value
+            assert llm.api_key is None
+
+            # _get_client_params should raise, not silently use OPENAI_API_KEY
+            with pytest.raises(ValueError, match="OPENROUTER_API_KEY is required"):
+                llm._get_client_params()
+
     def test_get_client_params_uses_env_var_fallback(self) -> None:
         """Test that _get_client_params falls back to OPENROUTER_API_KEY env var."""
         with patch("crewai.llms.providers.openai.completion.OpenAI"):
