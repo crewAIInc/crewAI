@@ -341,6 +341,7 @@ class AccumulatedToolArgs(BaseModel):
 
 class LLM(BaseLLM):
     completion_cost: float | None = None
+    _callback_lock: threading.RLock = threading.RLock()
 
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
@@ -1144,7 +1145,7 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
-            
+
             if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
@@ -1363,7 +1364,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
-        
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
@@ -1657,78 +1658,92 @@ class LLM(BaseLLM):
             raise ValueError("LLM call blocked by before_llm_call hook")
 
         # --- 5) Set up callbacks if provided
+        # Use a class-level lock to synchronize access to global litellm callbacks.
+        # This prevents race conditions when multiple LLM instances call set_callbacks
+        # concurrently, which could cause callbacks to be removed before they fire.
         with suppress_warnings():
-            if callbacks and len(callbacks) > 0:
-                self.set_callbacks(callbacks)
-            try:
-                # --- 6) Prepare parameters for the completion call
-                params = self._prepare_completion_params(messages, tools)
-                # --- 7) Make the completion call and handle response
-                if self.stream:
-                    result = self._handle_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
-                else:
-                    result = self._handle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
-
-                if isinstance(result, str):
-                    result = self._invoke_after_llm_call_hooks(
-                        messages, result, from_agent
-                    )
-
-                return result
-            except LLMContextLengthExceededError:
-                # Re-raise LLMContextLengthExceededError as it should be handled
-                # by the CrewAgentExecutor._invoke_loop method, which can then decide
-                # whether to summarize the content or abort based on the respect_context_window flag
-                raise
-            except Exception as e:
-                unsupported_stop = "Unsupported parameter" in str(
-                    e
-                ) and "'stop'" in str(e)
-
-                if unsupported_stop:
-                    if (
-                        "additional_drop_params" in self.additional_params
-                        and isinstance(
-                            self.additional_params["additional_drop_params"], list
+            with LLM._callback_lock:
+                if callbacks and len(callbacks) > 0:
+                    self.set_callbacks(callbacks)
+                try:
+                    # --- 6) Prepare parameters for the completion call
+                    params = self._prepare_completion_params(messages, tools)
+                    # --- 7) Make the completion call and handle response
+                    if self.stream:
+                        result = self._handle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
                         )
-                    ):
-                        self.additional_params["additional_drop_params"].append("stop")
                     else:
-                        self.additional_params = {"additional_drop_params": ["stop"]}
+                        result = self._handle_non_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
 
-                    logging.info("Retrying LLM call without the unsupported 'stop'")
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
 
-                    return self.call(
-                        messages,
-                        tools=tools,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
+                    return result
+                except LLMContextLengthExceededError:
+                    # Re-raise LLMContextLengthExceededError as it should be handled
+                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # whether to summarize the content or abort based on the respect_context_window flag
+                    raise
+                except Exception as e:
+                    unsupported_stop = "Unsupported parameter" in str(
+                        e
+                    ) and "'stop'" in str(e)
+
+                    if unsupported_stop:
+                        if (
+                            "additional_drop_params" in self.additional_params
+                            and isinstance(
+                                self.additional_params["additional_drop_params"], list
+                            )
+                        ):
+                            self.additional_params["additional_drop_params"].append(
+                                "stop"
+                            )
+                        else:
+                            self.additional_params = {
+                                "additional_drop_params": ["stop"]
+                            }
+
+                        logging.info(
+                            "Retrying LLM call without the unsupported 'stop'"
+                        )
+
+                        # Recursive call happens inside the lock since we're using
+                        # a reentrant-safe pattern (the lock is released when we
+                        # exit the with block, and the recursive call will acquire
+                        # it again)
+                        return self.call(
+                            messages,
+                            tools=tools,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e), from_task=from_task, from_agent=from_agent
+                        ),
                     )
-
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
-                    ),
-                )
-                raise
+                    raise
 
     async def acall(
         self,
@@ -1790,14 +1805,27 @@ class LLM(BaseLLM):
                     msg_role: Literal["assistant"] = "assistant"
                     message["role"] = msg_role
 
+        # Use a class-level lock to synchronize access to global litellm callbacks.
+        # This prevents race conditions when multiple LLM instances call set_callbacks
+        # concurrently, which could cause callbacks to be removed before they fire.
         with suppress_warnings():
-            if callbacks and len(callbacks) > 0:
-                self.set_callbacks(callbacks)
-            try:
-                params = self._prepare_completion_params(messages, tools)
+            with LLM._callback_lock:
+                if callbacks and len(callbacks) > 0:
+                    self.set_callbacks(callbacks)
+                try:
+                    params = self._prepare_completion_params(messages, tools)
 
-                if self.stream:
-                    return await self._ahandle_streaming_response(
+                    if self.stream:
+                        return await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+
+                    return await self._ahandle_non_streaming_response(
                         params=params,
                         callbacks=callbacks,
                         available_functions=available_functions,
@@ -1805,52 +1833,49 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         response_model=response_model,
                     )
+                except LLMContextLengthExceededError:
+                    raise
+                except Exception as e:
+                    unsupported_stop = "Unsupported parameter" in str(
+                        e
+                    ) and "'stop'" in str(e)
 
-                return await self._ahandle_non_streaming_response(
-                    params=params,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
-            except LLMContextLengthExceededError:
-                raise
-            except Exception as e:
-                unsupported_stop = "Unsupported parameter" in str(
-                    e
-                ) and "'stop'" in str(e)
+                    if unsupported_stop:
+                        if (
+                            "additional_drop_params" in self.additional_params
+                            and isinstance(
+                                self.additional_params["additional_drop_params"], list
+                            )
+                        ):
+                            self.additional_params["additional_drop_params"].append(
+                                "stop"
+                            )
+                        else:
+                            self.additional_params = {
+                                "additional_drop_params": ["stop"]
+                            }
 
-                if unsupported_stop:
-                    if (
-                        "additional_drop_params" in self.additional_params
-                        and isinstance(
-                            self.additional_params["additional_drop_params"], list
+                        logging.info(
+                            "Retrying LLM call without the unsupported 'stop'"
                         )
-                    ):
-                        self.additional_params["additional_drop_params"].append("stop")
-                    else:
-                        self.additional_params = {"additional_drop_params": ["stop"]}
 
-                    logging.info("Retrying LLM call without the unsupported 'stop'")
+                        return await self.acall(
+                            messages,
+                            tools=tools,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
 
-                    return await self.acall(
-                        messages,
-                        tools=tools,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e), from_task=from_task, from_agent=from_agent
+                        ),
                     )
-
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
-                    ),
-                )
-                raise
+                    raise
 
     def _handle_emit_call_events(
         self,
