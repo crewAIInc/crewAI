@@ -111,21 +111,36 @@ class LongTermMemory(Memory):
 
     def search(
         self,
-        query: str,
-        limit: int = 3,
+        query: str | None = None,
+        limit: int | None = None,
         score_threshold: float = 0.6,
+        *,
+        task: str | None = None,
+        latest_n: int | None = None,
     ) -> list[Any]:
         """Search long-term memory for relevant entries.
 
         Args:
-            query: The task description to search for.
-            limit: Maximum number of results to return.
+            query: The task description to search for (or use 'task' for backward compatibility).
+            limit: Maximum number of results to return (or use 'latest_n' for backward compatibility).
             score_threshold: Minimum similarity score (not used in long-term memory).
+            task: (Deprecated) Old parameter name for query.
+            latest_n: (Deprecated) Old parameter name for limit.
 
         Returns:
             List of matching memory entries.
         """
-        # For backward compatibility, support 'task' parameter name
+        # Handle backward compatibility for parameter names
+        if task is not None:
+            query = task
+        if latest_n is not None:
+            limit = latest_n
+        
+        if query is None:
+            raise ValueError("Either 'query' or 'task' parameter is required")
+        if limit is None:
+            limit = 3
+        
         task = query
         latest_n = limit
         crewai_event_bus.emit(
@@ -246,21 +261,36 @@ class LongTermMemory(Memory):
 
     async def asearch(
         self,
-        query: str,
-        limit: int = 3,
+        query: str | None = None,
+        limit: int | None = None,
         score_threshold: float = 0.6,
+        *,
+        task: str | None = None,
+        latest_n: int | None = None,
     ) -> list[Any]:
         """Search long-term memory asynchronously.
 
         Args:
-            query: The task description to search for.
-            limit: Maximum number of results to return.
+            query: The task description to search for (or use 'task' for backward compatibility).
+            limit: Maximum number of results to return (or use 'latest_n' for backward compatibility).
             score_threshold: Minimum similarity score (not used in long-term memory).
+            task: (Deprecated) Old parameter name for query.
+            latest_n: (Deprecated) Old parameter name for limit.
 
         Returns:
             List of matching memory entries.
         """
-        # For backward compatibility, support 'task' parameter name
+        # Handle backward compatibility for parameter names
+        if task is not None:
+            query = task
+        if latest_n is not None:
+            limit = latest_n
+        
+        if query is None:
+            raise ValueError("Either 'query' or 'task' parameter is required")
+        if limit is None:
+            limit = 3
+        
         task = query
         latest_n = limit
         crewai_event_bus.emit(
