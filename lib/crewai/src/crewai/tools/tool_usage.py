@@ -97,7 +97,9 @@ class ToolUsage:
         self._telemetry: Telemetry = Telemetry()
         self._run_attempts: int = 1
         self._max_parsing_attempts: int = 3
-        self._remember_format_after_usages: int = 3
+        self._remember_format_after_usages: int = (
+            task.tool_reminder_after_usage if task and task.tool_reminder_after_usage is not None else 3
+        )
         self.agent = agent
         self.tools_description = render_text_description_and_args(tools)
         self.tools_names = get_tool_names(tools)
@@ -114,7 +116,8 @@ class ToolUsage:
             and self.function_calling_llm.model in OPENAI_BIGGER_MODELS
         ):
             self._max_parsing_attempts = 2
-            self._remember_format_after_usages = 4
+            if task is None or task.tool_reminder_after_usage is None:
+                self._remember_format_after_usages = 4
 
     def parse_tool_calling(
         self, tool_string: str
@@ -606,7 +609,7 @@ class ToolUsage:
         return str(result)
 
     def _should_remember_format(self) -> bool:
-        if self.task:
+        if self.task and self._remember_format_after_usages > 0:
             return self.task.used_tools % self._remember_format_after_usages == 0
         return False
 
