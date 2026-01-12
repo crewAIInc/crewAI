@@ -7,9 +7,10 @@ and memory management.
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from pydantic import BaseModel, GetCoreSchemaHandler
+from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
 from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
@@ -50,6 +51,8 @@ from crewai.utilities.tool_utils import (
 )
 from crewai.utilities.training_handler import CrewTrainingHandler
 
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
@@ -241,7 +244,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+                if self.response_model is not None:
+                    try:
+                        self.response_model.model_validate_json(answer)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer,
+                            text=answer,
+                        )
+                    except ValidationError:
+                        formatted_answer = process_llm_response(
+                            answer, self.use_stop_words
+                        )  # type: ignore[assignment]
+                else:
+                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -275,7 +291,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
 
                 self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
+                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -395,7 +411,21 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
-                formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+
+                if self.response_model is not None:
+                    try:
+                        self.response_model.model_validate_json(answer)
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer,
+                            text=answer,
+                        )
+                    except ValidationError:
+                        formatted_answer = process_llm_response(
+                            answer, self.use_stop_words
+                        )  # type: ignore[assignment]
+                else:
+                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}
@@ -428,7 +458,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )
 
                 self._invoke_step_callback(formatted_answer)  # type: ignore[arg-type]
-                self._append_message(formatted_answer.text)  # type: ignore[union-attr,attr-defined]
+                self._append_message(formatted_answer.text)  # type: ignore[union-attr]
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -541,7 +571,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
-        crewai_event_bus.emit(
+        future = crewai_event_bus.emit(
             self.agent,
             AgentLogsExecutionEvent(
                 agent_role=self.agent.role,
@@ -550,6 +580,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
         )
+
+        if future is not None:
+            try:
+                future.result(timeout=5.0)
+            except Exception as e:
+                logger.error(f"Failed to show logs for agent execution event: {e}")
 
     def _handle_crew_training_output(
         self, result: AgentFinish, human_feedback: str | None = None

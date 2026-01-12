@@ -103,7 +103,7 @@ HIDDEN_SETTINGS_KEYS = [
 class Settings(BaseModel):
     enterprise_base_url: str | None = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
-        description="Base URL of the CrewAI AOP instance",
+        description="Base URL of the CrewAI AMP instance",
     )
     tool_repository_username: str | None = Field(
         None, description="Username for interacting with the Tool Repository"

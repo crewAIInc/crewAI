@@ -5,9 +5,22 @@ icon: "user-check"
 mode: "wide"
 ---
 
-Human-in-the-Loop (HITL) é uma abordagem poderosa que combina a inteligência artificial com a experiência humana para aprimorar a tomada de decisões e melhorar os resultados das tarefas. Este guia mostra como implementar HITL dentro da CrewAI.
+Human-in-the-Loop (HITL) é uma abordagem poderosa que combina a inteligência artificial com a experiência humana para aprimorar a tomada de decisões e melhorar os resultados das tarefas. CrewAI oferece várias maneiras de implementar HITL dependendo das suas necessidades.
 
-## Configurando Workflows HITL
+## Escolhendo Sua Abordagem HITL
+
+CrewAI oferece duas abordagens principais para implementar workflows human-in-the-loop:
+
+| Abordagem | Melhor Para | Integração | Versão |
+|----------|----------|-------------|---------|
+| **Baseada em Flow** (decorador `@human_feedback`) | Desenvolvimento local, revisão via console, workflows síncronos | [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows) | **1.8.0+** |
+| **Baseada em Webhook** (Enterprise) | Deployments em produção, workflows assíncronos, integrações externas (Slack, Teams, etc.) | Este guia | - |
+
+<Tip>
+Se você está construindo flows e deseja adicionar etapas de revisão humana com roteamento baseado em feedback, confira o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows) para o decorador `@human_feedback`.
+</Tip>
+
+## Configurando Workflows HITL Baseados em Webhook
 
 <Steps>
     <Step title="Configure sua Tarefa">
