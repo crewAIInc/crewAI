@@ -4,6 +4,545 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="08 jan 2026">
+  ## v1.8.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.8.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar cadeia async nativa para a2a
+  - Adicionar mecanismos de atualização a2a (poll/stream/push) com handlers e config
+  - Introduzir configuração global de fluxo para feedback human-in-the-loop
+  - Adicionar eventos de chamada de ferramenta em streaming e corrigir rastreamento de ID do provedor
+  - Introduzir arquitetura de Flows e Crews pronta para produção
+  - Adicionar HITL para Flows
+  - Melhorar EventListener e TraceCollectionListener para melhor tratamento de eventos
+
+  ### Correções de Bugs
+  - Tratar dependência a2a ausente como opcional
+  - Corrigir busca de erro para polling de login WorkOS
+  - Corrigir nome de trigger errado na documentação de exemplo
+
+  ### Documentação
+  - Atualizar documentação de webhook-streaming
+  - Ajustar linguagem da documentação de AOP para AMP
+
+  ### Contribuidores
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta
+
+</Update>
+
+<Update label="19 dez 2025">
+  ## v1.7.2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.7.2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Resolver problemas de conexão
+
+  ### Documentação
+  - Atualizar página de documentação api-reference/status
+
+  ### Contribuidores
+  @greysonlalonde, @heitorado, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="16 dez 2025">
+  ## v1.7.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.7.1)
+
+  ## O que Mudou
+
+  ### Melhorias
+  - Adicionar flag `--no-commit` ao comando bump
+  - Usar schema JSON para serialização de argumentos de ferramenta
+
+  ### Correções de Bugs
+  - Corrigir exibição de mensagem de erro da resposta quando login do repositório de ferramentas falha
+  - Corrigir terminação graciosa de future ao executar tarefa assincronamente
+  - Corrigir ordenação de tarefas adicionando índice
+  - Corrigir verificações de compatibilidade de plataforma para sinais Windows
+  - Corrigir timer do controlador RPM para evitar travamento do processo
+  - Corrigir registro de uso de tokens e validar modelo de resposta em stream
+
+  ### Documentação
+  - Adicionar documentação traduzida para async
+  - Adicionar documentação para API Deploy AOP
+  - Adicionar documentação para o conector agent handler
+  - Adicionar documentação sobre async nativo
+
+  ### Contribuidores
+  @Llamrei, @dragosmc, @gilfeig, @greysonlalonde, @heitorado, @lorenzejay, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="09 dez 2025">
+  ## v1.7.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.7.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar kickoff de fluxo async
+  - Adicionar suporte a crew async
+  - Adicionar suporte a tarefa async
+  - Adicionar suporte a conhecimento async
+  - Adicionar suporte a memória async
+  - Adicionar suporte async para ferramentas e executor de agente; melhorar tipagem e docs
+  - Implementar API de extensões a2a e cache de cartão de agente async; corrigir propagação de tarefas e streaming
+  - Adicionar suporte a ferramenta async nativa
+  - Adicionar suporte a llm async
+  - Criar tipos de eventos sys e handler
+
+  ### Correções de Bugs
+  - Corrigir problema para garantir que nonetypes não sejam passados para otel
+  - Corrigir deadlock em operações de arquivo do armazenamento de tokens
+  - Corrigir para garantir que span otel seja fechado
+  - Usar HuggingFaceEmbeddingFunction para embeddings, atualizar chaves e adicionar testes
+  - Corrigir para garantir que supports_tools seja true para todos os modelos anthropic suportados
+  - Garantir que hooks funcionem com fluxos de lite agents
+
+  ### Contribuidores
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="29 nov 2025">
+  ## v1.6.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.6.1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir chamada ChatCompletionsClient para garantir funcionamento adequado
+  - Garantir que métodos async sejam executáveis para anotações
+  - Corrigir parâmetros em RagTool.add, adicionar tipagem e testes
+  - Remover parâmetro inválido do cliente SSE
+  - Apagar configuração 'oauth2_extra' no comando 'crewai config reset'
+
+  ### Refatoração
+  - Aprimorar validação de modelo e inferência de provedor na classe LLM
+
+  ### Contribuidores
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @lorenzejay
+
+</Update>
+
+<Update label="25 nov 2025">
+  ## v1.6.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.6.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a resultado de streaming para fluxos e crews
+  - Adicionar gemini-3-pro-preview
+  - Suportar login CLI com Entra ID
+  - Adicionar ferramenta Merge Agent Handler
+  - Aprimorar gerenciamento de estado de eventos de fluxo
+
+  ### Correções de Bugs
+  - Garantir que caminho de persistência de armazenamento rag personalizado seja definido se passado
+  - Garantir que retornos fuzzy sejam mais estritos e mostrem aviso de tipo
+  - Re-adicionar parâmetro response_format do openai e adicionar teste
+  - Corrigir configuração de embeddings da ferramenta rag
+  - Garantir que painel de início de execução de fluxo não seja mostrado no plot
+
+  ### Documentação
+  - Atualizar referências de AMP para AOP na documentação
+  - Atualizar AMP para AOP
+
+  ### Contribuidores
+  @Vidit-Ostwal, @gilfeig, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @markmcd
+
+</Update>
+
+<Update label="22 nov 2025">
+  ## v0.203.2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/0.203.2)
+
+  ## O que Mudou
+
+  - Bump de versão hotfix de 0.203.1 para 0.203.2
+
+</Update>
+
+<Update label="16 nov 2025">
+  ## v1.5.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.5.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar flag de status de conclusão remota de confiança a2a
+  - Buscar e armazenar mais dados sobre servidor de autorização Okta
+  - Implementar hooks antes e depois de chamadas LLM no CrewAgentExecutor
+  - Expor mensagens para TaskOutput e LiteAgentOutputs
+  - Aprimorar descrição de schema do QdrantVectorSearchTool
+
+  ### Correções de Bugs
+  - Garantir que flags de instrumentação de rastreamento sejam aplicadas corretamente
+  - Corrigir links de documentação de ferramentas personalizadas e adicionar ação de links quebrados do Mintlify
+
+  ### Documentação
+  - Aprimorar documentação de guardrail de tarefa com suporte a validação baseada em LLM
+
+  ### Contribuidores
+  @danielfsbarreto, @greysonlalonde, @heitorado, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="07 nov 2025">
+  ## v1.4.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.4.1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir tratamento de iterações máximas do agente
+  - Resolver problemas de roteamento para sintaxe de modelo LLM para provedores respeitados
+
+  ### Contribuidores
+  @greysonlalonde
+
+</Update>
+
+<Update label="07 nov 2025">
+  ## v1.4.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.4.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte para rotas de plot não-AST
+  - Implementar suporte de primeira classe para MCP
+  - Adicionar dunder de validação Pydantic ao BaseInterceptor
+  - Adicionar suporte para hooks de interceptor de mensagem LLM
+  - Cache de prompts i18n para uso eficiente
+  - Aprimorar QdrantVectorSearchTool
+
+  ### Correções de Bugs
+  - Corrigir problemas para manter stopwords atualizadas
+  - Resolver valores não pickleable no estado de fluxo
+  - Garantir que lite agents corrijam curso em erros de validação
+  - Corrigir hash de argumento de callback para garantir que cache funcione
+  - Permitir adicionar conteúdo de fonte RAG de URLs válidas
+  - Tornar seleção de nó de plot mais suave
+  - Corrigir IDs de documento duplicados para conhecimento
+
+  ### Refatoração
+  - Melhorar tratamento de execução de ferramenta MCP com concurrent futures
+  - Simplificar tratamento de fluxo, tipagem e logging; atualizar UI e testes
+  - Refatorar gerenciamento de stop word para propriedade
+
+  ### Documentação
+  - Migrar embedder para embedding_model e exigir vectordb em documentação de ferramentas; adicionar exemplos de provedor (en/ko/pt-BR)
+
+  ### Contribuidores
+  @danielfsbarreto, @greysonlalonde, @lorenzejay, @lucasgomide, @tonykipkemboi
+
+</Update>
+
+<Update label="01 nov 2025">
+  ## v1.3.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.3.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Refatorar tratamento de fluxo, tipagem e logging
+  - Aprimorar QdrantVectorSearchTool
+
+  ### Correções de Bugs
+  - Corrigir ferramentas Firecrawl e adicionar testes
+  - Refatorar use_stop_words para propriedade e adicionar verificação para stop words
+
+  ### Documentação
+  - Migrar embedder para embedding_model e exigir vectordb em documentação de ferramentas
+  - Adicionar exemplos de provedor em Inglês, Coreano e Português
+
+  ### Refatoração
+  - Melhorar tratamento de fluxo e atualizações de UI
+
+  ### Contribuidores
+  @danielfsbarreto, @greysonlalonde, @lorenzejay, @lucasgomide, @tonykipkemboi
+
+</Update>
+
+<Update label="27 out 2025">
+  ## v1.2.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.2.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte para integração Datadog
+  - Suportar apps e mcps em liteagent
+
+  ### Documentação
+  - Descrever variável de ambiente obrigatória para chamar ferramentas Platform para cada integração
+  - Adicionar documentação de integração Datadog
+
+  ### Contribuidores
+  @barieom, @lorenzejay, @lucasgomide, @sabrenner
+
+</Update>
+
+<Update label="24 out 2025">
+  ## v1.2.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.2.0)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Atualizar modelo LLM padrão e melhorar logging de erros em utilitários LLM
+  - Alterar diretório de visualização de fluxo e inspeção de método
+
+  ### Removendo Não Utilizados
+  - Remover aisuite
+
+  ### Contribuidores
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="21 out 2025">
+  ## v1.1.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.1.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Aprimorar InternalInstructor para suportar múltiplos provedores LLM
+  - Implementar base de plugin mypy
+  - Melhorar QdrantVectorSearchTool
+
+  ### Correções de Bugs
+  - Corrigir links de documentação de integração quebrados
+  - Corrigir chamada de trace dupla e adicionar tipos
+  - Fixar versões de template para mais recente
+
+  ### Documentação
+  - Atualizar detalhes e exemplos de integração LLM
+
+  ### Refatoração
+  - Melhorar tipagem do CrewBase
+
+  ### Contribuidores
+  @cwarre33, @danielfsbarreto, @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="20 out 2025">
+  ## v1.0.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Bump de versões para 1.0.0
+  - Aprimorar tratamento de eventos de conhecimento e guardrail na classe Agent
+  - Injetar credenciais do repositório de ferramentas no comando crewai run
+
+  ### Correções de Bugs
+  - Preservar estrutura de condição aninhada em decoradores Flow
+  - Adicionar parâmetros de print padrão ao método Printer.print
+  - Corrigir erros quando não há input() disponível
+  - Adicionar margem de 10s ao decodificar JWT
+  - Reverter agenda cron ruim
+  - Corrigir agenda cron para executar a cada 5 dias em datas específicas
+  - Usar PATH do sistema para binário Docker em vez de caminho hardcoded
+  - Adicionar configuração CodeQL para excluir corretamente diretórios de template
+
+  ### Documentação
+  - Atualizar política de segurança para relatório de vulnerabilidade
+  - Adicionar guia para capturar logs de telemetria no CrewAI AMP
+  - Adicionar arquivos /resume ausentes
+  - Esclarecer parâmetro de URL de webhook em workflows HITL
+
+  ### Contribuidores
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta, @theCyberTech
+
+</Update>
+
+<Update label="18 out 2025">
+  ## v1.0.0b3 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b3)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Aprimorar funcionalidade e validação de guardrail de tarefa
+  - Melhorar suporte para importar SDK nativo
+  - Adicionar testes nativos Azure
+  - Aprimorar classe BedrockCompletion com funcionalidades avançadas
+  - Aprimorar classe GeminiCompletion com suporte a parâmetro de cliente
+  - Aprimorar classe AnthropicCompletion com parâmetros de cliente adicionais
+
+  ### Correções de Bugs
+  - Preservar estrutura de condição aninhada em decoradores Flow
+  - Adicionar parâmetros de print padrão ao método Printer.print
+  - Remover prints stdout e melhorar determinismo de teste
+
+  ### Refatoração
+  - Converter módulo de projeto para metaclasse com tipagem completa
+
+  ### Contribuidores
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="16 out 2025">
+  ## v1.0.0b2 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b2)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Aprimorar classe OpenAICompletion com parâmetros de cliente adicionais
+  - Melhorar segurança de thread do event bus e suporte async
+  - Injetar credenciais do repositório de ferramentas no comando crewai run
+
+  ### Correções de Bugs
+  - Corrigir problema onde ocorre erro se não houver input() disponível
+  - Adicionar margem de 10s ao decodificar JWT
+  - Corrigir cópia e adicionar verificação NOT_SPECIFIED em task.py
+
+  ### Documentação
+  - Garantir que CREWAI_PLATFORM_INTEGRATION_TOKEN seja mencionado na documentação
+  - Atualizar documentação de triggers
+
+  ### Contribuidores
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="14 out 2025">
+  ## v1.0.0b1 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Aprimorar classe OpenAICompletion com parâmetros de cliente adicionais
+  - Melhorar segurança de thread do event bus e suporte async
+  - Implementar integração Bedrock LLM
+
+  ### Correções de Bugs
+  - Corrigir problema com disponibilidade de input() ausente
+  - Resolver erro de decodificação JWT adicionando margem de 10 segundos
+  - Injetar credenciais do repositório de ferramentas no comando crewai run
+  - Corrigir cópia e adicionar verificação NOT_SPECIFIED em task.py
+
+  ### Documentação
+  - Garantir que CREWAI_PLATFORM_INTEGRATION_TOKEN seja mencionado na documentação
+  - Atualizar documentação de triggers
+
+  ### Contribuidores
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="13 out 2025">
+  ## v0.203.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/0.203.1)
+
+  ## O que Mudou
+
+  ### Melhorias e Correções do Núcleo
+  - Corrigida injeção de credenciais do repositório de ferramentas no comando `crewai run`
+  - Adicionada margem de 10 segundos ao decodificar JWTs para reduzir erros de validação de token
+  - Corrigida (depois revertida) correção de agenda cron destinada a executar jobs a cada 5 dias em datas específicas
+
+  ### Documentação e Guias
+  - Atualizada política de segurança para esclarecer o processo de relatório de vulnerabilidade
+
+</Update>
+
+<Update label="09 out 2025">
+  ## v1.0.0a4 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a4)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Aprimorar tratamento de eventos de conhecimento e guardrail na classe Agent
+  - Introduzir comandos de listagem e execução de trigger para desenvolvimento local
+  - Atualizar documentação com nova abordagem para consumir Platform Actions
+  - Adicionar guia para capturar logs de telemetria no CrewAI AMP
+
+  ### Correções de Bugs
+  - Reverter agenda cron ruim
+  - Corrigir agenda cron para executar a cada 5 dias em datas específicas
+  - Remover linha duplicada e adicionar variável de ambiente explícita
+
+  ### Contribuidores
+  @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta, @theCyberTech
+
+</Update>
+
+<Update label="07 out 2025">
+  ## v1.0.0a3 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a3)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a agente para ações de plataforma
+  - Adicionar argumento de interpretador para ferramenta de execução de código
+  - Suporte direto para execução de apps de plataforma
+
+  ### Documentação
+  - Adicionar documentação de ações de plataforma
+  - Adicionar tipos de transporte stdio e sse à documentação MCP
+  - Atualizar lista de modelos AWS
+
+  ### Contribuidores
+  @greysonlalonde, @heitorado, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="03 out 2025">
+  ## v1.0.0a2 (Pré-lançamento)
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a2)
+
+  ## O que Mudou
+
+  ### Melhorias e Correções do Núcleo
+  - Atualizações de CI para monorepo
+  - Atualizar modelo Anthropic padrão para claude-sonnet-4-20250514
+  - Corrigir testes para atualização de modelo
+
+  ### Contribuidores
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
 <Update label="30 set 2025">
   ## v1.0.0a1
 
