@@ -91,6 +91,10 @@ The `A2AConfig` class accepts the following parameters:
   Update mechanism for receiving task status. Options: `StreamingConfig`, `PollingConfig`, or `PushNotificationConfig`.
 </ParamField>
 
+<ParamField path="transport_protocol" type="Literal['JSONRPC', 'GRPC', 'HTTP+JSON']" default="JSONRPC">
+  Transport protocol for A2A communication. Options: `JSONRPC` (default), `GRPC`, or `HTTP+JSON`.
+</ParamField>
+
 ## Authentication
 
 For A2A agents that require authentication, use one of the provided auth schemes:
