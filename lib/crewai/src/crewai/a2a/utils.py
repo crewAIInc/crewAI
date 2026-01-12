@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator, MutableMapping
 from contextlib import asynccontextmanager
 from functools import lru_cache
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 import uuid
 
 from a2a.client import A2AClientHTTPError, Client, ClientConfig, ClientFactory
@@ -18,7 +18,6 @@ from a2a.types import (
     PushNotificationConfig as A2APushNotificationConfig,
     Role,
     TextPart,
-    TransportProtocol,
 )
 from aiocache import cached  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
@@ -259,7 +258,7 @@ async def _afetch_agent_card_impl(
 
 def execute_a2a_delegation(
     endpoint: str,
-    transport_protocol: TransportProtocol,
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"],
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -352,7 +351,7 @@ def execute_a2a_delegation(
 
 async def aexecute_a2a_delegation(
     endpoint: str,
-    transport_protocol: TransportProtocol,
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"],
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -388,7 +387,6 @@ async def aexecute_a2a_delegation(
         metadata: Additional metadata
         extensions: Protocol extensions
         conversation_history: Previous Message objects
-        is_multiturn: Whether this is a multi-turn conversation
         turn_number: Current turn number
         agent_branch: Agent tree branch for logging
         agent_id: Agent identifier for logging
@@ -470,7 +468,7 @@ async def aexecute_a2a_delegation(
 
 async def _aexecute_a2a_delegation_impl(
     endpoint: str,
-    transport_protocol: TransportProtocol,
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"],
     auth: AuthScheme | None,
     timeout: int,
     task_description: str,
@@ -635,7 +633,7 @@ async def _aexecute_a2a_delegation_impl(
 @asynccontextmanager
 async def _create_a2a_client(
     agent_card: AgentCard,
-    transport_protocol: TransportProtocol,
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"],
     timeout: int,
     headers: MutableMapping[str, str],
     streaming: bool,
@@ -679,7 +677,7 @@ async def _create_a2a_client(
 
         config = ClientConfig(
             httpx_client=httpx_client,
-            supported_transports=[str(transport_protocol.value)],
+            supported_transports=[transport_protocol],
             streaming=streaming and not use_polling,
             polling=use_polling,
             accepted_output_modes=["application/json"],

@@ -53,7 +53,7 @@ class A2AConfig(BaseModel):
         fail_fast: If True, raise error when agent unreachable; if False, skip and continue.
         trust_remote_completion_status: If True, return A2A agent's result directly when completed.
         updates: Update mechanism config.
-        transport_protocol: Optional A2A transport protocol (grpc, jsonrpc, http+json).
+        transport_protocol: A2A transport protocol (grpc, jsonrpc, http+json).
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
