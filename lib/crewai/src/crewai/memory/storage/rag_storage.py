@@ -5,8 +5,6 @@ import traceback
 from typing import TYPE_CHECKING, Any, cast
 import warnings
 
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.factory import create_client
@@ -37,6 +35,9 @@ class RAGStorage(BaseRAGStorage):
         crew: Crew | None = None,
         path: str | None = None,
     ) -> None:
+        from crewai.rag.chromadb.config import ChromaDBConfig
+        from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+
         super().__init__(type, allow_reset, embedder_config, crew)
         crew_agents = crew.agents if crew else []
         sanitized_roles = [self._sanitize_role(agent.role) for agent in crew_agents]

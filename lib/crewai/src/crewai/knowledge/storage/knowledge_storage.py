@@ -1,19 +1,22 @@
+from __future__ import annotations
+
 import logging
 import traceback
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 import warnings
 
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
-from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.utils import get_rag_client
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.factory import build_embedder
-from crewai.rag.embeddings.types import ProviderSpec
 from crewai.rag.factory import create_client
 from crewai.rag.types import BaseRecord, SearchResult
 from crewai.utilities.logger import Logger
+
+
+if TYPE_CHECKING:
+    from crewai.rag.embeddings.types import ProviderSpec
 
 
 class KnowledgeStorage(BaseKnowledgeStorage):
@@ -30,6 +33,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         | None = None,
         collection_name: str | None = None,
     ) -> None:
+        from crewai.rag.chromadb.config import ChromaDBConfig
+        from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
+
         self.collection_name = collection_name
         self._client: BaseClient | None = None
 

@@ -1,11 +1,12 @@
 """ChromaDB configuration model."""
 
+from __future__ import annotations
+
 from dataclasses import field
 import os
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 import warnings
 
-from chromadb.config import Settings
 from pydantic.dataclasses import dataclass as pyd_dataclass
 
 from crewai.rag.chromadb.constants import (
@@ -13,8 +14,13 @@ from crewai.rag.chromadb.constants import (
     DEFAULT_STORAGE_PATH,
     DEFAULT_TENANT,
 )
-from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 from crewai.rag.config.base import BaseRagConfig
+
+
+if TYPE_CHECKING:
+    from chromadb.config import Settings
+
+    from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 
 
 warnings.filterwarnings(
@@ -37,6 +43,8 @@ def _default_settings() -> Settings:
     Returns:
         Settings with persistent storage and reset enabled.
     """
+    from chromadb.config import Settings
+
     return Settings(
         persist_directory=DEFAULT_STORAGE_PATH,
         allow_reset=True,
@@ -53,6 +61,8 @@ def _default_embedding_function() -> ChromaEmbeddingFunctionWrapper:
     from chromadb.utils.embedding_functions.openai_embedding_function import (
         OpenAIEmbeddingFunction,
     )
+
+    from crewai.rag.chromadb.types import ChromaEmbeddingFunctionWrapper
 
     return cast(
         ChromaEmbeddingFunctionWrapper,

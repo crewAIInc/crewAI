@@ -1,13 +1,18 @@
 """Factory functions for creating ChromaDB clients."""
 
+from __future__ import annotations
+
 from hashlib import md5
 import os
+from typing import TYPE_CHECKING
 
 from chromadb import PersistentClient
 import portalocker
 
-from crewai.rag.chromadb.client import ChromaDBClient
-from crewai.rag.chromadb.config import ChromaDBConfig
+
+if TYPE_CHECKING:
+    from crewai.rag.chromadb.client import ChromaDBClient
+    from crewai.rag.chromadb.config import ChromaDBConfig
 
 
 def create_client(config: ChromaDBConfig) -> ChromaDBClient:
@@ -22,6 +27,7 @@ def create_client(config: ChromaDBConfig) -> ChromaDBClient:
     Notes:
         Need to update to use chromadb.Client to support more client types in the near future.
     """
+    from crewai.rag.chromadb.client import ChromaDBClient
 
     persist_dir = config.settings.persist_directory
     os.makedirs(persist_dir, exist_ok=True)
