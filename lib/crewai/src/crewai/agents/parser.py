@@ -6,6 +6,7 @@ AgentAction or AgentFinish objects.
 """
 
 from dataclasses import dataclass
+import re
 
 from json_repair import repair_json  # type: ignore[import-untyped]
 
@@ -96,6 +97,7 @@ def parse(text: str) -> AgentAction | AgentFinish:
 
     if includes_answer:
         final_answer = text.split(FINAL_ANSWER_ACTION)[-1].strip()
+        final_answer = _strip_trailing_react_blocks(final_answer)
         # Check whether the final answer ends with triple backticks.
         if final_answer.endswith("```"):
             # Count occurrences of triple backticks in the final answer.
@@ -192,3 +194,35 @@ def _safe_repair_json(tool_input: str) -> str:
         return tool_input
 
     return str(result)
+
+
+_CODE_SPAN_RE: re.Pattern[str] = re.compile(
+    r"(?is)<pre><code>.*?</code></pre>|<code>.*?</code>"
+)
+_TRAILING_REACT_MARKER_RE: re.Pattern[str] = re.compile(
+    r"(?is)(?:^|[\r\n]|>)[ \t]*(Thought:|Action:|Action Input:|Observation:)"
+)
+
+
+def _strip_trailing_react_blocks(final_answer: str) -> str:
+    """Strip accidental ReAct blocks appended after a valid Final Answer.
+
+    Some models will output a valid `Final Answer:` segment and then append
+    `Thought:` / `Action:` / `Action Input:` / `Observation:`. Those blocks are
+    control text and should never be included in the user-facing answer.
+    """
+    if not final_answer:
+        return final_answer
+
+    code_spans = [(m.start(), m.end()) for m in _CODE_SPAN_RE.finditer(final_answer)]
+
+    def _is_in_code(index: int) -> bool:
+        return any(start <= index < end for start, end in code_spans)
+
+    for match in _TRAILING_REACT_MARKER_RE.finditer(final_answer):
+        marker_index = match.start(1)
+        if _is_in_code(marker_index):
+            continue
+        return final_answer[:marker_index].strip()
+
+    return final_answer
