@@ -223,6 +223,16 @@ def _strip_trailing_react_blocks(final_answer: str) -> str:
         marker_index = match.start(1)
         if _is_in_code(marker_index):
             continue
+
+        # Reduce false positives: only strip if the remaining tail looks like
+        # a real ReAct control block (e.g., includes Action Input).
+        tail = final_answer[marker_index:]
+        marker = match.group(1)
+        if marker.startswith("Thought:") and ("Action:" not in tail and "Action Input:" not in tail):
+            continue
+        if marker.startswith("Action:") and "Action Input:" not in tail:
+            continue
+
         return final_answer[:marker_index].strip()
 
     return final_answer

@@ -169,7 +169,15 @@ def handle_max_iterations_exceeded(
         )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    formatted = format_answer(answer=answer)
+    try:
+        formatted = format_answer(answer=answer)
+    except OutputParserError:
+        # Last-resort fallback: do not crash or leak raw output after max iterations.
+        return AgentFinish(
+            thought="",
+            output="I'm sorry, I couldn't produce a valid final answer. Please try again.",
+            text=str(answer),
+        )
 
     # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
