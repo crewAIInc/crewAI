@@ -1,0 +1,909 @@
+---
+title: "Flow HITL Management"
+description: "Enterprise-grade human review for Flows with assignment, SLA management, escalation policies, and dynamic routing"
+icon: "users-gear"
+mode: "wide"
+---
+
+<Note>
+Flow HITL Management features require the `@human_feedback` decorator, available in **CrewAI version 1.8.0 or higher**. These features apply specifically to **Flows**, not Crews.
+</Note>
+
+CrewAI Enterprise provides a comprehensive Human-in-the-Loop (HITL) management system for Flows that transforms AI workflows into collaborative human-AI processes. Beyond simple approval gates, the platform offers enterprise-grade controls for assignment, accountability, and compliance.
+
+## Overview
+
+<CardGroup cols={3}>
+  <Card title="In-Platform Review" icon="desktop">
+    Review and respond to requests directly in the Enterprise dashboard
+  </Card>
+  <Card title="Smart Assignment" icon="user-check">
+    Route reviews to the right people based on rules and expertise
+  </Card>
+  <Card title="SLA & Escalation" icon="clock">
+    Ensure timely responses with automated escalation policies
+  </Card>
+</CardGroup>
+
+## Setting Up Human Review Points in Flows
+
+Configure human review checkpoints within your Flows using the `@human_feedback` decorator. When execution reaches a review point, the system pauses and displays a "waiting for input" state in the UI.
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
+
+class ContentApprovalFlow(Flow):
+    @start()
+    def generate_content(self):
+        # AI generates content
+        return "Generated marketing copy for Q1 campaign..."
+
+    @listen(generate_content)
+    @human_feedback(
+        message="Please review this content for brand compliance:",
+        emit=["approved", "rejected", "needs_revision"],
+    )
+    def review_content(self, content):
+        return content
+
+    @listen("approved")
+    def publish_content(self, result: HumanFeedbackResult):
+        print(f"Publishing approved content. Reviewer notes: {result.feedback}")
+
+    @listen("rejected")
+    def archive_content(self, result: HumanFeedbackResult):
+        print(f"Content rejected. Reason: {result.feedback}")
+
+    @listen("needs_revision")
+    def revise_content(self, result: HumanFeedbackResult):
+        print(f"Revision requested: {result.feedback}")
+```
+
+For complete implementation details, see the [Human Feedback in Flows](/en/learn/human-feedback-in-flows) guide.
+
+## Assignment & Routing
+
+The Enterprise platform provides sophisticated assignment capabilities to ensure reviews reach the right team members.
+
+### Responder Assignment
+
+Assign specific team members or groups as responders for different task types:
+
+<Steps>
+  <Step title="Navigate to HITL Settings">
+    Go to your Flow settings and select the "Human Review" configuration section.
+  </Step>
+  <Step title="Configure Responders">
+    Assign individual users or groups as default responders for review requests.
+  </Step>
+  <Step title="Set Backup Responders">
+    Define fallback responders when primary assignees are unavailable.
+  </Step>
+</Steps>
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-1.png" alt="HITL Configuration Settings" />
+</Frame>
+
+### Dynamic Routing Rules
+
+Set up intelligent routing based on flow state, content type, or custom conditions:
+
+| Rule Type | Description | Example |
+|-----------|-------------|---------|
+| **Content-Based** | Route based on the content being reviewed | Legal content → Legal team |
+| **Priority-Based** | Assign reviewers based on urgency level | High priority → Senior reviewers |
+| **State-Based** | Route based on flow state variables | `state.amount > 10000` → Finance director |
+| **Round-Robin** | Distribute reviews evenly across team | Balance workload automatically |
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-2.png" alt="HITL Routing Rules Configuration" />
+</Frame>
+
+### Role-Based Permissions
+
+Control who can view, respond to, or escalate HITL requests:
+
+<AccordionGroup>
+  <Accordion title="Viewer" icon="eye">
+    Can view HITL requests and their status but cannot respond or take action.
+  </Accordion>
+  <Accordion title="Responder" icon="reply">
+    Can view and respond to assigned HITL requests with approve/reject decisions.
+  </Accordion>
+  <Accordion title="Manager" icon="user-tie">
+    Can view all requests, respond, reassign to other team members, and override decisions.
+  </Accordion>
+  <Accordion title="Admin" icon="shield">
+    Full access including configuration of routing rules, SLAs, and escalation policies.
+  </Accordion>
+</AccordionGroup>
+
+## Review Process
+
+### Review Interface
+
+The HITL review interface provides a clean, focused experience for reviewers:
+
+- **Markdown Rendering**: Rich formatting for review content with syntax highlighting
+- **Context Panel**: View flow state, execution history, and related information
+- **Feedback Input**: Provide detailed feedback and comments with your decision
+- **Quick Actions**: One-click approve/reject buttons with optional comments
+
+<Frame>
+  <img src="/images/enterprise/hitl-list-pending-feedbacks.png" alt="HITL Pending Requests List" />
+</Frame>
+
+### Review Modes
+
+Choose the review approach that fits your workflow:
+
+<CardGroup cols={2}>
+  <Card title="Immediate Gating" icon="hand">
+    **Block execution until approval**
+
+    Flow pauses completely until a human provides feedback. Best for critical decisions that must not proceed without review.
+  </Card>
+  <Card title="Batch Processing" icon="layer-group">
+    **Queue items for efficient review**
+
+    Collect multiple review requests and process them in focused sessions. Ideal for high-volume, lower-urgency reviews.
+  </Card>
+</CardGroup>
+
+### History & Audit Trail
+
+Every HITL interaction is tracked with a complete timeline:
+
+- Decision history (approve/reject/revise)
+- Reviewer identity and timestamp
+- Feedback and comments provided
+- State changes and escalations
+- Response time metrics
+
+## SLA Management & Escalation
+
+Ensure timely responses with automated SLA tracking and escalation policies.
+
+### Configuring SLAs
+
+Set response time expectations for different review types:
+
+| SLA Level | Response Time | Use Case |
+|-----------|---------------|----------|
+| **Critical** | 15 minutes | Production incidents, security reviews |
+| **High** | 1 hour | Customer-facing content, urgent approvals |
+| **Standard** | 4 hours | Regular content review, routine approvals |
+| **Low** | 24 hours | Non-blocking reviews, batch processing |
+
+### Escalation Rules
+
+Configure automatic escalation when SLAs are at risk:
+
+<Steps>
+  <Step title="Warning Threshold">
+    Send reminder notification to assigned reviewer (e.g., at 50% of SLA time).
+  </Step>
+  <Step title="Escalation Trigger">
+    Escalate to manager or backup reviewer when SLA threshold is reached.
+  </Step>
+  <Step title="Auto-Action">
+    Configure fallback behavior if no response after extended period:
+    - **Auto-approve**: Proceed with execution (for non-critical reviews)
+    - **Auto-reject**: Fail safely and notify stakeholders
+    - **Re-route**: Assign to different reviewer or team
+  </Step>
+</Steps>
+
+### Notifications
+
+Automated alerts keep stakeholders informed throughout the workflow:
+
+- **Assignment Notifications**: Alert reviewers when new requests arrive
+- **SLA Warnings**: Remind reviewers before deadlines
+- **Escalation Alerts**: Notify managers when reviews are escalated
+- **Completion Updates**: Inform requesters when reviews are complete
+
+<Note>
+**Slack Integration**: Direct Slack notifications for HITL requests coming soon.
+</Note>
+
+## Analytics & Monitoring
+
+Track HITL performance with comprehensive analytics.
+
+### Performance Dashboard
+
+Monitor key metrics across your HITL workflows:
+
+<Frame>
+  <img src="/images/enterprise/hitl-metrics.png" alt="HITL Metrics Dashboard" />
+</Frame>
+
+<CardGroup cols={2}>
+  <Card title="SLA Compliance" icon="chart-line">
+    Track percentage of reviews completed within SLA thresholds.
+  </Card>
+  <Card title="Response Times" icon="stopwatch">
+    Monitor average and median response times by reviewer, team, or flow.
+  </Card>
+  <Card title="Volume Trends" icon="chart-bar">
+    Analyze review volume patterns to optimize team capacity.
+  </Card>
+  <Card title="Decision Distribution" icon="chart-pie">
+    View approval/rejection rates across different review types.
+  </Card>
+</CardGroup>
+
+### Individual Metrics
+
+Track reviewer performance for accountability and workload balancing:
+
+- Approval/rejection rates by reviewer
+- Average response time per reviewer
+- Review completion rates
+- Escalation frequency
+
+### Audit & Compliance
+
+Enterprise-ready audit capabilities for regulatory requirements:
+
+- Complete decision history with timestamps
+- Reviewer identity verification
+- Immutable audit logs
+- Export capabilities for compliance reporting
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Security Reviews" icon="shield-halved">
+    **Use Case**: Internal security questionnaire automation with human validation
+
+    - AI generates responses to security questionnaires
+    - Security team reviews and validates accuracy
+    - Approved responses are compiled into final submission
+    - Full audit trail for compliance
+  </Accordion>
+
+  <Accordion title="Content Approval" icon="file-lines">
+    **Use Case**: Marketing content requiring legal/brand review
+
+    - AI generates marketing copy or social media content
+    - Route to brand team for voice/tone review
+    - Escalate to legal for compliance-sensitive content
+    - Automatic publishing upon approval
+  </Accordion>
+
+  <Accordion title="Financial Approvals" icon="money-bill">
+    **Use Case**: Expense reports, contract terms, budget allocations
+
+    - AI pre-processes and categorizes financial requests
+    - Route based on amount thresholds to appropriate approvers
+    - Enforce segregation of duties with role-based access
+    - Maintain complete audit trail for financial compliance
+  </Accordion>
+
+  <Accordion title="Compliance Checks" icon="clipboard-check">
+    **Use Case**: Regulatory review for sensitive operations
+
+    - AI flags potential compliance issues
+    - Compliance officers review flagged items
+    - Escalate to legal counsel as needed
+    - Generate compliance reports with decision history
+  </Accordion>
+
+  <Accordion title="Quality Assurance" icon="magnifying-glass">
+    **Use Case**: AI output validation before customer delivery
+
+    - AI generates customer-facing content or responses
+    - QA team samples and reviews output quality
+    - Feedback loops improve AI performance over time
+    - Track quality metrics across review cycles
+  </Accordion>
+</AccordionGroup>
+
+## Custom Webhooks API
+
+When your Flows pause for human feedback, you can configure webhooks to send request data to your own application. This enables:
+
+- Building custom approval UIs
+- Integrating with internal tools (Jira, ServiceNow, custom dashboards)
+- Routing approvals to third-party systems
+- Mobile app notifications
+- Automated decision systems
+
+### Configuring Webhooks
+
+<Steps>
+  <Step title="Navigate to Settings">
+    Go to your **Deployment** → **Settings** → **Human in the Loop**
+  </Step>
+  <Step title="Expand Webhooks Section">
+    Click to expand the **Webhooks** configuration
+  </Step>
+  <Step title="Add Your Webhook URL">
+    Enter your webhook URL (must be HTTPS in production)
+  </Step>
+  <Step title="Save Configuration">
+    Click **Save Configuration** to activate
+  </Step>
+</Steps>
+
+You can configure multiple webhooks. Each active webhook receives all HITL events.
+
+### Webhook Events
+
+Your endpoint will receive HTTP POST requests for these events:
+
+| Event Type | When Triggered |
+|------------|----------------|
+| `new_request` | A flow pauses and requests human feedback |
+| `escalation` | A pending request is escalated due to SLA timeout |
+
+### Webhook Payload
+
+All webhooks receive a JSON payload with this structure:
+
+```json
+{
+  "event_type": "new_request",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "status": "pending",
+  "flow_id": "flow_abc123",
+  "flow_class": "ContentReviewFlow",
+  "method_name": "review_article",
+  "message": "Please review this article for publication.",
+  "output": "# Article Title\n\nThis is the content that needs review...",
+  "emit": ["approve", "reject", "request_changes"],
+  "default_outcome": null,
+  "state": {
+    "article_id": 12345,
+    "author": "john@example.com",
+    "category": "technology"
+  },
+  "metadata": {
+    "priority": "high",
+    "source": "cms"
+  },
+  "created_at": "2026-01-12T10:30:00Z",
+  "callback_url": "https://api.crewai.com/crewai_plus/api/v1/human_feedback_requests/550e8400.../respond?token=abc123...",
+  "response_token": "abc123def456...",
+  "deployment_id": 12345,
+  "deployment_name": "Content Review Crew",
+  "flow_execution_id": "exec_789",
+  "trace_batch_id": "trace_456",
+  "organization_id": "org_123",
+  "assigned_to": {
+    "id": 42,
+    "email": "reviewer@company.com",
+    "name": "Jane Reviewer"
+  },
+  "assigned_at": "2026-01-12T10:30:05Z",
+  "escalated_at": null,
+  "sla_target_minutes": 120,
+  "triggered_by_user_id": 99,
+  "routing": {
+    "effective_responders": [
+      {"id": 42, "email": "reviewer@company.com", "name": "Jane Reviewer"},
+      {"id": 43, "email": "manager@company.com", "name": "Bob Manager"}
+    ],
+    "enforce_routing_rules": true
+  }
+}
+```
+
+### Field Reference
+
+<AccordionGroup>
+  <Accordion title="Core Fields" icon="circle-info">
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `event_type` | string | `"new_request"` or `"escalation"` |
+    | `id` | UUID | Unique identifier for this request |
+    | `status` | string | Always `"pending"` for active requests |
+    | `method_name` | string | The decorated method that requested feedback |
+    | `message` | string | Human-readable prompt/question for the reviewer |
+    | `output` | string | Content to review (may contain Markdown) |
+    | `emit` | array | Valid response options from the decorator |
+    | `default_outcome` | string | Default outcome if auto-response triggers |
+    | `state` | object | Flow state at the moment of pause |
+    | `metadata` | object | Custom metadata from the decorator |
+    | `created_at` | ISO8601 | When the request was created |
+  </Accordion>
+
+  <Accordion title="Response Fields" icon="reply">
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `callback_url` | string | **POST to this URL to submit feedback** (token included) |
+    | `response_token` | string | Single-use auth token (already in callback_url) |
+  </Accordion>
+
+  <Accordion title="Context Fields" icon="layer-group">
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `deployment_id` | integer | Deployment identifier |
+    | `deployment_name` | string | Human-readable deployment name |
+    | `flow_execution_id` | UUID | Links to the execution trace |
+    | `organization_id` | UUID | Organization identifier |
+    | `sla_target_minutes` | integer | Configured SLA target (null if not set) |
+    | `triggered_by_user_id` | integer | User who kicked off the flow (if known) |
+  </Accordion>
+
+  <Accordion title="Assignment & Routing Fields" icon="route">
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `assigned_to` | object | Pre-assigned reviewer (if any) |
+    | `assigned_at` | ISO8601 | When assignment was made |
+    | `escalated_at` | ISO8601 | When request was escalated (null if not escalated) |
+    | `routing.effective_responders` | array | Users configured to respond |
+    | `routing.enforce_routing_rules` | boolean | Whether only listed responders can respond |
+  </Accordion>
+</AccordionGroup>
+
+### Responding to Requests
+
+To submit feedback, **POST to the `callback_url`** included in the webhook payload.
+
+```http
+POST /crewai_plus/api/v1/human_feedback_requests/{id}/respond?token={token}
+Content-Type: application/json
+
+{
+  "feedback": "Approved. Great article!",
+  "source": "my_custom_app"
+}
+```
+
+**The token is already included in `callback_url`**, so you can POST directly:
+
+```bash
+curl -X POST "${callback_url}" \
+  -H "Content-Type: application/json" \
+  -d '{"feedback": "Approved with minor edits"}'
+```
+
+#### Parameters
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `feedback` | Yes | Your feedback text (will be passed to the flow) |
+| `source` | No | Identifier for your app (shows in history) |
+
+#### Response Examples
+
+<CodeGroup>
+```json Success (200 OK)
+{
+  "status": "accepted",
+  "request": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "responded",
+    "feedback": "Approved with minor edits",
+    "outcome": null,
+    "responded_at": "2026-01-12T11:45:00Z",
+    "responded_via": "my_custom_app"
+  }
+}
+```
+
+```json Already Responded (409 Conflict)
+{
+  "error": "already_responded",
+  "message": "Feedback already provided via dashboard at 2026-01-12T11:30:00Z"
+}
+```
+
+```json Invalid Token (401 Unauthorized)
+{
+  "error": "unauthorized",
+  "message": "Invalid response token"
+}
+```
+</CodeGroup>
+
+### Security
+
+<Info>
+All webhook requests are cryptographically signed using HMAC-SHA256 to ensure authenticity and prevent tampering.
+</Info>
+
+#### Webhook Security
+
+- **HMAC-SHA256 signatures**: Every webhook includes a cryptographic signature
+- **Per-webhook secrets**: Each webhook has its own unique signing secret
+- **Encrypted at rest**: Signing secrets are encrypted in our database
+- **Timestamp verification**: Prevents replay attacks
+
+#### Response Token Security
+
+- **Single-use**: Tokens are invalidated after a successful response
+- **256-bit entropy**: Tokens use cryptographically secure random generation
+
+#### Best Practices
+
+1. **Verify signatures**: Always validate the `X-CrewAI-Signature` header
+2. **Check timestamps**: Reject requests older than 5 minutes
+3. **Store secrets securely**: Treat signing secrets like passwords
+4. **Use HTTPS**: Your webhook endpoint must use TLS in production
+5. **Rotate secrets**: Regenerate webhook secrets periodically via the dashboard
+
+### Example Integrations
+
+<CodeGroup>
+```python Python (Flask) - Complete Example
+from flask import Flask, request, jsonify
+import requests
+import hmac
+import hashlib
+import time
+
+app = Flask(__name__)
+
+WEBHOOK_SECRET = "whsec_your_signing_secret_here"
+MAX_TIMESTAMP_AGE = 300
+
+def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
+    try:
+        ts = int(timestamp)
+        if abs(time.time() - ts) > MAX_TIMESTAMP_AGE:
+            return False
+    except (ValueError, TypeError):
+        return False
+
+    signature_payload = f"{timestamp}.{payload.decode('utf-8')}"
+    expected = hmac.new(
+        WEBHOOK_SECRET.encode('utf-8'),
+        signature_payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    return hmac.compare_digest(f"sha256={expected}", signature)
+
+@app.route('/hitl-webhook', methods=['POST'])
+def handle_hitl():
+    # Verify signature first
+    signature = request.headers.get('X-CrewAI-Signature', '')
+    timestamp = request.headers.get('X-CrewAI-Timestamp', '')
+
+    if not verify_signature(request.data, signature, timestamp):
+        return jsonify({'error': 'Invalid signature'}), 401
+
+    payload = request.json
+
+    # Store for later review
+    store_request(payload)
+
+    # Or auto-approve based on rules
+    if should_auto_approve(payload):
+        response = requests.post(
+            payload['callback_url'],
+            json={'feedback': 'Auto-approved by policy', 'source': 'auto_approver'}
+        )
+        return jsonify({'status': 'auto_approved'})
+
+    return jsonify({'status': 'queued_for_review'})
+```
+
+```javascript Node.js (Express) - Complete Example
+const express = require('express');
+const crypto = require('crypto');
+const axios = require('axios');
+
+const app = express();
+const WEBHOOK_SECRET = 'whsec_your_signing_secret_here';
+const MAX_TIMESTAMP_AGE = 300;
+
+// Capture raw body for signature verification
+app.use('/hitl-webhook', express.raw({ type: 'application/json' }));
+
+function verifySignature(payload, signature, timestamp) {
+  const ts = parseInt(timestamp, 10);
+  if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > MAX_TIMESTAMP_AGE) {
+    return false;
+  }
+
+  const signaturePayload = `${timestamp}.${payload.toString()}`;
+  const expected = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(signaturePayload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(`sha256=${expected}`),
+    Buffer.from(signature)
+  );
+}
+
+app.post('/hitl-webhook', async (req, res) => {
+  const signature = req.headers['x-crewai-signature'] || '';
+  const timestamp = req.headers['x-crewai-timestamp'] || '';
+
+  if (!verifySignature(req.body, signature, timestamp)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  const { event_type, callback_url, message, output } = JSON.parse(req.body);
+
+  console.log(`Received ${event_type}: ${message}`);
+
+  // Notify your team via Slack, email, etc.
+  await notifyTeam(payload);
+
+  // Later, when someone approves:
+  // await axios.post(callback_url, { feedback: 'Approved!' });
+
+  res.json({ received: true });
+});
+```
+</CodeGroup>
+
+### Webhook Signature Verification
+
+All webhook requests are signed using HMAC-SHA256. You should verify the signature to ensure requests are authentic and haven't been tampered with.
+
+#### Signature Headers
+
+Each webhook request includes these headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-CrewAI-Signature` | HMAC-SHA256 signature: `sha256=<hex_digest>` |
+| `X-CrewAI-Timestamp` | Unix timestamp when the request was signed |
+
+#### Verification Algorithm
+
+The signature is computed as:
+
+```
+HMAC-SHA256(signing_secret, timestamp + "." + raw_body)
+```
+
+Where:
+- `signing_secret` is your webhook's unique secret (shown in dashboard)
+- `timestamp` is the value from `X-CrewAI-Timestamp` header
+- `raw_body` is the raw JSON request body (before parsing)
+
+#### Python Verification Example
+
+```python
+import hmac
+import hashlib
+import time
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+WEBHOOK_SECRET = "whsec_your_signing_secret_here"
+MAX_TIMESTAMP_AGE = 300  # 5 minutes
+
+def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
+    """Verify the webhook signature."""
+    # Check timestamp to prevent replay attacks
+    try:
+        ts = int(timestamp)
+        if abs(time.time() - ts) > MAX_TIMESTAMP_AGE:
+            return False
+    except (ValueError, TypeError):
+        return False
+
+    # Compute expected signature
+    signature_payload = f"{timestamp}.{payload.decode('utf-8')}"
+    expected = hmac.new(
+        WEBHOOK_SECRET.encode('utf-8'),
+        signature_payload.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
+    expected_header = f"sha256={expected}"
+
+    # Constant-time comparison to prevent timing attacks
+    return hmac.compare_digest(expected_header, signature)
+
+@app.route('/hitl-webhook', methods=['POST'])
+def handle_hitl():
+    signature = request.headers.get('X-CrewAI-Signature', '')
+    timestamp = request.headers.get('X-CrewAI-Timestamp', '')
+
+    if not verify_signature(request.data, signature, timestamp):
+        return jsonify({'error': 'Invalid signature'}), 401
+
+    payload = request.json
+    # Process the verified webhook...
+    return jsonify({'status': 'received'})
+```
+
+#### Node.js Verification Example
+
+```javascript
+const express = require('express');
+const crypto = require('crypto');
+
+const app = express();
+const WEBHOOK_SECRET = 'whsec_your_signing_secret_here';
+const MAX_TIMESTAMP_AGE = 300; // 5 minutes
+
+// Use raw body for signature verification
+app.use('/hitl-webhook', express.raw({ type: 'application/json' }));
+
+function verifySignature(payload, signature, timestamp) {
+  // Check timestamp
+  const ts = parseInt(timestamp, 10);
+  if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > MAX_TIMESTAMP_AGE) {
+    return false;
+  }
+
+  // Compute expected signature
+  const signaturePayload = `${timestamp}.${payload.toString()}`;
+  const expected = crypto
+    .createHmac('sha256', WEBHOOK_SECRET)
+    .update(signaturePayload)
+    .digest('hex');
+
+  const expectedHeader = `sha256=${expected}`;
+
+  // Constant-time comparison
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedHeader),
+    Buffer.from(signature)
+  );
+}
+
+app.post('/hitl-webhook', (req, res) => {
+  const signature = req.headers['x-crewai-signature'] || '';
+  const timestamp = req.headers['x-crewai-timestamp'] || '';
+
+  if (!verifySignature(req.body, signature, timestamp)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+
+  const payload = JSON.parse(req.body);
+  // Process the verified webhook...
+  res.json({ status: 'received' });
+});
+```
+
+#### Ruby Verification Example
+
+```ruby
+require 'openssl'
+require 'json'
+
+class HitlWebhookController < ApplicationController
+  WEBHOOK_SECRET = ENV['CREWAI_WEBHOOK_SECRET']
+  MAX_TIMESTAMP_AGE = 300 # 5 minutes
+
+  skip_before_action :verify_authenticity_token
+
+  def receive
+    signature = request.headers['X-CrewAI-Signature']
+    timestamp = request.headers['X-CrewAI-Timestamp']
+    payload = request.raw_post
+
+    unless verify_signature(payload, signature, timestamp)
+      render json: { error: 'Invalid signature' }, status: :unauthorized
+      return
+    end
+
+    data = JSON.parse(payload)
+    # Process the verified webhook...
+    render json: { status: 'received' }
+  end
+
+  private
+
+  def verify_signature(payload, signature, timestamp)
+    return false if timestamp.blank? || signature.blank?
+
+    # Check timestamp freshness
+    ts = timestamp.to_i
+    return false if (Time.now.to_i - ts).abs > MAX_TIMESTAMP_AGE
+
+    # Compute expected signature
+    signature_payload = "#{timestamp}.#{payload}"
+    expected = OpenSSL::HMAC.hexdigest('SHA256', WEBHOOK_SECRET, signature_payload)
+    expected_header = "sha256=#{expected}"
+
+    # Constant-time comparison
+    ActiveSupport::SecurityUtils.secure_compare(expected_header, signature)
+  end
+end
+```
+
+#### Security Best Practices
+
+1. **Always verify signatures** before processing webhook data
+2. **Check timestamp freshness** (we recommend 5-minute tolerance)
+3. **Use constant-time comparison** to prevent timing attacks
+4. **Store secrets securely** using environment variables or secret managers
+5. **Rotate secrets periodically** (you can regenerate in the dashboard)
+
+### Error Handling
+
+Your webhook endpoint should return a 2xx status code to acknowledge receipt:
+
+| Your Response | Our Behavior |
+|---------------|--------------|
+| 2xx | Webhook delivered successfully |
+| 4xx/5xx | Logged as failed, no retry |
+| Timeout (30s) | Logged as failed, no retry |
+
+### Testing Your Integration
+
+<Steps>
+  <Step title="Configure Webhook">
+    Add a webhook pointing to your dev endpoint
+  </Step>
+  <Step title="Use a Tunnel for Local Dev">
+    For local development, use [ngrok](https://ngrok.com):
+    ```bash
+    ngrok http 3000
+    # Use the HTTPS URL as your webhook endpoint
+    ```
+  </Step>
+  <Step title="Trigger a Flow">
+    Run a flow with a `@human_feedback` decorator
+  </Step>
+  <Step title="Verify Receipt">
+    Check that your endpoint receives the payload
+  </Step>
+  <Step title="Submit Response">
+    POST to the `callback_url` to complete the flow
+  </Step>
+</Steps>
+
+## Other Integration Options
+
+### API Access
+
+Full programmatic control for custom integrations:
+
+```python
+# Example: Programmatically check HITL status
+from crewai.enterprise import HITLClient
+
+client = HITLClient()
+pending_reviews = client.get_pending_reviews(flow_id="my-flow")
+
+for review in pending_reviews:
+    print(f"Review {review.id}: {review.status} - Assigned to: {review.assignee}")
+```
+
+### Coming Soon
+
+- **Slack Integration**: Respond to HITL requests directly from Slack
+- **Microsoft Teams**: Teams-native review experience
+- **Mobile App**: Review and approve on the go
+
+## Best Practices
+
+<Tip>
+**Start Simple**: Begin with basic approval gates, then add routing and SLAs as your workflows mature.
+</Tip>
+
+1. **Define Clear Review Criteria**: Document what reviewers should look for to ensure consistent decisions.
+
+2. **Set Realistic SLAs**: Balance urgency with reviewer capacity to maintain sustainable workflows.
+
+3. **Use Escalation Wisely**: Reserve auto-approval for truly non-critical reviews to maintain quality.
+
+4. **Monitor and Iterate**: Use analytics to identify bottlenecks and optimize reviewer assignments.
+
+5. **Train Your Team**: Ensure reviewers understand their role and the tools available to them.
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Human Feedback in Flows" icon="code" href="/en/learn/human-feedback-in-flows">
+    Implementation guide for the `@human_feedback` decorator
+  </Card>
+  <Card title="Flow HITL Workflow Guide" icon="route" href="/en/enterprise/guides/human-in-the-loop">
+    Step-by-step guide for setting up HITL workflows
+  </Card>
+  <Card title="RBAC Configuration" icon="shield-check" href="/en/enterprise/features/rbac">
+    Configure role-based access control for your organization
+  </Card>
+  <Card title="Webhook Streaming" icon="bolt" href="/en/enterprise/features/webhook-streaming">
+    Set up real-time event notifications
+  </Card>
+</CardGroup>

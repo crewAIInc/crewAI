@@ -5,9 +5,53 @@ icon: "user-check"
 mode: "wide"
 ---
 
-Human-In-The-Loop (HITL) é uma abordagem poderosa que combina inteligência artificial com expertise humana para aprimorar a tomada de decisão e melhorar os resultados das tarefas. Este guia mostra como implementar HITL dentro do CrewAI.
+Human-In-The-Loop (HITL) é uma abordagem poderosa que combina inteligência artificial com expertise humana para aprimorar a tomada de decisão e melhorar os resultados das tarefas. Este guia mostra como implementar HITL dentro do CrewAI Enterprise.
 
-## Configurando Workflows HITL
+## Abordagens HITL no CrewAI
+
+CrewAI oferece duas abordagens para implementar workflows human-in-the-loop:
+
+| Abordagem | Melhor Para | Versão |
+|----------|----------|---------|
+| **Baseada em Flow** (decorador `@human_feedback`) | Produção com UI Enterprise, workflows gerenciados, recursos completos da plataforma | **1.8.0+** |
+| **Baseada em Webhook** | Integrações customizadas, sistemas externos (Slack, Teams, etc.), configurações legadas | Todas as versões |
+
+## HITL Baseado em Flow com Plataforma Enterprise
+
+<Note>
+O decorador `@human_feedback` requer **CrewAI versão 1.8.0 ou superior**.
+</Note>
+
+Ao usar o decorador `@human_feedback` em seus Flows, o CrewAI Enterprise oferece uma **UI de Gerenciamento HITL** dedicada que proporciona controle total sobre os workflows de feedback humano:
+
+<CardGroup cols={2}>
+  <Card title="Resposta na Plataforma" icon="reply">
+    Revise e responda a solicitações HITL diretamente no dashboard Enterprise—sem necessidade de configuração de webhook.
+  </Card>
+  <Card title="Atribuição de Respondentes" icon="user-plus">
+    Atribua membros específicos da equipe ou grupos como respondentes para diferentes tipos de tarefas ou crews.
+  </Card>
+  <Card title="Permissões e Controle de Acesso" icon="shield-check">
+    Defina quem pode visualizar, responder ou escalar solicitações HITL com controles de permissão granulares.
+  </Card>
+  <Card title="Políticas de Escalação" icon="arrow-up-right">
+    Configure regras de escalação automática quando as respostas atrasarem ou exigirem revisão sênior.
+  </Card>
+  <Card title="Gerenciamento de SLA" icon="clock">
+    Defina Acordos de Nível de Serviço para tempos de resposta com notificações e rastreamento automáticos.
+  </Card>
+  <Card title="Roteamento Dinâmico" icon="route">
+    Roteie solicitações HITL com base em conteúdo, prioridade ou regras personalizadas com políticas de aplicação.
+  </Card>
+</CardGroup>
+
+<Tip>
+Para detalhes de implementação do decorador `@human_feedback`, consulte o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
+</Tip>
+
+## Configurando Workflows HITL Baseados em Webhook
+
+Para integrações customizadas com sistemas externos como Slack, Microsoft Teams ou suas próprias aplicações, você pode usar a abordagem baseada em webhook:
 
 <Steps>
     <Step title="Configure Sua Tarefa">
@@ -99,3 +143,14 @@ Workflows HITL são particularmente valiosos para:
 - Operações sensíveis ou de alto risco
 - Tarefas criativas que exigem julgamento humano
 - Revisões de conformidade e regulatórias
+
+## Saiba Mais
+
+<CardGroup cols={2}>
+  <Card title="Gerenciamento HITL para Flows" icon="users-gear" href="/pt-BR/enterprise/features/flow-hitl-management">
+    Explore os recursos completos da plataforma HITL para Flows, incluindo atribuição, gerenciamento de SLA, políticas de escalação e análises.
+  </Card>
+  <Card title="Feedback Humano em Flows" icon="code" href="/pt-BR/learn/human-feedback-in-flows">
+    Guia de implementação para o decorador `@human_feedback` em seus Flows.
+  </Card>
+</CardGroup>

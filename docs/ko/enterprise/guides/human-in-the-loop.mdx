@@ -5,9 +5,53 @@ icon: "user-check"
 mode: "wide"
 ---
 
-인간-중심(Human-In-The-Loop, HITL)은 인공지능과 인간 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드는 CrewAI 내에서 HITL을 구현하는 방법을 보여줍니다.
+인간-중심(Human-In-The-Loop, HITL)은 인공지능과 인간 전문 지식을 결합하여 의사결정을 강화하고 작업 결과를 향상시키는 강력한 접근 방식입니다. 이 가이드는 CrewAI Enterprise 내에서 HITL을 구현하는 방법을 보여줍니다.
 
-## HITL 워크플로 설정
+## CrewAI의 HITL 접근 방식
+
+CrewAI는 human-in-the-loop 워크플로우를 구현하기 위한 두 가지 접근 방식을 제공합니다:
+
+| 접근 방식 | 적합한 용도 | 버전 |
+|----------|----------|---------|
+| **Flow 기반** (`@human_feedback` 데코레이터) | Enterprise UI를 사용한 프로덕션, 관리형 워크플로우, 전체 플랫폼 기능 | **1.8.0+** |
+| **Webhook 기반** | 커스텀 통합, 외부 시스템 (Slack, Teams 등), 레거시 설정 | 모든 버전 |
+
+## Enterprise 플랫폼과 Flow 기반 HITL
+
+<Note>
+`@human_feedback` 데코레이터는 **CrewAI 버전 1.8.0 이상**이 필요합니다.
+</Note>
+
+Flow에서 `@human_feedback` 데코레이터를 사용하면, CrewAI Enterprise는 인간 피드백 워크플로우를 완벽하게 제어할 수 있는 전용 **HITL 관리 UI**를 제공합니다:
+
+<CardGroup cols={2}>
+  <Card title="플랫폼 내 응답" icon="reply">
+    Enterprise 대시보드에서 직접 HITL 요청을 검토하고 응답하세요—webhook 설정이 필요 없습니다.
+  </Card>
+  <Card title="응답자 할당" icon="user-plus">
+    다양한 작업 유형이나 crew에 대해 특정 팀원 또는 그룹을 응답자로 할당하세요.
+  </Card>
+  <Card title="권한 및 접근 제어" icon="shield-check">
+    세분화된 권한 제어로 HITL 요청을 보거나, 응답하거나, 에스컬레이션할 수 있는 사람을 정의하세요.
+  </Card>
+  <Card title="에스컬레이션 정책" icon="arrow-up-right">
+    응답이 지연되거나 상급 검토가 필요할 때 자동 에스컬레이션 규칙을 구성하세요.
+  </Card>
+  <Card title="SLA 관리" icon="clock">
+    응답 시간에 대한 서비스 수준 계약을 설정하고 자동 알림 및 추적을 활성화하세요.
+  </Card>
+  <Card title="동적 라우팅" icon="route">
+    콘텐츠, 우선순위 또는 사용자 정의 규칙을 기반으로 적용 정책과 함께 HITL 요청을 라우팅하세요.
+  </Card>
+</CardGroup>
+
+<Tip>
+`@human_feedback` 데코레이터의 구현 세부 사항은 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
+</Tip>
+
+## Webhook 기반 HITL 워크플로 설정
+
+Slack, Microsoft Teams 또는 자체 애플리케이션과 같은 외부 시스템과의 커스텀 통합을 위해 webhook 기반 접근 방식을 사용할 수 있습니다:
 
 <Steps>
     <Step title="작업 구성">
@@ -99,3 +143,14 @@ HITL 워크플로우는 특히 다음과 같은 경우에 유용합니다:
 - 민감하거나 위험도가 높은 작업
 - 인간의 판단이 필요한 창의적 작업
 - 준수 및 규제 검토
+
+## 자세히 알아보기
+
+<CardGroup cols={2}>
+  <Card title="Flow HITL 관리" icon="users-gear" href="/ko/enterprise/features/flow-hitl-management">
+    할당, SLA 관리, 에스컬레이션 정책 및 분석을 포함한 전체 Enterprise Flow HITL 플랫폼 기능을 살펴보세요.
+  </Card>
+  <Card title="Flow에서 인간 피드백" icon="code" href="/ko/learn/human-feedback-in-flows">
+    Flow에서 `@human_feedback` 데코레이터 구현 가이드.
+  </Card>
+</CardGroup>
