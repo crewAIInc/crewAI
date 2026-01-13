@@ -36,6 +36,7 @@ class CrewStructuredTool:
         result_as_answer: bool = False,
         max_usage_count: int | None = None,
         current_usage_count: int = 0,
+        allow_repeated_usage: bool = False,
     ) -> None:
         """Initialize the structured tool.
 
@@ -47,6 +48,7 @@ class CrewStructuredTool:
             result_as_answer: Whether to return the output directly
             max_usage_count: Maximum number of times this tool can be used. None means unlimited usage.
             current_usage_count: Current number of times this tool has been used.
+            allow_repeated_usage: If True, allows the tool to be called consecutively with the same arguments.
         """
         self.name = name
         self.description = description
@@ -56,6 +58,7 @@ class CrewStructuredTool:
         self.result_as_answer = result_as_answer
         self.max_usage_count = max_usage_count
         self.current_usage_count = current_usage_count
+        self.allow_repeated_usage = allow_repeated_usage
         self._original_tool: BaseTool | None = None
 
         # Validate the function signature matches the schema
