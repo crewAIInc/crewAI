@@ -4500,6 +4500,71 @@ def test_crew_copy_with_memory():
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
 
+def test_sets_parent_flow_when_using_crewbase_pattern_inside_flow():
+    @CrewBase
+    class TestCrew:
+        agents_config = None
+        tasks_config = None
+
+        agents: list[BaseAgent]
+        tasks: list[Task]
+
+        @agent
+        def researcher(self) -> Agent:
+            return Agent(
+                role="Researcher",
+                goal="Research things",
+                backstory="Expert researcher",
+            )
+
+        @agent
+        def writer_agent(self) -> Agent:
+            return Agent(
+                role="Writer",
+                goal="Write things",
+                backstory="Expert writer",
+            )
+
+        @task
+        def research_task(self) -> Task:
+            return Task(
+                description="Test task for researcher",
+                expected_output="output",
+                agent=self.researcher(),
+            )
+
+        @task
+        def write_task(self) -> Task:
+            return Task(
+                description="Test task for writer",
+                expected_output="output",
+                agent=self.writer_agent(),
+            )
+
+        @crew
+        def crew(self) -> Crew:
+            return Crew(
+                agents=self.agents,
+                tasks=self.tasks,
+                process=Process.sequential,
+            )
+
+    captured_crew = None
+
+    class MyFlow(Flow):
+        @start()
+        def start_method(self):
+            nonlocal captured_crew
+            captured_crew = TestCrew().crew()
+            return captured_crew
+
+    flow = MyFlow()
+    flow.kickoff()
+
+    assert captured_crew is not None
+    assert captured_crew.parent_flow is flow
+
+
 def test_sets_parent_flow_when_outside_flow(researcher, writer):
     crew = Crew(
         agents=[researcher, writer],

@@ -515,6 +515,94 @@ def test_azure_supports_stop_words():
     assert llm.supports_stop_words() == True
 
 
+def test_azure_gpt5_models_do_not_support_stop_words():
+    """
+    Test that GPT-5 family models do not support stop words.
+    GPT-5 models use the Responses API which doesn't support stop sequences.
+    See: https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure
+    """
+    # GPT-5 base models
+    gpt5_models = [
+        "azure/gpt-5",
+        "azure/gpt-5-mini",
+        "azure/gpt-5-nano",
+        "azure/gpt-5-chat",
+        # GPT-5.1 series
+        "azure/gpt-5.1",
+        "azure/gpt-5.1-chat",
+        "azure/gpt-5.1-codex",
+        "azure/gpt-5.1-codex-mini",
+        # GPT-5.2 series
+        "azure/gpt-5.2",
+        "azure/gpt-5.2-chat",
+    ]
+
+    for model_name in gpt5_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_o_series_models_do_not_support_stop_words():
+    """
+    Test that o-series reasoning models do not support stop words.
+    """
+    o_series_models = [
+        "azure/o1",
+        "azure/o1-mini",
+        "azure/o3",
+        "azure/o3-mini",
+        "azure/o4",
+        "azure/o4-mini",
+    ]
+
+    for model_name in o_series_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_responses_api_models_do_not_support_stop_words():
+    """
+    Test that models using the Responses API do not support stop words.
+    """
+    responses_api_models = [
+        "azure/computer-use-preview",
+    ]
+
+    for model_name in responses_api_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_stop_words_not_included_for_unsupported_models():
+    """
+    Test that stop words are not included in completion params for models that don't support them.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        # Test GPT-5 model - stop should NOT be included even if set
+        llm_gpt5 = LLM(
+            model="azure/gpt-5-nano",
+            stop=["STOP", "END"]
+        )
+        params = llm_gpt5._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+        assert "stop" not in params, "stop should not be included for GPT-5 models"
+
+        # Test regular model - stop SHOULD be included
+        llm_gpt4 = LLM(
+            model="azure/gpt-4",
+            stop=["STOP", "END"]
+        )
+        params = llm_gpt4._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+        assert "stop" in params, "stop should be included for GPT-4 models"
+        assert params["stop"] == ["STOP", "END"]
+
+
 def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
