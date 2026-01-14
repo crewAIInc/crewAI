@@ -1579,6 +1579,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 else method(*args, **kwargs)
             )
 
+            # Auto-await coroutines from sync methods (enables agent.kickoff() inside flows)
+            if asyncio.iscoroutine(result):
+                result = await result
+
             self._method_outputs.append(result)
             self._method_execution_counts[method_name] = (
                 self._method_execution_counts.get(method_name, 0) + 1

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 import shutil
 import subprocess
 import time
@@ -70,6 +70,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
+    is_inside_event_loop,
     load_agent_from_repository,
     parse_tools,
     render_text_description_and_args,
@@ -1577,12 +1578,16 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-    ) -> LiteAgentOutput:
+    ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
         """
         Execute the agent with the given messages using the AgentExecutor.
 
         This method provides standalone agent execution without requiring a Crew.
         It supports tools, response formatting, and guardrails.
+
+        When called from within a Flow (inside an event loop), this method
+        automatically returns a coroutine that the Flow framework will await,
+        making it work seamlessly in both sync and async contexts.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
@@ -1592,7 +1597,11 @@ class Agent(BaseAgent):
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
+            Or a coroutine if called from within an event loop.
         """
+        if is_inside_event_loop():
+            return self.kickoff_async(messages, response_format)
+
         # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
@@ -1738,8 +1747,70 @@ class Agent(BaseAgent):
         """
         import json
 
-        # Execute the agent
-        result = executor.invoke(inputs)
+        # Execute the agent (this is called from sync path, so invoke returns dict)
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        raw_output = result.get("output", "")
+
+        # Handle response format conversion
+        formatted_result: BaseModel | None = None
+        if response_format:
+            try:
+                model_schema = generate_model_description(response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=raw_output,
+                    model=response_format,
+                    instructions=instructions,
+                )
+
+                conversion_result = converter.to_pydantic()
+                if isinstance(conversion_result, BaseModel):
+                    formatted_result = conversion_result
+            except ConverterError:
+                pass  # Keep raw output if conversion fails
+
+        # Get token usage metrics
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+
+        return LiteAgentOutput(
+            raw=raw_output,
+            pydantic=formatted_result,
+            agent_role=self.role,
+            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=executor.messages,
+        )
+
+    async def _execute_and_build_output_async(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent asynchronously and build the output object.
+
+        This is the async version of _execute_and_build_output that uses
+        invoke_async() for native async execution within event loops.
+
+        Args:
+            executor: The executor instance.
+            inputs: Input dictionary for execution.
+            response_format: Optional response format.
+
+        Returns:
+            LiteAgentOutput with raw output, formatted result, and metrics.
+        """
+        import json
+
+        # Execute the agent asynchronously
+        result = await executor.invoke_async(inputs)
         raw_output = result.get("output", "")
 
         # Handle response format conversion
@@ -1866,7 +1937,9 @@ class Agent(BaseAgent):
         """
         Execute the agent asynchronously with the given messages.
 
-        This is the async version of the kickoff method.
+        This is the async version of the kickoff method that uses native async
+        execution. It is designed for use within async contexts, such as when
+        called from within an async Flow method.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
@@ -1877,4 +1950,131 @@ class Agent(BaseAgent):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        return await asyncio.to_thread(self.kickoff, messages, response_format)
+        # Process platform apps and MCP tools
+        if self.apps:
+            platform_tools = self.get_platform_tools(self.apps)
+            if platform_tools and self.tools is not None:
+                self.tools.extend(platform_tools)
+        if self.mcps:
+            mcps = self.get_mcp_tools(self.mcps)
+            if mcps and self.tools is not None:
+                self.tools.extend(mcps)
+
+        # Prepare tools
+        raw_tools: list[BaseTool] = self.tools or []
+        parsed_tools = parse_tools(raw_tools)
+
+        # Build agent_info for backward-compatible event emission
+        agent_info = {
+            "id": self.id,
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": raw_tools,
+            "verbose": self.verbose,
+        }
+
+        # Build prompt for standalone execution
+        prompt = Prompts(
+            agent=self,
+            has_tools=len(raw_tools) > 0,
+            i18n=self.i18n,
+            use_system_prompt=self.use_system_prompt,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
+
+        # Prepare stop words
+        stop_words = [self.i18n.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        # Get RPM limit function
+        rpm_limit_fn = (
+            self._rpm_controller.check_or_wait if self._rpm_controller else None
+        )
+
+        # Create the executor for standalone mode (no crew, no task)
+        executor = AgentExecutor(
+            task=None,
+            crew=None,
+            llm=cast(BaseLLM, self.llm),
+            agent=self,
+            prompt=prompt,
+            max_iter=self.max_iter,
+            tools=parsed_tools,
+            tools_names=get_tool_names(parsed_tools),
+            stop_words=stop_words,
+            tools_description=render_text_description_and_args(parsed_tools),
+            tools_handler=self.tools_handler,
+            original_tools=raw_tools,
+            step_callback=self.step_callback,
+            function_calling_llm=self.function_calling_llm,
+            respect_context_window=self.respect_context_window,
+            request_within_rpm_limit=rpm_limit_fn,
+            callbacks=[TokenCalcHandler(self._token_process)],
+            response_model=response_format,
+            i18n=self.i18n,
+        )
+
+        if isinstance(messages, str):
+            formatted_messages = messages
+        else:
+            # Convert list of messages to a single input string
+            formatted_messages = "\n".join(
+                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            )
+
+        # Build the input dict for the executor
+        inputs = {
+            "input": formatted_messages,
+            "tool_names": get_tool_names(parsed_tools),
+            "tools": render_text_description_and_args(parsed_tools),
+        }
+
+        try:
+            # Emit started event for backward compatibility with LiteAgent listeners
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=parsed_tools,
+                    messages=messages,
+                ),
+            )
+
+            # Execute asynchronously using invoke_async
+            output = await self._execute_and_build_output_async(
+                executor, inputs, response_format
+            )
+
+            if self.guardrail is not None:
+                output = self._process_kickoff_guardrail(
+                    output=output,
+                    executor=executor,
+                    inputs=inputs,
+                    response_format=response_format,
+                )
+
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=output.raw,
+                ),
+            )
+
+            return output
+
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise
