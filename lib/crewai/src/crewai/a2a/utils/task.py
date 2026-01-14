@@ -231,6 +231,17 @@ async def cancel(
         The canceled task with updated status.
     """
     task_id = context.task_id
+    context_id = context.context_id
+    if task_id is None or context_id is None:
+        raise ServerError(InvalidParamsError(message="task_id and context_id required"))
+
+    if context.current_task and context.current_task.status.state in (
+        TaskState.completed,
+        TaskState.failed,
+        TaskState.canceled,
+    ):
+        return context.current_task
+
     cache = caches.get("default")
 
     await cache.set(f"cancel:{task_id}", True, ttl=3600)
@@ -240,7 +251,7 @@ async def cancel(
     await event_queue.enqueue_event(
         TaskStatusUpdateEvent(
             task_id=task_id,
-            context_id=context.context_id,
+            context_id=context_id,
             status=TaskStatus(state=TaskState.canceled),
             final=True,
         )
