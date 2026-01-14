@@ -683,3 +683,151 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
 
     # Verify MCP tools were retrieved
     mock_get_mcp_tools.assert_called_once_with("https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research")
+
+
+# ============================================================================
+# Tests for LiteAgent inside Flow (magic auto-async pattern)
+# ============================================================================
+
+from crewai.flow.flow import listen
+
+
+@pytest.mark.vcr()
+def test_lite_agent_inside_flow_sync():
+    """Test that LiteAgent.kickoff() works magically inside a Flow.
+
+    This tests the "magic auto-async" pattern where calling agent.kickoff()
+    from within a Flow automatically detects the event loop and returns a
+    coroutine that the Flow framework awaits. Users don't need to use async/await.
+    """
+    # Track execution
+    execution_log = []
+
+    class TestFlow(Flow):
+        @start()
+        def run_agent(self):
+            execution_log.append("flow_started")
+            agent = Agent(
+                role="Test Agent",
+                goal="Answer questions",
+                backstory="A helpful test assistant",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            # Magic: just call kickoff() normally - it auto-detects Flow context
+            result = agent.kickoff(messages="What is 2+2? Reply with just the number.")
+            execution_log.append("agent_completed")
+            return result
+
+    flow = TestFlow()
+    result = flow.kickoff()
+
+    # Verify the flow executed successfully
+    assert "flow_started" in execution_log
+    assert "agent_completed" in execution_log
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+def test_lite_agent_inside_flow_with_tools():
+    """Test that LiteAgent with tools works correctly inside a Flow."""
+    class TestFlow(Flow):
+        @start()
+        def run_agent_with_tools(self):
+            agent = Agent(
+                role="Calculator Agent",
+                goal="Perform calculations",
+                backstory="A math expert",
+                llm=LLM(model="gpt-4o-mini"),
+                tools=[CalculatorTool()],
+                verbose=False,
+            )
+            result = agent.kickoff(messages="Calculate 10 * 5")
+            return result
+
+    flow = TestFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None
+
+
+@pytest.mark.vcr()
+def test_multiple_agents_in_same_flow():
+    """Test that multiple LiteAgents can run sequentially in the same Flow."""
+    class MultiAgentFlow(Flow):
+        @start()
+        def first_step(self):
+            agent1 = Agent(
+                role="First Agent",
+                goal="Greet users",
+                backstory="A friendly greeter",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            return agent1.kickoff(messages="Say hello")
+
+        @listen(first_step)
+        def second_step(self, first_result):
+            agent2 = Agent(
+                role="Second Agent",
+                goal="Say goodbye",
+                backstory="A polite farewell agent",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            return agent2.kickoff(messages="Say goodbye")
+
+    flow = MultiAgentFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+async def test_lite_agent_kickoff_async_inside_flow():
+    """Test that LiteAgent.kickoff_async() works correctly from async Flow methods."""
+    class AsyncAgentFlow(Flow):
+        @start()
+        async def async_agent_step(self):
+            agent = Agent(
+                role="Async Test Agent",
+                goal="Answer questions asynchronously",
+                backstory="An async helper",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            result = await agent.kickoff_async(messages="What is 3+3?")
+            return result
+
+    flow = AsyncAgentFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+def test_lite_agent_standalone_still_works():
+    """Test that LiteAgent.kickoff() still works normally outside of a Flow.
+
+    This verifies that the magic auto-async pattern doesn't break standalone usage
+    where there's no event loop running.
+    """
+    agent = Agent(
+        role="Standalone Agent",
+        goal="Answer questions",
+        backstory="A helpful assistant",
+        llm=LLM(model="gpt-4o-mini"),
+        verbose=False,
+    )
+
+    # This should work normally - no Flow, no event loop
+    result = agent.kickoff(messages="What is 5+5? Reply with just the number.")
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None

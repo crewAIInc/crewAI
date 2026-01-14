@@ -73,6 +73,7 @@ from crewai.flow.utils import (
     is_simple_flow_condition,
 )
 
+
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.flow.human_feedback import HumanFeedbackResult
@@ -570,7 +571,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         flow_id: str,
         persistence: FlowPersistence | None = None,
         **kwargs: Any,
-    ) -> "Flow[Any]":
+    ) -> Flow[Any]:
         """Create a Flow instance from a pending feedback state.
 
         This classmethod is used to restore a flow that was paused waiting
@@ -631,7 +632,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         return instance
 
     @property
-    def pending_feedback(self) -> "PendingFeedbackContext | None":
+    def pending_feedback(self) -> PendingFeedbackContext | None:
         """Get the pending feedback context if this flow is waiting for feedback.
 
         Returns:
@@ -716,8 +717,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If no pending feedback context exists
         """
-        from crewai.flow.human_feedback import HumanFeedbackResult
         from datetime import datetime
+
+        from crewai.flow.human_feedback import HumanFeedbackResult
 
         if self._pending_feedback_context is None:
             raise ValueError(
