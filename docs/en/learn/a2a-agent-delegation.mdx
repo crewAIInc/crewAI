@@ -1,19 +1,20 @@
 ---
 title: Agent-to-Agent (A2A) Protocol
-description: Enable CrewAI agents to delegate tasks to remote A2A-compliant agents for specialized handling
+description: Agents delegate tasks to remote A2A agents and/or operate as A2A-compliant server agents.
 icon: network-wired
 mode: "wide"
 ---
 
 ## A2A Agent Delegation
 
-CrewAI supports the Agent-to-Agent (A2A) protocol, allowing agents to delegate tasks to remote specialized agents. The agent's LLM automatically decides whether to handle a task directly or delegate to an A2A agent based on the task requirements.
+CrewAI treats [A2A protocol](https://a2a-protocol.org/latest/) as a first-class delegation primitive, enabling agents to delegate tasks, request information, and collaborate with remote agents, as well as act as A2A-compliant server agents.
+In client mode, agents autonomously choose between local execution and remote delegation based on task requirements.
 
 ## How It Works
 
 When an agent is configured with A2A capabilities:
 
-1. The LLM analyzes each task
+1. The Agent analyzes each task
 2. It decides to either:
    - Handle the task directly using its own capabilities
    - Delegate to a remote A2A agent for specialized handling
@@ -27,7 +28,7 @@ When an agent is configured with A2A capabilities:
 ## Basic Configuration
 
 <Warning>
-  `crewai.a2a.config.A2AConfig` is deprecated and will be removed in v2.0.0. Use `A2AClientConfig` for connecting to remote agents or `A2AServerConfig` for exposing agents as servers.
+  `crewai.a2a.config.A2AConfig` is deprecated and will be removed in v2.0.0. Use `A2AClientConfig` for connecting to remote agents and/or `A2AServerConfig` for exposing agents as servers.
 </Warning>
 
 Configure an agent for A2A delegation by setting the `a2a` parameter:
