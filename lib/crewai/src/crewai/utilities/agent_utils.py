@@ -108,6 +108,65 @@ def render_text_description_and_args(
     return "\n".join(tool_strings)
 
 
+def convert_tools_to_openai_schema(
+    tools: Sequence[BaseTool | CrewStructuredTool],
+) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+    """Convert CrewAI tools to OpenAI function calling format.
+
+    This function converts CrewAI BaseTool and CrewStructuredTool objects
+    into the OpenAI-compatible tool schema format that can be passed to
+    LLM providers for native function calling.
+
+    Args:
+        tools: List of CrewAI tool objects to convert.
+
+    Returns:
+        Tuple containing:
+        - List of OpenAI-format tool schema dictionaries
+        - Dict mapping tool names to their callable run() methods
+
+    Example:
+        >>> tools = [CalculatorTool(), SearchTool()]
+        >>> schemas, functions = convert_tools_to_openai_schema(tools)
+        >>> # schemas can be passed to llm.call(tools=schemas)
+        >>> # functions can be passed to llm.call(available_functions=functions)
+    """
+    openai_tools: list[dict[str, Any]] = []
+    available_functions: dict[str, Callable[..., Any]] = {}
+
+    for tool in tools:
+        # Get the JSON schema for tool parameters
+        parameters: dict[str, Any] = {}
+        if hasattr(tool, "args_schema") and tool.args_schema is not None:
+            try:
+                parameters = tool.args_schema.model_json_schema()
+                # Remove title and description from schema root as they're redundant
+                parameters.pop("title", None)
+                parameters.pop("description", None)
+            except Exception:
+                parameters = {}
+
+        # Extract original description from formatted description
+        # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
+        description = tool.description
+        if "Tool Description:" in description:
+            # Extract the original description after "Tool Description:"
+            description = description.split("Tool Description:")[-1].strip()
+
+        schema: dict[str, Any] = {
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": description,
+                "parameters": parameters,
+            },
+        }
+        openai_tools.append(schema)
+        available_functions[tool.name] = tool.run
+
+    return openai_tools, available_functions
+
+
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
     """Check if the maximum number of iterations has been reached.
 
@@ -234,11 +293,13 @@ def get_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | LiteAgent | None = None,
-) -> str:
+) -> str | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
     Args:
@@ -246,13 +307,16 @@ def get_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, or tool call results if
+        native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -267,7 +331,9 @@ def get_llm_response(
     try:
         answer = llm.call(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
@@ -289,11 +355,13 @@ async def aget_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | None = None,
-) -> str:
+) -> str | Any:
     """Call the LLM asynchronously and return the response.
 
     Args:
@@ -301,13 +369,16 @@ async def aget_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, or tool call results if
+        native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -321,7 +392,9 @@ async def aget_llm_response(
     try:
         answer = await llm.acall(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,

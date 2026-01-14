@@ -236,14 +236,30 @@ def process_tool_results(agent: Agent, result: Any) -> Any:
 def save_last_messages(agent: Agent) -> None:
     """Save the last messages from agent executor.
 
+    Sanitizes messages to be compatible with TaskOutput's LLMMessage type,
+    which only accepts 'user', 'assistant', 'system' roles and requires
+    content to be a string or list (not None).
+
     Args:
         agent: The agent instance.
     """
-    agent._last_messages = (
-        agent.agent_executor.messages.copy()
-        if agent.agent_executor and hasattr(agent.agent_executor, "messages")
-        else []
-    )
+    if not agent.agent_executor or not hasattr(agent.agent_executor, "messages"):
+        agent._last_messages = []
+        return
+
+    sanitized_messages = []
+    for msg in agent.agent_executor.messages:
+        role = msg.get("role", "")
+        # Only include messages with valid LLMMessage roles
+        if role not in ("user", "assistant", "system"):
+            continue
+        # Ensure content is not None (can happen with tool call assistant messages)
+        content = msg.get("content")
+        if content is None:
+            content = ""
+        sanitized_messages.append({"role": role, "content": content})
+
+    agent._last_messages = sanitized_messages
 
 
 def prepare_tools(

@@ -709,15 +709,25 @@ class Agent(BaseAgent):
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
+        use_native_tool_calling = (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+            and len(raw_tools) > 0
+        )
+
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
         ).task_execution()
+
+        print("prompt", prompt)
 
         stop_words = [self.i18n.slice("observation")]
 

@@ -1,0 +1,479 @@
+"""Integration tests for native tool calling functionality.
+
+These tests verify that agents can use native function calling
+when the LLM supports it, across multiple providers.
+"""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+from unittest.mock import patch, MagicMock
+
+import pytest
+from pydantic import BaseModel, Field
+
+from crewai import Agent, Crew, Task
+from crewai.llm import LLM
+from crewai.tools.base_tool import BaseTool
+
+
+# Check for optional provider availability
+try:
+    import anthropic
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
+
+try:
+    import google.genai
+    HAS_GOOGLE_GENAI = True
+except ImportError:
+    HAS_GOOGLE_GENAI = False
+
+try:
+    import boto3
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
+
+
+class CalculatorInput(BaseModel):
+    """Input schema for calculator tool."""
+
+    expression: str = Field(description="Mathematical expression to evaluate")
+
+
+class CalculatorTool(BaseTool):
+    """A calculator tool that performs mathematical calculations."""
+
+    name: str = "calculator"
+    description: str = "Perform mathematical calculations. Use this for any math operations."
+    args_schema: type[BaseModel] = CalculatorInput
+
+    def _run(self, expression: str) -> str:
+        """Execute the calculation."""
+        try:
+            # Safe evaluation for basic math
+            result = eval(expression)  # noqa: S307
+            return f"The result of {expression} is {result}"
+        except Exception as e:
+            return f"Error calculating {expression}: {e}"
+
+
+class WeatherInput(BaseModel):
+    """Input schema for weather tool."""
+
+    location: str = Field(description="City name to get weather for")
+
+
+class WeatherTool(BaseTool):
+    """A mock weather tool for testing."""
+
+    name: str = "get_weather"
+    description: str = "Get the current weather for a location"
+    args_schema: type[BaseModel] = WeatherInput
+
+    def _run(self, location: str) -> str:
+        """Get weather (mock implementation)."""
+        return f"The weather in {location} is sunny with a temperature of 72°F"
+
+
+@pytest.fixture
+def calculator_tool() -> CalculatorTool:
+    """Create a calculator tool for testing."""
+    return CalculatorTool()
+
+
+@pytest.fixture
+def weather_tool() -> WeatherTool:
+    """Create a weather tool for testing."""
+    return WeatherTool()
+
+
+# =============================================================================
+# OpenAI Provider Tests
+# =============================================================================
+
+
+class TestOpenAINativeToolCalling:
+    """Tests for native tool calling with OpenAI models."""
+
+    @pytest.mark.vcr()
+    def test_openai_agent_with_native_tool_calling(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test OpenAI agent can use native tool calling."""
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="You are a helpful math assistant.",
+            tools=[calculator_tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        task = Task(
+            description="Calculate what is 15 * 8",
+            expected_output="The result of the calculation",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
+        assert "120" in str(result.raw)
+
+    def test_openai_agent_kickoff_with_tools_mocked(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test OpenAI agent kickoff with mocked LLM call."""
+        llm = LLM(model="gpt-4o-mini")
+
+        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Calculate math",
+                backstory="You calculate.",
+                tools=[calculator_tool],
+                llm=llm,
+                verbose=False,
+            )
+
+            task = Task(
+                description="Calculate 15 * 8",
+                expected_output="Result",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert mock_call.called
+            assert result is not None
+
+
+# =============================================================================
+# Anthropic Provider Tests
+# =============================================================================
+
+
+@pytest.mark.skipif(not HAS_ANTHROPIC, reason="anthropic package not installed")
+class TestAnthropicNativeToolCalling:
+    """Tests for native tool calling with Anthropic models."""
+
+    @pytest.fixture(autouse=True)
+    def mock_anthropic_api_key(self):
+        """Mock ANTHROPIC_API_KEY for tests."""
+        if "ANTHROPIC_API_KEY" not in os.environ:
+            with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+                yield
+        else:
+            yield
+
+    @pytest.mark.vcr()
+    def test_anthropic_agent_with_native_tool_calling(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Anthropic agent can use native tool calling."""
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="You are a helpful math assistant.",
+            tools=[calculator_tool],
+            llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        task = Task(
+            description="Calculate what is 15 * 8",
+            expected_output="The result of the calculation",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
+
+    def test_anthropic_agent_kickoff_with_tools_mocked(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Anthropic agent kickoff with mocked LLM call."""
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Calculate math",
+                backstory="You calculate.",
+                tools=[calculator_tool],
+                llm=llm,
+                verbose=False,
+            )
+
+            task = Task(
+                description="Calculate 15 * 8",
+                expected_output="Result",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert mock_call.called
+            assert result is not None
+
+
+# =============================================================================
+# Google/Gemini Provider Tests
+# =============================================================================
+
+
+@pytest.mark.skipif(not HAS_GOOGLE_GENAI, reason="google-genai package not installed")
+class TestGeminiNativeToolCalling:
+    """Tests for native tool calling with Gemini models."""
+
+    @pytest.fixture(autouse=True)
+    def mock_google_api_key(self):
+        """Mock GOOGLE_API_KEY for tests."""
+        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+            yield
+
+    @pytest.mark.vcr()
+    def test_gemini_agent_with_native_tool_calling(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Gemini agent can use native tool calling."""
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="You are a helpful math assistant.",
+            tools=[calculator_tool],
+            llm=LLM(model="gemini/gemini-2.0-flash-001"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        task = Task(
+            description="Calculate what is 15 * 8",
+            expected_output="The result of the calculation",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
+
+    def test_gemini_agent_kickoff_with_tools_mocked(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Gemini agent kickoff with mocked LLM call."""
+        llm = LLM(model="gemini/gemini-2.0-flash-001")
+
+        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Calculate math",
+                backstory="You calculate.",
+                tools=[calculator_tool],
+                llm=llm,
+                verbose=False,
+            )
+
+            task = Task(
+                description="Calculate 15 * 8",
+                expected_output="Result",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert mock_call.called
+            assert result is not None
+
+
+# =============================================================================
+# Azure Provider Tests
+# =============================================================================
+
+
+class TestAzureNativeToolCalling:
+    """Tests for native tool calling with Azure OpenAI models."""
+
+    @pytest.fixture(autouse=True)
+    def mock_azure_env(self):
+        """Mock Azure environment variables for tests."""
+        env_vars = {
+            "AZURE_API_KEY": "test-key",
+            "AZURE_API_BASE": "https://test.openai.azure.com",
+            "AZURE_API_VERSION": "2024-02-15-preview",
+        }
+        with patch.dict(os.environ, env_vars):
+            yield
+
+    def test_azure_agent_kickoff_with_tools_mocked(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Azure agent kickoff with mocked LLM call."""
+        llm = LLM(
+            model="azure/gpt-4o-mini",
+            api_key="test-key",
+            base_url="https://test.openai.azure.com",
+        )
+
+        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Calculate math",
+                backstory="You calculate.",
+                tools=[calculator_tool],
+                llm=llm,
+                verbose=False,
+            )
+
+            task = Task(
+                description="Calculate 15 * 8",
+                expected_output="Result",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert mock_call.called
+            assert result is not None
+
+
+# =============================================================================
+# Bedrock Provider Tests
+# =============================================================================
+
+
+@pytest.mark.skipif(not HAS_BOTO3, reason="boto3 package not installed")
+class TestBedrockNativeToolCalling:
+    """Tests for native tool calling with AWS Bedrock models."""
+
+    @pytest.fixture(autouse=True)
+    def mock_aws_env(self):
+        """Mock AWS environment variables for tests."""
+        env_vars = {
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+            "AWS_REGION": "us-east-1",
+        }
+        with patch.dict(os.environ, env_vars):
+            yield
+
+    def test_bedrock_agent_kickoff_with_tools_mocked(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Bedrock agent kickoff with mocked LLM call."""
+        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+
+        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Calculate math",
+                backstory="You calculate.",
+                tools=[calculator_tool],
+                llm=llm,
+                verbose=False,
+            )
+
+            task = Task(
+                description="Calculate 15 * 8",
+                expected_output="Result",
+                agent=agent,
+            )
+
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert mock_call.called
+            assert result is not None
+
+
+# =============================================================================
+# Cross-Provider Native Tool Calling Behavior Tests
+# =============================================================================
+
+
+class TestNativeToolCallingBehavior:
+    """Tests for native tool calling behavior across providers."""
+
+    def test_supports_function_calling_check(self) -> None:
+        """Test that supports_function_calling() is properly checked."""
+        # OpenAI should support function calling
+        openai_llm = LLM(model="gpt-4o-mini")
+        assert hasattr(openai_llm, "supports_function_calling")
+        assert openai_llm.supports_function_calling() is True
+
+    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="anthropic package not installed")
+    def test_anthropic_supports_function_calling(self) -> None:
+        """Test that Anthropic models support function calling."""
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+            assert hasattr(llm, "supports_function_calling")
+            assert llm.supports_function_calling() is True
+
+    @pytest.mark.skipif(not HAS_GOOGLE_GENAI, reason="google-genai package not installed")
+    def test_gemini_supports_function_calling(self) -> None:
+        """Test that Gemini models support function calling."""
+        # with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        print("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY"))
+        llm = LLM(model="gemini/gemini-2.5-flash")
+        assert hasattr(llm, "supports_function_calling")
+        # Gemini uses supports_tools property
+        assert llm.supports_function_calling() is True
+
+
+# =============================================================================
+# Token Usage Tests
+# =============================================================================
+
+
+class TestNativeToolCallingTokenUsage:
+    """Tests for token usage with native tool calling."""
+
+    @pytest.mark.vcr()
+    def test_openai_native_tool_calling_token_usage(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test token usage tracking with OpenAI native tool calling."""
+        agent = Agent(
+            role="Calculator",
+            goal="Perform calculations efficiently",
+            backstory="You calculate things.",
+            tools=[calculator_tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        task = Task(
+            description="What is 100 / 4?",
+            expected_output="The result",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.token_usage is not None
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.successful_requests >= 1
+
+        print(f"\n[OPENAI NATIVE TOOL CALLING TOKEN USAGE]")
+        print(f"  Prompt tokens: {result.token_usage.prompt_tokens}")
+        print(f"  Completion tokens: {result.token_usage.completion_tokens}")
+        print(f"  Total tokens: {result.token_usage.total_tokens}")

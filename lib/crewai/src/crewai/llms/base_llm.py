@@ -445,7 +445,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
             )
 
-            return str(result)
+            return result
 
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"

@@ -606,6 +606,17 @@ class GeminiCompletion(BaseLLM):
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
+                # Collect function call parts
+                function_call_parts = [
+                    part for part in candidate.content.parts if part.function_call
+                ]
+
+                # If there are function calls but no available_functions,
+                # return them for the executor to handle (like OpenAI/Anthropic)
+                if function_call_parts and not available_functions:
+                    return function_call_parts
+
+                # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
@@ -720,7 +731,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -737,6 +748,21 @@ class GeminiCompletion(BaseLLM):
             Final response content after processing
         """
         self._track_token_usage_internal(usage_data)
+
+        # If there are function calls but no available_functions,
+        # return them for the executor to handle
+        if function_calls and not available_functions:
+            return [
+                {
+                    "id": call_data["id"],
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": json.dumps(call_data["args"]),
+                    },
+                    "type": "function",
+                }
+                for call_data in function_calls.values()
+            ]
 
         # Handle completed function calls
         if function_calls and available_functions:

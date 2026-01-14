@@ -428,6 +428,12 @@ class OpenAICompletion(BaseLLM):
             choice: Choice = response.choices[0]
             message = choice.message
 
+            # If there are tool_calls but no available_functions, return the tool_calls
+            # This allows the caller (e.g., executor) to handle tool execution
+            if message.tool_calls and not available_functions:
+                return list(message.tool_calls)
+
+            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 function_name = tool_call.function.name
@@ -725,6 +731,15 @@ class OpenAICompletion(BaseLLM):
             choice: Choice = response.choices[0]
             message = choice.message
 
+            # If there are tool_calls but no available_functions, return the tool_calls
+            # This allows the caller (e.g., executor) to handle tool execution
+            if message.tool_calls and not available_functions:
+                print("--------------------------------")
+                print("lorenze tool_calls", list(message.tool_calls))
+                print("--------------------------------")
+                return list(message.tool_calls)
+
+            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 function_name = tool_call.function.name

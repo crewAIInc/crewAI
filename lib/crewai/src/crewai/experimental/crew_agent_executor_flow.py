@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import datetime
+import json
 import threading
 from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import uuid4
@@ -17,9 +19,16 @@ from crewai.agents.parser import (
     OutputParserError,
 )
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.listeners.tracing.utils import (
+    is_tracing_enabled_in_context,
+)
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
+)
+from crewai.events.types.tool_usage_events import (
+    ToolUsageFinishedEvent,
+    ToolUsageStartedEvent,
 )
 from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.hooks.llm_hooks import (
@@ -27,6 +36,7 @@ from crewai.hooks.llm_hooks import (
     get_before_llm_call_hooks,
 )
 from crewai.utilities.agent_utils import (
+    convert_tools_to_openai_schema,
     enforce_rpm_limit,
     format_message_for_llm,
     get_llm_response,
@@ -71,6 +81,8 @@ class AgentReActState(BaseModel):
     current_answer: AgentAction | AgentFinish | None = Field(default=None)
     is_finished: bool = Field(default=False)
     ask_for_human_input: bool = Field(default=False)
+    use_native_tools: bool = Field(default=False)
+    pending_tool_calls: list[Any] = Field(default_factory=list)
 
 
 class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
@@ -179,6 +191,10 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             )
 
+        # Native tool calling support
+        self._openai_tools: list[dict[str, Any]] = []
+        self._available_functions: dict[str, Callable[..., Any]] = {}
+
         self._state = AgentReActState()
 
     def _ensure_flow_initialized(self) -> None:
@@ -189,13 +205,65 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         Only the instance that actually executes via invoke() will emit events.
         """
         if not self._flow_initialized:
+            current_tracing = is_tracing_enabled_in_context()
             # Now call Flow's __init__ which will replace self._state
             # with Flow's managed state. Suppress flow events since this is
             # an agent executor, not a user-facing flow.
             super().__init__(
                 suppress_flow_events=True,
+                tracing=current_tracing if current_tracing else None,
             )
             self._flow_initialized = True
+
+    def _check_native_tool_support(self) -> bool:
+        """Check if LLM supports native function calling.
+
+        Returns:
+            True if the LLM supports native function calling and tools are available.
+        """
+        return (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+            and bool(self.original_tools)
+        )
+
+    def _setup_native_tools(self) -> None:
+        """Convert tools to OpenAI schema format for native function calling."""
+        if self.original_tools:
+            self._openai_tools, self._available_functions = (
+                convert_tools_to_openai_schema(self.original_tools)
+            )
+
+    def _is_tool_call_list(self, response: list[Any]) -> bool:
+        """Check if a response is a list of tool calls.
+
+        Args:
+            response: The response to check.
+
+        Returns:
+            True if the response appears to be a list of tool calls.
+        """
+        if not response:
+            return False
+        first_item = response[0]
+        # Check for OpenAI-style tool call structure
+        if hasattr(first_item, "function") or (
+            isinstance(first_item, dict) and "function" in first_item
+        ):
+            return True
+        # Check for Anthropic-style tool call structure (ToolUseBlock)
+        if (
+            hasattr(first_item, "type")
+            and getattr(first_item, "type", None) == "tool_use"
+        ):
+            return True
+        if hasattr(first_item, "name") and hasattr(first_item, "input"):
+            return True
+        # Check for Gemini-style function call (Part with function_call)
+        if hasattr(first_item, "function_call") and first_item.function_call:
+            return True
+        return False
 
     @property
     def use_stop_words(self) -> bool:
@@ -229,6 +297,11 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
     def initialize_reasoning(self) -> Literal["initialized"]:
         """Initialize the reasoning flow and emit agent start logs."""
         self._show_start_logs()
+        # Check for native tool support on first iteration
+        if self.state.iterations == 0:
+            self.state.use_native_tools = self._check_native_tool_support()
+            if self.state.use_native_tools:
+                self._setup_native_tools()
         return "initialized"
 
     @listen("force_final_answer")
@@ -303,6 +376,69 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             handle_unknown_error(self._printer, e)
             raise
 
+    @listen("continue_reasoning_native")
+    def call_llm_native_tools(
+        self,
+    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+        """Execute LLM call with native function calling.
+
+        Returns routing decision based on whether tool calls or final answer.
+        """
+        try:
+            enforce_rpm_limit(self.request_within_rpm_limit)
+
+            # Call LLM with native tools
+            # Pass available_functions=None so the LLM returns tool_calls
+            # without executing them. The executor handles tool execution.
+            answer = get_llm_response(
+                llm=self.llm,
+                messages=list(self.state.messages),
+                callbacks=self.callbacks,
+                printer=self._printer,
+                tools=self._openai_tools,
+                available_functions=None,
+                from_task=self.task,
+                from_agent=self.agent,
+                response_model=self.response_model,
+                executor_context=self,
+            )
+
+            # Check if the response is a list of tool calls
+            if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
+                # Store tool calls for sequential processing
+                self.state.pending_tool_calls = list(answer)
+                return "native_tool_calls"
+
+            # Text response - this is the final answer
+            if isinstance(answer, str):
+                self.state.current_answer = AgentFinish(
+                    thought="",
+                    output=answer,
+                    text=answer,
+                )
+                self._invoke_step_callback(self.state.current_answer)
+                self._append_message_to_state(answer)
+                return "native_finished"
+
+            # Unexpected response type, treat as final answer
+            self.state.current_answer = AgentFinish(
+                thought="",
+                output=str(answer),
+                text=str(answer),
+            )
+            self._invoke_step_callback(self.state.current_answer)
+            self._append_message_to_state(str(answer))
+            return "native_finished"
+
+        except Exception as e:
+            if is_context_length_exceeded(e):
+                self._last_context_error = e
+                return "context_error"
+            if e.__class__.__module__.startswith("litellm"):
+                raise e
+            handle_unknown_error(self._printer, e)
+            raise
+
     @router(call_llm_and_parse)
     def route_by_answer_type(self) -> Literal["execute_tool", "agent_finished"]:
         """Route based on whether answer is AgentAction or AgentFinish."""
@@ -358,6 +494,14 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self.state.is_finished = True
                 return "tool_result_is_final"
 
+            # Inject post-tool reasoning prompt to enforce analysis
+            reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+            reasoning_message: LLMMessage = {
+                "role": "user",
+                "content": reasoning_prompt,
+            }
+            self.state.messages.append(reasoning_message)
+
             return "tool_completed"
 
         except Exception as e:
@@ -367,6 +511,143 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._console.print(error_text)
             raise
 
+    @listen("native_tool_calls")
+    def execute_native_tool(self) -> Literal["native_tool_completed"]:
+        """Execute a single native tool call and inject reasoning prompt.
+
+        Processes only the FIRST tool call from pending_tool_calls for
+        sequential execution with reflection after each tool.
+        """
+        if not self.state.pending_tool_calls:
+            return "native_tool_completed"
+
+        tool_call = self.state.pending_tool_calls[0]
+        self.state.pending_tool_calls = []  # Clear pending calls
+
+        # Extract tool call info - handle OpenAI, Anthropic, and Gemini formats
+        if hasattr(tool_call, "function"):
+            # OpenAI format: has .function.name and .function.arguments
+            call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+            func_name = tool_call.function.name
+            func_args = tool_call.function.arguments
+        elif hasattr(tool_call, "function_call") and tool_call.function_call:
+            # Gemini format: has .function_call.name and .function_call.args
+            call_id = f"call_{id(tool_call)}"
+            func_name = tool_call.function_call.name
+            func_args = (
+                dict(tool_call.function_call.args)
+                if tool_call.function_call.args
+                else {}
+            )
+        elif hasattr(tool_call, "name") and hasattr(tool_call, "input"):
+            # Anthropic format: has .name and .input (ToolUseBlock)
+            call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+            func_name = tool_call.name
+            func_args = tool_call.input  # Already a dict in Anthropic
+        elif isinstance(tool_call, dict):
+            call_id = tool_call.get("id", f"call_{id(tool_call)}")
+            func_info = tool_call.get("function", {})
+            func_name = func_info.get("name", "") or tool_call.get("name", "")
+            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        else:
+            return "native_tool_completed"
+
+        # Append assistant message with single tool call
+        assistant_message: LLMMessage = {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": call_id,
+                    "type": "function",
+                    "function": {
+                        "name": func_name,
+                        "arguments": func_args
+                        if isinstance(func_args, str)
+                        else json.dumps(func_args),
+                    },
+                }
+            ],
+        }
+        self.state.messages.append(assistant_message)
+
+        # Parse arguments for the single tool call
+        if isinstance(func_args, str):
+            try:
+                args_dict = json.loads(func_args)
+            except json.JSONDecodeError:
+                args_dict = {}
+        else:
+            args_dict = func_args
+
+        # Emit tool usage started event
+        started_at = datetime.now()
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageStartedEvent(
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+            ),
+        )
+
+        # Execute the tool
+        result = "Tool not found"
+        if func_name in self._available_functions:
+            try:
+                tool_func = self._available_functions[func_name]
+                result = tool_func(**args_dict)
+                if not isinstance(result, str):
+                    result = str(result)
+            except Exception as e:
+                result = f"Error executing tool: {e}"
+
+        # Emit tool usage finished event
+        crewai_event_bus.emit(
+            self,
+            event=ToolUsageFinishedEvent(
+                output=result,
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=self.agent,
+                from_task=self.task,
+                started_at=started_at,
+                finished_at=datetime.now(),
+            ),
+        )
+
+        # Append tool result message
+        tool_message: LLMMessage = {
+            "role": "tool",
+            "tool_call_id": call_id,
+            "content": result,
+        }
+        self.state.messages.append(tool_message)
+
+        # Log the tool execution
+        if self.agent and self.agent.verbose:
+            self._printer.print(
+                content=f"Tool {func_name} executed with result: {result[:200]}...",
+                color="green",
+            )
+
+        # Inject post-tool reasoning prompt to enforce analysis
+        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_message: LLMMessage = {
+            "role": "user",
+            "content": reasoning_prompt,
+        }
+        self.state.messages.append(reasoning_message)
+
+        return "native_tool_completed"
+
+    @router(execute_native_tool)
+    def increment_native_and_continue(self) -> Literal["initialized"]:
+        """Increment iteration counter after native tool execution."""
+        self.state.iterations += 1
+        return "initialized"
+
     @listen("initialized")
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
@@ -375,10 +656,14 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
     @router(or_(initialize_reasoning, continue_iteration))
     def check_max_iterations(
         self,
-    ) -> Literal["force_final_answer", "continue_reasoning"]:
+    ) -> Literal[
+        "force_final_answer", "continue_reasoning", "continue_reasoning_native"
+    ]:
         """Check if max iterations reached before proceeding with reasoning."""
         if has_reached_max_iterations(self.state.iterations, self.max_iter):
             return "force_final_answer"
+        if self.state.use_native_tools:
+            return "continue_reasoning_native"
         return "continue_reasoning"
 
     @router(execute_tool_action)
@@ -387,7 +672,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.iterations += 1
         return "initialized"
 
-    @listen(or_("agent_finished", "tool_result_is_final"))
+    @listen(or_("agent_finished", "tool_result_is_final", "native_finished"))
     def finalize(self) -> Literal["completed", "skipped"]:
         """Finalize execution and emit completion logs."""
         if self.state.current_answer is None:
@@ -475,6 +760,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.iterations = 0
             self.state.current_answer = None
             self.state.is_finished = False
+            self.state.use_native_tools = False
+            self.state.pending_tool_calls = []
 
             if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
