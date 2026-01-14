@@ -399,4 +399,4 @@ def inject_a2a_server_methods(target: Crew | Agent) -> None:
             return _crew_to_agent_card(self, url)
         return _agent_to_agent_card(self, url)
 
-    target.to_agent_card = MethodType(_to_agent_card, target)  # type: ignore[union-attr]
+    object.__setattr__(target, "to_agent_card", MethodType(_to_agent_card, target))
