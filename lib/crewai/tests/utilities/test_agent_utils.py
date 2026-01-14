@@ -190,8 +190,8 @@ class TestGetLlmResponse:
         assert len(call_kwargs["tools"]) == 1
         assert call_kwargs["tools"][0]["name"] == "test_tool"
 
-    def test_passes_none_tools_when_no_context(self, mock_llm, mock_printer):
-        """Test that tools=None is passed when no executor_context."""
+    def test_does_not_pass_tools_when_no_context(self, mock_llm, mock_printer):
+        """Test that tools parameter is not passed when no executor_context."""
         result = get_llm_response(
             llm=mock_llm,
             messages=[{"role": "user", "content": "test"}],
@@ -202,13 +202,14 @@ class TestGetLlmResponse:
 
         mock_llm.call.assert_called_once()
         call_kwargs = mock_llm.call.call_args[1]
-        assert "tools" in call_kwargs
-        assert call_kwargs["tools"] is None
+        # tools should NOT be in kwargs when there are no tools
+        # This maintains backward compatibility with code that checks "tools" in kwargs
+        assert "tools" not in call_kwargs
 
-    def test_passes_none_tools_when_context_has_no_tools(
+    def test_does_not_pass_tools_when_context_has_no_tools(
         self, mock_llm, mock_printer
     ):
-        """Test that tools=None is passed when context has no tools."""
+        """Test that tools parameter is not passed when context has no tools."""
         mock_context = Mock()
         mock_context.tools = []
         mock_context.messages = [{"role": "user", "content": "test"}]
@@ -233,8 +234,9 @@ class TestGetLlmResponse:
 
         mock_llm.call.assert_called_once()
         call_kwargs = mock_llm.call.call_args[1]
-        assert "tools" in call_kwargs
-        assert call_kwargs["tools"] is None
+        # tools should NOT be in kwargs when there are no tools
+        # This maintains backward compatibility with code that checks "tools" in kwargs
+        assert "tools" not in call_kwargs
 
 
 class TestAgetLlmResponse:
@@ -293,8 +295,8 @@ class TestAgetLlmResponse:
         assert call_kwargs["tools"][0]["name"] == "async_test_tool"
 
     @pytest.mark.asyncio
-    async def test_passes_none_tools_when_no_context(self, mock_llm, mock_printer):
-        """Test that tools=None is passed when no executor_context."""
+    async def test_does_not_pass_tools_when_no_context(self, mock_llm, mock_printer):
+        """Test that tools parameter is not passed when no executor_context."""
         result = await aget_llm_response(
             llm=mock_llm,
             messages=[{"role": "user", "content": "test"}],
@@ -305,8 +307,9 @@ class TestAgetLlmResponse:
 
         mock_llm.acall.assert_called_once()
         call_kwargs = mock_llm.acall.call_args[1]
-        assert "tools" in call_kwargs
-        assert call_kwargs["tools"] is None
+        # tools should NOT be in kwargs when there are no tools
+        # This maintains backward compatibility with code that checks "tools" in kwargs
+        assert "tools" not in call_kwargs
 
 
 class TestToolsPassedToGeminiModels:

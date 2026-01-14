@@ -310,14 +310,25 @@ def get_llm_response(
     tools = _extract_tools_from_context(executor_context)
 
     try:
-        answer = llm.call(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
-            response_model=response_model,
-        )
+        # Only pass tools parameter if tools are available to maintain backward compatibility
+        # with code that checks "tools" in kwargs
+        if tools is not None:
+            answer = llm.call(
+                messages,
+                tools=tools,
+                callbacks=callbacks,
+                from_task=from_task,
+                from_agent=from_agent,  # type: ignore[arg-type]
+                response_model=response_model,
+            )
+        else:
+            answer = llm.call(
+                messages,
+                callbacks=callbacks,
+                from_task=from_task,
+                from_agent=from_agent,  # type: ignore[arg-type]
+                response_model=response_model,
+            )
     except Exception as e:
         raise e
     if not answer:
@@ -368,14 +379,25 @@ async def aget_llm_response(
     tools = _extract_tools_from_context(executor_context)
 
     try:
-        answer = await llm.acall(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            from_task=from_task,
-            from_agent=from_agent,  # type: ignore[arg-type]
-            response_model=response_model,
-        )
+        # Only pass tools parameter if tools are available to maintain backward compatibility
+        # with code that checks "tools" in kwargs
+        if tools is not None:
+            answer = await llm.acall(
+                messages,
+                tools=tools,
+                callbacks=callbacks,
+                from_task=from_task,
+                from_agent=from_agent,  # type: ignore[arg-type]
+                response_model=response_model,
+            )
+        else:
+            answer = await llm.acall(
+                messages,
+                callbacks=callbacks,
+                from_task=from_task,
+                from_agent=from_agent,  # type: ignore[arg-type]
+                response_model=response_model,
+            )
     except Exception as e:
         raise e
     if not answer:
