@@ -361,7 +361,7 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     return AgentCard(
         name=name,
         description=description,
-        url=url,
+        url=server_config.url or url,
         version=server_config.version,
         capabilities=server_config.capabilities,
         default_input_modes=server_config.default_input_modes,
@@ -375,6 +375,7 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
         security=server_config.security,
         security_schemes=server_config.security_schemes,
         supports_authenticated_extended_card=server_config.supports_authenticated_extended_card,
+        signatures=server_config.signatures,
     )
 
 

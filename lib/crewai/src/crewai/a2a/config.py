@@ -10,6 +10,7 @@ from typing import Any, ClassVar
 
 from a2a.types import (
     AgentCapabilities,
+    AgentCardSignature,
     AgentInterface,
     AgentProvider,
     AgentSkill,
@@ -34,7 +35,10 @@ def _get_default_update_config() -> UpdateConfig:
     return StreamingConfig()
 
 
-@deprecated("Use A2AClientConfig instead.")
+@deprecated(
+    "Use `crewai.a2a.config.A2AClientConfig` or `crewai.a2a.config.A2AServerConfig` instead.",
+    category=FutureWarning,
+)
 class A2AConfig(BaseModel):
     """Configuration for A2A protocol integration.
 
@@ -167,6 +171,8 @@ class A2AServerConfig(BaseModel):
         security: Security requirement objects for all interactions.
         security_schemes: Security schemes available to authorize requests.
         supports_authenticated_extended_card: Whether agent provides extended card to authenticated users.
+        url: Preferred endpoint URL for the agent.
+        signatures: JSON Web Signatures for the AgentCard.
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
@@ -198,7 +204,7 @@ class A2AServerConfig(BaseModel):
     capabilities: AgentCapabilities = Field(
         default_factory=lambda: AgentCapabilities(
             streaming=True,
-            push_notifications=True,
+            push_notifications=False,
         ),
         description="Declaration of optional capabilities supported by the agent",
     )
@@ -214,11 +220,11 @@ class A2AServerConfig(BaseModel):
         default=None,
         description="Information about the agent's service provider",
     )
-    documentation_url: str | None = Field(
+    documentation_url: Url | None = Field(
         default=None,
         description="URL to the agent's documentation",
     )
-    icon_url: str | None = Field(
+    icon_url: Url | None = Field(
         default=None,
         description="URL to an icon for the agent",
     )
@@ -237,4 +243,12 @@ class A2AServerConfig(BaseModel):
     supports_authenticated_extended_card: bool = Field(
         default=False,
         description="Whether agent provides extended card to authenticated users",
+    )
+    url: Url | None = Field(
+        default=None,
+        description="Preferred endpoint URL for the agent. Set at runtime if not provided.",
+    )
+    signatures: list[AgentCardSignature] = Field(
+        default_factory=list,
+        description="JSON Web Signatures for the AgentCard",
     )
