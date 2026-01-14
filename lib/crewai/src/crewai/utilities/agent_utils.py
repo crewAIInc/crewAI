@@ -229,6 +229,48 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+def _extract_tools_from_context(
+    executor_context: CrewAgentExecutor | LiteAgent | None,
+) -> list[dict[str, Any]] | None:
+    """Extract tools from executor context and convert to LLM-compatible format.
+
+    Args:
+        executor_context: The executor context containing tools.
+
+    Returns:
+        List of tool dictionaries in LLM-compatible format, or None if no tools.
+    """
+    if executor_context is None:
+        return None
+
+    # Get tools from executor context
+    # CrewAgentExecutor has 'tools' attribute, LiteAgent has '_parsed_tools'
+    tools: list[CrewStructuredTool] | None = None
+    if hasattr(executor_context, "tools"):
+        context_tools = executor_context.tools
+        if isinstance(context_tools, list) and len(context_tools) > 0:
+            tools = context_tools
+    if tools is None and hasattr(executor_context, "_parsed_tools"):
+        parsed_tools = executor_context._parsed_tools
+        if isinstance(parsed_tools, list) and len(parsed_tools) > 0:
+            tools = parsed_tools
+
+    if not tools:
+        return None
+
+    # Convert CrewStructuredTool to dict format expected by LLM
+    tool_dicts: list[dict[str, Any]] = []
+    for tool in tools:
+        tool_dict: dict[str, Any] = {
+            "name": tool.name,
+            "description": tool.description,
+            "args_schema": tool.args_schema,
+        }
+        tool_dicts.append(tool_dict)
+
+    return tool_dicts if tool_dicts else None
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -264,9 +306,13 @@ def get_llm_response(
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
+    # Extract tools from executor context for native function calling support
+    tools = _extract_tools_from_context(executor_context)
+
     try:
         answer = llm.call(
             messages,
+            tools=tools,
             callbacks=callbacks,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
@@ -292,7 +338,7 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
+    executor_context: CrewAgentExecutor | LiteAgent | None = None,
 ) -> str:
     """Call the LLM asynchronously and return the response.
 
@@ -318,9 +364,13 @@ async def aget_llm_response(
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
+    # Extract tools from executor context for native function calling support
+    tools = _extract_tools_from_context(executor_context)
+
     try:
         answer = await llm.acall(
             messages,
+            tools=tools,
             callbacks=callbacks,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
