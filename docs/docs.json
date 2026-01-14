@@ -826,7 +826,8 @@
                 "group": "Guias",
                 "pages": [
                   "pt-BR/enterprise/guides/build-crew",
-                  "pt-BR/enterprise/guides/deploy-crew",
+                  "pt-BR/enterprise/guides/prepare-for-deployment",
+                  "pt-BR/enterprise/guides/deploy-to-amp",
                   "pt-BR/enterprise/guides/kickoff-crew",
                   "pt-BR/enterprise/guides/update-crew",
                   "pt-BR/enterprise/guides/enable-crew-studio",
@@ -1265,7 +1266,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "ko/enterprise/guides/build-crew",
-                  "ko/enterprise/guides/deploy-crew",
+                  "ko/enterprise/guides/prepare-for-deployment",
+                  "ko/enterprise/guides/deploy-to-amp",
                   "ko/enterprise/guides/kickoff-crew",
                   "ko/enterprise/guides/update-crew",
                   "ko/enterprise/guides/enable-crew-studio",
@@ -1449,6 +1451,14 @@
     {
       "source": "/en/enterprise/guides/deploy-crew",
       "destination": "/en/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/ko/enterprise/guides/deploy-crew",
+      "destination": "/ko/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/pt-BR/enterprise/guides/deploy-crew",
+      "destination": "/pt-BR/enterprise/guides/deploy-to-amp"
     },
     {
       "source": "/api-reference/:path*",
