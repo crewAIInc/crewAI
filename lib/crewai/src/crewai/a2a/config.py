@@ -36,7 +36,10 @@ def _get_default_update_config() -> UpdateConfig:
 
 
 @deprecated(
-    "Use `crewai.a2a.config.A2AClientConfig` or `crewai.a2a.config.A2AServerConfig` instead.",
+    """
+    `crewai.a2a.config.A2AConfig` is deprecated and will be removed in v2.0.0,
+    use `crewai.a2a.config.A2AClientConfig` or `crewai.a2a.config.A2AServerConfig` instead.
+    """,
     category=FutureWarning,
 )
 class A2AConfig(BaseModel):

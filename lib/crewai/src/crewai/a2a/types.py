@@ -1,6 +1,17 @@
 """Type definitions for A2A protocol message parts."""
 
-from typing import Annotated, Any, Literal, Protocol, TypedDict, runtime_checkable
+from __future__ import annotations
+
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Literal,
+    Protocol,
+    TypeAlias,
+    TypedDict,
+    runtime_checkable,
+)
 
 from pydantic import BeforeValidator, HttpUrl, TypeAdapter
 from typing_extensions import NotRequired
@@ -14,6 +25,10 @@ from crewai.a2a.updates import (
     StreamingHandler,
     UpdateConfig,
 )
+
+
+if TYPE_CHECKING:
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 
 
 TransportType = Literal["JSONRPC", "GRPC", "HTTP+JSON"]
@@ -72,3 +87,6 @@ HANDLER_REGISTRY: dict[type[UpdateConfig], HandlerType] = {
     StreamingConfig: StreamingHandler,
     PushNotificationConfig: PushNotificationHandler,
 }
+
+A2AConfigTypes: TypeAlias = A2AConfig | A2AServerConfig | A2AClientConfig
+A2AClientConfigTypes: TypeAlias = A2AConfig | A2AClientConfig

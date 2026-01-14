@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, create_model
 
-from crewai.a2a.config import A2AConfig
+from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
+from crewai.a2a.types import A2AClientConfigTypes, A2AConfigTypes
 from crewai.types.utils import create_literals_from_strings
 
 
@@ -46,36 +47,45 @@ def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
 
 
 def extract_a2a_agent_ids_from_config(
-    a2a_config: list[A2AConfig] | A2AConfig | None,
-) -> tuple[list[A2AConfig], tuple[str, ...]]:
+    a2a_config: list[A2AConfigTypes] | A2AConfigTypes | None,
+) -> tuple[list[A2AClientConfigTypes], tuple[str, ...]]:
     """Extract A2A agent IDs from A2A configuration.
 
+    Filters out A2AServerConfig since it doesn't have an endpoint for delegation.
+
     Args:
-        a2a_config: A2A configuration.
+        a2a_config: A2A configuration (any type).
 
     Returns:
-        Tuple of A2A configs list and agent endpoint IDs.
+        Tuple of client A2A configs list and agent endpoint IDs.
     """
     if a2a_config is None:
         return [], ()
 
-    if isinstance(a2a_config, A2AConfig):
-        a2a_agents = [a2a_config]
+    configs: list[A2AConfigTypes]
+    if isinstance(a2a_config, (A2AConfig, A2AClientConfig, A2AServerConfig)):
+        configs = [a2a_config]
     else:
-        a2a_agents = a2a_config
-    return a2a_agents, tuple(config.endpoint for config in a2a_agents)
+        configs = a2a_config
+
+    # Filter to only client configs (those with endpoint)
+    client_configs: list[A2AClientConfigTypes] = [
+        config for config in configs if isinstance(config, (A2AConfig, A2AClientConfig))
+    ]
+
+    return client_configs, tuple(config.endpoint for config in client_configs)
 
 
 def get_a2a_agents_and_response_model(
-    a2a_config: list[A2AConfig] | A2AConfig | None,
-) -> tuple[list[A2AConfig], type[BaseModel]]:
+    a2a_config: list[A2AConfigTypes] | A2AConfigTypes | None,
+) -> tuple[list[A2AClientConfigTypes], type[BaseModel]]:
     """Get A2A agent configs and response model.
 
     Args:
-        a2a_config: A2A configuration.
+        a2a_config: A2A configuration (any type).
 
     Returns:
-        Tuple of A2A configs and response model.
+        Tuple of client A2A configs and response model.
     """
     a2a_agents, agent_ids = extract_a2a_agent_ids_from_config(a2a_config=a2a_config)
 
