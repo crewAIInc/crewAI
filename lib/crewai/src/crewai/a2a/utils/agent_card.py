@@ -379,24 +379,21 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     )
 
 
-def inject_a2a_server_methods(target: Crew | Agent) -> None:
-    """Inject A2A server methods onto a Crew or Agent instance.
+def inject_a2a_server_methods(agent: Agent) -> None:
+    """Inject A2A server methods onto an Agent instance.
 
-    Adds a `to_agent_card(url: str) -> AgentCard` method to the target
-    instance that generates an A2A-compliant AgentCard.
+    Adds a `to_agent_card(url: str) -> AgentCard` method to the agent
+    that generates an A2A-compliant AgentCard.
 
-    For Agents, this only injects methods if an A2AServerConfig is present.
-    For Crews, methods are always injected.
+    Only injects if the agent has an A2AServerConfig.
 
     Args:
-        target: The Crew or Agent instance to inject methods onto.
+        agent: The Agent instance to inject methods onto.
     """
-    if not isinstance(target, Crew) and _get_server_config(target) is None:
+    if _get_server_config(agent) is None:
         return
 
-    def _to_agent_card(self: Crew | Agent, url: str) -> AgentCard:
-        if isinstance(self, Crew):
-            return _crew_to_agent_card(self, url)
+    def _to_agent_card(self: Agent, url: str) -> AgentCard:
         return _agent_to_agent_card(self, url)
 
-    object.__setattr__(target, "to_agent_card", MethodType(_to_agent_card, target))
+    object.__setattr__(agent, "to_agent_card", MethodType(_to_agent_card, agent))
