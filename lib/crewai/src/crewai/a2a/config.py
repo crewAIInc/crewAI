@@ -6,7 +6,7 @@ This module is separate from experimental.a2a to avoid circular imports.
 from __future__ import annotations
 
 from importlib.metadata import version
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from a2a.types import (
     AgentCapabilities,
@@ -54,6 +54,7 @@ class A2AConfig(BaseModel):
         fail_fast: If True, raise error when agent unreachable; if False, skip and continue.
         trust_remote_completion_status: If True, return A2A agent's result directly when completed.
         updates: Update mechanism config.
+        transport_protocol: A2A transport protocol (grpc, jsonrpc, http+json).
     """
 
     model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
@@ -82,6 +83,10 @@ class A2AConfig(BaseModel):
     updates: UpdateConfig = Field(
         default_factory=_get_default_update_config,
         description="Update mechanism config",
+    )
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"] = Field(
+        default="JSONRPC",
+        description="Specified mode of A2A transport protocol",
     )
 
 
@@ -145,6 +150,10 @@ class A2AClientConfig(BaseModel):
     extensions: list[str] = Field(
         default_factory=list,
         description="Extension URIs the client supports",
+    )
+    transport_protocol: Literal["JSONRPC", "GRPC", "HTTP+JSON"] = Field(
+        default="JSONRPC",
+        description="Specified mode of A2A transport protocol",
     )
 
 
