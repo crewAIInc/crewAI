@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+from typing import TypeAlias
+
 from pydantic import BaseModel, Field, create_model
 
 from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
-from crewai.a2a.types import A2AClientConfigTypes, A2AConfigTypes
 from crewai.types.utils import create_literals_from_strings
+
+
+A2AConfigTypes: TypeAlias = A2AConfig | A2AServerConfig | A2AClientConfig
+A2AClientConfigTypes: TypeAlias = A2AConfig | A2AClientConfig
 
 
 def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
