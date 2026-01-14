@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from typing import Any, Literal, Union
@@ -169,7 +170,8 @@ class ValyuExtractorTool(BaseTool):
         """Asynchronously extracts content from the given URL(s).
 
         Note: The Valyu SDK currently uses synchronous calls, so this method
-        wraps the synchronous implementation.
+        runs the synchronous implementation in a thread pool to avoid blocking
+        the event loop.
 
         Args:
             urls: The URL(s) to extract data from. Maximum 10 URLs.
@@ -177,5 +179,4 @@ class ValyuExtractorTool(BaseTool):
         Returns:
             A JSON string containing the extracted data.
         """
-        # Valyu SDK is synchronous, so we call the sync method
-        return self._run(urls)
+        return await asyncio.to_thread(self._run, urls)

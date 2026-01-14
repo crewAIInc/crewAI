@@ -218,7 +218,7 @@ def test_valyu_extractor_tool_run_no_client_raises_error(
 
 @pytest.mark.asyncio
 async def test_valyu_extractor_tool_arun(mock_valyu_class, mock_valyu_available):
-    """Test the async _arun method."""
+    """Test the async _arun method uses asyncio.to_thread to avoid blocking."""
     from crewai_tools import ValyuExtractorTool
 
     mock_response = MagicMock()
@@ -228,7 +228,10 @@ async def test_valyu_extractor_tool_arun(mock_valyu_class, mock_valyu_available)
     mock_valyu_class.return_value.contents.return_value = mock_response
 
     tool = ValyuExtractorTool(api_key="test_api_key")
-    result = await tool._arun(urls="https://example.com")
+
+    with patch("asyncio.to_thread", wraps=__import__("asyncio").to_thread) as mock_to_thread:
+        result = await tool._arun(urls="https://example.com")
+        mock_to_thread.assert_called_once_with(tool._run, "https://example.com")
 
     parsed_result = json.loads(result)
     assert "results" in parsed_result
@@ -238,7 +241,7 @@ async def test_valyu_extractor_tool_arun(mock_valyu_class, mock_valyu_available)
 async def test_valyu_extractor_tool_arun_multiple_urls(
     mock_valyu_class, mock_valyu_available
 ):
-    """Test the async _arun method with multiple URLs."""
+    """Test the async _arun method with multiple URLs uses asyncio.to_thread."""
     from crewai_tools import ValyuExtractorTool
 
     mock_response = MagicMock()
@@ -251,7 +254,11 @@ async def test_valyu_extractor_tool_arun_multiple_urls(
     mock_valyu_class.return_value.contents.return_value = mock_response
 
     tool = ValyuExtractorTool(api_key="test_api_key")
-    result = await tool._arun(urls=["https://example1.com", "https://example2.com"])
+    urls = ["https://example1.com", "https://example2.com"]
+
+    with patch("asyncio.to_thread", wraps=__import__("asyncio").to_thread) as mock_to_thread:
+        result = await tool._arun(urls=urls)
+        mock_to_thread.assert_called_once_with(tool._run, urls)
 
     parsed_result = json.loads(result)
     assert len(parsed_result["results"]) == 2

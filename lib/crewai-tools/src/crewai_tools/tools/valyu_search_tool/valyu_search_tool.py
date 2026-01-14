@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Sequence
 import json
 import os
@@ -214,7 +215,8 @@ class ValyuSearchTool(BaseTool):
         Content of each result is truncated to `max_content_length_per_result`.
 
         Note: The Valyu SDK currently uses synchronous calls, so this method
-        wraps the synchronous implementation.
+        runs the synchronous implementation in a thread pool to avoid blocking
+        the event loop.
 
         Args:
             query: The search query string.
@@ -222,5 +224,4 @@ class ValyuSearchTool(BaseTool):
         Returns:
             A JSON string containing the search results with truncated content.
         """
-        # Valyu SDK is synchronous, so we call the sync method
-        return self._run(query)
+        return await asyncio.to_thread(self._run, query)

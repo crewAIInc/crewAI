@@ -226,7 +226,7 @@ def test_valyu_search_tool_run_no_client_raises_error(
 
 @pytest.mark.asyncio
 async def test_valyu_search_tool_arun(mock_valyu_class, mock_valyu_available):
-    """Test the async _arun method."""
+    """Test the async _arun method uses asyncio.to_thread to avoid blocking."""
     from crewai_tools import ValyuSearchTool
 
     mock_response = MagicMock()
@@ -236,7 +236,10 @@ async def test_valyu_search_tool_arun(mock_valyu_class, mock_valyu_available):
     mock_valyu_class.return_value.search.return_value = mock_response
 
     tool = ValyuSearchTool(api_key="test_api_key")
-    result = await tool._arun(query="test query")
+
+    with patch("asyncio.to_thread", wraps=__import__("asyncio").to_thread) as mock_to_thread:
+        result = await tool._arun(query="test query")
+        mock_to_thread.assert_called_once_with(tool._run, "test query")
 
     parsed_result = json.loads(result)
     assert "results" in parsed_result
