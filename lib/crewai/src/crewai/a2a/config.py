@@ -8,14 +8,6 @@ from __future__ import annotations
 from importlib.metadata import version
 from typing import Any, ClassVar, Literal
 
-from a2a.types import (
-    AgentCapabilities,
-    AgentCardSignature,
-    AgentInterface,
-    AgentProvider,
-    AgentSkill,
-    SecurityScheme,
-)
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import deprecated
 
@@ -24,8 +16,24 @@ from crewai.a2a.types import TransportType, Url
 
 
 try:
+    from a2a.types import (
+        AgentCapabilities,
+        AgentCardSignature,
+        AgentInterface,
+        AgentProvider,
+        AgentSkill,
+        SecurityScheme,
+    )
+
     from crewai.a2a.updates import UpdateConfig
 except ImportError:
+    UpdateConfig = Any
+    AgentCapabilities = Any
+    AgentCardSignature = Any
+    AgentInterface = Any
+    AgentProvider = Any
+    SecurityScheme = Any
+    AgentSkill = Any
     UpdateConfig = Any  # type: ignore[misc,assignment]
 
 
