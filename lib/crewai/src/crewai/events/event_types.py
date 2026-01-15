@@ -1,3 +1,20 @@
+from crewai.events.types.a2a_events import (
+    A2AConversationCompletedEvent,
+    A2AConversationStartedEvent,
+    A2ADelegationCompletedEvent,
+    A2ADelegationStartedEvent,
+    A2AMessageSentEvent,
+    A2APollingStartedEvent,
+    A2APollingStatusEvent,
+    A2APushNotificationReceivedEvent,
+    A2APushNotificationRegisteredEvent,
+    A2APushNotificationTimeoutEvent,
+    A2AResponseReceivedEvent,
+    A2AServerTaskCanceledEvent,
+    A2AServerTaskCompletedEvent,
+    A2AServerTaskFailedEvent,
+    A2AServerTaskStartedEvent,
+)
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
@@ -76,7 +93,22 @@ from crewai.events.types.tool_usage_events import (
 
 
 EventTypes = (
-    CrewKickoffStartedEvent
+    A2AConversationCompletedEvent
+    | A2AConversationStartedEvent
+    | A2ADelegationCompletedEvent
+    | A2ADelegationStartedEvent
+    | A2AMessageSentEvent
+    | A2APollingStartedEvent
+    | A2APollingStatusEvent
+    | A2APushNotificationReceivedEvent
+    | A2APushNotificationRegisteredEvent
+    | A2APushNotificationTimeoutEvent
+    | A2AResponseReceivedEvent
+    | A2AServerTaskCanceledEvent
+    | A2AServerTaskCompletedEvent
+    | A2AServerTaskFailedEvent
+    | A2AServerTaskStartedEvent
+    | CrewKickoffStartedEvent
     | CrewKickoffCompletedEvent
     | CrewKickoffFailedEvent
     | CrewTestStartedEvent
