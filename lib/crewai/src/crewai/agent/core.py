@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine, Sequence
+from collections.abc import Callable, Sequence
 import shutil
 import subprocess
 import time
@@ -70,7 +70,6 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
-    is_inside_event_loop,
     load_agent_from_repository,
     parse_tools,
     render_text_description_and_args,
@@ -1684,16 +1683,16 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-    ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
+    ) -> LiteAgentOutput:
         """
         Execute the agent with the given messages using the AgentExecutor.
 
         This method provides standalone agent execution without requiring a Crew.
         It supports tools, response formatting, and guardrails.
 
-        When called from within a Flow (inside an event loop), this method
-        automatically returns a coroutine that the Flow framework will await,
-        making it work seamlessly in both sync and async contexts.
+        When called from within a sync Flow method, the Flow framework automatically
+        runs the method in a thread pool, so this works seamlessly. For async Flow
+        methods, use kickoff_async() instead.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
@@ -1703,11 +1702,10 @@ class Agent(BaseAgent):
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
-            Or a coroutine if called from within an event loop.
+
+        Note:
+            If called from an async context (not through Flow), use kickoff_async().
         """
-        # Magic auto-async: return coroutine for Flow to await
-        if is_inside_event_loop():
-            return self.kickoff_async(messages, response_format)
 
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
             messages, response_format

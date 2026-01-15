@@ -1575,13 +1575,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
-            result = (
-                await method(*args, **kwargs)
-                if asyncio.iscoroutinefunction(method)
-                else method(*args, **kwargs)
-            )
+            if asyncio.iscoroutinefunction(method):
+                result = await method(*args, **kwargs)
+            else:
+                import contextvars
 
-            # Auto-await coroutines from sync methods (enables agent.kickoff() inside flows)
+                ctx = contextvars.copy_context()
+                result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+
+            # Auto-await coroutines from sync methods (still useful for explicit coroutine returns)
             if asyncio.iscoroutine(result):
                 result = await result
 
