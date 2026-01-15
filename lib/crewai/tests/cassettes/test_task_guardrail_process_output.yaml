@@ -14,8 +14,8 @@ interactions:
       false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
       Ensure the final output does not include any code block markers like ```json
       or ```python."},{"role":"user","content":"{\"valid\":false,\"feedback\":\"The
-      task result contains 22 words, exceeding the limit of 10 words specified by
-      the guardrail.\"}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      task result has more than 10 words. It violates the guardrail requirement of
+      having less than 10 words.\"}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
       the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
       feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
@@ -30,7 +30,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1854'
+      - '1867'
       content-type:
       - application/json
       cookie:
@@ -61,16 +61,19 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFI9b9swEN39Kw4324Gs2K6trcjUoS1QFAWMKhBo8iRdRJEESSVxDf/3
-        QlJiOW0KdNHA96F37+40A0BWmAHKWkTZOr24O653n/nTfv/wpUnuvu1Z/3r68VV/dG3TlDjvFfbw
-        QDK+qm6kbZ2myNaMsPQkIvWuyw+b7ep2vV6mA9BaRbqXVS4uVnaRJulqkWwXyeZFWFuWFDCDnzMA
-        gNPw7SMaRc+YQTJ/fWkpBFERZhcSAHqr+xcUIXCIwkScT6C0JpIZUp9yfBSaVY5ZKXSgeY4lkToI
-        2eSY5fi9JogiNOApdDpCLxVsAqQpPFmvwhzoWRIpNhXEmkBzyxFsCctkJEBwJLlkUnA4DpSqE155
-        wfomx/N1Lk9lF0Rfi+m0vgKEMTaKvtahkfsX5HzpQNvKeXsIf0ixZMOhLjyJYE0/b4jW4YCeZwD3
-        Q9fdm/rQedu6WETb0PC7281m9MNpuxOa7l7AaKPQV6rdev6OX6EoCtbhalsohaxJTdJptaJTbK+A
-        2dXUf6d5z3ucnE31P/YTICW5SKpwnhTLtxNPNE/98f+Ldml5CIyB/CNLKiKT7zehqBSdHu8SwzFE
-        aouSTUXeeR6Ps3SFSGi32iYiLXF2nv0GAAD//wMAnpXehqUDAAA=
+      string: "{\n  \"id\": \"chatcmpl-Cy5PPD1uYxgIbXU5hMI4xS5PK4Swt\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768436507,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The
+        task result has more than 10 words. It violates the guardrail requirement
+        of having less than 10 words.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 369,\n    \"completion_tokens\":
+        32,\n    \"total_tokens\": 401,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a0e9480a2f\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -79,7 +82,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:05:13 GMT
+      - Thu, 15 Jan 2026 00:21:47 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -94,16 +97,18 @@ interactions:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
+      content-length:
+      - '946'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '474'
+      - '463'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '489'
+      - '671'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -183,15 +188,17 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jJIxb9swEIV3/QriZqlQbMm1NTbtkqno2DoQzuRJYkORLEkFFQz/94KS
-        YylpCnThwO/e8b3jnRPGQAqoGPAOA++tyu7H8vD1e5GPX37R/cO3z+Onre/GAg/9YB4gjQpz+kk8
-        vKg+cNNbRUEaPWPuCAPFrncfd/tiW5Z35QR6I0hFWWtDVphsk2+KLN9n+e4q7Izk5KFiPxLGGDtP
-        Z7SoBf2GiuXpy01P3mNLUN2KGANnVLwB9F76gDpAukBudCA9uT4f4RmVFEeoghsoPUJDJE7In45Q
-        6UGpy1roqBk8Rt8RrQBqbQLG3JPlxyu53Ewq01pnTv6NFBqppe9qR+iNjoZ8MBYmekkYe5yGMbzK
-        B9aZ3oY6mCeantsWu7kfLONf6OHKggmoVqKyTN9pVwsKKJVfTRM48o7EIl1Gj4OQZgWSVei/zbzX
-        ew4udfs/7RfAOdlAoraOhOSvAy9ljuJy/qvsNuTJMHhyz5JTHSS5+BGCGhzUvDfgRx+orxupW3LW
-        yXl5GltjTodin+OmgeSS/AEAAP//AwDHbN/ZRQMAAA==
+      string: "{\n  \"id\": \"chatcmpl-Cy5PQkMg7YJYa44FYy6Wb04G3qmx4\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768436508,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        346,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 355,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_a0e9480a2f\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -200,7 +207,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:05:15 GMT
+      - Thu, 15 Jan 2026 00:21:48 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -215,16 +222,18 @@ interactions:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
+      content-length:
+      - '837'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '355'
+      - '316'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '604'
+      - '349'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
