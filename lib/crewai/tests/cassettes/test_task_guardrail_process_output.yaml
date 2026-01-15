@@ -14,8 +14,7 @@ interactions:
       false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
       Ensure the final output does not include any code block markers like ```json
       or ```python."},{"role":"user","content":"{\"valid\":false,\"feedback\":\"The
-      task result has more than 10 words. It violates the guardrail requirement of
-      having less than 10 words.\"}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      task result contains more than 10 words. Specifically, it has 24 words.\"}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
       the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
       feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
@@ -30,7 +29,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1867'
+      - '1835'
       content-type:
       - application/json
       cookie:
@@ -61,16 +60,15 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy5PPD1uYxgIbXU5hMI4xS5PK4Swt\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768436507,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-Cy5UxZ7PQkv5X90uKpxCSTKfmOMng\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768436851,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The
-        task result has more than 10 words. It violates the guardrail requirement
-        of having less than 10 words.\\\"}\",\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 369,\n    \"completion_tokens\":
-        32,\n    \"total_tokens\": 401,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        task result contains more than 10 words. Specifically, it has 24 words.\\\"}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        363,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 389,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_a0e9480a2f\"\n}\n"
@@ -82,7 +80,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:21:47 GMT
+      - Thu, 15 Jan 2026 00:27:32 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -98,17 +96,17 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '946'
+      - '914'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '463'
+      - '993'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '671'
+      - '1014'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -188,8 +186,8 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy5PQkMg7YJYa44FYy6Wb04G3qmx4\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768436508,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-Cy5UzjLkbVZHlwyGGpbwO6KTz1C8U\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768436853,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
@@ -207,7 +205,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:21:48 GMT
+      - Thu, 15 Jan 2026 00:27:33 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -227,13 +225,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '316'
+      - '238'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '349'
+      - '253'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
