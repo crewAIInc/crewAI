@@ -1,6 +1,6 @@
 ---
 title: "Flow HITL 관리"
-description: "할당, SLA 관리, 에스컬레이션 정책 및 동적 라우팅을 갖춘 Flow용 엔터프라이즈급 인간 검토"
+description: "이메일 우선 알림, 라우팅 규칙 및 자동 응답 기능을 갖춘 Flow용 엔터프라이즈급 인간 검토"
 icon: "users-gear"
 mode: "wide"
 ---
@@ -9,25 +9,33 @@ mode: "wide"
 Flow HITL 관리 기능은 `@human_feedback` 데코레이터가 필요하며, **CrewAI 버전 1.8.0 이상**에서 사용할 수 있습니다. 이 기능은 Crew가 아닌 **Flow**에만 적용됩니다.
 </Note>
 
-CrewAI Enterprise는 AI 워크플로우를 협업적인 인간-AI 프로세스로 전환하는 Flow용 포괄적인 Human-in-the-Loop(HITL) 관리 시스템을 제공합니다. 단순한 승인 게이트를 넘어, 플랫폼은 할당, 책임, 규정 준수를 위한 엔터프라이즈급 제어를 제공합니다.
+CrewAI Enterprise는 AI 워크플로우를 협업적인 인간-AI 프로세스로 전환하는 Flow용 포괄적인 Human-in-the-Loop(HITL) 관리 시스템을 제공합니다. 플랫폼은 **이메일 우선 아키텍처**를 사용하여 이메일 주소가 있는 누구나 플랫폼 계정 없이도 검토 요청에 응답할 수 있습니다.
 
 ## 개요
 
 <CardGroup cols={3}>
-  <Card title="플랫폼 내 검토" icon="desktop">
-    Enterprise 대시보드에서 직접 요청을 검토하고 응답
+  <Card title="이메일 우선 설계" icon="envelope">
+    응답자가 알림 이메일에 직접 회신하여 피드백 제공 가능
   </Card>
-  <Card title="스마트 할당" icon="user-check">
-    규칙과 전문성에 따라 적합한 담당자에게 검토 라우팅
+  <Card title="유연한 라우팅" icon="route">
+    메서드 패턴 또는 Flow 상태에 따라 특정 이메일로 요청 라우팅
   </Card>
-  <Card title="SLA 및 에스컬레이션" icon="clock">
-    자동화된 에스컬레이션 정책으로 적시 응답 보장
+  <Card title="자동 응답" icon="clock">
+    시간 내에 인간이 응답하지 않을 경우 자동 대체 응답 구성
   </Card>
 </CardGroup>
 
+### 주요 이점
+
+- **간단한 멘탈 모델**: 이메일 주소는 보편적이며 플랫폼 사용자나 역할을 관리할 필요 없음
+- **외부 응답자**: 플랫폼 사용자가 아니어도 이메일이 있는 누구나 응답 가능
+- **동적 할당**: Flow 상태에서 직접 담당자 이메일 가져오기 (예: `sales_rep_email`)
+- **간소화된 구성**: 설정할 항목이 적어 더 빠르게 가치 실현
+- **이메일이 주요 채널**: 대부분의 사용자는 대시보드 로그인보다 이메일로 응답하는 것을 선호
+
 ## Flow에서 인간 검토 포인트 설정
 
-`@human_feedback` 데코레이터를 사용하여 Flow 내에 인간 검토 체크포인트를 구성합니다. 실행이 검토 포인트에 도달하면 시스템이 일시 중지되고 UI에 "입력 대기 중" 상태가 표시됩니다.
+`@human_feedback` 데코레이터를 사용하여 Flow 내에 인간 검토 체크포인트를 구성합니다. 실행이 검토 포인트에 도달하면 시스템이 일시 중지되고, 담당자에게 이메일로 알리며, 응답을 기다립니다.
 
 ```python
 from crewai.flow.flow import Flow, start, listen
@@ -62,95 +70,191 @@ class ContentApprovalFlow(Flow):
 
 완전한 구현 세부 사항은 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
 
-## 할당 및 라우팅
+### 데코레이터 파라미터
 
-Enterprise 플랫폼은 검토가 적합한 팀원에게 전달되도록 정교한 할당 기능을 제공합니다.
+| 파라미터 | 유형 | 설명 |
+|---------|------|------|
+| `message` | `str` | 인간 검토자에게 표시되는 메시지 |
+| `emit` | `list[str]` | 유효한 응답 옵션 (UI에서 버튼으로 표시) |
 
-### 응답자 할당
+## 플랫폼 구성
 
-다양한 작업 유형에 대해 특정 팀원 또는 그룹을 응답자로 할당합니다:
+HITL 구성에 접근: **배포** → **설정** → **Human in the Loop 구성**
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-overview.png" alt="HITL 구성 설정" />
+</Frame>
+
+### 이메일 알림
+
+HITL 요청에 대한 이메일 알림을 활성화하거나 비활성화하는 토글입니다.
+
+| 설정 | 기본값 | 설명 |
+|-----|-------|------|
+| 이메일 알림 | 활성화됨 | 피드백 요청 시 이메일 전송 |
+
+<Note>
+비활성화되면 응답자는 대시보드 UI를 사용하거나 커스텀 알림 시스템을 위해 webhook을 구성해야 합니다.
+</Note>
+
+### SLA 목표
+
+추적 및 메트릭 목적으로 목표 응답 시간을 설정합니다.
+
+| 설정 | 설명 |
+|-----|------|
+| SLA 목표 (분) | 목표 응답 시간. 대시보드 메트릭 및 SLA 추적에 사용 |
+
+SLA 추적을 비활성화하려면 비워 두세요.
+
+## 이메일 알림 및 응답
+
+HITL 시스템은 응답자가 알림 이메일에 직접 회신할 수 있는 이메일 우선 아키텍처를 사용합니다.
+
+### 이메일 응답 작동 방식
 
 <Steps>
-  <Step title="HITL 설정으로 이동">
-    Flow 설정으로 이동하여 "인간 검토" 구성 섹션을 선택합니다.
+  <Step title="알림 전송">
+    HITL 요청이 생성되면 검토 콘텐츠와 컨텍스트가 포함된 이메일이 할당된 응답자에게 전송됩니다.
   </Step>
-  <Step title="응답자 구성">
-    검토 요청에 대한 기본 응답자로 개별 사용자 또는 그룹을 할당합니다.
+  <Step title="Reply-To 주소">
+    이메일에는 인증을 위한 서명된 토큰이 포함된 특별한 reply-to 주소가 있습니다.
   </Step>
-  <Step title="백업 응답자 설정">
-    주 담당자가 부재 시 대체 응답자를 정의합니다.
+  <Step title="사용자 회신">
+    응답자는 이메일에 피드백으로 회신하면 됩니다—로그인 필요 없음.
+  </Step>
+  <Step title="토큰 검증">
+    플랫폼이 회신을 받고, 서명된 토큰을 확인하고, 발신자 이메일을 매칭합니다.
+  </Step>
+  <Step title="Flow 재개">
+    피드백이 기록되고 인간의 입력으로 Flow가 계속됩니다.
   </Step>
 </Steps>
 
+### 응답 형식
+
+응답자는 다음과 같이 회신할 수 있습니다:
+
+- **Emit 옵션**: 회신이 `emit` 옵션과 일치하면 (예: "approved") 직접 사용됨
+- **자유 형식 텍스트**: 모든 텍스트 응답이 피드백으로 Flow에 전달됨
+- **일반 텍스트**: 회신 본문의 첫 번째 줄이 피드백으로 사용됨
+
+### 확인 이메일
+
+회신을 처리한 후 응답자는 피드백이 성공적으로 제출되었는지 또는 오류가 발생했는지 나타내는 확인 이메일을 받습니다.
+
+### 이메일 토큰 보안
+
+- 토큰은 보안을 위해 암호화 서명됨
+- 토큰은 7일 후 만료됨
+- 발신자 이메일은 토큰의 인증된 이메일과 일치해야 함
+- 처리 후 확인/오류 이메일 전송됨
+
+## 라우팅 규칙
+
+메서드 패턴에 따라 HITL 요청을 특정 이메일 주소로 라우팅합니다.
+
 <Frame>
-  <img src="/images/enterprise/hitl-settings-1.png" alt="HITL 구성 설정" />
+  <img src="/images/enterprise/hitl-settings-routing-rules.png" alt="HITL 라우팅 규칙 구성" />
 </Frame>
 
-### 동적 라우팅 규칙
+### 규칙 구조
 
-Flow 상태, 콘텐츠 유형 또는 사용자 정의 조건에 따라 지능형 라우팅을 설정합니다:
+```json
+{
+  "name": "재무팀으로 승인",
+  "match": {
+    "method_name": "approve_*"
+  },
+  "assign_to_email": "finance@company.com",
+  "assign_from_input": "manager_email"
+}
+```
 
-| 규칙 유형 | 설명 | 예시 |
-|-----------|------|------|
-| **콘텐츠 기반** | 검토 대상 콘텐츠에 따라 라우팅 | 법률 콘텐츠 → 법무팀 |
-| **우선순위 기반** | 긴급도에 따라 검토자 할당 | 높은 우선순위 → 시니어 검토자 |
-| **상태 기반** | Flow 상태 변수에 따라 라우팅 | `state.amount > 10000` → 재무 이사 |
-| **라운드 로빈** | 팀 전체에 검토를 균등 분배 | 워크로드 자동 균형 |
+### 매칭 패턴
+
+| 패턴 | 설명 | 매칭 예시 |
+|-----|------|----------|
+| `approve_*` | 와일드카드 (모든 문자) | `approve_payment`, `approve_vendor` |
+| `review_?` | 단일 문자 | `review_a`, `review_1` |
+| `validate_payment` | 정확히 일치 | `validate_payment`만 |
+
+### 할당 우선순위
+
+1. **동적 할당** (`assign_from_input`): 구성된 경우 Flow 상태에서 이메일 가져옴
+2. **정적 이메일** (`assign_to_email`): 구성된 이메일로 대체
+3. **배포 생성자**: 규칙이 일치하지 않으면 배포 생성자의 이메일이 사용됨
+
+### 동적 할당 예제
+
+Flow 상태에 `{"sales_rep_email": "alice@company.com"}`이 포함된 경우:
+
+```json
+{
+  "name": "영업 담당자에게 라우팅",
+  "match": {
+    "method_name": "review_*"
+  },
+  "assign_from_input": "sales_rep_email"
+}
+```
+
+요청이 자동으로 `alice@company.com`에 할당됩니다.
+
+<Tip>
+**사용 사례**: CRM, 데이터베이스 또는 이전 Flow 단계에서 담당자를 가져와 적합한 사람에게 검토를 동적으로 라우팅하세요.
+</Tip>
+
+## 자동 응답
+
+시간 내에 인간이 응답하지 않으면 HITL 요청에 자동으로 응답합니다. 이를 통해 Flow가 무한정 중단되지 않도록 합니다.
+
+### 구성
+
+| 설정 | 설명 |
+|-----|------|
+| 활성화됨 | 자동 응답 활성화 토글 |
+| 타임아웃 (분) | 자동 응답 전 대기 시간 |
+| 기본 결과 | 응답 값 (`emit` 옵션과 일치해야 함) |
 
 <Frame>
-  <img src="/images/enterprise/hitl-settings-2.png" alt="HITL 라우팅 규칙 구성" />
+  <img src="/images/enterprise/hitl-settings-auto-respond.png" alt="HITL 자동 응답 구성" />
 </Frame>
 
-### 역할 기반 권한
+### 사용 사례
 
-HITL 요청을 보거나, 응답하거나, 에스컬레이션할 수 있는 사람을 제어합니다:
+- **SLA 준수**: Flow가 무한정 중단되지 않도록 보장
+- **기본 승인**: 타임아웃 후 저위험 요청 자동 승인
+- **우아한 저하**: 검토자가 없을 때 안전한 기본값으로 계속
 
-<AccordionGroup>
-  <Accordion title="뷰어" icon="eye">
-    HITL 요청과 상태를 볼 수 있지만 응답하거나 조치를 취할 수 없습니다.
-  </Accordion>
-  <Accordion title="응답자" icon="reply">
-    할당된 HITL 요청을 보고 승인/거부 결정으로 응답할 수 있습니다.
-  </Accordion>
-  <Accordion title="관리자" icon="user-tie">
-    모든 요청을 보고, 응답하고, 다른 팀원에게 재할당하고, 결정을 재정의할 수 있습니다.
-  </Accordion>
-  <Accordion title="어드민" icon="shield">
-    라우팅 규칙, SLA 및 에스컬레이션 정책 구성을 포함한 전체 접근 권한.
-  </Accordion>
-</AccordionGroup>
+<Warning>
+자동 응답을 신중하게 사용하세요. 기본 응답이 허용되는 중요하지 않은 검토에만 활성화하세요.
+</Warning>
 
 ## 검토 프로세스
 
-### 검토 인터페이스
+### 대시보드 인터페이스
 
 HITL 검토 인터페이스는 검토자에게 깔끔하고 집중된 경험을 제공합니다:
 
 - **마크다운 렌더링**: 구문 강조가 포함된 풍부한 형식의 검토 콘텐츠
 - **컨텍스트 패널**: Flow 상태, 실행 기록 및 관련 정보 보기
 - **피드백 입력**: 결정과 함께 상세한 피드백 및 코멘트 제공
-- **빠른 작업**: 선택적 코멘트가 있는 원클릭 승인/거부 버튼
+- **빠른 작업**: 선택적 코멘트가 있는 원클릭 emit 옵션 버튼
 
 <Frame>
   <img src="/images/enterprise/hitl-list-pending-feedbacks.png" alt="HITL 대기 중인 요청 목록" />
 </Frame>
 
-### 검토 모드
+### 응답 방법
 
-워크플로우에 맞는 검토 방식을 선택합니다:
+검토자는 세 가지 채널을 통해 응답할 수 있습니다:
 
-<CardGroup cols={2}>
-  <Card title="즉시 게이팅" icon="hand">
-    **승인까지 실행 차단**
-
-    인간이 피드백을 제공할 때까지 Flow가 완전히 일시 중지됩니다. 검토 없이 진행해서는 안 되는 중요한 결정에 적합합니다.
-  </Card>
-  <Card title="배치 처리" icon="layer-group">
-    **효율적인 검토를 위해 항목 대기열에 추가**
-
-    여러 검토 요청을 수집하고 집중 세션에서 처리합니다. 대량이지만 긴급도가 낮은 검토에 이상적입니다.
-  </Card>
-</CardGroup>
+| 방법 | 설명 |
+|-----|------|
+| **이메일 회신** | 알림 이메일에 직접 회신 |
+| **대시보드** | Enterprise 대시보드 UI 사용 |
+| **API/Webhook** | API를 통한 프로그래밍 방식 응답 |
 
 ### 기록 및 감사 추적
 
@@ -159,55 +263,8 @@ HITL 검토 인터페이스는 검토자에게 깔끔하고 집중된 경험을 
 - 결정 기록 (승인/거부/수정)
 - 검토자 신원 및 타임스탬프
 - 제공된 피드백 및 코멘트
-- 상태 변경 및 에스컬레이션
+- 응답 방법 (이메일/대시보드/API)
 - 응답 시간 메트릭
-
-## SLA 관리 및 에스컬레이션
-
-자동화된 SLA 추적 및 에스컬레이션 정책으로 적시 응답을 보장합니다.
-
-### SLA 구성
-
-다양한 검토 유형에 대한 응답 시간 기대치를 설정합니다:
-
-| SLA 레벨 | 응답 시간 | 사용 사례 |
-|----------|----------|----------|
-| **긴급** | 15분 | 프로덕션 인시던트, 보안 검토 |
-| **높음** | 1시간 | 고객 대면 콘텐츠, 긴급 승인 |
-| **표준** | 4시간 | 일반 콘텐츠 검토, 일상적인 승인 |
-| **낮음** | 24시간 | 비차단 검토, 배치 처리 |
-
-### 에스컬레이션 규칙
-
-SLA가 위험에 처할 때 자동 에스컬레이션을 구성합니다:
-
-<Steps>
-  <Step title="경고 임계값">
-    할당된 검토자에게 알림 전송 (예: SLA 시간의 50% 도달 시).
-  </Step>
-  <Step title="에스컬레이션 트리거">
-    SLA 임계값에 도달하면 관리자 또는 백업 검토자에게 에스컬레이션.
-  </Step>
-  <Step title="자동 조치">
-    연장된 기간 후에도 응답이 없을 경우 대체 동작 구성:
-    - **자동 승인**: 실행 진행 (중요하지 않은 검토의 경우)
-    - **자동 거부**: 안전하게 실패하고 이해관계자에게 알림
-    - **재라우팅**: 다른 검토자 또는 팀에 할당
-  </Step>
-</Steps>
-
-### 알림
-
-자동화된 알림이 워크플로우 전반에 걸쳐 이해관계자에게 정보를 제공합니다:
-
-- **할당 알림**: 새 요청이 도착하면 검토자에게 알림
-- **SLA 경고**: 마감 전 검토자에게 리마인더
-- **에스컬레이션 알림**: 검토가 에스컬레이션되면 관리자에게 알림
-- **완료 업데이트**: 검토가 완료되면 요청자에게 알림
-
-<Note>
-**Slack 통합**: HITL 요청에 대한 직접 Slack 알림이 곧 제공됩니다.
-</Note>
 
 ## 분석 및 모니터링
 
@@ -215,18 +272,13 @@ SLA가 위험에 처할 때 자동 에스컬레이션을 구성합니다:
 
 ### 성능 대시보드
 
-HITL 워크플로우 전반의 주요 메트릭을 모니터링합니다:
-
 <Frame>
   <img src="/images/enterprise/hitl-metrics.png" alt="HITL 메트릭 대시보드" />
 </Frame>
 
 <CardGroup cols={2}>
-  <Card title="SLA 준수" icon="chart-line">
-    SLA 임계값 내에 완료된 검토 비율 추적.
-  </Card>
   <Card title="응답 시간" icon="stopwatch">
-    검토자, 팀 또는 Flow별 평균 및 중앙값 응답 시간 모니터링.
+    검토자 또는 Flow별 평균 및 중앙값 응답 시간 모니터링.
   </Card>
   <Card title="볼륨 트렌드" icon="chart-bar">
     팀 용량 최적화를 위한 검토 볼륨 패턴 분석.
@@ -234,16 +286,10 @@ HITL 워크플로우 전반의 주요 메트릭을 모니터링합니다:
   <Card title="결정 분포" icon="chart-pie">
     다양한 검토 유형에 대한 승인/거부 비율 보기.
   </Card>
+  <Card title="SLA 추적" icon="chart-line">
+    SLA 목표 내에 완료된 검토 비율 추적.
+  </Card>
 </CardGroup>
-
-### 개별 메트릭
-
-책임 추적 및 워크로드 균형을 위한 검토자 성과 추적:
-
-- 검토자별 승인/거부 비율
-- 검토자별 평균 응답 시간
-- 검토 완료율
-- 에스컬레이션 빈도
 
 ### 감사 및 규정 준수
 
@@ -261,7 +307,7 @@ HITL 워크플로우 전반의 주요 메트릭을 모니터링합니다:
     **사용 사례**: 인간 검증이 포함된 내부 보안 설문지 자동화
 
     - AI가 보안 설문지에 대한 응답 생성
-    - 보안팀이 정확성 검토 및 검증
+    - 보안팀이 이메일로 정확성 검토 및 검증
     - 승인된 응답이 최종 제출물로 편집
     - 규정 준수를 위한 완전한 감사 추적
   </Accordion>
@@ -270,8 +316,7 @@ HITL 워크플로우 전반의 주요 메트릭을 모니터링합니다:
     **사용 사례**: 법무/브랜드 검토가 필요한 마케팅 콘텐츠
 
     - AI가 마케팅 카피 또는 소셜 미디어 콘텐츠 생성
-    - 브랜드팀에 목소리/톤 검토를 위해 라우팅
-    - 규정 준수에 민감한 콘텐츠는 법무팀으로 에스컬레이션
+    - 브랜드팀 이메일로 목소리/톤 검토를 위해 라우팅
     - 승인 시 자동 게시
   </Accordion>
 
@@ -279,31 +324,28 @@ HITL 워크플로우 전반의 주요 메트릭을 모니터링합니다:
     **사용 사례**: 경비 보고서, 계약 조건, 예산 배분
 
     - AI가 재무 요청을 사전 처리하고 분류
-    - 금액 임계값에 따라 적절한 승인자에게 라우팅
-    - 역할 기반 접근으로 직무 분리 시행
+    - 동적 할당을 사용하여 금액 임계값에 따라 라우팅
     - 재무 규정 준수를 위한 완전한 감사 추적 유지
   </Accordion>
 
-  <Accordion title="규정 준수 검사" icon="clipboard-check">
-    **사용 사례**: 민감한 작업에 대한 규제 검토
+  <Accordion title="CRM에서 동적 할당" icon="database">
+    **사용 사례**: CRM에서 계정 담당자에게 검토 라우팅
 
-    - AI가 잠재적 규정 준수 문제 플래그
-    - 규정 준수 담당자가 플래그된 항목 검토
-    - 필요에 따라 법률 고문에게 에스컬레이션
-    - 결정 기록이 포함된 규정 준수 보고서 생성
+    - Flow가 CRM에서 계정 담당자 이메일 가져옴
+    - 이메일을 Flow 상태에 저장 (예: `account_owner_email`)
+    - `assign_from_input`을 사용하여 적합한 사람에게 자동 라우팅
   </Accordion>
 
   <Accordion title="품질 보증" icon="magnifying-glass">
     **사용 사례**: 고객 전달 전 AI 출력 검증
 
     - AI가 고객 대면 콘텐츠 또는 응답 생성
-    - QA팀이 출력 품질 샘플링 및 검토
+    - QA팀이 이메일 알림을 통해 검토
     - 피드백 루프가 시간이 지남에 따라 AI 성능 개선
-    - 검토 주기 전반의 품질 메트릭 추적
   </Accordion>
 </AccordionGroup>
 
-## 커스텀 Webhook API
+## Webhook API
 
 Flow가 인간 피드백을 위해 일시 중지되면, 요청 데이터를 자체 애플리케이션으로 보내도록 webhook을 구성할 수 있습니다. 이를 통해 다음이 가능합니다:
 
@@ -312,6 +354,10 @@ Flow가 인간 피드백을 위해 일시 중지되면, 요청 데이터를 자�
 - 타사 시스템으로 승인 라우팅
 - 모바일 앱 알림
 - 자동화된 결정 시스템
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-webhook.png" alt="HITL Webhook 구성" />
+</Frame>
 
 ### Webhook 구성
 
@@ -339,7 +385,6 @@ Flow가 인간 피드백을 위해 일시 중지되면, 요청 데이터를 자�
 | 이벤트 유형 | 트리거 시점 |
 |------------|------------|
 | `new_request` | Flow가 일시 중지되고 인간 피드백을 요청할 때 |
-| `escalation` | SLA 타임아웃으로 인해 대기 중인 요청이 에스컬레이션될 때 |
 
 ### Webhook 페이로드
 
@@ -347,106 +392,37 @@ Flow가 인간 피드백을 위해 일시 중지되면, 요청 데이터를 자�
 
 ```json
 {
-  "event_type": "new_request",
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "status": "pending",
-  "flow_id": "flow_abc123",
-  "flow_class": "ContentReviewFlow",
-  "method_name": "review_article",
-  "message": "이 기사의 게시를 검토해 주세요.",
-  "output": "# 기사 제목\n\n검토가 필요한 콘텐츠입니다...",
-  "emit": ["approve", "reject", "request_changes"],
-  "default_outcome": null,
-  "state": {
-    "article_id": 12345,
-    "author": "john@example.com",
-    "category": "technology"
+  "event": "new_request",
+  "request": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "flow_id": "flow_abc123",
+    "method_name": "review_article",
+    "message": "이 기사의 게시를 검토해 주세요.",
+    "emit_options": ["approved", "rejected", "request_changes"],
+    "state": {
+      "article_id": 12345,
+      "author": "john@example.com",
+      "category": "technology"
+    },
+    "metadata": {},
+    "created_at": "2026-01-14T12:00:00Z"
   },
-  "metadata": {
-    "priority": "high",
-    "source": "cms"
+  "deployment": {
+    "id": 456,
+    "name": "Content Review Flow",
+    "organization_id": 789
   },
-  "created_at": "2026-01-12T10:30:00Z",
-  "callback_url": "https://api.crewai.com/crewai_plus/api/v1/human_feedback_requests/550e8400.../respond?token=abc123...",
-  "response_token": "abc123def456...",
-  "deployment_id": 12345,
-  "deployment_name": "Content Review Crew",
-  "flow_execution_id": "exec_789",
-  "trace_batch_id": "trace_456",
-  "organization_id": "org_123",
-  "assigned_to": {
-    "id": 42,
-    "email": "reviewer@company.com",
-    "name": "Jane Reviewer"
-  },
-  "assigned_at": "2026-01-12T10:30:05Z",
-  "escalated_at": null,
-  "sla_target_minutes": 120,
-  "triggered_by_user_id": 99,
-  "routing": {
-    "effective_responders": [
-      {"id": 42, "email": "reviewer@company.com", "name": "Jane Reviewer"},
-      {"id": 43, "email": "manager@company.com", "name": "Bob Manager"}
-    ],
-    "enforce_routing_rules": true
-  }
+  "callback_url": "https://api.crewai.com/...",
+  "assigned_to_email": "reviewer@company.com"
 }
 ```
-
-### 필드 참조
-
-<AccordionGroup>
-  <Accordion title="핵심 필드" icon="circle-info">
-    | 필드 | 유형 | 설명 |
-    |------|------|------|
-    | `event_type` | string | `"new_request"` 또는 `"escalation"` |
-    | `id` | UUID | 이 요청의 고유 식별자 |
-    | `status` | string | 활성 요청의 경우 항상 `"pending"` |
-    | `method_name` | string | 피드백을 요청한 데코레이터 메서드 |
-    | `message` | string | 검토자를 위한 사람이 읽을 수 있는 프롬프트/질문 |
-    | `output` | string | 검토할 콘텐츠 (Markdown 포함 가능) |
-    | `emit` | array | 데코레이터의 유효한 응답 옵션 |
-    | `default_outcome` | string | 자동 응답 트리거 시 기본 결과 |
-    | `state` | object | 일시 중지 시점의 Flow 상태 |
-    | `metadata` | object | 데코레이터의 커스텀 메타데이터 |
-    | `created_at` | ISO8601 | 요청 생성 시간 |
-  </Accordion>
-
-  <Accordion title="응답 필드" icon="reply">
-    | 필드 | 유형 | 설명 |
-    |------|------|------|
-    | `callback_url` | string | **피드백 제출을 위해 이 URL로 POST** (토큰 포함) |
-    | `response_token` | string | 일회용 인증 토큰 (이미 callback_url에 포함) |
-  </Accordion>
-
-  <Accordion title="컨텍스트 필드" icon="layer-group">
-    | 필드 | 유형 | 설명 |
-    |------|------|------|
-    | `deployment_id` | integer | 배포 식별자 |
-    | `deployment_name` | string | 사람이 읽을 수 있는 배포 이름 |
-    | `flow_execution_id` | UUID | 실행 트레이스에 연결 |
-    | `organization_id` | UUID | 조직 식별자 |
-    | `sla_target_minutes` | integer | 구성된 SLA 목표 (설정되지 않은 경우 null) |
-    | `triggered_by_user_id` | integer | Flow를 시작한 사용자 (알려진 경우) |
-  </Accordion>
-
-  <Accordion title="할당 및 라우팅 필드" icon="route">
-    | 필드 | 유형 | 설명 |
-    |------|------|------|
-    | `assigned_to` | object | 사전 할당된 검토자 (있는 경우) |
-    | `assigned_at` | ISO8601 | 할당된 시간 |
-    | `escalated_at` | ISO8601 | 요청이 에스컬레이션된 시간 (아닌 경우 null) |
-    | `routing.effective_responders` | array | 응답하도록 구성된 사용자 |
-    | `routing.enforce_routing_rules` | boolean | 나열된 응답자만 응답할 수 있는지 여부 |
-  </Accordion>
-</AccordionGroup>
 
 ### 요청에 응답하기
 
 피드백을 제출하려면 webhook 페이로드에 포함된 **`callback_url`로 POST**합니다.
 
 ```http
-POST /crewai_plus/api/v1/human_feedback_requests/{id}/respond?token={token}
+POST {callback_url}
 Content-Type: application/json
 
 {
@@ -454,53 +430,6 @@ Content-Type: application/json
   "source": "my_custom_app"
 }
 ```
-
-**토큰은 이미 `callback_url`에 포함되어 있으므로** 직접 POST할 수 있습니다:
-
-```bash
-curl -X POST "${callback_url}" \
-  -H "Content-Type: application/json" \
-  -d '{"feedback": "약간의 수정과 함께 승인됨"}'
-```
-
-#### 파라미터
-
-| 파라미터 | 필수 | 설명 |
-|---------|------|------|
-| `feedback` | 예 | 피드백 텍스트 (flow로 전달됨) |
-| `source` | 아니오 | 앱 식별자 (기록에 표시) |
-
-#### 응답 예시
-
-<CodeGroup>
-```json 성공 (200 OK)
-{
-  "status": "accepted",
-  "request": {
-    "id": "550e8400-e29b-41d4-a716-446655440000",
-    "status": "responded",
-    "feedback": "약간의 수정과 함께 승인됨",
-    "outcome": null,
-    "responded_at": "2026-01-12T11:45:00Z",
-    "responded_via": "my_custom_app"
-  }
-}
-```
-
-```json 이미 응답됨 (409 Conflict)
-{
-  "error": "already_responded",
-  "message": "2026-01-12T11:30:00Z에 대시보드를 통해 이미 피드백이 제공되었습니다"
-}
-```
-
-```json 유효하지 않은 토큰 (401 Unauthorized)
-{
-  "error": "unauthorized",
-  "message": "유효하지 않은 응답 토큰"
-}
-```
-</CodeGroup>
 
 ### 보안
 
@@ -515,309 +444,32 @@ curl -X POST "${callback_url}" \
 - **저장 시 암호화**: 서명 시크릿은 데이터베이스에서 암호화됨
 - **타임스탬프 검증**: 리플레이 공격 방지
 
-#### 응답 토큰 보안
-
-- **일회용**: 토큰은 성공적인 응답 후 무효화됨
-- **256비트 엔트로피**: 토큰은 암호학적으로 안전한 랜덤 생성 사용
-- **타이밍 안전 비교**: 타이밍 공격 방지
-
-#### 모범 사례
-
-1. **서명 검증**: 항상 `X-CrewAI-Signature` 헤더를 검증하세요
-2. **타임스탬프 확인**: 5분 이상 된 요청은 거부하세요
-3. **시크릿 안전 저장**: 서명 시크릿을 비밀번호처럼 취급하세요
-4. **HTTPS 사용**: 프로덕션에서 webhook 엔드포인트는 TLS를 사용해야 합니다
-5. **시크릿 순환**: 대시보드를 통해 주기적으로 webhook 시크릿을 재생성하세요
-
-### 통합 예제
-
-<CodeGroup>
-```python Python (Flask) - 전체 예제
-from flask import Flask, request, jsonify
-import requests
-import hmac
-import hashlib
-import time
-
-app = Flask(__name__)
-
-WEBHOOK_SECRET = "whsec_your_signing_secret_here"
-MAX_TIMESTAMP_AGE = 300
-
-def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
-    try:
-        ts = int(timestamp)
-        if abs(time.time() - ts) > MAX_TIMESTAMP_AGE:
-            return False
-    except (ValueError, TypeError):
-        return False
-
-    signature_payload = f"{timestamp}.{payload.decode('utf-8')}"
-    expected = hmac.new(
-        WEBHOOK_SECRET.encode('utf-8'),
-        signature_payload.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-
-    return hmac.compare_digest(f"sha256={expected}", signature)
-
-@app.route('/hitl-webhook', methods=['POST'])
-def handle_hitl():
-    # 먼저 서명 검증
-    signature = request.headers.get('X-CrewAI-Signature', '')
-    timestamp = request.headers.get('X-CrewAI-Timestamp', '')
-
-    if not verify_signature(request.data, signature, timestamp):
-        return jsonify({'error': '유효하지 않은 서명'}), 401
-
-    payload = request.json
-
-    # 나중에 검토하기 위해 저장
-    store_request(payload)
-
-    # 또는 규칙에 따라 자동 승인
-    if should_auto_approve(payload):
-        response = requests.post(
-            payload['callback_url'],
-            json={'feedback': '정책에 의해 자동 승인됨', 'source': 'auto_approver'}
-        )
-        return jsonify({'status': 'auto_approved'})
-
-    return jsonify({'status': 'queued_for_review'})
-```
-
-```javascript Node.js (Express) - 전체 예제
-const express = require('express');
-const crypto = require('crypto');
-const axios = require('axios');
-
-const app = express();
-const WEBHOOK_SECRET = 'whsec_your_signing_secret_here';
-const MAX_TIMESTAMP_AGE = 300;
-
-// 서명 검증을 위해 raw body 캡처
-app.use('/hitl-webhook', express.raw({ type: 'application/json' }));
-
-function verifySignature(payload, signature, timestamp) {
-  const ts = parseInt(timestamp, 10);
-  if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > MAX_TIMESTAMP_AGE) {
-    return false;
-  }
-
-  const signaturePayload = `${timestamp}.${payload.toString()}`;
-  const expected = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
-    .update(signaturePayload)
-    .digest('hex');
-
-  return crypto.timingSafeEqual(
-    Buffer.from(`sha256=${expected}`),
-    Buffer.from(signature)
-  );
-}
-
-app.post('/hitl-webhook', async (req, res) => {
-  const signature = req.headers['x-crewai-signature'] || '';
-  const timestamp = req.headers['x-crewai-timestamp'] || '';
-
-  if (!verifySignature(req.body, signature, timestamp)) {
-    return res.status(401).json({ error: '유효하지 않은 서명' });
-  }
-
-  const { event_type, callback_url, message, output } = JSON.parse(req.body);
-
-  console.log(`수신됨 ${event_type}: ${message}`);
-
-  // Slack, 이메일 등을 통해 팀에 알림
-  await notifyTeam(payload);
-
-  // 나중에 누군가가 승인할 때:
-  // await axios.post(callback_url, { feedback: '승인됨!' });
-
-  res.json({ received: true });
-});
-```
-</CodeGroup>
-
-### Webhook 서명 검증
-
-모든 webhook 요청은 HMAC-SHA256을 사용하여 서명됩니다. 요청이 진본이고 변조되지 않았음을 확인하기 위해 서명을 검증해야 합니다.
-
 #### 서명 헤더
 
 각 webhook 요청에는 다음 헤더가 포함됩니다:
 
 | 헤더 | 설명 |
 |------|------|
-| `X-CrewAI-Signature` | HMAC-SHA256 서명: `sha256=<hex_digest>` |
-| `X-CrewAI-Timestamp` | 요청이 서명된 Unix 타임스탬프 |
+| `X-Signature` | HMAC-SHA256 서명: `sha256=<hex_digest>` |
+| `X-Timestamp` | 요청이 서명된 Unix 타임스탬프 |
 
-#### 검증 알고리즘
+#### 검증
 
-서명은 다음과 같이 계산됩니다:
-
-```
-HMAC-SHA256(signing_secret, timestamp + "." + raw_body)
-```
-
-여기서:
-- `signing_secret`은 webhook의 고유 시크릿입니다 (대시보드에 표시)
-- `timestamp`는 `X-CrewAI-Timestamp` 헤더의 값입니다
-- `raw_body`는 원시 JSON 요청 본문입니다 (파싱 전)
-
-#### Python 검증 예제
+다음과 같이 계산하여 검증합니다:
 
 ```python
 import hmac
 import hashlib
-import time
-from flask import Flask, request, jsonify
 
-app = Flask(__name__)
+expected = hmac.new(
+    signing_secret.encode(),
+    f"{timestamp}.{payload}".encode(),
+    hashlib.sha256
+).hexdigest()
 
-WEBHOOK_SECRET = "whsec_your_signing_secret_here"
-MAX_TIMESTAMP_AGE = 300  # 5분
-
-def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
-    """Webhook 서명을 검증합니다."""
-    # 리플레이 공격 방지를 위한 타임스탬프 확인
-    try:
-        ts = int(timestamp)
-        if abs(time.time() - ts) > MAX_TIMESTAMP_AGE:
-            return False
-    except (ValueError, TypeError):
-        return False
-
-    # 예상 서명 계산
-    signature_payload = f"{timestamp}.{payload.decode('utf-8')}"
-    expected = hmac.new(
-        WEBHOOK_SECRET.encode('utf-8'),
-        signature_payload.encode('utf-8'),
-        hashlib.sha256
-    ).hexdigest()
-
-    expected_header = f"sha256={expected}"
-
-    # 타이밍 공격 방지를 위한 상수 시간 비교
-    return hmac.compare_digest(expected_header, signature)
-
-@app.route('/hitl-webhook', methods=['POST'])
-def handle_hitl():
-    signature = request.headers.get('X-CrewAI-Signature', '')
-    timestamp = request.headers.get('X-CrewAI-Timestamp', '')
-
-    if not verify_signature(request.data, signature, timestamp):
-        return jsonify({'error': '유효하지 않은 서명'}), 401
-
-    payload = request.json
-    # 검증된 webhook 처리...
-    return jsonify({'status': 'received'})
+if hmac.compare_digest(expected, signature):
+    # 유효한 서명
 ```
-
-#### Node.js 검증 예제
-
-```javascript
-const express = require('express');
-const crypto = require('crypto');
-
-const app = express();
-const WEBHOOK_SECRET = 'whsec_your_signing_secret_here';
-const MAX_TIMESTAMP_AGE = 300; // 5분
-
-// 서명 검증을 위해 raw body 사용
-app.use('/hitl-webhook', express.raw({ type: 'application/json' }));
-
-function verifySignature(payload, signature, timestamp) {
-  // 타임스탬프 확인
-  const ts = parseInt(timestamp, 10);
-  if (isNaN(ts) || Math.abs(Date.now() / 1000 - ts) > MAX_TIMESTAMP_AGE) {
-    return false;
-  }
-
-  // 예상 서명 계산
-  const signaturePayload = `${timestamp}.${payload.toString()}`;
-  const expected = crypto
-    .createHmac('sha256', WEBHOOK_SECRET)
-    .update(signaturePayload)
-    .digest('hex');
-
-  const expectedHeader = `sha256=${expected}`;
-
-  // 상수 시간 비교
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedHeader),
-    Buffer.from(signature)
-  );
-}
-
-app.post('/hitl-webhook', (req, res) => {
-  const signature = req.headers['x-crewai-signature'] || '';
-  const timestamp = req.headers['x-crewai-timestamp'] || '';
-
-  if (!verifySignature(req.body, signature, timestamp)) {
-    return res.status(401).json({ error: '유효하지 않은 서명' });
-  }
-
-  const payload = JSON.parse(req.body);
-  // 검증된 webhook 처리...
-  res.json({ status: 'received' });
-});
-```
-
-#### Ruby 검증 예제
-
-```ruby
-require 'openssl'
-require 'json'
-
-class HitlWebhookController < ApplicationController
-  WEBHOOK_SECRET = ENV['CREWAI_WEBHOOK_SECRET']
-  MAX_TIMESTAMP_AGE = 300 # 5분
-
-  skip_before_action :verify_authenticity_token
-
-  def receive
-    signature = request.headers['X-CrewAI-Signature']
-    timestamp = request.headers['X-CrewAI-Timestamp']
-    payload = request.raw_post
-
-    unless verify_signature(payload, signature, timestamp)
-      render json: { error: '유효하지 않은 서명' }, status: :unauthorized
-      return
-    end
-
-    data = JSON.parse(payload)
-    # 검증된 webhook 처리...
-    render json: { status: 'received' }
-  end
-
-  private
-
-  def verify_signature(payload, signature, timestamp)
-    return false if timestamp.blank? || signature.blank?
-
-    # 타임스탬프 최신성 확인
-    ts = timestamp.to_i
-    return false if (Time.now.to_i - ts).abs > MAX_TIMESTAMP_AGE
-
-    # 예상 서명 계산
-    signature_payload = "#{timestamp}.#{payload}"
-    expected = OpenSSL::HMAC.hexdigest('SHA256', WEBHOOK_SECRET, signature_payload)
-    expected_header = "sha256=#{expected}"
-
-    # 상수 시간 비교
-    ActiveSupport::SecurityUtils.secure_compare(expected_header, signature)
-  end
-end
-```
-
-#### 보안 모범 사례
-
-1. **항상 서명 검증** webhook 데이터 처리 전에 서명을 검증하세요
-2. **타임스탬프 최신성 확인** (5분 허용 오차 권장)
-3. **상수 시간 비교 사용** 타이밍 공격을 방지합니다
-4. **시크릿 안전 저장** 환경 변수나 시크릿 매니저를 사용하세요
-5. **주기적 시크릿 순환** (대시보드에서 재생성 가능)
 
 ### 오류 처리
 
@@ -829,68 +481,69 @@ webhook 엔드포인트는 수신 확인을 위해 2xx 상태 코드를 반환�
 | 4xx/5xx | 실패로 기록됨, 재시도 없음 |
 | 타임아웃 (30초) | 실패로 기록됨, 재시도 없음 |
 
-### 통합 테스트
+## 보안 및 RBAC
 
-<Steps>
-  <Step title="Webhook 구성">
-    개발 엔드포인트를 가리키는 webhook 추가
-  </Step>
-  <Step title="로컬 개발용 터널 사용">
-    로컬 개발의 경우 [ngrok](https://ngrok.com) 사용:
-    ```bash
-    ngrok http 3000
-    # HTTPS URL을 webhook 엔드포인트로 사용
-    ```
-  </Step>
-  <Step title="Flow 트리거">
-    `@human_feedback` 데코레이터가 있는 flow 실행
-  </Step>
-  <Step title="수신 확인">
-    엔드포인트가 페이로드를 수신하는지 확인
-  </Step>
-  <Step title="응답 제출">
-    `callback_url`로 POST하여 flow 완료
-  </Step>
-</Steps>
+### 대시보드 접근
 
-## 기타 통합 옵션
+HITL 접근은 배포 수준에서 제어됩니다:
 
-### API 접근
+| 권한 | 기능 |
+|-----|------|
+| `manage_human_feedback` | HITL 설정 구성, 모든 요청 보기 |
+| `respond_to_human_feedback` | 요청에 응답, 할당된 요청 보기 |
 
-커스텀 통합을 위한 완전한 프로그래밍 제어:
+### 이메일 응답 인증
 
-```python
-# 예: 프로그래밍 방식으로 HITL 상태 확인
-from crewai.enterprise import HITLClient
+이메일 회신의 경우:
+1. reply-to 토큰이 인증된 이메일을 인코딩
+2. 발신자 이메일이 토큰의 이메일과 일치해야 함
+3. 토큰이 만료되지 않아야 함 (기본 7일)
+4. 요청이 여전히 대기 중이어야 함
 
-client = HITLClient()
-pending_reviews = client.get_pending_reviews(flow_id="my-flow")
+### 감사 추적
 
-for review in pending_reviews:
-    print(f"검토 {review.id}: {review.status} - 할당된 사람: {review.assignee}")
-```
+모든 HITL 작업이 기록됩니다:
+- 요청 생성
+- 할당 변경
+- 응답 제출 (소스: 대시보드/이메일/API)
+- Flow 재개 상태
 
-### 곧 출시 예정
+## 문제 해결
 
-- **Slack 통합**: Slack에서 직접 HITL 요청에 응답
-- **Microsoft Teams**: Teams 네이티브 검토 경험
-- **모바일 앱**: 이동 중 검토 및 승인
+### 이메일이 전송되지 않음
+
+1. 구성에서 "이메일 알림"이 활성화되어 있는지 확인
+2. 라우팅 규칙이 메서드 이름과 일치하는지 확인
+3. 담당자 이메일이 유효한지 확인
+4. 라우팅 규칙이 일치하지 않는 경우 배포 생성자 대체 확인
+
+### 이메일 회신이 처리되지 않음
+
+1. 토큰이 만료되지 않았는지 확인 (기본 7일)
+2. 발신자 이메일이 할당된 이메일과 일치하는지 확인
+3. 요청이 여전히 대기 중인지 확인 (아직 응답되지 않음)
+
+### Flow가 재개되지 않음
+
+1. 대시보드에서 요청 상태 확인
+2. 콜백 URL에 접근 가능한지 확인
+3. 배포가 여전히 실행 중인지 확인
 
 ## 모범 사례
 
 <Tip>
-**간단하게 시작**: 기본 승인 게이트로 시작한 다음, 워크플로우가 성숙해지면 라우팅과 SLA를 추가하세요.
+**간단하게 시작**: 배포 생성자에게 이메일 알림으로 시작한 다음, 워크플로우가 성숙해지면 라우팅 규칙을 추가하세요.
 </Tip>
 
-1. **명확한 검토 기준 정의**: 일관된 결정을 보장하기 위해 검토자가 무엇을 확인해야 하는지 문서화하세요.
+1. **동적 할당 사용**: 유연한 라우팅을 위해 Flow 상태에서 담당자 이메일을 가져오세요.
 
-2. **현실적인 SLA 설정**: 지속 가능한 워크플로우를 유지하기 위해 긴급도와 검토자 용량의 균형을 맞추세요.
+2. **자동 응답 구성**: 중요하지 않은 검토에 대해 Flow가 중단되지 않도록 대체를 설정하세요.
 
-3. **에스컬레이션을 현명하게 사용**: 품질을 유지하기 위해 진정으로 중요하지 않은 검토에만 자동 승인을 사용하세요.
+3. **응답 시간 모니터링**: 분석을 사용하여 병목 현상을 식별하고 검토 프로세스를 최적화하세요.
 
-4. **모니터링 및 반복**: 분석을 사용하여 병목 현상을 식별하고 검토자 할당을 최적화하세요.
+4. **검토 메시지를 명확하게 유지**: `@human_feedback` 데코레이터에 명확하고 실행 가능한 메시지를 작성하세요.
 
-5. **팀 교육**: 검토자가 자신의 역할과 사용 가능한 도구를 이해하도록 하세요.
+5. **이메일 흐름 테스트**: 프로덕션에 가기 전에 테스트 요청을 보내 이메일 전달을 확인하세요.
 
 ## 관련 리소스
 

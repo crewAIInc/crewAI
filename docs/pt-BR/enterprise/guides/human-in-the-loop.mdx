@@ -13,7 +13,7 @@ CrewAI oferece duas abordagens para implementar workflows human-in-the-loop:
 
 | Abordagem | Melhor Para | Versão |
 |----------|----------|---------|
-| **Baseada em Flow** (decorador `@human_feedback`) | Produção com UI Enterprise, workflows gerenciados, recursos completos da plataforma | **1.8.0+** |
+| **Baseada em Flow** (decorador `@human_feedback`) | Produção com UI Enterprise, workflows email-first, recursos completos da plataforma | **1.8.0+** |
 | **Baseada em Webhook** | Integrações customizadas, sistemas externos (Slack, Teams, etc.), configurações legadas | Todas as versões |
 
 ## HITL Baseado em Flow com Plataforma Enterprise
@@ -22,28 +22,29 @@ CrewAI oferece duas abordagens para implementar workflows human-in-the-loop:
 O decorador `@human_feedback` requer **CrewAI versão 1.8.0 ou superior**.
 </Note>
 
-Ao usar o decorador `@human_feedback` em seus Flows, o CrewAI Enterprise oferece uma **UI de Gerenciamento HITL** dedicada que proporciona controle total sobre os workflows de feedback humano:
+Ao usar o decorador `@human_feedback` em seus Flows, o CrewAI Enterprise oferece um **sistema HITL email-first** que permite que qualquer pessoa com um endereço de email responda a solicitações de revisão:
 
 <CardGroup cols={2}>
-  <Card title="Resposta na Plataforma" icon="reply">
-    Revise e responda a solicitações HITL diretamente no dashboard Enterprise—sem necessidade de configuração de webhook.
+  <Card title="Design Email-First" icon="envelope">
+    Respondentes recebem notificações por email e podem responder diretamente—nenhum login necessário.
   </Card>
-  <Card title="Atribuição de Respondentes" icon="user-plus">
-    Atribua membros específicos da equipe ou grupos como respondentes para diferentes tipos de tarefas ou crews.
+  <Card title="Revisão no Dashboard" icon="desktop">
+    Revise e responda a solicitações HITL no dashboard Enterprise quando preferir.
   </Card>
-  <Card title="Permissões e Controle de Acesso" icon="shield-check">
-    Defina quem pode visualizar, responder ou escalar solicitações HITL com controles de permissão granulares.
+  <Card title="Roteamento Flexível" icon="route">
+    Direcione solicitações para emails específicos com base em padrões de método ou obtenha do estado do flow.
   </Card>
-  <Card title="Políticas de Escalação" icon="arrow-up-right">
-    Configure regras de escalação automática quando as respostas atrasarem ou exigirem revisão sênior.
-  </Card>
-  <Card title="Gerenciamento de SLA" icon="clock">
-    Defina Acordos de Nível de Serviço para tempos de resposta com notificações e rastreamento automáticos.
-  </Card>
-  <Card title="Roteamento Dinâmico" icon="route">
-    Roteie solicitações HITL com base em conteúdo, prioridade ou regras personalizadas com políticas de aplicação.
+  <Card title="Resposta Automática" icon="clock">
+    Configure respostas automáticas de fallback quando nenhum humano responder dentro do timeout.
   </Card>
 </CardGroup>
+
+### Principais Benefícios
+
+- **Respondentes externos**: Qualquer pessoa com email pode responder, mesmo não sendo usuário da plataforma
+- **Atribuição dinâmica**: Obtenha o email do responsável do estado do flow (ex: `account_owner_email`)
+- **Configuração simples**: Roteamento baseado em email é mais fácil de configurar do que gerenciamento de usuários/funções
+- **Fallback do criador do deployment**: Se nenhuma regra de roteamento corresponder, o criador do deployment é notificado
 
 <Tip>
 Para detalhes de implementação do decorador `@human_feedback`, consulte o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
@@ -148,7 +149,7 @@ Workflows HITL são particularmente valiosos para:
 
 <CardGroup cols={2}>
   <Card title="Gerenciamento HITL para Flows" icon="users-gear" href="/pt-BR/enterprise/features/flow-hitl-management">
-    Explore os recursos completos da plataforma HITL para Flows, incluindo atribuição, gerenciamento de SLA, políticas de escalação e análises.
+    Explore os recursos completos da plataforma HITL para Flows, incluindo notificações por email, regras de roteamento, resposta automática e análises.
   </Card>
   <Card title="Feedback Humano em Flows" icon="code" href="/pt-BR/learn/human-feedback-in-flows">
     Guia de implementação para o decorador `@human_feedback` em seus Flows.

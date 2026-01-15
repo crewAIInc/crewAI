@@ -13,7 +13,7 @@ CrewAI offers two approaches for implementing human-in-the-loop workflows:
 
 | Approach | Best For | Version |
 |----------|----------|---------|
-| **Flow-based** (`@human_feedback` decorator) | Production with Enterprise UI, managed workflows, full platform features | **1.8.0+** |
+| **Flow-based** (`@human_feedback` decorator) | Production with Enterprise UI, email-first workflows, full platform features | **1.8.0+** |
 | **Webhook-based** | Custom integrations, external systems (Slack, Teams, etc.), legacy setups | All versions |
 
 ## Flow-Based HITL with Enterprise Platform
@@ -22,28 +22,29 @@ CrewAI offers two approaches for implementing human-in-the-loop workflows:
 The `@human_feedback` decorator requires **CrewAI version 1.8.0 or higher**.
 </Note>
 
-When using the `@human_feedback` decorator in your Flows, CrewAI Enterprise provides a dedicated **HITL Management UI** that gives you full control over human feedback workflows:
+When using the `@human_feedback` decorator in your Flows, CrewAI Enterprise provides an **email-first HITL system** that enables anyone with an email address to respond to review requests:
 
 <CardGroup cols={2}>
-  <Card title="In-Platform Response" icon="reply">
-    Review and respond to HITL requests directly within the Enterprise dashboard—no webhook setup required.
+  <Card title="Email-First Design" icon="envelope">
+    Responders receive email notifications and can reply directly—no login required.
   </Card>
-  <Card title="Responder Assignment" icon="user-plus">
-    Assign specific team members or groups as responders for different task types or crews.
+  <Card title="Dashboard Review" icon="desktop">
+    Review and respond to HITL requests in the Enterprise dashboard when preferred.
   </Card>
-  <Card title="Permissions & Access Control" icon="shield-check">
-    Define who can view, respond to, or escalate HITL requests with granular permission controls.
+  <Card title="Flexible Routing" icon="route">
+    Route requests to specific emails based on method patterns or pull from flow state.
   </Card>
-  <Card title="Escalation Policies" icon="arrow-up-right">
-    Configure automatic escalation rules when responses are delayed or require senior review.
-  </Card>
-  <Card title="SLA Management" icon="clock">
-    Set Service Level Agreements for response times with automatic notifications and tracking.
-  </Card>
-  <Card title="Dynamic Routing" icon="route">
-    Route HITL requests based on content, priority, or custom rules with enforcement policies.
+  <Card title="Auto-Response" icon="clock">
+    Configure automatic fallback responses when no human replies within the timeout.
   </Card>
 </CardGroup>
+
+### Key Benefits
+
+- **External responders**: Anyone with an email can respond, even non-platform users
+- **Dynamic assignment**: Pull assignee email from flow state (e.g., `account_owner_email`)
+- **Simple configuration**: Email-based routing is easier to set up than user/role management
+- **Deployment creator fallback**: If no routing rule matches, the deployment creator is notified
 
 <Tip>
 For implementation details on the `@human_feedback` decorator, see the [Human Feedback in Flows](/en/learn/human-feedback-in-flows) guide.
@@ -148,7 +149,7 @@ HITL workflows are particularly valuable for:
 
 <CardGroup cols={2}>
   <Card title="Flow HITL Management" icon="users-gear" href="/en/enterprise/features/flow-hitl-management">
-    Explore the full Enterprise Flow HITL platform capabilities including assignment, SLA management, escalation policies, and analytics.
+    Explore the full Enterprise Flow HITL platform capabilities including email notifications, routing rules, auto-response, and analytics.
   </Card>
   <Card title="Human Feedback in Flows" icon="code" href="/en/learn/human-feedback-in-flows">
     Implementation guide for the `@human_feedback` decorator in your Flows.
