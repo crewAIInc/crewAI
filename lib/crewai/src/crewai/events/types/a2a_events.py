@@ -210,3 +210,37 @@ class A2APushNotificationTimeoutEvent(A2AEventBase):
     type: str = "a2a_push_notification_timeout"
     task_id: str
     timeout_seconds: float
+
+
+class A2AServerTaskStartedEvent(A2AEventBase):
+    """Event emitted when an A2A server task execution starts."""
+
+    type: str = "a2a_server_task_started"
+    a2a_task_id: str
+    a2a_context_id: str
+
+
+class A2AServerTaskCompletedEvent(A2AEventBase):
+    """Event emitted when an A2A server task execution completes."""
+
+    type: str = "a2a_server_task_completed"
+    a2a_task_id: str
+    a2a_context_id: str
+    result: str
+
+
+class A2AServerTaskCanceledEvent(A2AEventBase):
+    """Event emitted when an A2A server task execution is canceled."""
+
+    type: str = "a2a_server_task_canceled"
+    a2a_task_id: str
+    a2a_context_id: str
+
+
+class A2AServerTaskFailedEvent(A2AEventBase):
+    """Event emitted when an A2A server task execution fails."""
+
+    type: str = "a2a_server_task_failed"
+    a2a_task_id: str
+    a2a_context_id: str
+    error: str

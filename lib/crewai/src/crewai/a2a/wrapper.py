@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Any
 from a2a.types import Role, TaskState
 from pydantic import BaseModel, ValidationError
 
-from crewai.a2a.config import A2AConfig
+from crewai.a2a.config import A2AClientConfig, A2AConfig
 from crewai.a2a.extensions.base import ExtensionRegistry
 from crewai.a2a.task_helpers import TaskStateResult
 from crewai.a2a.templates import (
@@ -26,13 +26,16 @@ from crewai.a2a.templates import (
     UNAVAILABLE_AGENTS_NOTICE_TEMPLATE,
 )
 from crewai.a2a.types import AgentResponseProtocol
-from crewai.a2a.utils import (
-    aexecute_a2a_delegation,
+from crewai.a2a.utils.agent_card import (
     afetch_agent_card,
-    execute_a2a_delegation,
     fetch_agent_card,
-    get_a2a_agents_and_response_model,
+    inject_a2a_server_methods,
 )
+from crewai.a2a.utils.delegation import (
+    aexecute_a2a_delegation,
+    execute_a2a_delegation,
+)
+from crewai.a2a.utils.response_model import get_a2a_agents_and_response_model
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationCompletedEvent,
@@ -122,10 +125,12 @@ def wrap_agent_with_a2a_instance(
         agent, "aexecute_task", MethodType(aexecute_task_with_a2a, agent)
     )
 
+    inject_a2a_server_methods(agent)
+
 
 def _fetch_card_from_config(
-    config: A2AConfig,
-) -> tuple[A2AConfig, AgentCard | Exception]:
+    config: A2AConfig | A2AClientConfig,
+) -> tuple[A2AConfig | A2AClientConfig, AgentCard | Exception]:
     """Fetch agent card from A2A config.
 
     Args:
@@ -146,7 +151,7 @@ def _fetch_card_from_config(
 
 
 def _fetch_agent_cards_concurrently(
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
 ) -> tuple[dict[str, AgentCard], dict[str, str]]:
     """Fetch agent cards concurrently for multiple A2A agents.
 
@@ -181,7 +186,7 @@ def _fetch_agent_cards_concurrently(
 
 def _execute_task_with_a2a(
     self: Agent,
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
     original_fn: Callable[..., str],
     task: Task,
     agent_response_model: type[BaseModel],
@@ -270,7 +275,7 @@ def _execute_task_with_a2a(
 
 
 def _augment_prompt_with_a2a(
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
     task_description: str,
     agent_cards: dict[str, AgentCard],
     conversation_history: list[Message] | None = None,
@@ -523,11 +528,11 @@ def _prepare_delegation_context(
     task: Task,
     original_task_description: str | None,
 ) -> tuple[
-    list[A2AConfig],
+    list[A2AConfig | A2AClientConfig],
     type[BaseModel],
     str,
     str,
-    A2AConfig,
+    A2AConfig | A2AClientConfig,
     str | None,
     str | None,
     dict[str, Any] | None,
@@ -591,7 +596,7 @@ def _handle_task_completion(
     task: Task,
     task_id_config: str | None,
     reference_task_ids: list[str],
-    agent_config: A2AConfig,
+    agent_config: A2AConfig | A2AClientConfig,
     turn_num: int,
 ) -> tuple[str | None, str | None, list[str]]:
     """Handle task completion state including reference task updates.
@@ -631,7 +636,7 @@ def _handle_agent_response_and_continue(
     a2a_result: TaskStateResult,
     agent_id: str,
     agent_cards: dict[str, AgentCard] | None,
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
     original_task_description: str,
     conversation_history: list[Message],
     turn_num: int,
@@ -868,8 +873,8 @@ def _delegate_to_a2a(
 
 
 async def _afetch_card_from_config(
-    config: A2AConfig,
-) -> tuple[A2AConfig, AgentCard | Exception]:
+    config: A2AConfig | A2AClientConfig,
+) -> tuple[A2AConfig | A2AClientConfig, AgentCard | Exception]:
     """Fetch agent card from A2A config asynchronously."""
     try:
         card = await afetch_agent_card(
@@ -883,7 +888,7 @@ async def _afetch_card_from_config(
 
 
 async def _afetch_agent_cards_concurrently(
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
 ) -> tuple[dict[str, AgentCard], dict[str, str]]:
     """Fetch agent cards concurrently for multiple A2A agents using asyncio."""
     agent_cards: dict[str, AgentCard] = {}
@@ -908,7 +913,7 @@ async def _afetch_agent_cards_concurrently(
 
 async def _aexecute_task_with_a2a(
     self: Agent,
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
     original_fn: Callable[..., Coroutine[Any, Any, str]],
     task: Task,
     agent_response_model: type[BaseModel],
@@ -987,7 +992,7 @@ async def _ahandle_agent_response_and_continue(
     a2a_result: TaskStateResult,
     agent_id: str,
     agent_cards: dict[str, AgentCard] | None,
-    a2a_agents: list[A2AConfig],
+    a2a_agents: list[A2AConfig | A2AClientConfig],
     original_task_description: str,
     conversation_history: list[Message],
     turn_num: int,
