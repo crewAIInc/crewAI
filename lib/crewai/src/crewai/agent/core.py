@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
 from typing_extensions import Self
 
-from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -76,6 +75,14 @@ from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+
+
+try:
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
+except ImportError:
+    A2AClientConfig = Any
+    A2AConfig = Any
+    A2AServerConfig = Any
 
 
 if TYPE_CHECKING:
