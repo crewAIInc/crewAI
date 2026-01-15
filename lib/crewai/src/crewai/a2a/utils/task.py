@@ -14,12 +14,13 @@ from a2a.server.events import EventQueue
 from a2a.types import (
     InternalError,
     InvalidParamsError,
+    Message,
     Task as A2ATask,
     TaskState,
     TaskStatus,
     TaskStatusUpdateEvent,
 )
-from a2a.utils import completed_task, new_text_artifact
+from a2a.utils import new_agent_text_message, new_text_artifact
 from a2a.utils.errors import ServerError
 from aiocache import SimpleMemoryCache, caches  # type: ignore[import-untyped]
 
@@ -43,14 +44,30 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
+def _parse_redis_url(url: str) -> dict[str, Any]:
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    config: dict[str, Any] = {
+        "cache": "aiocache.RedisCache",
+        "endpoint": parsed.hostname or "localhost",
+        "port": parsed.port or 6379,
+    }
+    if parsed.path and parsed.path != "/":
+        try:
+            config["db"] = int(parsed.path.lstrip("/"))
+        except ValueError:
+            pass
+    if parsed.password:
+        config["password"] = parsed.password
+    return config
+
+
 _redis_url = os.environ.get("REDIS_URL")
 
 caches.set_config(
     {
-        "default": {
-            "cache": "aiocache.RedisCache",
-            "endpoint": _redis_url,
-        }
+        "default": _parse_redis_url(_redis_url)
         if _redis_url
         else {
             "cache": "aiocache.SimpleMemoryCache",
@@ -183,12 +200,16 @@ async def execute(
 
     try:
         result = await agent.aexecute_task(task=task, tools=agent.tools)
+        result_str = str(result)
+        history: list[Message] = [context.message] if context.message else []
+        history.append(new_agent_text_message(result_str, context_id, task_id))
         await event_queue.enqueue_event(
-            completed_task(
-                task_id,
-                context_id,
-                [new_text_artifact(str(result), f"result_{task_id}")],
-                [context.message] if context.message else [],
+            A2ATask(
+                id=task_id,
+                context_id=context_id,
+                status=TaskStatus(state=TaskState.input_required),
+                artifacts=[new_text_artifact(result_str, f"result_{task_id}")],
+                history=history,
             )
         )
         crewai_event_bus.emit(

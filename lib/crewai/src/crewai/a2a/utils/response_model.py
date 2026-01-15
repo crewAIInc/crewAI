@@ -14,15 +14,19 @@ A2AConfigTypes: TypeAlias = A2AConfig | A2AServerConfig | A2AClientConfig
 A2AClientConfigTypes: TypeAlias = A2AConfig | A2AClientConfig
 
 
-def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
+def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel] | None:
     """Create a dynamic AgentResponse model with Literal types for agent IDs.
 
     Args:
         agent_ids: List of available A2A agent IDs.
 
     Returns:
-        Dynamically created Pydantic model with Literal-constrained a2a_ids field.
+        Dynamically created Pydantic model with Literal-constrained a2a_ids field,
+        or None if agent_ids is empty.
     """
+    if not agent_ids:
+        return None
+
     DynamicLiteral = create_literals_from_strings(agent_ids)  # noqa: N806
 
     return create_model(
@@ -83,7 +87,7 @@ def extract_a2a_agent_ids_from_config(
 
 def get_a2a_agents_and_response_model(
     a2a_config: list[A2AConfigTypes] | A2AConfigTypes | None,
-) -> tuple[list[A2AClientConfigTypes], type[BaseModel]]:
+) -> tuple[list[A2AClientConfigTypes], type[BaseModel] | None]:
     """Get A2A agent configs and response model.
 
     Args:
