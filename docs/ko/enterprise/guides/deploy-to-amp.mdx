@@ -1,0 +1,438 @@
+---
+title: "AMP에 배포하기"
+description: "Crew 또는 Flow를 CrewAI AMP에 배포하기"
+icon: "rocket"
+mode: "wide"
+---
+
+<Note>
+  로컬에서 또는 Crew Studio를 통해 Crew나 Flow를 생성한 후, 다음 단계는 이를 CrewAI AMP
+  플랫폼에 배포하는 것입니다. 본 가이드에서는 다양한 배포 방법을 다루며,
+  여러분의 워크플로우에 가장 적합한 방식을 선택할 수 있도록 안내합니다.
+</Note>
+
+## 사전 준비 사항
+
+<CardGroup cols={2}>
+  <Card title="배포 준비가 완료된 프로젝트" icon="check-circle">
+    로컬에서 성공적으로 실행되는 Crew 또는 Flow가 있어야 합니다.
+    [배포 준비 가이드](/ko/enterprise/guides/prepare-for-deployment)를 따라 프로젝트 구조를 확인하세요.
+  </Card>
+  <Card title="GitHub 저장소" icon="github">
+    코드가 GitHub 저장소에 있어야 합니다(GitHub 연동 방식의 경우).
+  </Card>
+</CardGroup>
+
+<Info>
+  **Crews vs Flows**: 두 프로젝트 유형 모두 CrewAI AMP에서 "자동화"로 배포할 수 있습니다.
+  배포 과정은 동일하지만, 프로젝트 구조가 다릅니다.
+  자세한 내용은 [배포 준비하기](/ko/enterprise/guides/prepare-for-deployment)를 참조하세요.
+</Info>
+
+## 옵션 1: CrewAI CLI를 사용한 배포
+
+CLI는 로컬에서 개발된 Crew 또는 Flow를 AMP 플랫폼에 가장 빠르게 배포할 수 있는 방법을 제공합니다.
+CLI는 `pyproject.toml`에서 프로젝트 유형을 자동으로 감지하고 그에 맞게 빌드합니다.
+
+<Steps>
+  <Step title="CrewAI CLI 설치">
+    아직 설치하지 않았다면 CrewAI CLI를 설치하세요:
+
+    ```bash
+    pip install crewai[tools]
+    ```
+
+    <Tip>
+    CLI는 기본 CrewAI 패키지에 포함되어 있지만, `[tools]` 추가 옵션을 사용하면 모든 배포 종속성을 함께 설치할 수 있습니다.
+    </Tip>
+
+  </Step>
+
+  <Step title="Enterprise 플랫폼에 인증">
+    먼저, CrewAI AMP 플랫폼에 CLI를 인증해야 합니다:
+
+    ```bash
+    # 이미 CrewAI AMP 계정이 있거나 새로 생성하고 싶을 때:
+    crewai login
+    ```
+
+    위 명령어를 실행하면 CLI가 다음을 진행합니다:
+    1. URL과 고유 기기 코드를 표시합니다
+    2. 브라우저를 열어 인증 페이지로 이동합니다
+    3. 기기 확인을 요청합니다
+    4. 인증 과정을 완료합니다
+
+    인증이 성공적으로 완료되면 터미널에 확인 메시지가 표시됩니다!
+
+  </Step>
+
+  <Step title="배포 생성">
+
+    프로젝트 디렉터리에서 다음 명령어를 실행하세요:
+
+    ```bash
+    crewai deploy create
+    ```
+
+    이 명령어는 다음을 수행합니다:
+    1. GitHub 저장소 정보를 감지합니다
+    2. 로컬 `.env` 파일의 환경 변수를 식별합니다
+    3. 이러한 변수를 Enterprise 플랫폼으로 안전하게 전송합니다
+    4. 고유 식별자가 부여된 새 배포를 만듭니다
+
+    성공적으로 생성되면 다음과 같은 메시지가 표시됩니다:
+    ```shell
+    Deployment created successfully!
+    Name: your_project_name
+    Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
+    Current Status: Deploy Enqueued
+    ```
+
+  </Step>
+
+  <Step title="배포 진행 상황 모니터링">
+
+    다음 명령어로 배포 상태를 추적할 수 있습니다:
+
+    ```bash
+    crewai deploy status
+    ```
+
+    빌드 과정의 상세 로그가 필요하다면:
+
+    ```bash
+    crewai deploy logs
+    ```
+
+    <Tip>
+    첫 배포는 컨테이너 이미지를 빌드하므로 일반적으로 10~15분 정도 소요됩니다. 이후 배포는 훨씬 빠릅니다.
+    </Tip>
+
+  </Step>
+</Steps>
+
+## 추가 CLI 명령어
+
+CrewAI CLI는 배포를 관리하기 위한 여러 명령어를 제공합니다:
+
+```bash
+# 모든 배포 목록 확인
+crewai deploy list
+
+# 배포 상태 확인
+crewai deploy status
+
+# 배포 로그 보기
+crewai deploy logs
+
+# 코드 변경 후 업데이트 푸시
+crewai deploy push
+
+# 배포 삭제
+crewai deploy remove <deployment_id>
+```
+
+## 옵션 2: 웹 인터페이스를 통한 직접 배포
+
+GitHub 계정을 연결하여 CrewAI AMP 웹 인터페이스를 통해 Crew 또는 Flow를 직접 배포할 수도 있습니다. 이 방법은 로컬 머신에서 CLI를 사용할 필요가 없습니다. 플랫폼은 자동으로 프로젝트 유형을 감지하고 적절하게 빌드를 처리합니다.
+
+<Steps>
+
+  <Step title="GitHub로 푸시하기">
+
+Crew를 GitHub 저장소에 푸시해야 합니다. 아직 Crew를 만들지 않았다면, [이 튜토리얼](/ko/quickstart)을 따라할 수 있습니다.
+
+  </Step>
+
+  <Step title="GitHub를 CrewAI AMP에 연결하기">
+
+    1. [CrewAI AMP](https://app.crewai.com)에 로그인합니다.
+    2. "Connect GitHub" 버튼을 클릭합니다.
+
+    <Frame>
+      ![Connect GitHub Button](/images/enterprise/connect-github.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="저장소 선택하기">
+
+    GitHub 계정을 연결한 후 배포할 저장소를 선택할 수 있습니다:
+
+    <Frame>
+      ![Select Repository](/images/enterprise/select-repo.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="환경 변수 설정하기">
+
+    배포 전에, LLM 제공업체 또는 기타 서비스에 연결할 환경 변수를 설정해야 합니다:
+
+    1. 변수를 개별적으로 또는 일괄적으로 추가할 수 있습니다.
+    2. 환경 변수는 `KEY=VALUE` 형식(한 줄에 하나씩)으로 입력합니다.
+
+    <Frame>
+      ![Set Environment Variables](/images/enterprise/set-env-variables.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="Crew 배포하기">
+
+    1. "Deploy" 버튼을 클릭하여 배포 프로세스를 시작합니다.
+    2. 진행 바를 통해 진행 상황을 모니터링할 수 있습니다.
+    3. 첫 번째 배포에는 일반적으로 약 10-15분 정도 소요되며, 이후 배포는 더 빠릅니다.
+
+    <Frame>
+      ![Deploy Progress](/images/enterprise/deploy-progress.png)
+    </Frame>
+
+    배포가 완료되면 다음을 확인할 수 있습니다:
+    - Crew의 고유 URL
+    - Crew API를 보호할 Bearer 토큰
+    - 배포를 삭제해야 하는 경우 "Delete" 버튼
+
+  </Step>
+
+</Steps>
+
+## 옵션 3: API를 통한 재배포 (CI/CD 통합)
+
+CI/CD 파이프라인에서 자동화된 배포를 위해 CrewAI API를 사용하여 기존 crew의 재배포를 트리거할 수 있습니다. 이 방법은 GitHub Actions, Jenkins 또는 기타 자동화 워크플로우에 특히 유용합니다.
+
+<Steps>
+  <Step title="개인 액세스 토큰 발급">
+
+    CrewAI AMP 계정 설정에서 API 토큰을 생성합니다:
+
+    1. [app.crewai.com](https://app.crewai.com)으로 이동합니다
+    2. **Settings** → **Account** → **Personal Access Token**을 클릭합니다
+    3. 새 토큰을 생성하고 안전하게 복사합니다
+    4. 이 토큰을 CI/CD 시스템의 시크릿으로 저장합니다
+
+  </Step>
+
+  <Step title="Automation UUID 찾기">
+
+    배포된 crew의 고유 식별자를 찾습니다:
+
+    1. CrewAI AMP 대시보드에서 **Automations**로 이동합니다
+    2. 기존 automation/crew를 선택합니다
+    3. **Additional Details**를 클릭합니다
+    4. **UUID**를 복사합니다 - 이것이 특정 crew 배포를 식별합니다
+
+  </Step>
+
+  <Step title="API를 통한 재배포 트리거">
+
+    Deploy API 엔드포인트를 사용하여 재배포를 트리거합니다:
+
+    ```bash
+    curl -i -X POST \
+         -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \
+         https://app.crewai.com/crewai_plus/api/v1/crews/YOUR-AUTOMATION-UUID/deploy
+
+    # HTTP/2 200
+    # content-type: application/json
+    #
+    # {
+    #   "uuid": "your-automation-uuid",
+    #   "status": "Deploy Enqueued",
+    #   "public_url": "https://your-crew-deployment.crewai.com",
+    #   "token": "your-bearer-token"
+    # }
+    ```
+
+    <Info>
+    Git에 연결되어 처음 생성된 automation의 경우, API가 재배포 전에 자동으로 저장소에서 최신 변경 사항을 가져옵니다.
+    </Info>
+
+  </Step>
+
+  <Step title="GitHub Actions 통합 예시">
+
+    더 복잡한 배포 트리거가 있는 GitHub Actions 워크플로우 예시입니다:
+
+    ```yaml
+    name: Deploy CrewAI Automation
+
+    on:
+      push:
+        branches: [ main ]
+      pull_request:
+        types: [ labeled ]
+      release:
+        types: [ published ]
+
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) ||
+          (github.event_name == 'release')
+        steps:
+          - name: Trigger CrewAI Redeployment
+            run: |
+              curl -X POST \
+                   -H "Authorization: Bearer ${{ secrets.CREWAI_PAT }}" \
+                   https://app.crewai.com/crewai_plus/api/v1/crews/${{ secrets.CREWAI_AUTOMATION_UUID }}/deploy
+    ```
+
+    <Tip>
+    `CREWAI_PAT`와 `CREWAI_AUTOMATION_UUID`를 저장소 시크릿으로 추가하세요. PR 배포의 경우 "deploy" 라벨을 추가하여 워크플로우를 트리거합니다.
+    </Tip>
+
+    </Step>
+
+  </Steps>
+
+## 배포된 Automation과 상호작용하기
+
+배포가 완료되면 다음을 통해 crew에 접근할 수 있습니다:
+
+1. **REST API**: 플랫폼에서 아래의 주요 경로가 포함된 고유한 HTTPS 엔드포인트를 생성합니다:
+
+   - `/inputs`: 필요한 입력 파라미터 목록
+   - `/kickoff`: 제공된 입력값으로 실행 시작
+   - `/status/{kickoff_id}`: 실행 상태 확인
+
+2. **웹 인터페이스**: [app.crewai.com](https://app.crewai.com)에 방문하여 다음을 확인할 수 있습니다:
+   - **Status 탭**: 배포 정보, API 엔드포인트 세부 정보 및 인증 토큰 확인
+   - **Run 탭**: Crew 구조의 시각적 표현
+   - **Executions 탭**: 모든 실행 내역
+   - **Metrics 탭**: 성능 분석
+   - **Traces 탭**: 상세 실행 인사이트
+
+### 실행 트리거하기
+
+Enterprise 대시보드에서 다음 작업을 수행할 수 있습니다:
+
+1. Crew 이름을 클릭하여 상세 정보를 엽니다
+2. 관리 인터페이스에서 "Trigger Crew"를 선택합니다
+3. 나타나는 모달에 필요한 입력값을 입력합니다
+4. 파이프라인을 따라 실행의 진행 상황을 모니터링합니다
+
+### 모니터링 및 분석
+
+Enterprise 플랫폼은 포괄적인 가시성 기능을 제공합니다:
+
+- **실행 관리**: 활성 및 완료된 실행 추적
+- **트레이스**: 각 실행의 상세 분해
+- **메트릭**: 토큰 사용량, 실행 시간, 비용
+- **타임라인 보기**: 작업 시퀀스의 시각적 표현
+
+### 고급 기능
+
+Enterprise 플랫폼은 또한 다음을 제공합니다:
+
+- **환경 변수 관리**: API 키를 안전하게 저장 및 관리
+- **LLM 연결**: 다양한 LLM 공급자와의 통합 구성
+- **Custom Tools Repository**: 도구 생성, 공유 및 설치
+- **Crew Studio**: 코드를 작성하지 않고 채팅 인터페이스를 통해 crew 빌드
+
+## 배포 실패 문제 해결
+
+배포가 실패하면 다음과 같은 일반적인 문제를 확인하세요:
+
+### 빌드 실패
+
+#### uv.lock 파일 누락
+
+**증상**: 의존성 해결 오류와 함께 빌드 초기에 실패
+
+**해결책**: lock 파일을 생성하고 커밋합니다:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+<Warning>
+  `uv.lock` 파일은 모든 배포에 필수입니다. 이 파일이 없으면 플랫폼에서
+  의존성을 안정적으로 설치할 수 없습니다.
+</Warning>
+
+#### 잘못된 프로젝트 구조
+
+**증상**: "Could not find entry point" 또는 "Module not found" 오류
+
+**해결책**: 프로젝트가 예상 구조와 일치하는지 확인합니다:
+
+- **Crews와 Flows 모두**: 진입점이 `src/project_name/main.py`에 있어야 합니다
+- **Crews**: 진입점으로 `run()` 함수 사용
+- **Flows**: 진입점으로 `kickoff()` 함수 사용
+
+자세한 구조 다이어그램은 [배포 준비하기](/ko/enterprise/guides/prepare-for-deployment)를 참조하세요.
+
+#### CrewBase 데코레이터 누락
+
+**증상**: "Crew not found", "Config not found" 또는 agent/task 구성 오류
+
+**해결책**: **모든** crew 클래스가 `@CrewBase` 데코레이터를 사용하는지 확인합니다:
+
+```python
+from crewai.project import CrewBase, agent, crew, task
+
+@CrewBase  # 이 데코레이터는 필수입니다
+class YourCrew():
+    """Crew 설명"""
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    # ... 나머지 crew 정의
+```
+
+<Info>
+  이것은 독립 실행형 Crews와 Flow 프로젝트 내에 포함된 crews 모두에 적용됩니다.
+  모든 crew 클래스에 데코레이터가 필요합니다.
+</Info>
+
+#### 잘못된 pyproject.toml 타입
+
+**증상**: 빌드는 성공하지만 런타임에서 실패하거나 예상치 못한 동작
+
+**해결책**: `[tool.crewai]` 섹션이 프로젝트 유형과 일치하는지 확인합니다:
+
+```toml
+# Crew 프로젝트의 경우:
+[tool.crewai]
+type = "crew"
+
+# Flow 프로젝트의 경우:
+[tool.crewai]
+type = "flow"
+```
+
+### 런타임 실패
+
+#### LLM 연결 실패
+
+**증상**: API 키 오류, "model not found" 또는 인증 실패
+
+**해결책**:
+1. LLM 제공업체의 API 키가 환경 변수에 올바르게 설정되어 있는지 확인합니다
+2. 환경 변수 이름이 코드에서 예상하는 것과 일치하는지 확인합니다
+3. 배포 전에 동일한 환경 변수로 로컬에서 테스트합니다
+
+#### Crew 실행 오류
+
+**증상**: Crew가 시작되지만 실행 중에 실패
+
+**해결책**:
+1. AMP 대시보드에서 실행 로그를 확인합니다 (Traces 탭)
+2. 모든 도구에 필요한 API 키가 구성되어 있는지 확인합니다
+3. `agents.yaml`의 agent 구성이 유효한지 확인합니다
+4. `tasks.yaml`의 task 구성에 구문 오류가 없는지 확인합니다
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  배포 문제 또는 AMP 플랫폼에 대한 문의 사항이 있으시면 지원팀에 연락해 주세요.
+</Card>

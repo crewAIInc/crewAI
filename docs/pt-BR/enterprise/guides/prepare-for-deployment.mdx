@@ -1,0 +1,305 @@
+---
+title: "Preparar para Implantação"
+description: "Certifique-se de que seu Crew ou Flow está pronto para implantação no CrewAI AMP"
+icon: "clipboard-check"
+mode: "wide"
+---
+
+<Note>
+  Antes de implantar no CrewAI AMP, é crucial verificar se seu projeto está estruturado corretamente.
+  Tanto Crews quanto Flows podem ser implantados como "automações", mas eles têm estruturas de projeto
+  e requisitos diferentes que devem ser atendidos para uma implantação bem-sucedida.
+</Note>
+
+## Entendendo Automações
+
+No CrewAI AMP, **automações** é o termo geral para projetos de IA Agêntica implantáveis. Uma automação pode ser:
+
+- **Um Crew**: Uma equipe independente de agentes de IA trabalhando juntos em tarefas
+- **Um Flow**: Um workflow orquestrado que pode combinar múltiplos crews, chamadas diretas de LLM e lógica procedural
+
+Entender qual tipo você está implantando é essencial porque eles têm estruturas de projeto e pontos de entrada diferentes.
+
+## Crews vs Flows: Principais Diferenças
+
+<CardGroup cols={2}>
+  <Card title="Projetos Crew" icon="users">
+    Equipes de agentes de IA independentes com `crew.py` definindo agentes e tarefas. Ideal para tarefas focadas e colaborativas.
+  </Card>
+  <Card title="Projetos Flow" icon="diagram-project">
+    Workflows orquestrados com crews embutidos em uma pasta `crews/`. Ideal para processos complexos de múltiplas etapas.
+  </Card>
+</CardGroup>
+
+| Aspecto | Crew | Flow |
+|---------|------|------|
+| **Estrutura do projeto** | `src/project_name/` com `crew.py` | `src/project_name/` com pasta `crews/` |
+| **Localização da lógica principal** | `src/project_name/crew.py` | `src/project_name/main.py` (classe Flow) |
+| **Função de ponto de entrada** | `run()` em `main.py` | `kickoff()` em `main.py` |
+| **Tipo no pyproject.toml** | `type = "crew"` | `type = "flow"` |
+| **Comando CLI de criação** | `crewai create crew name` | `crewai create flow name` |
+| **Localização da configuração** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
+| **Pode conter outros crews** | Não | Sim (na pasta `crews/`) |
+
+## Referência de Estrutura de Projeto
+
+### Estrutura de Projeto Crew
+
+Quando você executa `crewai create crew my_crew`, você obtém esta estrutura:
+
+```
+my_crew/
+├── .gitignore
+├── pyproject.toml          # Deve ter type = "crew"
+├── README.md
+├── .env
+├── uv.lock                  # OBRIGATÓRIO para implantação
+└── src/
+    └── my_crew/
+        ├── __init__.py
+        ├── main.py          # Ponto de entrada com função run()
+        ├── crew.py          # Classe Crew com decorador @CrewBase
+        ├── tools/
+        │   ├── custom_tool.py
+        │   └── __init__.py
+        └── config/
+            ├── agents.yaml  # Definições de agentes
+            └── tasks.yaml   # Definições de tarefas
+```
+
+<Warning>
+  A estrutura aninhada `src/project_name/` é crítica para Crews.
+  Colocar arquivos no nível errado causará falhas na implantação.
+</Warning>
+
+### Estrutura de Projeto Flow
+
+Quando você executa `crewai create flow my_flow`, você obtém esta estrutura:
+
+```
+my_flow/
+├── .gitignore
+├── pyproject.toml          # Deve ter type = "flow"
+├── README.md
+├── .env
+├── uv.lock                  # OBRIGATÓRIO para implantação
+└── src/
+    └── my_flow/
+        ├── __init__.py
+        ├── main.py          # Ponto de entrada com função kickoff() + classe Flow
+        ├── crews/           # Pasta de crews embutidos
+        │   └── poem_crew/
+        │       ├── __init__.py
+        │       ├── poem_crew.py  # Crew com decorador @CrewBase
+        │       └── config/
+        │           ├── agents.yaml
+        │           └── tasks.yaml
+        └── tools/
+            ├── __init__.py
+            └── custom_tool.py
+```
+
+<Info>
+  Tanto Crews quanto Flows usam a estrutura `src/project_name/`.
+  A diferença chave é que Flows têm uma pasta `crews/` para crews embutidos,
+  enquanto Crews têm `crew.py` diretamente na pasta do projeto.
+</Info>
+
+## Checklist Pré-Implantação
+
+Use este checklist para verificar se seu projeto está pronto para implantação.
+
+### 1. Verificar Configuração do pyproject.toml
+
+Seu `pyproject.toml` deve incluir a seção `[tool.crewai]` correta:
+
+<Tabs>
+  <Tab title="Para Crews">
+    ```toml
+    [tool.crewai]
+    type = "crew"
+    ```
+  </Tab>
+  <Tab title="Para Flows">
+    ```toml
+    [tool.crewai]
+    type = "flow"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Se o `type` não corresponder à estrutura do seu projeto, o build falhará ou
+  a automação não funcionará corretamente.
+</Warning>
+
+### 2. Garantir que o Arquivo uv.lock Existe
+
+CrewAI usa `uv` para gerenciamento de dependências. O arquivo `uv.lock` garante builds reproduzíveis e é **obrigatório** para implantação.
+
+```bash
+# Gerar ou atualizar o arquivo lock
+uv lock
+
+# Verificar se existe
+ls -la uv.lock
+```
+
+Se o arquivo não existir, execute `uv lock` e faça commit no seu repositório:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+### 3. Validar Uso do Decorador CrewBase
+
+**Toda classe crew deve usar o decorador `@CrewBase`.** Isso se aplica a:
+
+- Projetos crew independentes
+- Crews embutidos dentro de projetos Flow
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase  # Este decorador é OBRIGATÓRIO
+class MyCrew():
+    """Descrição do meu crew"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def my_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['my_task']  # type: ignore[index]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+<Warning>
+  Se você esquecer o decorador `@CrewBase`, sua implantação falhará com
+  erros sobre configurações de agents ou tasks ausentes.
+</Warning>
+
+### 4. Verificar Pontos de Entrada do Projeto
+
+Tanto Crews quanto Flows têm seu ponto de entrada em `src/project_name/main.py`:
+
+<Tabs>
+  <Tab title="Para Crews">
+    O ponto de entrada usa uma função `run()`:
+
+    ```python
+    # src/my_crew/main.py
+    from my_crew.crew import MyCrew
+
+    def run():
+        """Executa o crew."""
+        inputs = {'topic': 'AI in Healthcare'}
+        result = MyCrew().crew().kickoff(inputs=inputs)
+        return result
+
+    if __name__ == "__main__":
+        run()
+    ```
+  </Tab>
+  <Tab title="Para Flows">
+    O ponto de entrada usa uma função `kickoff()` com uma classe Flow:
+
+    ```python
+    # src/my_flow/main.py
+    from crewai.flow import Flow, listen, start
+    from my_flow.crews.poem_crew.poem_crew import PoemCrew
+
+    class MyFlow(Flow):
+        @start()
+        def begin(self):
+            # Lógica do Flow aqui
+            result = PoemCrew().crew().kickoff(inputs={...})
+            return result
+
+    def kickoff():
+        """Executa o flow."""
+        MyFlow().kickoff()
+
+    if __name__ == "__main__":
+        kickoff()
+    ```
+  </Tab>
+</Tabs>
+
+### 5. Preparar Variáveis de Ambiente
+
+Antes da implantação, certifique-se de ter:
+
+1. **Chaves de API de LLM** prontas (OpenAI, Anthropic, Google, etc.)
+2. **Chaves de API de ferramentas** se estiver usando ferramentas externas (Serper, etc.)
+
+<Tip>
+  Teste seu projeto localmente com as mesmas variáveis de ambiente antes de implantar
+  para detectar problemas de configuração antecipadamente.
+</Tip>
+
+## Comandos de Validação Rápida
+
+Execute estes comandos a partir da raiz do seu projeto para verificar rapidamente sua configuração:
+
+```bash
+# 1. Verificar tipo do projeto no pyproject.toml
+grep -A2 "\[tool.crewai\]" pyproject.toml
+
+# 2. Verificar se uv.lock existe
+ls -la uv.lock || echo "ERRO: uv.lock ausente! Execute 'uv lock'"
+
+# 3. Verificar se estrutura src/ existe
+ls -la src/*/main.py 2>/dev/null || echo "Nenhum main.py encontrado em src/"
+
+# 4. Para Crews - verificar se crew.py existe
+ls -la src/*/crew.py 2>/dev/null || echo "Nenhum crew.py (esperado para Crews)"
+
+# 5. Para Flows - verificar se pasta crews/ existe
+ls -la src/*/crews/ 2>/dev/null || echo "Nenhuma pasta crews/ (esperado para Flows)"
+
+# 6. Verificar uso do CrewBase
+grep -r "@CrewBase" . --include="*.py"
+```
+
+## Erros Comuns de Configuração
+
+| Erro | Sintoma | Correção |
+|------|---------|----------|
+| `uv.lock` ausente | Build falha durante resolução de dependências | Execute `uv lock` e faça commit |
+| `type` errado no pyproject.toml | Build bem-sucedido mas falha em runtime | Altere para o tipo correto |
+| Decorador `@CrewBase` ausente | Erros "Config not found" | Adicione decorador a todas as classes crew |
+| Arquivos na raiz ao invés de `src/` | Ponto de entrada não encontrado | Mova para `src/project_name/` |
+| `run()` ou `kickoff()` ausente | Não é possível iniciar automação | Adicione a função de entrada correta |
+
+## Próximos Passos
+
+Uma vez que seu projeto passar por todos os itens do checklist, você está pronto para implantar:
+
+<Card title="Deploy para AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+  Siga o guia de implantação para implantar seu Crew ou Flow no CrewAI AMP usando
+  a CLI, interface web ou integração CI/CD.
+</Card>

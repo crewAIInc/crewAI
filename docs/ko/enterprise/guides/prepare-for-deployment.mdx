@@ -1,0 +1,305 @@
+---
+title: "배포 준비하기"
+description: "Crew 또는 Flow가 CrewAI AMP에 배포될 준비가 되었는지 확인하기"
+icon: "clipboard-check"
+mode: "wide"
+---
+
+<Note>
+  CrewAI AMP에 배포하기 전에, 프로젝트가 올바르게 구성되어 있는지 확인하는 것이 중요합니다.
+  Crews와 Flows 모두 "자동화"로 배포할 수 있지만, 성공적인 배포를 위해 충족해야 하는
+  서로 다른 프로젝트 구조와 요구 사항이 있습니다.
+</Note>
+
+## 자동화 이해하기
+
+CrewAI AMP에서 **자동화(automations)**는 배포 가능한 Agentic AI 프로젝트의 총칭입니다. 자동화는 다음 중 하나일 수 있습니다:
+
+- **Crew**: 작업을 함께 수행하는 AI 에이전트들의 독립 실행형 팀
+- **Flow**: 여러 crew, 직접 LLM 호출 및 절차적 로직을 결합할 수 있는 오케스트레이션된 워크플로우
+
+배포하는 유형을 이해하는 것은 프로젝트 구조와 진입점이 다르기 때문에 필수적입니다.
+
+## Crews vs Flows: 주요 차이점
+
+<CardGroup cols={2}>
+  <Card title="Crew 프로젝트" icon="users">
+    에이전트와 작업을 정의하는 `crew.py`가 있는 독립 실행형 AI 에이전트 팀. 집중적이고 협업적인 작업에 적합합니다.
+  </Card>
+  <Card title="Flow 프로젝트" icon="diagram-project">
+    `crews/` 폴더에 포함된 crew가 있는 오케스트레이션된 워크플로우. 복잡한 다단계 프로세스에 적합합니다.
+  </Card>
+</CardGroup>
+
+| 측면 | Crew | Flow |
+|------|------|------|
+| **프로젝트 구조** | `crew.py`가 있는 `src/project_name/` | `crews/` 폴더가 있는 `src/project_name/` |
+| **메인 로직 위치** | `src/project_name/crew.py` | `src/project_name/main.py` (Flow 클래스) |
+| **진입점 함수** | `main.py`의 `run()` | `main.py`의 `kickoff()` |
+| **pyproject.toml 타입** | `type = "crew"` | `type = "flow"` |
+| **CLI 생성 명령어** | `crewai create crew name` | `crewai create flow name` |
+| **설정 위치** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
+| **다른 crew 포함 가능** | 아니오 | 예 (`crews/` 폴더 내) |
+
+## 프로젝트 구조 참조
+
+### Crew 프로젝트 구조
+
+`crewai create crew my_crew`를 실행하면 다음 구조를 얻습니다:
+
+```
+my_crew/
+├── .gitignore
+├── pyproject.toml          # type = "crew"여야 함
+├── README.md
+├── .env
+├── uv.lock                  # 배포에 필수
+└── src/
+    └── my_crew/
+        ├── __init__.py
+        ├── main.py          # run() 함수가 있는 진입점
+        ├── crew.py          # @CrewBase 데코레이터가 있는 Crew 클래스
+        ├── tools/
+        │   ├── custom_tool.py
+        │   └── __init__.py
+        └── config/
+            ├── agents.yaml  # 에이전트 정의
+            └── tasks.yaml   # 작업 정의
+```
+
+<Warning>
+  중첩된 `src/project_name/` 구조는 Crews에 매우 중요합니다.
+  잘못된 레벨에 파일을 배치하면 배포 실패의 원인이 됩니다.
+</Warning>
+
+### Flow 프로젝트 구조
+
+`crewai create flow my_flow`를 실행하면 다음 구조를 얻습니다:
+
+```
+my_flow/
+├── .gitignore
+├── pyproject.toml          # type = "flow"여야 함
+├── README.md
+├── .env
+├── uv.lock                  # 배포에 필수
+└── src/
+    └── my_flow/
+        ├── __init__.py
+        ├── main.py          # kickoff() 함수 + Flow 클래스가 있는 진입점
+        ├── crews/           # 포함된 crews 폴더
+        │   └── poem_crew/
+        │       ├── __init__.py
+        │       ├── poem_crew.py  # @CrewBase 데코레이터가 있는 Crew
+        │       └── config/
+        │           ├── agents.yaml
+        │           └── tasks.yaml
+        └── tools/
+            ├── __init__.py
+            └── custom_tool.py
+```
+
+<Info>
+  Crews와 Flows 모두 `src/project_name/` 구조를 사용합니다.
+  핵심 차이점은 Flows는 포함된 crews를 위한 `crews/` 폴더가 있고,
+  Crews는 프로젝트 폴더에 직접 `crew.py`가 있다는 것입니다.
+</Info>
+
+## 배포 전 체크리스트
+
+이 체크리스트를 사용하여 프로젝트가 배포 준비가 되었는지 확인하세요.
+
+### 1. pyproject.toml 설정 확인
+
+`pyproject.toml`에 올바른 `[tool.crewai]` 섹션이 포함되어야 합니다:
+
+<Tabs>
+  <Tab title="Crews의 경우">
+    ```toml
+    [tool.crewai]
+    type = "crew"
+    ```
+  </Tab>
+  <Tab title="Flows의 경우">
+    ```toml
+    [tool.crewai]
+    type = "flow"
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  `type`이 프로젝트 구조와 일치하지 않으면 빌드가 실패하거나
+  자동화가 올바르게 실행되지 않습니다.
+</Warning>
+
+### 2. uv.lock 파일 존재 확인
+
+CrewAI는 의존성 관리를 위해 `uv`를 사용합니다. `uv.lock` 파일은 재현 가능한 빌드를 보장하며 배포에 **필수**입니다.
+
+```bash
+# lock 파일 생성 또는 업데이트
+uv lock
+
+# 존재 여부 확인
+ls -la uv.lock
+```
+
+파일이 존재하지 않으면 `uv lock`을 실행하고 저장소에 커밋하세요:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+### 3. CrewBase 데코레이터 사용 확인
+
+**모든 crew 클래스는 `@CrewBase` 데코레이터를 사용해야 합니다.** 이것은 다음에 적용됩니다:
+
+- 독립 실행형 crew 프로젝트
+- Flow 프로젝트 내에 포함된 crews
+
+```python
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from typing import List
+
+@CrewBase  # 이 데코레이터는 필수입니다
+class MyCrew():
+    """내 crew 설명"""
+
+    agents: List[BaseAgent]
+    tasks: List[Task]
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    @task
+    def my_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['my_task']  # type: ignore[index]
+        )
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+<Warning>
+  `@CrewBase` 데코레이터를 잊으면 에이전트나 작업 구성이 누락되었다는
+  오류와 함께 배포가 실패합니다.
+</Warning>
+
+### 4. 프로젝트 진입점 확인
+
+Crews와 Flows 모두 `src/project_name/main.py`에 진입점이 있습니다:
+
+<Tabs>
+  <Tab title="Crews의 경우">
+    진입점은 `run()` 함수를 사용합니다:
+
+    ```python
+    # src/my_crew/main.py
+    from my_crew.crew import MyCrew
+
+    def run():
+        """crew를 실행합니다."""
+        inputs = {'topic': 'AI in Healthcare'}
+        result = MyCrew().crew().kickoff(inputs=inputs)
+        return result
+
+    if __name__ == "__main__":
+        run()
+    ```
+  </Tab>
+  <Tab title="Flows의 경우">
+    진입점은 Flow 클래스와 함께 `kickoff()` 함수를 사용합니다:
+
+    ```python
+    # src/my_flow/main.py
+    from crewai.flow import Flow, listen, start
+    from my_flow.crews.poem_crew.poem_crew import PoemCrew
+
+    class MyFlow(Flow):
+        @start()
+        def begin(self):
+            # Flow 로직
+            result = PoemCrew().crew().kickoff(inputs={...})
+            return result
+
+    def kickoff():
+        """flow를 실행합니다."""
+        MyFlow().kickoff()
+
+    if __name__ == "__main__":
+        kickoff()
+    ```
+  </Tab>
+</Tabs>
+
+### 5. 환경 변수 준비
+
+배포 전에 다음을 준비해야 합니다:
+
+1. **LLM API 키** (OpenAI, Anthropic, Google 등)
+2. **도구 API 키** - 외부 도구를 사용하는 경우 (Serper 등)
+
+<Tip>
+  구성 문제를 조기에 발견하기 위해 배포 전에 동일한 환경 변수로
+  로컬에서 프로젝트를 테스트하세요.
+</Tip>
+
+## 빠른 검증 명령어
+
+프로젝트 루트에서 다음 명령어를 실행하여 설정을 빠르게 확인하세요:
+
+```bash
+# 1. pyproject.toml에서 프로젝트 타입 확인
+grep -A2 "\[tool.crewai\]" pyproject.toml
+
+# 2. uv.lock 존재 확인
+ls -la uv.lock || echo "오류: uv.lock이 없습니다! 'uv lock'을 실행하세요"
+
+# 3. src/ 구조 존재 확인
+ls -la src/*/main.py 2>/dev/null || echo "src/에서 main.py를 찾을 수 없습니다"
+
+# 4. Crews의 경우 - crew.py 존재 확인
+ls -la src/*/crew.py 2>/dev/null || echo "crew.py가 없습니다 (Crews에서 예상됨)"
+
+# 5. Flows의 경우 - crews/ 폴더 존재 확인
+ls -la src/*/crews/ 2>/dev/null || echo "crews/ 폴더가 없습니다 (Flows에서 예상됨)"
+
+# 6. CrewBase 사용 확인
+grep -r "@CrewBase" . --include="*.py"
+```
+
+## 일반적인 설정 실수
+
+| 실수 | 증상 | 해결 방법 |
+|------|------|----------|
+| `uv.lock` 누락 | 의존성 해결 중 빌드 실패 | `uv lock` 실행 후 커밋 |
+| pyproject.toml의 잘못된 `type` | 빌드 성공하지만 런타임 실패 | 올바른 타입으로 변경 |
+| `@CrewBase` 데코레이터 누락 | "Config not found" 오류 | 모든 crew 클래스에 데코레이터 추가 |
+| `src/` 대신 루트에 파일 배치 | 진입점을 찾을 수 없음 | `src/project_name/`으로 이동 |
+| `run()` 또는 `kickoff()` 누락 | 자동화를 시작할 수 없음 | 올바른 진입 함수 추가 |
+
+## 다음 단계
+
+프로젝트가 모든 체크리스트 항목을 통과하면 배포할 준비가 된 것입니다:
+
+<Card title="AMP에 배포하기" icon="rocket" href="/ko/enterprise/guides/deploy-to-amp">
+  CLI, 웹 인터페이스 또는 CI/CD 통합을 사용하여 Crew 또는 Flow를 CrewAI AMP에
+  배포하려면 배포 가이드를 따르세요.
+</Card>
