@@ -17,7 +17,6 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
 from typing_extensions import Self
 
-from crewai.a2a.config import A2AConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -73,9 +72,17 @@ from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_F
 from crewai.utilities.converter import Converter
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.prompts import Prompts
+from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+
+
+try:
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
+except ImportError:
+    A2AClientConfig = Any
+    A2AConfig = Any
+    A2AServerConfig = Any
 
 
 if TYPE_CHECKING:
@@ -218,9 +225,18 @@ class Agent(BaseAgent):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
-    a2a: list[A2AConfig] | A2AConfig | None = Field(
+    a2a: (
+        list[A2AConfig | A2AServerConfig | A2AClientConfig]
+        | A2AConfig
+        | A2AServerConfig
+        | A2AClientConfig
+        | None
+    ) = Field(
         default=None,
-        description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+        description="""
+        A2A (Agent-to-Agent) configuration for delegating tasks to remote agents.
+        Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
+        """,
     )
     executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
         default=CrewAgentExecutor,
@@ -733,7 +749,7 @@ class Agent(BaseAgent):
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,
+                tools=parsed_tools,  # type: ignore[arg-type]
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
@@ -742,7 +758,7 @@ class Agent(BaseAgent):
         else:
             self.agent_executor = self.executor_class(
                 llm=cast(BaseLLM, self.llm),
-                task=task,
+                task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
                 crew=self.crew,
@@ -765,11 +781,11 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list,
+        tools: list[BaseTool],
         raw_tools: list[BaseTool],
-        prompt: dict,
+        prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
-        rpm_limit_fn: Callable | None,
+        rpm_limit_fn: Callable | None,  # type: ignore[type-arg]
     ) -> None:
         """Update executor parameters without recreating instance.
 
