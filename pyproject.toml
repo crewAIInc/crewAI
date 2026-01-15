@@ -117,7 +117,7 @@ show_error_codes = true
 warn_unused_ignores = true
 python_version = "3.12"
 exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/ | ^lib/crewai/tests/ | ^lib/crewai-tools/tests/)"
-plugins = ["pydantic.mypy", "crewai.mypy"]
+plugins = ["pydantic.mypy"]
 
 
 [tool.bandit]
