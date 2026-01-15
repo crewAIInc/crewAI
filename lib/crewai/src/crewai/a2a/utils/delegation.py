@@ -1,16 +1,14 @@
-"""Utility functions for A2A (Agent-to-Agent) protocol delegation."""
+"""A2A delegation utilities for executing tasks on remote agents."""
 
 from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator, MutableMapping
 from contextlib import asynccontextmanager
-from functools import lru_cache
-import time
 from typing import TYPE_CHECKING, Any, Literal
 import uuid
 
-from a2a.client import A2AClientHTTPError, Client, ClientConfig, ClientFactory
+from a2a.client import Client, ClientConfig, ClientFactory
 from a2a.types import (
     AgentCard,
     Message,
@@ -19,19 +17,15 @@ from a2a.types import (
     Role,
     TextPart,
 )
-from aiocache import cached  # type: ignore[import-untyped]
-from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 import httpx
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel
 
 from crewai.a2a.auth.schemas import APIKeyAuth, HTTPDigestAuth
 from crewai.a2a.auth.utils import (
     _auth_store,
     configure_auth_client,
-    retry_on_401,
     validate_auth_against_agent_card,
 )
-from crewai.a2a.config import A2AConfig
 from crewai.a2a.task_helpers import TaskStateResult
 from crewai.a2a.types import (
     HANDLER_REGISTRY,
@@ -45,6 +39,7 @@ from crewai.a2a.updates import (
     StreamingHandler,
     UpdateConfig,
 )
+from crewai.a2a.utils.agent_card import _afetch_agent_card_cached
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
     A2AConversationStartedEvent,
@@ -52,7 +47,6 @@ from crewai.events.types.a2a_events import (
     A2ADelegationStartedEvent,
     A2AMessageSentEvent,
 )
-from crewai.types.utils import create_literals_from_strings
 
 
 if TYPE_CHECKING:
@@ -73,187 +67,6 @@ def get_handler(config: UpdateConfig | None) -> HandlerType:
     if config is None:
         return StreamingHandler
     return HANDLER_REGISTRY.get(type(config), StreamingHandler)
-
-
-@lru_cache()
-def _fetch_agent_card_cached(
-    endpoint: str,
-    auth_hash: int,
-    timeout: int,
-    _ttl_hash: int,
-) -> AgentCard:
-    """Cached sync version of fetch_agent_card."""
-    auth = _auth_store.get(auth_hash)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(
-            _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
-        )
-    finally:
-        loop.close()
-
-
-def fetch_agent_card(
-    endpoint: str,
-    auth: AuthScheme | None = None,
-    timeout: int = 30,
-    use_cache: bool = True,
-    cache_ttl: int = 300,
-) -> AgentCard:
-    """Fetch AgentCard from an A2A endpoint with optional caching.
-
-    Args:
-        endpoint: A2A agent endpoint URL (AgentCard URL)
-        auth: Optional AuthScheme for authentication
-        timeout: Request timeout in seconds
-        use_cache: Whether to use caching (default True)
-        cache_ttl: Cache TTL in seconds (default 300 = 5 minutes)
-
-    Returns:
-        AgentCard object with agent capabilities and skills
-
-    Raises:
-        httpx.HTTPStatusError: If the request fails
-        A2AClientHTTPError: If authentication fails
-    """
-    if use_cache:
-        if auth:
-            auth_data = auth.model_dump_json(
-                exclude={
-                    "_access_token",
-                    "_token_expires_at",
-                    "_refresh_token",
-                    "_authorization_callback",
-                }
-            )
-            auth_hash = hash((type(auth).__name__, auth_data))
-        else:
-            auth_hash = 0
-        _auth_store[auth_hash] = auth
-        ttl_hash = int(time.time() // cache_ttl)
-        return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        return loop.run_until_complete(
-            afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
-        )
-    finally:
-        loop.close()
-
-
-async def afetch_agent_card(
-    endpoint: str,
-    auth: AuthScheme | None = None,
-    timeout: int = 30,
-    use_cache: bool = True,
-) -> AgentCard:
-    """Fetch AgentCard from an A2A endpoint asynchronously.
-
-    Native async implementation. Use this when running in an async context.
-
-    Args:
-        endpoint: A2A agent endpoint URL (AgentCard URL).
-        auth: Optional AuthScheme for authentication.
-        timeout: Request timeout in seconds.
-        use_cache: Whether to use caching (default True).
-
-    Returns:
-        AgentCard object with agent capabilities and skills.
-
-    Raises:
-        httpx.HTTPStatusError: If the request fails.
-        A2AClientHTTPError: If authentication fails.
-    """
-    if use_cache:
-        if auth:
-            auth_data = auth.model_dump_json(
-                exclude={
-                    "_access_token",
-                    "_token_expires_at",
-                    "_refresh_token",
-                    "_authorization_callback",
-                }
-            )
-            auth_hash = hash((type(auth).__name__, auth_data))
-        else:
-            auth_hash = 0
-        _auth_store[auth_hash] = auth
-        agent_card: AgentCard = await _afetch_agent_card_cached(
-            endpoint, auth_hash, timeout
-        )
-        return agent_card
-
-    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
-
-
-@cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
-async def _afetch_agent_card_cached(
-    endpoint: str,
-    auth_hash: int,
-    timeout: int,
-) -> AgentCard:
-    """Cached async implementation of AgentCard fetching."""
-    auth = _auth_store.get(auth_hash)
-    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
-
-
-async def _afetch_agent_card_impl(
-    endpoint: str,
-    auth: AuthScheme | None,
-    timeout: int,
-) -> AgentCard:
-    """Internal async implementation of AgentCard fetching."""
-    if "/.well-known/agent-card.json" in endpoint:
-        base_url = endpoint.replace("/.well-known/agent-card.json", "")
-        agent_card_path = "/.well-known/agent-card.json"
-    else:
-        url_parts = endpoint.split("/", 3)
-        base_url = f"{url_parts[0]}//{url_parts[2]}"
-        agent_card_path = f"/{url_parts[3]}" if len(url_parts) > 3 else "/"
-
-    headers: MutableMapping[str, str] = {}
-    if auth:
-        async with httpx.AsyncClient(timeout=timeout) as temp_auth_client:
-            if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
-                configure_auth_client(auth, temp_auth_client)
-            headers = await auth.apply_auth(temp_auth_client, {})
-
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as temp_client:
-        if auth and isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
-            configure_auth_client(auth, temp_client)
-
-        agent_card_url = f"{base_url}{agent_card_path}"
-
-        async def _fetch_agent_card_request() -> httpx.Response:
-            return await temp_client.get(agent_card_url)
-
-        try:
-            response = await retry_on_401(
-                request_func=_fetch_agent_card_request,
-                auth_scheme=auth,
-                client=temp_client,
-                headers=temp_client.headers,
-                max_retries=2,
-            )
-            response.raise_for_status()
-
-            return AgentCard.model_validate(response.json())
-
-        except httpx.HTTPStatusError as e:
-            if e.response.status_code == 401:
-                error_details = ["Authentication failed"]
-                www_auth = e.response.headers.get("WWW-Authenticate")
-                if www_auth:
-                    error_details.append(f"WWW-Authenticate: {www_auth}")
-                if not auth:
-                    error_details.append("No auth scheme provided")
-                msg = " | ".join(error_details)
-                raise A2AClientHTTPError(401, msg) from e
-            raise
 
 
 def execute_a2a_delegation(
@@ -644,19 +457,18 @@ async def _create_a2a_client(
     """Create and configure an A2A client.
 
     Args:
-        agent_card: The A2A agent card
-        transport_protocol: Transport protocol to use
-        timeout: Request timeout in seconds
-        headers: HTTP headers (already with auth applied)
-        streaming: Enable streaming responses
-        auth: Optional AuthScheme for client configuration
-        use_polling: Enable polling mode
-        push_notification_config: Optional push notification config to include in requests
+        agent_card: The A2A agent card.
+        transport_protocol: Transport protocol to use.
+        timeout: Request timeout in seconds.
+        headers: HTTP headers (already with auth applied).
+        streaming: Enable streaming responses.
+        auth: Optional AuthScheme for client configuration.
+        use_polling: Enable polling mode.
+        push_notification_config: Optional push notification config.
 
     Yields:
-        Configured A2A client instance
+        Configured A2A client instance.
     """
-
     async with httpx.AsyncClient(
         timeout=timeout,
         headers=headers,
@@ -687,78 +499,3 @@ async def _create_a2a_client(
         factory = ClientFactory(config)
         client = factory.create(agent_card)
         yield client
-
-
-def create_agent_response_model(agent_ids: tuple[str, ...]) -> type[BaseModel]:
-    """Create a dynamic AgentResponse model with Literal types for agent IDs.
-
-    Args:
-        agent_ids: List of available A2A agent IDs
-
-    Returns:
-        Dynamically created Pydantic model with Literal-constrained a2a_ids field
-    """
-
-    DynamicLiteral = create_literals_from_strings(agent_ids)  # noqa: N806
-
-    return create_model(
-        "AgentResponse",
-        a2a_ids=(
-            tuple[DynamicLiteral, ...],  # type: ignore[valid-type]
-            Field(
-                default_factory=tuple,
-                max_length=len(agent_ids),
-                description="A2A agent IDs to delegate to.",
-            ),
-        ),
-        message=(
-            str,
-            Field(
-                description="The message content. If is_a2a=true, this is sent to the A2A agent. If is_a2a=false, this is your final answer ending the conversation."
-            ),
-        ),
-        is_a2a=(
-            bool,
-            Field(
-                description="Set to false when the remote agent has answered your question - extract their answer and return it as your final message. Set to true ONLY if you need to ask a NEW, DIFFERENT question. NEVER repeat the same request - if the conversation history shows the agent already answered, set is_a2a=false immediately."
-            ),
-        ),
-        __base__=BaseModel,
-    )
-
-
-def extract_a2a_agent_ids_from_config(
-    a2a_config: list[A2AConfig] | A2AConfig | None,
-) -> tuple[list[A2AConfig], tuple[str, ...]]:
-    """Extract A2A agent IDs from A2A configuration.
-
-    Args:
-        a2a_config: A2A configuration
-
-    Returns:
-        List of A2A agent IDs
-    """
-    if a2a_config is None:
-        return [], ()
-
-    if isinstance(a2a_config, A2AConfig):
-        a2a_agents = [a2a_config]
-    else:
-        a2a_agents = a2a_config
-    return a2a_agents, tuple(config.endpoint for config in a2a_agents)
-
-
-def get_a2a_agents_and_response_model(
-    a2a_config: list[A2AConfig] | A2AConfig | None,
-) -> tuple[list[A2AConfig], type[BaseModel]]:
-    """Get A2A agent IDs and response model.
-
-    Args:
-        a2a_config: A2A configuration
-
-    Returns:
-        Tuple of A2A agent IDs and response model
-    """
-    a2a_agents, agent_ids = extract_a2a_agent_ids_from_config(a2a_config=a2a_config)
-
-    return a2a_agents, create_agent_response_model(agent_ids)
