@@ -207,11 +207,20 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     `.env` 파일에 API 키를 설정하십시오. 키가 필요하거나 기존 키를 찾으려면 [AI Studio](https://aistudio.google.com/apikey)를 확인하세요.
 
     ```toml .env
-    # https://ai.google.dev/gemini-api/docs/api-key
+    # Gemini API 사용 시 (다음 중 하나)
+    GOOGLE_API_KEY=<your-api-key>
     GEMINI_API_KEY=<your-api-key>
+
+    # Vertex AI Express 모드 사용 시 (API 키 인증)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # Vertex AI 서비스 계정 사용 시
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # 기본값: us-central1
     ```
 
-    CrewAI 프로젝트에서의 예시 사용법:
+    **기본 사용법:**
     ```python Code
     from crewai import LLM
 
@@ -220,6 +229,34 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
         temperature=0.7,
     )
     ```
+
+    **Vertex AI Express 모드 (API 키 인증):**
+
+    Vertex AI Express 모드를 사용하면 서비스 계정 자격 증명 대신 간단한 API 키 인증으로 Vertex AI를 사용할 수 있습니다. Vertex AI를 시작하는 가장 빠른 방법입니다.
+
+    Express 모드를 활성화하려면 `.env` 파일에 두 환경 변수를 모두 설정하세요:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    그런 다음 평소처럼 LLM을 사용하세요:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Express 모드 API 키를 받으려면:
+      - 신규 Google Cloud 사용자: [Express 모드 API 키](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey) 받기
+      - 기존 Google Cloud 사용자: [서비스 계정에 바인딩된 Google Cloud API 키](https://cloud.google.com/docs/authentication/api-keys) 받기
+      
+      자세한 내용은 [Vertex AI Express 모드 문서](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)를 참조하세요.
+    </Info>
 
     ### Gemini 모델
 
