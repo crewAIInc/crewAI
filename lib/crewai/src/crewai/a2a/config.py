@@ -34,6 +34,7 @@ except ImportError:
     AgentProvider = Any
     SecurityScheme = Any
     AgentSkill = Any
+    UpdateConfig = Any  # type: ignore[misc,assignment]
 
 
 def _get_default_update_config() -> UpdateConfig:
