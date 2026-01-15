@@ -79,7 +79,7 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
 
     # Configuração avançada com parâmetros detalhados
     llm = LLM(
-        model="openai/gpt-4", 
+        model="openai/gpt-4",
         temperature=0.8,
         max_tokens=150,
         top_p=0.9,
@@ -254,7 +254,7 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
       Para obter uma chave de API do Express mode:
       - Novos usuários do Google Cloud: Obtenha uma [chave de API do Express mode](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
       - Usuários existentes do Google Cloud: Obtenha uma [chave de API do Google Cloud vinculada a uma conta de serviço](https://cloud.google.com/docs/authentication/api-keys)
-      
+
       Para mais detalhes, consulte a [documentação do Vertex AI Express mode](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
     </Info>
 
@@ -860,7 +860,7 @@ Saiba como obter o máximo da configuração do seu LLM:
       Lembre-se de monitorar regularmente o uso de tokens e ajustar suas configurações para otimizar custos e desempenho.
     </Info>
   </Accordion>
-  
+
   <Accordion title="Descartar Parâmetros Adicionais">
     O CrewAI usa Litellm internamente para chamadas LLM, permitindo descartar parâmetros adicionais desnecessários para seu caso de uso. Isso pode simplificar seu código e reduzir a complexidade da configuração do LLM.
     Por exemplo, se não precisar enviar o parâmetro <code>stop</code>, basta omiti-lo na chamada do LLM:
