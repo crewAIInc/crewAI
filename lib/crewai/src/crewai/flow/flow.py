@@ -1522,11 +1522,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     if self.last_human_feedback is not None
                     else result
                 )
-                tasks = [
-                    self._execute_single_listener(listener_name, listener_result)
-                    for listener_name in listeners_for_result
-                ]
-                await asyncio.gather(*tasks)
+                # Execute listeners sequentially to prevent race conditions on shared state
+                for listener_name in listeners_for_result:
+                    await self._execute_single_listener(listener_name, listener_result)
         else:
             await self._execute_listeners(start_method_name, result)
 
@@ -1595,12 +1593,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if asyncio.iscoroutinefunction(method):
                 result = await method(*args, **kwargs)
             else:
+                # Run sync methods in thread pool for isolation
+                # This allows Agent.kickoff() to work synchronously inside Flow methods
                 import contextvars
 
                 ctx = contextvars.copy_context()
                 result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
 
-            # Auto-await coroutines from sync methods (still useful for explicit coroutine returns)
+            # Auto-await coroutines returned from sync methods (enables AgentExecutor pattern)
             if asyncio.iscoroutine(result):
                 result = await result
 
@@ -1749,11 +1749,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     listener_result = router_result_to_feedback.get(
                         str(current_trigger), result
                     )
-                    tasks = [
-                        self._execute_single_listener(listener_name, listener_result)
-                        for listener_name in listeners_triggered
-                    ]
-                    await asyncio.gather(*tasks)
+                    # Execute listeners sequentially to prevent race conditions on shared state
+                    for listener_name in listeners_triggered:
+                        await self._execute_single_listener(
+                            listener_name, listener_result
+                        )
 
                 if current_trigger in router_results:
                     # Find start methods triggered by this router result
@@ -1969,11 +1969,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         if self.last_human_feedback is not None
                         else listener_result
                     )
-                    tasks = [
-                        self._execute_single_listener(name, feedback_result)
-                        for name in listeners_for_result
-                    ]
-                    await asyncio.gather(*tasks)
+                    # Execute listeners sequentially to prevent race conditions on shared state
+                    for name in listeners_for_result:
+                        await self._execute_single_listener(name, feedback_result)
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow

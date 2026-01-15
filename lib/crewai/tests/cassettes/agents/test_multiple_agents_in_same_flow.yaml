@@ -47,16 +47,15 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy7awLGYnYfpKGEeRhKlU90FltH7L\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768444910,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-CyRKzgODZ9yn3F9OkaXsscLk2Ln3N\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768520801,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-        Answer: Hello and welcome! It's wonderful to see you here. I hope you're having
-        a fantastic day. If there's anything you need or if you have any questions,
-        feel free to ask. I'm here to help and make your experience enjoyable!\",\n
-        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        127,\n    \"completion_tokens\": 57,\n    \"total_tokens\": 184,\n    \"prompt_tokens_details\":
+        Answer: Hello! Welcome! I'm so glad to see you here. If you need any assistance
+        or have any questions, feel free to ask. Have a wonderful day!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        127,\n    \"completion_tokens\": 43,\n    \"total_tokens\": 170,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -69,7 +68,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 02:41:51 GMT
+      - Thu, 15 Jan 2026 23:46:42 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -87,17 +86,17 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '1074'
+      - '990'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1019'
+      - '880'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1242'
+      - '1160'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -165,18 +164,18 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy7ayZre6crr19UyujJE9YbNxDndk\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768444912,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-CyRL1Ua2PkK5xXPp3KeF0AnGAk3JP\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768520803,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-        Answer: As we conclude our conversation, I just want to take a moment to express
-        my heartfelt gratitude for your time and engagement. It has been a pleasure
-        interacting with you. I wish you all the best in your future endeavors. May
-        your path ahead be filled with success and happiness. Farewell, and until
-        we meet again!\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 126,\n    \"completion_tokens\":
-        75,\n    \"total_tokens\": 201,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        Answer: As we reach the end of our conversation, I want to express my gratitude
+        for the time we've shared. It's been a pleasure assisting you, and I hope
+        you found our interaction helpful and enjoyable. Remember, whenever you need
+        assistance, I'm just a message away. Wishing you all the best in your future
+        endeavors. Goodbye and take care!\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 126,\n    \"completion_tokens\":
+        79,\n    \"total_tokens\": 205,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -189,7 +188,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 02:41:53 GMT
+      - Thu, 15 Jan 2026 23:46:44 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -207,17 +206,17 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '1169'
+      - '1189'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1298'
+      - '1363'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1550'
+      - '1605'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
