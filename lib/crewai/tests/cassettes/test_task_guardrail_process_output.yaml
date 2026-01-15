@@ -1,5 +1,141 @@
 interactions:
 - request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: \\n        Ensure
+      the following task result complies with the given guardrail.\\n\\n        Task
+      result:\\n        \\n        Lorem Ipsum is simply dummy text of the printing
+      and typesetting industry. Lorem Ipsum has been the industry's standard dummy
+      text ever\\n        \\n\\n        Guardrail:\\n        Ensure the result has
+      less than 10 words\\n\\n        Your task:\\n        - Confirm if the Task result
+      complies with the guardrail.\\n        - If not, provide clear feedback explaining
+      what is wrong (e.g., by how much it violates the rule, or what specific part
+      fails).\\n        - Focus only on identifying issues \u2014 do not propose corrections.\\n
+      \       - If the Task result complies with the guardrail, saying that is valid\\n
+      \       \\n\\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\\n\\nThought:\"}],\"model\":\"gpt-4o\"}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1467'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Cy7yHRYTZi8yzRbcODnKr92keLKCb\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768446357,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The task result provided has more than
+        10 words. I will count the words to verify this.\\n\\nThe task result is the
+        following text:\\n\\\"Lorem Ipsum is simply dummy text of the printing and
+        typesetting industry. Lorem Ipsum has been the industry's standard dummy text
+        ever\\\"\\n\\nCounting the words:\\n\\n1. Lorem \\n2. Ipsum \\n3. is \\n4.
+        simply \\n5. dummy \\n6. text \\n7. of \\n8. the \\n9. printing \\n10. and
+        \\n11. typesetting \\n12. industry. \\n13. Lorem \\n14. Ipsum \\n15. has \\n16.
+        been \\n17. the \\n18. industry's \\n19. standard \\n20. dummy \\n21. text
+        \\n22. ever\\n\\nThe total word count is 22.\\n\\nThought: I now can give
+        a great answer\\nFinal Answer: The task result does not comply with the guardrail.
+        It contains 22 words, which exceeds the limit of 10 words.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        285,\n    \"completion_tokens\": 195,\n    \"total_tokens\": 480,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 15 Jan 2026 03:05:59 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '1557'
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2130'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2147'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
     body: '{"messages":[{"role":"system","content":"Ensure your final answer strictly
       adheres to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
       {\n    \"name\": \"LLMGuardrailResult\",\n    \"strict\": true,\n    \"schema\":
@@ -13,8 +149,8 @@ interactions:
       \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
       false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
       Ensure the final output does not include any code block markers like ```json
-      or ```python."},{"role":"user","content":"{\"valid\":false,\"feedback\":\"The
-      task result contains more than 10 words. Specifically, it has 24 words.\"}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      or ```python."},{"role":"user","content":"The task result does not comply with
+      the guardrail. It contains 22 words, which exceeds the limit of 10 words."}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
       the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
       feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
@@ -60,14 +196,14 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy5UxZ7PQkv5X90uKpxCSTKfmOMng\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768436851,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-Cy7yJiPCk4fXuogyT5e8XeGRLCSf8\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768446359,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"valid\\\":false,\\\"feedback\\\":\\\"The
-        task result contains more than 10 words. Specifically, it has 24 words.\\\"}\",\n
+        task output exceeds the word limit of 10 words by containing 22 words.\\\"}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        363,\n    \"completion_tokens\": 26,\n    \"total_tokens\": 389,\n    \"prompt_tokens_details\":
+        363,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 388,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -80,7 +216,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:27:32 GMT
+      - Thu, 15 Jan 2026 03:05:59 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -96,17 +232,154 @@ interactions:
       cf-cache-status:
       - DYNAMIC
       content-length:
-      - '914'
+      - '913'
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '993'
+      - '488'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1014'
+      - '507'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Guardrail Agent.
+      You are a expert at validating the output of a task. By providing effective
+      feedback if the output is not valid.\\nYour personal goal is: Validate the output
+      of the task\\nTo give my best complete final answer to the task respond using
+      the exact following format:\\n\\nThought: I now can give a great answer\\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\\n\\nI MUST use these formats, my job depends
+      on it!\"},{\"role\":\"user\",\"content\":\"\\nCurrent Task: \\n        Ensure
+      the following task result complies with the given guardrail.\\n\\n        Task
+      result:\\n        \\n        Lorem Ipsum is simply dummy text of the printing
+      and typesetting industry. Lorem Ipsum has been the industry's standard dummy
+      text ever\\n        \\n\\n        Guardrail:\\n        Ensure the result has
+      less than 500 words\\n\\n        Your task:\\n        - Confirm if the Task
+      result complies with the guardrail.\\n        - If not, provide clear feedback
+      explaining what is wrong (e.g., by how much it violates the rule, or what specific
+      part fails).\\n        - Focus only on identifying issues \u2014 do not propose
+      corrections.\\n        - If the Task result complies with the guardrail, saying
+      that is valid\\n        \\n\\nBegin! This is VERY important to you, use the
+      tools available and give your best Final Answer, your job depends on it!\\n\\nThought:\"}],\"model\":\"gpt-4o\"}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1468'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-Cy7yKa0rmi2YoTLpyXt9hjeLt2rTI\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768446360,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"First, I'll count the number of words
+        in the Task result to ensure it complies with the guardrail. \\n\\nThe Task
+        result is: \\\"Lorem Ipsum is simply dummy text of the printing and typesetting
+        industry. Lorem Ipsum has been the industry's standard dummy text ever.\\\"\\n\\nBy
+        counting the words: \\n1. Lorem\\n2. Ipsum\\n3. is\\n4. simply\\n5. dummy\\n6.
+        text\\n7. of\\n8. the\\n9. printing\\n10. and\\n11. typesetting\\n12. industry\\n13.
+        Lorem\\n14. Ipsum\\n15. has\\n16. been\\n17. the\\n18. industry's\\n19. standard\\n20.
+        dummy\\n21. text\\n22. ever\\n\\nThere are 22 words total in the Task result.\\n\\nI
+        need to verify if the count of 22 words is less than the guardrail limit of
+        500 words.\\n\\nThought: I now can give a great answer\\nFinal Answer: The
+        Task result complies with the guardrail as it contains 22 words, which is
+        less than the 500-word limit. Therefore, the output is valid.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        285,\n    \"completion_tokens\": 227,\n    \"total_tokens\": 512,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 15 Jan 2026 03:06:02 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      content-length:
+      - '1668'
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2502'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2522'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -140,7 +413,9 @@ interactions:
       \"LLMGuardrailResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
       false\n    }\n  }\n}\n\nDo not include the OpenAPI schema in the final output.
       Ensure the final output does not include any code block markers like ```json
-      or ```python."},{"role":"user","content":"{\"valid\":true,\"feedback\":null}"}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
+      or ```python."},{"role":"user","content":"The Task result complies with the
+      guardrail as it contains 22 words, which is less than the 500-word limit. Therefore,
+      the output is valid."}],"model":"gpt-4o","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"valid":{"description":"Whether
       the task output complies with the guardrail","title":"Valid","type":"boolean"},"feedback":{"anyOf":[{"type":"string"},{"type":"null"}],"description":"A
       feedback about the task output if it is not valid","title":"Feedback"}},"required":["valid","feedback"],"title":"LLMGuardrailResult","type":"object","additionalProperties":false},"name":"LLMGuardrailResult","strict":true}},"stream":false}'
     headers:
@@ -155,7 +430,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1759'
+      - '1864'
       content-type:
       - application/json
       cookie:
@@ -186,13 +461,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-Cy5UzjLkbVZHlwyGGpbwO6KTz1C8U\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1768436853,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-Cy7yMAjNYSCz2foZPEcSVCuapzF8y\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768446362,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"valid\\\":true,\\\"feedback\\\":null}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        346,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 355,\n    \"prompt_tokens_details\":
+        369,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 378,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -205,7 +480,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 15 Jan 2026 00:27:33 GMT
+      - Thu, 15 Jan 2026 03:06:03 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -225,13 +500,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '238'
+      - '413'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '253'
+      - '650'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
