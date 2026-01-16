@@ -168,7 +168,10 @@ def execute_a2a_delegation(
             )
         )
     finally:
-        loop.close()
+        try:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        finally:
+            loop.close()
 
 
 async def aexecute_a2a_delegation(
