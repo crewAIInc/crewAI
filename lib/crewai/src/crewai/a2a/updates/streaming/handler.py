@@ -26,7 +26,13 @@ from crewai.a2a.task_helpers import (
 )
 from crewai.a2a.updates.base import StreamingHandlerKwargs
 from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.a2a_events import A2AResponseReceivedEvent
+from crewai.events.types.a2a_events import (
+    A2AArtifactReceivedEvent,
+    A2AConnectionErrorEvent,
+    A2AResponseReceivedEvent,
+    A2AStreamingChunkEvent,
+    A2AStreamingStartedEvent,
+)
 
 
 class StreamingHandler:
@@ -57,10 +63,31 @@ class StreamingHandler:
         turn_number = kwargs.get("turn_number", 0)
         is_multiturn = kwargs.get("is_multiturn", False)
         agent_role = kwargs.get("agent_role")
+        endpoint = kwargs.get("endpoint")
+        a2a_agent_name = kwargs.get("a2a_agent_name")
+        from_task = kwargs.get("from_task")
+        from_agent = kwargs.get("from_agent")
+        agent_branch = kwargs.get("agent_branch")
 
         result_parts: list[str] = []
         final_result: TaskStateResult | None = None
         event_stream = client.send_message(message)
+        chunk_index = 0
+
+        crewai_event_bus.emit(
+            agent_branch,
+            A2AStreamingStartedEvent(
+                task_id=task_id,
+                context_id=context_id,
+                endpoint=endpoint or "",
+                a2a_agent_name=a2a_agent_name,
+                turn_number=turn_number,
+                is_multiturn=is_multiturn,
+                agent_role=agent_role,
+                from_task=from_task,
+                from_agent=from_agent,
+            ),
+        )
 
         try:
             async for event in event_stream:
@@ -70,6 +97,22 @@ class StreamingHandler:
                         if part.root.kind == "text":
                             text = part.root.text
                             result_parts.append(text)
+                            crewai_event_bus.emit(
+                                agent_branch,
+                                A2AStreamingChunkEvent(
+                                    task_id=task_id,
+                                    context_id=context_id,
+                                    chunk=text,
+                                    chunk_index=chunk_index,
+                                    endpoint=endpoint,
+                                    a2a_agent_name=a2a_agent_name,
+                                    turn_number=turn_number,
+                                    is_multiturn=is_multiturn,
+                                    from_task=from_task,
+                                    from_agent=from_agent,
+                                ),
+                            )
+                            chunk_index += 1
 
                 elif isinstance(event, tuple):
                     a2a_task, update = event
@@ -80,6 +123,36 @@ class StreamingHandler:
                             part.root.text
                             for part in artifact.parts
                             if part.root.kind == "text"
+                        )
+                        artifact_size = None
+                        if artifact.parts:
+                            artifact_size = sum(
+                                len(p.root.text.encode("utf-8"))
+                                if p.root.kind == "text"
+                                else len(getattr(p.root, "data", b""))
+                                for p in artifact.parts
+                            )
+                        crewai_event_bus.emit(
+                            agent_branch,
+                            A2AArtifactReceivedEvent(
+                                task_id=a2a_task.id,
+                                artifact_id=artifact.artifact_id,
+                                artifact_name=artifact.name,
+                                artifact_description=artifact.description,
+                                mime_type=artifact.parts[0].root.kind
+                                if artifact.parts
+                                else None,
+                                size_bytes=artifact_size,
+                                append=update.append or False,
+                                last_chunk=update.last_chunk or False,
+                                endpoint=endpoint,
+                                a2a_agent_name=a2a_agent_name,
+                                context_id=context_id,
+                                turn_number=turn_number,
+                                is_multiturn=is_multiturn,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            ),
                         )
 
                     is_final_update = False
@@ -101,6 +174,11 @@ class StreamingHandler:
                         is_multiturn=is_multiturn,
                         agent_role=agent_role,
                         result_parts=result_parts,
+                        endpoint=endpoint,
+                        a2a_agent_name=a2a_agent_name,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        is_final=is_final_update,
                     )
                     if final_result:
                         break
@@ -118,13 +196,82 @@ class StreamingHandler:
             new_messages.append(error_message)
 
             crewai_event_bus.emit(
-                None,
+                agent_branch,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint or "",
+                    error=str(e),
+                    error_type="http_error",
+                    status_code=e.status_code,
+                    a2a_agent_name=a2a_agent_name,
+                    operation="streaming",
+                    context_id=context_id,
+                    task_id=task_id,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
+            crewai_event_bus.emit(
+                agent_branch,
                 A2AResponseReceivedEvent(
                     response=error_msg,
                     turn_number=turn_number,
+                    context_id=context_id,
                     is_multiturn=is_multiturn,
                     status="failed",
+                    final=True,
                     agent_role=agent_role,
+                    endpoint=endpoint,
+                    a2a_agent_name=a2a_agent_name,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
+            return TaskStateResult(
+                status=TaskState.failed,
+                error=error_msg,
+                history=new_messages,
+            )
+
+        except Exception as e:
+            error_msg = f"Unexpected error during streaming: {e!s}"
+
+            error_message = Message(
+                role=Role.agent,
+                message_id=str(uuid.uuid4()),
+                parts=[Part(root=TextPart(text=error_msg))],
+                context_id=context_id,
+                task_id=task_id,
+            )
+            new_messages.append(error_message)
+
+            crewai_event_bus.emit(
+                agent_branch,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint or "",
+                    error=str(e),
+                    error_type="unexpected_error",
+                    a2a_agent_name=a2a_agent_name,
+                    operation="streaming",
+                    context_id=context_id,
+                    task_id=task_id,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
+            crewai_event_bus.emit(
+                agent_branch,
+                A2AResponseReceivedEvent(
+                    response=error_msg,
+                    turn_number=turn_number,
+                    context_id=context_id,
+                    is_multiturn=is_multiturn,
+                    status="failed",
+                    final=True,
+                    agent_role=agent_role,
+                    endpoint=endpoint,
+                    a2a_agent_name=a2a_agent_name,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 ),
             )
             return TaskStateResult(
@@ -136,7 +283,23 @@ class StreamingHandler:
         finally:
             aclose = getattr(event_stream, "aclose", None)
             if aclose:
-                await aclose()
+                try:
+                    await aclose()
+                except Exception as close_error:
+                    crewai_event_bus.emit(
+                        agent_branch,
+                        A2AConnectionErrorEvent(
+                            endpoint=endpoint or "",
+                            error=str(close_error),
+                            error_type="stream_close_error",
+                            a2a_agent_name=a2a_agent_name,
+                            operation="stream_close",
+                            context_id=context_id,
+                            task_id=task_id,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        ),
+                    )
 
         if final_result:
             return final_result
@@ -145,5 +308,5 @@ class StreamingHandler:
             status=TaskState.completed,
             result=" ".join(result_parts) if result_parts else "",
             history=new_messages,
-            agent_card=agent_card,
+            agent_card=agent_card.model_dump(exclude_none=True),
         )

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import Callable, Coroutine
+from datetime import datetime
 from functools import wraps
 import logging
 import os
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
+from urllib.parse import urlparse
 
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
@@ -45,7 +48,14 @@ T = TypeVar("T")
 
 
 def _parse_redis_url(url: str) -> dict[str, Any]:
-    from urllib.parse import urlparse
+    """Parse a Redis URL into aiocache configuration.
+
+    Args:
+        url: Redis connection URL (e.g., redis://localhost:6379/0).
+
+    Returns:
+        Configuration dict for aiocache.RedisCache.
+    """
 
     parsed = urlparse(url)
     config: dict[str, Any] = {
@@ -127,7 +137,7 @@ def cancellable(
                 async for message in pubsub.listen():
                     if message["type"] == "message":
                         return True
-            except Exception as e:
+            except (OSError, ConnectionError) as e:
                 logger.warning("Cancel watcher error for task_id=%s: %s", task_id, e)
                 return await poll_for_cancel()
             return False
@@ -183,7 +193,12 @@ async def execute(
         msg = "task_id and context_id are required"
         crewai_event_bus.emit(
             agent,
-            A2AServerTaskFailedEvent(a2a_task_id="", a2a_context_id="", error=msg),
+            A2AServerTaskFailedEvent(
+                task_id="",
+                context_id="",
+                error=msg,
+                from_agent=agent,
+            ),
         )
         raise ServerError(InvalidParamsError(message=msg)) from None
 
@@ -195,7 +210,12 @@ async def execute(
 
     crewai_event_bus.emit(
         agent,
-        A2AServerTaskStartedEvent(a2a_task_id=task_id, a2a_context_id=context_id),
+        A2AServerTaskStartedEvent(
+            task_id=task_id,
+            context_id=context_id,
+            from_task=task,
+            from_agent=agent,
+        ),
     )
 
     try:
@@ -215,20 +235,33 @@ async def execute(
         crewai_event_bus.emit(
             agent,
             A2AServerTaskCompletedEvent(
-                a2a_task_id=task_id, a2a_context_id=context_id, result=str(result)
+                task_id=task_id,
+                context_id=context_id,
+                result=str(result),
+                from_task=task,
+                from_agent=agent,
             ),
         )
     except asyncio.CancelledError:
         crewai_event_bus.emit(
             agent,
-            A2AServerTaskCanceledEvent(a2a_task_id=task_id, a2a_context_id=context_id),
+            A2AServerTaskCanceledEvent(
+                task_id=task_id,
+                context_id=context_id,
+                from_task=task,
+                from_agent=agent,
+            ),
         )
         raise
     except Exception as e:
         crewai_event_bus.emit(
             agent,
             A2AServerTaskFailedEvent(
-                a2a_task_id=task_id, a2a_context_id=context_id, error=str(e)
+                task_id=task_id,
+                context_id=context_id,
+                error=str(e),
+                from_task=task,
+                from_agent=agent,
             ),
         )
         raise ServerError(
@@ -282,3 +315,85 @@ async def cancel(
         context.current_task.status = TaskStatus(state=TaskState.canceled)
         return context.current_task
     return None
+
+
+def list_tasks(
+    tasks: list[A2ATask],
+    context_id: str | None = None,
+    status: TaskState | None = None,
+    status_timestamp_after: datetime | None = None,
+    page_size: int = 50,
+    page_token: str | None = None,
+    history_length: int | None = None,
+    include_artifacts: bool = False,
+) -> tuple[list[A2ATask], str | None, int]:
+    """Filter and paginate A2A tasks.
+
+    Provides filtering by context, status, and timestamp, along with
+    cursor-based pagination. This is a pure utility function that operates
+    on an in-memory list of tasks - storage retrieval is handled separately.
+
+    Args:
+        tasks: All tasks to filter.
+        context_id: Filter by context ID to get tasks in a conversation.
+        status: Filter by task state (e.g., completed, working).
+        status_timestamp_after: Filter to tasks updated after this time.
+        page_size: Maximum tasks per page (default 50).
+        page_token: Base64-encoded cursor from previous response.
+        history_length: Limit history messages per task (None = full history).
+        include_artifacts: Whether to include task artifacts (default False).
+
+    Returns:
+        Tuple of (filtered_tasks, next_page_token, total_count).
+        - filtered_tasks: Tasks matching filters, paginated and trimmed.
+        - next_page_token: Token for next page, or None if no more pages.
+        - total_count: Total number of tasks matching filters (before pagination).
+    """
+    filtered: list[A2ATask] = []
+    for task in tasks:
+        if context_id and task.context_id != context_id:
+            continue
+        if status and task.status.state != status:
+            continue
+        if status_timestamp_after and task.status.timestamp:
+            ts = datetime.fromisoformat(task.status.timestamp.replace("Z", "+00:00"))
+            if ts <= status_timestamp_after:
+                continue
+        filtered.append(task)
+
+    def get_timestamp(t: A2ATask) -> datetime:
+        """Extract timestamp from task status for sorting."""
+        if t.status.timestamp is None:
+            return datetime.min
+        return datetime.fromisoformat(t.status.timestamp.replace("Z", "+00:00"))
+
+    filtered.sort(key=get_timestamp, reverse=True)
+    total = len(filtered)
+
+    start = 0
+    if page_token:
+        try:
+            cursor_id = base64.b64decode(page_token).decode()
+            for idx, task in enumerate(filtered):
+                if task.id == cursor_id:
+                    start = idx + 1
+                    break
+        except (ValueError, UnicodeDecodeError):
+            pass
+
+    page = filtered[start : start + page_size]
+
+    result: list[A2ATask] = []
+    for task in page:
+        task = task.model_copy(deep=True)
+        if history_length is not None and task.history:
+            task.history = task.history[-history_length:]
+        if not include_artifacts:
+            task.artifacts = None
+        result.append(task)
+
+    next_token: str | None = None
+    if result and len(result) == page_size:
+        next_token = base64.b64encode(result[-1].id.encode()).decode()
+
+    return result, next_token, total

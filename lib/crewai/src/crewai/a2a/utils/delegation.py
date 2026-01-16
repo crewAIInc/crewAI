@@ -88,6 +88,9 @@ def execute_a2a_delegation(
     response_model: type[BaseModel] | None = None,
     turn_number: int | None = None,
     updates: UpdateConfig | None = None,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    skill_id: str | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent synchronously.
 
@@ -129,6 +132,9 @@ def execute_a2a_delegation(
         response_model: Optional Pydantic model for structured outputs.
         turn_number: Optional turn number for multi-turn conversations.
         updates: Update mechanism config from A2AConfig.updates.
+        from_task: Optional CrewAI Task object for event metadata.
+        from_agent: Optional CrewAI Agent object for event metadata.
+        skill_id: Optional skill ID to target a specific agent capability.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -156,6 +162,9 @@ def execute_a2a_delegation(
                 transport_protocol=transport_protocol,
                 turn_number=turn_number,
                 updates=updates,
+                from_task=from_task,
+                from_agent=from_agent,
+                skill_id=skill_id,
             )
         )
     finally:
@@ -181,6 +190,9 @@ async def aexecute_a2a_delegation(
     response_model: type[BaseModel] | None = None,
     turn_number: int | None = None,
     updates: UpdateConfig | None = None,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    skill_id: str | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent asynchronously.
 
@@ -222,6 +234,9 @@ async def aexecute_a2a_delegation(
         response_model: Optional Pydantic model for structured outputs.
         turn_number: Optional turn number for multi-turn conversations.
         updates: Update mechanism config from A2AConfig.updates.
+        from_task: Optional CrewAI Task object for event metadata.
+        from_agent: Optional CrewAI Agent object for event metadata.
+        skill_id: Optional skill ID to target a specific agent capability.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -232,17 +247,6 @@ async def aexecute_a2a_delegation(
     is_multiturn = len(conversation_history) > 0
     if turn_number is None:
         turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
-
-    crewai_event_bus.emit(
-        agent_branch,
-        A2ADelegationStartedEvent(
-            endpoint=endpoint,
-            task_description=task_description,
-            agent_id=agent_id,
-            is_multiturn=is_multiturn,
-            turn_number=turn_number,
-        ),
-    )
 
     result = await _aexecute_a2a_delegation_impl(
         endpoint=endpoint,
@@ -264,15 +268,28 @@ async def aexecute_a2a_delegation(
         response_model=response_model,
         updates=updates,
         transport_protocol=transport_protocol,
+        from_task=from_task,
+        from_agent=from_agent,
+        skill_id=skill_id,
     )
 
+    agent_card_data: dict[str, Any] = result.get("agent_card") or {}
     crewai_event_bus.emit(
         agent_branch,
         A2ADelegationCompletedEvent(
             status=result["status"],
             result=result.get("result"),
             error=result.get("error"),
+            context_id=context_id,
             is_multiturn=is_multiturn,
+            endpoint=endpoint,
+            a2a_agent_name=result.get("a2a_agent_name"),
+            agent_card=agent_card_data,
+            provider=agent_card_data.get("provider"),
+            metadata=metadata,
+            extensions=list(extensions.keys()) if extensions else None,
+            from_task=from_task,
+            from_agent=from_agent,
         ),
     )
 
@@ -299,6 +316,9 @@ async def _aexecute_a2a_delegation_impl(
     agent_role: str | None,
     response_model: type[BaseModel] | None,
     updates: UpdateConfig | None,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    skill_id: str | None = None,
 ) -> TaskStateResult:
     """Internal async implementation of A2A delegation."""
     if auth:
@@ -331,6 +351,28 @@ async def _aexecute_a2a_delegation_impl(
     if agent_card.name:
         a2a_agent_name = agent_card.name
 
+    agent_card_dict = agent_card.model_dump(exclude_none=True)
+    crewai_event_bus.emit(
+        agent_branch,
+        A2ADelegationStartedEvent(
+            endpoint=endpoint,
+            task_description=task_description,
+            agent_id=agent_id or endpoint,
+            context_id=context_id,
+            is_multiturn=is_multiturn,
+            turn_number=turn_number,
+            a2a_agent_name=a2a_agent_name,
+            agent_card=agent_card_dict,
+            protocol_version=agent_card.protocol_version,
+            provider=agent_card_dict.get("provider"),
+            skill_id=skill_id,
+            metadata=metadata,
+            extensions=list(extensions.keys()) if extensions else None,
+            from_task=from_task,
+            from_agent=from_agent,
+        ),
+    )
+
     if turn_number == 1:
         agent_id_for_event = agent_id or endpoint
         crewai_event_bus.emit(
@@ -338,7 +380,17 @@ async def _aexecute_a2a_delegation_impl(
             A2AConversationStartedEvent(
                 agent_id=agent_id_for_event,
                 endpoint=endpoint,
+                context_id=context_id,
                 a2a_agent_name=a2a_agent_name,
+                agent_card=agent_card_dict,
+                protocol_version=agent_card.protocol_version,
+                provider=agent_card_dict.get("provider"),
+                skill_id=skill_id,
+                reference_task_ids=reference_task_ids,
+                metadata=metadata,
+                extensions=list(extensions.keys()) if extensions else None,
+                from_task=from_task,
+                from_agent=from_agent,
             ),
         )
 
@@ -364,6 +416,10 @@ async def _aexecute_a2a_delegation_impl(
             }
         )
 
+    message_metadata = metadata.copy() if metadata else {}
+    if skill_id:
+        message_metadata["skill_id"] = skill_id
+
     message = Message(
         role=Role.user,
         message_id=str(uuid.uuid4()),
@@ -371,7 +427,7 @@ async def _aexecute_a2a_delegation_impl(
         context_id=context_id,
         task_id=task_id,
         reference_task_ids=reference_task_ids,
-        metadata=metadata,
+        metadata=message_metadata if message_metadata else None,
         extensions=extensions,
     )
 
@@ -381,8 +437,17 @@ async def _aexecute_a2a_delegation_impl(
         A2AMessageSentEvent(
             message=message_text,
             turn_number=turn_number,
+            context_id=context_id,
+            message_id=message.message_id,
             is_multiturn=is_multiturn,
             agent_role=agent_role,
+            endpoint=endpoint,
+            a2a_agent_name=a2a_agent_name,
+            skill_id=skill_id,
+            metadata=message_metadata if message_metadata else None,
+            extensions=list(extensions.keys()) if extensions else None,
+            from_task=from_task,
+            from_agent=from_agent,
         ),
     )
 
@@ -397,6 +462,9 @@ async def _aexecute_a2a_delegation_impl(
         "task_id": task_id,
         "endpoint": endpoint,
         "agent_branch": agent_branch,
+        "a2a_agent_name": a2a_agent_name,
+        "from_task": from_task,
+        "from_agent": from_agent,
     }
 
     if isinstance(updates, PollingConfig):
@@ -434,13 +502,16 @@ async def _aexecute_a2a_delegation_impl(
         use_polling=use_polling,
         push_notification_config=push_config_for_client,
     ) as client:
-        return await handler.execute(
+        result = await handler.execute(
             client=client,
             message=message,
             new_messages=new_messages,
             agent_card=agent_card,
             **handler_kwargs,
         )
+        result["a2a_agent_name"] = a2a_agent_name
+        result["agent_card"] = agent_card.model_dump(exclude_none=True)
+        return result
 
 
 @asynccontextmanager
