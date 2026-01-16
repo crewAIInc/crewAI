@@ -196,6 +196,7 @@ class PushNotificationHandler:
                 from_agent=from_agent,
                 endpoint=endpoint,
                 a2a_agent_name=a2a_agent_name,
+                context_id=context_id,
             )
 
             if not isinstance(result_or_task_id, str):

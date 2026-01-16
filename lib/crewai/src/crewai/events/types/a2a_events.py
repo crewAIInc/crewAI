@@ -624,3 +624,33 @@ class A2AServerTaskFailedEvent(A2AEventBase):
     context_id: str
     error: str
     metadata: dict[str, Any] | None = None
+
+
+class A2AParallelDelegationStartedEvent(A2AEventBase):
+    """Event emitted when parallel delegation to multiple A2A agents begins.
+
+    Attributes:
+        endpoints: List of A2A agent endpoints being delegated to.
+        task_description: Description of the task being delegated.
+    """
+
+    type: str = "a2a_parallel_delegation_started"
+    endpoints: list[str]
+    task_description: str
+
+
+class A2AParallelDelegationCompletedEvent(A2AEventBase):
+    """Event emitted when parallel delegation to multiple A2A agents completes.
+
+    Attributes:
+        endpoints: List of A2A agent endpoints that were delegated to.
+        success_count: Number of successful delegations.
+        failure_count: Number of failed delegations.
+        results: Summary of results from each agent.
+    """
+
+    type: str = "a2a_parallel_delegation_completed"
+    endpoints: list[str]
+    success_count: int
+    failure_count: int
+    results: dict[str, str] | None = None

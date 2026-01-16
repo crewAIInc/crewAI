@@ -164,12 +164,11 @@ def process_task_state(
     Returns:
         Result dictionary if terminal/actionable state, None otherwise.
     """
-    should_extract = result_parts is None
     if result_parts is None:
         result_parts = []
 
     if a2a_task.status.state == TaskState.completed:
-        if should_extract:
+        if not result_parts:
             extracted_parts = extract_task_result_parts(a2a_task)
             result_parts.extend(extracted_parts)
         if a2a_task.history:
@@ -287,6 +286,7 @@ async def send_message_and_get_task_id(
     from_agent: Any | None = None,
     endpoint: str | None = None,
     a2a_agent_name: str | None = None,
+    context_id: str | None = None,
 ) -> str | TaskStateResult:
     """Send message and process initial response.
 
@@ -305,6 +305,7 @@ async def send_message_and_get_task_id(
         from_agent: Optional CrewAI Agent object for event metadata.
         endpoint: Optional A2A endpoint URL.
         a2a_agent_name: Optional A2A agent name.
+        context_id: Optional A2A context ID for correlation.
 
     Returns:
         Task ID string if agent needs polling/waiting, or TaskStateResult if done.
@@ -377,6 +378,7 @@ async def send_message_and_get_task_id(
             role=Role.agent,
             message_id=str(uuid.uuid4()),
             parts=[Part(root=TextPart(text=error_msg))],
+            context_id=context_id,
         )
         new_messages.append(error_message)
 
@@ -389,6 +391,7 @@ async def send_message_and_get_task_id(
                 status_code=e.status_code,
                 a2a_agent_name=a2a_agent_name,
                 operation="send_message",
+                context_id=context_id,
                 from_task=from_task,
                 from_agent=from_agent,
             ),
@@ -398,6 +401,7 @@ async def send_message_and_get_task_id(
             A2AResponseReceivedEvent(
                 response=error_msg,
                 turn_number=turn_number,
+                context_id=context_id,
                 is_multiturn=is_multiturn,
                 status="failed",
                 final=True,
@@ -421,6 +425,7 @@ async def send_message_and_get_task_id(
             role=Role.agent,
             message_id=str(uuid.uuid4()),
             parts=[Part(root=TextPart(text=error_msg))],
+            context_id=context_id,
         )
         new_messages.append(error_message)
 
@@ -432,6 +437,7 @@ async def send_message_and_get_task_id(
                 error_type="unexpected_error",
                 a2a_agent_name=a2a_agent_name,
                 operation="send_message",
+                context_id=context_id,
                 from_task=from_task,
                 from_agent=from_agent,
             ),
@@ -441,6 +447,7 @@ async def send_message_and_get_task_id(
             A2AResponseReceivedEvent(
                 response=error_msg,
                 turn_number=turn_number,
+                context_id=context_id,
                 is_multiturn=is_multiturn,
                 status="failed",
                 final=True,

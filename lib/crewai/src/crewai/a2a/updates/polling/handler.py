@@ -88,11 +88,12 @@ async def _poll_task_until_complete(
         )
 
         elapsed = time.monotonic() - start_time
+        effective_context_id = task.context_id or context_id
         crewai_event_bus.emit(
             agent_branch,
             A2APollingStatusEvent(
                 task_id=task_id,
-                context_id=context_id,
+                context_id=effective_context_id,
                 state=str(task.status.state.value) if task.status.state else "unknown",
                 elapsed_seconds=elapsed,
                 poll_count=poll_count,
@@ -169,6 +170,7 @@ class PollingHandler:
                 from_agent=from_agent,
                 endpoint=endpoint,
                 a2a_agent_name=a2a_agent_name,
+                context_id=context_id,
             )
 
             if not isinstance(result_or_task_id, str):

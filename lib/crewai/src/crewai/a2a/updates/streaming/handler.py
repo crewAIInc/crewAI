@@ -93,6 +93,7 @@ class StreamingHandler:
             async for event in event_stream:
                 if isinstance(event, Message):
                     new_messages.append(event)
+                    message_context_id = event.context_id or context_id
                     for part in event.parts:
                         if part.root.kind == "text":
                             text = part.root.text
@@ -100,8 +101,8 @@ class StreamingHandler:
                             crewai_event_bus.emit(
                                 agent_branch,
                                 A2AStreamingChunkEvent(
-                                    task_id=task_id,
-                                    context_id=context_id,
+                                    task_id=event.task_id or task_id,
+                                    context_id=message_context_id,
                                     chunk=text,
                                     chunk_index=chunk_index,
                                     endpoint=endpoint,
@@ -132,6 +133,7 @@ class StreamingHandler:
                                 else len(getattr(p.root, "data", b""))
                                 for p in artifact.parts
                             )
+                        effective_context_id = a2a_task.context_id or context_id
                         crewai_event_bus.emit(
                             agent_branch,
                             A2AArtifactReceivedEvent(
@@ -147,7 +149,7 @@ class StreamingHandler:
                                 last_chunk=update.last_chunk or False,
                                 endpoint=endpoint,
                                 a2a_agent_name=a2a_agent_name,
-                                context_id=context_id,
+                                context_id=effective_context_id,
                                 turn_number=turn_number,
                                 is_multiturn=is_multiturn,
                                 from_task=from_task,
@@ -158,6 +160,16 @@ class StreamingHandler:
                     is_final_update = False
                     if isinstance(update, TaskStatusUpdateEvent):
                         is_final_update = update.final
+                        if (
+                            update.status
+                            and update.status.message
+                            and update.status.message.parts
+                        ):
+                            result_parts.extend(
+                                part.root.text
+                                for part in update.status.message.parts
+                                if part.root.kind == "text" and part.root.text
+                            )
 
                     if (
                         not is_final_update

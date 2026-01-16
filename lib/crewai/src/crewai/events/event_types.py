@@ -8,6 +8,8 @@ from crewai.events.types.a2a_events import (
     A2ADelegationCompletedEvent,
     A2ADelegationStartedEvent,
     A2AMessageSentEvent,
+    A2AParallelDelegationCompletedEvent,
+    A2AParallelDelegationStartedEvent,
     A2APollingStartedEvent,
     A2APollingStatusEvent,
     A2APushNotificationReceivedEvent,
@@ -122,6 +124,8 @@ EventTypes = (
     | A2AServerTaskStartedEvent
     | A2AStreamingChunkEvent
     | A2AStreamingStartedEvent
+    | A2AParallelDelegationStartedEvent
+    | A2AParallelDelegationCompletedEvent
     | CrewKickoffStartedEvent
     | CrewKickoffCompletedEvent
     | CrewKickoffFailedEvent
