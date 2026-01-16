@@ -245,6 +245,9 @@ async def _afetch_agent_card_impl(
             return agent_card
 
         except httpx.HTTPStatusError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            response_body = e.response.text[:1000] if e.response.text else None
+
             if e.response.status_code == 401:
                 error_details = ["Authentication failed"]
                 www_auth = e.response.headers.get("WWW-Authenticate")
@@ -262,6 +265,12 @@ async def _afetch_agent_card_impl(
                         auth_type=auth_type,
                         error=msg,
                         status_code=401,
+                        metadata={
+                            "elapsed_ms": elapsed_ms,
+                            "response_body": response_body,
+                            "www_authenticate": www_auth,
+                            "request_url": str(e.request.url),
+                        },
                     ),
                 )
 
@@ -275,11 +284,17 @@ async def _afetch_agent_card_impl(
                     error_type="http_error",
                     status_code=e.response.status_code,
                     operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "response_body": response_body,
+                        "request_url": str(e.request.url),
+                    },
                 ),
             )
             raise
 
         except httpx.TimeoutException as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
             crewai_event_bus.emit(
                 None,
                 A2AConnectionErrorEvent(
@@ -287,11 +302,17 @@ async def _afetch_agent_card_impl(
                     error=str(e),
                     error_type="timeout",
                     operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "timeout_config": timeout,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
                 ),
             )
             raise
 
         except httpx.ConnectError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
             crewai_event_bus.emit(
                 None,
                 A2AConnectionErrorEvent(
@@ -299,11 +320,16 @@ async def _afetch_agent_card_impl(
                     error=str(e),
                     error_type="connection_error",
                     operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
                 ),
             )
             raise
 
         except httpx.RequestError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
             crewai_event_bus.emit(
                 None,
                 A2AConnectionErrorEvent(
@@ -311,6 +337,10 @@ async def _afetch_agent_card_impl(
                     error=str(e),
                     error_type="request_error",
                     operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
                 ),
             )
             raise
