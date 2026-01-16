@@ -219,6 +219,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         formatted_answer = None
+        last_raw_output: str | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
@@ -244,6 +245,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
+                last_raw_output = answer
                 if self.response_model is not None:
                     try:
                         self.response_model.model_validate_json(answer)
@@ -300,6 +302,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    raw_output=last_raw_output,
+                    agent_role=self.agent.role if self.agent else None,
                 )
 
             except Exception as e:
@@ -386,6 +390,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             Final answer from the agent.
         """
         formatted_answer = None
+        last_raw_output: str | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
@@ -411,6 +416,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
+                last_raw_output = answer
 
                 if self.response_model is not None:
                     try:
@@ -467,6 +473,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    raw_output=last_raw_output,
+                    agent_role=self.agent.role if self.agent else None,
                 )
 
             except Exception as e:

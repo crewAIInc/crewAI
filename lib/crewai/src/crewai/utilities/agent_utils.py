@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
@@ -50,6 +51,8 @@ class SummaryContent(TypedDict):
 
 
 console = Console()
+
+logger = logging.getLogger(__name__)
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
 
@@ -430,6 +433,8 @@ def handle_output_parser_exception(
     iterations: int,
     log_error_after: int = 3,
     printer: Printer | None = None,
+    raw_output: str | None = None,
+    agent_role: str | None = None,
 ) -> AgentAction:
     """Handle OutputParserError by updating messages and formatted_answer.
 
@@ -439,6 +444,8 @@ def handle_output_parser_exception(
         iterations: Current iteration count
         log_error_after: Number of iterations after which to log errors
         printer: Optional printer instance for logging
+        raw_output: The raw LLM output that failed to parse
+        agent_role: The role of the agent for logging context
 
     Returns:
         AgentAction: A formatted answer with the error
@@ -451,6 +458,27 @@ def handle_output_parser_exception(
         tool_input="",
         thought="",
     )
+
+    retry_count = iterations + 1
+    agent_context = f" for agent '{agent_role}'" if agent_role else ""
+
+    logger.debug(
+        "Parse failed%s: %s",
+        agent_context,
+        e.error.split("\n")[0],
+    )
+
+    if raw_output is not None:
+        truncated_output = (
+            raw_output[:500] + "..." if len(raw_output) > 500 else raw_output
+        )
+        logger.debug(
+            "Raw output (truncated)%s: %s",
+            agent_context,
+            truncated_output.replace("\n", "\\n"),
+        )
+
+    logger.debug("Retry %d initiated%s", retry_count, agent_context)
 
     if iterations > log_error_after and printer:
         printer.print(

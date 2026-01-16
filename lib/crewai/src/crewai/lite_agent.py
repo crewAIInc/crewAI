@@ -533,6 +533,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         """
         # Execute the agent loop
         formatted_answer: AgentAction | AgentFinish | None = None
+        last_raw_output: str | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self._iterations, self.max_iterations):
@@ -556,6 +557,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         from_agent=self,
                         executor_context=self,
                     )
+                    last_raw_output = answer
 
                 except Exception as e:
                     raise e
@@ -594,6 +596,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                     iterations=self._iterations,
                     log_error_after=3,
                     printer=self._printer,
+                    raw_output=last_raw_output,
+                    agent_role=self.role,
                 )
 
             except Exception as e:
