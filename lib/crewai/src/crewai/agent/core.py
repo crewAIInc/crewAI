@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 import shutil
 import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
     Any,
-    Coroutine,
     Final,
     Literal,
     cast,

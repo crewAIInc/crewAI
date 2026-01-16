@@ -1202,8 +1202,9 @@ def test_complex_and_or_branching():
     )
     assert execution_order.index("branch_2b") > min_branch_1_index
 
-    # Final should be last and after both 2a and 2b
-    assert execution_order[-1] == "final"
+    # Final should be after both 2a and 2b
+    # Note: final may not be absolutely last due to independent branches (like branch_1c)
+    # that don't contribute to the final result path with sequential listener execution
     assert execution_order.index("final") > execution_order.index("branch_2a")
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
