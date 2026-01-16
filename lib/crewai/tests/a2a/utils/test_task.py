@@ -26,9 +26,13 @@ def mock_agent() -> MagicMock:
 
 
 @pytest.fixture
-def mock_task() -> MagicMock:
+def mock_task(mock_context: MagicMock) -> MagicMock:
     """Create a mock Task."""
-    return MagicMock()
+    task = MagicMock()
+    task.id = mock_context.task_id
+    task.name = "Mock Task"
+    task.description = "Mock task description"
+    return task
 
 
 @pytest.fixture
