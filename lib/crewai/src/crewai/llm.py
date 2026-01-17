@@ -308,6 +308,7 @@ DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 8192
 CONTEXT_WINDOW_USAGE_RATIO: Final[float] = 0.85
 SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "openai",
+    "openai_responses",
     "anthropic",
     "claude",
     "azure",
@@ -367,6 +368,7 @@ class LLM(BaseLLM):
 
             provider_mapping = {
                 "openai": "openai",
+                "openai_responses": "openai_responses",
                 "anthropic": "anthropic",
                 "claude": "anthropic",
                 "azure": "azure",
@@ -440,6 +442,13 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
             )
 
+        if provider == "openai_responses":
+            # Responses API supports GPT-4o and o-series models
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["gpt-4o", "gpt-4.1", "o1", "o3", "o4"]
+            )
+
         if provider == "anthropic" or provider == "claude":
             return any(
                 model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
@@ -479,6 +488,13 @@ class LLM(BaseLLM):
         """
         if provider == "openai" and model in OPENAI_MODELS:
             return True
+
+        if provider == "openai_responses":
+            # Responses API supports subset of OpenAI models
+            responses_models = {"gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1", "o1-mini", "o1-preview", "o3", "o3-mini", "o4-mini"}
+            if model in responses_models or cls._matches_provider_pattern(model, provider):
+                return True
+            return False
 
         if (
             provider == "anthropic" or provider == "claude"
@@ -536,6 +552,13 @@ class LLM(BaseLLM):
             from crewai.llms.providers.openai.completion import OpenAICompletion
 
             return OpenAICompletion
+
+        if provider == "openai_responses":
+            from crewai.llms.providers.openai_responses.completion import (
+                OpenAIResponsesCompletion,
+            )
+
+            return OpenAIResponsesCompletion
 
         if provider == "anthropic" or provider == "claude":
             from crewai.llms.providers.anthropic.completion import (
