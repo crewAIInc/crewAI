@@ -1,4 +1,4 @@
-"""Tests for OpenAI Responses API provider."""
+"""Tests for OpenAI Responses API via api='responses'."""
 
 import sys
 import types
@@ -12,31 +12,28 @@ from crewai.llms.providers.openai_responses.completion import (
 )
 
 
-def test_openai_responses_completion_is_used_when_provider_specified():
+def test_responses_completion_is_used_with_api_flag():
     """
-    Test that OpenAIResponsesCompletion is used when provider='openai_responses'
+    OpenAIResponsesCompletion should be used when provider='openai' and api='responses'
     """
-    llm = LLM(model="gpt-4o", provider="openai_responses")
+    llm = LLM(model="gpt-4o", provider="openai", api="responses")
 
     assert llm.__class__.__name__ == "OpenAIResponsesCompletion"
     assert llm.provider == "openai_responses"
     assert llm.model == "gpt-4o"
 
 
-def test_openai_responses_completion_is_used_with_model_prefix():
+def test_model_prefix_responses_is_rejected():
     """
-    Test that OpenAIResponsesCompletion is used when model has openai_responses/ prefix
+    Model prefix 'openai_responses/' is not supported and should raise.
     """
-    llm = LLM(model="openai_responses/gpt-4o")
-
-    assert isinstance(llm, OpenAIResponsesCompletion)
-    assert llm.provider == "openai_responses"
-    assert llm.model == "gpt-4o"
+    with pytest.raises(ValueError):
+        LLM(model="openai_responses/gpt-4o")
 
 
-def test_openai_responses_completion_module_is_imported():
+def test_responses_completion_module_is_imported():
     """
-    Test that the completion module is properly imported when using openai_responses provider
+    The completion module should be imported when using api='responses'.
     """
     module_name = "crewai.llms.providers.openai_responses.completion"
 
@@ -45,7 +42,7 @@ def test_openai_responses_completion_module_is_imported():
         del sys.modules[module_name]
 
     # Create LLM instance - this should trigger the import
-    LLM(model="gpt-4o", provider="openai_responses")
+    LLM(model="gpt-4o", provider="openai", api="responses")
 
     # Verify the module was imported
     assert module_name in sys.modules
@@ -56,13 +53,14 @@ def test_openai_responses_completion_module_is_imported():
     assert hasattr(completion_mod, "OpenAIResponsesCompletion")
 
 
-def test_openai_responses_completion_initialization_parameters():
+def test_responses_completion_initialization_parameters():
     """
     Test that OpenAIResponsesCompletion is initialized with correct parameters
     """
     llm = LLM(
         model="gpt-4o",
-        provider="openai_responses",
+        provider="openai",
+        api="responses",
         temperature=0.7,
         max_output_tokens=1000,
         api_key="test-key",
@@ -80,7 +78,8 @@ def test_openai_responses_completion_with_reasoning_effort():
     """
     llm = LLM(
         model="o3-mini",
-        provider="openai_responses",
+        provider="openai",
+        api="responses",
         reasoning_effort="high",
     )
 
@@ -94,7 +93,7 @@ def test_openai_responses_completion_call():
     """
     Test that OpenAIResponsesCompletion call method works
     """
-    llm = LLM(model="gpt-4o", provider="openai_responses")
+    llm = LLM(model="gpt-4o", provider="openai", api="responses")
 
     # Mock the call method on the instance
     with patch.object(llm, "call", return_value="Hello! I'm ready to help.") as mock_call:
@@ -248,7 +247,7 @@ def test_openai_responses_raises_error_when_initialization_fails():
         mock_get_provider.return_value = FailingCompletion
 
         with pytest.raises(ImportError) as excinfo:
-            LLM(model="gpt-4o", provider="openai_responses")
+            LLM(model="gpt-4o", provider="openai", api="responses")
 
         assert "Error importing native provider" in str(excinfo.value)
         assert "Native SDK failed" in str(excinfo.value)

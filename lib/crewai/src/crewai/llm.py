@@ -346,29 +346,55 @@ class LLM(BaseLLM):
     def __new__(cls, model: str, is_litellm: bool = False, **kwargs: Any) -> LLM:
         """Factory method that routes to native SDK or falls back to LiteLLM.
 
+        Supports both legacy provider parameter and new api parameter for clearer semantics.
+
         Routing priority:
-            1. If 'provider' kwarg is present, use that provider with constants
+            1. If 'provider' kwarg is present, resolve provider + api combination
             2. If only 'model' kwarg, use constants to infer provider
             3. If "/" in model name:
                - Check if prefix is a native provider (openai/anthropic/azure/bedrock/gemini)
                - If yes, validate model against constants
                - If valid, route to native SDK; otherwise route to LiteLLM
+
+        Args:
+            model: Model identifier (e.g., "gpt-4o", "claude-3-sonnet")
+            is_litellm: Force use of LiteLLM fallback
+            **kwargs: Additional parameters including:
+                - provider: Provider name ("openai", "anthropic", etc.)
+                - api: API type within provider ("chat", "responses", etc.)
+                - Other model parameters (temperature, etc.)
         """
         if not model or not isinstance(model, str):
             raise ValueError("Model must be a non-empty string")
 
         explicit_provider = kwargs.get("provider")
+        explicit_api = kwargs.get("api")
 
+        # Resolve provider and API combination
         if explicit_provider:
-            provider = explicit_provider
+            try:
+                resolved_provider = cls._resolve_provider_and_api(explicit_provider, explicit_api)
+            except ValueError as e:
+                raise ValueError(f"Invalid provider/api combination: {e}") from e
+
+            # Validate model compatibility with resolved provider
+            if not cls._validate_model_for_provider_api(model, resolved_provider, explicit_api):
+                supported_models = cls._get_supported_models_message(explicit_provider, explicit_api)
+                api_desc = f" with {explicit_api} API" if explicit_api else ""
+                raise ValueError(
+                    f"Model '{model}' is not compatible with provider '{explicit_provider}'{api_desc}. "
+                    f"Supported models: {supported_models}"
+                )
+
+            provider = resolved_provider
             use_native = True
             model_string = model
+
         elif "/" in model:
             prefix, _, model_part = model.partition("/")
 
             provider_mapping = {
                 "openai": "openai",
-                "openai_responses": "openai_responses",
                 "anthropic": "anthropic",
                 "claude": "anthropic",
                 "azure": "azure",
@@ -378,6 +404,12 @@ class LLM(BaseLLM):
                 "bedrock": "bedrock",
                 "aws": "bedrock",
             }
+
+            if prefix.lower() == "openai_responses":
+                raise ValueError(
+                    "Model prefix 'openai_responses/' is no longer supported. "
+                    "Use provider='openai' with api='responses' instead."
+                )
 
             canonical_provider = provider_mapping.get(prefix.lower())
 
@@ -399,8 +431,8 @@ class LLM(BaseLLM):
         native_class = cls._get_native_provider(provider) if use_native else None
         if native_class and not is_litellm and provider in SUPPORTED_NATIVE_PROVIDERS:
             try:
-                # Remove 'provider' from kwargs if it exists to avoid duplicate keyword argument
-                kwargs_copy = {k: v for k, v in kwargs.items() if k != "provider"}
+                # Remove 'provider' and 'api' from kwargs to avoid duplicate keyword arguments
+                kwargs_copy = {k: v for k, v in kwargs.items() if k not in ("provider", "api")}
                 return cast(
                     Self,
                     native_class(model=model_string, provider=provider, **kwargs_copy),
@@ -419,6 +451,65 @@ class LLM(BaseLLM):
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
         instance.is_litellm = True
         return instance
+
+    @classmethod
+    def _resolve_provider_and_api(cls, provider: str, api: str | None) -> str:
+        """Resolve logical provider + api combination to actual provider implementation.
+
+        Currently only handles OpenAI's multiple APIs to eliminate confusion with provider="openai_responses".
+        No fallback is kept for provider="openai_responses" since that alias is removed.
+
+        Args:
+            provider: Logical provider name (e.g., "openai")
+            api: API type (e.g., "responses", "chat", None)
+
+        Returns:
+            Actual provider implementation name
+        """
+        if provider == "openai":
+            if api == "responses":
+                return "openai_responses"
+            elif api == "chat" or api is None:
+                return "openai"
+            else:
+                raise ValueError(f"Unsupported API '{api}' for provider 'openai'. Supported: 'chat', 'responses'")
+
+        # Explicitly disallow legacy alias to avoid confusion
+        if provider == "openai_responses":
+            raise ValueError(
+                "provider='openai_responses' is no longer supported. "
+                "Use provider='openai' with api='responses' instead."
+            )
+
+        return provider
+
+    @classmethod
+    def _validate_model_for_provider_api(cls, model: str, provider: str, api: str | None) -> bool:
+        """Validate if a model is compatible with the given provider and API combination.
+
+        Currently focused on OpenAI API validation to prevent using incompatible models.
+
+        Args:
+            model: Model name to validate
+            provider: Resolved provider name
+            api: API type (for additional context)
+
+        Returns:
+            True if compatible, False otherwise
+        """
+        return cls._matches_provider_pattern(model, provider)
+
+    @classmethod
+    def _get_supported_models_message(cls, provider: str, api: str | None) -> str:
+        """Get a human-readable message about supported models for a provider/API combination."""
+        if provider in ["openai_responses", "openai"] and api == "responses":
+            return ("gpt-4o, gpt-4o-mini, gpt-4.1, gpt-4.1-mini, gpt-4.1-nano, "
+                   "o1, o1-mini, o1-preview, o3, o3-mini, o4-mini")
+        elif provider == "openai" or (provider == "openai" and api in [None, "chat"]):
+            return ("gpt-3.5-turbo, gpt-4, gpt-4-turbo, gpt-4o, gpt-4o-mini, "
+                   "o1, o1-mini, o1-preview, o3, o3-mini, o4-mini, whisper-1, and other OpenAI models")
+        else:
+            return f"models supported by provider '{provider}'"
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
@@ -491,10 +582,12 @@ class LLM(BaseLLM):
 
         if provider == "openai_responses":
             # Responses API supports subset of OpenAI models
-            responses_models = {"gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1", "o1-mini", "o1-preview", "o3", "o3-mini", "o4-mini"}
-            if model in responses_models or cls._matches_provider_pattern(model, provider):
+            responses_models = {"gpt-4o", "gpt-4o-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
+                              "o1", "o1-mini", "o1-preview", "o3", "o3-mini", "o4-mini"}
+            if model in responses_models:
                 return True
-            return False
+            # Also check pattern matching for newer models with these prefixes
+            return cls._matches_provider_pattern(model, provider)
 
         if (
             provider == "anthropic" or provider == "claude"
@@ -504,11 +597,10 @@ class LLM(BaseLLM):
         if (provider == "gemini" or provider == "google") and model in GEMINI_MODELS:
             return True
 
-        if provider == "bedrock" and model in BEDROCK_MODELS:
+        if (provider == "bedrock" or provider == "aws") and model in BEDROCK_MODELS:
             return True
 
-        if provider == "azure":
-            # azure does not provide a list of available models, determine a better way to handle this
+        if provider == "azure" and model in AZURE_MODELS:
             return True
 
         # Fallback to pattern matching for models not in constants
