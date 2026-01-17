@@ -273,6 +273,7 @@ class OpenAIResponsesCompletion(BaseLLM):
             if self.stream:
                 return self._handle_streaming_response(
                     params=params,
+                    formatted_messages=formatted_messages,
                     available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
@@ -281,6 +282,7 @@ class OpenAIResponsesCompletion(BaseLLM):
 
             return self._handle_response(
                 params=params,
+                formatted_messages=formatted_messages,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -335,6 +337,9 @@ class OpenAIResponsesCompletion(BaseLLM):
 
             formatted_messages = self._format_messages(messages)
 
+            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
+
             params = self._prepare_responses_params(
                 messages=formatted_messages,
                 tools=tools,
@@ -344,6 +349,7 @@ class OpenAIResponsesCompletion(BaseLLM):
             if self.stream:
                 return await self._ahandle_streaming_response(
                     params=params,
+                    formatted_messages=formatted_messages,
                     available_functions=available_functions,
                     from_task=from_task,
                     from_agent=from_agent,
@@ -352,6 +358,7 @@ class OpenAIResponsesCompletion(BaseLLM):
 
             return await self._ahandle_response(
                 params=params,
+                formatted_messages=formatted_messages,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
@@ -501,6 +508,7 @@ class OpenAIResponsesCompletion(BaseLLM):
     def _handle_response(
         self,
         params: dict[str, Any],
+        formatted_messages: list[LLMMessage],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
@@ -540,7 +548,7 @@ class OpenAIResponsesCompletion(BaseLLM):
                         function_args = json.loads(output_item.arguments)
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse tool arguments: {e}")
-                        function_args = {}
+                        continue
 
                     result = self._handle_tool_execution(
                         function_name=function_name,
@@ -580,7 +588,7 @@ class OpenAIResponsesCompletion(BaseLLM):
         )
 
         content = self._invoke_after_llm_call_hooks(
-            params.get("messages", []), content, from_agent
+            formatted_messages, content, from_agent
         )
 
         return content
@@ -588,6 +596,7 @@ class OpenAIResponsesCompletion(BaseLLM):
     async def _ahandle_response(
         self,
         params: dict[str, Any],
+        formatted_messages: list[LLMMessage],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
@@ -627,7 +636,7 @@ class OpenAIResponsesCompletion(BaseLLM):
                         function_args = json.loads(output_item.arguments)
                     except json.JSONDecodeError as e:
                         logging.error(f"Failed to parse tool arguments: {e}")
-                        function_args = {}
+                        continue
 
                     result = self._handle_tool_execution(
                         function_name=function_name,
@@ -666,11 +675,14 @@ class OpenAIResponsesCompletion(BaseLLM):
             from_agent=from_agent,
         )
 
-        return content
+        return self._invoke_after_llm_call_hooks(
+            formatted_messages, content, from_agent
+        )
 
     def _handle_streaming_response(
         self,
         params: dict[str, Any],
+        formatted_messages: list[LLMMessage],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
@@ -829,12 +841,13 @@ class OpenAIResponsesCompletion(BaseLLM):
         )
 
         return self._invoke_after_llm_call_hooks(
-            params.get("messages", []), full_response, from_agent
+            formatted_messages, full_response, from_agent
         )
 
     async def _ahandle_streaming_response(
         self,
         params: dict[str, Any],
+        formatted_messages: list[LLMMessage],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: Agent | None = None,
@@ -992,7 +1005,9 @@ class OpenAIResponsesCompletion(BaseLLM):
             from_agent=from_agent,
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            formatted_messages, full_response, from_agent
+        )
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
