@@ -28,6 +28,10 @@ VOYAGE_TOTAL_TOKEN_LIMITS = {
     "voyage-3-m-exp": 120_000,
     "voyage-multimodal-3": 32_000,
     "voyage-multimodal-3.5": 32_000,
+    # Voyage-4 series models
+    "voyage-4": 320_000,
+    "voyage-4-lite": 1_000_000,
+    "voyage-4-large": 120_000,
 }
 
 # Batch size for embedding requests

@@ -10,14 +10,23 @@ from crewai.rag.embeddings.providers.voyageai.embedding_callable import (
 
 voyageai = pytest.importorskip("voyageai", reason="voyageai not installed")
 
+# Standard models that support basic embedding and custom dimensions
+STANDARD_MODELS = [
+    "voyage-3.5",
+    "voyage-4",
+    "voyage-4-lite",
+    "voyage-4-large",
+]
 
-def test_basic_embedding() -> None:
-    """Test basic embedding generation."""
+
+@pytest.mark.parametrize("model", STANDARD_MODELS)
+def test_basic_embedding(model: str) -> None:
+    """Test basic embedding generation for standard models."""
     if os.environ.get("VOYAGE_API_KEY") is None:
         pytest.skip("VOYAGE_API_KEY not set")
     ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-3.5",
+        model=model,
     )
     embeddings = ef(["hello world"])
     assert embeddings is not None
@@ -25,13 +34,14 @@ def test_basic_embedding() -> None:
     assert len(embeddings[0]) > 0
 
 
-def test_with_embedding_dimensions() -> None:
-    """Test embedding generation with custom dimensions."""
+@pytest.mark.parametrize("model", STANDARD_MODELS)
+def test_with_embedding_dimensions(model: str) -> None:
+    """Test embedding generation with custom dimensions for standard models."""
     if os.environ.get("VOYAGE_API_KEY") is None:
         pytest.skip("VOYAGE_API_KEY not set")
     ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-3.5",
+        model=model,
         output_dimension=2048,
     )
     embeddings = ef(["hello world"])
@@ -95,40 +105,39 @@ def test_count_tokens_single_text() -> None:
     assert token_counts[0] > 0
 
 
-def test_get_token_limit() -> None:
+# Token limit test cases: (model, expected_limit)
+TOKEN_LIMIT_CASES = [
+    ("voyage-2", 320_000),
+    ("voyage-context-3", 32_000),
+    ("voyage-3-large", 120_000),
+    # Voyage-4 family
+    ("voyage-4", 320_000),
+    ("voyage-4-lite", 1_000_000),
+    ("voyage-4-large", 120_000),
+]
+
+
+@pytest.mark.parametrize("model,expected_limit", TOKEN_LIMIT_CASES)
+def test_get_token_limit(model: str, expected_limit: int) -> None:
     """Test getting token limit for different models."""
     if os.environ.get("VOYAGE_API_KEY") is None:
         pytest.skip("VOYAGE_API_KEY not set")
 
-    # Test voyage-2 model
     ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-2",
+        model=model,
     )
-    assert ef.get_token_limit() == 320_000
-
-    # Test context model
-    ef_context = VoyageAIEmbeddingFunction(
-        api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-context-3",
-    )
-    assert ef_context.get_token_limit() == 32_000
-
-    # Test voyage-3-large model
-    ef_large = VoyageAIEmbeddingFunction(
-        api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-3-large",
-    )
-    assert ef_large.get_token_limit() == 120_000
+    assert ef.get_token_limit() == expected_limit
 
 
-def test_batching_with_multiple_texts() -> None:
-    """Test that batching works with multiple texts."""
+@pytest.mark.parametrize("model", STANDARD_MODELS)
+def test_batching_with_multiple_texts(model: str) -> None:
+    """Test that batching works with multiple texts for standard models."""
     if os.environ.get("VOYAGE_API_KEY") is None:
         pytest.skip("VOYAGE_API_KEY not set")
     ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-3.5",
+        model=model,
     )
     texts = ["text1", "text2", "text3", "text4", "text5"]
     embeddings = ef(texts)
@@ -339,27 +348,44 @@ def test_voyage_multimodal_batching() -> None:
     assert all(len(emb) > 0 for emb in embeddings)
 
 
-def test_is_multimodal_model() -> None:
-    """Test the _is_multimodal_model helper method."""
+@pytest.mark.parametrize("model", STANDARD_MODELS)
+def test_is_not_context_model(model: str) -> None:
+    """Test that standard models are not detected as context models."""
     if os.environ.get("VOYAGE_API_KEY") is None:
         pytest.skip("VOYAGE_API_KEY not set")
-
-    # Test with multimodal model
-    ef_multimodal = VoyageAIEmbeddingFunction(
+    ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-multimodal-3",
+        model=model,
     )
-    assert ef_multimodal._is_multimodal_model() is True
+    assert ef._is_context_model() is False
 
-    ef_multimodal_35 = VoyageAIEmbeddingFunction(
-        api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-multimodal-3.5",
-    )
-    assert ef_multimodal_35._is_multimodal_model() is True
 
-    # Test with regular model
-    ef_regular = VoyageAIEmbeddingFunction(
+@pytest.mark.parametrize("model", STANDARD_MODELS)
+def test_is_not_multimodal_model(model: str) -> None:
+    """Test that standard models are not detected as multimodal models."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
         api_key=os.environ["VOYAGE_API_KEY"],
-        model="voyage-3.5",
+        model=model,
     )
-    assert ef_regular._is_multimodal_model() is False
+    assert ef._is_multimodal_model() is False
+
+
+# Multimodal models list
+MULTIMODAL_MODELS = [
+    "voyage-multimodal-3",
+    "voyage-multimodal-3.5",
+]
+
+
+@pytest.mark.parametrize("model", MULTIMODAL_MODELS)
+def test_is_multimodal_model(model: str) -> None:
+    """Test that multimodal models are correctly detected."""
+    if os.environ.get("VOYAGE_API_KEY") is None:
+        pytest.skip("VOYAGE_API_KEY not set")
+    ef = VoyageAIEmbeddingFunction(
+        api_key=os.environ["VOYAGE_API_KEY"],
+        model=model,
+    )
+    assert ef._is_multimodal_model() is True
