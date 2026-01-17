@@ -23,6 +23,12 @@ from crewai.a2a.auth.utils import (
 )
 from crewai.a2a.config import A2AServerConfig
 from crewai.crew import Crew
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.a2a_events import (
+    A2AAgentCardFetchedEvent,
+    A2AAuthenticationFailedEvent,
+    A2AConnectionErrorEvent,
+)
 
 
 if TYPE_CHECKING:
@@ -183,6 +189,8 @@ async def _afetch_agent_card_impl(
     timeout: int,
 ) -> AgentCard:
     """Internal async implementation of AgentCard fetching."""
+    start_time = time.perf_counter()
+
     if "/.well-known/agent-card.json" in endpoint:
         base_url = endpoint.replace("/.well-known/agent-card.json", "")
         agent_card_path = "/.well-known/agent-card.json"
@@ -217,9 +225,29 @@ async def _afetch_agent_card_impl(
             )
             response.raise_for_status()
 
-            return AgentCard.model_validate(response.json())
+            agent_card = AgentCard.model_validate(response.json())
+            fetch_time_ms = (time.perf_counter() - start_time) * 1000
+            agent_card_dict = agent_card.model_dump(exclude_none=True)
+
+            crewai_event_bus.emit(
+                None,
+                A2AAgentCardFetchedEvent(
+                    endpoint=endpoint,
+                    a2a_agent_name=agent_card.name,
+                    agent_card=agent_card_dict,
+                    protocol_version=agent_card.protocol_version,
+                    provider=agent_card_dict.get("provider"),
+                    cached=False,
+                    fetch_time_ms=fetch_time_ms,
+                ),
+            )
+
+            return agent_card
 
         except httpx.HTTPStatusError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            response_body = e.response.text[:1000] if e.response.text else None
+
             if e.response.status_code == 401:
                 error_details = ["Authentication failed"]
                 www_auth = e.response.headers.get("WWW-Authenticate")
@@ -228,7 +256,93 @@ async def _afetch_agent_card_impl(
                 if not auth:
                     error_details.append("No auth scheme provided")
                 msg = " | ".join(error_details)
+
+                auth_type = type(auth).__name__ if auth else None
+                crewai_event_bus.emit(
+                    None,
+                    A2AAuthenticationFailedEvent(
+                        endpoint=endpoint,
+                        auth_type=auth_type,
+                        error=msg,
+                        status_code=401,
+                        metadata={
+                            "elapsed_ms": elapsed_ms,
+                            "response_body": response_body,
+                            "www_authenticate": www_auth,
+                            "request_url": str(e.request.url),
+                        },
+                    ),
+                )
+
                 raise A2AClientHTTPError(401, msg) from e
+
+            crewai_event_bus.emit(
+                None,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint,
+                    error=str(e),
+                    error_type="http_error",
+                    status_code=e.response.status_code,
+                    operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "response_body": response_body,
+                        "request_url": str(e.request.url),
+                    },
+                ),
+            )
+            raise
+
+        except httpx.TimeoutException as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            crewai_event_bus.emit(
+                None,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint,
+                    error=str(e),
+                    error_type="timeout",
+                    operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "timeout_config": timeout,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
+                ),
+            )
+            raise
+
+        except httpx.ConnectError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            crewai_event_bus.emit(
+                None,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint,
+                    error=str(e),
+                    error_type="connection_error",
+                    operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
+                ),
+            )
+            raise
+
+        except httpx.RequestError as e:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            crewai_event_bus.emit(
+                None,
+                A2AConnectionErrorEvent(
+                    endpoint=endpoint,
+                    error=str(e),
+                    error_type="request_error",
+                    operation="fetch_agent_card",
+                    metadata={
+                        "elapsed_ms": elapsed_ms,
+                        "request_url": str(e.request.url) if e.request else None,
+                    },
+                ),
+            )
             raise
 
 
