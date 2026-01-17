@@ -576,6 +576,9 @@ class OpenAIResponsesCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                 )
+                structured_json = self._invoke_after_llm_call_hooks(
+                    formatted_messages, structured_json, from_agent
+                )
                 return structured_json
             except Exception as e:
                 logging.warning(f"Structured output parsing failed: {e}")
@@ -663,6 +666,9 @@ class OpenAIResponsesCompletion(BaseLLM):
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
+                )
+                structured_json = self._invoke_after_llm_call_hooks(
+                    formatted_messages, structured_json, from_agent
                 )
                 return structured_json
             except Exception as e:
@@ -829,6 +835,9 @@ class OpenAIResponsesCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                 )
+                structured_json = self._invoke_after_llm_call_hooks(
+                    formatted_messages, structured_json, from_agent
+                )
                 return structured_json
             except Exception as e:
                 logging.warning(f"Structured output parsing failed: {e}")
@@ -993,6 +1002,9 @@ class OpenAIResponsesCompletion(BaseLLM):
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
+                )
+                structured_json = self._invoke_after_llm_call_hooks(
+                    formatted_messages, structured_json, from_agent
                 )
                 return structured_json
             except Exception as e:
