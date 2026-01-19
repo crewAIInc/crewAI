@@ -22,6 +22,13 @@ class BaseHandlerKwargs(TypedDict, total=False):
     turn_number: int
     is_multiturn: bool
     agent_role: str | None
+    context_id: str | None
+    task_id: str | None
+    endpoint: str | None
+    agent_branch: Any
+    a2a_agent_name: str | None
+    from_task: Any
+    from_agent: Any
 
 
 class PollingHandlerKwargs(BaseHandlerKwargs, total=False):
@@ -29,17 +36,12 @@ class PollingHandlerKwargs(BaseHandlerKwargs, total=False):
 
     polling_interval: float
     polling_timeout: float
-    endpoint: str
-    agent_branch: Any
     history_length: int
     max_polls: int | None
 
 
 class StreamingHandlerKwargs(BaseHandlerKwargs, total=False):
     """Kwargs for streaming handler."""
-
-    context_id: str | None
-    task_id: str | None
 
 
 class PushNotificationHandlerKwargs(BaseHandlerKwargs, total=False):
@@ -49,7 +51,6 @@ class PushNotificationHandlerKwargs(BaseHandlerKwargs, total=False):
     result_store: PushNotificationResultStore
     polling_timeout: float
     polling_interval: float
-    agent_branch: Any
 
 
 class PushNotificationResultStore(Protocol):

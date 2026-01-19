@@ -6,9 +6,10 @@ Wraps agent classes with A2A delegation capabilities.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import wraps
+import json
 from types import MethodType
 from typing import TYPE_CHECKING, Any
 
@@ -189,7 +190,7 @@ def _execute_task_with_a2a(
     a2a_agents: list[A2AConfig | A2AClientConfig],
     original_fn: Callable[..., str],
     task: Task,
-    agent_response_model: type[BaseModel],
+    agent_response_model: type[BaseModel] | None,
     context: str | None,
     tools: list[BaseTool] | None,
     extension_registry: ExtensionRegistry,
@@ -277,7 +278,7 @@ def _execute_task_with_a2a(
 def _augment_prompt_with_a2a(
     a2a_agents: list[A2AConfig | A2AClientConfig],
     task_description: str,
-    agent_cards: dict[str, AgentCard],
+    agent_cards: Mapping[str, AgentCard | dict[str, Any]],
     conversation_history: list[Message] | None = None,
     turn_num: int = 0,
     max_turns: int | None = None,
@@ -309,7 +310,15 @@ def _augment_prompt_with_a2a(
     for config in a2a_agents:
         if config.endpoint in agent_cards:
             card = agent_cards[config.endpoint]
-            agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True, include={'description', 'url', 'skills'})}\n"
+            if isinstance(card, dict):
+                filtered = {
+                    k: v
+                    for k, v in card.items()
+                    if k in {"description", "url", "skills"} and v is not None
+                }
+                agents_text += f"\n{json.dumps(filtered, indent=2)}\n"
+            else:
+                agents_text += f"\n{card.model_dump_json(indent=2, exclude_none=True, include={'description', 'url', 'skills'})}\n"
 
     failed_agents = failed_agents or {}
     if failed_agents:
@@ -377,7 +386,7 @@ IMPORTANT: You have the ability to delegate this task to remote A2A agents.
 
 
 def _parse_agent_response(
-    raw_result: str | dict[str, Any], agent_response_model: type[BaseModel]
+    raw_result: str | dict[str, Any], agent_response_model: type[BaseModel] | None
 ) -> BaseModel | str | dict[str, Any]:
     """Parse LLM output as AgentResponse or return raw agent response."""
     if agent_response_model:
@@ -394,6 +403,11 @@ def _parse_agent_response(
 def _handle_max_turns_exceeded(
     conversation_history: list[Message],
     max_turns: int,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    endpoint: str | None = None,
+    a2a_agent_name: str | None = None,
+    agent_card: dict[str, Any] | None = None,
 ) -> str:
     """Handle the case when max turns is exceeded.
 
@@ -421,6 +435,11 @@ def _handle_max_turns_exceeded(
                         final_result=final_message,
                         error=None,
                         total_turns=max_turns,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        endpoint=endpoint,
+                        a2a_agent_name=a2a_agent_name,
+                        agent_card=agent_card,
                     ),
                 )
                 return final_message
@@ -432,6 +451,11 @@ def _handle_max_turns_exceeded(
             final_result=None,
             error=f"Conversation exceeded maximum turns ({max_turns})",
             total_turns=max_turns,
+            from_task=from_task,
+            from_agent=from_agent,
+            endpoint=endpoint,
+            a2a_agent_name=a2a_agent_name,
+            agent_card=agent_card,
         ),
     )
     raise Exception(f"A2A conversation exceeded maximum turns ({max_turns})")
@@ -442,7 +466,12 @@ def _process_response_result(
     disable_structured_output: bool,
     turn_num: int,
     agent_role: str,
-    agent_response_model: type[BaseModel],
+    agent_response_model: type[BaseModel] | None,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    endpoint: str | None = None,
+    a2a_agent_name: str | None = None,
+    agent_card: dict[str, Any] | None = None,
 ) -> tuple[str | None, str | None]:
     """Process LLM response and determine next action.
 
@@ -461,6 +490,10 @@ def _process_response_result(
                 turn_number=final_turn_number,
                 is_multiturn=True,
                 agent_role=agent_role,
+                from_task=from_task,
+                from_agent=from_agent,
+                endpoint=endpoint,
+                a2a_agent_name=a2a_agent_name,
             ),
         )
         crewai_event_bus.emit(
@@ -470,6 +503,11 @@ def _process_response_result(
                 final_result=result_text,
                 error=None,
                 total_turns=final_turn_number,
+                from_task=from_task,
+                from_agent=from_agent,
+                endpoint=endpoint,
+                a2a_agent_name=a2a_agent_name,
+                agent_card=agent_card,
             ),
         )
         return result_text, None
@@ -490,6 +528,10 @@ def _process_response_result(
                     turn_number=final_turn_number,
                     is_multiturn=True,
                     agent_role=agent_role,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    endpoint=endpoint,
+                    a2a_agent_name=a2a_agent_name,
                 ),
             )
             crewai_event_bus.emit(
@@ -499,6 +541,11 @@ def _process_response_result(
                     final_result=str(llm_response.message),
                     error=None,
                     total_turns=final_turn_number,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    endpoint=endpoint,
+                    a2a_agent_name=a2a_agent_name,
+                    agent_card=agent_card,
                 ),
             )
             return str(llm_response.message), None
@@ -510,13 +557,15 @@ def _process_response_result(
 def _prepare_agent_cards_dict(
     a2a_result: TaskStateResult,
     agent_id: str,
-    agent_cards: dict[str, AgentCard] | None,
-) -> dict[str, AgentCard]:
+    agent_cards: Mapping[str, AgentCard | dict[str, Any]] | None,
+) -> dict[str, AgentCard | dict[str, Any]]:
     """Prepare agent cards dictionary from result and existing cards.
 
     Shared logic for both sync and async response handlers.
     """
-    agent_cards_dict = agent_cards or {}
+    agent_cards_dict: dict[str, AgentCard | dict[str, Any]] = (
+        dict(agent_cards) if agent_cards else {}
+    )
     if "agent_card" in a2a_result and agent_id not in agent_cards_dict:
         agent_cards_dict[agent_id] = a2a_result["agent_card"]
     return agent_cards_dict
@@ -529,7 +578,7 @@ def _prepare_delegation_context(
     original_task_description: str | None,
 ) -> tuple[
     list[A2AConfig | A2AClientConfig],
-    type[BaseModel],
+    type[BaseModel] | None,
     str,
     str,
     A2AConfig | A2AClientConfig,
@@ -598,6 +647,11 @@ def _handle_task_completion(
     reference_task_ids: list[str],
     agent_config: A2AConfig | A2AClientConfig,
     turn_num: int,
+    from_task: Any | None = None,
+    from_agent: Any | None = None,
+    endpoint: str | None = None,
+    a2a_agent_name: str | None = None,
+    agent_card: dict[str, Any] | None = None,
 ) -> tuple[str | None, str | None, list[str]]:
     """Handle task completion state including reference task updates.
 
@@ -624,6 +678,11 @@ def _handle_task_completion(
                     final_result=result_text,
                     error=None,
                     total_turns=final_turn_number,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    endpoint=endpoint,
+                    a2a_agent_name=a2a_agent_name,
+                    agent_card=agent_card,
                 ),
             )
             return str(result_text), task_id_config, reference_task_ids
@@ -645,8 +704,11 @@ def _handle_agent_response_and_continue(
     original_fn: Callable[..., str],
     context: str | None,
     tools: list[BaseTool] | None,
-    agent_response_model: type[BaseModel],
+    agent_response_model: type[BaseModel] | None,
     remote_task_completed: bool = False,
+    endpoint: str | None = None,
+    a2a_agent_name: str | None = None,
+    agent_card: dict[str, Any] | None = None,
 ) -> tuple[str | None, str | None]:
     """Handle A2A result and get CrewAI agent's response.
 
@@ -698,6 +760,11 @@ def _handle_agent_response_and_continue(
         turn_num=turn_num,
         agent_role=self.role,
         agent_response_model=agent_response_model,
+        from_task=task,
+        from_agent=self,
+        endpoint=endpoint,
+        a2a_agent_name=a2a_agent_name,
+        agent_card=agent_card,
     )
 
 
@@ -750,6 +817,12 @@ def _delegate_to_a2a(
 
     conversation_history: list[Message] = []
 
+    current_agent_card = agent_cards.get(agent_id) if agent_cards else None
+    current_agent_card_dict = (
+        current_agent_card.model_dump() if current_agent_card else None
+    )
+    current_a2a_agent_name = current_agent_card.name if current_agent_card else None
+
     try:
         for turn_num in range(max_turns):
             console_formatter = getattr(crewai_event_bus, "_console", None)
@@ -777,6 +850,8 @@ def _delegate_to_a2a(
                 turn_number=turn_num + 1,
                 updates=agent_config.updates,
                 transport_protocol=agent_config.transport_protocol,
+                from_task=task,
+                from_agent=self,
             )
 
             conversation_history = a2a_result.get("history", [])
@@ -797,6 +872,11 @@ def _delegate_to_a2a(
                         reference_task_ids,
                         agent_config,
                         turn_num,
+                        from_task=task,
+                        from_agent=self,
+                        endpoint=agent_config.endpoint,
+                        a2a_agent_name=current_a2a_agent_name,
+                        agent_card=current_agent_card_dict,
                     )
                 )
                 if trusted_result is not None:
@@ -818,6 +898,9 @@ def _delegate_to_a2a(
                     tools=tools,
                     agent_response_model=agent_response_model,
                     remote_task_completed=(a2a_result["status"] == TaskState.completed),
+                    endpoint=agent_config.endpoint,
+                    a2a_agent_name=current_a2a_agent_name,
+                    agent_card=current_agent_card_dict,
                 )
 
                 if final_result is not None:
@@ -846,6 +929,9 @@ def _delegate_to_a2a(
                 tools=tools,
                 agent_response_model=agent_response_model,
                 remote_task_completed=False,
+                endpoint=agent_config.endpoint,
+                a2a_agent_name=current_a2a_agent_name,
+                agent_card=current_agent_card_dict,
             )
 
             if final_result is not None:
@@ -862,11 +948,24 @@ def _delegate_to_a2a(
                     final_result=None,
                     error=error_msg,
                     total_turns=turn_num + 1,
+                    from_task=task,
+                    from_agent=self,
+                    endpoint=agent_config.endpoint,
+                    a2a_agent_name=current_a2a_agent_name,
+                    agent_card=current_agent_card_dict,
                 ),
             )
             return f"A2A delegation failed: {error_msg}"
 
-        return _handle_max_turns_exceeded(conversation_history, max_turns)
+        return _handle_max_turns_exceeded(
+            conversation_history,
+            max_turns,
+            from_task=task,
+            from_agent=self,
+            endpoint=agent_config.endpoint,
+            a2a_agent_name=current_a2a_agent_name,
+            agent_card=current_agent_card_dict,
+        )
 
     finally:
         task.description = original_task_description
@@ -916,7 +1015,7 @@ async def _aexecute_task_with_a2a(
     a2a_agents: list[A2AConfig | A2AClientConfig],
     original_fn: Callable[..., Coroutine[Any, Any, str]],
     task: Task,
-    agent_response_model: type[BaseModel],
+    agent_response_model: type[BaseModel] | None,
     context: str | None,
     tools: list[BaseTool] | None,
     extension_registry: ExtensionRegistry,
@@ -1001,8 +1100,11 @@ async def _ahandle_agent_response_and_continue(
     original_fn: Callable[..., Coroutine[Any, Any, str]],
     context: str | None,
     tools: list[BaseTool] | None,
-    agent_response_model: type[BaseModel],
+    agent_response_model: type[BaseModel] | None,
     remote_task_completed: bool = False,
+    endpoint: str | None = None,
+    a2a_agent_name: str | None = None,
+    agent_card: dict[str, Any] | None = None,
 ) -> tuple[str | None, str | None]:
     """Async version of _handle_agent_response_and_continue."""
     agent_cards_dict = _prepare_agent_cards_dict(a2a_result, agent_id, agent_cards)
@@ -1032,6 +1134,11 @@ async def _ahandle_agent_response_and_continue(
         turn_num=turn_num,
         agent_role=self.role,
         agent_response_model=agent_response_model,
+        from_task=task,
+        from_agent=self,
+        endpoint=endpoint,
+        a2a_agent_name=a2a_agent_name,
+        agent_card=agent_card,
     )
 
 
@@ -1066,6 +1173,12 @@ async def _adelegate_to_a2a(
 
     conversation_history: list[Message] = []
 
+    current_agent_card = agent_cards.get(agent_id) if agent_cards else None
+    current_agent_card_dict = (
+        current_agent_card.model_dump() if current_agent_card else None
+    )
+    current_a2a_agent_name = current_agent_card.name if current_agent_card else None
+
     try:
         for turn_num in range(max_turns):
             console_formatter = getattr(crewai_event_bus, "_console", None)
@@ -1093,6 +1206,8 @@ async def _adelegate_to_a2a(
                 turn_number=turn_num + 1,
                 transport_protocol=agent_config.transport_protocol,
                 updates=agent_config.updates,
+                from_task=task,
+                from_agent=self,
             )
 
             conversation_history = a2a_result.get("history", [])
@@ -1113,6 +1228,11 @@ async def _adelegate_to_a2a(
                         reference_task_ids,
                         agent_config,
                         turn_num,
+                        from_task=task,
+                        from_agent=self,
+                        endpoint=agent_config.endpoint,
+                        a2a_agent_name=current_a2a_agent_name,
+                        agent_card=current_agent_card_dict,
                     )
                 )
                 if trusted_result is not None:
@@ -1134,6 +1254,9 @@ async def _adelegate_to_a2a(
                     tools=tools,
                     agent_response_model=agent_response_model,
                     remote_task_completed=(a2a_result["status"] == TaskState.completed),
+                    endpoint=agent_config.endpoint,
+                    a2a_agent_name=current_a2a_agent_name,
+                    agent_card=current_agent_card_dict,
                 )
 
                 if final_result is not None:
@@ -1161,6 +1284,9 @@ async def _adelegate_to_a2a(
                 context=context,
                 tools=tools,
                 agent_response_model=agent_response_model,
+                endpoint=agent_config.endpoint,
+                a2a_agent_name=current_a2a_agent_name,
+                agent_card=current_agent_card_dict,
             )
 
             if final_result is not None:
@@ -1177,11 +1303,24 @@ async def _adelegate_to_a2a(
                     final_result=None,
                     error=error_msg,
                     total_turns=turn_num + 1,
+                    from_task=task,
+                    from_agent=self,
+                    endpoint=agent_config.endpoint,
+                    a2a_agent_name=current_a2a_agent_name,
+                    agent_card=current_agent_card_dict,
                 ),
             )
             return f"A2A delegation failed: {error_msg}"
 
-        return _handle_max_turns_exceeded(conversation_history, max_turns)
+        return _handle_max_turns_exceeded(
+            conversation_history,
+            max_turns,
+            from_task=task,
+            from_agent=self,
+            endpoint=agent_config.endpoint,
+            a2a_agent_name=current_a2a_agent_name,
+            agent_card=current_agent_card_dict,
+        )
 
     finally:
         task.description = original_task_description

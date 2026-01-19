@@ -26,9 +26,13 @@ def mock_agent() -> MagicMock:
 
 
 @pytest.fixture
-def mock_task() -> MagicMock:
+def mock_task(mock_context: MagicMock) -> MagicMock:
     """Create a mock Task."""
-    return MagicMock()
+    task = MagicMock()
+    task.id = mock_context.task_id
+    task.name = "Mock Task"
+    task.description = "Mock task description"
+    return task
 
 
 @pytest.fixture
@@ -179,8 +183,8 @@ class TestExecute:
         event = first_call[0][1]
 
         assert event.type == "a2a_server_task_started"
-        assert event.a2a_task_id == mock_context.task_id
-        assert event.a2a_context_id == mock_context.context_id
+        assert event.task_id == mock_context.task_id
+        assert event.context_id == mock_context.context_id
 
     @pytest.mark.asyncio
     async def test_emits_completed_event(
@@ -201,7 +205,7 @@ class TestExecute:
         event = second_call[0][1]
 
         assert event.type == "a2a_server_task_completed"
-        assert event.a2a_task_id == mock_context.task_id
+        assert event.task_id == mock_context.task_id
         assert event.result == "Task completed successfully"
 
     @pytest.mark.asyncio
@@ -250,7 +254,7 @@ class TestExecute:
         event = canceled_call[0][1]
 
         assert event.type == "a2a_server_task_canceled"
-        assert event.a2a_task_id == mock_context.task_id
+        assert event.task_id == mock_context.task_id
 
 
 class TestCancel:
