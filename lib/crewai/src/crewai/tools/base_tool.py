@@ -93,6 +93,12 @@ class BaseTool(BaseModel, ABC):
         default=0,
         description="Current number of times this tool has been used.",
     )
+    allow_repeated_usage: bool = Field(
+        default=False,
+        description="If True, allows the tool to be called consecutively with the same arguments. "
+        "Useful for stateful tools like browser automation where repeated calls with the same "
+        "arguments may produce different results due to external state changes.",
+    )
 
     @field_validator("args_schema", mode="before")
     @classmethod
@@ -227,6 +233,7 @@ class BaseTool(BaseModel, ABC):
             result_as_answer=self.result_as_answer,
             max_usage_count=self.max_usage_count,
             current_usage_count=self.current_usage_count,
+            allow_repeated_usage=self.allow_repeated_usage,
         )
         structured_tool._original_tool = self
         return structured_tool

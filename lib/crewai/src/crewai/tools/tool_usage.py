@@ -226,7 +226,7 @@ class ToolUsage:
         Returns:
             The result of the tool execution as a string.
         """
-        if self._check_tool_repeated_usage(calling=calling):
+        if self._check_tool_repeated_usage(calling=calling, tool=tool):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -412,7 +412,7 @@ class ToolUsage:
         tool: CrewStructuredTool,
         calling: ToolCalling | InstructorToolCalling,
     ) -> str:
-        if self._check_tool_repeated_usage(calling=calling):
+        if self._check_tool_repeated_usage(calling=calling, tool=tool):
             try:
                 result = self._i18n.errors("task_repeated_usage").format(
                     tool_names=self.tools_names
@@ -618,9 +618,12 @@ class ToolUsage:
         return result
 
     def _check_tool_repeated_usage(
-        self, calling: ToolCalling | InstructorToolCalling
+        self, calling: ToolCalling | InstructorToolCalling, tool: Any = None
     ) -> bool:
         if not self.tools_handler:
+            return False
+        # Check if the tool allows repeated usage (e.g., stateful tools like browser automation)
+        if tool is not None and getattr(tool, "allow_repeated_usage", False):
             return False
         if last_tool_usage := self.tools_handler.last_used_tool:
             return (calling.tool_name == last_tool_usage.tool_name) and (
