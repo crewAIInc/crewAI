@@ -430,7 +430,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "en/enterprise/guides/build-crew",
-                  "en/enterprise/guides/deploy-crew",
+                  "en/enterprise/guides/prepare-for-deployment",
+                  "en/enterprise/guides/deploy-to-amp",
                   "en/enterprise/guides/kickoff-crew",
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
@@ -865,7 +866,8 @@
                 "group": "Guias",
                 "pages": [
                   "pt-BR/enterprise/guides/build-crew",
-                  "pt-BR/enterprise/guides/deploy-crew",
+                  "pt-BR/enterprise/guides/prepare-for-deployment",
+                  "pt-BR/enterprise/guides/deploy-to-amp",
                   "pt-BR/enterprise/guides/kickoff-crew",
                   "pt-BR/enterprise/guides/update-crew",
                   "pt-BR/enterprise/guides/enable-crew-studio",
@@ -1327,7 +1329,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "ko/enterprise/guides/build-crew",
-                  "ko/enterprise/guides/deploy-crew",
+                  "ko/enterprise/guides/prepare-for-deployment",
+                  "ko/enterprise/guides/deploy-to-amp",
                   "ko/enterprise/guides/kickoff-crew",
                   "ko/enterprise/guides/update-crew",
                   "ko/enterprise/guides/enable-crew-studio",
@@ -1514,6 +1517,18 @@
     {
       "source": "/enterprise/:path*",
       "destination": "/en/enterprise/:path*"
+    },
+    {
+      "source": "/en/enterprise/guides/deploy-crew",
+      "destination": "/en/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/ko/enterprise/guides/deploy-crew",
+      "destination": "/ko/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/pt-BR/enterprise/guides/deploy-crew",
+      "destination": "/pt-BR/enterprise/guides/deploy-to-amp"
     },
     {
       "source": "/api-reference/:path*",
