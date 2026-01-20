@@ -443,6 +443,17 @@ class StateProxy(Generic[T]):
         """Return the underlying state object."""
         return cast(T, object.__getattribute__(self, "_proxy_state"))
 
+    def model_dump(self) -> dict[str, Any]:
+        """Return state as a dictionary.
+
+        Works for both dict and BaseModel underlying states.
+        """
+        state = object.__getattribute__(self, "_proxy_state")
+        if isinstance(state, dict):
+            return state
+        result: dict[str, Any] = state.model_dump()
+        return result
+
 
 class FlowMeta(type):
     def __new__(
