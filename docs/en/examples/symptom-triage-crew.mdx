@@ -1,39 +1,42 @@
-Symptom Triage Crew
+# Symptom Triage Crew
 
-//Overview
+## Overview
 
 This example demonstrates an agentic AI workflow using CrewAI, where multiple
 specialized agents collaborate to perform basic healthcare triage.
 
-Each agent has a clear role, and decisions are made through collaboration
-rather than a single monolithic prompt.
+Each agent has a clear responsibility, and decisions emerge through
+collaboration rather than a single monolithic prompt.
 
+---
 
+## Agents
 
-//Agents
-
-Symptom Collector Agent
-Role
+### Symptom Collector Agent
+**Role**
 - Extract symptoms from raw patient input
 - Normalize symptom descriptions
 
-Example Input
+**Example Input**
 "I have fever, cough, and headache"
 
+---
 
-Risk Assessment Agent
-Role
+### Risk Assessment Agent
+**Role**
 - Analyze symptom combinations
 - Classify risk as low, medium, or high
 
+---
 
-Care Advisor Agent
-Role
+### Care Advisor Agent
+**Role**
 - Suggest next steps based on risk level
 - Recommend rest or medical consultation
 
+---
 
-//Agentic Workflow
+## Agentic Workflow
 
 1. User provides a natural language symptom description
 2. Symptom Collector extracts structured symptoms
@@ -41,80 +44,44 @@ Role
 4. Care Advisor generates guidance
 5. Final response is returned to the user
 
+---
 
-//Why This Is Agentic AI
+## Why This Is Agentic AI
 
 - Each agent has a single responsibility
 - Reasoning is distributed across agents
 - No single agent controls the full decision
 - Collaboration produces the final output
 
+---
 
-//Use Cases
+## Conceptual Example
 
-- Healthcare triage assistants
-- Educational medical chatbots
-- Agent-based reasoning demos
+```python
+# Conceptual illustration of input interpolation in CrewAI
 
-
-**Disclaimer**
-
-This example is for educational purposes only and does not provide
-medical diagnosis or professional medical advice.
-
-
-
-
-//Sample runnable code
-
-from crewai.agent import Agent
-from crewai.tasks import ConditionalTask
-from crewai.crews import Crew
-
-
-
-symptom_collector=Agent(
-	role="Symptom collector",
-	goal="Extract symptoms from patient input",
-	backstory="Medical intake assiatant"
-
+crew = Crew(
+    agents=[
+        {
+            "role": "Symptom Collector",
+            "goal": "Extract symptoms from: {patient_input}"
+        },
+        {
+            "role": "Risk Assessor",
+            "goal": "Assess severity of: {patient_input}"
+        },
+        {
+            "role": "Care Advisor",
+            "goal": "Suggest next steps for: {patient_input}"
+        }
+    ],
+    task="Perform symptom triage using the provided patient input."
 )
 
-risk_assessor=Agent(
-	role="Risk assessor",
-	goal="Dete	rmine severity of symptoms",
-	backstory="Clinial traige specialist"
-
-)
-
-care_advisor=Agent(
-	role="Care advisor",
-	goal="Suggest appropriate next steps",
-	backstory="Healthacare guidance expert"
-)
-
-task1=Task(
-	description="Extract symptoms from input text",
-	agent=symptom_collector
-)
-
-task2=Task(
-	description="Assess severity of the symptoms",
-	agent=risk_assessor
-)
-
-task3=task(
-	description="Recommend whether to rest or consult a doctor",
-	agent=care_advisor
-)
-
-crew=Crew(
-	agents=[symptom_collector,risk_assessor,care_advisor],
-	tasks=[task1,task2,task3]
-)
-
-result=crew.kickoff(
-	inputs={"patient_input:" "I have fever, cough and headache"}
+result = crew.kickoff(
+    inputs={
+        "patient_input": "I have fever, cough, and headache"
+    }
 )
 
 print(result)
