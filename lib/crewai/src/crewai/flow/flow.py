@@ -399,6 +399,51 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
+class StateProxy(Generic[T]):
+    """Proxy that provides thread-safe access to flow state.
+
+    Wraps state objects (dict or BaseModel) and uses a lock for all write
+    operations to prevent race conditions when parallel listeners modify state.
+    """
+
+    __slots__ = ("_proxy_lock", "_proxy_state")
+
+    def __init__(self, state: T, lock: threading.Lock) -> None:
+        object.__setattr__(self, "_proxy_state", state)
+        object.__setattr__(self, "_proxy_lock", lock)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(object.__getattribute__(self, "_proxy_state"), name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in ("_proxy_state", "_proxy_lock"):
+            object.__setattr__(self, name, value)
+        else:
+            with object.__getattribute__(self, "_proxy_lock"):
+                setattr(object.__getattribute__(self, "_proxy_state"), name, value)
+
+    def __getitem__(self, key: str) -> Any:
+        return object.__getattribute__(self, "_proxy_state")[key]
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        with object.__getattribute__(self, "_proxy_lock"):
+            object.__getattribute__(self, "_proxy_state")[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        with object.__getattribute__(self, "_proxy_lock"):
+            del object.__getattribute__(self, "_proxy_state")[key]
+
+    def __contains__(self, key: str) -> bool:
+        return key in object.__getattribute__(self, "_proxy_state")
+
+    def __repr__(self) -> str:
+        return repr(object.__getattribute__(self, "_proxy_state"))
+
+    def _unwrap(self) -> T:
+        """Return the underlying state object."""
+        return cast(T, object.__getattribute__(self, "_proxy_state"))
+
+
 class FlowMeta(type):
     def __new__(
         mcs,
@@ -1144,7 +1189,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
     @property
     def state(self) -> T:
-        return self._state
+        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
     @property
     def method_outputs(self) -> list[Any]:
