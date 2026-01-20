@@ -186,7 +186,7 @@ def test_task_guardrail_process_output(task_output):
     result = guardrail(task_output)
     assert result[0] is False
     # Check that feedback is provided (wording varies by LLM)
-    assert result[1] and len(result[1]) > 0
+    assert result[1] == "The task output exceeds the word limit of 10 words by containing 22 words."
 
     guardrail = LLMGuardrail(
         description="Ensure the result has less than 500 words", llm=LLM(model="gpt-4o")
