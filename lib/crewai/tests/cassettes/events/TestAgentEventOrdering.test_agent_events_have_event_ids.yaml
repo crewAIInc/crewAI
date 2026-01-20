@@ -50,14 +50,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFJdT9wwEHzPr1j5+YISyBHIGxSBSh+Q+qGq16LI2JvErWMbewOt0P33
-        yslxCS2V+hIpOzvjmd19SgCYkqwCJjpOonc6vciyL809bdafPpy/e3N9XV5Jer85uzkPny82bBUZ
-        9u47CnpmHQjbO42krJlg4ZETRtW8PD45OS3WeTkCvZWoI611lBYHedoro9LD7HCdZkWaFzt6Z5XA
-        wCr4mgAAPI3faNRI/MkqyFbPlR5D4C2yat8EwLzVscJ4CCoQN8RWMyisITSj94+dHdqOKngLxj6C
-        4AZa9YDAoY0BgJvwiP6buVSGazgb/yqQ1uBS0GMzBB5TmUHrBcCNscTjVMYotztkuzevbeu8vQt/
-        UFmjjApd7ZEHa6LRQNaxEd0mALfjkIYXuZnztndUk/2B43P5+nTSY/NyFmixA8kS14t6ebR6Ra+W
-        SFzpsBgzE1x0KGfqvBM+SGUXQLJI/beb17Sn5Mq0/yM/A0KgI5S18yiVeJl4bvMYb/dfbfspj4ZZ
-        QP+gBNak0MdNSGz4oKeDYuFXIOzrRpkWvfNquqrG1UflMS+FwCZnyTb5DQAA//8DAJn9dBVkAwAA
+        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kwid4yJOnTr1regwrMN2C7DDVhisTNtaZUmQ6GZFkX8f
+        ZKexu3XALgbMx/f0HsmXBECoWpQgZIcse6fTD+t12B1QfpN+n/Ht/stjc2icvvsaPj1/FqvIsA8/
+        SfIr60La3mliZc0ES0/IFFWz4mq3u94Wm3wEeluTjrTWcZpfZGmvjEo36802Xedplp/onVWSgijh
+        ewIA8DJ+o1FT0y9Rwnr1WukpBGxJlOcmAOGtjhWBIajAaFisZlBaw2RG7/vODm3HJdyBsQeQaKBV
+        TwQIbQwAaMKB/A/zURnUcDP+lVBbQ0tBT80QMKYyg9YLAI2xjHEqY5T7E3I8m9e2dd4+hD+oolFG
+        ha7yhMGaaDSwdWJEjwnA/Tik4U1u4bztHVdsH2l8LtteT3piXs4CzU8gW0a9qBeXq3f0qpoYlQ6L
+        MQuJsqN6ps47waFWdgEki9R/u3lPe0quTPs/8jMgJTmmunKeaiXfJp7bPMXb/VfbecqjYRHIPylJ
+        FSvycRM1NTjo6aBEeA5MfdUo05J3Xk1X1bjqsrjCQkpqMpEck98AAAD//wMAnStaOGQDAAA=
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -66,7 +66,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 20 Jan 2026 07:35:17 GMT
+      - Tue, 20 Jan 2026 07:55:25 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -86,13 +86,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '520'
+      - '601'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '538'
+      - '628'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

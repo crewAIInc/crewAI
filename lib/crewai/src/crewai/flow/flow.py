@@ -1448,7 +1448,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return final_output
         finally:
-            await asyncio.to_thread(crewai_event_bus.flush)
             detach(flow_token)
 
     async def akickoff(

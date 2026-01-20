@@ -556,6 +556,9 @@ class CrewAIEventsBus:
             wait: If True, wait for all pending tasks to complete before stopping.
                   If False, cancel all pending tasks immediately.
         """
+        if wait:
+            self.flush()
+
         with self._rwlock.w_locked():
             self._shutting_down = True
             loop = getattr(self, "_loop", None)

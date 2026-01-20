@@ -129,6 +129,7 @@ class TestCrewEventOrdering:
         )
         crew = Crew(agents=[agent], tasks=[task], verbose=False)
         crew.kickoff()
+        crewai_event_bus.flush()
 
         started = collector.first(CrewKickoffStartedEvent)
         completed = collector.first(CrewKickoffCompletedEvent)
@@ -157,6 +158,7 @@ class TestCrewEventOrdering:
         )
         crew = Crew(agents=[agent], tasks=[task], verbose=False)
         crew.kickoff()
+        crewai_event_bus.flush()
 
         started = collector.first(CrewKickoffStartedEvent)
         completed = collector.first(CrewKickoffCompletedEvent)
@@ -183,6 +185,7 @@ class TestCrewEventOrdering:
         )
         crew = Crew(agents=[agent], tasks=[task], verbose=False)
         crew.kickoff()
+        crewai_event_bus.flush()
 
         crew_started = collector.first(CrewKickoffStartedEvent)
         task_started = collector.first(TaskStartedEvent)
@@ -272,6 +275,7 @@ class TestFlowWithCrewEventOrdering:
 
         flow = SimpleFlow()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         flow_started = collector.first(FlowStartedEvent)
         flow_finished = collector.first(FlowFinishedEvent)
@@ -305,6 +309,7 @@ class TestFlowWithCrewEventOrdering:
 
         flow = FlowWithMethod()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         flow_started = collector.first(FlowStartedEvent)
         method_started = collector.first(MethodExecutionStartedEvent)
@@ -336,6 +341,7 @@ class TestFlowWithCrewEventOrdering:
 
         flow = FlowWithCrew()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         method_started = collector.first(MethodExecutionStartedEvent)
         crew_started = collector.first(CrewKickoffStartedEvent)
@@ -387,6 +393,7 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         flow = TwoCrewFlow()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
 
@@ -432,6 +439,7 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         flow = SequentialCrewFlow()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
 
@@ -482,6 +490,7 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         flow = ParentTestFlow()
         flow.kickoff()
+        crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
         task_started_events = collector.all_of(TaskStartedEvent)
