@@ -80,6 +80,8 @@ class CrewAIEventsBus:
     _execution_plan_cache: dict[type[BaseEvent], ExecutionPlan]
     _console: ConsoleFormatter
     _shutting_down: bool
+    _pending_futures: set[Future[Any]]
+    _futures_lock: threading.Lock
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -102,6 +104,8 @@ class CrewAIEventsBus:
         """
         self._shutting_down = False
         self._rwlock = RWLock()
+        self._pending_futures: set[Future[Any]] = set()
+        self._futures_lock = threading.Lock()
         self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
         self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
         self._handler_dependencies: dict[
@@ -121,6 +125,25 @@ class CrewAIEventsBus:
             daemon=True,
         )
         self._loop_thread.start()
+
+    def _track_future(self, future: Future[Any]) -> Future[Any]:
+        """Track a future and set up automatic cleanup when it completes.
+
+        Args:
+            future: The future to track
+
+        Returns:
+            The same future for chaining
+        """
+        with self._futures_lock:
+            self._pending_futures.add(future)
+
+        def _cleanup(f: Future[Any]) -> None:
+            with self._futures_lock:
+                self._pending_futures.discard(f)
+
+        future.add_done_callback(_cleanup)
+        return future
 
     def _run_loop(self) -> None:
         """Run the background async event loop."""
@@ -369,9 +392,11 @@ class CrewAIEventsBus:
             async_handlers = self._async_handlers.get(event_type, frozenset())
 
         if has_dependencies:
-            return asyncio.run_coroutine_threadsafe(
-                self._emit_with_dependencies(source, event),
-                self._loop,
+            return self._track_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._emit_with_dependencies(source, event),
+                    self._loop,
+                )
             )
 
         if sync_handlers:
@@ -383,15 +408,52 @@ class CrewAIEventsBus:
                     ctx.run, self._call_handlers, source, event, sync_handlers
                 )
                 if not async_handlers:
-                    return sync_future
+                    return self._track_future(sync_future)
 
         if async_handlers:
-            return asyncio.run_coroutine_threadsafe(
-                self._acall_handlers(source, event, async_handlers),
-                self._loop,
+            return self._track_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._acall_handlers(source, event, async_handlers),
+                    self._loop,
+                )
             )
 
         return None
+
+    def flush(self, timeout: float | None = None) -> bool:
+        """Block until all pending event handlers complete.
+
+        This method waits for all futures from previously emitted events to
+        finish executing. Useful at the end of operations (like kickoff) to
+        ensure all event handlers have completed before returning.
+
+        Args:
+            timeout: Maximum time in seconds to wait for handlers to complete.
+                    If None, waits indefinitely.
+
+        Returns:
+            True if all handlers completed, False if timeout occurred.
+        """
+        with self._futures_lock:
+            futures_to_wait = list(self._pending_futures)
+
+        if not futures_to_wait:
+            return True
+
+        from concurrent.futures import wait as wait_futures
+
+        done, not_done = wait_futures(futures_to_wait, timeout=timeout)
+
+        # Check for exceptions in completed futures
+        errors = [
+            future.exception() for future in done if future.exception() is not None
+        ]
+        for error in errors:
+            self._console.print(
+                f"[CrewAIEventsBus] Handler exception during flush: {error}"
+            )
+
+        return len(not_done) == 0
 
     async def aemit(self, source: Any, event: BaseEvent) -> None:
         """Asynchronously emit an event to registered async handlers.

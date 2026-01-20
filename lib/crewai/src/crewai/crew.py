@@ -732,6 +732,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            crewai_event_bus.flush()
             detach(token)
 
     def kickoff_for_each(
@@ -880,6 +881,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            await asyncio.to_thread(crewai_event_bus.flush)
             detach(token)
 
     async def akickoff_for_each(
