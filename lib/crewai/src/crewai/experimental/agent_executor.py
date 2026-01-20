@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from datetime import datetime
 import json
 import threading
@@ -47,6 +47,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    is_inside_event_loop,
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
@@ -85,12 +86,16 @@ class AgentReActState(BaseModel):
     pending_tool_calls: list[Any] = Field(default_factory=list)
 
 
-class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
-    """Flow-based executor matching CrewAgentExecutor interface.
+class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
+    """Flow-based agent executor for both standalone and crew-bound execution.
 
     Inherits from:
     - Flow[AgentReActState]: Provides flow orchestration capabilities
     - CrewAgentExecutorMixin: Provides memory methods (short/long/external term)
+
+    This executor can operate in two modes:
+    - Standalone mode: When crew and task are None (used by Agent.kickoff())
+    - Crew mode: When crew and task are provided (used by Agent.execute_task())
 
     Note: Multiple instances may be created during agent initialization
     (cache setup, RPM controller setup, etc.) but only the final instance
@@ -100,8 +105,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
     def __init__(
         self,
         llm: BaseLLM,
-        task: Task,
-        crew: Crew,
         agent: Agent,
         prompt: SystemPromptResult | StandardPromptResult,
         max_iter: int,
@@ -110,6 +113,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         stop_words: list[str],
         tools_description: str,
         tools_handler: ToolsHandler,
+        task: Task | None = None,
+        crew: Crew | None = None,
         step_callback: Any = None,
         original_tools: list[BaseTool] | None = None,
         function_calling_llm: BaseLLM | Any | None = None,
@@ -123,8 +128,6 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         Args:
             llm: Language model instance.
-            task: Task to execute.
-            crew: Crew instance.
             agent: Agent to execute.
             prompt: Prompt templates.
             max_iter: Maximum iterations.
@@ -133,6 +136,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             stop_words: Stop word list.
             tools_description: Tool descriptions.
             tools_handler: Tool handler instance.
+            task: Optional task to execute (None for standalone agent execution).
+            crew: Optional crew instance (None for standalone agent execution).
             step_callback: Optional step callback.
             original_tools: Original tool list.
             function_calling_llm: Optional function calling LLM.
@@ -143,9 +148,9 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         """
         self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
-        self.task = task
+        self.task: Task | None = task
         self.agent = agent
-        self.crew = crew
+        self.crew: Crew | None = crew
         self.prompt = prompt
         self.tools = tools
         self.tools_names = tools_names
@@ -337,7 +342,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 printer=self._printer,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=self.response_model,
+                response_model=None,
                 executor_context=self,
             )
 
@@ -734,8 +739,98 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         return "initialized"
 
-    def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
+    def invoke(
+        self, inputs: dict[str, Any]
+    ) -> dict[str, Any] | Coroutine[Any, Any, dict[str, Any]]:
         """Execute agent with given inputs.
+
+        When called from within an existing event loop (e.g., inside a Flow),
+        this method returns a coroutine that should be awaited. The Flow
+        framework handles this automatically.
+
+        Args:
+            inputs: Input dictionary containing prompt variables.
+
+        Returns:
+            Dictionary with agent output, or a coroutine if inside an event loop.
+        """
+        # Magic auto-async: if inside event loop, return coroutine for Flow to await
+        if is_inside_event_loop():
+            return self.invoke_async(inputs)
+
+        self._ensure_flow_initialized()
+
+        with self._execution_lock:
+            if self._is_executing:
+                raise RuntimeError(
+                    "Executor is already running. "
+                    "Cannot invoke the same executor instance concurrently."
+                )
+            self._is_executing = True
+            self._has_been_invoked = True
+
+        try:
+            # Reset state for fresh execution
+            self.state.messages.clear()
+            self.state.iterations = 0
+            self.state.current_answer = None
+            self.state.is_finished = False
+
+            if "system" in self.prompt:
+                prompt = cast("SystemPromptResult", self.prompt)
+                system_prompt = self._format_prompt(prompt["system"], inputs)
+                user_prompt = self._format_prompt(prompt["user"], inputs)
+                self.state.messages.append(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+                self.state.messages.append(format_message_for_llm(user_prompt))
+            else:
+                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+                self.state.messages.append(format_message_for_llm(user_prompt))
+
+            self.state.ask_for_human_input = bool(
+                inputs.get("ask_for_human_input", False)
+            )
+
+            self.kickoff()
+
+            formatted_answer = self.state.current_answer
+
+            if not isinstance(formatted_answer, AgentFinish):
+                raise RuntimeError(
+                    "Agent execution ended without reaching a final answer."
+                )
+
+            if self.state.ask_for_human_input:
+                formatted_answer = self._handle_human_feedback(formatted_answer)
+
+            self._create_short_term_memory(formatted_answer)
+            self._create_long_term_memory(formatted_answer)
+            self._create_external_memory(formatted_answer)
+
+            return {"output": formatted_answer.output}
+
+        except AssertionError:
+            fail_text = Text()
+            fail_text.append("❌ ", style="red bold")
+            fail_text.append(
+                "Agent failed to reach a final answer. This is likely a bug - please report it.",
+                style="red",
+            )
+            self._console.print(fail_text)
+            raise
+        except Exception as e:
+            handle_unknown_error(self._printer, e)
+            raise
+        finally:
+            self._is_executing = False
+
+    async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Execute agent asynchronously with given inputs.
+
+        This method is designed for use within async contexts, such as when
+        the agent is called from within an async Flow method. It uses
+        kickoff_async() directly instead of running in a separate thread.
 
         Args:
             inputs: Input dictionary containing prompt variables.
@@ -779,7 +874,8 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
                 inputs.get("ask_for_human_input", False)
             )
 
-            self.kickoff()
+            # Use async kickoff directly since we're already in an async context
+            await self.kickoff_async()
 
             formatted_answer = self.state.current_answer
 
@@ -870,11 +966,14 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         if self.agent is None:
             raise ValueError("Agent cannot be None")
 
+        if self.task is None:
+            return
+
         crewai_event_bus.emit(
             self.agent,
             AgentLogsStartedEvent(
                 agent_role=self.agent.role,
-                task_description=(self.task.description if self.task else "Not Found"),
+                task_description=self.task.description,
                 verbose=self.agent.verbose
                 or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
             ),
@@ -908,10 +1007,12 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
             result: Agent's final output.
             human_feedback: Optional feedback from human.
         """
+        # Early return if no crew (standalone mode)
+        if self.crew is None:
+            return
+
         agent_id = str(self.agent.id)
-        train_iteration = (
-            getattr(self.crew, "_train_iteration", None) if self.crew else None
-        )
+        train_iteration = getattr(self.crew, "_train_iteration", None)
 
         if train_iteration is None or not isinstance(train_iteration, int):
             train_error = Text()
@@ -1093,3 +1194,7 @@ class CrewAgentExecutorFlow(Flow[AgentReActState], CrewAgentExecutorMixin):
         requiring arbitrary_types_allowed=True.
         """
         return core_schema.any_schema()
+
+
+# Backward compatibility alias (deprecated)
+CrewAgentExecutorFlow = AgentExecutor
