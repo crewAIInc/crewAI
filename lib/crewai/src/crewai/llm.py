@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import threading
+import warnings
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -406,23 +407,37 @@ class LLM(BaseLLM):
             }
 
             if prefix.lower() == "openai_responses":
-                raise ValueError(
-                    "Model prefix 'openai_responses/' is no longer supported. "
-                    "Use provider='openai' with api='responses' instead."
+                # Backwards-compatibility: allow the old prefix for now, but steer
+                # users to the explicit provider+api syntax.
+                if explicit_api not in (None, "responses"):
+                    raise ValueError(
+                        "Model prefix 'openai_responses/' implies api='responses' but "
+                        f"got api='{explicit_api}'. Use provider='openai' with api='responses' instead."
+                    )
+                warnings.warn(
+                    "Model prefix 'openai_responses/' is deprecated and will be removed in a future version. "
+                    "Use provider='openai' with api='responses' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
                 )
-
-            canonical_provider = provider_mapping.get(prefix.lower())
-
-            if canonical_provider and cls._validate_model_in_constants(
-                model_part, canonical_provider
-            ):
-                provider = canonical_provider
+                provider = "openai_responses"
                 use_native = True
                 model_string = model_part
+                canonical_provider = None
             else:
-                provider = prefix
-                use_native = False
-                model_string = model_part
+                canonical_provider = provider_mapping.get(prefix.lower())
+
+            if canonical_provider is not None:
+                if canonical_provider and cls._validate_model_in_constants(
+                    model_part, canonical_provider
+                ):
+                    provider = canonical_provider
+                    use_native = True
+                    model_string = model_part
+                else:
+                    provider = prefix
+                    use_native = False
+                    model_string = model_part
         else:
             provider = cls._infer_provider_from_model(model)
             use_native = True
@@ -476,10 +491,20 @@ class LLM(BaseLLM):
 
         # Explicitly disallow legacy alias to avoid confusion
         if provider == "openai_responses":
-            raise ValueError(
-                "provider='openai_responses' is no longer supported. "
-                "Use provider='openai' with api='responses' instead."
+            # Backwards-compatibility: allow the legacy alias for now, but steer
+            # users to the explicit provider+api syntax.
+            if api not in (None, "responses"):
+                raise ValueError(
+                    "provider='openai_responses' implies api='responses' but "
+                    f"got api='{api}'. Use provider='openai' with api='responses' instead."
+                )
+            warnings.warn(
+                "provider='openai_responses' is deprecated and will be removed in a future version. "
+                "Use provider='openai' with api='responses' instead.",
+                DeprecationWarning,
+                stacklevel=2,
             )
+            return "openai_responses"
 
         return provider
 

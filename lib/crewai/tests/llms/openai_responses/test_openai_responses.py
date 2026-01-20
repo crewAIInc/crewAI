@@ -25,10 +25,31 @@ def test_responses_completion_is_used_with_api_flag():
 
 def test_model_prefix_responses_is_rejected():
     """
-    Model prefix 'openai_responses/' is not supported and should raise.
+    Model prefix 'openai_responses/' is deprecated but should still work for now.
     """
+    with pytest.warns(DeprecationWarning):
+        llm = LLM(model="openai_responses/gpt-4o")
+    assert llm.__class__.__name__ == "OpenAIResponsesCompletion"
+    assert llm.provider == "openai_responses"
+    assert llm.model == "gpt-4o"
+
+
+def test_provider_openai_responses_is_deprecated_but_supported():
+    with pytest.warns(DeprecationWarning):
+        llm = LLM(model="gpt-4o", provider="openai_responses")
+    assert llm.__class__.__name__ == "OpenAIResponsesCompletion"
+    assert llm.provider == "openai_responses"
+    assert llm.model == "gpt-4o"
+
+
+def test_provider_openai_responses_conflicting_api_is_rejected():
     with pytest.raises(ValueError):
-        LLM(model="openai_responses/gpt-4o")
+        LLM(model="gpt-4o", provider="openai_responses", api="chat")
+
+
+def test_model_prefix_openai_responses_conflicting_api_is_rejected():
+    with pytest.raises(ValueError):
+        LLM(model="openai_responses/gpt-4o", api="chat")
 
 
 def test_responses_completion_module_is_imported():
