@@ -32,6 +32,16 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 
 
 @pytest.fixture(autouse=True, scope="function")
+def reset_event_state() -> None:
+    """Reset event system state before each test for isolation."""
+    from crewai.events.base_events import reset_emission_counter
+    from crewai.events.event_context import _event_id_stack
+
+    reset_emission_counter()
+    _event_id_stack.set(())
+
+
+@pytest.fixture(autouse=True, scope="function")
 def setup_test_environment() -> Generator[None, Any, None]:
     """Setup test environment for crewAI workspace."""
     with tempfile.TemporaryDirectory() as temp_dir:
