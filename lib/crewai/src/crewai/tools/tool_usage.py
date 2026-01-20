@@ -401,6 +401,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_tools_errors()
                         should_retry = True
+            else:
+                result = self._format_result(result=result)
 
         finally:
             if started_event_emitted:
@@ -602,6 +604,8 @@ class ToolUsage:
                         if self.task:
                             self.task.increment_tools_errors()
                         should_retry = True
+            else:
+                result = self._format_result(result=result)
 
         finally:
             if started_event_emitted:
