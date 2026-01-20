@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+import contextvars
 from datetime import datetime, timezone
 import itertools
 from typing import Any
@@ -9,27 +10,37 @@ from pydantic import BaseModel, Field
 from crewai.utilities.serialization import Serializable, to_serializable
 
 
-_emission_counter: Iterator[int] = itertools.count(start=1)
+_emission_counter: contextvars.ContextVar[Iterator[int]] = contextvars.ContextVar(
+    "_emission_counter"
+)
+
+
+def _get_or_create_counter() -> Iterator[int]:
+    """Get the emission counter for the current context, creating if needed."""
+    try:
+        return _emission_counter.get()
+    except LookupError:
+        counter: Iterator[int] = itertools.count(start=1)
+        _emission_counter.set(counter)
+        return counter
 
 
 def get_next_emission_sequence() -> int:
     """Get the next emission sequence number.
 
-    Thread-safe due to atomic next() on itertools.count under the GIL.
-
     Returns:
         The next sequence number.
     """
-    return next(_emission_counter)
+    return next(_get_or_create_counter())
 
 
 def reset_emission_counter() -> None:
     """Reset the emission sequence counter to 1.
 
-    Useful for test isolation.
+    Resets for the current context only.
     """
-    global _emission_counter
-    _emission_counter = itertools.count(start=1)
+    counter: Iterator[int] = itertools.count(start=1)
+    _emission_counter.set(counter)
 
 
 class BaseEvent(BaseModel):

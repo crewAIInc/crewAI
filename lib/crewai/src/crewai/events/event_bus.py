@@ -420,7 +420,7 @@ class CrewAIEventsBus:
 
         return None
 
-    def flush(self, timeout: float | None = None) -> bool:
+    def flush(self, timeout: float | None = 30.0) -> bool:
         """Block until all pending event handlers complete.
 
         This method waits for all futures from previously emitted events to
@@ -429,7 +429,7 @@ class CrewAIEventsBus:
 
         Args:
             timeout: Maximum time in seconds to wait for handlers to complete.
-                    If None, waits indefinitely.
+                    Defaults to 30 seconds. Pass None to wait indefinitely.
 
         Returns:
             True if all handlers completed, False if timeout occurred.
