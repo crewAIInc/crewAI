@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, Field, create_model
+from pydantic import Field, create_model
 import requests
 import typing_extensions as te
 
@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 class MergeAgentHandlerToolError(Exception):
     """Base exception for Merge Agent Handler tool errors."""
-
 
 
 class MergeAgentHandlerTool(BaseTool):
@@ -109,7 +108,7 @@ class MergeAgentHandlerTool(BaseTool):
                 )
                 raise MergeAgentHandlerToolError(f"API Error: {error_msg}")
 
-            return result
+            return result  # type: ignore[no-any-return]
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to call Agent Handler API: {e!s}")
@@ -123,10 +122,18 @@ class MergeAgentHandlerTool(BaseTool):
             # Log what we're about to send
             logger.info(f"Executing {self.tool_name} with arguments: {kwargs}")
 
+            # Agent Handler wraps parameters in an "input" object
+            # If arguments are already wrapped (from workaround), use as-is
+            # Otherwise, wrap them
+            if "input" in kwargs and len(kwargs) == 1:
+                arguments = kwargs
+            else:
+                arguments = {"input": kwargs}
+
             # Make the tool call via MCP
             result = self._make_mcp_request(
                 method="tools/call",
-                params={"name": self.tool_name, "arguments": kwargs},
+                params={"name": self.tool_name, "arguments": arguments},
             )
 
             # Extract the actual result from the MCP response
@@ -174,7 +181,7 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tool = MergeAgentHandlerTool.from_tool_name(
             ...     tool_name="linear__create_issue",
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
-            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa"
+            ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
             ... )
         """
         # Create an empty args schema model (proper BaseModel subclass)
@@ -206,37 +213,78 @@ class MergeAgentHandlerTool(BaseTool):
                         "description", instance.description
                     )
 
-                    # Convert parameters schema to Pydantic model
-                    if "parameters" in tool_schema:
+                    # Convert inputSchema to Pydantic model (MCP protocol uses "inputSchema")
+                    if "inputSchema" in tool_schema:
                         try:
-                            params = tool_schema["parameters"]
-                            if params.get("type") == "object" and "properties" in params:
-                                # Build field definitions for Pydantic
-                                fields = {}
+                            params = tool_schema["inputSchema"]
+                            if (
+                                params.get("type") == "object"
+                                and "properties" in params
+                            ):
+                                # Agent Handler wraps parameters in an "input" object
+                                # Check if we need to unwrap it
                                 properties = params["properties"]
                                 required = params.get("required", [])
 
+                                if "input" in properties and len(properties) == 1:
+                                    # Unwrap the input object to get actual parameters
+                                    input_schema = properties["input"]
+                                    if (
+                                        isinstance(input_schema, dict)
+                                        and "properties" in input_schema
+                                    ):
+                                        properties = input_schema["properties"]
+                                        required = input_schema.get("required", [])
+
+                                # Build field definitions for Pydantic
+                                fields = {}
+
                                 for field_name, field_schema in properties.items():
-                                    field_type = Any  # Default type
-                                    field_default = ...  # Required by default
+                                    field_type: Any = Any  # Default type
+                                    field_default: Any = ...  # Required by default
+                                    is_nullable = False
 
-                                    # Map JSON schema types to Python types
-                                    json_type = field_schema.get("type", "string")
-                                    if json_type == "string":
-                                        field_type = str
-                                    elif json_type == "integer":
-                                        field_type = int
-                                    elif json_type == "number":
-                                        field_type = float
-                                    elif json_type == "boolean":
-                                        field_type = bool
-                                    elif json_type == "array":
-                                        field_type = list[Any]
-                                    elif json_type == "object":
-                                        field_type = dict[str, Any]
+                                    # Check if field uses anyOf (common for nullable types)
+                                    if "anyOf" in field_schema:
+                                        # anyOf typically means the field can be null
+                                        types_in_any_of = field_schema["anyOf"]
+                                        for type_def in types_in_any_of:
+                                            if isinstance(type_def, dict):
+                                                if type_def.get("type") == "null":
+                                                    is_nullable = True
+                                                elif "type" in type_def:
+                                                    # Use the non-null type
+                                                    json_type = type_def["type"]
+                                                    if json_type == "string":
+                                                        field_type = str
+                                                    elif json_type == "integer":
+                                                        field_type = int
+                                                    elif json_type == "number":
+                                                        field_type = float
+                                                    elif json_type == "boolean":
+                                                        field_type = bool
+                                                    elif json_type == "array":
+                                                        field_type = list[Any]
+                                                    elif json_type == "object":
+                                                        field_type = dict[str, Any]
+                                    else:
+                                        # Map JSON schema types to Python types
+                                        json_type = field_schema.get("type", "string")
+                                        if json_type == "string":
+                                            field_type = str
+                                        elif json_type == "integer":
+                                            field_type = int
+                                        elif json_type == "number":
+                                            field_type = float
+                                        elif json_type == "boolean":
+                                            field_type = bool
+                                        elif json_type == "array":
+                                            field_type = list[Any]
+                                        elif json_type == "object":
+                                            field_type = dict[str, Any]
 
-                                    # Make field optional if not required
-                                    if field_name not in required:
+                                    # Make field optional if not required or if nullable
+                                    if field_name not in required or is_nullable:
                                         field_type = field_type | None
                                         field_default = None
 
@@ -254,7 +302,7 @@ class MergeAgentHandlerTool(BaseTool):
 
                                 # Create the Pydantic model
                                 if fields:
-                                    args_schema = create_model(
+                                    args_schema = create_model(  # type: ignore[call-overload]
                                         f"{tool_name.replace('__', '_').title()}Args",
                                         **fields,
                                     )
@@ -264,6 +312,12 @@ class MergeAgentHandlerTool(BaseTool):
                             logger.warning(
                                 f"Failed to create args schema for {tool_name}: {e!s}"
                             )
+                    else:
+                        # Log when inputSchema is missing to help debugging
+                        logger.debug(
+                            f"Tool {tool_name} has no inputSchema in response. "
+                            f"Available keys: {list(tool_schema.keys())}"
+                        )
 
         except Exception as e:
             logger.warning(
@@ -298,10 +352,11 @@ class MergeAgentHandlerTool(BaseTool):
             >>> tools = MergeAgentHandlerTool.from_tool_pack(
             ...     tool_pack_id="134e0111-0f67-44f6-98f0-597000290bb3",
             ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
-            ...     tool_names=["linear__create_issue", "linear__get_issues"]
+            ...     tool_names=["linear__create_issue", "linear__get_issues"],
             ... )
         """
         # Create a temporary instance to fetch the tool list
+        temp_args_schema = create_model("TempArgs")
         temp_instance = cls(
             name="temp",
             description="temp",
@@ -309,7 +364,7 @@ class MergeAgentHandlerTool(BaseTool):
             registered_user_id=registered_user_id,
             tool_name="temp",
             base_url=base_url,
-            args_schema=BaseModel,
+            args_schema=temp_args_schema,
         )
 
         try:
