@@ -728,3 +728,39 @@ def test_google_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+@pytest.mark.vcr()
+def test_google_express_mode_works() -> None:
+    """
+    Test Google Vertex AI Express mode with API key authentication.
+    This tests Vertex AI Express mode (aiplatform.googleapis.com) with API key
+    authentication.
+
+    """
+    with patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}):
+        agent = Agent(
+            role="Research Assistant",
+            goal="Find information about the capital of Japan",
+            backstory="You are a helpful research assistant.",
+            llm=LLM(
+                model="gemini/gemini-2.0-flash-exp",
+            ),
+            verbose=True,
+        )
+
+        task = Task(
+            description="What is the capital of Japan?",
+            expected_output="The capital of Japan",
+            agent=agent,
+        )
+
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result.token_usage is not None
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.prompt_tokens > 0
+        assert result.token_usage.completion_tokens > 0
+        assert result.token_usage.successful_requests >= 1
