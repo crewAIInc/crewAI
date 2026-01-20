@@ -54,15 +54,21 @@ class GeminiCompletion(BaseLLM):
         safety_settings: dict[str, Any] | None = None,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        use_vertexai: bool | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
 
         Args:
             model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
-            api_key: Google API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
-            project: Google Cloud project ID (for Vertex AI)
-            location: Google Cloud location (for Vertex AI, defaults to 'us-central1')
+            api_key: Google API key for Gemini API authentication.
+                    Defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var.
+                    NOTE: Cannot be used with Vertex AI (project parameter). Use Gemini API instead.
+            project: Google Cloud project ID for Vertex AI with ADC authentication.
+                    Requires Application Default Credentials (gcloud auth application-default login).
+                    NOTE: Vertex AI does NOT support API keys, only OAuth2/ADC.
+                    If both api_key and project are set, api_key takes precedence.
+            location: Google Cloud location (for Vertex AI with ADC, defaults to 'us-central1')
             temperature: Sampling temperature (0-2)
             top_p: Nucleus sampling parameter
             top_k: Top-k sampling parameter
@@ -73,6 +79,12 @@ class GeminiCompletion(BaseLLM):
             client_params: Additional parameters to pass to the Google Gen AI Client constructor.
                           Supports parameters like http_options, credentials, debug_config, etc.
             interceptor: HTTP interceptor (not yet supported for Gemini).
+            use_vertexai: Whether to use Vertex AI instead of Gemini API.
+                         - True: Use Vertex AI (with ADC or Express mode with API key)
+                         - False: Use Gemini API (explicitly override env var)
+                         - None (default): Check GOOGLE_GENAI_USE_VERTEXAI env var
+                         When using Vertex AI with API key (Express mode), http_options with
+                         api_version="v1" is automatically configured.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -95,7 +107,8 @@ class GeminiCompletion(BaseLLM):
         self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
         self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
 
-        use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+        if use_vertexai is None:
+            use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
 
         self.client = self._initialize_client(use_vertexai)
 
@@ -146,13 +159,34 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             Initialized Google Gen AI Client
+
+        Note:
+            Google Gen AI SDK has two distinct endpoints with different auth requirements:
+            - Gemini API (generativelanguage.googleapis.com): Supports API key authentication
+            - Vertex AI (aiplatform.googleapis.com): Only supports OAuth2/ADC, NO API keys
+
+            When vertexai=True is set, it routes to aiplatform.googleapis.com which rejects
+            API keys. Use Gemini API endpoint for API key authentication instead.
         """
         client_params = {}
 
         if self.client_params:
             client_params.update(self.client_params)
 
-        if use_vertexai or self.project:
+        # Determine authentication mode based on available credentials
+        has_api_key = bool(self.api_key)
+        has_project = bool(self.project)
+
+        if has_api_key and has_project:
+            logging.warning(
+                "Both API key and project provided. Using API key authentication. "
+                "Project/location parameters are ignored when using API keys. "
+                "To use Vertex AI with ADC, remove the api_key parameter."
+            )
+            has_project = False
+
+        # Vertex AI with ADC (project without API key)
+        if (use_vertexai or has_project) and not has_api_key:
             client_params.update(
                 {
                     "vertexai": True,
@@ -161,12 +195,20 @@ class GeminiCompletion(BaseLLM):
                 }
             )
 
-            client_params.pop("api_key", None)
-
-        elif self.api_key:
+        # API key authentication (works with both Gemini API and Vertex AI Express)
+        elif has_api_key:
             client_params["api_key"] = self.api_key
 
-            client_params.pop("vertexai", None)
+            # Vertex AI Express mode: API key + vertexai=True + http_options with api_version="v1"
+            # See: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey
+            if use_vertexai:
+                client_params["vertexai"] = True
+                client_params["http_options"] = types.HttpOptions(api_version="v1")
+            else:
+                # This ensures we use the Gemini API (generativelanguage.googleapis.com)
+                client_params["vertexai"] = False
+
+            # Clean up project/location (not allowed with API key)
             client_params.pop("project", None)
             client_params.pop("location", None)
 
@@ -175,10 +217,13 @@ class GeminiCompletion(BaseLLM):
                 return genai.Client(**client_params)
             except Exception as e:
                 raise ValueError(
-                    "Either GOOGLE_API_KEY/GEMINI_API_KEY (for Gemini API) or "
-                    "GOOGLE_CLOUD_PROJECT (for Vertex AI) must be set"
+                    "Authentication required. Provide one of:\n"
+                    "  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n"
+                    "     (use_vertexai=True is optional for Vertex AI with API key)\n"
+                    "  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n"
+                    "     gcloud auth application-default login\n"
+                    "  3. Pass api_key parameter directly to LLM constructor\n"
                 ) from e
-
         return genai.Client(**client_params)
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -202,6 +247,8 @@ class GeminiCompletion(BaseLLM):
                     "location": self.location,
                 }
             )
+            if self.api_key:
+                params["api_key"] = self.api_key
         elif self.api_key:
             params["api_key"] = self.api_key
 
