@@ -49,15 +49,18 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: !!binary |
-        H4sIAAAAAAAAAwAAAP//jFLBbtswDL37Kwid48JOk7rxLUAxdIdil24osBUGI9M2N1kSJLnpUOTf
-        Bzlp7HYdsIsB8/E9vUfyJQEQXIsShOwwyN6q9CbL/Gb7sH/YfZUFP+Pdt1u/VTdfbu8afS8WkWF2
-        P0mGV9aFNL1VFNjoIywdYaComhdX19ebdbFcj0BvalKR1tqQri7ytGfN6TJbrtNslearE70zLMmL
-        Er4nAAAv4zca1TU9ixKyxWulJ++xJVGemwCEMypWBHrPPqAOYjGB0uhAevR+35mh7UIJn0GbPUjU
-        0PITAUIbAwBqvyf3Q39ijQq2418JHc/lHDWDx5hJD0rNANTaBIwzGYM8npDD2boyrXVm599RRcOa
-        fVc5Qm90tOmDsWJEDwnA4zii4U1qYZ3pbaiC+UXjc/l6c9QT02pm6OoEBhNQzerF5eIDvaqmgKz8
-        bMhCouyonqjTRnCo2cyAZJb6bzcfaR+Ts27/R34CpCQbqK6so5rl28RTm6N4uf9qO095NCw8uSeW
-        VAUmFzdRU4ODOp6T8L99oL5qWLfkrOPjTTW2uiyusJCSmlwkh+QPAAAA//8DAASWsy5iAwAA
+      string: "{\n  \"id\": \"chatcmpl-D087HNU70QfEltqUwIaR3WflNQJMq\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1768923571,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+        Answer: hi\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 159,\n    \"completion_tokens\": 14,\n
+        \   \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -66,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 20 Jan 2026 07:55:26 GMT
+      - Tue, 20 Jan 2026 15:39:31 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -86,13 +89,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '369'
+      - '401'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '391'
+      - '429'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

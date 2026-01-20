@@ -1,6 +1,7 @@
 """Pytest configuration for crewAI workspace."""
 
 from collections.abc import Generator
+import gzip
 import os
 from pathlib import Path
 import tempfile
@@ -153,9 +154,14 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
 
 def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
     """Filter sensitive headers from response before recording."""
-    # Remove Content-Encoding to prevent decompression issues on replay
+
     for encoding_header in ["Content-Encoding", "content-encoding"]:
-        response["headers"].pop(encoding_header, None)
+        if encoding_header in response["headers"]:
+            encoding = response["headers"].pop(encoding_header)
+            if encoding and encoding[0] == "gzip":
+                body = response.get("body", {}).get("string", b"")
+                if isinstance(body, bytes) and body.startswith(b"\x1f\x8b"):
+                    response["body"]["string"] = gzip.decompress(body).decode("utf-8")
 
     for header_name, replacement in HEADERS_TO_FILTER.items():
         for variant in [header_name, header_name.upper(), header_name.title()]:
