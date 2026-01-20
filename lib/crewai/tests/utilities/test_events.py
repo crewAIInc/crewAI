@@ -348,9 +348,7 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
 
     error_message = "Error happening while sending prompt to model."
     base_agent.max_retry_limit = 0
-    with patch.object(
-        CrewAgentExecutor, "invoke", wraps=base_agent.agent_executor.invoke
-    ) as invoke_mock:
+    with patch.object(CrewAgentExecutor, "invoke") as invoke_mock:
         invoke_mock.side_effect = Exception(error_message)
 
         with pytest.raises(Exception):  # noqa: B017
