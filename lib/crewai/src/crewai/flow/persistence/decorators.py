@@ -90,6 +90,12 @@ class PersistenceDecorator:
             flow_uuid: str | None = None
             if isinstance(state, dict):
                 flow_uuid = state.get("id")
+            elif hasattr(state, "_unwrap"):
+                unwrapped = state._unwrap()
+                if isinstance(unwrapped, dict):
+                    flow_uuid = unwrapped.get("id")
+                else:
+                    flow_uuid = getattr(unwrapped, "id", None)
             elif isinstance(state, BaseModel) or hasattr(state, "id"):
                 flow_uuid = getattr(state, "id", None)
 
