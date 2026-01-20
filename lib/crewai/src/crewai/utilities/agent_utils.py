@@ -171,16 +171,18 @@ def convert_tools_to_openai_schema(
             # Extract the original description after "Tool Description:"
             description = description.split("Tool Description:")[-1].strip()
 
+        sanitized_name = re.sub(r"[^a-zA-Z0-9_.\-:]", "_", tool.name)
+
         schema: dict[str, Any] = {
             "type": "function",
             "function": {
-                "name": tool.name,
+                "name": sanitized_name,
                 "description": description,
                 "parameters": parameters,
             },
         }
         openai_tools.append(schema)
-        available_functions[tool.name] = tool.run
+        available_functions[sanitized_name] = tool.run  # type: ignore[attr-defined]
 
     return openai_tools, available_functions
 

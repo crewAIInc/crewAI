@@ -105,6 +105,21 @@ def log_tool_conversion(tool: dict[str, Any], provider: str) -> None:
         logging.error(f"{provider}: Tool structure: {tool}")
 
 
+def sanitize_function_name(name: str) -> str:
+    """Sanitize function name for LLM provider compatibility.
+
+    Replaces invalid characters with underscores. Valid characters are:
+    letters, numbers, underscore, dot, colon, and dash.
+
+    Args:
+        name: Original function name
+
+    Returns:
+        Sanitized function name with invalid characters replaced
+    """
+    return re.sub(r"[^a-zA-Z0-9_.\-:]", "_", name)
+
+
 def safe_tool_conversion(
     tool: dict[str, Any], provider: str
 ) -> tuple[str, str, dict[str, Any]]:
@@ -127,7 +142,10 @@ def safe_tool_conversion(
 
         name, description, parameters = extract_tool_info(tool)
 
-        validated_name = validate_function_name(name, provider)
+        # Sanitize name before validation (replace invalid chars with underscores)
+        sanitized_name = sanitize_function_name(name)
+
+        validated_name = validate_function_name(sanitized_name, provider)
 
         logging.info(f"{provider}: Successfully validated tool '{validated_name}'")
         return validated_name, description, parameters
