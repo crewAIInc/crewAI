@@ -404,7 +404,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 available_functions=None,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=self.response_model,
+                # response_model=self.response_model,
+                response_model=None,
                 executor_context=self,
             )
 
