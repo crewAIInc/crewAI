@@ -24,6 +24,8 @@ from crewai.events.event_context import (
     VALID_EVENT_PAIRS,
     get_current_parent_id,
     get_enclosing_parent_id,
+    handle_empty_pop,
+    handle_mismatch,
     pop_event_scope,
     push_event_scope,
 )
@@ -342,19 +344,12 @@ class CrewAIEventsBus:
                 event.parent_event_id = get_enclosing_parent_id()
                 popped = pop_event_scope()
                 if popped is None:
-                    self._console.print(
-                        f"[CrewAIEventsBus] Warning: Ending event '{event_type_name}' "
-                        "emitted with empty scope stack. Missing starting event?"
-                    )
+                    handle_empty_pop(event_type_name)
                 else:
                     _, popped_type = popped
                     expected_start = VALID_EVENT_PAIRS.get(event_type_name)
                     if expected_start and popped_type and popped_type != expected_start:
-                        self._console.print(
-                            f"[CrewAIEventsBus] Warning: Event pairing mismatch. "
-                            f"'{event_type_name}' closed '{popped_type}' "
-                            f"(expected '{expected_start}')"
-                        )
+                        handle_mismatch(event_type_name, popped_type, expected_start)
             elif event_type_name in SCOPE_STARTING_EVENTS:
                 event.parent_event_id = get_current_parent_id()
                 push_event_scope(event.event_id, event_type_name)

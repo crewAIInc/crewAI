@@ -35,10 +35,15 @@ def cleanup_event_handlers() -> Generator[None, Any, None]:
 def reset_event_state() -> None:
     """Reset event system state before each test for isolation."""
     from crewai.events.base_events import reset_emission_counter
-    from crewai.events.event_context import _event_id_stack
+    from crewai.events.event_context import (
+        EventContextConfig,
+        _event_context_config,
+        _event_id_stack,
+    )
 
     reset_emission_counter()
     _event_id_stack.set(())
+    _event_context_config.set(EventContextConfig())
 
 
 @pytest.fixture(autouse=True, scope="function")
