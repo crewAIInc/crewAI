@@ -125,7 +125,13 @@ class MergeAgentHandlerTool(BaseTool):
             # Agent Handler wraps parameters in an "input" object
             # If arguments are already wrapped (from workaround), use as-is
             # Otherwise, wrap them
-            if "input" in kwargs and len(kwargs) == 1:
+            # Check if value is a dict to distinguish pre-wrapped args from a tool
+            # parameter that happens to be named "input"
+            if (
+                "input" in kwargs
+                and len(kwargs) == 1
+                and isinstance(kwargs["input"], dict)
+            ):
                 arguments = kwargs
             else:
                 arguments = {"input": kwargs}
@@ -283,9 +289,12 @@ class MergeAgentHandlerTool(BaseTool):
                                         elif json_type == "object":
                                             field_type = dict[str, Any]
 
-                                    # Make field optional if not required or if nullable
-                                    if field_name not in required or is_nullable:
+                                    # Add None to type union if field is nullable
+                                    if is_nullable:
                                         field_type = field_type | None
+
+                                    # Only set default to None if field is not required
+                                    if field_name not in required:
                                         field_default = None
 
                                     field_description = field_schema.get("description")
