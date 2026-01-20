@@ -252,8 +252,9 @@ class TestAgentEventOrdering:
 class TestFlowWithCrewEventOrdering:
     """Tests for event ordering in flows containing crews."""
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_flow_events_have_ids(self, collector: EventCollector) -> None:
+    async def test_flow_events_have_ids(self, collector: EventCollector) -> None:
         """Flow events should have event_ids."""
         agent = Agent(
             role="Worker",
@@ -269,12 +270,12 @@ class TestFlowWithCrewEventOrdering:
 
         class SimpleFlow(Flow):
             @start()
-            def run_crew(self):
+            async def run_crew(self):
                 c = Crew(agents=[agent], tasks=[task], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = SimpleFlow()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         flow_started = collector.first(FlowStartedEvent)
@@ -286,8 +287,9 @@ class TestFlowWithCrewEventOrdering:
         assert flow_finished is not None
         assert flow_finished.event_id is not None
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_method_parent_is_flow(self, collector: EventCollector) -> None:
+    async def test_method_parent_is_flow(self, collector: EventCollector) -> None:
         """Method execution events should have flow as parent."""
         agent = Agent(
             role="Worker",
@@ -303,12 +305,12 @@ class TestFlowWithCrewEventOrdering:
 
         class FlowWithMethod(Flow):
             @start()
-            def my_method(self):
+            async def my_method(self):
                 c = Crew(agents=[agent], tasks=[task], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = FlowWithMethod()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         flow_started = collector.first(FlowStartedEvent)
@@ -318,8 +320,9 @@ class TestFlowWithCrewEventOrdering:
         assert method_started is not None
         assert method_started.parent_event_id == flow_started.event_id
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_crew_parent_is_method(self, collector: EventCollector) -> None:
+    async def test_crew_parent_is_method(self, collector: EventCollector) -> None:
         """Crew inside flow method should have method as parent."""
         agent = Agent(
             role="Worker",
@@ -335,12 +338,12 @@ class TestFlowWithCrewEventOrdering:
 
         class FlowWithCrew(Flow):
             @start()
-            def run_it(self):
+            async def run_it(self):
                 c = Crew(agents=[agent], tasks=[task], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = FlowWithCrew()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         method_started = collector.first(MethodExecutionStartedEvent)
@@ -354,8 +357,11 @@ class TestFlowWithCrewEventOrdering:
 class TestFlowWithMultipleCrewsEventOrdering:
     """Tests for event ordering in flows with multiple crews."""
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_two_crews_have_different_ids(self, collector: EventCollector) -> None:
+    async def test_two_crews_have_different_ids(
+        self, collector: EventCollector
+    ) -> None:
         """Two crews in a flow should have different event_ids."""
         agent1 = Agent(
             role="First",
@@ -382,17 +388,17 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         class TwoCrewFlow(Flow):
             @start()
-            def first(self):
+            async def first(self):
                 c = Crew(agents=[agent1], tasks=[task1], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
             @listen(first)
-            def second(self, _):
+            async def second(self, _):
                 c = Crew(agents=[agent2], tasks=[task2], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = TwoCrewFlow()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
@@ -400,8 +406,9 @@ class TestFlowWithMultipleCrewsEventOrdering:
         assert len(crew_started_events) >= 2
         assert crew_started_events[0].event_id != crew_started_events[1].event_id
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_second_crew_after_first(self, collector: EventCollector) -> None:
+    async def test_second_crew_after_first(self, collector: EventCollector) -> None:
         """Second crew should have higher sequence than first."""
         agent1 = Agent(
             role="First",
@@ -428,17 +435,17 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         class SequentialCrewFlow(Flow):
             @start()
-            def crew_a(self):
+            async def crew_a(self):
                 c = Crew(agents=[agent1], tasks=[task1], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
             @listen(crew_a)
-            def crew_b(self, _):
+            async def crew_b(self, _):
                 c = Crew(agents=[agent2], tasks=[task2], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = SequentialCrewFlow()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
@@ -451,8 +458,11 @@ class TestFlowWithMultipleCrewsEventOrdering:
         assert second.emission_sequence is not None
         assert second.emission_sequence > first.emission_sequence
 
+    @pytest.mark.asyncio
     @pytest.mark.vcr()
-    def test_tasks_have_correct_crew_parents(self, collector: EventCollector) -> None:
+    async def test_tasks_have_correct_crew_parents(
+        self, collector: EventCollector
+    ) -> None:
         """Tasks in different crews should have their own crew as parent."""
         agent1 = Agent(
             role="Alpha",
@@ -479,17 +489,17 @@ class TestFlowWithMultipleCrewsEventOrdering:
 
         class ParentTestFlow(Flow):
             @start()
-            def alpha_crew(self):
+            async def alpha_crew(self):
                 c = Crew(agents=[agent1], tasks=[task1], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
             @listen(alpha_crew)
-            def beta_crew(self, _):
+            async def beta_crew(self, _):
                 c = Crew(agents=[agent2], tasks=[task2], verbose=False)
-                return c.kickoff()
+                return await c.akickoff()
 
         flow = ParentTestFlow()
-        flow.kickoff()
+        await flow.akickoff()
         crewai_event_bus.flush()
 
         crew_started_events = collector.all_of(CrewKickoffStartedEvent)
