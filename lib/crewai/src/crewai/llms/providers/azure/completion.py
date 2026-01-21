@@ -171,7 +171,7 @@ class AzureCompletion(BaseLLM):
         )
 
         self.is_azure_openai_endpoint = (
-            "openai.azure.com" in self.endpoint
+            "azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
         )
 
@@ -189,7 +189,7 @@ class AzureCompletion(BaseLLM):
         Returns:
             Validated and potentially corrected endpoint URL
         """
-        if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
+        if "azure.com" in endpoint and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 
             if not endpoint.endswith("/openai/deployments"):
