@@ -1260,6 +1260,7 @@ def test_state_consistency_across_parallel_branches():
 
     Note: Branches triggered by the same parent execute in parallel for efficiency.
     Thread-safe state access via StateProxy ensures no race conditions.
+    We check the execution order to ensure the branches execute in parallel.
     """
     execution_order = []
 
