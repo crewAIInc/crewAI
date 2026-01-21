@@ -724,6 +724,8 @@ class TraceCollectionListener(BaseEventListener):
             event_id=event.event_id,
             emission_sequence=event.emission_sequence,
             parent_event_id=event.parent_event_id,
+            previous_event_id=event.previous_event_id,
+            triggered_by_event_id=event.triggered_by_event_id,
         )
 
         trace_event.event_data = self._build_event_data(event_type, event, source)
