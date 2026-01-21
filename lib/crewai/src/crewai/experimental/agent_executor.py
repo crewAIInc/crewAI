@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
+from datetime import datetime
+import json
 import threading
 import time
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -541,6 +543,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @listen("execute_tool")
     def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
         """Execute the tool action and handle the result."""
+
         try:
             action = cast(AgentAction, self.state.current_answer)
 
