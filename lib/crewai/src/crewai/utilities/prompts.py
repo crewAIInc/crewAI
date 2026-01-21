@@ -68,9 +68,7 @@ class Prompts(BaseModel):
         # When using ReAct pattern with tools, use tools instructions
         # When no tools are available, use no_tools instructions
         if self.has_tools:
-            if self.use_native_tool_calling:
-                slices.append("native_tools")
-            else:
+            if not self.use_native_tool_calling:
                 slices.append("tools")
         else:
             slices.append("no_tools")
