@@ -819,6 +819,42 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     return attributes
 
 
+def extract_tool_call_info(
+    tool_call: Any,
+) -> tuple[str, str, dict[str, Any] | str] | None:
+    """Extract tool call ID, name, and arguments from various provider formats.
+
+    Args:
+        tool_call: The tool call object to extract info from.
+
+    Returns:
+        Tuple of (call_id, func_name, func_args) or None if format is unrecognized.
+    """
+    if hasattr(tool_call, "function"):
+        # OpenAI-style: has .function.name and .function.arguments
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return call_id, tool_call.function.name, tool_call.function.arguments
+    if hasattr(tool_call, "function_call") and tool_call.function_call:
+        # Gemini-style: has .function_call.name and .function_call.args
+        call_id = f"call_{id(tool_call)}"
+        return (
+            call_id,
+            tool_call.function_call.name,
+            dict(tool_call.function_call.args) if tool_call.function_call.args else {},
+        )
+    if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
+        # Anthropic format: has .name and .input (ToolUseBlock)
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return call_id, tool_call.name, tool_call.input
+    if isinstance(tool_call, dict):
+        call_id = tool_call.get("id", f"call_{id(tool_call)}")
+        func_info = tool_call.get("function", {})
+        func_name = func_info.get("name", "") or tool_call.get("name", "")
+        func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        return call_id, func_name, func_args
+    return None
+
+
 def _setup_before_llm_call_hooks(
     executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
 ) -> bool:
