@@ -737,6 +737,33 @@ def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
         assert llm.model == "groq/llama-3.1-70b-versatile"
 
 
+def test_litellm_fallback_raises_helpful_error_when_litellm_not_available():
+    """Test that when LiteLLM is not available, a helpful error message is raised."""
+    with patch("crewai.llm.LITELLM_AVAILABLE", False):
+        with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
+            with pytest.raises(ImportError) as excinfo:
+                LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
+
+            error_message = str(excinfo.value)
+            assert "groq/llama-3.1-70b-versatile" in error_message
+            assert "LiteLLM" in error_message
+            assert "pip install" in error_message
+            assert "crewai[litellm]" in error_message
+
+
+def test_litellm_fallback_error_includes_model_name():
+    """Test that the LiteLLM fallback error includes the model name for clarity."""
+    with patch("crewai.llm.LITELLM_AVAILABLE", False):
+        with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
+            test_model = "together/meta-llama/Llama-3-70b"
+            with pytest.raises(ImportError) as excinfo:
+                LLM(model=test_model, is_litellm=False)
+
+            error_message = str(excinfo.value)
+            assert test_model in error_message
+            assert "requires LiteLLM for inference" in error_message
+
+
 def test_prefixed_models_with_valid_constants_use_native_sdk():
     """Test that models with native provider prefixes use native SDK when model is in constants."""
     # Test openai/ prefix with actual OpenAI model in constants → Native SDK

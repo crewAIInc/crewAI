@@ -410,8 +410,14 @@ class LLM(BaseLLM):
 
         # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
-            logger.error("LiteLLM is not available, falling back to LiteLLM")
-            raise ImportError("Fallback to LiteLLM is not available") from None
+            logger.error(
+                f"Model '{model}' requires LiteLLM but it is not installed. "
+                "Install it with: pip install 'crewai[litellm]' or pip install litellm"
+            )
+            raise ImportError(
+                f"Model '{model}' requires LiteLLM for inference but LiteLLM is not installed. "
+                "Please install it with: pip install 'crewai[litellm]' or pip install litellm"
+            ) from None
 
         instance = object.__new__(cls)
         super(LLM, instance).__init__(model=model, is_litellm=True, **kwargs)
@@ -1144,7 +1150,7 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
-            
+
             if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
@@ -1363,7 +1369,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
-        
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
