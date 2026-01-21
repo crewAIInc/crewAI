@@ -14,10 +14,16 @@ from crewai.events.event_context import (
     EventContextConfig,
     get_current_parent_id,
     get_enclosing_parent_id,
+    get_last_event_id,
+    get_triggering_event_id,
     handle_empty_pop,
     handle_mismatch,
     pop_event_scope,
     push_event_scope,
+    reset_last_event_id,
+    set_last_event_id,
+    set_triggering_event_id,
+    triggered_by_scope,
 )
 
 
@@ -97,3 +103,78 @@ class TestEventTypeSets:
     def test_starting_and_ending_are_disjoint(self) -> None:
         overlap = SCOPE_STARTING_EVENTS & SCOPE_ENDING_EVENTS
         assert not overlap
+
+
+class TestLastEventIdTracking:
+    """Tests for linear chain event ID tracking."""
+
+    def test_initial_last_event_id_is_none(self) -> None:
+        reset_last_event_id()
+        assert get_last_event_id() is None
+
+    def test_set_and_get_last_event_id(self) -> None:
+        reset_last_event_id()
+        set_last_event_id("event-123")
+        assert get_last_event_id() == "event-123"
+
+    def test_reset_clears_last_event_id(self) -> None:
+        set_last_event_id("event-123")
+        reset_last_event_id()
+        assert get_last_event_id() is None
+
+    def test_overwrite_last_event_id(self) -> None:
+        reset_last_event_id()
+        set_last_event_id("event-1")
+        set_last_event_id("event-2")
+        assert get_last_event_id() == "event-2"
+
+
+class TestTriggeringEventIdTracking:
+    """Tests for causal chain event ID tracking."""
+
+    def test_initial_triggering_event_id_is_none(self) -> None:
+        set_triggering_event_id(None)
+        assert get_triggering_event_id() is None
+
+    def test_set_and_get_triggering_event_id(self) -> None:
+        set_triggering_event_id("trigger-123")
+        assert get_triggering_event_id() == "trigger-123"
+        set_triggering_event_id(None)
+
+    def test_set_none_clears_triggering_event_id(self) -> None:
+        set_triggering_event_id("trigger-123")
+        set_triggering_event_id(None)
+        assert get_triggering_event_id() is None
+
+
+class TestTriggeredByScope:
+    """Tests for triggered_by_scope context manager."""
+
+    def test_scope_sets_triggering_id(self) -> None:
+        set_triggering_event_id(None)
+        with triggered_by_scope("trigger-456"):
+            assert get_triggering_event_id() == "trigger-456"
+
+    def test_scope_restores_previous_value(self) -> None:
+        set_triggering_event_id(None)
+        with triggered_by_scope("trigger-456"):
+            pass
+        assert get_triggering_event_id() is None
+
+    def test_nested_scopes(self) -> None:
+        set_triggering_event_id(None)
+        with triggered_by_scope("outer"):
+            assert get_triggering_event_id() == "outer"
+            with triggered_by_scope("inner"):
+                assert get_triggering_event_id() == "inner"
+            assert get_triggering_event_id() == "outer"
+        assert get_triggering_event_id() is None
+
+    def test_scope_restores_on_exception(self) -> None:
+        set_triggering_event_id(None)
+        try:
+            with triggered_by_scope("trigger-789"):
+                raise ValueError("test error")
+        except ValueError:
+            pass
+        assert get_triggering_event_id() is None
