@@ -1256,10 +1256,10 @@ def test_conditional_router_paths_exclusivity():
 
 
 def test_state_consistency_across_parallel_branches():
-    """Test that state remains consistent when branches execute sequentially.
+    """Test that state remains consistent when branches execute in parallel.
 
-    Note: Branches triggered by the same parent execute sequentially, not in parallel.
-    This ensures predictable state mutations and prevents race conditions.
+    Note: Branches triggered by the same parent execute in parallel for efficiency.
+    Thread-safe state access via StateProxy ensures no race conditions.
     """
     execution_order = []
 
@@ -1296,12 +1296,14 @@ def test_state_consistency_across_parallel_branches():
     flow = StateConsistencyFlow()
     flow.kickoff()
 
-    # Branches execute sequentially, so branch_a runs first, then branch_b
-    assert flow.state["branch_a_value"] == 10  # Sees initial value
-    assert flow.state["branch_b_value"] == 11  # Sees value after branch_a increment
+    assert "branch_a" in execution_order
+    assert "branch_b" in execution_order
+    assert "verify_state" in execution_order
 
-    # Final counter should reflect both increments sequentially
-    assert flow.state["counter"] == 16  # 10 + 1 + 5
+    assert flow.state["branch_a_value"] is not None
+    assert flow.state["branch_b_value"] is not None
+
+    assert flow.state["counter"] == 16
 
 
 def test_deeply_nested_conditions():
