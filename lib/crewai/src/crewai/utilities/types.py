@@ -1,8 +1,8 @@
 """Types for CrewAI utilities."""
 
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
-from typing_extensions import TypedDict
+from crewai.utilities.files import FileInput
 
 
 class LLMMessage(TypedDict):
@@ -15,3 +15,13 @@ class LLMMessage(TypedDict):
 
     role: Literal["user", "assistant", "system"]
     content: str | list[dict[str, Any]]
+
+
+class KickoffInputs(TypedDict, total=False):
+    """Type for crew kickoff inputs.
+
+    Attributes:
+        files: Named file inputs accessible to tasks during execution.
+    """
+
+    files: dict[str, FileInput]
