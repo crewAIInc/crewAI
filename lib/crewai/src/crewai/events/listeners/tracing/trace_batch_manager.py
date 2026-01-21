@@ -267,9 +267,12 @@ class TraceBatchManager:
 
         sorted_events = sorted(
             self.event_buffer,
-            key=lambda e: e.timestamp
-            if hasattr(e, "timestamp") and e.timestamp
-            else "",
+            key=lambda e: (
+                e.emission_sequence
+                if e.emission_sequence is not None
+                else float("inf"),
+                e.timestamp if hasattr(e, "timestamp") and e.timestamp else "",
+            ),
         )
 
         self.current_batch.events = sorted_events

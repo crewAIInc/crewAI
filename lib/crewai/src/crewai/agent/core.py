@@ -14,7 +14,14 @@ from typing import (
 )
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    model_validator,
+)
 from typing_extensions import Self
 
 from crewai.agent.utils import (
@@ -46,6 +53,7 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
 from crewai.experimental.agent_executor import AgentExecutor
@@ -85,17 +93,10 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-try:
-    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
-except ImportError:
-    A2AClientConfig = Any
-    A2AConfig = Any
-    A2AServerConfig = Any
-
-
 if TYPE_CHECKING:
     from crewai_tools import CodeInterpreterTool
 
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
@@ -140,6 +141,8 @@ class Agent(BaseAgent):
             apps: List of applications that the agent can access through CrewAI Platform.
             mcps: List of MCP server references for tool integration.
     """
+
+    model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
     _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
@@ -354,30 +357,43 @@ class Agent(BaseAgent):
             )
 
             start_time = time.time()
+            memory = ""
 
-            contextual_memory = ContextualMemory(
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._external_memory,
-                agent=self,
-                task=task,
-            )
-            memory = contextual_memory.build_context_for_task(task, context or "")
-            if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+            try:
+                contextual_memory = ContextualMemory(
+                    self.crew._short_term_memory,
+                    self.crew._long_term_memory,
+                    self.crew._entity_memory,
+                    self.crew._external_memory,
+                    agent=self,
+                    task=task,
+                )
+                memory = contextual_memory.build_context_for_task(task, context or "")
+                if memory.strip() != "":
+                    task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalCompletedEvent(
-                    task_id=str(task.id) if task else None,
-                    memory_content=memory,
-                    retrieval_time_ms=(time.time() - start_time) * 1000,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=str(task.id) if task else None,
+                        memory_content=memory,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=str(task.id) if task else None,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                        error=str(e),
+                    ),
+                )
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -563,32 +579,45 @@ class Agent(BaseAgent):
             )
 
             start_time = time.time()
+            memory = ""
 
-            contextual_memory = ContextualMemory(
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._external_memory,
-                agent=self,
-                task=task,
-            )
-            memory = await contextual_memory.abuild_context_for_task(
-                task, context or ""
-            )
-            if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+            try:
+                contextual_memory = ContextualMemory(
+                    self.crew._short_term_memory,
+                    self.crew._long_term_memory,
+                    self.crew._entity_memory,
+                    self.crew._external_memory,
+                    agent=self,
+                    task=task,
+                )
+                memory = await contextual_memory.abuild_context_for_task(
+                    task, context or ""
+                )
+                if memory.strip() != "":
+                    task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalCompletedEvent(
-                    task_id=str(task.id) if task else None,
-                    memory_content=memory,
-                    retrieval_time_ms=(time.time() - start_time) * 1000,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=str(task.id) if task else None,
+                        memory_content=memory,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=str(task.id) if task else None,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                        error=str(e),
+                    ),
+                )
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
@@ -2039,3 +2068,22 @@ class Agent(BaseAgent):
                 ),
             )
             raise
+
+
+# Rebuild Agent model to resolve A2A type forward references
+try:
+    from crewai.a2a.config import (
+        A2AClientConfig as _A2AClientConfig,
+        A2AConfig as _A2AConfig,
+        A2AServerConfig as _A2AServerConfig,
+    )
+
+    Agent.model_rebuild(
+        _types_namespace={
+            "A2AConfig": _A2AConfig,
+            "A2AClientConfig": _A2AClientConfig,
+            "A2AServerConfig": _A2AServerConfig,
+        }
+    )
+except ImportError:
+    pass

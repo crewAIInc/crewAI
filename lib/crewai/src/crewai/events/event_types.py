@@ -79,6 +79,7 @@ from crewai.events.types.memory_events import (
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -173,6 +174,7 @@ EventTypes = (
     | MemoryQueryFailedEvent
     | MemoryRetrievalStartedEvent
     | MemoryRetrievalCompletedEvent
+    | MemoryRetrievalFailedEvent
     | MCPConnectionStartedEvent
     | MCPConnectionCompletedEvent
     | MCPConnectionFailedEvent
