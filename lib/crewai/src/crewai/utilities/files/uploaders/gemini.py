@@ -10,6 +10,7 @@ from typing import Any
 
 from crewai.utilities.files.content_types import (
     AudioFile,
+    File,
     ImageFile,
     PDFFile,
     TextFile,
@@ -20,7 +21,7 @@ from crewai.utilities.files.uploaders.base import FileUploader, UploadResult
 
 logger = logging.getLogger(__name__)
 
-FileInput = AudioFile | ImageFile | PDFFile | TextFile | VideoFile
+FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 # Gemini files expire after 48 hours
 GEMINI_FILE_TTL = timedelta(hours=48)

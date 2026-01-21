@@ -5,6 +5,7 @@ import logging
 
 from crewai.utilities.files.content_types import (
     AudioFile,
+    File,
     ImageFile,
     PDFFile,
     TextFile,
@@ -26,7 +27,7 @@ from crewai.utilities.files.processing.exceptions import (
 
 logger = logging.getLogger(__name__)
 
-FileInput = AudioFile | ImageFile | PDFFile | TextFile | VideoFile
+FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 
 def _format_size(size_bytes: int) -> str:
