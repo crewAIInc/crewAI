@@ -250,10 +250,6 @@ class Agent(BaseAgent):
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
-    max_tools_per_turn: int = Field(
-        default=10,
-        description="Maximum number of tool calls to execute per LLM turn before asking for reflection.",
-    )
 
     @model_validator(mode="before")
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:  # noqa: N805
@@ -807,7 +803,6 @@ class Agent(BaseAgent):
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
                 response_model=task.response_model if task else None,
-                # max_tools_per_turn=self.max_tools_per_turn, #TODO: drop this
             )
 
     def _update_executor_parameters(
@@ -1703,7 +1698,6 @@ class Agent(BaseAgent):
             callbacks=[TokenCalcHandler(self._token_process)],
             response_model=response_format,
             i18n=self.i18n,
-            max_tools_per_turn=self.max_tools_per_turn,
         )
 
         # Format messages
