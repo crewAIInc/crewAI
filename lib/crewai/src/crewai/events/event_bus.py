@@ -24,10 +24,13 @@ from crewai.events.event_context import (
     VALID_EVENT_PAIRS,
     get_current_parent_id,
     get_enclosing_parent_id,
+    get_last_event_id,
+    get_triggering_event_id,
     handle_empty_pop,
     handle_mismatch,
     pop_event_scope,
     push_event_scope,
+    set_last_event_id,
 )
 from crewai.events.handler_graph import build_execution_plan
 from crewai.events.types.event_bus_types import (
@@ -360,6 +363,8 @@ class CrewAIEventsBus:
             ...     await asyncio.wrap_future(future)  # In async test
             ...     # or future.result(timeout=5.0) in sync code
         """
+        event.previous_event_id = get_last_event_id()
+        event.triggered_by_event_id = get_triggering_event_id()
         event.emission_sequence = get_next_emission_sequence()
         if event.parent_event_id is None:
             event_type_name = event.type
@@ -379,6 +384,7 @@ class CrewAIEventsBus:
             else:
                 event.parent_event_id = get_current_parent_id()
 
+        set_last_event_id(event.event_id)
         event_type = type(event)
 
         with self._rwlock.r_locked():
