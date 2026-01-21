@@ -15,5 +15,10 @@ class TraceEvent:
     type: str = ""
     event_data: dict[str, Any] = field(default_factory=dict)
 
+    emission_sequence: int | None = None
+    parent_event_id: str | None = None
+    previous_event_id: str | None = None
+    triggered_by_event_id: str | None = None
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

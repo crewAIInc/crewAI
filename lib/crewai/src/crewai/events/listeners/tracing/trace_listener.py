@@ -9,6 +9,7 @@ from typing_extensions import Self
 from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
+from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
 from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
@@ -616,7 +617,7 @@ class TraceCollectionListener(BaseEventListener):
             if self.batch_manager.is_batch_initialized():
                 self.batch_manager.finalize_batch()
 
-    def _initialize_crew_batch(self, source: Any, event: Any) -> None:
+    def _initialize_crew_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch.
 
         Args:
@@ -626,7 +627,7 @@ class TraceCollectionListener(BaseEventListener):
         user_context = self._get_user_context()
         execution_metadata = {
             "crew_name": getattr(event, "crew_name", "Unknown Crew"),
-            "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
+            "execution_start": event.timestamp,
             "crewai_version": get_crewai_version(),
         }
 
@@ -635,7 +636,7 @@ class TraceCollectionListener(BaseEventListener):
 
         self._initialize_batch(user_context, execution_metadata)
 
-    def _initialize_flow_batch(self, source: Any, event: Any) -> None:
+    def _initialize_flow_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch for Flow execution.
 
         Args:
@@ -645,7 +646,7 @@ class TraceCollectionListener(BaseEventListener):
         user_context = self._get_user_context()
         execution_metadata = {
             "flow_name": getattr(event, "flow_name", "Unknown Flow"),
-            "execution_start": event.timestamp if hasattr(event, "timestamp") else None,
+            "execution_start": event.timestamp,
             "crewai_version": get_crewai_version(),
             "execution_type": "flow",
         }
@@ -714,18 +715,18 @@ class TraceCollectionListener(BaseEventListener):
             self.batch_manager.end_event_processing()
 
     def _create_trace_event(
-        self, event_type: str, source: Any, event: Any
+        self, event_type: str, source: Any, event: BaseEvent
     ) -> TraceEvent:
-        """Create a trace event"""
-        if hasattr(event, "timestamp") and event.timestamp:
-            trace_event = TraceEvent(
-                type=event_type,
-                timestamp=event.timestamp.isoformat(),
-            )
-        else:
-            trace_event = TraceEvent(
-                type=event_type,
-            )
+        """Create a trace event with ordering information."""
+        trace_event = TraceEvent(
+            type=event_type,
+            timestamp=event.timestamp.isoformat() if event.timestamp else "",
+            event_id=event.event_id,
+            emission_sequence=event.emission_sequence,
+            parent_event_id=event.parent_event_id,
+            previous_event_id=event.previous_event_id,
+            triggered_by_event_id=event.triggered_by_event_id,
+        )
 
         trace_event.event_data = self._build_event_data(event_type, event, source)
 
@@ -778,10 +779,8 @@ class TraceCollectionListener(BaseEventListener):
             }
         if event_type == "llm_call_started":
             event_data = safe_serialize_to_dict(event)
-            event_data["task_name"] = (
-                event.task_name or event.task_description
-                if hasattr(event, "task_name") and event.task_name
-                else None
+            event_data["task_name"] = event.task_name or getattr(
+                event, "task_description", None
             )
             return event_data
         if event_type == "llm_call_completed":

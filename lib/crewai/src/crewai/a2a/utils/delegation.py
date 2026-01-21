@@ -251,30 +251,48 @@ async def aexecute_a2a_delegation(
     if turn_number is None:
         turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
 
-    result = await _aexecute_a2a_delegation_impl(
-        endpoint=endpoint,
-        auth=auth,
-        timeout=timeout,
-        task_description=task_description,
-        context=context,
-        context_id=context_id,
-        task_id=task_id,
-        reference_task_ids=reference_task_ids,
-        metadata=metadata,
-        extensions=extensions,
-        conversation_history=conversation_history,
-        is_multiturn=is_multiturn,
-        turn_number=turn_number,
-        agent_branch=agent_branch,
-        agent_id=agent_id,
-        agent_role=agent_role,
-        response_model=response_model,
-        updates=updates,
-        transport_protocol=transport_protocol,
-        from_task=from_task,
-        from_agent=from_agent,
-        skill_id=skill_id,
-    )
+    try:
+        result = await _aexecute_a2a_delegation_impl(
+            endpoint=endpoint,
+            auth=auth,
+            timeout=timeout,
+            task_description=task_description,
+            context=context,
+            context_id=context_id,
+            task_id=task_id,
+            reference_task_ids=reference_task_ids,
+            metadata=metadata,
+            extensions=extensions,
+            conversation_history=conversation_history,
+            is_multiturn=is_multiturn,
+            turn_number=turn_number,
+            agent_branch=agent_branch,
+            agent_id=agent_id,
+            agent_role=agent_role,
+            response_model=response_model,
+            updates=updates,
+            transport_protocol=transport_protocol,
+            from_task=from_task,
+            from_agent=from_agent,
+            skill_id=skill_id,
+        )
+    except Exception as e:
+        crewai_event_bus.emit(
+            agent_branch,
+            A2ADelegationCompletedEvent(
+                status="failed",
+                result=None,
+                error=str(e),
+                context_id=context_id,
+                is_multiturn=is_multiturn,
+                endpoint=endpoint,
+                metadata=metadata,
+                extensions=list(extensions.keys()) if extensions else None,
+                from_task=from_task,
+                from_agent=from_agent,
+            ),
+        )
+        raise
 
     agent_card_data: dict[str, Any] = result.get("agent_card") or {}
     crewai_event_bus.emit(

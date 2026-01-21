@@ -10,6 +10,7 @@ from typing import (
     get_origin,
 )
 import uuid
+import warnings
 
 from pydantic import (
     UUID4,
@@ -79,6 +80,11 @@ from crewai.utilities.types import LLMMessage
 class LiteAgent(FlowTrackable, BaseModel):
     """
     A lightweight agent that can process messages and use tools.
+
+    .. deprecated::
+        LiteAgent is deprecated and will be removed in a future version.
+        Use ``Agent().kickoff(messages)`` instead, which provides the same
+        functionality with additional features like memory and knowledge support.
 
     This agent is simpler than the full Agent class, focusing on direct execution
     rather than task delegation. It's designed to be used for simple interactions
@@ -163,6 +169,18 @@ class LiteAgent(FlowTrackable, BaseModel):
     _after_llm_call_hooks: list[AfterLLMCallHookType] = PrivateAttr(
         default_factory=get_after_llm_call_hooks
     )
+
+    @model_validator(mode="after")
+    def emit_deprecation_warning(self) -> Self:
+        """Emit deprecation warning for LiteAgent usage."""
+        warnings.warn(
+            "LiteAgent is deprecated and will be removed in a future version. "
+            "Use Agent().kickoff(messages) instead, which provides the same "
+            "functionality with additional features like memory and knowledge support.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self
 
     @model_validator(mode="after")
     def setup_llm(self) -> Self:

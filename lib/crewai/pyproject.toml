@@ -25,7 +25,7 @@ dependencies = [
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv~=1.1.1",
-    "pyjwt~=2.9.0",
+    "pyjwt>=2.9.0,<3",
     # Configuration and Utils
     "click~=8.1.7",
     "appdirs~=1.4.4",
@@ -36,7 +36,7 @@ dependencies = [
     "json5~=0.10.0",
     "portalocker~=2.7.0",
     "pydantic-settings~=2.10.1",
-    "mcp~=1.16.0",
+    "mcp~=1.23.1",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
 ]

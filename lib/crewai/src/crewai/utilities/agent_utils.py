@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Sequence
 import json
 import re
@@ -52,6 +53,23 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+
+
+def is_inside_event_loop() -> bool:
+    """Check if code is currently running inside an asyncio event loop.
+
+    This is used to detect when code is being called from within an async context
+    (e.g., inside a Flow). In such cases, callers should return a coroutine
+    instead of executing synchronously to avoid nested event loop errors.
+
+    Returns:
+        True if inside a running event loop, False otherwise.
+    """
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False
 
 
 def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:

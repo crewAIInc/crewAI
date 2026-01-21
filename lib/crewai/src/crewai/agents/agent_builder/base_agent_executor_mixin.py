@@ -21,9 +21,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Crew
+    crew: Crew | None
     agent: Agent
-    task: Task
+    task: Task | None
     iterations: int
     max_iter: int
     messages: list[LLMMessage]
