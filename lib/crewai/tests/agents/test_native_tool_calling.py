@@ -7,8 +7,7 @@ when the LLM supports it, across multiple providers.
 from __future__ import annotations
 
 import os
-from typing import Any
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -16,26 +15,6 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Crew, Task
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
-
-
-# Check for optional provider availability
-try:
-    import anthropic
-    HAS_ANTHROPIC = True
-except ImportError:
-    HAS_ANTHROPIC = False
-
-try:
-    import google.genai
-    HAS_GOOGLE_GENAI = True
-except ImportError:
-    HAS_GOOGLE_GENAI = False
-
-try:
-    import boto3
-    HAS_BOTO3 = True
-except ImportError:
-    HAS_BOTO3 = False
 
 
 class CalculatorInput(BaseModel):
@@ -159,9 +138,6 @@ class TestOpenAINativeToolCalling:
 # =============================================================================
 # Anthropic Provider Tests
 # =============================================================================
-
-
-@pytest.mark.skipif(not HAS_ANTHROPIC, reason="anthropic package not installed")
 class TestAnthropicNativeToolCalling:
     """Tests for native tool calling with Anthropic models."""
 
@@ -235,42 +211,44 @@ class TestAnthropicNativeToolCalling:
 # =============================================================================
 
 
-@pytest.mark.skipif(not HAS_GOOGLE_GENAI, reason="google-genai package not installed")
 class TestGeminiNativeToolCalling:
     """Tests for native tool calling with Gemini models."""
 
     @pytest.fixture(autouse=True)
     def mock_google_api_key(self):
         """Mock GOOGLE_API_KEY for tests."""
-        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+        if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" not in os.environ:
+            with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+                yield
+        else:
             yield
+
 
     @pytest.mark.vcr()
     def test_gemini_agent_with_native_tool_calling(
         self, calculator_tool: CalculatorTool
     ) -> None:
         """Test Gemini agent can use native tool calling."""
-        agent = Agent(
-            role="Math Assistant",
-            goal="Help users with mathematical calculations",
-            backstory="You are a helpful math assistant.",
-            tools=[calculator_tool],
-            llm=LLM(model="gemini/gemini-2.0-flash-001"),
-            verbose=False,
-            max_iter=3,
-        )
+        with patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}):
+            agent = Agent(
+                role="Math Assistant",
+                goal="Help users with mathematical calculations",
+                backstory="You are a helpful math assistant.",
+                tools=[calculator_tool],
+                llm=LLM(model="gemini/gemini-2.0-flash-exp"),
+            )
 
-        task = Task(
-            description="Calculate what is 15 * 8",
-            expected_output="The result of the calculation",
-            agent=agent,
-        )
+            task = Task(
+                description="Calculate what is 15 * 8",
+                expected_output="The result of the calculation",
+                agent=agent,
+            )
 
-        crew = Crew(agents=[agent], tasks=[task])
-        result = crew.kickoff()
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
 
-        assert result is not None
-        assert result.raw is not None
+            assert result is not None
+            assert result.raw is not None
 
     def test_gemini_agent_kickoff_with_tools_mocked(
         self, calculator_tool: CalculatorTool
@@ -358,7 +336,6 @@ class TestAzureNativeToolCalling:
 # =============================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTO3, reason="boto3 package not installed")
 class TestBedrockNativeToolCalling:
     """Tests for native tool calling with AWS Bedrock models."""
 
@@ -417,7 +394,6 @@ class TestNativeToolCallingBehavior:
         assert hasattr(openai_llm, "supports_function_calling")
         assert openai_llm.supports_function_calling() is True
 
-    @pytest.mark.skipif(not HAS_ANTHROPIC, reason="anthropic package not installed")
     def test_anthropic_supports_function_calling(self) -> None:
         """Test that Anthropic models support function calling."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
@@ -425,14 +401,10 @@ class TestNativeToolCallingBehavior:
             assert hasattr(llm, "supports_function_calling")
             assert llm.supports_function_calling() is True
 
-    @pytest.mark.skipif(not HAS_GOOGLE_GENAI, reason="google-genai package not installed")
     def test_gemini_supports_function_calling(self) -> None:
         """Test that Gemini models support function calling."""
-        # with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
-        print("GOOGLE_API_KEY", os.getenv("GOOGLE_API_KEY"))
         llm = LLM(model="gemini/gemini-2.5-flash")
         assert hasattr(llm, "supports_function_calling")
-        # Gemini uses supports_tools property
         assert llm.supports_function_calling() is True
 
 
