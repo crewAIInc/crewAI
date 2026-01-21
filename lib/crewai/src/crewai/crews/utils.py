@@ -191,11 +191,12 @@ def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any]
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.event_context import get_current_parent_id
+    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
     if get_current_parent_id() is None:
         reset_emission_counter()
+        reset_last_event_id()
 
     for before_callback in crew.before_kickoff_callbacks:
         if inputs is None:
