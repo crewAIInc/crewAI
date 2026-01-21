@@ -75,7 +75,7 @@ class AgentReActState(BaseModel):
 
 
 class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
-    """Flow-based agent executor for both standalone and crew-bound execution.
+    """Agent Executor for both standalone agents and crew-bound agents.
 
     Inherits from:
     - Flow[AgentReActState]: Provides flow orchestration capabilities
