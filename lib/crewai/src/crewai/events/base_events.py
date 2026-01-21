@@ -61,6 +61,8 @@ class BaseEvent(BaseModel):
 
     event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     parent_event_id: str | None = None
+    previous_event_id: str | None = None
+    triggered_by_event_id: str | None = None
     emission_sequence: int | None = None
 
     def to_json(self, exclude: set[str] | None = None) -> Serializable:
