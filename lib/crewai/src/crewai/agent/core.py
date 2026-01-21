@@ -247,6 +247,7 @@ class Agent(BaseAgent):
         """,
     )
     executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
+    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
@@ -1615,6 +1616,7 @@ class Agent(BaseAgent):
             )
             return None
 
+    def _prepare_kickoff(
     def _prepare_kickoff(
         self,
         messages: str | list[LLMMessage],

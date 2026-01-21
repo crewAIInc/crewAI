@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Coroutine
-from datetime import datetime
-import json
 import threading
 import time
 from typing import TYPE_CHECKING, Any, Literal, cast
@@ -88,7 +86,7 @@ class AgentReActState(BaseModel):
 
 
 class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
-    """Flow-based agent executor for both standalone and crew-bound execution.
+    """Agent Executor for both standalone agents and crew-bound agents.
 
     Inherits from:
     - Flow[AgentReActState]: Provides flow orchestration capabilities
@@ -199,11 +197,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     else self.stop
                 )
             )
-
-        # Native tool calling support
-        self._openai_tools: list[dict[str, Any]] = []
-        self._available_functions: dict[str, Callable[..., Any]] = {}
-
         self._state = AgentReActState()
 
     def _ensure_flow_initialized(self) -> None:
@@ -917,6 +910,91 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
 
             self.kickoff()
+
+            formatted_answer = self.state.current_answer
+
+            if not isinstance(formatted_answer, AgentFinish):
+                raise RuntimeError(
+                    "Agent execution ended without reaching a final answer."
+                )
+
+            if self.state.ask_for_human_input:
+                formatted_answer = self._handle_human_feedback(formatted_answer)
+
+            self._create_short_term_memory(formatted_answer)
+            self._create_long_term_memory(formatted_answer)
+            self._create_external_memory(formatted_answer)
+
+            return {"output": formatted_answer.output}
+
+        except AssertionError:
+            fail_text = Text()
+            fail_text.append("❌ ", style="red bold")
+            fail_text.append(
+                "Agent failed to reach a final answer. This is likely a bug - please report it.",
+                style="red",
+            )
+            self._console.print(fail_text)
+            raise
+        except Exception as e:
+            handle_unknown_error(self._printer, e)
+            raise
+        finally:
+            self._is_executing = False
+
+    async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Execute agent asynchronously with given inputs.
+
+        This method is designed for use within async contexts, such as when
+        the agent is called from within an async Flow method. It uses
+        kickoff_async() directly instead of running in a separate thread.
+
+        Args:
+            inputs: Input dictionary containing prompt variables.
+
+        Returns:
+            Dictionary with agent output, or a coroutine if inside an event loop.
+        """
+        # Magic auto-async: if inside event loop, return coroutine for Flow to await
+        if is_inside_event_loop():
+            return self.invoke_async(inputs)
+
+        self._ensure_flow_initialized()
+
+        with self._execution_lock:
+            if self._is_executing:
+                raise RuntimeError(
+                    "Executor is already running. "
+                    "Cannot invoke the same executor instance concurrently."
+                )
+            self._is_executing = True
+            self._has_been_invoked = True
+
+        try:
+            # Reset state for fresh execution
+            self.state.messages.clear()
+            self.state.iterations = 0
+            self.state.current_answer = None
+            self.state.is_finished = False
+
+            if "system" in self.prompt:
+                prompt = cast("SystemPromptResult", self.prompt)
+                system_prompt = self._format_prompt(prompt["system"], inputs)
+                user_prompt = self._format_prompt(prompt["user"], inputs)
+                self.state.messages.append(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+                self.state.messages.append(format_message_for_llm(user_prompt))
+            else:
+                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
+                self.state.messages.append(format_message_for_llm(user_prompt))
+
+            self.state.ask_for_human_input = bool(
+                inputs.get("ask_for_human_input", False)
+            )
+
+            # Use async kickoff directly since we're already in an async context
+            await self.kickoff_async()
 
             formatted_answer = self.state.current_answer
 
