@@ -124,8 +124,11 @@ class AzureCompletion(BaseLLM):
         )
 
         self.api_key = api_key or os.getenv("AZURE_API_KEY")
+        # Support both 'endpoint' and 'base_url' parameters for consistency with other providers
+        base_url = kwargs.get("base_url")
         self.endpoint = (
             endpoint
+            or base_url
             or os.getenv("AZURE_ENDPOINT")
             or os.getenv("AZURE_OPENAI_ENDPOINT")
             or os.getenv("AZURE_API_BASE")
@@ -170,10 +173,43 @@ class AzureCompletion(BaseLLM):
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
         )
 
+        # Azure OpenAI endpoints use openai.azure.com domain and require deployment path
+        # Other Azure AI endpoints (cognitiveservices.azure.com, etc.) are also valid
         self.is_azure_openai_endpoint = (
             "openai.azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
         )
+
+        # Check if this is any Azure endpoint (for proper API handling)
+        self.is_azure_endpoint = self._is_azure_endpoint(self.endpoint)
+
+    @staticmethod
+    def _is_azure_endpoint(endpoint: str) -> bool:
+        """Check if the endpoint is an Azure endpoint.
+
+        Azure endpoints can have various domain formats:
+        - openai.azure.com (Azure OpenAI Service)
+        - cognitiveservices.azure.com (Azure AI Services / Cognitive Services)
+        - services.ai.azure.com (Azure AI Services)
+        - Other *.azure.com domains
+
+        Args:
+            endpoint: The endpoint URL to check
+
+        Returns:
+            True if the endpoint is an Azure endpoint, False otherwise
+        """
+        azure_domains = [
+            "openai.azure.com",
+            "cognitiveservices.azure.com",
+            "services.ai.azure.com",
+        ]
+        # Check for known Azure domains
+        for domain in azure_domains:
+            if domain in endpoint:
+                return True
+        # Also check for generic .azure.com pattern (e.g., cservices.azure.com)
+        return ".azure.com" in endpoint
 
     @staticmethod
     def _validate_and_fix_endpoint(endpoint: str, model: str) -> str:
@@ -182,6 +218,9 @@ class AzureCompletion(BaseLLM):
         Azure OpenAI endpoints should be in the format:
         https://<resource-name>.openai.azure.com/openai/deployments/<deployment-name>
 
+        Other Azure AI endpoints (cognitiveservices.azure.com, etc.) are used as-is
+        since they may have different URL structures.
+
         Args:
             endpoint: The endpoint URL
             model: The model/deployment name
@@ -189,6 +228,8 @@ class AzureCompletion(BaseLLM):
         Returns:
             Validated and potentially corrected endpoint URL
         """
+        # Only auto-construct deployment path for Azure OpenAI endpoints (openai.azure.com)
+        # Other Azure endpoints (cognitiveservices.azure.com, etc.) should be used as-is
         if "openai.azure.com" in endpoint and "/openai/deployments/" not in endpoint:
             endpoint = endpoint.rstrip("/")
 

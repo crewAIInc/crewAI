@@ -1215,3 +1215,177 @@ def test_azure_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+def test_azure_cognitive_services_endpoint():
+    """
+    Test that Azure Cognitive Services endpoints (cognitiveservices.azure.com) are supported.
+    This addresses GitHub issue #4260 where non-openai.azure.com endpoints were not working.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://my-resource.cognitiveservices.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        assert isinstance(llm, AzureCompletion)
+        # Cognitive Services endpoints should NOT have deployment path auto-constructed
+        assert llm.endpoint == "https://my-resource.cognitiveservices.azure.com"
+        # Should be recognized as an Azure endpoint
+        assert llm.is_azure_endpoint == True
+        # But NOT as an Azure OpenAI endpoint (different URL structure)
+        assert llm.is_azure_openai_endpoint == False
+
+
+def test_azure_ai_services_endpoint():
+    """
+    Test that Azure AI Services endpoints (services.ai.azure.com) are supported.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://my-resource.services.ai.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        assert isinstance(llm, AzureCompletion)
+        assert llm.endpoint == "https://my-resource.services.ai.azure.com"
+        assert llm.is_azure_endpoint == True
+        assert llm.is_azure_openai_endpoint == False
+
+
+def test_azure_generic_azure_com_endpoint():
+    """
+    Test that generic .azure.com endpoints are supported (e.g., cservices.azure.com).
+    This addresses the specific case from GitHub issue #4260.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://my-resource.cservices.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        assert isinstance(llm, AzureCompletion)
+        assert llm.endpoint == "https://my-resource.cservices.azure.com"
+        assert llm.is_azure_endpoint == True
+        assert llm.is_azure_openai_endpoint == False
+
+
+def test_azure_is_azure_endpoint_detection():
+    """
+    Test the _is_azure_endpoint static method for various endpoint formats.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Azure OpenAI endpoints
+    assert AzureCompletion._is_azure_endpoint("https://my-resource.openai.azure.com") == True
+    assert AzureCompletion._is_azure_endpoint("https://my-resource.openai.azure.com/openai/deployments/gpt-4") == True
+
+    # Azure Cognitive Services endpoints
+    assert AzureCompletion._is_azure_endpoint("https://my-resource.cognitiveservices.azure.com") == True
+
+    # Azure AI Services endpoints
+    assert AzureCompletion._is_azure_endpoint("https://my-resource.services.ai.azure.com") == True
+
+    # Generic .azure.com endpoints (like cservices.azure.com from issue #4260)
+    assert AzureCompletion._is_azure_endpoint("https://my-resource.cservices.azure.com") == True
+
+    # Azure AI Inference endpoint
+    assert AzureCompletion._is_azure_endpoint("https://models.inference.ai.azure.com") == True
+
+    # Non-Azure endpoints should return False
+    assert AzureCompletion._is_azure_endpoint("https://api.openai.com") == False
+    assert AzureCompletion._is_azure_endpoint("https://example.com") == False
+
+
+def test_azure_base_url_parameter_support():
+    """
+    Test that the base_url parameter is supported as an alias for endpoint.
+    This provides consistency with other LLM providers.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Test with base_url parameter directly
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        base_url="https://my-resource.cognitiveservices.azure.com"
+    )
+
+    assert llm.endpoint == "https://my-resource.cognitiveservices.azure.com"
+    assert llm.is_azure_endpoint == True
+
+
+def test_azure_endpoint_takes_precedence_over_base_url():
+    """
+    Test that explicit endpoint parameter takes precedence over base_url.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        endpoint="https://explicit-endpoint.openai.azure.com",
+        base_url="https://base-url-endpoint.cognitiveservices.azure.com"
+    )
+
+    # endpoint should take precedence
+    assert "explicit-endpoint.openai.azure.com" in llm.endpoint
+
+
+def test_azure_non_openai_endpoint_model_parameter_included():
+    """
+    Test that model parameter IS included for non-Azure OpenAI endpoints.
+    This is important for Cognitive Services and other Azure AI endpoints.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://my-resource.cognitiveservices.azure.com"
+    }):
+        llm = LLM(model="azure/gpt-4")
+
+        params = llm._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+
+        # Model parameter should be included for non-Azure OpenAI endpoints
+        assert "model" in params
+        assert params["model"] == "gpt-4"
+
+
+def test_azure_validate_and_fix_endpoint_only_modifies_openai_azure():
+    """
+    Test that _validate_and_fix_endpoint only auto-constructs deployment path
+    for openai.azure.com endpoints, not for other Azure endpoints.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Azure OpenAI endpoint should have deployment path auto-constructed
+    result = AzureCompletion._validate_and_fix_endpoint(
+        "https://my-resource.openai.azure.com",
+        "gpt-4"
+    )
+    assert "/openai/deployments/gpt-4" in result
+
+    # Cognitive Services endpoint should NOT be modified
+    result = AzureCompletion._validate_and_fix_endpoint(
+        "https://my-resource.cognitiveservices.azure.com",
+        "gpt-4"
+    )
+    assert result == "https://my-resource.cognitiveservices.azure.com"
+    assert "/openai/deployments/" not in result
+
+    # Generic Azure endpoint should NOT be modified
+    result = AzureCompletion._validate_and_fix_endpoint(
+        "https://my-resource.cservices.azure.com",
+        "gpt-4"
+    )
+    assert result == "https://my-resource.cservices.azure.com"
+    assert "/openai/deployments/" not in result
