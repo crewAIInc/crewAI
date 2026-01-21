@@ -546,6 +546,18 @@ class BedrockCompletion(BaseLLM):
                     "I apologize, but I received an empty response. Please try again."
                 )
 
+            # If there are tool uses but no available_functions, return them for the executor to handle
+            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            if tool_uses and not available_functions:
+                self._emit_call_completed_event(
+                    response=tool_uses,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                )
+                return tool_uses
+
             # Process content blocks and handle tool use correctly
             text_content = ""
 
@@ -934,6 +946,18 @@ class BedrockCompletion(BaseLLM):
                 return (
                     "I apologize, but I received an empty response. Please try again."
                 )
+
+            # If there are tool uses but no available_functions, return them for the executor to handle
+            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            if tool_uses and not available_functions:
+                self._emit_call_completed_event(
+                    response=tool_uses,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                )
+                return tool_uses
 
             text_content = ""
 

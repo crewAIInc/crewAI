@@ -66,11 +66,23 @@ def to_serializable(
             if key not in exclude
         }
     if isinstance(obj, BaseModel):
-        return to_serializable(
-            obj=obj.model_dump(exclude=exclude),
-            max_depth=max_depth,
-            _current_depth=_current_depth + 1,
-        )
+        try:
+            return to_serializable(
+                obj=obj.model_dump(exclude=exclude),
+                max_depth=max_depth,
+                _current_depth=_current_depth + 1,
+            )
+        except Exception:
+            try:
+                return {
+                    _to_serializable_key(k): to_serializable(
+                        v, max_depth=max_depth, _current_depth=_current_depth + 1
+                    )
+                    for k, v in obj.__dict__.items()
+                    if k not in (exclude or set())
+                }
+            except Exception:
+                return repr(obj)
     return repr(obj)
 
 

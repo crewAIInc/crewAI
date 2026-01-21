@@ -628,6 +628,13 @@ class AzureCompletion(BaseLLM):
         # If there are tool_calls but no available_functions, return the tool_calls
         # This allows the caller (e.g., executor) to handle tool execution
         if message.tool_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=list(message.tool_calls),
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
             return list(message.tool_calls)
 
         # Handle tool calls
@@ -804,7 +811,7 @@ class AzureCompletion(BaseLLM):
         # If there are tool_calls but no available_functions, return them
         # in OpenAI-compatible format for executor to handle
         if tool_calls and not available_functions:
-            return [
+            formatted_tool_calls = [
                 {
                     "id": call_data.get("id", f"call_{idx}"),
                     "type": "function",
@@ -815,6 +822,14 @@ class AzureCompletion(BaseLLM):
                 }
                 for idx, call_data in tool_calls.items()
             ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
 
         # Handle completed tool calls
         if tool_calls and available_functions:

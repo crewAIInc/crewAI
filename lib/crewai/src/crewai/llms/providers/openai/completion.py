@@ -431,6 +431,13 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls but no available_functions, return the tool_calls
             # This allows the caller (e.g., executor) to handle tool execution
             if message.tool_calls and not available_functions:
+                self._emit_call_completed_event(
+                    response=list(message.tool_calls),
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
                 return list(message.tool_calls)
 
             # If there are tool_calls and available_functions, execute the tools
@@ -734,9 +741,13 @@ class OpenAICompletion(BaseLLM):
             # If there are tool_calls but no available_functions, return the tool_calls
             # This allows the caller (e.g., executor) to handle tool execution
             if message.tool_calls and not available_functions:
-                print("--------------------------------")
-                print("lorenze tool_calls", list(message.tool_calls))
-                print("--------------------------------")
+                self._emit_call_completed_event(
+                    response=list(message.tool_calls),
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
                 return list(message.tool_calls)
 
             # If there are tool_calls and available_functions, execute the tools

@@ -589,6 +589,13 @@ class AnthropicCompletion(BaseLLM):
                 # This allows the executor to manage tool execution with proper
                 # message history and post-tool reasoning prompts
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
                     return list(tool_uses)
 
                 # Handle tool use conversation flow internally
@@ -1004,6 +1011,13 @@ class AnthropicCompletion(BaseLLM):
             if tool_uses:
                 # If no available_functions, return tool calls for executor to handle
                 if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
                     return list(tool_uses)
 
                 return await self._ahandle_tool_use_conversation(

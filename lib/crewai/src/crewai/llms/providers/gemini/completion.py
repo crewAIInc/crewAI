@@ -661,6 +661,13 @@ class GeminiCompletion(BaseLLM):
                 # If there are function calls but no available_functions,
                 # return them for the executor to handle (like OpenAI/Anthropic)
                 if function_call_parts and not available_functions:
+                    self._emit_call_completed_event(
+                        response=function_call_parts,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=self._convert_contents_to_dict(contents),
+                    )
                     return function_call_parts
 
                 # Otherwise execute the tools internally
@@ -799,7 +806,7 @@ class GeminiCompletion(BaseLLM):
         # If there are function calls but no available_functions,
         # return them for the executor to handle
         if function_calls and not available_functions:
-            return [
+            formatted_function_calls = [
                 {
                     "id": call_data["id"],
                     "function": {
@@ -810,6 +817,14 @@ class GeminiCompletion(BaseLLM):
                 }
                 for call_data in function_calls.values()
             ]
+            self._emit_call_completed_event(
+                response=formatted_function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return formatted_function_calls
 
         # Handle completed function calls
         if function_calls and available_functions:

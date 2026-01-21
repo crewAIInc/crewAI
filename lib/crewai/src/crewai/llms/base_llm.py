@@ -292,14 +292,16 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call started event."""
+        from crewai.utilities.serialization import to_serializable
+
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
 
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
-                messages=messages,
-                tools=tools,
+                messages=to_serializable(messages),
+                tools=to_serializable(tools),
                 callbacks=callbacks,
                 available_functions=available_functions,
                 from_task=from_task,
@@ -317,11 +319,13 @@ class BaseLLM(ABC):
         messages: str | list[LLMMessage] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
+        from crewai.utilities.serialization import to_serializable
+
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
-                messages=messages,
-                response=response,
+                messages=to_serializable(messages),
+                response=to_serializable(response),
                 call_type=call_type,
                 from_task=from_task,
                 from_agent=from_agent,
