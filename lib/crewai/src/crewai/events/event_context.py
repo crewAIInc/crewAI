@@ -46,6 +46,14 @@ _event_context_config: contextvars.ContextVar[EventContextConfig | None] = (
     contextvars.ContextVar("_event_context_config", default=None)
 )
 
+_last_event_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_last_event_id", default=None
+)
+
+_triggering_event_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_triggering_event_id", default=None
+)
+
 _default_config = EventContextConfig()
 
 _console = ConsoleFormatter()
@@ -61,6 +69,68 @@ def get_enclosing_parent_id() -> str | None:
     """Get the parent of the current scope (stack[-2])."""
     stack = _event_id_stack.get()
     return stack[-2][0] if len(stack) >= 2 else None
+
+
+def get_last_event_id() -> str | None:
+    """Get the ID of the last emitted event for linear chain tracking.
+
+    Returns:
+        The event_id of the previously emitted event, or None if no event yet.
+    """
+    return _last_event_id.get()
+
+
+def reset_last_event_id() -> None:
+    """Reset the last event ID to None.
+
+    Should be called at the start of a new flow or when resetting event state.
+    """
+    _last_event_id.set(None)
+
+
+def set_last_event_id(event_id: str) -> None:
+    """Set the ID of the last emitted event.
+
+    Args:
+        event_id: The event_id to set as the last emitted event.
+    """
+    _last_event_id.set(event_id)
+
+
+def get_triggering_event_id() -> str | None:
+    """Get the ID of the event that triggered the current execution.
+
+    Returns:
+        The event_id of the triggering event, or None if not in a triggered context.
+    """
+    return _triggering_event_id.get()
+
+
+def set_triggering_event_id(event_id: str | None) -> None:
+    """Set the ID of the triggering event for causal chain tracking.
+
+    Args:
+        event_id: The event_id that triggered the current execution, or None.
+    """
+    _triggering_event_id.set(event_id)
+
+
+@contextmanager
+def triggered_by_scope(event_id: str) -> Generator[None, None, None]:
+    """Context manager to set the triggering event ID for causal chain tracking.
+
+    All events emitted within this context will have their triggered_by_event_id
+    set to the provided event_id.
+
+    Args:
+        event_id: The event_id that triggered the current execution.
+    """
+    previous = _triggering_event_id.get()
+    _triggering_event_id.set(event_id)
+    try:
+        yield
+    finally:
+        _triggering_event_id.set(previous)
 
 
 def push_event_scope(event_id: str, event_type: str = "") -> None:
