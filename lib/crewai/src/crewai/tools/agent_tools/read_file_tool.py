@@ -11,7 +11,7 @@ from crewai.tools.base_tool import BaseTool
 
 
 if TYPE_CHECKING:
-    from crewai.files import FileInput
+    from crewai_files import FileInput
 
 
 class ReadFileToolSchema(BaseModel):

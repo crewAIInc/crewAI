@@ -2,7 +2,7 @@
 
 from typing import Any, Literal, TypedDict
 
-from crewai.files import FileInput
+from crewai_files import FileInput
 
 
 class LLMMessage(TypedDict):

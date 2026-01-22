@@ -32,8 +32,9 @@ from crewai.types.usage_metrics import UsageMetrics
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput, UploadCache
+
     from crewai.agent.core import Agent
-    from crewai.files import FileInput, UploadCache
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage

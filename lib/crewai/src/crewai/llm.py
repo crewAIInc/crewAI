@@ -53,6 +53,7 @@ from crewai.utilities.logger_utils import suppress_warnings
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput, UploadCache
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
@@ -66,7 +67,6 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
-    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
     from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
@@ -2274,7 +2274,7 @@ class LLM(BaseLLM):
         """
         import base64
 
-        from crewai.files import (
+        from crewai_files import (
             FileResolver,
             FileResolverConfig,
             InlineBase64,

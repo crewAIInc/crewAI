@@ -20,7 +20,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.files import FileInput, UploadCache
+    from crewai_files import FileInput, UploadCache
+
     from crewai.llms.hooks.base import BaseInterceptor
 
 DEFAULT_CACHE_TTL = "ephemeral"
@@ -1281,7 +1282,7 @@ class AnthropicCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,
@@ -1394,7 +1395,7 @@ class AnthropicCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,

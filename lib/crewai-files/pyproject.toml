@@ -1,0 +1,25 @@
+[project]
+name = "crewai-files"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Greyson LaLonde", email = "greyson.r.lalonde@gmail.com" }
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "Pillow~=10.4.0",
+    "pypdf~=4.0.0",
+    "python-magic>=0.4.27",
+    "aiocache~=0.12.3",
+    "aiofiles~=24.1.0",
+    "tinytag~=1.10.0",
+    "av~=13.0.0",
+]
+
+[project.scripts]
+crewai-files = "crewai_files:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

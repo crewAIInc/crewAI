@@ -18,7 +18,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.files import FileInput, UploadCache
+    from crewai_files import FileInput, UploadCache
+
     from crewai.llms.hooks.base import BaseInterceptor
 
 
@@ -1060,7 +1061,7 @@ class AzureCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.files import (
+        from crewai_files import (
             FileResolver,
             FileResolverConfig,
             InlineBase64,
@@ -1120,7 +1121,7 @@ class AzureCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.files import (
+        from crewai_files import (
             FileResolver,
             FileResolverConfig,
             InlineBase64,

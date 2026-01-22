@@ -19,10 +19,11 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.files import (
+    from crewai_files import (
         FileInput,
         UploadCache,
     )
+
     from crewai.llms.hooks.base import BaseInterceptor
 
 
@@ -1113,7 +1114,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             List of content blocks in Gemini's expected format.
         """
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,
@@ -1183,7 +1184,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             List of content blocks in Gemini's expected format.
         """
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,

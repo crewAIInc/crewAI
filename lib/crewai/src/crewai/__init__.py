@@ -3,10 +3,7 @@ from typing import Any
 import urllib.request
 import warnings
 
-from crewai.agent.core import Agent
-from crewai.crew import Crew
-from crewai.crews.crew_output import CrewOutput
-from crewai.files import (
+from crewai_files import (
     AudioFile,
     File,
     ImageFile,
@@ -14,6 +11,10 @@ from crewai.files import (
     TextFile,
     VideoFile,
 )
+
+from crewai.agent.core import Agent
+from crewai.crew import Crew
+from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM

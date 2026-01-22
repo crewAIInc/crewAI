@@ -160,7 +160,10 @@ def vcr_cassette_dir(request: Any) -> str:
     test_file = Path(request.fspath)
 
     for parent in test_file.parents:
-        if parent.name in ("crewai", "crewai-tools") and parent.parent.name == "lib":
+        if (
+            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            and parent.parent.name == "lib"
+        ):
             package_root = parent
             break
     else:

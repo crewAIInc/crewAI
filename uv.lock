@@ -32,6 +32,7 @@ resolution-markers = [
 members = [
     "crewai",
     "crewai-devtools",
+    "crewai-files",
     "crewai-tools",
 ]
 
@@ -1239,13 +1240,7 @@ embeddings = [
     { name = "tiktoken" },
 ]
 file-processing = [
-    { name = "aiocache" },
-    { name = "aiofiles" },
-    { name = "av" },
-    { name = "pillow" },
-    { name = "pypdf" },
-    { name = "python-magic" },
-    { name = "tinytag" },
+    { name = "crewai-files" },
 ]
 google-genai = [
     { name = "google-genai" },
@@ -1279,18 +1274,16 @@ watson = [
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=2.25.2" },
-    { name = "aiocache", marker = "extra == 'file-processing'", specifier = "~=0.12.3" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
-    { name = "aiofiles", marker = "extra == 'file-processing'", specifier = "~=24.1.0" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.71.0" },
     { name = "appdirs", specifier = "~=1.4.4" },
-    { name = "av", marker = "extra == 'file-processing'", specifier = "~=13.0.0" },
     { name = "azure-ai-inference", marker = "extra == 'azure-ai-inference'", specifier = "~=1.0.0b9" },
     { name = "boto3", marker = "extra == 'aws'", specifier = "~=1.40.38" },
     { name = "boto3", marker = "extra == 'bedrock'", specifier = "~=1.40.45" },
     { name = "chromadb", specifier = "~=1.1.0" },
     { name = "click", specifier = "~=8.1.7" },
+    { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.63.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.49.0" },
@@ -1312,18 +1305,14 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = "~=1.34.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = "~=2.2.3" },
     { name = "pdfplumber", specifier = "~=0.11.4" },
-    { name = "pillow", marker = "extra == 'file-processing'", specifier = "~=10.4.0" },
     { name = "portalocker", specifier = "~=2.7.0" },
     { name = "pydantic", specifier = "~=2.11.9" },
     { name = "pydantic-settings", specifier = "~=2.10.1" },
     { name = "pyjwt", specifier = "~=2.9.0" },
-    { name = "pypdf", marker = "extra == 'file-processing'", specifier = "~=4.0.0" },
     { name = "python-dotenv", specifier = "~=1.1.1" },
-    { name = "python-magic", marker = "extra == 'file-processing'", specifier = ">=0.4.27" },
     { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = "~=1.14.3" },
     { name = "regex", specifier = "~=2024.9.11" },
     { name = "tiktoken", marker = "extra == 'embeddings'", specifier = "~=0.8.0" },
-    { name = "tinytag", marker = "extra == 'file-processing'", specifier = "~=1.10.0" },
     { name = "tokenizers", specifier = "~=0.20.3" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
@@ -1352,6 +1341,31 @@ requires-dist = [
     { name = "python-dotenv", specifier = "~=1.1.1" },
     { name = "rich", specifier = "~=13.9.4" },
     { name = "toml", specifier = "~=0.10.2" },
+]
+
+[[package]]
+name = "crewai-files"
+version = "0.1.0"
+source = { editable = "lib/crewai-files" }
+dependencies = [
+    { name = "aiocache" },
+    { name = "aiofiles" },
+    { name = "av" },
+    { name = "pillow" },
+    { name = "pypdf" },
+    { name = "python-magic" },
+    { name = "tinytag" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiocache", specifier = "~=0.12.3" },
+    { name = "aiofiles", specifier = "~=24.1.0" },
+    { name = "av", specifier = "~=13.0.0" },
+    { name = "pillow", specifier = "~=10.4.0" },
+    { name = "pypdf", specifier = "~=4.0.0" },
+    { name = "python-magic", specifier = ">=0.4.27" },
+    { name = "tinytag", specifier = "~=1.10.0" },
 ]
 
 [[package]]

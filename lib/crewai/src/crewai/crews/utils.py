@@ -6,15 +6,16 @@ import asyncio
 from collections.abc import Callable, Coroutine, Iterable
 from typing import TYPE_CHECKING, Any
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from crewai.crews.crew_output import CrewOutput
-from crewai.files import (
+from crewai_files import (
     AudioFile,
     ImageFile,
     PDFFile,
     TextFile,
     VideoFile,
 )
+
+from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.crews.crew_output import CrewOutput
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
 from crewai.utilities.file_store import store_files

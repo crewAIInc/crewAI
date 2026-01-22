@@ -20,6 +20,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput, UploadCache
     from mypy_boto3_bedrock_runtime.type_defs import (
         GuardrailConfigurationTypeDef,
         GuardrailStreamConfigurationTypeDef,
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
-    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
 
 
@@ -1586,7 +1586,7 @@ class BedrockCompletion(BaseLLM):
 
         import os
 
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,
@@ -1714,7 +1714,7 @@ class BedrockCompletion(BaseLLM):
 
         import os
 
-        from crewai.files import (
+        from crewai_files import (
             FileReference,
             FileResolver,
             FileResolverConfig,

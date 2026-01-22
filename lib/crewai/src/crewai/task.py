@@ -19,6 +19,12 @@ from typing import (
 import uuid
 import warnings
 
+from crewai_files import (
+    FileInput,
+    FilePath,
+    FileSourceInput,
+    normalize_input_files,
+)
 from pydantic import (
     UUID4,
     BaseModel,
@@ -36,12 +42,6 @@ from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
     TaskStartedEvent,
-)
-from crewai.files import (
-    FileInput,
-    FilePath,
-    FileSourceInput,
-    normalize_input_files,
 )
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat

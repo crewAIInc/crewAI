@@ -10,6 +10,7 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
+from crewai_files import FileProcessor
 from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
@@ -24,7 +25,6 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
-from crewai.files import FileProcessor
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -238,7 +238,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         processor = FileProcessor(constraints=provider)
         files = processor.process_files(files)
 
-        from crewai.files import get_upload_cache
+        from crewai_files import get_upload_cache
 
         upload_cache = get_upload_cache()
         content_blocks = self.llm.format_multimodal_content(
@@ -280,7 +280,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         processor = FileProcessor(constraints=provider)
         files = await processor.aprocess_files(files)
 
-        from crewai.files import get_upload_cache
+        from crewai_files import get_upload_cache
 
         upload_cache = get_upload_cache()
         content_blocks = await self.llm.aformat_multimodal_content(
