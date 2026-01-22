@@ -154,7 +154,6 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self._run(*args, **kwargs)
 
         # If _run is async, we safely run it
@@ -329,7 +328,6 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
-        _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
