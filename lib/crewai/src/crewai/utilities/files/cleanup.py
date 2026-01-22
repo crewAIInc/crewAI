@@ -177,10 +177,4 @@ def _get_providers_from_cache(cache: UploadCache) -> set[str]:
     Returns:
         Set of provider names.
     """
-    providers: set[str] = set()
-
-    with cache._lock:
-        for _, provider in cache._cache.keys():
-            providers.add(provider)
-
-    return providers
+    return cache.get_providers()
