@@ -148,7 +148,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             callbacks: Optional callbacks list.
             response_model: Optional Pydantic model for structured outputs.
         """
-        print("lorenze using agent executor")
         self._i18n: I18N = i18n or get_i18n()
         self.llm = llm
         self.task: Task | None = task
@@ -332,19 +331,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         """
         try:
             iteration_start = time.time()
-            print(f"\n{'=' * 60}")
-            print(
-                f"[{time.strftime('%H:%M:%S')}] ITERATION {self.state.iterations} - call_llm_and_parse START (ReAct)"
-            )
-            print(
-                f"[{time.strftime('%H:%M:%S')}] Messages count: {len(self.state.messages)}"
-            )
-            print(f"{'=' * 60}")
 
             enforce_rpm_limit(self.request_within_rpm_limit)
 
             llm_start = time.time()
-            print(f"[{time.strftime('%H:%M:%S')}] LLM CALL START")
 
             answer = get_llm_response(
                 llm=self.llm,
@@ -357,21 +347,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 executor_context=self,
             )
 
-            llm_elapsed = time.time() - llm_start
-            print(
-                f"[{time.strftime('%H:%M:%S')}] LLM CALL END - took {llm_elapsed:.2f}s"
-            )
-            print(
-                f"[{time.strftime('%H:%M:%S')}] Answer length: {len(answer) if answer else 0} chars"
-            )
-
             # Parse the LLM response
-            parse_start = time.time()
             formatted_answer = process_llm_response(answer, self.use_stop_words)
-            parse_elapsed = time.time() - parse_start
-            print(
-                f"[{time.strftime('%H:%M:%S')}] Parsing took {parse_elapsed:.3f}s -> {type(formatted_answer).__name__}"
-            )
+
             self.state.current_answer = formatted_answer
 
             if "Final Answer:" in answer and isinstance(formatted_answer, AgentAction):
@@ -387,10 +365,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 preview_text.append(f"{answer[:200]}...", style="yellow dim")
                 self._console.print(preview_text)
 
-            iteration_elapsed = time.time() - iteration_start
-            print(
-                f"[{time.strftime('%H:%M:%S')}] ITERATION total: {iteration_elapsed:.2f}s"
-            )
             return "parsed"
 
         except OutputParserError as e:
@@ -421,19 +395,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns routing decision based on whether tool calls or final answer.
         """
         try:
-            iteration_start = time.time()
-            print(f"\n{'=' * 60}")
-            print(
-                f"[{time.strftime('%H:%M:%S')}] ITERATION {self.state.iterations} - call_llm_native_tools START"
-            )
-            print(
-                f"[{time.strftime('%H:%M:%S')}] pending_tool_calls before LLM: {len(self.state.pending_tool_calls)}"
-            )
-            print(
-                f"[{time.strftime('%H:%M:%S')}] Messages count: {len(self.state.messages)}"
-            )
-            print(f"{'=' * 60}")
-
             # Clear pending tools - LLM will decide what to do next after reading
             # the reflection prompt. It can either:
             # 1. Return a final answer (string) if it has enough info
@@ -442,22 +403,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
             enforce_rpm_limit(self.request_within_rpm_limit)
 
-            last_msg_content = (
-                self.state.messages[-1].get("content", "")
-                if self.state.messages
-                else ""
-            )
-            last_msg_preview = (
-                last_msg_content[:200] if last_msg_content else "(no content)"
-            )
-            print(
-                f"[{time.strftime('%H:%M:%S')}] Last message to LLM: {last_msg_preview}..."
-            )
-
             # Call LLM with native tools
-            llm_start = time.time()
-            print(f"[{time.strftime('%H:%M:%S')}] LLM CALL START")
-
             answer = get_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
@@ -471,24 +417,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 executor_context=self,
             )
 
-            llm_elapsed = time.time() - llm_start
-            print(
-                f"[{time.strftime('%H:%M:%S')}] LLM CALL END - took {llm_elapsed:.2f}s"
-            )
-            print(f"[{time.strftime('%H:%M:%S')}] Answer type: {type(answer).__name__}")
-
             # Check if the response is a list of tool calls
             if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 # Store tool calls for sequential processing
                 self.state.pending_tool_calls = list(answer)
 
-                iteration_elapsed = time.time() - iteration_start
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] -> Routing to native_tool_calls ({len(answer)} tools)"
-                )
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] ITERATION total: {iteration_elapsed:.2f}s"
-                )
                 return "native_tool_calls"
 
             # Text response - this is the final answer
@@ -500,13 +433,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer)
-                iteration_elapsed = time.time() - iteration_start
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] -> FINAL ANSWER (string, len={len(answer)})"
-                )
-                print(
-                    f"[{time.strftime('%H:%M:%S')}] ITERATION total: {iteration_elapsed:.2f}s"
-                )
+
                 return "native_finished"
 
             # Unexpected response type, treat as final answer
@@ -517,11 +444,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
             self._invoke_step_callback(self.state.current_answer)
             self._append_message_to_state(str(answer))
-            iteration_elapsed = time.time() - iteration_start
-            print(f"[{time.strftime('%H:%M:%S')}] -> FINAL ANSWER (unexpected type)")
-            print(
-                f"[{time.strftime('%H:%M:%S')}] ITERATION total: {iteration_elapsed:.2f}s"
-            )
+
             return "native_finished"
 
         except Exception as e:
@@ -716,9 +639,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
 
         # Add reflection prompt once after all tools in the batch
-        print("--------------------------------")
-        print("BATCH COMPLETED: All pending tools executed - adding reflection prompt")
-        print("--------------------------------")
         reasoning_prompt = self._i18n.slice("post_tool_reasoning")
 
         reasoning_message: LLMMessage = {
@@ -870,6 +790,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.iterations = 0
             self.state.current_answer = None
             self.state.is_finished = False
+            self.state.use_native_tools = False
+            self.state.pending_tool_calls = []
 
             if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
@@ -888,91 +810,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
 
             self.kickoff()
-
-            formatted_answer = self.state.current_answer
-
-            if not isinstance(formatted_answer, AgentFinish):
-                raise RuntimeError(
-                    "Agent execution ended without reaching a final answer."
-                )
-
-            if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
-
-            self._create_short_term_memory(formatted_answer)
-            self._create_long_term_memory(formatted_answer)
-            self._create_external_memory(formatted_answer)
-
-            return {"output": formatted_answer.output}
-
-        except AssertionError:
-            fail_text = Text()
-            fail_text.append("❌ ", style="red bold")
-            fail_text.append(
-                "Agent failed to reach a final answer. This is likely a bug - please report it.",
-                style="red",
-            )
-            self._console.print(fail_text)
-            raise
-        except Exception as e:
-            handle_unknown_error(self._printer, e)
-            raise
-        finally:
-            self._is_executing = False
-
-    async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Execute agent asynchronously with given inputs.
-
-        This method is designed for use within async contexts, such as when
-        the agent is called from within an async Flow method. It uses
-        kickoff_async() directly instead of running in a separate thread.
-
-        Args:
-            inputs: Input dictionary containing prompt variables.
-
-        Returns:
-            Dictionary with agent output, or a coroutine if inside an event loop.
-        """
-        # Magic auto-async: if inside event loop, return coroutine for Flow to await
-        if is_inside_event_loop():
-            return self.invoke_async(inputs)
-
-        self._ensure_flow_initialized()
-
-        with self._execution_lock:
-            if self._is_executing:
-                raise RuntimeError(
-                    "Executor is already running. "
-                    "Cannot invoke the same executor instance concurrently."
-                )
-            self._is_executing = True
-            self._has_been_invoked = True
-
-        try:
-            # Reset state for fresh execution
-            self.state.messages.clear()
-            self.state.iterations = 0
-            self.state.current_answer = None
-            self.state.is_finished = False
-
-            if "system" in self.prompt:
-                prompt = cast("SystemPromptResult", self.prompt)
-                system_prompt = self._format_prompt(prompt["system"], inputs)
-                user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    format_message_for_llm(system_prompt, role="system")
-                )
-                self.state.messages.append(format_message_for_llm(user_prompt))
-            else:
-                user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(format_message_for_llm(user_prompt))
-
-            self.state.ask_for_human_input = bool(
-                inputs.get("ask_for_human_input", False)
-            )
-
-            # Use async kickoff directly since we're already in an async context
-            await self.kickoff_async()
 
             formatted_answer = self.state.current_answer
 
