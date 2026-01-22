@@ -295,8 +295,40 @@ class TestAzureNativeToolCalling:
             "AZURE_API_BASE": "https://test.openai.azure.com",
             "AZURE_API_VERSION": "2024-02-15-preview",
         }
-        with patch.dict(os.environ, env_vars):
+        # Only patch if keys are not already in environment
+        if "AZURE_API_KEY" not in os.environ:
+            with patch.dict(os.environ, env_vars):
+                yield
+        else:
             yield
+
+    @pytest.mark.vcr()
+    def test_azure_agent_with_native_tool_calling(
+        self, calculator_tool: CalculatorTool
+    ) -> None:
+        """Test Azure agent can use native tool calling."""
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="You are a helpful math assistant.",
+            tools=[calculator_tool],
+            llm=LLM(model="azure/gpt-4o-mini"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        task = Task(
+            description="Calculate what is 15 * 8",
+            expected_output="The result of the calculation",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
+        assert "120" in str(result.raw)
 
     def test_azure_agent_kickoff_with_tools_mocked(
         self, calculator_tool: CalculatorTool
