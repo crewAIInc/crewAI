@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 from collections.abc import AsyncIterator
 import json
 import logging
@@ -27,8 +26,6 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai_files import FileInput, UploadCache
-
     from crewai.agent.core import Agent
     from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
@@ -1080,136 +1077,3 @@ class OpenAICompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
         return ["image/"]
-
-    def format_multimodal_content(
-        self,
-        files: dict[str, FileInput],
-        upload_cache: UploadCache | None = None,
-    ) -> list[dict[str, Any]]:
-        """Format files as OpenAI multimodal content blocks.
-
-        OpenAI supports both base64 data URLs and file_id references via Files API.
-        Uses FileResolver to determine the best delivery method based on file size.
-
-        Args:
-            files: Dictionary mapping file names to FileInput objects.
-            upload_cache: Optional cache for tracking uploaded files.
-
-        Returns:
-            List of content blocks in OpenAI's expected format.
-        """
-        if not self.supports_multimodal():
-            return []
-
-        from crewai_files import (
-            FileReference,
-            FileResolver,
-            FileResolverConfig,
-            InlineBase64,
-        )
-
-        content_blocks: list[dict[str, Any]] = []
-        supported_types = self.supported_multimodal_content_types()
-
-        config = FileResolverConfig(prefer_upload=False)
-        resolver = FileResolver(config=config, upload_cache=upload_cache)
-
-        for file_input in files.values():
-            content_type = file_input.content_type
-            if not any(content_type.startswith(t) for t in supported_types):
-                continue
-
-            resolved = resolver.resolve(file_input, "openai")
-
-            if isinstance(resolved, FileReference):
-                content_blocks.append(
-                    {
-                        "type": "file",
-                        "file": {
-                            "file_id": resolved.file_id,
-                        },
-                    }
-                )
-            elif isinstance(resolved, InlineBase64):
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
-                        },
-                    }
-                )
-            else:
-                data = base64.b64encode(file_input.read()).decode("ascii")
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{content_type};base64,{data}"},
-                    }
-                )
-
-        return content_blocks
-
-    async def aformat_multimodal_content(
-        self,
-        files: dict[str, FileInput],
-        upload_cache: UploadCache | None = None,
-    ) -> list[dict[str, Any]]:
-        """Async format files as OpenAI multimodal content blocks.
-
-        Uses parallel file resolution for improved performance with multiple files.
-
-        Args:
-            files: Dictionary mapping file names to FileInput objects.
-            upload_cache: Optional cache for tracking uploaded files.
-
-        Returns:
-            List of content blocks in OpenAI's expected format.
-        """
-        if not self.supports_multimodal():
-            return []
-
-        from crewai_files import (
-            FileReference,
-            FileResolver,
-            FileResolverConfig,
-            InlineBase64,
-        )
-
-        supported_types = self.supported_multimodal_content_types()
-
-        supported_files = {
-            name: f
-            for name, f in files.items()
-            if any(f.content_type.startswith(t) for t in supported_types)
-        }
-
-        if not supported_files:
-            return []
-
-        config = FileResolverConfig(prefer_upload=False)
-        resolver = FileResolver(config=config, upload_cache=upload_cache)
-        resolved_files = await resolver.aresolve_files(supported_files, "openai")
-
-        content_blocks: list[dict[str, Any]] = []
-        for resolved in resolved_files.values():
-            if isinstance(resolved, FileReference):
-                content_blocks.append(
-                    {
-                        "type": "file",
-                        "file": {
-                            "file_id": resolved.file_id,
-                        },
-                    }
-                )
-            elif isinstance(resolved, InlineBase64):
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
-                        },
-                    }
-                )
-
-        return content_blocks

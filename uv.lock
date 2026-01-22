@@ -1345,7 +1345,6 @@ requires-dist = [
 
 [[package]]
 name = "crewai-files"
-version = "0.1.0"
 source = { editable = "lib/crewai-files" }
 dependencies = [
     { name = "aiocache" },

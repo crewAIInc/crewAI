@@ -1,10 +1,10 @@
 [project]
 name = "crewai-files"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Greyson LaLonde", email = "greyson.r.lalonde@gmail.com" }
+    { name = "Greyson LaLonde", email = "greyson@crewai.com" }
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
@@ -17,9 +17,9 @@ dependencies = [
     "av~=13.0.0",
 ]
 
-[project.scripts]
-crewai-files = "crewai_files:main"
-
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_files/__init__.py"

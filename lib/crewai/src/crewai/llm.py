@@ -53,7 +53,6 @@ from crewai.utilities.logger_utils import suppress_warnings
 
 
 if TYPE_CHECKING:
-    from crewai_files import FileInput, UploadCache
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
@@ -2254,66 +2253,3 @@ class LLM(BaseLLM):
         if "claude-3" in model_lower or "claude-4" in model_lower:
             return ["image/", "application/pdf"]
         return ["image/"]
-
-    def format_multimodal_content(
-        self,
-        files: dict[str, FileInput],
-        upload_cache: UploadCache | None = None,
-    ) -> list[dict[str, Any]]:
-        """Format files as multimodal content blocks for litellm.
-
-        Uses OpenAI-compatible format which litellm translates to provider format.
-        Uses FileResolver for consistent base64 encoding.
-
-        Args:
-            files: Dictionary mapping file names to FileInput objects.
-            upload_cache: Optional cache (not used by litellm but kept for interface consistency).
-
-        Returns:
-            List of content blocks in OpenAI's expected format.
-        """
-        import base64
-
-        from crewai_files import (
-            FileResolver,
-            FileResolverConfig,
-            InlineBase64,
-        )
-
-        if not self.supports_multimodal():
-            return []
-
-        content_blocks: list[dict[str, Any]] = []
-        supported_types = self.supported_multimodal_content_types()
-
-        # LiteLLM uses OpenAI-compatible format
-        config = FileResolverConfig(prefer_upload=False)
-        resolver = FileResolver(config=config, upload_cache=upload_cache)
-
-        for file_input in files.values():
-            content_type = file_input.content_type
-            if not any(content_type.startswith(t) for t in supported_types):
-                continue
-
-            resolved = resolver.resolve(file_input, "openai")
-
-            if isinstance(resolved, InlineBase64):
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
-                        },
-                    }
-                )
-            else:
-                # Fallback to direct base64 encoding
-                data = base64.b64encode(file_input.read()).decode("ascii")
-                content_blocks.append(
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:{content_type};base64,{data}"},
-                    }
-                )
-
-        return content_blocks

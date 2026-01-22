@@ -49,6 +49,10 @@ from crewai_files.core.types import (
     VideoFile,
     VideoMimeType,
 )
+from crewai_files.formatting import (
+    aformat_multimodal_content,
+    format_multimodal_content,
+)
 from crewai_files.processing import (
     ANTHROPIC_CONSTRAINTS,
     BEDROCK_CONSTRAINTS,
@@ -132,10 +136,12 @@ __all__ = [
     "VideoExtension",
     "VideoFile",
     "VideoMimeType",
+    "aformat_multimodal_content",
     "cleanup_expired_files",
     "cleanup_provider_files",
     "cleanup_uploaded_files",
     "create_resolver",
+    "format_multimodal_content",
     "get_constraints_for_provider",
     "get_upload_cache",
     "get_uploader",
@@ -143,3 +149,5 @@ __all__ = [
     "reset_upload_cache",
     "wrap_file_source",
 ]
+
+__version__ = "1.8.1"

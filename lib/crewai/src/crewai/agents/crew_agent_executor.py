@@ -10,7 +10,7 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from crewai_files import FileProcessor
+from crewai_files import aformat_multimodal_content, format_multimodal_content
 from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
@@ -220,9 +220,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Inject files as multimodal content into messages.
 
         For crews with input files and LLMs that support multimodal,
-        processes files according to provider constraints and file handling mode,
-        then delegates to the LLM's format_multimodal_content method to
-        generate provider-specific content blocks.
+        uses crewai_files to process, resolve, and format files into
+        provider-specific content blocks.
         """
         if not self.crew or not self.task:
             return
@@ -235,15 +234,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             return
 
         provider = getattr(self.llm, "provider", None) or getattr(self.llm, "model", "")
-        processor = FileProcessor(constraints=provider)
-        files = processor.process_files(files)
+        content_blocks = format_multimodal_content(files, provider)
 
-        from crewai_files import get_upload_cache
-
-        upload_cache = get_upload_cache()
-        content_blocks = self.llm.format_multimodal_content(
-            files, upload_cache=upload_cache
-        )
         if not content_blocks:
             return
 
@@ -262,9 +254,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """Async inject files as multimodal content into messages.
 
         For crews with input files and LLMs that support multimodal,
-        processes files according to provider constraints using parallel processing,
-        then delegates to the LLM's aformat_multimodal_content method to
-        generate provider-specific content blocks with parallel file resolution.
+        uses crewai_files to process, resolve, and format files into
+        provider-specific content blocks with parallel file resolution.
         """
         if not self.crew or not self.task:
             return
@@ -277,15 +268,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             return
 
         provider = getattr(self.llm, "provider", None) or getattr(self.llm, "model", "")
-        processor = FileProcessor(constraints=provider)
-        files = await processor.aprocess_files(files)
+        content_blocks = await aformat_multimodal_content(files, provider)
 
-        from crewai_files import get_upload_cache
-
-        upload_cache = get_upload_cache()
-        content_blocks = await self.llm.aformat_multimodal_content(
-            files, upload_cache=upload_cache
-        )
         if not content_blocks:
             return
 
