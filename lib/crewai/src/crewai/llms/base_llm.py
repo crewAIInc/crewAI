@@ -345,6 +345,7 @@ class BaseLLM(ABC):
                 error=error,
                 from_task=from_task,
                 from_agent=from_agent,
+                model=self.model,
             ),
         )
 
