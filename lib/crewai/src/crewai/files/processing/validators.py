@@ -136,17 +136,15 @@ def _get_video_duration(
     format_hint = _VIDEO_FORMAT_MAP.get(content_type) if content_type else None
 
     try:
-        container = av.open(io.BytesIO(content), format=format_hint)  # type: ignore[attr-defined]
-        try:
-            duration = getattr(container, "duration", None)
+        with av.open(io.BytesIO(content), format=format_hint) as container:  # type: ignore[attr-defined]
+            duration: int | None = container.duration  # type: ignore[union-attr]
             if duration is None:
                 return None
             return float(duration) / 1_000_000
-        finally:
-            container.close()
     except Exception as e:
         logger.debug(f"Could not determine video duration: {e}")
-        return None
+
+    return None
 
 
 def _format_size(size_bytes: int) -> str:
@@ -431,7 +429,7 @@ def validate_video(
     )
 
     if constraints.max_duration_seconds is not None:
-        duration = _get_video_duration(content, file.content_type)
+        duration = _get_video_duration(content)
         if duration is not None and duration > constraints.max_duration_seconds:
             msg = (
                 f"Video '{filename}' duration ({duration:.1f}s) exceeds "
