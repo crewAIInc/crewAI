@@ -608,9 +608,15 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             from_cache = False
             input_str = json.dumps(args_dict) if args_dict else ""
             if self.tools_handler and self.tools_handler.cache:
-                cached_result = self.tools_handler.cache.read(tool=func_name, input=input_str)
+                cached_result = self.tools_handler.cache.read(
+                    tool=func_name, input=input_str
+                )
                 if cached_result is not None:
-                    result = str(cached_result) if not isinstance(cached_result, str) else cached_result
+                    result = (
+                        str(cached_result)
+                        if not isinstance(cached_result, str)
+                        else cached_result
+                    )
                     from_cache = True
 
             # Emit tool usage started event
@@ -644,14 +650,20 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                                 and hasattr(original_tool, "cache_function")
                                 and original_tool.cache_function
                             ):
-                                should_cache = original_tool.cache_function(args_dict, raw_result)
+                                should_cache = original_tool.cache_function(
+                                    args_dict, raw_result
+                                )
                             if should_cache:
                                 self.tools_handler.cache.add(
                                     tool=func_name, input=input_str, output=raw_result
                                 )
 
                         # Convert to string for message
-                        result = str(raw_result) if not isinstance(raw_result, str) else raw_result
+                        result = (
+                            str(raw_result)
+                            if not isinstance(raw_result, str)
+                            else raw_result
+                        )
                     except Exception as e:
                         result = f"Error executing tool: {e}"
                         if self.task:
