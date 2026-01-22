@@ -492,3 +492,84 @@ class TestGetVideoDuration:
         result = _get_video_duration(corrupt_data)
 
         assert result is None
+
+
+class TestRealVideoFile:
+    """Tests using real video fixture file."""
+
+    @pytest.fixture
+    def sample_video_path(self):
+        """Path to sample video fixture."""
+        from pathlib import Path
+
+        path = Path(__file__).parent.parent.parent / "fixtures" / "sample_video.mp4"
+        if not path.exists():
+            pytest.skip("sample_video.mp4 fixture not found")
+        return path
+
+    @pytest.fixture
+    def sample_video_content(self, sample_video_path):
+        """Read sample video content."""
+        return sample_video_path.read_bytes()
+
+    def test_get_video_duration_real_file(self, sample_video_content):
+        """Test duration detection with real video file."""
+        try:
+            import av  # noqa: F401
+        except ImportError:
+            pytest.skip("PyAV not installed")
+
+        duration = _get_video_duration(sample_video_content, "video/mp4")
+
+        assert duration is not None
+        assert 4.5 <= duration <= 5.5  # ~5 seconds with tolerance
+
+    def test_get_video_duration_real_file_no_format_hint(self, sample_video_content):
+        """Test duration detection without format hint."""
+        try:
+            import av  # noqa: F401
+        except ImportError:
+            pytest.skip("PyAV not installed")
+
+        duration = _get_video_duration(sample_video_content)
+
+        assert duration is not None
+        assert 4.5 <= duration <= 5.5
+
+    def test_validate_video_real_file_passes(self, sample_video_path):
+        """Test validating real video file within constraints."""
+        try:
+            import av  # noqa: F401
+        except ImportError:
+            pytest.skip("PyAV not installed")
+
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("video/mp4",),
+        )
+        file = VideoFile(source=str(sample_video_path))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+
+    def test_validate_video_real_file_duration_exceeded(self, sample_video_path):
+        """Test validating real video file that exceeds duration limit."""
+        try:
+            import av  # noqa: F401
+        except ImportError:
+            pytest.skip("PyAV not installed")
+
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=2,  # Video is ~5 seconds
+            supported_formats=("video/mp4",),
+        )
+        file = VideoFile(source=str(sample_video_path))
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_video(file, constraints)
+
+        assert "duration" in str(exc_info.value).lower()
+        assert "2s" in str(exc_info.value)
