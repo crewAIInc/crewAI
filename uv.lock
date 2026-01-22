@@ -1146,6 +1146,7 @@ wheels = [
 name = "crewai"
 source = { editable = "lib/crewai" }
 dependencies = [
+    { name = "aiocache" },
     { name = "aiosqlite" },
     { name = "appdirs" },
     { name = "chromadb" },
@@ -1166,6 +1167,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
+    { name = "python-magic" },
     { name = "regex" },
     { name = "tokenizers" },
     { name = "tomli" },
@@ -1199,8 +1201,15 @@ docling = [
 embeddings = [
     { name = "tiktoken" },
 ]
+file-processing = [
+    { name = "pillow" },
+    { name = "pypdf" },
+]
 google-genai = [
     { name = "google-genai" },
+]
+image-processing = [
+    { name = "pillow" },
 ]
 litellm = [
     { name = "litellm" },
@@ -1213,6 +1222,9 @@ openpyxl = [
 ]
 pandas = [
     { name = "pandas" },
+]
+pdf-processing = [
+    { name = "pypdf" },
 ]
 qdrant = [
     { name = "qdrant-client", extra = ["fastembed"] },
@@ -1231,6 +1243,7 @@ watson = [
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=2.25.2" },
+    { name = "aiocache", specifier = "~=0.12.3" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.71.0" },
@@ -1261,11 +1274,16 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = "~=1.34.0" },
     { name = "pandas", marker = "extra == 'pandas'", specifier = "~=2.2.3" },
     { name = "pdfplumber", specifier = "~=0.11.4" },
+    { name = "pillow", marker = "extra == 'file-processing'", specifier = "~=10.4.0" },
+    { name = "pillow", marker = "extra == 'image-processing'", specifier = "~=10.4.0" },
     { name = "portalocker", specifier = "~=2.7.0" },
     { name = "pydantic", specifier = "~=2.11.9" },
     { name = "pydantic-settings", specifier = "~=2.10.1" },
     { name = "pyjwt", specifier = "~=2.9.0" },
+    { name = "pypdf", marker = "extra == 'file-processing'", specifier = "~=4.0.0" },
+    { name = "pypdf", marker = "extra == 'pdf-processing'", specifier = "~=4.0.0" },
     { name = "python-dotenv", specifier = "~=1.1.1" },
+    { name = "python-magic", specifier = ">=0.4.27" },
     { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = "~=1.14.3" },
     { name = "regex", specifier = "~=2024.9.11" },
     { name = "tiktoken", marker = "extra == 'embeddings'", specifier = "~=0.8.0" },
@@ -1275,7 +1293,7 @@ requires-dist = [
     { name = "uv", specifier = "~=0.9.13" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "image-processing", "litellm", "mem0", "openpyxl", "pandas", "pdf-processing", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"
@@ -6211,14 +6229,11 @@ wheels = [
 
 [[package]]
 name = "pypdf"
-version = "6.4.1"
+version = "4.0.2"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0c/e0/57f914ae9fedbc91fe3ebe74b78c88903943ec9c232b6da15947bb3bf8ab/pypdf-6.4.1.tar.gz", hash = "sha256:36eb0b52730fc3077d2b8d4122751e696d46af9ef9e5383db492df1ab0cc4647", size = 5275322, upload-time = "2025-12-07T14:19:27.922Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/de/5ee74158c3090ec99eae9f90c9e9c18f207fa5c722b0e95d6fa7faebcdf8/pypdf-4.0.2.tar.gz", hash = "sha256:3316d9ddfcff5df67ae3cdfe8b945c432aa43e7f970bae7c2a4ab4fe129cd937", size = 280173, upload-time = "2024-02-18T15:45:10.729Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/ef/68c0f473d8b8764b23f199450dfa035e6f2206e67e9bde5dd695bab9bdf0/pypdf-6.4.1-py3-none-any.whl", hash = "sha256:1782ee0766f0b77defc305f1eb2bafe738a2ef6313f3f3d2ee85b4542ba7e535", size = 328325, upload-time = "2025-12-07T14:19:26.286Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/87/30f8a2963247fd7b1267e600379c5e3f51c9849a07d042398e4485b7415c/pypdf-4.0.2-py3-none-any.whl", hash = "sha256:a62daa2a24d5a608ba1b6284dde185317ce3644f89b9ebe5314d0c5d1c9f257d", size = 283953, upload-time = "2024-02-18T15:45:07.857Z" },
 ]
 
 [[package]]
@@ -7604,12 +7619,14 @@ dependencies = [
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/be/f9/5e4491e5ccf42f5d9cfc663741d261b3e6e1683ae7812114e7636409fcc6/sqlalchemy-2.0.45.tar.gz", hash = "sha256:1632a4bda8d2d25703fdad6363058d882541bdaaee0e5e3ddfa0cd3229efce88", size = 9869912, upload-time = "2025-12-09T21:05:16.737Z" }
 wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/70/75b1387d72e2847220441166c5eb4e9846dd753895208c13e6d66523b2d9/sqlalchemy-2.0.45-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:c64772786d9eee72d4d3784c28f0a636af5b0a29f3fe26ff11f55efe90c0bd85", size = 2154148, upload-time = "2025-12-10T20:03:21.023Z" },
     { url = "https://files.pythonhosted.org/packages/d8/a4/7805e02323c49cb9d1ae5cd4913b28c97103079765f520043f914fca4cb3/sqlalchemy-2.0.45-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:7ae64ebf7657395824a19bca98ab10eb9a3ecb026bf09524014f1bb81cb598d4", size = 3233051, upload-time = "2025-12-09T22:06:04.768Z" },
     { url = "https://files.pythonhosted.org/packages/d7/ec/32ae09139f61bef3de3142e85c47abdee8db9a55af2bb438da54a4549263/sqlalchemy-2.0.45-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:0f02325709d1b1a1489f23a39b318e175a171497374149eae74d612634b234c0", size = 3232781, upload-time = "2025-12-09T22:09:54.435Z" },
     { url = "https://files.pythonhosted.org/packages/ad/bd/bf7b869b6f5585eac34222e1cf4405f4ba8c3b85dd6b1af5d4ce8bca695f/sqlalchemy-2.0.45-cp310-cp310-musllinux_1_2_aarch64.whl", hash = "sha256:d2c3684fca8a05f0ac1d9a21c1f4a266983a7ea9180efb80ffeb03861ecd01a0", size = 3182096, upload-time = "2025-12-09T22:06:06.169Z" },
     { url = "https://files.pythonhosted.org/packages/21/6a/c219720a241bb8f35c88815ccc27761f5af7fdef04b987b0e8a2c1a6dcaa/sqlalchemy-2.0.45-cp310-cp310-musllinux_1_2_x86_64.whl", hash = "sha256:040f6f0545b3b7da6b9317fc3e922c9a98fc7243b2a1b39f78390fc0942f7826", size = 3205109, upload-time = "2025-12-09T22:09:55.969Z" },
     { url = "https://files.pythonhosted.org/packages/bd/c4/6ccf31b2bc925d5d95fab403ffd50d20d7c82b858cf1a4855664ca054dce/sqlalchemy-2.0.45-cp310-cp310-win32.whl", hash = "sha256:830d434d609fe7bfa47c425c445a8b37929f140a7a44cdaf77f6d34df3a7296a", size = 2114240, upload-time = "2025-12-09T21:29:54.007Z" },
     { url = "https://files.pythonhosted.org/packages/de/29/a27a31fca07316def418db6f7c70ab14010506616a2decef1906050a0587/sqlalchemy-2.0.45-cp310-cp310-win_amd64.whl", hash = "sha256:0209d9753671b0da74da2cfbb9ecf9c02f72a759e4b018b3ab35f244c91842c7", size = 2137615, upload-time = "2025-12-09T21:29:55.85Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/1c/769552a9d840065137272ebe86ffbb0bc92b0f1e0a68ee5266a225f8cd7b/sqlalchemy-2.0.45-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:2e90a344c644a4fa871eb01809c32096487928bd2038bf10f3e4515cb688cc56", size = 2153860, upload-time = "2025-12-10T20:03:23.843Z" },
     { url = "https://files.pythonhosted.org/packages/f3/f8/9be54ff620e5b796ca7b44670ef58bc678095d51b0e89d6e3102ea468216/sqlalchemy-2.0.45-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:b8c8b41b97fba5f62349aa285654230296829672fc9939cd7f35aab246d1c08b", size = 3309379, upload-time = "2025-12-09T22:06:07.461Z" },
     { url = "https://files.pythonhosted.org/packages/f6/2b/60ce3ee7a5ae172bfcd419ce23259bb874d2cddd44f67c5df3760a1e22f9/sqlalchemy-2.0.45-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:12c694ed6468333a090d2f60950e4250b928f457e4962389553d6ba5fe9951ac", size = 3309948, upload-time = "2025-12-09T22:09:57.643Z" },
     { url = "https://files.pythonhosted.org/packages/a3/42/bac8d393f5db550e4e466d03d16daaafd2bad1f74e48c12673fb499a7fc1/sqlalchemy-2.0.45-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:f7d27a1d977a1cfef38a0e2e1ca86f09c4212666ce34e6ae542f3ed0a33bc606", size = 3261239, upload-time = "2025-12-09T22:06:08.879Z" },
@@ -8451,7 +8468,7 @@ local-inference = [
 
 [[package]]
 name = "unstructured-client"
-version = "0.42.4"
+version = "0.42.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -8462,9 +8479,9 @@ dependencies = [
     { name = "pypdf" },
     { name = "requests-toolbelt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/8f/43c9a936a153e62f18e7629128698feebd81d2cfff2835febc85377b8eb8/unstructured_client-0.42.4.tar.gz", hash = "sha256:144ecd231a11d091cdc76acf50e79e57889269b8c9d8b9df60e74cf32ac1ba5e", size = 91404, upload-time = "2025-11-14T16:59:25.131Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/45/0d605c1c4ed6e38845e9e7d95758abddc7d66e1d096ef9acdf2ecdeaf009/unstructured_client-0.42.3.tar.gz", hash = "sha256:a568d8b281fafdf452647d874060cd0647e33e4a19e811b4db821eb1f3051163", size = 91379, upload-time = "2025-08-12T20:48:04.937Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/6c/7c69e4353e5bdd05fc247c2ec1d840096eb928975697277b015c49405b0f/unstructured_client-0.42.4-py3-none-any.whl", hash = "sha256:fc6341344dd2f2e2aed793636b5f4e6204cad741ff2253d5a48ff2f2bccb8e9a", size = 207863, upload-time = "2025-11-14T16:59:23.674Z" },
+    { url = "https://files.pythonhosted.org/packages/47/1c/137993fff771efc3d5c31ea6b6d126c635c7b124ea641531bca1fd8ea815/unstructured_client-0.42.3-py3-none-any.whl", hash = "sha256:14e9a6a44ed58c64bacd32c62d71db19bf9c2f2b46a2401830a8dfff48249d39", size = 207814, upload-time = "2025-08-12T20:48:03.638Z" },
 ]
 
 [[package]]

@@ -39,6 +39,8 @@ dependencies = [
     "mcp~=1.16.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
+    "python-magic>=0.4.27",
+    "aiocache~=0.12.3",
 ]
 
 [project.urls]
@@ -97,6 +99,16 @@ a2a = [
      "httpx-auth~=0.23.1",
      "httpx-sse~=0.4.0",
      "aiocache[redis,memcached]~=0.12.3",
+]
+image-processing = [
+    "Pillow~=10.4.0",
+]
+pdf-processing = [
+    "pypdf~=4.0.0",
+]
+file-processing = [
+    "Pillow~=10.4.0",
+    "pypdf~=4.0.0",
 ]
 
 
