@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC
+from io import IOBase
 from pathlib import Path
-from typing import Literal, Self
+from typing import Annotated, Any, Literal, Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, GetCoreSchemaHandler
+from pydantic_core import CoreSchema, core_schema
+from typing_extensions import TypeIs
 
 from crewai.utilities.files.file import (
     FileBytes,
@@ -14,6 +17,52 @@ from crewai.utilities.files.file import (
     FileSource,
     FileStream,
 )
+
+
+FileSourceInput = str | Path | bytes | IOBase | FileSource
+
+
+class _FileSourceCoercer:
+    """Pydantic-compatible type that coerces various inputs to FileSource."""
+
+    @classmethod
+    def _coerce(cls, v: Any) -> FileSource:
+        """Convert raw input to appropriate FileSource type."""
+        if isinstance(v, (FilePath, FileBytes, FileStream)):
+            return v
+        if isinstance(v, Path):
+            return FilePath(path=v)
+        if isinstance(v, str):
+            return FilePath(path=Path(v))
+        if isinstance(v, bytes):
+            return FileBytes(data=v)
+        if isinstance(v, IOBase):
+            return FileStream(stream=v)
+        raise ValueError(f"Cannot convert {type(v).__name__} to file source")
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        source_type: Any,
+        handler: GetCoreSchemaHandler,
+    ) -> CoreSchema:
+        """Generate Pydantic core schema for FileSource coercion."""
+        return core_schema.no_info_plain_validator_function(
+            cls._coerce,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: v,
+                info_arg=False,
+                return_schema=core_schema.any_schema(),
+            ),
+        )
+
+
+CoercedFileSource = Annotated[FileSourceInput, _FileSourceCoercer]
+
+
+def _is_file_source(v: FileSourceInput) -> TypeIs[FileSource]:
+    """Type guard to narrow FileSourceInput to FileSource."""
+    return isinstance(v, (FilePath, FileBytes, FileStream))
 
 
 FileMode = Literal["strict", "auto", "warn", "chunk"]
@@ -111,41 +160,32 @@ class BaseFile(ABC, BaseModel):
         mode: How to handle this file if it exceeds provider limits.
     """
 
-    source: FileSource = Field(description="The underlying file source.")
+    source: CoercedFileSource = Field(description="The underlying file source.")
     mode: FileMode = Field(
         default="auto",
         description="How to handle if file exceeds limits: strict, auto, warn, chunk.",
     )
 
-    @field_validator("source", mode="before")
-    @classmethod
-    def _normalize_source(cls, v: str | Path | bytes | FileSource) -> FileSource:
-        """Convert raw input to appropriate source type."""
-        if isinstance(v, (FilePath, FileBytes, FileStream)):
-            return v
-        if isinstance(v, Path):
-            return FilePath(path=v)
-        if isinstance(v, str):
-            return FilePath(path=Path(v))
-        if isinstance(v, bytes):
-            return FileBytes(data=v)
-        if hasattr(v, "read") and hasattr(v, "seek"):
-            return FileStream(stream=v)
-        raise ValueError(f"Cannot convert {type(v).__name__} to file source")
+    @property
+    def _file_source(self) -> FileSource:
+        """Get source with narrowed type (always FileSource after validation)."""
+        if _is_file_source(self.source):
+            return self.source
+        raise TypeError("source must be a FileSource after validation")
 
     @property
     def filename(self) -> str | None:
         """Get the filename from the source."""
-        return self.source.filename
+        return self._file_source.filename
 
     @property
     def content_type(self) -> str:
         """Get the content type from the source."""
-        return self.source.content_type
+        return self._file_source.content_type
 
     def read(self) -> bytes:
         """Read the file content as bytes."""
-        return self.source.read()
+        return self._file_source.read()
 
     def read_text(self, encoding: str = "utf-8") -> str:
         """Read the file content as string."""
@@ -154,8 +194,9 @@ class BaseFile(ABC, BaseModel):
     @property
     def _unpack_key(self) -> str:
         """Get the key to use when unpacking (filename stem)."""
-        if self.source.filename:
-            return Path(self.source.filename).stem
+        filename = self._file_source.filename
+        if filename:
+            return Path(filename).stem
         return "file"
 
     def keys(self) -> list[str]:
