@@ -6,14 +6,7 @@ from dataclasses import dataclass, field
 import hashlib
 import logging
 
-from crewai.files.content_types import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
+from crewai.files.content_types import FileInput
 from crewai.files.metrics import measure_operation
 from crewai.files.processing.constraints import (
     AudioConstraints,
@@ -35,8 +28,6 @@ from crewai.files.uploaders.base import FileUploader
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 UPLOAD_MAX_RETRIES = 3
 UPLOAD_RETRY_DELAY_BASE = 2

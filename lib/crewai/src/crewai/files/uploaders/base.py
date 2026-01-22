@@ -6,17 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from crewai.files.content_types import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
-
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
+from crewai.files.content_types import FileInput
 
 
 @dataclass

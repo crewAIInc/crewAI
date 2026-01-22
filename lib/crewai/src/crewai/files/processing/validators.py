@@ -6,7 +6,7 @@ import logging
 
 from crewai.files.content_types import (
     AudioFile,
-    File,
+    FileInput,
     ImageFile,
     PDFFile,
     TextFile,
@@ -27,8 +27,6 @@ from crewai.files.processing.exceptions import (
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 
 def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:

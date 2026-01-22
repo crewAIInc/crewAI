@@ -70,9 +70,19 @@ FileMode = Literal["strict", "auto", "warn", "chunk"]
 
 
 ImageExtension = Literal[
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".tif", ".svg"
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".bmp",
+    ".tiff",
+    ".tif",
+    ".svg",
+    ".heic",
+    ".heif",
 ]
-ImageContentType = Literal[
+ImageMimeType = Literal[
     "image/png",
     "image/jpeg",
     "image/gif",
@@ -80,6 +90,8 @@ ImageContentType = Literal[
     "image/bmp",
     "image/tiff",
     "image/svg+xml",
+    "image/heic",
+    "image/heif",
 ]
 
 PDFExtension = Literal[".pdf"]
@@ -116,13 +128,15 @@ TextContentType = Literal[
 AudioExtension = Literal[
     ".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".wma", ".aiff", ".opus"
 ]
-AudioContentType = Literal[
+AudioMimeType = Literal[
+    "audio/mp3",
     "audio/mpeg",
     "audio/wav",
     "audio/x-wav",
     "audio/ogg",
     "audio/flac",
     "audio/aac",
+    "audio/m4a",
     "audio/mp4",
     "audio/x-ms-wma",
     "audio/aiff",
@@ -132,15 +146,15 @@ AudioContentType = Literal[
 VideoExtension = Literal[
     ".mp4", ".avi", ".mkv", ".mov", ".webm", ".flv", ".wmv", ".m4v", ".mpeg", ".mpg"
 ]
-VideoContentType = Literal[
+VideoMimeType = Literal[
     "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/quicktime",
     "video/x-msvideo",
     "video/x-matroska",
-    "video/quicktime",
-    "video/webm",
     "video/x-flv",
     "video/x-ms-wmv",
-    "video/mpeg",
 ]
 
 
@@ -265,3 +279,6 @@ class File(BaseFile):
         >>> image_file = File(source="./image.png")
         >>> bytes_file = File(source=b"file content")
     """
+
+
+FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile

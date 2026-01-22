@@ -7,21 +7,12 @@ import logging
 import os
 from typing import Any
 
-from crewai.files.content_types import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
+from crewai.files.content_types import FileInput
 from crewai.files.processing.exceptions import classify_upload_error
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 
 class AnthropicFileUploader(FileUploader):

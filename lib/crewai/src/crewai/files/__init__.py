@@ -6,24 +6,25 @@ from crewai.files.cleanup import (
     cleanup_uploaded_files,
 )
 from crewai.files.content_types import (
-    AudioContentType,
     AudioExtension,
     AudioFile,
+    AudioMimeType,
     BaseFile,
     File,
+    FileInput,
     FileMode,
-    ImageContentType,
     ImageExtension,
     ImageFile,
+    ImageMimeType,
     PDFContentType,
     PDFExtension,
     PDFFile,
     TextContentType,
     TextExtension,
     TextFile,
-    VideoContentType,
     VideoExtension,
     VideoFile,
+    VideoMimeType,
 )
 from crewai.files.file import (
     FileBytes,
@@ -72,9 +73,6 @@ from crewai.files.upload_cache import (
     reset_upload_cache,
 )
 from crewai.files.uploaders import FileUploader, UploadResult, get_uploader
-
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 
 def wrap_file_source(source: FileSource) -> FileInput:
@@ -146,9 +144,9 @@ __all__ = [
     "GEMINI_CONSTRAINTS",
     "OPENAI_CONSTRAINTS",
     "AudioConstraints",
-    "AudioContentType",
     "AudioExtension",
     "AudioFile",
+    "AudioMimeType",
     "BaseFile",
     "CachedUpload",
     "File",
@@ -169,9 +167,9 @@ __all__ = [
     "FileUploader",
     "FileValidationError",
     "ImageConstraints",
-    "ImageContentType",
     "ImageExtension",
     "ImageFile",
+    "ImageMimeType",
     "InlineBase64",
     "InlineBytes",
     "PDFConstraints",
@@ -191,9 +189,9 @@ __all__ = [
     "UploadResult",
     "UrlReference",
     "VideoConstraints",
-    "VideoContentType",
     "VideoExtension",
     "VideoFile",
+    "VideoMimeType",
     "cleanup_expired_files",
     "cleanup_provider_files",
     "cleanup_uploaded_files",

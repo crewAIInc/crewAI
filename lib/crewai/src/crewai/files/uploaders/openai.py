@@ -8,14 +8,7 @@ import logging
 import os
 from typing import Any
 
-from crewai.files.content_types import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
+from crewai.files.content_types import FileInput
 from crewai.files.file import FileBytes, FilePath, FileStream
 from crewai.files.processing.exceptions import (
     PermanentUploadError,
@@ -26,8 +19,6 @@ from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 FILES_API_MAX_SIZE = 512 * 1024 * 1024
 DEFAULT_UPLOAD_CHUNK_SIZE = 64 * 1024 * 1024

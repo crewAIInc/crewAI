@@ -8,14 +8,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from crewai.files.content_types import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
+from crewai.files.content_types import FileInput
 from crewai.files.file import FileBytes, FilePath
 from crewai.files.processing.exceptions import (
     PermanentUploadError,
@@ -25,8 +18,6 @@ from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 MULTIPART_THRESHOLD = 8 * 1024 * 1024
 MULTIPART_CHUNKSIZE = 8 * 1024 * 1024

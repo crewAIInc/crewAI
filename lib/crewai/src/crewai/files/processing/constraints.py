@@ -3,35 +3,12 @@
 from dataclasses import dataclass
 from typing import Literal
 
+from crewai.files.content_types import (
+    AudioMimeType,
+    ImageMimeType,
+    VideoMimeType,
+)
 
-ImageFormat = Literal[
-    "image/png",
-    "image/jpeg",
-    "image/gif",
-    "image/webp",
-    "image/heic",
-    "image/heif",
-]
-
-AudioFormat = Literal[
-    "audio/mp3",
-    "audio/mpeg",
-    "audio/wav",
-    "audio/ogg",
-    "audio/flac",
-    "audio/aac",
-    "audio/m4a",
-    "audio/opus",
-]
-
-VideoFormat = Literal[
-    "video/mp4",
-    "video/mpeg",
-    "video/webm",
-    "video/quicktime",
-    "video/x-msvideo",
-    "video/x-flv",
-]
 
 ProviderName = Literal[
     "anthropic",
@@ -41,15 +18,14 @@ ProviderName = Literal[
     "azure",
 ]
 
-# Pre-typed format tuples for common combinations
-DEFAULT_IMAGE_FORMATS: tuple[ImageFormat, ...] = (
+DEFAULT_IMAGE_FORMATS: tuple[ImageMimeType, ...] = (
     "image/png",
     "image/jpeg",
     "image/gif",
     "image/webp",
 )
 
-GEMINI_IMAGE_FORMATS: tuple[ImageFormat, ...] = (
+GEMINI_IMAGE_FORMATS: tuple[ImageMimeType, ...] = (
     "image/png",
     "image/jpeg",
     "image/gif",
@@ -58,7 +34,7 @@ GEMINI_IMAGE_FORMATS: tuple[ImageFormat, ...] = (
     "image/heif",
 )
 
-DEFAULT_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
+DEFAULT_AUDIO_FORMATS: tuple[AudioMimeType, ...] = (
     "audio/mp3",
     "audio/mpeg",
     "audio/wav",
@@ -68,7 +44,7 @@ DEFAULT_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
     "audio/m4a",
 )
 
-GEMINI_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
+GEMINI_AUDIO_FORMATS: tuple[AudioMimeType, ...] = (
     "audio/mp3",
     "audio/mpeg",
     "audio/wav",
@@ -79,14 +55,14 @@ GEMINI_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
     "audio/opus",
 )
 
-DEFAULT_VIDEO_FORMATS: tuple[VideoFormat, ...] = (
+DEFAULT_VIDEO_FORMATS: tuple[VideoMimeType, ...] = (
     "video/mp4",
     "video/mpeg",
     "video/webm",
     "video/quicktime",
 )
 
-GEMINI_VIDEO_FORMATS: tuple[VideoFormat, ...] = (
+GEMINI_VIDEO_FORMATS: tuple[VideoMimeType, ...] = (
     "video/mp4",
     "video/mpeg",
     "video/webm",
@@ -112,7 +88,7 @@ class ImageConstraints:
     max_width: int | None = None
     max_height: int | None = None
     max_images_per_request: int | None = None
-    supported_formats: tuple[ImageFormat, ...] = DEFAULT_IMAGE_FORMATS
+    supported_formats: tuple[ImageMimeType, ...] = DEFAULT_IMAGE_FORMATS
 
 
 @dataclass(frozen=True)
@@ -140,7 +116,7 @@ class AudioConstraints:
 
     max_size_bytes: int
     max_duration_seconds: int | None = None
-    supported_formats: tuple[AudioFormat, ...] = DEFAULT_AUDIO_FORMATS
+    supported_formats: tuple[AudioMimeType, ...] = DEFAULT_AUDIO_FORMATS
 
 
 @dataclass(frozen=True)
@@ -155,7 +131,7 @@ class VideoConstraints:
 
     max_size_bytes: int
     max_duration_seconds: int | None = None
-    supported_formats: tuple[VideoFormat, ...] = DEFAULT_VIDEO_FORMATS
+    supported_formats: tuple[VideoMimeType, ...] = DEFAULT_VIDEO_FORMATS
 
 
 @dataclass(frozen=True)

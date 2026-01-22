@@ -7,6 +7,7 @@ import logging
 from crewai.files.content_types import (
     AudioFile,
     File,
+    FileInput,
     ImageFile,
     PDFFile,
     TextFile,
@@ -35,8 +36,6 @@ from crewai.files.processing.validators import validate_file
 
 
 logger = logging.getLogger(__name__)
-
-FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 
 class FileProcessor:

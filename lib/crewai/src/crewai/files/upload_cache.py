@@ -17,16 +17,7 @@ from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped
 
 
 if TYPE_CHECKING:
-    from crewai.files.content_types import (
-        AudioFile,
-        File,
-        ImageFile,
-        PDFFile,
-        TextFile,
-        VideoFile,
-    )
-
-    FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
+    from crewai.files.content_types import FileInput
 
 logger = logging.getLogger(__name__)
 
