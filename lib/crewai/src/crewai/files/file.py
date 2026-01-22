@@ -18,6 +18,8 @@ from pydantic import (
 )
 from pydantic_core import CoreSchema, core_schema
 
+from crewai.files.constants import DEFAULT_MAX_FILE_SIZE_BYTES, MAGIC_BUFFER_SIZE
+
 
 @runtime_checkable
 class AsyncReadable(Protocol):
@@ -51,7 +53,14 @@ class _AsyncReadableValidator:
 
 ValidatedAsyncReadable = Annotated[AsyncReadable, _AsyncReadableValidator()]
 
-DEFAULT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024  # 500MB
+
+def _fallback_content_type(filename: str | None) -> str:
+    """Get content type from filename extension or return default."""
+    if filename:
+        mime_type, _ = mimetypes.guess_type(filename)
+        if mime_type:
+            return mime_type
+    return "application/octet-stream"
 
 
 def detect_content_type(data: bytes, filename: str | None = None) -> str:
@@ -61,7 +70,7 @@ def detect_content_type(data: bytes, filename: str | None = None) -> str:
     falls back to mimetypes module using filename extension.
 
     Args:
-        data: Raw bytes to analyze.
+        data: Raw bytes to analyze (only first 2048 bytes are used).
         filename: Optional filename for extension-based fallback.
 
     Returns:
@@ -70,14 +79,32 @@ def detect_content_type(data: bytes, filename: str | None = None) -> str:
     try:
         import magic
 
-        result: str = magic.from_buffer(data, mime=True)
+        result: str = magic.from_buffer(data[:MAGIC_BUFFER_SIZE], mime=True)
         return result
     except ImportError:
-        if filename:
-            mime_type, _ = mimetypes.guess_type(filename)
-            if mime_type:
-                return mime_type
-        return "application/octet-stream"
+        return _fallback_content_type(filename)
+
+
+def detect_content_type_from_path(path: Path, filename: str | None = None) -> str:
+    """Detect MIME type from file path.
+
+    Uses python-magic's from_file() for accurate detection without reading
+    the entire file into memory.
+
+    Args:
+        path: Path to the file.
+        filename: Optional filename for extension-based fallback.
+
+    Returns:
+        The detected MIME type.
+    """
+    try:
+        import magic
+
+        result: str = magic.from_file(str(path), mime=True)
+        return result
+    except ImportError:
+        return _fallback_content_type(filename or path.name)
 
 
 class _BinaryIOValidator:
@@ -114,6 +141,7 @@ class FilePath(BaseModel):
         description="Maximum file size in bytes.",
     )
     _content: bytes | None = PrivateAttr(default=None)
+    _content_type: str = PrivateAttr()
 
     @model_validator(mode="after")
     def _validate_file_exists(self) -> FilePath:
@@ -144,6 +172,7 @@ class FilePath(BaseModel):
                 max_size=self.max_size_bytes,
             )
 
+        self._content_type = detect_content_type_from_path(self.path, self.path.name)
         return self
 
     @property
@@ -153,8 +182,8 @@ class FilePath(BaseModel):
 
     @property
     def content_type(self) -> str:
-        """Get the content type by reading file content."""
-        return detect_content_type(self.read(), self.filename)
+        """Get the content type."""
+        return self._content_type
 
     def read(self) -> bytes:
         """Read the file content from disk."""
@@ -201,11 +230,18 @@ class FileBytes(BaseModel):
 
     data: bytes = Field(description="Raw bytes content of the file.")
     filename: str | None = Field(default=None, description="Optional filename.")
+    _content_type: str = PrivateAttr()
+
+    @model_validator(mode="after")
+    def _detect_content_type(self) -> FileBytes:
+        """Detect and cache content type from data."""
+        self._content_type = detect_content_type(self.data, self.filename)
+        return self
 
     @property
     def content_type(self) -> str:
-        """Get the content type from the data."""
-        return detect_content_type(self.data, self.filename)
+        """Get the content type."""
+        return self._content_type
 
     def read(self) -> bytes:
         """Return the bytes content."""
@@ -246,18 +282,27 @@ class FileStream(BaseModel):
     stream: ValidatedBinaryIO = Field(description="Binary file stream.")
     filename: str | None = Field(default=None, description="Optional filename.")
     _content: bytes | None = PrivateAttr(default=None)
+    _content_type: str = PrivateAttr()
 
-    def model_post_init(self, __context: object) -> None:
-        """Extract filename from stream if not provided."""
+    @model_validator(mode="after")
+    def _initialize(self) -> FileStream:
+        """Extract filename and detect content type."""
         if self.filename is None:
             name = getattr(self.stream, "name", None)
             if name is not None:
-                object.__setattr__(self, "filename", Path(name).name)
+                self.filename = Path(name).name
+
+        position = self.stream.tell()
+        self.stream.seek(0)
+        header = self.stream.read(MAGIC_BUFFER_SIZE)
+        self.stream.seek(position)
+        self._content_type = detect_content_type(header, self.filename)
+        return self
 
     @property
     def content_type(self) -> str:
-        """Get the content type from stream content."""
-        return detect_content_type(self.read(), self.filename)
+        """Get the content type."""
+        return self._content_type
 
     def read(self) -> bytes:
         """Read the stream content. Content is cached after first read."""
@@ -319,13 +364,16 @@ class AsyncFileStream(BaseModel):
     )
     filename: str | None = Field(default=None, description="Optional filename.")
     _content: bytes | None = PrivateAttr(default=None)
+    _content_type: str | None = PrivateAttr(default=None)
 
     @property
     def content_type(self) -> str:
-        """Get the content type from stream content. Requires aread() first."""
+        """Get the content type from stream content (cached). Requires aread() first."""
         if self._content is None:
             raise RuntimeError("Call aread() first to load content")
-        return detect_content_type(self._content, self.filename)
+        if self._content_type is None:
+            self._content_type = detect_content_type(self._content, self.filename)
+        return self._content_type
 
     async def aread(self) -> bytes:
         """Async read the stream content. Content is cached after first read."""

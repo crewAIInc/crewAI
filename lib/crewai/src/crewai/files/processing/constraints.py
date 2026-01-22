@@ -1,6 +1,7 @@
 """Provider-specific file constraints for multimodal content."""
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Literal
 
 from crewai.files.content_types import (
@@ -162,47 +163,47 @@ class ProviderConstraints:
 ANTHROPIC_CONSTRAINTS = ProviderConstraints(
     name="anthropic",
     image=ImageConstraints(
-        max_size_bytes=5 * 1024 * 1024,
+        max_size_bytes=5_242_880,
         max_width=8000,
         max_height=8000,
     ),
     pdf=PDFConstraints(
-        max_size_bytes=30 * 1024 * 1024,
+        max_size_bytes=31_457_280,
         max_pages=100,
     ),
     supports_file_upload=True,
-    file_upload_threshold_bytes=5 * 1024 * 1024,
+    file_upload_threshold_bytes=5_242_880,
 )
 
 OPENAI_CONSTRAINTS = ProviderConstraints(
     name="openai",
     image=ImageConstraints(
-        max_size_bytes=20 * 1024 * 1024,
+        max_size_bytes=20_971_520,
         max_images_per_request=10,
     ),
     supports_file_upload=True,
-    file_upload_threshold_bytes=5 * 1024 * 1024,
+    file_upload_threshold_bytes=5_242_880,
 )
 
 GEMINI_CONSTRAINTS = ProviderConstraints(
     name="gemini",
     image=ImageConstraints(
-        max_size_bytes=100 * 1024 * 1024,
+        max_size_bytes=104_857_600,
         supported_formats=GEMINI_IMAGE_FORMATS,
     ),
     pdf=PDFConstraints(
-        max_size_bytes=50 * 1024 * 1024,
+        max_size_bytes=52_428_800,
     ),
     audio=AudioConstraints(
-        max_size_bytes=100 * 1024 * 1024,
+        max_size_bytes=104_857_600,
         supported_formats=GEMINI_AUDIO_FORMATS,
     ),
     video=VideoConstraints(
-        max_size_bytes=2 * 1024 * 1024 * 1024,
+        max_size_bytes=2_147_483_648,
         supported_formats=GEMINI_VIDEO_FORMATS,
     ),
     supports_file_upload=True,
-    file_upload_threshold_bytes=20 * 1024 * 1024,
+    file_upload_threshold_bytes=20_971_520,
 )
 
 BEDROCK_CONSTRAINTS = ProviderConstraints(
@@ -221,7 +222,7 @@ BEDROCK_CONSTRAINTS = ProviderConstraints(
 AZURE_CONSTRAINTS = ProviderConstraints(
     name="azure",
     image=ImageConstraints(
-        max_size_bytes=20 * 1024 * 1024,
+        max_size_bytes=20_971_520,
         max_images_per_request=10,
     ),
 )
@@ -240,6 +241,7 @@ _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
 }
 
 
+@lru_cache(maxsize=32)
 def get_constraints_for_provider(
     provider: str | ProviderConstraints,
 ) -> ProviderConstraints | None:

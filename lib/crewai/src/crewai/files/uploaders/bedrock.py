@@ -8,6 +8,11 @@ import os
 from pathlib import Path
 from typing import Any
 
+from crewai.files.constants import (
+    MAX_CONCURRENCY,
+    MULTIPART_CHUNKSIZE,
+    MULTIPART_THRESHOLD,
+)
 from crewai.files.content_types import FileInput
 from crewai.files.file import FileBytes, FilePath
 from crewai.files.processing.exceptions import (
@@ -18,10 +23,6 @@ from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
-
-MULTIPART_THRESHOLD = 8 * 1024 * 1024
-MULTIPART_CHUNKSIZE = 8 * 1024 * 1024
-MAX_CONCURRENCY = 10
 
 
 def _classify_s3_error(e: Exception, filename: str | None) -> Exception:

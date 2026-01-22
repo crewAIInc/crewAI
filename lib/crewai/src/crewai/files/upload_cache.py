@@ -15,14 +15,13 @@ from typing import TYPE_CHECKING, Any
 from aiocache import Cache  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 
+from crewai.files.constants import DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_TTL_SECONDS
+
 
 if TYPE_CHECKING:
     from crewai.files.content_types import FileInput
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_TTL_SECONDS = 24 * 60 * 60  # 24 hours
-DEFAULT_MAX_CACHE_ENTRIES = 1000
 
 
 @dataclass

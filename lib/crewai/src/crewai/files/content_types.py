@@ -9,7 +9,6 @@ from typing import Annotated, Any, BinaryIO, Literal, Self
 
 from pydantic import BaseModel, Field, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
-from typing_extensions import TypeIs
 
 from crewai.files.file import (
     AsyncFileStream,
@@ -18,6 +17,7 @@ from crewai.files.file import (
     FileSource,
     FileStream,
 )
+from crewai.files.utils import is_file_source
 
 
 FileSourceInput = str | Path | bytes | IOBase | FileSource
@@ -59,12 +59,6 @@ class _FileSourceCoercer:
 
 
 CoercedFileSource = Annotated[FileSourceInput, _FileSourceCoercer]
-
-
-def _is_file_source(v: FileSourceInput) -> TypeIs[FileSource]:
-    """Type guard to narrow FileSourceInput to FileSource."""
-    return isinstance(v, (FilePath, FileBytes, FileStream))
-
 
 FileMode = Literal["strict", "auto", "warn", "chunk"]
 
@@ -184,7 +178,7 @@ class BaseFile(ABC, BaseModel):
     @property
     def _file_source(self) -> FileSource:
         """Get source with narrowed type (always FileSource after validation)."""
-        if _is_file_source(self.source):
+        if is_file_source(self.source):
             return self.source
         raise TypeError("source must be a FileSource after validation")
 

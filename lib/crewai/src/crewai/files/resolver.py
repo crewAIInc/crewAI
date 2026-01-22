@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 import hashlib
 import logging
 
+from crewai.files.constants import UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY_BASE
 from crewai.files.content_types import FileInput
 from crewai.files.metrics import measure_operation
 from crewai.files.processing.constraints import (
@@ -28,9 +29,6 @@ from crewai.files.uploaders.base import FileUploader
 
 
 logger = logging.getLogger(__name__)
-
-UPLOAD_MAX_RETRIES = 3
-UPLOAD_RETRY_DELAY_BASE = 2
 
 
 @dataclass

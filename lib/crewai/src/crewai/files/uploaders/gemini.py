@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import io
 import logging
 import os
@@ -12,6 +12,12 @@ import random
 import time
 from typing import Any
 
+from crewai.files.constants import (
+    BACKOFF_BASE_DELAY,
+    BACKOFF_JITTER_FACTOR,
+    BACKOFF_MAX_DELAY,
+    GEMINI_FILE_TTL,
+)
 from crewai.files.content_types import FileInput
 from crewai.files.file import FilePath
 from crewai.files.processing.exceptions import (
@@ -23,12 +29,6 @@ from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
-
-GEMINI_FILE_TTL = timedelta(hours=48)
-
-BACKOFF_BASE_DELAY = 1.0
-BACKOFF_MAX_DELAY = 30.0
-BACKOFF_JITTER_FACTOR = 0.1
 
 
 def _compute_backoff_delay(attempt: int) -> float:
