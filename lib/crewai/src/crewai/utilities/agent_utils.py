@@ -876,7 +876,9 @@ def extract_tool_call_info(
         return call_id, tool_call.name, tool_call.input
     if isinstance(tool_call, dict):
         # Support OpenAI "id", Bedrock "toolUseId", or generate one
-        call_id = tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+        call_id = (
+            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+        )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
         func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
