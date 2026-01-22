@@ -645,6 +645,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 original_tool = tool
                 break
 
+        # Check if tool has reached max usage count
+        max_usage_reached = False
+        if original_tool:
+            if (
+                hasattr(original_tool, "max_usage_count")
+                and original_tool.max_usage_count is not None
+                and original_tool.current_usage_count >= original_tool.max_usage_count
+            ):
+                max_usage_reached = True
+
         # Check cache before executing
         from_cache = False
         input_str = json.dumps(args_dict) if args_dict else ""
@@ -675,8 +685,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
-        # Execute the tool (only if not cached)
-        if not from_cache:
+        # Execute the tool (only if not cached and not at max usage)
+        if not from_cache and not max_usage_reached:
             result = "Tool not found"
             if func_name in available_functions:
                 try:
@@ -720,6 +730,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
+        elif max_usage_reached:
+            # Return error message when max usage limit is reached
+            result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
 
         # Emit tool usage finished event
         crewai_event_bus.emit(

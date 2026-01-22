@@ -371,6 +371,19 @@ class ToolUsage:
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
                         available_tool, "current_usage_count"
                     ):
                         available_tool.current_usage_count += 1
@@ -577,6 +590,19 @@ class ToolUsage:
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
                         available_tool, "current_usage_count"
                     ):
                         available_tool.current_usage_count += 1

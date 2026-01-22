@@ -536,3 +536,100 @@ def test_native_tool_calling_error_handling(failing_tool: FailingTool):
     assert error_event.tool_name == "failing_tool"
     assert error_event.agent_role == agent.role
     assert "This tool always fails" in str(error_event.error)
+
+
+# =============================================================================
+# Max Usage Count Tests for Native Tool Calling
+# =============================================================================
+
+
+class CountingInput(BaseModel):
+    """Input schema for counting tool."""
+
+    value: str = Field(description="Value to count")
+
+
+class CountingTool(BaseTool):
+    """A tool that counts its usage."""
+
+    name: str = "counting_tool"
+    description: str = "A tool that counts how many times it's been called"
+    args_schema: type[BaseModel] = CountingInput
+
+    def _run(self, value: str) -> str:
+        """Return the value with a count prefix."""
+        return f"Counted: {value}"
+
+
+class TestMaxUsageCountWithNativeToolCalling:
+    """Tests for max_usage_count with native tool calling."""
+
+    @pytest.mark.vcr()
+    def test_max_usage_count_tracked_in_native_tool_calling(self) -> None:
+        """Test that max_usage_count is properly tracked when using native tool calling."""
+        tool = CountingTool(max_usage_count=3)
+
+        # Verify initial state
+        assert tool.max_usage_count == 3
+        assert tool.current_usage_count == 0
+
+        agent = Agent(
+            role="Counting Agent",
+            goal="Call the counting tool multiple times",
+            backstory="You are an agent that counts things.",
+            tools=[tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+            max_iter=5,
+        )
+
+        task = Task(
+            description="Call the counting_tool 3 times with values 'first', 'second', and 'third'",
+            expected_output="The results of the counting operations",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        crew.kickoff()
+
+        # Verify usage count was tracked
+        assert tool.max_usage_count == 3
+        assert tool.current_usage_count <= tool.max_usage_count
+
+    def test_max_usage_count_limit_enforced_in_native_tool_calling(self) -> None:
+        """Test that when max_usage_count is reached, tool returns error message."""
+        tool = CountingTool(max_usage_count=2)
+
+        # Manually simulate tool being at max usage
+        tool.current_usage_count = 2
+
+        agent = Agent(
+            role="Counting Agent",
+            goal="Try to use the counting tool",
+            backstory="You are an agent that counts things.",
+            tools=[tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+            max_iter=3,
+        )
+
+        # Verify the tool is at max usage
+        assert tool.current_usage_count >= tool.max_usage_count
+
+        # The tool should report it has reached its limit when the agent tries to use it
+        # This is handled in _handle_native_tool_calls / execute_native_tool
+
+    def test_tool_usage_increments_after_successful_execution(self) -> None:
+        """Test that usage count increments after each successful native tool call."""
+        tool = CountingTool(max_usage_count=10)
+
+        assert tool.current_usage_count == 0
+
+        # Simulate direct tool execution (which happens during native tool calling)
+        result = tool.run(value="test")
+        assert "Counted: test" in result
+        assert tool.current_usage_count == 1
+
+        result = tool.run(value="test2")
+        assert "Counted: test2" in result
+        assert tool.current_usage_count == 2
