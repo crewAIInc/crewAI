@@ -596,40 +596,62 @@ class TestMaxUsageCountWithNativeToolCalling:
         assert tool.max_usage_count == 3
         assert tool.current_usage_count <= tool.max_usage_count
 
+    @pytest.mark.vcr()
     def test_max_usage_count_limit_enforced_in_native_tool_calling(self) -> None:
         """Test that when max_usage_count is reached, tool returns error message."""
         tool = CountingTool(max_usage_count=2)
 
-        # Manually simulate tool being at max usage
-        tool.current_usage_count = 2
-
         agent = Agent(
             role="Counting Agent",
-            goal="Try to use the counting tool",
-            backstory="You are an agent that counts things.",
+            goal="Use the counting tool as many times as requested",
+            backstory="You are an agent that counts things. You must try to use the tool for each value requested.",
             tools=[tool],
             llm=LLM(model="gpt-4o-mini"),
             verbose=False,
-            max_iter=3,
+            max_iter=5,
         )
 
-        # Verify the tool is at max usage
-        assert tool.current_usage_count >= tool.max_usage_count
+        # Request more tool calls than the max_usage_count allows
+        task = Task(
+            description="Call the counting_tool 4 times with values 'one', 'two', 'three', and 'four'",
+            expected_output="The results of the counting operations, noting any failures",
+            agent=agent,
+        )
 
-        # The tool should report it has reached its limit when the agent tries to use it
-        # This is handled in _handle_native_tool_calls / execute_native_tool
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
 
+        # The tool should have been limited to max_usage_count (2) calls
+        assert result is not None
+        assert tool.current_usage_count == tool.max_usage_count
+        # After hitting the limit, further calls should have been rejected
+
+    @pytest.mark.vcr()
     def test_tool_usage_increments_after_successful_execution(self) -> None:
         """Test that usage count increments after each successful native tool call."""
         tool = CountingTool(max_usage_count=10)
 
         assert tool.current_usage_count == 0
 
-        # Simulate direct tool execution (which happens during native tool calling)
-        result = tool.run(value="test")
-        assert "Counted: test" in result
-        assert tool.current_usage_count == 1
+        agent = Agent(
+            role="Counting Agent",
+            goal="Use the counting tool exactly as requested",
+            backstory="You are an agent that counts things precisely.",
+            tools=[tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+            max_iter=5,
+        )
 
-        result = tool.run(value="test2")
-        assert "Counted: test2" in result
+        task = Task(
+            description="Call the counting_tool exactly 2 times: first with value 'alpha', then with value 'beta'",
+            expected_output="The results showing both 'Counted: alpha' and 'Counted: beta'",
+            agent=agent,
+        )
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        # Verify usage count was incremented for each successful call
         assert tool.current_usage_count == 2
