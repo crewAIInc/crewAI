@@ -58,6 +58,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    is_null_response_because_context_length_exceeded,
     parse_tools,
     process_llm_response,
     render_text_description_and_args,
@@ -618,7 +619,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if e.__class__.__module__.startswith("litellm"):
                     # Do not retry on litellm errors
                     raise e
-                if is_context_length_exceeded(e):
+                if is_context_length_exceeded(exception=e) or is_null_response_because_context_length_exceeded(exception=e, messages=self.messages, llm=self.llm ):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
                         printer=self._printer,
