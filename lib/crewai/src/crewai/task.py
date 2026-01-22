@@ -44,6 +44,17 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.file_store import (
+    clear_task_files,
+    get_all_files,
+    store_task_files,
+)
+from crewai.utilities.files import (
+    FileInput,
+    FilePath,
+    FileSourceInput,
+    normalize_input_files,
+)
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -141,6 +152,10 @@ class Task(BaseModel):
     tools: list[BaseTool] | None = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    input_files: list[FileSourceInput | FileInput] = Field(
+        default_factory=list,
+        description="List of input files for this task. Accepts paths, bytes, or File objects.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
@@ -357,6 +372,21 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    @field_validator("input_files", mode="before")
+    @classmethod
+    def _normalize_input_files(cls, v: list[Any]) -> list[Any]:
+        """Convert string paths to FilePath objects."""
+        if not v:
+            return v
+
+        result = []
+        for item in v:
+            if isinstance(item, str):
+                result.append(FilePath(path=Path(item)))
+            else:
+                result.append(item)
+        return result
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -495,10 +525,10 @@ class Task(BaseModel):
     ) -> None:
         """Execute the task asynchronously with context handling."""
         try:
-          result = self._execute_core(agent, context, tools)
-          future.set_result(result)
+            result = self._execute_core(agent, context, tools)
+            future.set_result(result)
         except Exception as e:
-          future.set_exception(e)
+            future.set_exception(e)
 
     async def aexecute_sync(
         self,
@@ -516,6 +546,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        self._store_input_files()
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -600,6 +631,8 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
             raise e  # Re-raise the exception after emitting the event
+        finally:
+            clear_task_files(self.id)
 
     def _execute_core(
         self,
@@ -608,6 +641,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        self._store_input_files()
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -693,6 +727,8 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
             raise e  # Re-raise the exception after emitting the event
+        finally:
+            clear_task_files(self.id)
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
@@ -714,6 +750,51 @@ class Task(BaseModel):
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
+
+        if self.agent and self.agent.crew:
+            files = get_all_files(self.agent.crew.id, self.id)
+            if files:
+                supported_types: list[str] = []
+                if self.agent.llm and self.agent.llm.supports_multimodal():
+                    supported_types = (
+                        self.agent.llm.supported_multimodal_content_types()
+                    )
+
+                def is_auto_injected(content_type: str) -> bool:
+                    return any(content_type.startswith(t) for t in supported_types)
+
+                auto_injected_files = {
+                    name: f_input
+                    for name, f_input in files.items()
+                    if is_auto_injected(f_input.content_type)
+                }
+                tool_files = {
+                    name: f_input
+                    for name, f_input in files.items()
+                    if not is_auto_injected(f_input.content_type)
+                }
+
+                file_lines: list[str] = []
+
+                if auto_injected_files:
+                    file_lines.append(
+                        "Input files (content already loaded in conversation):"
+                    )
+                    for name, file_input in auto_injected_files.items():
+                        filename = file_input.filename or name
+                        file_lines.append(f'  - "{name}" ({filename})')
+
+                if tool_files:
+                    file_lines.append(
+                        "Available input files (use the name in quotes with read_file tool):"
+                    )
+                    for name, file_input in tool_files.items():
+                        filename = file_input.filename or name
+                        content_type = file_input.content_type
+                        file_lines.append(f'  - "{name}" ({filename}, {content_type})')
+
+                if file_lines:
+                    description += "\n\n" + "\n".join(file_lines)
 
         tasks_slices = [description]
 
@@ -947,6 +1028,18 @@ Follow these guidelines:
                 )
             ) from e
         return
+
+    def _store_input_files(self) -> None:
+        """Store task input files in the file store.
+
+        Converts input_files list to a named dict and stores under task ID.
+        """
+        if not self.input_files:
+            return
+
+        files_dict = normalize_input_files(self.input_files)
+        if files_dict:
+            store_task_files(self.id, files_dict)
 
     def __repr__(self) -> str:
         return f"Task(description={self.description}, expected_output={self.expected_output})"

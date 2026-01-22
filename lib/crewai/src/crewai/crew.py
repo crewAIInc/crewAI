@@ -80,6 +80,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -88,6 +89,7 @@ from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
+from crewai.utilities.file_store import clear_files, get_all_files
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -106,6 +108,7 @@ from crewai.utilities.streaming import (
 )
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
+from crewai.utilities.types import KickoffInputs
 
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
@@ -675,7 +678,7 @@ class Crew(FlowTrackable, BaseModel):
 
     def kickoff(
         self,
-        inputs: dict[str, Any] | None = None,
+        inputs: KickoffInputs | dict[str, Any] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -732,6 +735,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            clear_files(self.id)
             detach(token)
 
     def kickoff_for_each(
@@ -762,7 +766,7 @@ class Crew(FlowTrackable, BaseModel):
         return results
 
     async def kickoff_async(
-        self, inputs: dict[str, Any] | None = None
+        self, inputs: KickoffInputs | dict[str, Any] | None = None
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
 
@@ -817,7 +821,7 @@ class Crew(FlowTrackable, BaseModel):
         return await run_for_each_async(self, inputs, kickoff_fn)
 
     async def akickoff(
-        self, inputs: dict[str, Any] | None = None
+        self, inputs: KickoffInputs | dict[str, Any] | None = None
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
@@ -880,6 +884,7 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            clear_files(self.id)
             detach(token)
 
     async def akickoff_for_each(
@@ -1215,7 +1220,8 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            tools = self._add_multimodal_tools(agent, tools)
+            if not (agent.llm and agent.llm.supports_multimodal()):
+                tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
@@ -1223,7 +1229,24 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
-        # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
+        files = get_all_files(self.id, task.id)
+        if files:
+            supported_types: list[str] = []
+            if agent and agent.llm and agent.llm.supports_multimodal():
+                supported_types = agent.llm.supported_multimodal_content_types()
+
+            def is_auto_injected(content_type: str) -> bool:
+                return any(content_type.startswith(t) for t in supported_types)
+
+            # Only add read_file tool if there are files that need it
+            files_needing_tool = {
+                name: f
+                for name, f in files.items()
+                if not is_auto_injected(f.content_type)
+            }
+            if files_needing_tool:
+                tools = self._add_file_tools(tools, files_needing_tool)
+
         return tools
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -1302,6 +1325,22 @@ class Crew(FlowTrackable, BaseModel):
             # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
+
+    def _add_file_tools(
+        self, tools: list[BaseTool], files: dict[str, Any]
+    ) -> list[BaseTool]:
+        """Add file reading tool when input files are available.
+
+        Args:
+            tools: Current list of tools.
+            files: Dictionary of input files.
+
+        Returns:
+            Updated list with file tool added.
+        """
+        read_file_tool = ReadFileTool()
+        read_file_tool.set_files(files)
+        return self._merge_tools(tools, [read_file_tool])
 
     def _add_delegation_tools(
         self, task: Task, tools: list[BaseTool]

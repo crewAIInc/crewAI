@@ -43,6 +43,8 @@ from crewai.utilities.agent_utils import (
     process_llm_response,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_store import get_all_files
+from crewai.utilities.files import FileProcessor
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.tool_utils import (
@@ -188,6 +190,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
+        self._inject_multimodal_files()
+
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
@@ -211,6 +215,48 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
+
+    def _inject_multimodal_files(self) -> None:
+        """Inject files as multimodal content into messages.
+
+        For crews with input files and LLMs that support multimodal,
+        processes files according to provider constraints and file handling mode,
+        then delegates to the LLM's format_multimodal_content method to
+        generate provider-specific content blocks.
+        """
+        if not self.crew or not self.task:
+            return
+
+        if not self.llm.supports_multimodal():
+            return
+
+        files = get_all_files(self.crew.id, self.task.id)
+        if not files:
+            return
+
+        provider = getattr(self.llm, "provider", None) or getattr(self.llm, "model", "")
+        processor = FileProcessor(constraints=provider)
+        files = processor.process_files(files)
+
+        from crewai.utilities.files import get_upload_cache
+
+        upload_cache = get_upload_cache()
+        content_blocks = self.llm.format_multimodal_content(
+            files, upload_cache=upload_cache
+        )
+        if not content_blocks:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                existing_content = msg.get("content", "")
+                if isinstance(existing_content, str):
+                    msg["content"] = [
+                        self.llm.format_text_content(existing_content),
+                        *content_blocks,
+                    ]
+                break
 
     def _invoke_loop(self) -> AgentFinish:
         """Execute agent loop until completion.
@@ -354,6 +400,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
+
+        self._inject_multimodal_files()
 
         self._show_start_logs()
 
