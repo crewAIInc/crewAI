@@ -24,7 +24,7 @@ interactions:
     body:
       string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"Honey
         never spoils. Archaeologists have found pots of honey in ancient Egyptian
-        tombs that are over 3,000 years old and still perfectly edible!","refusal":null,"role":"assistant"}}],"created":1769117693,"id":"chatcmpl-D0wcHT5efjFu1HLK35c8gMXSxI0yM","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":32,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":12,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":44}}
+        tombs that are over 3,000 years old and still perfectly edible!","refusal":null,"role":"assistant"}}],"created":1769120028,"id":"chatcmpl-D0xDwEBxLUvEoBTmJsTH7Eq9lyTUp","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":32,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":12,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":44}}
 
         '
     headers:
@@ -33,7 +33,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 21:34:54 GMT
+      - Thu, 22 Jan 2026 22:13:48 GMT
       Strict-Transport-Security:
       - STS-XXX
       apim-request-id:
