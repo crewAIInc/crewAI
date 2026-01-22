@@ -77,18 +77,15 @@ class AnthropicFileUploader(FileUploader):
         """
         client = self._get_client()
 
-        content = file.source.read()
+        content = file.read()
         file_purpose = purpose or "user_upload"
 
-        # Create a file-like object for upload
         file_data = io.BytesIO(content)
 
         logger.info(
             f"Uploading file '{file.filename}' to Anthropic ({len(content)} bytes)"
         )
 
-        # Upload using the anthropic client
-        # Note: The Anthropic Files API uses a tuple format: (filename, file_obj, content_type)
         uploaded_file = client.files.create(
             file=(file.filename, file_data, file.content_type),
             purpose=file_purpose,
@@ -98,9 +95,9 @@ class AnthropicFileUploader(FileUploader):
 
         return UploadResult(
             file_id=uploaded_file.id,
-            file_uri=None,  # Anthropic doesn't provide a URI
+            file_uri=None,
             content_type=file.content_type,
-            expires_at=None,  # Anthropic files don't auto-expire
+            expires_at=None,
             provider=self.provider_name,
         )
 

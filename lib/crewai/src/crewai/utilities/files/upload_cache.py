@@ -126,10 +126,6 @@ class UploadCache:
         if provider in self._provider_keys:
             self._provider_keys[provider].discard(key)
 
-    # -------------------------------------------------------------------------
-    # Async methods (primary interface)
-    # -------------------------------------------------------------------------
-
     async def aget(self, file: FileInput, provider: str) -> CachedUpload | None:
         """Get a cached upload for a file.
 
@@ -334,10 +330,6 @@ class UploadCache:
                 results.append(cached)
         return results
 
-    # -------------------------------------------------------------------------
-    # Sync wrappers (convenience)
-    # -------------------------------------------------------------------------
-
     def _run_sync(self, coro: Any) -> Any:
         """Run an async coroutine from sync context."""
         try:
@@ -436,7 +428,6 @@ class UploadCache:
         return builtins.set(self._provider_keys.keys())
 
 
-# Module-level cache instance
 _default_cache: UploadCache | None = None
 
 
@@ -482,7 +473,6 @@ def _cleanup_on_exit() -> None:
     if _default_cache is None or len(_default_cache) == 0:
         return
 
-    # Import here to avoid circular imports
     from crewai.utilities.files.cleanup import cleanup_uploaded_files
 
     try:

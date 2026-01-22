@@ -96,7 +96,6 @@ def wrap_file_source(source: FileSource) -> FileInput:
         return VideoFile(source=source)
     if content_type == "application/pdf":
         return PDFFile(source=source)
-    # Default to text for anything else
     return TextFile(source=source)
 
 
@@ -116,10 +115,8 @@ def normalize_input_files(
     result: dict[str, FileInput] = {}
 
     for i, item in enumerate(input_files):
-        # If it's already a typed File wrapper, use it directly
         if isinstance(item, BaseFile):
             name = item.filename or f"file_{i}"
-            # Remove extension from name for cleaner keys
             if "." in name:
                 name = name.rsplit(".", 1)[0]
             result[name] = item

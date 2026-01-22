@@ -125,15 +125,12 @@ class FileProcessor:
         mode = self._get_mode(file)
 
         try:
-            # First validate
             errors = self.validate(file)
 
             if not errors:
                 return file
 
-            # Handle based on mode
             if mode == FileHandling.STRICT:
-                # Errors should have already raised in validate()
                 raise FileValidationError("; ".join(errors), file_name=file.filename)
 
             if mode == FileHandling.WARN:
@@ -178,7 +175,6 @@ class FileProcessor:
             if isinstance(processed, Sequence) and not isinstance(
                 processed, (str, bytes)
             ):
-                # File was chunked - add each chunk with indexed name
                 for i, chunk in enumerate(processed):
                     chunk_name = f"{name}_chunk_{i}"
                     result[chunk_name] = chunk
@@ -203,15 +199,12 @@ class FileProcessor:
             return self._auto_process_image(file)
 
         if isinstance(file, PDFFile) and self.constraints.pdf is not None:
-            # PDFs can't easily be auto-compressed, log warning
             logger.warning(
                 f"Cannot auto-compress PDF '{file.filename}'. "
                 "Consider using CHUNK mode for large PDFs."
             )
             return file
 
-        # Audio and video auto-processing would require additional dependencies
-        # For now, just warn
         if isinstance(file, (AudioFile, VideoFile)):
             logger.warning(
                 f"Auto-processing not supported for {type(file).__name__}. "
@@ -235,10 +228,9 @@ class FileProcessor:
 
         image_constraints = self.constraints.image
         processed = file
-        content = file.source.read()
+        content = file.read()
         current_size = len(content)
 
-        # First, resize if dimensions exceed limits
         if image_constraints.max_width or image_constraints.max_height:
             dimensions = get_image_dimensions(file)
             if dimensions:
@@ -249,12 +241,11 @@ class FileProcessor:
                 if width > max_w or height > max_h:
                     try:
                         processed = resize_image(file, max_w, max_h)
-                        content = processed.source.read()
+                        content = processed.read()
                         current_size = len(content)
                     except Exception as e:
                         logger.warning(f"Failed to resize image: {e}")
 
-        # Then, optimize if size still exceeds limits
         if current_size > image_constraints.max_size_bytes:
             try:
                 processed = optimize_image(processed, image_constraints.max_size_bytes)
@@ -290,7 +281,7 @@ class FileProcessor:
             # Use general max size as character limit approximation
             max_size = self.constraints.general_max_size_bytes
             if max_size is not None:
-                content = file.source.read()
+                content = file.read()
                 if len(content) > max_size:
                     try:
                         return chunk_text(file, max_size)
@@ -298,7 +289,6 @@ class FileProcessor:
                         logger.warning(f"Failed to chunk text file: {e}")
                         return file
 
-        # For other file types, chunking is not supported
         if isinstance(file, (ImageFile, AudioFile, VideoFile)):
             logger.warning(
                 f"Chunking not supported for {type(file).__name__}. "

@@ -34,18 +34,15 @@ def _run_sync(coro: Coroutine[None, None, T]) -> T:
     """
     try:
         asyncio.get_running_loop()
-        # We're in an async context - run in a thread pool
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(asyncio.run, coro)
             return future.result()
     except RuntimeError:
-        # No running loop - safe to create one
         return asyncio.run(coro)
 
 
 DEFAULT_TTL = 3600
 
-# Key prefixes for different scopes
 _CREW_PREFIX = "crew:"
 _TASK_PREFIX = "task:"
 
@@ -149,7 +146,6 @@ async def aget_all_files(
     if not crew_files and not task_files:
         return None
 
-    # Merge with task files taking precedence
     return {**crew_files, **(task_files or {})}
 
 

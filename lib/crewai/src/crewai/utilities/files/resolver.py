@@ -80,9 +80,8 @@ class FileResolver:
         """
         provider_lower = provider.lower()
         constraints = get_constraints_for_provider(provider)
-        file_size = len(file.source.read())
+        file_size = len(file.read())
 
-        # Determine if we should use file upload
         should_upload = self._should_upload(
             file, provider_lower, constraints, file_size
         )
@@ -91,9 +90,7 @@ class FileResolver:
             resolved = self._resolve_via_upload(file, provider_lower)
             if resolved is not None:
                 return resolved
-            # Fall back to inline if upload fails
 
-        # Use inline format
         return self._resolve_inline(file, provider_lower)
 
     def resolve_files(
@@ -130,15 +127,12 @@ class FileResolver:
         Returns:
             True if the file should be uploaded, False otherwise.
         """
-        # Check if provider supports file upload
         if constraints is None or not constraints.supports_file_upload:
             return False
 
-        # If prefer_upload is set, always prefer upload
         if self.config.prefer_upload:
             return True
 
-        # Check against size threshold
         threshold = self.config.upload_threshold_bytes
         if threshold is None and constraints is not None:
             threshold = constraints.file_upload_threshold_bytes
@@ -162,7 +156,6 @@ class FileResolver:
         Returns:
             FileReference if upload succeeds, None otherwise.
         """
-        # Check cache first
         if self.upload_cache is not None:
             cached = self.upload_cache.get(file, provider)
             if cached is not None:
@@ -177,7 +170,6 @@ class FileResolver:
                     file_uri=cached.file_uri,
                 )
 
-        # Get or create uploader
         uploader = self._get_uploader(provider)
         if uploader is None:
             logger.debug(f"No uploader available for {provider}")
@@ -186,7 +178,6 @@ class FileResolver:
         try:
             result = uploader.upload(file)
 
-            # Cache the result
             if self.upload_cache is not None:
                 self.upload_cache.set(
                     file=file,
@@ -218,16 +209,14 @@ class FileResolver:
         Returns:
             InlineBase64 or InlineBytes depending on provider.
         """
-        content = file.source.read()
+        content = file.read()
 
-        # Use raw bytes for Bedrock if configured
         if self.config.use_bytes_for_bedrock and "bedrock" in provider:
             return InlineBytes(
                 content_type=file.content_type,
                 data=content,
             )
 
-        # Default to base64
         encoded = base64.b64encode(content).decode("ascii")
         return InlineBase64(
             content_type=file.content_type,

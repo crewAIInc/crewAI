@@ -42,17 +42,15 @@ def resize_image(
             install_command="pip install Pillow",
         ) from e
 
-    content = file.source.read()
+    content = file.read()
 
     with Image.open(io.BytesIO(content)) as img:
         original_width, original_height = img.size
 
-        # Check if resize is needed
         if original_width <= max_width and original_height <= max_height:
             return file
 
         if preserve_aspect_ratio:
-            # Calculate scaling factor to fit within bounds
             width_ratio = max_width / original_width
             height_ratio = max_height / original_height
             scale_factor = min(width_ratio, height_ratio)
@@ -63,17 +61,13 @@ def resize_image(
             new_width = min(original_width, max_width)
             new_height = min(original_height, max_height)
 
-        # Resize the image
         resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-        # Determine output format
         output_format = img.format or "PNG"
         if output_format.upper() == "JPEG":
-            # Handle RGBA images for JPEG
             if resized_img.mode in ("RGBA", "LA", "P"):
                 resized_img = resized_img.convert("RGB")
 
-        # Save to bytes
         output_buffer = io.BytesIO()
         resized_img.save(output_buffer, format=output_format)
         output_bytes = output_buffer.getvalue()
@@ -118,15 +112,13 @@ def optimize_image(
             install_command="pip install Pillow",
         ) from e
 
-    content = file.source.read()
+    content = file.read()
     current_size = len(content)
 
-    # If already within target, return as-is
     if current_size <= target_size_bytes:
         return file
 
     with Image.open(io.BytesIO(content)) as img:
-        # Convert to RGB for JPEG compression if needed
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGB")
             output_format = "JPEG"
@@ -138,7 +130,6 @@ def optimize_image(
         quality = initial_quality
         output_bytes = content
 
-        # Binary search for optimal quality
         while len(output_bytes) > target_size_bytes and quality >= min_quality:
             output_buffer = io.BytesIO()
             img.save(
@@ -193,11 +184,10 @@ def chunk_pdf(
             install_command="pip install pypdf",
         ) from e
 
-    content = file.source.read()
+    content = file.read()
     reader = PdfReader(io.BytesIO(content))
     total_pages = len(reader.pages)
 
-    # If within limit, return as-is
     if total_pages <= max_pages:
         return [file]
 
@@ -253,11 +243,10 @@ def chunk_text(
     Returns:
         List of TextFile objects, one per chunk.
     """
-    content = file.source.read()
+    content = file.read()
     text = content.decode("utf-8", errors="replace")
     total_chars = len(text)
 
-    # If within limit, return as-is
     if total_chars <= max_chars:
         return [file]
 
@@ -291,7 +280,6 @@ def chunk_text(
             f"Created text chunk '{chunk_filename}' with {len(chunk_text)} characters"
         )
 
-        # Move start position with overlap
         start_pos = end_pos - overlap_chars if end_pos < total_chars else total_chars
         chunk_num += 1
 
@@ -313,7 +301,7 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
         logger.warning("Pillow not installed - cannot get image dimensions")
         return None
 
-    content = file.source.read()
+    content = file.read()
 
     try:
         with Image.open(io.BytesIO(content)) as img:
@@ -339,7 +327,7 @@ def get_pdf_page_count(file: PDFFile) -> int | None:
         logger.warning("pypdf not installed - cannot get PDF page count")
         return None
 
-    content = file.source.read()
+    content = file.read()
 
     try:
         reader = PdfReader(io.BytesIO(content))

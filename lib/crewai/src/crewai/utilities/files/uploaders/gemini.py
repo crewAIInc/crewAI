@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
-# Gemini files expire after 48 hours
 GEMINI_FILE_TTL = timedelta(hours=48)
 
 
@@ -80,10 +79,9 @@ class GeminiFileUploader(FileUploader):
         """
         client = self._get_client()
 
-        content = file.source.read()
+        content = file.read()
         display_name = purpose or file.filename
 
-        # Create a file-like object for upload
         file_data = io.BytesIO(content)
         file_data.name = file.filename
 
@@ -91,7 +89,6 @@ class GeminiFileUploader(FileUploader):
             f"Uploading file '{file.filename}' to Gemini ({len(content)} bytes)"
         )
 
-        # Upload using the genai client
         uploaded_file = client.files.upload(
             file=file_data,
             config={
@@ -199,7 +196,6 @@ class GeminiFileUploader(FileUploader):
         try:
             from google.genai.types import FileState
         except ImportError:
-            # If we can't import FileState, just return True
             return True
 
         client = self._get_client()

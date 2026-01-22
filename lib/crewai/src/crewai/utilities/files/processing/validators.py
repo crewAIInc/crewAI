@@ -63,11 +63,10 @@ def validate_image(
         UnsupportedFileTypeError: If the format is not supported.
     """
     errors: list[str] = []
-    content = file.source.read()
+    content = file.read()
     file_size = len(content)
     filename = file.filename
 
-    # Check file size
     if file_size > constraints.max_size_bytes:
         msg = (
             f"Image '{filename}' size ({_format_size(file_size)}) exceeds "
@@ -82,7 +81,6 @@ def validate_image(
                 max_size=constraints.max_size_bytes,
             )
 
-    # Check format
     content_type = file.content_type
     if content_type not in constraints.supported_formats:
         msg = (
@@ -95,7 +93,6 @@ def validate_image(
                 msg, file_name=filename, content_type=content_type
             )
 
-    # Check dimensions if constraints specify them
     if constraints.max_width is not None or constraints.max_height is not None:
         try:
             import io
@@ -153,11 +150,10 @@ def validate_pdf(
         FileValidationError: If the file exceeds page limits.
     """
     errors: list[str] = []
-    content = file.source.read()
+    content = file.read()
     file_size = len(content)
     filename = file.filename
 
-    # Check file size
     if file_size > constraints.max_size_bytes:
         msg = (
             f"PDF '{filename}' size ({_format_size(file_size)}) exceeds "
@@ -172,7 +168,6 @@ def validate_pdf(
                 max_size=constraints.max_size_bytes,
             )
 
-    # Check page count if constraint specifies it
     if constraints.max_pages is not None:
         try:
             import io
@@ -221,11 +216,10 @@ def validate_audio(
         UnsupportedFileTypeError: If the format is not supported.
     """
     errors: list[str] = []
-    content = file.source.read()
+    content = file.read()
     file_size = len(content)
     filename = file.filename
 
-    # Check file size
     if file_size > constraints.max_size_bytes:
         msg = (
             f"Audio '{filename}' size ({_format_size(file_size)}) exceeds "
@@ -240,7 +234,6 @@ def validate_audio(
                 max_size=constraints.max_size_bytes,
             )
 
-    # Check format
     content_type = file.content_type
     if content_type not in constraints.supported_formats:
         msg = (
@@ -277,11 +270,10 @@ def validate_video(
         UnsupportedFileTypeError: If the format is not supported.
     """
     errors: list[str] = []
-    content = file.source.read()
+    content = file.read()
     file_size = len(content)
     filename = file.filename
 
-    # Check file size
     if file_size > constraints.max_size_bytes:
         msg = (
             f"Video '{filename}' size ({_format_size(file_size)}) exceeds "
@@ -296,7 +288,6 @@ def validate_video(
                 max_size=constraints.max_size_bytes,
             )
 
-    # Check format
     content_type = file.content_type
     if content_type not in constraints.supported_formats:
         msg = (
@@ -336,7 +327,7 @@ def validate_text(
     if constraints.general_max_size_bytes is None:
         return errors
 
-    content = file.source.read()
+    content = file.read()
     file_size = len(content)
     filename = file.filename
 
@@ -423,5 +414,4 @@ def validate_file(
     if isinstance(file, TextFile):
         return validate_text(file, constraints, raise_on_error=raise_on_error)
 
-    # Unknown file type - can't validate
     return []

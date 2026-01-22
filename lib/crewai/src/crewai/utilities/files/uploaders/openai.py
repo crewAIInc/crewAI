@@ -77,7 +77,7 @@ class OpenAIFileUploader(FileUploader):
         """
         client = self._get_client()
 
-        content = file.source.read()
+        content = file.read()
         file_purpose = purpose or "user_data"
 
         file_data = io.BytesIO(content)
@@ -96,9 +96,9 @@ class OpenAIFileUploader(FileUploader):
 
         return UploadResult(
             file_id=uploaded_file.id,
-            file_uri=None,  # OpenAI doesn't provide a URI
+            file_uri=None,
             content_type=file.content_type,
-            expires_at=None,  # OpenAI files don't auto-expire
+            expires_at=None,
             provider=self.provider_name,
         )
 

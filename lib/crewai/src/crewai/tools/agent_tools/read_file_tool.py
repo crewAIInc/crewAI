@@ -64,7 +64,6 @@ class ReadFileTool(BaseTool):
         content_type = file_input.content_type
         filename = file_input.filename or file_name
 
-        # Text-based content types
         text_types = (
             "text/",
             "application/json",
@@ -75,6 +74,5 @@ class ReadFileTool(BaseTool):
         if any(content_type.startswith(t) for t in text_types):
             return content.decode("utf-8")
 
-        # Binary content - return base64 encoded
         encoded = base64.b64encode(content).decode("ascii")
         return f"[Binary file: {filename} ({content_type})]\nBase64: {encoded}"

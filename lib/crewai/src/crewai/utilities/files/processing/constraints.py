@@ -108,45 +108,38 @@ class ProviderConstraints:
     file_upload_threshold_bytes: int | None = None
 
 
-# Anthropic constraints (Claude 3+)
-# https://docs.anthropic.com/en/docs/build-with-claude/vision
 ANTHROPIC_CONSTRAINTS = ProviderConstraints(
     name="anthropic",
     image=ImageConstraints(
-        max_size_bytes=5 * 1024 * 1024,  # 5MB
+        max_size_bytes=5 * 1024 * 1024,
         max_width=8000,
         max_height=8000,
         supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
     pdf=PDFConstraints(
-        max_size_bytes=30 * 1024 * 1024,  # 30MB
+        max_size_bytes=30 * 1024 * 1024,
         max_pages=100,
     ),
     supports_file_upload=True,
-    file_upload_threshold_bytes=5 * 1024 * 1024,  # Use upload for files > 5MB
+    file_upload_threshold_bytes=5 * 1024 * 1024,
 )
 
-# OpenAI constraints (GPT-4o, GPT-4 Vision)
-# https://platform.openai.com/docs/guides/vision
 OPENAI_CONSTRAINTS = ProviderConstraints(
     name="openai",
     image=ImageConstraints(
-        max_size_bytes=20 * 1024 * 1024,  # 20MB
+        max_size_bytes=20 * 1024 * 1024,
         max_images_per_request=10,
         supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
-    # OpenAI does not support PDFs natively
     pdf=None,
     supports_file_upload=True,
-    file_upload_threshold_bytes=5 * 1024 * 1024,  # Use upload for files > 5MB
+    file_upload_threshold_bytes=5 * 1024 * 1024,
 )
 
-# Gemini constraints
-# https://ai.google.dev/gemini-api/docs/vision
 GEMINI_CONSTRAINTS = ProviderConstraints(
     name="gemini",
     image=ImageConstraints(
-        max_size_bytes=100 * 1024 * 1024,  # 100MB inline
+        max_size_bytes=100 * 1024 * 1024,
         supported_formats=(
             "image/png",
             "image/jpeg",
@@ -157,10 +150,10 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
         ),
     ),
     pdf=PDFConstraints(
-        max_size_bytes=50 * 1024 * 1024,  # 50MB inline
+        max_size_bytes=50 * 1024 * 1024,
     ),
     audio=AudioConstraints(
-        max_size_bytes=100 * 1024 * 1024,  # 100MB
+        max_size_bytes=100 * 1024 * 1024,
         supported_formats=(
             "audio/mp3",
             "audio/mpeg",
@@ -173,7 +166,7 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
         ),
     ),
     video=VideoConstraints(
-        max_size_bytes=2 * 1024 * 1024 * 1024,  # 2GB via File API
+        max_size_bytes=2 * 1024 * 1024 * 1024,
         supported_formats=(
             "video/mp4",
             "video/mpeg",
@@ -184,30 +177,27 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
         ),
     ),
     supports_file_upload=True,
-    file_upload_threshold_bytes=20 * 1024 * 1024,  # Use upload for files > 20MB
+    file_upload_threshold_bytes=20 * 1024 * 1024,
 )
 
-# AWS Bedrock constraints (Claude via Bedrock)
-# https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages.html
 BEDROCK_CONSTRAINTS = ProviderConstraints(
     name="bedrock",
     image=ImageConstraints(
-        max_size_bytes=4_608_000,  # ~4.5MB (encoded size limit)
+        max_size_bytes=4_608_000,
         max_width=8000,
         max_height=8000,
         supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
     pdf=PDFConstraints(
-        max_size_bytes=3_840_000,  # ~3.75MB
+        max_size_bytes=3_840_000,
         max_pages=100,
     ),
 )
 
-# Azure OpenAI constraints (same as OpenAI)
 AZURE_CONSTRAINTS = ProviderConstraints(
     name="azure",
     image=ImageConstraints(
-        max_size_bytes=20 * 1024 * 1024,  # 20MB
+        max_size_bytes=20 * 1024 * 1024,
         max_images_per_request=10,
         supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
@@ -215,14 +205,12 @@ AZURE_CONSTRAINTS = ProviderConstraints(
 )
 
 
-# Provider name mapping for convenience
 _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
     "anthropic": ANTHROPIC_CONSTRAINTS,
     "openai": OPENAI_CONSTRAINTS,
     "gemini": GEMINI_CONSTRAINTS,
     "bedrock": BEDROCK_CONSTRAINTS,
     "azure": AZURE_CONSTRAINTS,
-    # Aliases
     "claude": ANTHROPIC_CONSTRAINTS,
     "gpt": OPENAI_CONSTRAINTS,
     "google": GEMINI_CONSTRAINTS,
@@ -246,11 +234,9 @@ def get_constraints_for_provider(
 
     provider_lower = provider.lower()
 
-    # Direct lookup
     if provider_lower in _PROVIDER_CONSTRAINTS_MAP:
         return _PROVIDER_CONSTRAINTS_MAP[provider_lower]
 
-    # Check if provider name contains any known provider
     for key, constraints in _PROVIDER_CONSTRAINTS_MAP.items():
         if key in provider_lower:
             return constraints
