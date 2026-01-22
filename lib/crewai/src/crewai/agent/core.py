@@ -88,9 +88,9 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 try:
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
 except ImportError:
-    A2AClientConfig = Any
-    A2AConfig = Any
-    A2AServerConfig = Any
+    A2AClientConfig = Any  # type: ignore[assignment,misc]
+    A2AConfig = Any  # type: ignore[assignment,misc]
+    A2AServerConfig = Any  # type: ignore[assignment,misc]
 
 
 if TYPE_CHECKING:
@@ -184,7 +184,8 @@ class Agent(BaseAgent):
     )
     multimodal: bool = Field(
         default=False,
-        description="Whether the agent is multimodal.",
+        deprecated=True,
+        description="[DEPRECATED, will be removed in v2.0 - pass files natively.] Whether the agent is multimodal.",
     )
     inject_date: bool = Field(
         default=False,

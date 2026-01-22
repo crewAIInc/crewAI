@@ -15,6 +15,14 @@ from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
+from crewai.utilities.files import (
+    AudioFile,
+    File,
+    ImageFile,
+    PDFFile,
+    TextFile,
+    VideoFile,
+)
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:
@@ -74,14 +82,20 @@ _track_install_async()
 __all__ = [
     "LLM",
     "Agent",
+    "AudioFile",
     "BaseLLM",
     "Crew",
     "CrewOutput",
+    "File",
     "Flow",
+    "ImageFile",
     "Knowledge",
     "LLMGuardrail",
+    "PDFFile",
     "Process",
     "Task",
     "TaskOutput",
+    "TextFile",
+    "VideoFile",
     "__version__",
 ]
