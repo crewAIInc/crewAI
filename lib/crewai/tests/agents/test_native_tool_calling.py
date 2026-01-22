@@ -241,26 +241,26 @@ class TestGeminiNativeToolCalling:
         self, calculator_tool: CalculatorTool
     ) -> None:
         """Test Gemini agent can use native tool calling."""
-        with patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}):
-            agent = Agent(
-                role="Math Assistant",
-                goal="Help users with mathematical calculations",
-                backstory="You are a helpful math assistant.",
-                tools=[calculator_tool],
-                llm=LLM(model="gemini/gemini-2.0-flash-exp"),
-            )
 
-            task = Task(
-                description="Calculate what is 15 * 8",
-                expected_output="The result of the calculation",
-                agent=agent,
-            )
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help users with mathematical calculations",
+            backstory="You are a helpful math assistant.",
+            tools=[calculator_tool],
+            llm=LLM(model="gemini/gemini-2.0-flash-exp"),
+        )
 
-            crew = Crew(agents=[agent], tasks=[task])
-            result = crew.kickoff()
+        task = Task(
+            description="Calculate what is 15 * 8",
+            expected_output="The result of the calculation",
+            agent=agent,
+        )
 
-            assert result is not None
-            assert result.raw is not None
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result is not None
+        assert result.raw is not None
 
     def test_gemini_agent_kickoff_with_tools_mocked(
         self, calculator_tool: CalculatorTool
@@ -387,40 +387,45 @@ class TestBedrockNativeToolCalling:
     def mock_aws_env(self):
         """Mock AWS environment variables for tests."""
         env_vars = {
-            "AWS_ACCESS_KEY_ID": "test-key",
-            "AWS_SECRET_ACCESS_KEY": "test-secret",
-            "AWS_REGION": "us-east-1",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+        "AWS_REGION": "us-east-1",
         }
-        with patch.dict(os.environ, env_vars):
+        if "AWS_ACCESS_KEY_ID" not in os.environ:
+            with patch.dict(os.environ, env_vars):
+                yield
+        else:
             yield
 
+    @pytest.mark.vcr()
     def test_bedrock_agent_kickoff_with_tools_mocked(
         self, calculator_tool: CalculatorTool
     ) -> None:
         """Test Bedrock agent kickoff with mocked LLM call."""
         llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
 
-        with patch.object(llm, "call", return_value="The answer is 120.") as mock_call:
-            agent = Agent(
-                role="Math Assistant",
-                goal="Calculate math",
-                backstory="You calculate.",
-                tools=[calculator_tool],
-                llm=llm,
-                verbose=False,
-            )
+        agent = Agent(
+            role="Math Assistant",
+            goal="Calculate math",
+            backstory="You calculate.",
+            tools=[calculator_tool],
+            llm=llm,
+            verbose=False,
+            max_iter=5,
+        )
 
-            task = Task(
-                description="Calculate 15 * 8",
-                expected_output="Result",
-                agent=agent,
-            )
+        task = Task(
+            description="Calculate 15 * 8",
+            expected_output="Result",
+            agent=agent,
+        )
 
-            crew = Crew(agents=[agent], tasks=[task])
-            result = crew.kickoff()
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
 
-            assert mock_call.called
-            assert result is not None
+        assert result is not None
+        assert result.raw is not None
+        assert "120" in str(result.raw)
 
 
 # =============================================================================

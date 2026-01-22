@@ -517,13 +517,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             isinstance(first_item, dict) and "function" in first_item
         ):
             return True
-        # Anthropic-style
+        # Anthropic-style (object with attributes)
         if (
             hasattr(first_item, "type")
             and getattr(first_item, "type", None) == "tool_use"
         ):
             return True
         if hasattr(first_item, "name") and hasattr(first_item, "input"):
+            return True
+        # Bedrock-style (dict with name and input keys)
+        if (
+            isinstance(first_item, dict)
+            and "name" in first_item
+            and "input" in first_item
+        ):
             return True
         # Gemini-style
         if hasattr(first_item, "function_call") and first_item.function_call:
@@ -585,7 +592,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = tool_call.name
             func_args = tool_call.input  # Already a dict in Anthropic
         elif isinstance(tool_call, dict):
-            call_id = tool_call.get("id", f"call_{id(tool_call)}")
+            # Support OpenAI "id", Bedrock "toolUseId", or generate one
+            call_id = (
+                tool_call.get("id")
+                or tool_call.get("toolUseId")
+                or f"call_{id(tool_call)}"
+            )
             func_info = tool_call.get("function", {})
             func_name = func_info.get("name", "") or tool_call.get("name", "")
             func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})

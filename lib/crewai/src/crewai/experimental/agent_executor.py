@@ -263,6 +263,13 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             return True
         if hasattr(first_item, "name") and hasattr(first_item, "input"):
             return True
+        # Check for Bedrock-style tool call structure (dict with name and input keys)
+        if (
+            isinstance(first_item, dict)
+            and "name" in first_item
+            and "input" in first_item
+        ):
+            return True
         # Check for Gemini-style function call (Part with function_call)
         if hasattr(first_item, "function_call") and first_item.function_call:
             return True
