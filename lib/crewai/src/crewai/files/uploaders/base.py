@@ -1,11 +1,12 @@
 """Base class for file uploaders."""
 
 from abc import ABC, abstractmethod
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from crewai.utilities.files.content_types import (
+from crewai.files.content_types import (
     AudioFile,
     File,
     ImageFile,
@@ -63,6 +64,24 @@ class FileUploader(ABC):
             Exception: If upload fails.
         """
 
+    async def aupload(
+        self, file: FileInput, purpose: str | None = None
+    ) -> UploadResult:
+        """Async upload a file to the provider.
+
+        Default implementation runs sync upload in executor.
+        Override in subclasses for native async support.
+
+        Args:
+            file: The file to upload.
+            purpose: Optional purpose/description for the upload.
+
+        Returns:
+            UploadResult with the file identifier and metadata.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.upload, file, purpose)
+
     @abstractmethod
     def delete(self, file_id: str) -> bool:
         """Delete an uploaded file.
@@ -73,6 +92,21 @@ class FileUploader(ABC):
         Returns:
             True if deletion was successful, False otherwise.
         """
+
+    async def adelete(self, file_id: str) -> bool:
+        """Async delete an uploaded file.
+
+        Default implementation runs sync delete in executor.
+        Override in subclasses for native async support.
+
+        Args:
+            file_id: The file identifier to delete.
+
+        Returns:
+            True if deletion was successful, False otherwise.
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, self.delete, file_id)
 
     def get_file_info(self, file_id: str) -> dict[str, Any] | None:
         """Get information about an uploaded file.

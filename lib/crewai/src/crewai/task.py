@@ -37,6 +37,12 @@ from crewai.events.types.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.files import (
+    FileInput,
+    FilePath,
+    FileSourceInput,
+    normalize_input_files,
+)
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -48,12 +54,6 @@ from crewai.utilities.file_store import (
     clear_task_files,
     get_all_files,
     store_task_files,
-)
-from crewai.utilities.files import (
-    FileInput,
-    FilePath,
-    FileSourceInput,
-    normalize_input_files,
 )
 from crewai.utilities.guardrail import (
     process_guardrail,

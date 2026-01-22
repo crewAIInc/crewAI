@@ -20,8 +20,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.utilities.files import FileInput, UploadCache
 
 DEFAULT_CACHE_TTL = "ephemeral"
 
@@ -1281,7 +1281,7 @@ class AnthropicCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.utilities.files import (
+        from crewai.files import (
             FileReference,
             FileResolver,
             FileResolverConfig,
@@ -1359,6 +1359,110 @@ class AnthropicCompletion(BaseLLM):
                             "type": "base64",
                             "media_type": content_type,
                             "data": data,
+                        },
+                    }
+
+            if block and enable_caching and i == num_files - 1:
+                cache_control: dict[str, str] = {"type": cache_ttl or DEFAULT_CACHE_TTL}
+                block["cache_control"] = cache_control
+
+            if block:
+                content_blocks.append(block)
+
+        return content_blocks
+
+    async def aformat_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+        enable_caching: bool = True,
+        cache_ttl: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async format files as Anthropic multimodal content blocks.
+
+        Uses parallel file resolution for improved performance with multiple files.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+            enable_caching: Whether to add cache_control markers (default: True).
+            cache_ttl: Cache TTL - "ephemeral" (5min) or "1h" (1hr for supported models).
+
+        Returns:
+            List of content blocks in Anthropic's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        supported_types = self.supported_multimodal_content_types()
+
+        supported_files = {
+            name: f
+            for name, f in files.items()
+            if any(f.content_type.startswith(t) for t in supported_types)
+        }
+
+        if not supported_files:
+            return []
+
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+        resolved_files = await resolver.aresolve_files(supported_files, "anthropic")
+
+        content_blocks: list[dict[str, Any]] = []
+        num_files = len(resolved_files)
+        file_names = list(supported_files.keys())
+
+        for i, name in enumerate(file_names):
+            if name not in resolved_files:
+                continue
+
+            resolved = resolved_files[name]
+            file_input = supported_files[name]
+            content_type = file_input.content_type
+            block: dict[str, Any] = {}
+
+            if isinstance(resolved, FileReference):
+                if content_type.startswith("image/"):
+                    block = {
+                        "type": "image",
+                        "source": {
+                            "type": "file",
+                            "file_id": resolved.file_id,
+                        },
+                    }
+                elif content_type == "application/pdf":
+                    block = {
+                        "type": "document",
+                        "source": {
+                            "type": "file",
+                            "file_id": resolved.file_id,
+                        },
+                    }
+            elif isinstance(resolved, InlineBase64):
+                if content_type.startswith("image/"):
+                    block = {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": resolved.content_type,
+                            "data": resolved.data,
+                        },
+                    }
+                elif content_type == "application/pdf":
+                    block = {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": resolved.content_type,
+                            "data": resolved.data,
                         },
                     }
 

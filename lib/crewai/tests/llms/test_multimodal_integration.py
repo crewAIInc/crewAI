@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from crewai.llm import LLM
-from crewai.utilities.files import File, ImageFile, PDFFile, TextFile
+from crewai.files import File, ImageFile, PDFFile, TextFile
 
 
 # Path to test data files

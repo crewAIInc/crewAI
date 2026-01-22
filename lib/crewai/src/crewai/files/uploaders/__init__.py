@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from crewai.utilities.files.uploaders.base import FileUploader, UploadResult
+from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def get_uploader(provider: str, **kwargs: Any) -> FileUploader | None:
 
     if "gemini" in provider_lower or "google" in provider_lower:
         try:
-            from crewai.utilities.files.uploaders.gemini import GeminiFileUploader
+            from crewai.files.uploaders.gemini import GeminiFileUploader
 
             return GeminiFileUploader(**kwargs)
         except ImportError:
@@ -42,7 +42,7 @@ def get_uploader(provider: str, **kwargs: Any) -> FileUploader | None:
 
     if "anthropic" in provider_lower or "claude" in provider_lower:
         try:
-            from crewai.utilities.files.uploaders.anthropic import AnthropicFileUploader
+            from crewai.files.uploaders.anthropic import AnthropicFileUploader
 
             return AnthropicFileUploader(**kwargs)
         except ImportError:
@@ -53,11 +53,31 @@ def get_uploader(provider: str, **kwargs: Any) -> FileUploader | None:
 
     if "openai" in provider_lower or "gpt" in provider_lower:
         try:
-            from crewai.utilities.files.uploaders.openai import OpenAIFileUploader
+            from crewai.files.uploaders.openai import OpenAIFileUploader
 
             return OpenAIFileUploader(**kwargs)
         except ImportError:
             logger.warning("openai not installed. Install with: pip install openai")
+            return None
+
+    if "bedrock" in provider_lower or "aws" in provider_lower:
+        import os
+
+        if (
+            not os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
+            and "bucket_name" not in kwargs
+        ):
+            logger.debug(
+                "Bedrock S3 uploader not configured. "
+                "Set CREWAI_BEDROCK_S3_BUCKET environment variable to enable."
+            )
+            return None
+        try:
+            from crewai.files.uploaders.bedrock import BedrockFileUploader
+
+            return BedrockFileUploader(**kwargs)
+        except ImportError:
+            logger.warning("boto3 not installed. Install with: pip install boto3")
             return None
 
     logger.debug(f"No file uploader available for provider: {provider}")

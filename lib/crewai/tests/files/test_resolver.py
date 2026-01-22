@@ -2,14 +2,14 @@
 
 import pytest
 
-from crewai.utilities.files import FileBytes, ImageFile
-from crewai.utilities.files.resolved import InlineBase64, InlineBytes
-from crewai.utilities.files.resolver import (
+from crewai.files import FileBytes, ImageFile
+from crewai.files.resolved import InlineBase64, InlineBytes
+from crewai.files.resolver import (
     FileResolver,
     FileResolverConfig,
     create_resolver,
 )
-from crewai.utilities.files.upload_cache import UploadCache
+from crewai.files.upload_cache import UploadCache
 
 
 # Minimal valid PNG

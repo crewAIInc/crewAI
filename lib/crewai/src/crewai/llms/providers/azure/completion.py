@@ -18,8 +18,8 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.utilities.files import FileInput, UploadCache
 
 
 try:
@@ -1060,7 +1060,7 @@ class AzureCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.utilities.files import (
+        from crewai.files import (
             FileResolver,
             FileResolverConfig,
             InlineBase64,
@@ -1100,3 +1100,54 @@ class AzureCompletion(BaseLLM):
                 )
 
         return content_blocks
+
+    async def aformat_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async format files as Azure OpenAI multimodal content blocks.
+
+        Uses parallel file resolution for improved performance with multiple files.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache (not used by Azure but kept for interface consistency).
+
+        Returns:
+            List of content blocks in Azure OpenAI's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.files import (
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        supported_types = self.supported_multimodal_content_types()
+
+        supported_files = {
+            name: f
+            for name, f in files.items()
+            if any(f.content_type.startswith(t) for t in supported_types)
+        }
+
+        if not supported_files:
+            return []
+
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+        resolved_files = await resolver.aresolve_files(supported_files, "azure")
+
+        return [
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{resolved.content_type};base64,{resolved.data}"
+                },
+            }
+            for resolved in resolved_files.values()
+            if isinstance(resolved, InlineBase64)
+        ]

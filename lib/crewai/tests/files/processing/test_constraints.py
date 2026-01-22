@@ -2,7 +2,7 @@
 
 import pytest
 
-from crewai.utilities.files.processing.constraints import (
+from crewai.files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     BEDROCK_CONSTRAINTS,
     GEMINI_CONSTRAINTS,

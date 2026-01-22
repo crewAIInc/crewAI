@@ -2,19 +2,19 @@
 
 import pytest
 
-from crewai.utilities.files import FileBytes, ImageFile, PDFFile, TextFile
-from crewai.utilities.files.processing.constraints import (
+from crewai.files import FileBytes, ImageFile, PDFFile, TextFile
+from crewai.files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     ImageConstraints,
     PDFConstraints,
     ProviderConstraints,
 )
-from crewai.utilities.files.processing.exceptions import (
+from crewai.files.processing.exceptions import (
     FileTooLargeError,
     FileValidationError,
     UnsupportedFileTypeError,
 )
-from crewai.utilities.files.processing.validators import (
+from crewai.files.processing.validators import (
     validate_file,
     validate_image,
     validate_pdf,

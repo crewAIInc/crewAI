@@ -32,8 +32,8 @@ if TYPE_CHECKING:
         ToolTypeDef,
     )
 
+    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.utilities.files import FileInput, UploadCache
 
 
 try:
@@ -1455,13 +1455,33 @@ class BedrockCompletion(BaseLLM):
     def supports_multimodal(self) -> bool:
         """Check if the model supports multimodal inputs.
 
-        Claude models on Bedrock support vision.
+        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
 
         Returns:
             True if the model supports images.
         """
-        vision_models = ("anthropic.claude-3",)
-        return any(self.model.lower().startswith(m) for m in vision_models)
+        model_lower = self.model.lower()
+        vision_models = (
+            "anthropic.claude-3",
+            "amazon.nova-lite",
+            "amazon.nova-pro",
+            "amazon.nova-premier",
+            "us.amazon.nova-lite",
+            "us.amazon.nova-pro",
+            "us.amazon.nova-premier",
+        )
+        return any(model_lower.startswith(m) for m in vision_models)
+
+    def _is_nova_model(self) -> bool:
+        """Check if the model is an Amazon Nova model.
+
+        Only Nova models support S3 links for multimedia.
+
+        Returns:
+            True if the model is a Nova model.
+        """
+        model_lower = self.model.lower()
+        return "amazon.nova-" in model_lower
 
     def supported_multimodal_content_types(self) -> list[str]:
         """Get content types supported by Bedrock for multimodal input.
@@ -1471,7 +1491,78 @@ class BedrockCompletion(BaseLLM):
         """
         if not self.supports_multimodal():
             return []
-        return ["image/", "application/pdf"]
+
+        types = ["image/png", "image/jpeg", "image/gif", "image/webp"]
+
+        if self._is_nova_model():
+            types.extend(
+                [
+                    "application/pdf",
+                    "text/csv",
+                    "text/plain",
+                    "text/markdown",
+                    "text/html",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "video/mp4",
+                    "video/quicktime",
+                    "video/x-matroska",
+                    "video/webm",
+                    "video/x-flv",
+                    "video/mpeg",
+                    "video/x-ms-wmv",
+                    "video/3gpp",
+                ]
+            )
+        else:
+            types.append("application/pdf")
+
+        return types
+
+    def _get_document_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock document format.
+
+        Args:
+            content_type: MIME type of the document.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "application/pdf": "pdf",
+            "text/csv": "csv",
+            "text/plain": "txt",
+            "text/markdown": "md",
+            "text/html": "html",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        }
+        return format_map.get(content_type)
+
+    def _get_video_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock video format.
+
+        Args:
+            content_type: MIME type of the video.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "video/mp4": "mp4",
+            "video/quicktime": "mov",
+            "video/x-matroska": "mkv",
+            "video/webm": "webm",
+            "video/x-flv": "flv",
+            "video/mpeg": "mpeg",
+            "video/x-ms-wmv": "wmv",
+            "video/3gpp": "three_gp",
+        }
+        return format_map.get(content_type)
 
     def format_multimodal_content(
         self,
@@ -1480,12 +1571,12 @@ class BedrockCompletion(BaseLLM):
     ) -> list[dict[str, Any]]:
         """Format files as Bedrock Converse API multimodal content blocks.
 
-        Bedrock Converse API uses specific formats for images and documents with raw bytes.
-        Uses FileResolver to get InlineBytes format for Bedrock's byte-based API.
+        Bedrock Converse API supports both raw bytes and S3 URI references.
+        S3 uploads are only supported by Amazon Nova models.
 
         Args:
             files: Dictionary mapping file names to FileInput objects.
-            upload_cache: Optional cache (not used by Bedrock but kept for interface consistency).
+            upload_cache: Optional cache for S3 uploads.
 
         Returns:
             List of content blocks in Bedrock's expected format.
@@ -1493,50 +1584,239 @@ class BedrockCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
 
-        from crewai.utilities.files import (
+        import os
+
+        from crewai.files import (
+            FileReference,
             FileResolver,
             FileResolverConfig,
             InlineBytes,
         )
 
         content_blocks: list[dict[str, Any]] = []
+        is_nova = self._is_nova_model()
 
-        # Bedrock uses raw bytes, configure resolver accordingly
-        config = FileResolverConfig(prefer_upload=False, use_bytes_for_bedrock=True)
+        s3_bucket = os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
+        s3_bucket_owner = os.environ.get("CREWAI_BEDROCK_S3_BUCKET_OWNER")
+        prefer_upload = bool(s3_bucket) and is_nova
+
+        config = FileResolverConfig(
+            prefer_upload=prefer_upload, use_bytes_for_bedrock=True
+        )
         resolver = FileResolver(config=config, upload_cache=upload_cache)
 
         for name, file_input in files.items():
             content_type = file_input.content_type
-
             resolved = resolver.resolve(file_input, "bedrock")
 
-            if isinstance(resolved, InlineBytes):
-                file_bytes = resolved.data
-            else:
-                # Fallback to reading directly
-                file_bytes = file_input.read()
+            if isinstance(resolved, FileReference) and resolved.file_uri:
+                s3_location: dict[str, Any] = {"uri": resolved.file_uri}
+                if s3_bucket_owner:
+                    s3_location["bucketOwner"] = s3_bucket_owner
 
-            if content_type.startswith("image/"):
-                media_type = content_type.split("/")[-1]
-                if media_type == "jpg":
-                    media_type = "jpeg"
-                content_blocks.append(
-                    {
-                        "image": {
-                            "format": media_type,
-                            "source": {"bytes": file_bytes},
+                if content_type.startswith("image/"):
+                    media_type = content_type.split("/")[-1]
+                    if media_type == "jpg":
+                        media_type = "jpeg"
+                    content_blocks.append(
+                        {
+                            "image": {
+                                "format": media_type,
+                                "source": {"s3Location": s3_location},
+                            }
                         }
-                    }
-                )
-            elif content_type == "application/pdf":
-                content_blocks.append(
-                    {
-                        "document": {
-                            "name": name,
-                            "format": "pdf",
-                            "source": {"bytes": file_bytes},
+                    )
+                elif content_type.startswith("video/"):
+                    video_format = self._get_video_format(content_type)
+                    if video_format:
+                        content_blocks.append(
+                            {
+                                "video": {
+                                    "format": video_format,
+                                    "source": {"s3Location": s3_location},
+                                }
+                            }
+                        )
+                else:
+                    doc_format = self._get_document_format(content_type)
+                    if doc_format:
+                        content_blocks.append(
+                            {
+                                "document": {
+                                    "name": name,
+                                    "format": doc_format,
+                                    "source": {"s3Location": s3_location},
+                                }
+                            }
+                        )
+            else:
+                if isinstance(resolved, InlineBytes):
+                    file_bytes = resolved.data
+                else:
+                    file_bytes = file_input.read()
+
+                if content_type.startswith("image/"):
+                    media_type = content_type.split("/")[-1]
+                    if media_type == "jpg":
+                        media_type = "jpeg"
+                    content_blocks.append(
+                        {
+                            "image": {
+                                "format": media_type,
+                                "source": {"bytes": file_bytes},
+                            }
                         }
-                    }
-                )
+                    )
+                elif content_type.startswith("video/"):
+                    video_format = self._get_video_format(content_type)
+                    if video_format:
+                        content_blocks.append(
+                            {
+                                "video": {
+                                    "format": video_format,
+                                    "source": {"bytes": file_bytes},
+                                }
+                            }
+                        )
+                else:
+                    doc_format = self._get_document_format(content_type)
+                    if doc_format:
+                        content_blocks.append(
+                            {
+                                "document": {
+                                    "name": name,
+                                    "format": doc_format,
+                                    "source": {"bytes": file_bytes},
+                                }
+                            }
+                        )
+
+        return content_blocks
+
+    async def aformat_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async format files as Bedrock Converse API multimodal content blocks.
+
+        Uses parallel file resolution. S3 uploads are only supported by Nova models.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for S3 uploads.
+
+        Returns:
+            List of content blocks in Bedrock's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        import os
+
+        from crewai.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBytes,
+        )
+
+        is_nova = self._is_nova_model()
+        s3_bucket = os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
+        s3_bucket_owner = os.environ.get("CREWAI_BEDROCK_S3_BUCKET_OWNER")
+        prefer_upload = bool(s3_bucket) and is_nova
+
+        config = FileResolverConfig(
+            prefer_upload=prefer_upload, use_bytes_for_bedrock=True
+        )
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+        resolved_files = await resolver.aresolve_files(files, "bedrock")
+
+        content_blocks: list[dict[str, Any]] = []
+        for name, resolved in resolved_files.items():
+            file_input = files[name]
+            content_type = file_input.content_type
+
+            if isinstance(resolved, FileReference) and resolved.file_uri:
+                s3_location: dict[str, Any] = {"uri": resolved.file_uri}
+                if s3_bucket_owner:
+                    s3_location["bucketOwner"] = s3_bucket_owner
+
+                if content_type.startswith("image/"):
+                    media_type = content_type.split("/")[-1]
+                    if media_type == "jpg":
+                        media_type = "jpeg"
+                    content_blocks.append(
+                        {
+                            "image": {
+                                "format": media_type,
+                                "source": {"s3Location": s3_location},
+                            }
+                        }
+                    )
+                elif content_type.startswith("video/"):
+                    video_format = self._get_video_format(content_type)
+                    if video_format:
+                        content_blocks.append(
+                            {
+                                "video": {
+                                    "format": video_format,
+                                    "source": {"s3Location": s3_location},
+                                }
+                            }
+                        )
+                else:
+                    doc_format = self._get_document_format(content_type)
+                    if doc_format:
+                        content_blocks.append(
+                            {
+                                "document": {
+                                    "name": name,
+                                    "format": doc_format,
+                                    "source": {"s3Location": s3_location},
+                                }
+                            }
+                        )
+            else:
+                if isinstance(resolved, InlineBytes):
+                    file_bytes = resolved.data
+                else:
+                    file_bytes = await file_input.aread()
+
+                if content_type.startswith("image/"):
+                    media_type = content_type.split("/")[-1]
+                    if media_type == "jpg":
+                        media_type = "jpeg"
+                    content_blocks.append(
+                        {
+                            "image": {
+                                "format": media_type,
+                                "source": {"bytes": file_bytes},
+                            }
+                        }
+                    )
+                elif content_type.startswith("video/"):
+                    video_format = self._get_video_format(content_type)
+                    if video_format:
+                        content_blocks.append(
+                            {
+                                "video": {
+                                    "format": video_format,
+                                    "source": {"bytes": file_bytes},
+                                }
+                            }
+                        )
+                else:
+                    doc_format = self._get_document_format(content_type)
+                    if doc_format:
+                        content_blocks.append(
+                            {
+                                "document": {
+                                    "name": name,
+                                    "format": doc_format,
+                                    "source": {"bytes": file_bytes},
+                                }
+                            }
+                        )
 
         return content_blocks

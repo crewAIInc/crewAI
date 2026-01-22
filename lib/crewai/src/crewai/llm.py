@@ -66,11 +66,11 @@ if TYPE_CHECKING:
     from litellm.utils import supports_response_schema
 
     from crewai.agent.core import Agent
+    from crewai.files import FileInput, UploadCache
     from crewai.llms.hooks.base import BaseInterceptor
     from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
-    from crewai.utilities.files import FileInput, UploadCache
     from crewai.utilities.types import LLMMessage
 
 try:
@@ -2274,7 +2274,7 @@ class LLM(BaseLLM):
         """
         import base64
 
-        from crewai.utilities.files import (
+        from crewai.files import (
             FileResolver,
             FileResolverConfig,
             InlineBase64,

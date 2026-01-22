@@ -11,7 +11,8 @@ from pydantic import BaseModel, Field, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
-from crewai.utilities.files.file import (
+from crewai.files.file import (
+    AsyncFileStream,
     FileBytes,
     FilePath,
     FileSource,
@@ -185,7 +186,18 @@ class BaseFile(ABC, BaseModel):
 
     def read(self) -> bytes:
         """Read the file content as bytes."""
-        return self._file_source.read()
+        return self._file_source.read()  # type: ignore[union-attr]
+
+    async def aread(self) -> bytes:
+        """Async read the file content as bytes.
+
+        Raises:
+            TypeError: If the underlying source doesn't support async read.
+        """
+        source = self._file_source
+        if isinstance(source, (FilePath, FileBytes, AsyncFileStream)):
+            return await source.aread()
+        raise TypeError(f"{type(source).__name__} does not support async read")
 
     def read_text(self, encoding: str = "utf-8") -> str:
         """Read the file content as string."""

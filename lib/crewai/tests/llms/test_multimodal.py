@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai.llm import LLM
-from crewai.utilities.files import ImageFile, PDFFile, TextFile
+from crewai.files import ImageFile, PDFFile, TextFile
 
 # Check for optional provider dependencies
 try:

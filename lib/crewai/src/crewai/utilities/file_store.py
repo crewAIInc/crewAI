@@ -13,7 +13,7 @@ from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped
 
 
 if TYPE_CHECKING:
-    from crewai.utilities.files import FileInput
+    from crewai.files import FileInput
 
 _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
 

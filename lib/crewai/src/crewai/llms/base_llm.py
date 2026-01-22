@@ -33,9 +33,9 @@ from crewai.types.usage_metrics import UsageMetrics
 
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
+    from crewai.files import FileInput, UploadCache
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
-    from crewai.utilities.files import FileInput, UploadCache
     from crewai.utilities.types import LLMMessage
 
 
@@ -314,6 +314,25 @@ class BaseLLM(ABC):
             List of content blocks in the provider's expected format.
         """
         return []
+
+    async def aformat_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async format files as multimodal content blocks for the LLM.
+
+        Default implementation calls the sync version. Subclasses should
+        override to use async file resolution for parallel processing.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+
+        Returns:
+            List of content blocks in the provider's expected format.
+        """
+        return self.format_multimodal_content(files, upload_cache)
 
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.

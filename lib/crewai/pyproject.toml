@@ -103,6 +103,7 @@ file-processing = [
     "pypdf~=4.0.0",
     "python-magic>=0.4.27",
     "aiocache~=0.12.3",
+    "aiofiles~=24.1.0",
 ]
 
 

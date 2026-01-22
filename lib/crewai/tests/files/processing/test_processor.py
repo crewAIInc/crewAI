@@ -2,19 +2,19 @@
 
 import pytest
 
-from crewai.utilities.files import FileBytes, ImageFile, PDFFile, TextFile
-from crewai.utilities.files.processing.constraints import (
+from crewai.files import FileBytes, ImageFile, PDFFile, TextFile
+from crewai.files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     ImageConstraints,
     PDFConstraints,
     ProviderConstraints,
 )
-from crewai.utilities.files.processing.enums import FileHandling
-from crewai.utilities.files.processing.exceptions import (
+from crewai.files.processing.enums import FileHandling
+from crewai.files.processing.exceptions import (
     FileTooLargeError,
     FileValidationError,
 )
-from crewai.utilities.files.processing.processor import FileProcessor
+from crewai.files.processing.processor import FileProcessor
 
 
 # Minimal valid PNG: 8x8 pixel RGB image (valid for PIL)

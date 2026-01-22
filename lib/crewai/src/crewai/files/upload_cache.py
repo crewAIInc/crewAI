@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import atexit
 import builtins
+from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
@@ -16,7 +17,7 @@ from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped
 
 
 if TYPE_CHECKING:
-    from crewai.utilities.files.content_types import (
+    from crewai.files.content_types import (
         AudioFile,
         File,
         ImageFile,
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_TTL_SECONDS = 24 * 60 * 60  # 24 hours
+DEFAULT_MAX_CACHE_ENTRIES = 1000
 
 
 @dataclass
@@ -65,8 +67,31 @@ def _make_key(file_hash: str, provider: str) -> str:
     return f"upload:{provider}:{file_hash}"
 
 
+def _compute_file_hash_streaming(chunks: Iterator[bytes]) -> str:
+    """Compute SHA-256 hash from streaming chunks.
+
+    Args:
+        chunks: Iterator of byte chunks.
+
+    Returns:
+        Hexadecimal hash string.
+    """
+    hasher = hashlib.sha256()
+    for chunk in chunks:
+        hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 def _compute_file_hash(file: FileInput) -> str:
-    """Compute SHA-256 hash of file content."""
+    """Compute SHA-256 hash of file content.
+
+    Uses streaming for FilePath sources to avoid loading large files into memory.
+    """
+    from crewai.files.file import FilePath
+
+    source = file._file_source
+    if isinstance(source, FilePath):
+        return _compute_file_hash_streaming(source.read_chunks(chunk_size=1024 * 1024))
     content = file.read()
     return hashlib.sha256(content).hexdigest()
 
@@ -87,6 +112,7 @@ class UploadCache:
         ttl: int = DEFAULT_TTL_SECONDS,
         namespace: str = "crewai_uploads",
         cache_type: str = "memory",
+        max_entries: int | None = DEFAULT_MAX_CACHE_ENTRIES,
         **cache_kwargs: Any,
     ) -> None:
         """Initialize the upload cache.
@@ -95,11 +121,14 @@ class UploadCache:
             ttl: Default TTL in seconds.
             namespace: Cache namespace.
             cache_type: Backend type ("memory" or "redis").
+            max_entries: Maximum cache entries (None for unlimited).
             **cache_kwargs: Additional args for cache backend.
         """
         self.ttl = ttl
         self.namespace = namespace
+        self.max_entries = max_entries
         self._provider_keys: dict[str, set[str]] = {}
+        self._key_access_order: list[str] = []
 
         if cache_type == "redis":
             self._cache = Cache(
@@ -116,15 +145,60 @@ class UploadCache:
             )
 
     def _track_key(self, provider: str, key: str) -> None:
-        """Track a key for a provider (for cleanup)."""
+        """Track a key for a provider (for cleanup) and access order."""
         if provider not in self._provider_keys:
             self._provider_keys[provider] = set()
         self._provider_keys[provider].add(key)
+        if key in self._key_access_order:
+            self._key_access_order.remove(key)
+        self._key_access_order.append(key)
 
     def _untrack_key(self, provider: str, key: str) -> None:
         """Remove key tracking for a provider."""
         if provider in self._provider_keys:
             self._provider_keys[provider].discard(key)
+        if key in self._key_access_order:
+            self._key_access_order.remove(key)
+
+    async def _evict_if_needed(self) -> int:
+        """Evict oldest entries if limit exceeded.
+
+        Returns:
+            Number of entries evicted.
+        """
+        if self.max_entries is None:
+            return 0
+
+        current_count = len(self)
+        if current_count < self.max_entries:
+            return 0
+
+        to_evict = max(1, self.max_entries // 10)
+        return await self._evict_oldest(to_evict)
+
+    async def _evict_oldest(self, count: int) -> int:
+        """Evict the oldest entries from the cache.
+
+        Args:
+            count: Number of entries to evict.
+
+        Returns:
+            Number of entries actually evicted.
+        """
+        evicted = 0
+        keys_to_evict = self._key_access_order[:count]
+
+        for key in keys_to_evict:
+            await self._cache.delete(key)
+            self._key_access_order.remove(key)
+            for provider_keys in self._provider_keys.values():
+                provider_keys.discard(key)
+            evicted += 1
+
+        if evicted > 0:
+            logger.debug(f"Evicted {evicted} oldest cache entries")
+
+        return evicted
 
     async def aget(self, file: FileInput, provider: str) -> CachedUpload | None:
         """Get a cached upload for a file.
@@ -214,6 +288,8 @@ class UploadCache:
         Returns:
             The created cache entry.
         """
+        await self._evict_if_needed()
+
         key = _make_key(file_hash, provider)
         now = datetime.now(timezone.utc)
 
@@ -331,18 +407,15 @@ class UploadCache:
         return results
 
     def _run_sync(self, coro: Any) -> Any:
-        """Run an async coroutine from sync context."""
+        """Run an async coroutine from sync context without blocking event loop."""
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             loop = None
 
         if loop is not None and loop.is_running():
-            import concurrent.futures
-
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, coro)
-                return future.result()
+            future = asyncio.run_coroutine_threadsafe(coro, loop)
+            return future.result(timeout=30)
         return asyncio.run(coro)
 
     def get(self, file: FileInput, provider: str) -> CachedUpload | None:
@@ -473,7 +546,7 @@ def _cleanup_on_exit() -> None:
     if _default_cache is None or len(_default_cache) == 0:
         return
 
-    from crewai.utilities.files.cleanup import cleanup_uploaded_files
+    from crewai.files.cleanup import cleanup_uploaded_files
 
     try:
         cleanup_uploaded_files(_default_cache, delete_from_provider=True)

@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
-from crewai.rag.embeddings.types import EmbedderConfig
-from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
-from crewai.utilities.file_store import store_files
-from crewai.utilities.files import (
+from crewai.files import (
     AudioFile,
     ImageFile,
     PDFFile,
     TextFile,
     VideoFile,
 )
+from crewai.rag.embeddings.types import EmbedderConfig
+from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
     StreamingState,
     TaskInfo,

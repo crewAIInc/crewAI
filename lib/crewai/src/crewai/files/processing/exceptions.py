@@ -81,3 +81,23 @@ class ProcessingDependencyError(FileProcessingError):
         self.dependency = dependency
         self.install_command = install_command
         super().__init__(message)
+
+
+class TransientFileError(FileProcessingError):
+    """Transient error that may succeed on retry (network, timeout)."""
+
+
+class PermanentFileError(FileProcessingError):
+    """Permanent error that will not succeed on retry (auth, format)."""
+
+
+class UploadError(FileProcessingError):
+    """Base exception for upload errors."""
+
+
+class TransientUploadError(UploadError, TransientFileError):
+    """Upload failed but may succeed on retry (network issues, rate limits)."""
+
+
+class PermanentUploadError(UploadError, PermanentFileError):
+    """Upload failed permanently (auth failure, invalid file, unsupported type)."""

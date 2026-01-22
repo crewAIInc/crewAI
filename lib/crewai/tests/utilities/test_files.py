@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from crewai.utilities.files import (
+from crewai.files import (
     AudioFile,
     File,
     FileBytes,
@@ -20,7 +20,7 @@ from crewai.utilities.files import (
     normalize_input_files,
     wrap_file_source,
 )
-from crewai.utilities.files.file import detect_content_type
+from crewai.files.file import detect_content_type
 
 
 class TestDetectContentType:
@@ -34,7 +34,7 @@ class TestDetectContentType:
     def test_detect_json(self) -> None:
         """Test detection of JSON content."""
         result = detect_content_type(b'{"key": "value"}')
-        assert result in ("text/plain", "application/json")
+        assert result == "application/json"
 
     def test_detect_png(self) -> None:
         """Test detection of PNG content."""

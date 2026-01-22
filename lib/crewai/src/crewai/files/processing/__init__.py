@@ -4,7 +4,7 @@ This module provides validation, transformation, and processing utilities
 for files used in multimodal LLM interactions.
 """
 
-from crewai.utilities.files.processing.constraints import (
+from crewai.files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
     BEDROCK_CONSTRAINTS,
     GEMINI_CONSTRAINTS,
@@ -16,16 +16,16 @@ from crewai.utilities.files.processing.constraints import (
     VideoConstraints,
     get_constraints_for_provider,
 )
-from crewai.utilities.files.processing.enums import FileHandling
-from crewai.utilities.files.processing.exceptions import (
+from crewai.files.processing.enums import FileHandling
+from crewai.files.processing.exceptions import (
     FileProcessingError,
     FileTooLargeError,
     FileValidationError,
     ProcessingDependencyError,
     UnsupportedFileTypeError,
 )
-from crewai.utilities.files.processing.processor import FileProcessor
-from crewai.utilities.files.processing.validators import (
+from crewai.files.processing.processor import FileProcessor
+from crewai.files.processing.validators import (
     validate_audio,
     validate_file,
     validate_image,

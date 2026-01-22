@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 import logging
 
-from crewai.utilities.files.content_types import (
+from crewai.files.content_types import (
     AudioFile,
     File,
     ImageFile,
@@ -11,14 +11,14 @@ from crewai.utilities.files.content_types import (
     TextFile,
     VideoFile,
 )
-from crewai.utilities.files.processing.constraints import (
+from crewai.files.processing.constraints import (
     AudioConstraints,
     ImageConstraints,
     PDFConstraints,
     ProviderConstraints,
     VideoConstraints,
 )
-from crewai.utilities.files.processing.exceptions import (
+from crewai.files.processing.exceptions import (
     FileTooLargeError,
     FileValidationError,
     UnsupportedFileTypeError,
@@ -172,7 +172,7 @@ def validate_pdf(
         try:
             import io
 
-            from pypdf import PdfReader  # type: ignore[import-not-found]
+            from pypdf import PdfReader
 
             reader = PdfReader(io.BytesIO(content))
             page_count = len(reader.pages)

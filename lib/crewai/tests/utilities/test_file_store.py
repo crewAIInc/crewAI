@@ -13,7 +13,7 @@ from crewai.utilities.file_store import (
     store_files,
     store_task_files,
 )
-from crewai.utilities.files import TextFile
+from crewai.files import TextFile
 
 
 class TestFileStore:

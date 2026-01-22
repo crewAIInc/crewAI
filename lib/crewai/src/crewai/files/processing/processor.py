@@ -1,9 +1,10 @@
 """FileProcessor for validating and transforming files based on provider constraints."""
 
+import asyncio
 from collections.abc import Sequence
 import logging
 
-from crewai.utilities.files.content_types import (
+from crewai.files.content_types import (
     AudioFile,
     File,
     ImageFile,
@@ -11,18 +12,18 @@ from crewai.utilities.files.content_types import (
     TextFile,
     VideoFile,
 )
-from crewai.utilities.files.processing.constraints import (
+from crewai.files.processing.constraints import (
     ProviderConstraints,
     get_constraints_for_provider,
 )
-from crewai.utilities.files.processing.enums import FileHandling
-from crewai.utilities.files.processing.exceptions import (
+from crewai.files.processing.enums import FileHandling
+from crewai.files.processing.exceptions import (
     FileProcessingError,
     FileTooLargeError,
     FileValidationError,
     UnsupportedFileTypeError,
 )
-from crewai.utilities.files.processing.transformers import (
+from crewai.files.processing.transformers import (
     chunk_pdf,
     chunk_text,
     get_image_dimensions,
@@ -30,7 +31,7 @@ from crewai.utilities.files.processing.transformers import (
     optimize_image,
     resize_image,
 )
-from crewai.utilities.files.processing.validators import validate_file
+from crewai.files.processing.validators import validate_file
 
 
 logger = logging.getLogger(__name__)
@@ -183,6 +184,52 @@ class FileProcessor:
 
         return result
 
+    async def aprocess_files(
+        self,
+        files: dict[str, FileInput],
+        max_concurrency: int = 10,
+    ) -> dict[str, FileInput]:
+        """Async process multiple files in parallel.
+
+        Args:
+            files: Dictionary mapping names to file inputs.
+            max_concurrency: Maximum number of concurrent processing tasks.
+
+        Returns:
+            Dictionary mapping names to processed files. If a file is chunked,
+            multiple entries are created with indexed names.
+        """
+        semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def process_one(
+            name: str, file: FileInput
+        ) -> tuple[str, FileInput | Sequence[FileInput]]:
+            async with semaphore:
+                loop = asyncio.get_running_loop()
+                processed = await loop.run_in_executor(None, self.process, file)
+                return name, processed
+
+        tasks = [process_one(n, f) for n, f in files.items()]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        output: dict[str, FileInput] = {}
+        for result in results:
+            if isinstance(result, BaseException):
+                logger.error(f"Processing failed: {result}")
+                continue
+            name, processed = result
+            if isinstance(processed, Sequence) and not isinstance(
+                processed, (str, bytes)
+            ):
+                for i, chunk in enumerate(processed):
+                    output[f"{name}_chunk_{i}"] = chunk
+            elif isinstance(
+                processed, (AudioFile, File, ImageFile, PDFFile, TextFile, VideoFile)
+            ):
+                output[name] = processed
+
+        return output
+
     def _auto_process(self, file: FileInput) -> FileInput:
         """Automatically resize/compress file to meet constraints.
 
@@ -272,7 +319,7 @@ class FileProcessor:
                 page_count = get_pdf_page_count(file)
                 if page_count is not None and page_count > max_pages:
                     try:
-                        return chunk_pdf(file, max_pages)
+                        return list(chunk_pdf(file, max_pages))
                     except Exception as e:
                         logger.warning(f"Failed to chunk PDF: {e}")
                         return file
@@ -284,7 +331,7 @@ class FileProcessor:
                 content = file.read()
                 if len(content) > max_size:
                     try:
-                        return chunk_text(file, max_size)
+                        return list(chunk_text(file, max_size))
                     except Exception as e:
                         logger.warning(f"Failed to chunk text file: {e}")
                         return file

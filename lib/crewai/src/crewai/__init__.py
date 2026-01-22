@@ -6,6 +6,14 @@ import warnings
 from crewai.agent.core import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
+from crewai.files import (
+    AudioFile,
+    File,
+    ImageFile,
+    PDFFile,
+    TextFile,
+    VideoFile,
+)
 from crewai.flow.flow import Flow
 from crewai.knowledge.knowledge import Knowledge
 from crewai.llm import LLM
@@ -15,14 +23,6 @@ from crewai.task import Task
 from crewai.tasks.llm_guardrail import LLMGuardrail
 from crewai.tasks.task_output import TaskOutput
 from crewai.telemetry.telemetry import Telemetry
-from crewai.utilities.files import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
 
 
 def _suppress_pydantic_deprecation_warnings() -> None:

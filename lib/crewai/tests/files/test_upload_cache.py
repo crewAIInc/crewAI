@@ -4,8 +4,8 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from crewai.utilities.files import FileBytes, ImageFile
-from crewai.utilities.files.upload_cache import CachedUpload, UploadCache
+from crewai.files import FileBytes, ImageFile
+from crewai.files.upload_cache import CachedUpload, UploadCache
 
 
 # Minimal valid PNG

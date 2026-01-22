@@ -19,11 +19,11 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.utilities.files import (
+    from crewai.files import (
         FileInput,
         UploadCache,
     )
+    from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -1113,7 +1113,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             List of content blocks in Gemini's expected format.
         """
-        from crewai.utilities.files import (
+        from crewai.files import (
             FileReference,
             FileResolver,
             FileResolverConfig,
@@ -1123,7 +1123,6 @@ class GeminiCompletion(BaseLLM):
         content_blocks: list[dict[str, Any]] = []
         supported_types = self.supported_multimodal_content_types()
 
-        # Create resolver with optional cache
         config = FileResolverConfig(prefer_upload=False)
         resolver = FileResolver(config=config, upload_cache=upload_cache)
 
@@ -1162,6 +1161,67 @@ class GeminiCompletion(BaseLLM):
                         "inlineData": {
                             "mimeType": content_type,
                             "data": data,
+                        }
+                    }
+                )
+
+        return content_blocks
+
+    async def aformat_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Async format files as Gemini multimodal content blocks.
+
+        Uses parallel file resolution for improved performance with multiple files.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+
+        Returns:
+            List of content blocks in Gemini's expected format.
+        """
+        from crewai.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        supported_types = self.supported_multimodal_content_types()
+
+        supported_files = {
+            name: f
+            for name, f in files.items()
+            if any(f.content_type.startswith(t) for t in supported_types)
+        }
+
+        if not supported_files:
+            return []
+
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+        resolved_files = await resolver.aresolve_files(supported_files, "gemini")
+
+        content_blocks: list[dict[str, Any]] = []
+        for resolved in resolved_files.values():
+            if isinstance(resolved, FileReference) and resolved.file_uri:
+                content_blocks.append(
+                    {
+                        "fileData": {
+                            "mimeType": resolved.content_type,
+                            "fileUri": resolved.file_uri,
+                        }
+                    }
+                )
+            elif isinstance(resolved, InlineBase64):
+                content_blocks.append(
+                    {
+                        "inlineData": {
+                            "mimeType": resolved.content_type,
+                            "data": resolved.data,
                         }
                     }
                 )

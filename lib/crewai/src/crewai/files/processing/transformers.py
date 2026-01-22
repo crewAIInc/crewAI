@@ -1,12 +1,12 @@
 """File transformation functions for resizing, optimizing, and chunking."""
 
-from collections.abc import Sequence
+from collections.abc import Iterator
 import io
 import logging
 
-from crewai.utilities.files.content_types import ImageFile, PDFFile, TextFile
-from crewai.utilities.files.file import FileBytes
-from crewai.utilities.files.processing.exceptions import ProcessingDependencyError
+from crewai.files.content_types import ImageFile, PDFFile, TextFile
+from crewai.files.file import FileBytes
+from crewai.files.processing.exceptions import ProcessingDependencyError
 
 
 logger = logging.getLogger(__name__)
@@ -161,22 +161,24 @@ def chunk_pdf(
     max_pages: int,
     *,
     overlap_pages: int = 0,
-) -> Sequence[PDFFile]:
+) -> Iterator[PDFFile]:
     """Split a PDF into chunks of maximum page count.
+
+    Yields chunks one at a time to minimize memory usage.
 
     Args:
         file: The PDF file to chunk.
         max_pages: Maximum pages per chunk.
         overlap_pages: Number of overlapping pages between chunks (for context).
 
-    Returns:
-        List of PDFFile objects, one per chunk.
+    Yields:
+        PDFFile objects, one per chunk.
 
     Raises:
         ProcessingDependencyError: If pypdf is not installed.
     """
     try:
-        from pypdf import PdfReader, PdfWriter  # type: ignore[import-not-found]
+        from pypdf import PdfReader, PdfWriter
     except ImportError as e:
         raise ProcessingDependencyError(
             "pypdf is required for PDF chunking",
@@ -189,9 +191,9 @@ def chunk_pdf(
     total_pages = len(reader.pages)
 
     if total_pages <= max_pages:
-        return [file]
+        yield file
+        return
 
-    chunks: list[PDFFile] = []
     filename = file.filename or "document.pdf"
     base_filename = filename.rsplit(".", 1)[0]
     step = max_pages - overlap_pages
@@ -211,18 +213,15 @@ def chunk_pdf(
         output_bytes = output_buffer.getvalue()
 
         chunk_filename = f"{base_filename}_chunk_{chunk_num}.pdf"
-        chunks.append(
-            PDFFile(source=FileBytes(data=output_bytes, filename=chunk_filename))
-        )
 
         logger.info(
             f"Created PDF chunk '{chunk_filename}' with pages {start_page + 1}-{end_page}"
         )
 
+        yield PDFFile(source=FileBytes(data=output_bytes, filename=chunk_filename))
+
         start_page += step
         chunk_num += 1
-
-    return chunks
 
 
 def chunk_text(
@@ -231,8 +230,10 @@ def chunk_text(
     *,
     overlap_chars: int = 200,
     split_on_newlines: bool = True,
-) -> Sequence[TextFile]:
+) -> Iterator[TextFile]:
     """Split a text file into chunks of maximum character count.
+
+    Yields chunks one at a time to minimize memory usage.
 
     Args:
         file: The text file to chunk.
@@ -240,17 +241,17 @@ def chunk_text(
         overlap_chars: Number of overlapping characters between chunks.
         split_on_newlines: If True, prefer splitting at newline boundaries.
 
-    Returns:
-        List of TextFile objects, one per chunk.
+    Yields:
+        TextFile objects, one per chunk.
     """
     content = file.read()
     text = content.decode("utf-8", errors="replace")
     total_chars = len(text)
 
     if total_chars <= max_chars:
-        return [file]
+        yield file
+        return
 
-    chunks: list[TextFile] = []
     filename = file.filename or "text.txt"
     base_filename = filename.rsplit(".", 1)[0]
     extension = filename.rsplit(".", 1)[-1] if "." in filename else "txt"
@@ -261,29 +262,27 @@ def chunk_text(
     while start_pos < total_chars:
         end_pos = min(start_pos + max_chars, total_chars)
 
-        # If not at end, try to find a better split point
         if end_pos < total_chars and split_on_newlines:
-            # Look for last newline within the chunk
             last_newline = text.rfind("\n", start_pos, end_pos)
-            if last_newline > start_pos + max_chars // 2:  # Don't split too early
+            if last_newline > start_pos + max_chars // 2:
                 end_pos = last_newline + 1
 
-        chunk_text = text[start_pos:end_pos]
-        chunk_bytes = chunk_text.encode("utf-8")
+        chunk_content = text[start_pos:end_pos]
+        chunk_bytes = chunk_content.encode("utf-8")
 
         chunk_filename = f"{base_filename}_chunk_{chunk_num}.{extension}"
-        chunks.append(
-            TextFile(source=FileBytes(data=chunk_bytes, filename=chunk_filename))
-        )
 
         logger.info(
-            f"Created text chunk '{chunk_filename}' with {len(chunk_text)} characters"
+            f"Created text chunk '{chunk_filename}' with {len(chunk_content)} characters"
         )
 
-        start_pos = end_pos - overlap_chars if end_pos < total_chars else total_chars
-        chunk_num += 1
+        yield TextFile(source=FileBytes(data=chunk_bytes, filename=chunk_filename))
 
-    return chunks
+        if end_pos < total_chars:
+            start_pos = max(start_pos + 1, end_pos - overlap_chars)
+        else:
+            start_pos = total_chars
+        chunk_num += 1
 
 
 def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from crewai.utilities.files.resolved import (
+from crewai.files.resolved import (
     FileReference,
     InlineBase64,
     InlineBytes,
