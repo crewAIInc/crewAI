@@ -4,7 +4,6 @@ from collections.abc import Callable, Coroutine
 from datetime import datetime
 import json
 import threading
-import time
 from typing import TYPE_CHECKING, Any, Literal, cast
 from uuid import uuid4
 
@@ -330,11 +329,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns routing decision based on parsing result.
         """
         try:
-            iteration_start = time.time()
-
             enforce_rpm_limit(self.request_within_rpm_limit)
-
-            llm_start = time.time()
 
             answer = get_llm_response(
                 llm=self.llm,

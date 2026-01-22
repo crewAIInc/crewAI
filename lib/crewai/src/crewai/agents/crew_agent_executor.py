@@ -272,9 +272,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
-                print("--------------------------------")
-                print("get_llm_response answer", answer)
-                print("--------------------------------")
                 # breakpoint()
                 if self.response_model is not None:
                     try:
@@ -375,9 +372,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer from the agent.
         """
-        print("--------------------------------")
-        print("invoke_loop_native_tools")
-        print("--------------------------------")
         # Convert tools to OpenAI schema format
         if not self.original_tools:
             # No tools available, fall back to simple LLM call
@@ -403,21 +397,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                # Debug: Show messages being sent to LLM
-                print("--------------------------------")
-                print(f"Messages count: {len(self.messages)}")
-                for i, msg in enumerate(self.messages):
-                    role = msg.get("role", "unknown")
-                    content = msg.get("content", "")
-                    if content:
-                        preview = (
-                            content[:200] + "..." if len(content) > 200 else content
-                        )
-                    else:
-                        preview = "(no content)"
-                    print(f"  [{i}] {role}: {preview}")
-                print("--------------------------------")
-
                 # Call LLM with native tools
                 # Pass available_functions=None so the LLM returns tool_calls
                 # without executing them. The executor handles tool execution
@@ -434,10 +413,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
-                print("--------------------------------")
-                print("invoke_loop_native_tools answer", answer)
-                print("--------------------------------")
-                # print("get_llm_response answer", answer[:500] + "...")
 
                 # Check if the response is a list of tool calls
                 if (
@@ -649,7 +624,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
         # Execute the tool
-        print(f"Using Tool: {func_name}")
         result = "Tool not found"
         if func_name in available_functions:
             try:
@@ -931,10 +905,6 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     response_model=self.response_model,
                     executor_context=self,
                 )
-                print("--------------------------------")
-                print("native llm completion answer", answer)
-                print("--------------------------------")
-
                 # Check if the response is a list of tool calls
                 if (
                     isinstance(answer, list)
