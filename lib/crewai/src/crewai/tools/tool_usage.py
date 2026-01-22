@@ -333,13 +333,16 @@ class ToolUsage:
 
                     if self.tools_handler:
                         should_cache = True
-                        if (
-                            hasattr(available_tool, "cache_function")
-                            and available_tool.cache_function
-                        ):
-                            should_cache = available_tool.cache_function(
-                                calling.arguments, result
-                            )
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache
@@ -536,13 +539,16 @@ class ToolUsage:
 
                     if self.tools_handler:
                         should_cache = True
-                        if (
-                            hasattr(available_tool, "cache_function")
-                            and available_tool.cache_function
-                        ):
-                            should_cache = available_tool.cache_function(
-                                calling.arguments, result
-                            )
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache

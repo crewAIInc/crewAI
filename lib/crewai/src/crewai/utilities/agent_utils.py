@@ -819,6 +819,34 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     return attributes
 
 
+DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
+    [
+        "Delegate work to coworker",
+        "Delegate_work_to_coworker",
+        "Ask question to coworker",
+        "Ask_question_to_coworker",
+    ]
+)
+
+
+# native tool calling tracking for delegation
+def track_delegation_if_needed(
+    tool_name: str,
+    tool_args: dict[str, Any],
+    task: Task | None,
+) -> None:
+    """Track delegation if the tool is a delegation tool.
+
+    Args:
+        tool_name: Name of the tool being executed.
+        tool_args: Arguments passed to the tool.
+        task: The task being executed (used to track delegations).
+    """
+    if tool_name in DELEGATION_TOOL_NAMES and task is not None:
+        coworker = tool_args.get("coworker")
+        task.increment_delegations(coworker)
+
+
 def extract_tool_call_info(
     tool_call: Any,
 ) -> tuple[str, str, dict[str, Any] | str] | None:

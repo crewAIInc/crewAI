@@ -42,6 +42,7 @@ from crewai.utilities.agent_utils import (
     has_reached_max_iterations,
     is_context_length_exceeded,
     process_llm_response,
+    track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
@@ -421,7 +422,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     and self._is_tool_call_list(answer)
                 ):
                     # Handle tool calls - execute tools and add results to messages
-                    self._handle_native_tool_calls(answer, available_functions)
+                    tool_finish = self._handle_native_tool_calls(
+                        answer, available_functions
+                    )
+                    # If tool has result_as_answer=True, return immediately
+                    if tool_finish is not None:
+                        return tool_finish
                     # Continue loop to let LLM analyze results and decide next steps
                     continue
 
@@ -528,7 +534,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self,
         tool_calls: list[Any],
         available_functions: dict[str, Callable[..., Any]],
-    ) -> None:
+    ) -> AgentFinish | None:
         """Handle a single native tool call from the LLM.
 
         Executes only the FIRST tool call and appends the result to message history.
@@ -538,6 +544,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Args:
             tool_calls: List of tool calls from the LLM (only first is processed).
             available_functions: Dict mapping function names to callables.
+
+        Returns:
+            AgentFinish if tool has result_as_answer=True, None otherwise.
         """
         from datetime import datetime
         import json
@@ -550,7 +559,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
         if not tool_calls:
-            return
+            return None
 
         # Only process the FIRST tool call for sequential execution with reflection
         tool_call = tool_calls[0]
@@ -581,7 +590,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             func_name = func_info.get("name", "") or tool_call.get("name", "")
             func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
         else:
-            return
+            return None
 
         # Append assistant message with single tool call
         assistant_message: LLMMessage = {
@@ -614,6 +623,31 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
 
+        # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
+        import re
+
+        original_tool = None
+        for tool in self.original_tools or []:
+            sanitized_name = re.sub(r"[^a-zA-Z0-9_.\-:]", "_", tool.name)
+            if sanitized_name == func_name:
+                original_tool = tool
+                break
+
+        # Check cache before executing
+        from_cache = False
+        input_str = json.dumps(args_dict) if args_dict else ""
+        if self.tools_handler and self.tools_handler.cache:
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
+            if cached_result is not None:
+                result = (
+                    str(cached_result)
+                    if not isinstance(cached_result, str)
+                    else cached_result
+                )
+                from_cache = True
+
         # Emit tool usage started event
         started_at = datetime.now()
         crewai_event_bus.emit(
@@ -627,27 +661,53 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ),
         )
 
-        # Execute the tool
-        result = "Tool not found"
-        if func_name in available_functions:
-            try:
-                tool_func = available_functions[func_name]
-                result = tool_func(**args_dict)
-                if not isinstance(result, str):
-                    result = str(result)
-            except Exception as e:
-                result = f"Error executing tool: {e}"
-                crewai_event_bus.emit(
-                    self,
-                    event=ToolUsageErrorEvent(
-                        tool_name=func_name,
-                        tool_args=args_dict,
-                        from_agent=self.agent,
-                        from_task=self.task,
-                        agent_key=agent_key,
-                        error=e,
-                    ),
-                )
+        track_delegation_if_needed(func_name, args_dict, self.task)
+
+        # Execute the tool (only if not cached)
+        if not from_cache:
+            result = "Tool not found"
+            if func_name in available_functions:
+                try:
+                    tool_func = available_functions[func_name]
+                    raw_result = tool_func(**args_dict)
+
+                    # Add to cache after successful execution (before string conversion)
+                    if self.tools_handler and self.tools_handler.cache:
+                        should_cache = True
+                        if (
+                            original_tool
+                            and hasattr(original_tool, "cache_function")
+                            and original_tool.cache_function
+                        ):
+                            should_cache = original_tool.cache_function(
+                                args_dict, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
+
+                    # Convert to string for message
+                    result = (
+                        str(raw_result)
+                        if not isinstance(raw_result, str)
+                        else raw_result
+                    )
+                except Exception as e:
+                    result = f"Error executing tool: {e}"
+                    if self.task:
+                        self.task.increment_tools_errors()
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageErrorEvent(
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            error=e,
+                        ),
+                    )
 
         # Emit tool usage finished event
         crewai_event_bus.emit(
@@ -674,9 +734,22 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         # Log the tool execution
         if self.agent and self.agent.verbose:
+            cache_info = " (from cache)" if from_cache else ""
             self._printer.print(
-                content=f"Tool {func_name} executed with result: {result[:200]}...",
+                content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                 color="green",
+            )
+
+        if (
+            original_tool
+            and hasattr(original_tool, "result_as_answer")
+            and original_tool.result_as_answer
+        ):
+            # Return immediately with tool result as final answer
+            return AgentFinish(
+                thought="Tool result is the final answer",
+                output=result,
+                text=result,
             )
 
         # Inject post-tool reasoning prompt to enforce analysis
@@ -686,6 +759,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             "content": reasoning_prompt,
         }
         self.messages.append(reasoning_message)
+        return None
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent asynchronously with given inputs.
@@ -928,7 +1002,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     and self._is_tool_call_list(answer)
                 ):
                     # Handle tool calls - execute tools and add results to messages
-                    self._handle_native_tool_calls(answer, available_functions)
+                    tool_finish = self._handle_native_tool_calls(
+                        answer, available_functions
+                    )
+                    # If tool has result_as_answer=True, return immediately
+                    if tool_finish is not None:
+                        return tool_finish
                     # Continue loop to let LLM analyze results and decide next steps
                     continue
 
