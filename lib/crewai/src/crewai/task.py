@@ -79,6 +79,7 @@ class Task(BaseModel):
         output_pydantic: Pydantic model for task output.
         security_config: Security configuration including fingerprinting.
         tools: List of tools/resources limited for task execution.
+        tool_reminder_after_usage: Number of tool usages after which to remind the agent of available tools.
         allow_crewai_trigger_context: Optional flag to control crewai_trigger_payload injection.
                               None (default): Auto-inject for first task only.
                               True: Always inject trigger payload for this task.
@@ -141,6 +142,10 @@ class Task(BaseModel):
     tools: list[BaseTool] | None = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    tool_reminder_after_usage: int | None = Field(
+        default=None,
+        description="Number of tool usages after which to remind the agent of available tools. Set to 0 to disable reminders.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
