@@ -70,6 +70,7 @@ if TYPE_CHECKING:
     from crewai.llms.providers.anthropic.completion import AnthropicThinkingConfig
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.files import FileInput, UploadCache
     from crewai.utilities.types import LLMMessage
 
 try:
@@ -683,7 +684,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop,
+            "stop": self.stop or None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -931,7 +932,6 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             if not tool_calls or not available_functions:
-
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -1144,8 +1144,12 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
-            
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1273,7 +1277,11 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1363,7 +1371,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
-        
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
@@ -2205,3 +2213,107 @@ class LLM(BaseLLM):
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
             **filtered_params,
         )
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        For litellm, check common vision-enabled model prefixes.
+
+        Returns:
+            True if the model likely supports images.
+        """
+        vision_prefixes = (
+            "gpt-4o",
+            "gpt-4-turbo",
+            "gpt-4-vision",
+            "gpt-4.1",
+            "claude-3",
+            "claude-4",
+            "gemini",
+        )
+        model_lower = self.model.lower()
+        return any(
+            model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
+        )
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported for multimodal input.
+
+        Determines supported types based on the underlying model.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        model_lower = self.model.lower()
+
+        if "gemini" in model_lower:
+            return ["image/", "audio/", "video/", "application/pdf", "text/"]
+        if "claude-3" in model_lower or "claude-4" in model_lower:
+            return ["image/", "application/pdf"]
+        return ["image/"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as multimodal content blocks for litellm.
+
+        Uses OpenAI-compatible format which litellm translates to provider format.
+        Uses FileResolver for consistent base64 encoding.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache (not used by litellm but kept for interface consistency).
+
+        Returns:
+            List of content blocks in OpenAI's expected format.
+        """
+        import base64
+
+        from crewai.utilities.files import (
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        if not self.supports_multimodal():
+            return []
+
+        content_blocks: list[dict[str, Any]] = []
+        supported_types = self.supported_multimodal_content_types()
+
+        # LiteLLM uses OpenAI-compatible format
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        for file_input in files.values():
+            content_type = file_input.content_type
+            if not any(content_type.startswith(t) for t in supported_types):
+                continue
+
+            resolved = resolver.resolve(file_input, "openai")
+
+            if isinstance(resolved, InlineBase64):
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
+                        },
+                    }
+                )
+            else:
+                # Fallback to direct base64 encoding
+                data = base64.b64encode(file_input.read()).decode("ascii")
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{content_type};base64,{data}"},
+                    }
+                )
+
+        return content_blocks

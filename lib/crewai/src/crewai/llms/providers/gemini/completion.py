@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -19,6 +20,10 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.utilities.files import (
+        FileInput,
+        UploadCache,
+    )
 
 
 try:
@@ -516,17 +521,31 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Convert content to string if it's a list
+            # Build parts list from content
+            parts: list[types.Part] = []
             if isinstance(content, list):
-                text_content = " ".join(
-                    str(item.get("text", "")) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
+                for item in content:
+                    if isinstance(item, dict):
+                        if "text" in item:
+                            parts.append(types.Part.from_text(text=str(item["text"])))
+                        elif "inlineData" in item:
+                            inline = item["inlineData"]
+                            parts.append(
+                                types.Part.from_bytes(
+                                    data=base64.b64decode(inline["data"]),
+                                    mime_type=inline["mimeType"],
+                                )
+                            )
+                    else:
+                        parts.append(types.Part.from_text(text=str(item)))
             else:
-                text_content = str(content) if content else ""
+                parts.append(types.Part.from_text(text=str(content) if content else ""))
 
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
+                text_content = " ".join(
+                    p.text for p in parts if hasattr(p, "text") and p.text
+                )
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
@@ -536,9 +555,7 @@ class GeminiCompletion(BaseLLM):
                 gemini_role = "model" if role == "assistant" else "user"
 
                 # Create Content object
-                gemini_content = types.Content(
-                    role=gemini_role, parts=[types.Part.from_text(text=text_content)]
-                )
+                gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
         return contents, system_instruction
@@ -1060,3 +1077,106 @@ class GeminiCompletion(BaseLLM):
                 )
             )
         return result
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Gemini models support images, audio, video, and PDFs.
+
+        Returns:
+            True if the model supports multimodal inputs.
+        """
+        return True
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported by Gemini for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        return ["image/", "audio/", "video/", "application/pdf", "text/"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as Gemini multimodal content blocks.
+
+        Gemini supports both inlineData format and file references via File API.
+        Uses FileResolver to determine the best delivery method based on file size.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+
+        Returns:
+            List of content blocks in Gemini's expected format.
+        """
+        from crewai.utilities.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        content_blocks: list[dict[str, Any]] = []
+        supported_types = self.supported_multimodal_content_types()
+
+        # Create resolver with optional cache
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        for file_input in files.values():
+            content_type = file_input.content_type
+            if not any(content_type.startswith(t) for t in supported_types):
+                continue
+
+            resolved = resolver.resolve(file_input, "gemini")
+
+            if isinstance(resolved, FileReference) and resolved.file_uri:
+                # Use file reference format for uploaded files
+                content_blocks.append(
+                    {
+                        "fileData": {
+                            "mimeType": resolved.content_type,
+                            "fileUri": resolved.file_uri,
+                        }
+                    }
+                )
+            elif isinstance(resolved, InlineBase64):
+                # Use inline format for smaller files
+                content_blocks.append(
+                    {
+                        "inlineData": {
+                            "mimeType": resolved.content_type,
+                            "data": resolved.data,
+                        }
+                    }
+                )
+            else:
+                # Fallback to base64 encoding
+                data = base64.b64encode(file_input.read()).decode("ascii")
+                content_blocks.append(
+                    {
+                        "inlineData": {
+                            "mimeType": content_type,
+                            "data": data,
+                        }
+                    }
+                )
+
+        return content_blocks
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Gemini content block.
+
+        Gemini uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Gemini's expected format.
+        """
+        return {"text": text}

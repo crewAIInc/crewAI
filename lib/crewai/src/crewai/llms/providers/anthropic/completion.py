@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -20,6 +21,9 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.utilities.files import FileInput, UploadCache
+
+DEFAULT_CACHE_TTL = "ephemeral"
 
 try:
     from anthropic import Anthropic, AsyncAnthropic
@@ -1231,3 +1235,138 @@ class AnthropicCompletion(BaseLLM):
                 "total_tokens": input_tokens + output_tokens,
             }
         return {"total_tokens": 0}
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        All Claude 3+ models support vision and PDFs.
+
+        Returns:
+            True if the model supports images and PDFs.
+        """
+        return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported by Anthropic for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        if not self.supports_multimodal():
+            return []
+        return ["image/", "application/pdf"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+        enable_caching: bool = True,
+        cache_ttl: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as Anthropic multimodal content blocks.
+
+        Anthropic supports both base64 inline format and file references via Files API.
+        Uses FileResolver to determine the best delivery method based on file size.
+        Supports prompt caching to reduce costs and latency for repeated file usage.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+            enable_caching: Whether to add cache_control markers (default: True).
+            cache_ttl: Cache TTL - "ephemeral" (5min) or "1h" (1hr for supported models).
+
+        Returns:
+            List of content blocks in Anthropic's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.utilities.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        content_blocks: list[dict[str, Any]] = []
+        supported_types = self.supported_multimodal_content_types()
+
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        file_list = list(files.values())
+        num_files = len(file_list)
+
+        for i, file_input in enumerate(file_list):
+            content_type = file_input.content_type
+            if not any(content_type.startswith(t) for t in supported_types):
+                continue
+
+            resolved = resolver.resolve(file_input, "anthropic")
+            block: dict[str, Any] = {}
+
+            if isinstance(resolved, FileReference):
+                if content_type.startswith("image/"):
+                    block = {
+                        "type": "image",
+                        "source": {
+                            "type": "file",
+                            "file_id": resolved.file_id,
+                        },
+                    }
+                elif content_type == "application/pdf":
+                    block = {
+                        "type": "document",
+                        "source": {
+                            "type": "file",
+                            "file_id": resolved.file_id,
+                        },
+                    }
+            elif isinstance(resolved, InlineBase64):
+                if content_type.startswith("image/"):
+                    block = {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": resolved.content_type,
+                            "data": resolved.data,
+                        },
+                    }
+                elif content_type == "application/pdf":
+                    block = {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": resolved.content_type,
+                            "data": resolved.data,
+                        },
+                    }
+            else:
+                data = base64.b64encode(file_input.read()).decode("ascii")
+                if content_type.startswith("image/"):
+                    block = {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": content_type,
+                            "data": data,
+                        },
+                    }
+                elif content_type == "application/pdf":
+                    block = {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": content_type,
+                            "data": data,
+                        },
+                    }
+
+            if block and enable_caching and i == num_files - 1:
+                cache_control: dict[str, str] = {"type": cache_ttl or DEFAULT_CACHE_TTL}
+                block["cache_control"] = cache_control
+
+            if block:
+                content_blocks.append(block)
+
+        return content_blocks

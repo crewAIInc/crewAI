@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -18,6 +19,7 @@ from crewai.utilities.types import LLMMessage
 
 if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.utilities.files import FileInput, UploadCache
 
 
 try:
@@ -1016,3 +1018,85 @@ class AzureCompletion(BaseLLM):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.aclose()
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
+        return any(self.model.lower().startswith(m) for m in vision_models)
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported by Azure for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        if not self.supports_multimodal():
+            return []
+        return ["image/"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as Azure OpenAI multimodal content blocks.
+
+        Azure OpenAI uses the same image_url format as OpenAI.
+        Uses FileResolver for consistent base64 encoding.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache (not used by Azure but kept for interface consistency).
+
+        Returns:
+            List of content blocks in Azure OpenAI's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.utilities.files import (
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        content_blocks: list[dict[str, Any]] = []
+        supported_types = self.supported_multimodal_content_types()
+
+        # Azure doesn't support file uploads for images, so just use inline
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        for file_input in files.values():
+            content_type = file_input.content_type
+            if not any(content_type.startswith(t) for t in supported_types):
+                continue
+
+            resolved = resolver.resolve(file_input, "azure")
+
+            if isinstance(resolved, InlineBase64):
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
+                        },
+                    }
+                )
+            else:
+                # Fallback to direct base64 encoding
+                data = base64.b64encode(file_input.read()).decode("ascii")
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{content_type};base64,{data}"},
+                    }
+                )
+
+        return content_blocks

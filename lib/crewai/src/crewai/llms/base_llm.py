@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.files import FileInput, UploadCache
     from crewai.utilities.types import LLMMessage
 
 
@@ -279,6 +280,54 @@ class BaseLLM(ABC):
         """
         # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
+
+    def supports_multimodal(self) -> bool:
+        """Check if the LLM supports multimodal inputs.
+
+        Returns:
+            True if the LLM supports images, PDFs, audio, or video.
+        """
+        return False
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get the content types supported by this LLM for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes (e.g., ["image/", "application/pdf"]).
+        """
+        return []
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as multimodal content blocks for the LLM.
+
+        Subclasses should override this to provide provider-specific formatting.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+
+        Returns:
+            List of content blocks in the provider's expected format.
+        """
+        return []
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a content block for the LLM.
+
+        Default implementation uses OpenAI/Anthropic format.
+        Subclasses should override for provider-specific formatting.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in the provider's expected format.
+        """
+        return {"type": "text", "text": text}
 
     # Common helper methods for native SDK implementations
 

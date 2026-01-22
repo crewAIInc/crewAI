@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     )
 
     from crewai.llms.hooks.base import BaseInterceptor
+    from crewai.utilities.files import FileInput, UploadCache
 
 
 try:
@@ -1450,3 +1451,92 @@ class BedrockCompletion(BaseLLM):
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Claude models on Bedrock support vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("anthropic.claude-3",)
+        return any(self.model.lower().startswith(m) for m in vision_models)
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported by Bedrock for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        if not self.supports_multimodal():
+            return []
+        return ["image/", "application/pdf"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as Bedrock Converse API multimodal content blocks.
+
+        Bedrock Converse API uses specific formats for images and documents with raw bytes.
+        Uses FileResolver to get InlineBytes format for Bedrock's byte-based API.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache (not used by Bedrock but kept for interface consistency).
+
+        Returns:
+            List of content blocks in Bedrock's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.utilities.files import (
+            FileResolver,
+            FileResolverConfig,
+            InlineBytes,
+        )
+
+        content_blocks: list[dict[str, Any]] = []
+
+        # Bedrock uses raw bytes, configure resolver accordingly
+        config = FileResolverConfig(prefer_upload=False, use_bytes_for_bedrock=True)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        for name, file_input in files.items():
+            content_type = file_input.content_type
+
+            resolved = resolver.resolve(file_input, "bedrock")
+
+            if isinstance(resolved, InlineBytes):
+                file_bytes = resolved.data
+            else:
+                # Fallback to reading directly
+                file_bytes = file_input.read()
+
+            if content_type.startswith("image/"):
+                media_type = content_type.split("/")[-1]
+                if media_type == "jpg":
+                    media_type = "jpeg"
+                content_blocks.append(
+                    {
+                        "image": {
+                            "format": media_type,
+                            "source": {"bytes": file_bytes},
+                        }
+                    }
+                )
+            elif content_type == "application/pdf":
+                content_blocks.append(
+                    {
+                        "document": {
+                            "name": name,
+                            "format": "pdf",
+                            "source": {"bytes": file_bytes},
+                        }
+                    }
+                )
+
+        return content_blocks

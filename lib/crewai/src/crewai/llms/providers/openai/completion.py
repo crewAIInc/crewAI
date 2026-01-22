@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from collections.abc import AsyncIterator
 import json
 import logging
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+    from crewai.utilities.files import FileInput, UploadCache
 
 
 class OpenAICompletion(BaseLLM):
@@ -1048,3 +1050,101 @@ class OpenAICompletion(BaseLLM):
                 formatted_messages.append(message)
 
         return formatted_messages
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        OpenAI vision-enabled models include GPT-4o, GPT-4.1, and o-series.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = (
+            "gpt-4o",
+            "gpt-4.1",
+            "gpt-4-turbo",
+            "gpt-4-vision",
+            "o1",
+            "o3",
+            "o4",
+        )
+        return any(self.model.lower().startswith(m) for m in vision_models)
+
+    def supported_multimodal_content_types(self) -> list[str]:
+        """Get content types supported by OpenAI for multimodal input.
+
+        Returns:
+            List of supported MIME type prefixes.
+        """
+        if not self.supports_multimodal():
+            return []
+        return ["image/"]
+
+    def format_multimodal_content(
+        self,
+        files: dict[str, FileInput],
+        upload_cache: UploadCache | None = None,
+    ) -> list[dict[str, Any]]:
+        """Format files as OpenAI multimodal content blocks.
+
+        OpenAI supports both base64 data URLs and file_id references via Files API.
+        Uses FileResolver to determine the best delivery method based on file size.
+
+        Args:
+            files: Dictionary mapping file names to FileInput objects.
+            upload_cache: Optional cache for tracking uploaded files.
+
+        Returns:
+            List of content blocks in OpenAI's expected format.
+        """
+        if not self.supports_multimodal():
+            return []
+
+        from crewai.utilities.files import (
+            FileReference,
+            FileResolver,
+            FileResolverConfig,
+            InlineBase64,
+        )
+
+        content_blocks: list[dict[str, Any]] = []
+        supported_types = self.supported_multimodal_content_types()
+
+        config = FileResolverConfig(prefer_upload=False)
+        resolver = FileResolver(config=config, upload_cache=upload_cache)
+
+        for file_input in files.values():
+            content_type = file_input.content_type
+            if not any(content_type.startswith(t) for t in supported_types):
+                continue
+
+            resolved = resolver.resolve(file_input, "openai")
+
+            if isinstance(resolved, FileReference):
+                content_blocks.append(
+                    {
+                        "type": "file",
+                        "file": {
+                            "file_id": resolved.file_id,
+                        },
+                    }
+                )
+            elif isinstance(resolved, InlineBase64):
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{resolved.content_type};base64,{resolved.data}"
+                        },
+                    }
+                )
+            else:
+                data = base64.b64encode(file_input.read()).decode("ascii")
+                content_blocks.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{content_type};base64,{data}"},
+                    }
+                )
+
+        return content_blocks
