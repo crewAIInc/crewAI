@@ -21,6 +21,11 @@ from crewai.files.content_types import (
     VideoFile,
 )
 from crewai.files.file import FilePath
+from crewai.files.processing.exceptions import (
+    PermanentUploadError,
+    TransientUploadError,
+    classify_upload_error,
+)
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
@@ -29,6 +34,51 @@ logger = logging.getLogger(__name__)
 FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 GEMINI_FILE_TTL = timedelta(hours=48)
+
+BACKOFF_BASE_DELAY = 1.0
+BACKOFF_MAX_DELAY = 30.0
+BACKOFF_JITTER_FACTOR = 0.1
+
+
+def _compute_backoff_delay(attempt: int) -> float:
+    """Compute exponential backoff delay with jitter.
+
+    Args:
+        attempt: The current attempt number (0-indexed).
+
+    Returns:
+        Delay in seconds with jitter applied.
+    """
+    delay: float = min(BACKOFF_BASE_DELAY * (2**attempt), BACKOFF_MAX_DELAY)
+    jitter: float = random.uniform(0, delay * BACKOFF_JITTER_FACTOR)  # noqa: S311
+    return float(delay + jitter)
+
+
+def _classify_gemini_error(e: Exception, filename: str | None) -> Exception:
+    """Classify a Gemini exception as transient or permanent upload error.
+
+    Checks Gemini-specific error message patterns first, then falls back
+    to generic status code classification.
+
+    Args:
+        e: The exception to classify.
+        filename: The filename for error context.
+
+    Returns:
+        A TransientUploadError or PermanentUploadError wrapping the original.
+    """
+    error_msg = str(e).lower()
+
+    if "quota" in error_msg or "rate" in error_msg or "limit" in error_msg:
+        return TransientUploadError(f"Rate limit error: {e}", file_name=filename)
+    if "auth" in error_msg or "permission" in error_msg or "denied" in error_msg:
+        return PermanentUploadError(
+            f"Authentication/permission error: {e}", file_name=filename
+        )
+    if "invalid" in error_msg or "unsupported" in error_msg:
+        return PermanentUploadError(f"Invalid request: {e}", file_name=filename)
+
+    return classify_upload_error(e, filename)
 
 
 def _get_file_path(file: FileInput) -> Path | None:
@@ -46,28 +96,10 @@ def _get_file_path(file: FileInput) -> Path | None:
     return None
 
 
-def _get_file_size(file: FileInput) -> int | None:
-    """Get file size without reading content if possible.
-
-    Args:
-        file: The file input.
-
-    Returns:
-        Size in bytes if determinable without reading, None otherwise.
-    """
-    source = file._file_source
-    if isinstance(source, FilePath):
-        return source.path.stat().st_size
-    return None
-
-
 class GeminiFileUploader(FileUploader):
     """Uploader for Google Gemini File API.
 
     Uses the google-genai SDK to upload files. Files are stored for 48 hours.
-
-    Attributes:
-        api_key: Optional API key (uses GOOGLE_API_KEY env var if not provided).
     """
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -116,11 +148,6 @@ class GeminiFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             client = self._get_client()
             display_name = purpose or file.filename
@@ -181,42 +208,7 @@ class GeminiFileUploader(FileUploader):
         except (TransientUploadError, PermanentUploadError):
             raise
         except Exception as e:
-            error_msg = str(e).lower()
-            if "quota" in error_msg or "rate" in error_msg or "limit" in error_msg:
-                raise TransientUploadError(
-                    f"Rate limit error: {e}", file_name=file.filename
-                ) from e
-            if (
-                "auth" in error_msg
-                or "permission" in error_msg
-                or "denied" in error_msg
-            ):
-                raise PermanentUploadError(
-                    f"Authentication/permission error: {e}", file_name=file.filename
-                ) from e
-            if "invalid" in error_msg or "unsupported" in error_msg:
-                raise PermanentUploadError(
-                    f"Invalid request: {e}", file_name=file.filename
-                ) from e
-            status_code = getattr(e, "code", None) or getattr(e, "status_code", None)
-            if status_code is not None:
-                if isinstance(status_code, int):
-                    if status_code >= 500 or status_code == 429:
-                        raise TransientUploadError(
-                            f"Server error ({status_code}): {e}",
-                            file_name=file.filename,
-                        ) from e
-                    if status_code in (401, 403):
-                        raise PermanentUploadError(
-                            f"Auth error ({status_code}): {e}", file_name=file.filename
-                        ) from e
-                    if status_code == 400:
-                        raise PermanentUploadError(
-                            f"Bad request ({status_code}): {e}", file_name=file.filename
-                        ) from e
-            raise TransientUploadError(
-                f"Upload failed: {e}", file_name=file.filename
-            ) from e
+            raise _classify_gemini_error(e, file.filename) from e
 
     async def aupload(
         self, file: FileInput, purpose: str | None = None
@@ -237,11 +229,6 @@ class GeminiFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             client = self._get_client()
             display_name = purpose or file.filename
@@ -302,40 +289,7 @@ class GeminiFileUploader(FileUploader):
         except (TransientUploadError, PermanentUploadError):
             raise
         except Exception as e:
-            error_msg = str(e).lower()
-            if "quota" in error_msg or "rate" in error_msg or "limit" in error_msg:
-                raise TransientUploadError(
-                    f"Rate limit error: {e}", file_name=file.filename
-                ) from e
-            if (
-                "auth" in error_msg
-                or "permission" in error_msg
-                or "denied" in error_msg
-            ):
-                raise PermanentUploadError(
-                    f"Authentication/permission error: {e}", file_name=file.filename
-                ) from e
-            if "invalid" in error_msg or "unsupported" in error_msg:
-                raise PermanentUploadError(
-                    f"Invalid request: {e}", file_name=file.filename
-                ) from e
-            status_code = getattr(e, "code", None) or getattr(e, "status_code", None)
-            if status_code is not None and isinstance(status_code, int):
-                if status_code >= 500 or status_code == 429:
-                    raise TransientUploadError(
-                        f"Server error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code in (401, 403):
-                    raise PermanentUploadError(
-                        f"Auth error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code == 400:
-                    raise PermanentUploadError(
-                        f"Bad request ({status_code}): {e}", file_name=file.filename
-                    ) from e
-            raise TransientUploadError(
-                f"Upload failed: {e}", file_name=file.filename
-            ) from e
+            raise _classify_gemini_error(e, file.filename) from e
 
     def delete(self, file_id: str) -> bool:
         """Delete an uploaded file from Gemini.
@@ -442,8 +396,6 @@ class GeminiFileUploader(FileUploader):
 
         client = self._get_client()
         start_time = time.time()
-        base_delay = 1.0
-        max_delay = 30.0
         attempt = 0
 
         while time.time() - start_time < timeout_seconds:
@@ -451,14 +403,11 @@ class GeminiFileUploader(FileUploader):
 
             if file_info.state == FileState.ACTIVE:
                 return True
-
             if file_info.state == FileState.FAILED:
                 logger.error(f"Gemini file processing failed: {file_id}")
                 return False
 
-            delay = min(base_delay * (2**attempt), max_delay)
-            jitter = random.uniform(0, delay * 0.1)  # noqa: S311
-            time.sleep(delay + jitter)
+            time.sleep(_compute_backoff_delay(attempt))
             attempt += 1
 
         logger.warning(f"Timed out waiting for Gemini file processing: {file_id}")
@@ -485,8 +434,6 @@ class GeminiFileUploader(FileUploader):
 
         client = self._get_client()
         start_time = time.time()
-        base_delay = 1.0
-        max_delay = 30.0
         attempt = 0
 
         while time.time() - start_time < timeout_seconds:
@@ -494,14 +441,11 @@ class GeminiFileUploader(FileUploader):
 
             if file_info.state == FileState.ACTIVE:
                 return True
-
             if file_info.state == FileState.FAILED:
                 logger.error(f"Gemini file processing failed: {file_id}")
                 return False
 
-            delay = min(base_delay * (2**attempt), max_delay)
-            jitter = random.uniform(0, delay * 0.1)  # noqa: S311
-            await asyncio.sleep(delay + jitter)
+            await asyncio.sleep(_compute_backoff_delay(attempt))
             attempt += 1
 
         logger.warning(f"Timed out waiting for Gemini file processing: {file_id}")

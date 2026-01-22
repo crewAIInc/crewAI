@@ -245,7 +245,7 @@ def chunk_text(
         TextFile objects, one per chunk.
     """
     content = file.read()
-    text = content.decode("utf-8", errors="replace")
+    text = content.decode(errors="replace")
     total_chars = len(text)
 
     if total_chars <= max_chars:
@@ -268,7 +268,7 @@ def chunk_text(
                 end_pos = last_newline + 1
 
         chunk_content = text[start_pos:end_pos]
-        chunk_bytes = chunk_content.encode("utf-8")
+        chunk_bytes = chunk_content.encode()
 
         chunk_filename = f"{base_filename}_chunk_{chunk_num}.{extension}"
 

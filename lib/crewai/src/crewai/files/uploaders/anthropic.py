@@ -15,6 +15,7 @@ from crewai.files.content_types import (
     TextFile,
     VideoFile,
 )
+from crewai.files.processing.exceptions import classify_upload_error
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
@@ -28,9 +29,6 @@ class AnthropicFileUploader(FileUploader):
 
     Uses the anthropic SDK to upload files. Files are stored persistently
     until explicitly deleted.
-
-    Attributes:
-        api_key: Optional API key (uses ANTHROPIC_API_KEY env var if not provided).
     """
 
     def __init__(self, api_key: str | None = None) -> None:
@@ -91,11 +89,6 @@ class AnthropicFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             client = self._get_client()
 
@@ -125,36 +118,7 @@ class AnthropicFileUploader(FileUploader):
         except ImportError:
             raise
         except Exception as e:
-            error_type = type(e).__name__
-            if "RateLimit" in error_type or "APIConnection" in error_type:
-                raise TransientUploadError(
-                    f"Transient upload error: {e}", file_name=file.filename
-                ) from e
-            if "Authentication" in error_type or "Permission" in error_type:
-                raise PermanentUploadError(
-                    f"Authentication/permission error: {e}", file_name=file.filename
-                ) from e
-            if "BadRequest" in error_type or "InvalidRequest" in error_type:
-                raise PermanentUploadError(
-                    f"Invalid request: {e}", file_name=file.filename
-                ) from e
-            status_code = getattr(e, "status_code", None)
-            if status_code is not None:
-                if status_code >= 500 or status_code == 429:
-                    raise TransientUploadError(
-                        f"Server error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code in (401, 403):
-                    raise PermanentUploadError(
-                        f"Auth error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code == 400:
-                    raise PermanentUploadError(
-                        f"Bad request ({status_code}): {e}", file_name=file.filename
-                    ) from e
-            raise TransientUploadError(
-                f"Upload failed: {e}", file_name=file.filename
-            ) from e
+            raise classify_upload_error(e, file.filename) from e
 
     def delete(self, file_id: str) -> bool:
         """Delete an uploaded file from Anthropic.
@@ -236,11 +200,6 @@ class AnthropicFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             client = self._get_async_client()
 
@@ -270,36 +229,7 @@ class AnthropicFileUploader(FileUploader):
         except ImportError:
             raise
         except Exception as e:
-            error_type = type(e).__name__
-            if "RateLimit" in error_type or "APIConnection" in error_type:
-                raise TransientUploadError(
-                    f"Transient upload error: {e}", file_name=file.filename
-                ) from e
-            if "Authentication" in error_type or "Permission" in error_type:
-                raise PermanentUploadError(
-                    f"Authentication/permission error: {e}", file_name=file.filename
-                ) from e
-            if "BadRequest" in error_type or "InvalidRequest" in error_type:
-                raise PermanentUploadError(
-                    f"Invalid request: {e}", file_name=file.filename
-                ) from e
-            status_code = getattr(e, "status_code", None)
-            if status_code is not None:
-                if status_code >= 500 or status_code == 429:
-                    raise TransientUploadError(
-                        f"Server error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code in (401, 403):
-                    raise PermanentUploadError(
-                        f"Auth error ({status_code}): {e}", file_name=file.filename
-                    ) from e
-                if status_code == 400:
-                    raise PermanentUploadError(
-                        f"Bad request ({status_code}): {e}", file_name=file.filename
-                    ) from e
-            raise TransientUploadError(
-                f"Upload failed: {e}", file_name=file.filename
-            ) from e
+            raise classify_upload_error(e, file.filename) from e
 
     async def adelete(self, file_id: str) -> bool:
         """Async delete an uploaded file from Anthropic.

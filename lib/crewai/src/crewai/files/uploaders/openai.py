@@ -17,6 +17,11 @@ from crewai.files.content_types import (
     VideoFile,
 )
 from crewai.files.file import FileBytes, FilePath, FileStream
+from crewai.files.processing.exceptions import (
+    PermanentUploadError,
+    TransientUploadError,
+    classify_upload_error,
+)
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
@@ -100,10 +105,6 @@ class OpenAIFileUploader(FileUploader):
 
     Uses the Files API for files up to 512MB (single request).
     Uses the Uploads API for files larger than 512MB (multipart chunked).
-
-    Attributes:
-        api_key: Optional API key (uses OPENAI_API_KEY env var if not provided).
-        chunk_size: Chunk size for multipart uploads (default 64MB).
     """
 
     def __init__(
@@ -127,6 +128,24 @@ class OpenAIFileUploader(FileUploader):
     def provider_name(self) -> str:
         """Return the provider name."""
         return "openai"
+
+    def _build_upload_result(self, file_id: str, content_type: str) -> UploadResult:
+        """Build an UploadResult for a completed upload.
+
+        Args:
+            file_id: The uploaded file ID.
+            content_type: The file's content type.
+
+        Returns:
+            UploadResult with the file metadata.
+        """
+        return UploadResult(
+            file_id=file_id,
+            file_uri=None,
+            content_type=content_type,
+            expires_at=None,
+            provider=self.provider_name,
+        )
 
     def _get_client(self) -> Any:
         """Get or create the OpenAI client."""
@@ -173,11 +192,6 @@ class OpenAIFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             file_size = _get_file_size(file)
 
@@ -193,7 +207,7 @@ class OpenAIFileUploader(FileUploader):
         except (TransientUploadError, PermanentUploadError):
             raise
         except Exception as e:
-            raise self._classify_error(e, file.filename) from e
+            raise classify_upload_error(e, file.filename) from e
 
     def _upload_simple(
         self,
@@ -228,13 +242,7 @@ class OpenAIFileUploader(FileUploader):
 
         logger.info(f"Uploaded to OpenAI: {uploaded_file.id}")
 
-        return UploadResult(
-            file_id=uploaded_file.id,
-            file_uri=None,
-            content_type=file.content_type,
-            expires_at=None,
-            provider=self.provider_name,
-        )
+        return self._build_upload_result(uploaded_file.id, file.content_type)
 
     def _upload_multipart(
         self,
@@ -299,13 +307,7 @@ class OpenAIFileUploader(FileUploader):
             file_id = completed.file.id if completed.file else upload.id
             logger.info(f"Completed multipart upload to OpenAI: {file_id}")
 
-            return UploadResult(
-                file_id=file_id,
-                file_uri=None,
-                content_type=file.content_type,
-                expires_at=None,
-                provider=self.provider_name,
-            )
+            return self._build_upload_result(file_id, file.content_type)
         except Exception:
             logger.warning(f"Multipart upload failed, cancelling upload {upload.id}")
             try:
@@ -373,13 +375,7 @@ class OpenAIFileUploader(FileUploader):
             file_id = completed.file.id if completed.file else upload.id
             logger.info(f"Completed streaming multipart upload to OpenAI: {file_id}")
 
-            return UploadResult(
-                file_id=file_id,
-                file_uri=None,
-                content_type=file.content_type,
-                expires_at=None,
-                provider=self.provider_name,
-            )
+            return self._build_upload_result(file_id, file.content_type)
         except Exception:
             logger.warning(f"Multipart upload failed, cancelling upload {upload.id}")
             try:
@@ -387,51 +383,6 @@ class OpenAIFileUploader(FileUploader):
             except Exception as cancel_err:
                 logger.debug(f"Failed to cancel upload: {cancel_err}")
             raise
-
-    @staticmethod
-    def _classify_error(e: Exception, filename: str | None) -> Exception:
-        """Classify an exception as transient or permanent.
-
-        Args:
-            e: The exception to classify.
-            filename: The filename for error context.
-
-        Returns:
-            TransientUploadError or PermanentUploadError.
-        """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
-        error_type = type(e).__name__
-        if "RateLimit" in error_type or "APIConnection" in error_type:
-            return TransientUploadError(
-                f"Transient upload error: {e}", file_name=filename
-            )
-        if "Authentication" in error_type or "Permission" in error_type:
-            return PermanentUploadError(
-                f"Authentication/permission error: {e}", file_name=filename
-            )
-        if "BadRequest" in error_type or "InvalidRequest" in error_type:
-            return PermanentUploadError(f"Invalid request: {e}", file_name=filename)
-
-        status_code = getattr(e, "status_code", None)
-        if status_code is not None:
-            if status_code >= 500 or status_code == 429:
-                return TransientUploadError(
-                    f"Server error ({status_code}): {e}", file_name=filename
-                )
-            if status_code in (401, 403):
-                return PermanentUploadError(
-                    f"Auth error ({status_code}): {e}", file_name=filename
-                )
-            if status_code == 400:
-                return PermanentUploadError(
-                    f"Bad request ({status_code}): {e}", file_name=filename
-                )
-
-        return TransientUploadError(f"Upload failed: {e}", file_name=filename)
 
     def delete(self, file_id: str) -> bool:
         """Delete an uploaded file from OpenAI.
@@ -518,11 +469,6 @@ class OpenAIFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, rate limits).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             file_size = _get_file_size(file)
 
@@ -538,7 +484,7 @@ class OpenAIFileUploader(FileUploader):
         except (TransientUploadError, PermanentUploadError):
             raise
         except Exception as e:
-            raise self._classify_error(e, file.filename) from e
+            raise classify_upload_error(e, file.filename) from e
 
     async def _aupload_simple(
         self,
@@ -573,13 +519,7 @@ class OpenAIFileUploader(FileUploader):
 
         logger.info(f"Uploaded to OpenAI: {uploaded_file.id}")
 
-        return UploadResult(
-            file_id=uploaded_file.id,
-            file_uri=None,
-            content_type=file.content_type,
-            expires_at=None,
-            provider=self.provider_name,
-        )
+        return self._build_upload_result(uploaded_file.id, file.content_type)
 
     async def _aupload_multipart(
         self,
@@ -644,13 +584,7 @@ class OpenAIFileUploader(FileUploader):
             file_id = completed.file.id if completed.file else upload.id
             logger.info(f"Completed multipart upload to OpenAI: {file_id}")
 
-            return UploadResult(
-                file_id=file_id,
-                file_uri=None,
-                content_type=file.content_type,
-                expires_at=None,
-                provider=self.provider_name,
-            )
+            return self._build_upload_result(file_id, file.content_type)
         except Exception:
             logger.warning(f"Multipart upload failed, cancelling upload {upload.id}")
             try:
@@ -718,13 +652,7 @@ class OpenAIFileUploader(FileUploader):
             file_id = completed.file.id if completed.file else upload.id
             logger.info(f"Completed streaming multipart upload to OpenAI: {file_id}")
 
-            return UploadResult(
-                file_id=file_id,
-                file_uri=None,
-                content_type=file.content_type,
-                expires_at=None,
-                provider=self.provider_name,
-            )
+            return self._build_upload_result(file_id, file.content_type)
         except Exception:
             logger.warning(f"Multipart upload failed, cancelling upload {upload.id}")
             try:

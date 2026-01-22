@@ -101,3 +101,45 @@ class TransientUploadError(UploadError, TransientFileError):
 
 class PermanentUploadError(UploadError, PermanentFileError):
     """Upload failed permanently (auth failure, invalid file, unsupported type)."""
+
+
+def classify_upload_error(e: Exception, filename: str | None = None) -> Exception:
+    """Classify an exception as transient or permanent upload error.
+
+    Analyzes the exception type name and status code to determine if
+    the error is likely transient (retryable) or permanent.
+
+    Args:
+        e: The exception to classify.
+        filename: Optional filename for error context.
+
+    Returns:
+        A TransientUploadError or PermanentUploadError wrapping the original.
+    """
+    error_type = type(e).__name__
+
+    if "RateLimit" in error_type or "APIConnection" in error_type:
+        return TransientUploadError(f"Transient upload error: {e}", file_name=filename)
+    if "Authentication" in error_type or "Permission" in error_type:
+        return PermanentUploadError(
+            f"Authentication/permission error: {e}", file_name=filename
+        )
+    if "BadRequest" in error_type or "InvalidRequest" in error_type:
+        return PermanentUploadError(f"Invalid request: {e}", file_name=filename)
+
+    status_code = getattr(e, "status_code", None)
+    if status_code is not None:
+        if status_code >= 500 or status_code == 429:
+            return TransientUploadError(
+                f"Server error ({status_code}): {e}", file_name=filename
+            )
+        if status_code in (401, 403):
+            return PermanentUploadError(
+                f"Auth error ({status_code}): {e}", file_name=filename
+            )
+        if status_code == 400:
+            return PermanentUploadError(
+                f"Bad request ({status_code}): {e}", file_name=filename
+            )
+
+    return TransientUploadError(f"Upload failed: {e}", file_name=filename)

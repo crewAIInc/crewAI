@@ -17,6 +17,10 @@ from crewai.files.content_types import (
     VideoFile,
 )
 from crewai.files.file import FileBytes, FilePath
+from crewai.files.processing.exceptions import (
+    PermanentUploadError,
+    TransientUploadError,
+)
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
@@ -27,6 +31,30 @@ FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 MULTIPART_THRESHOLD = 8 * 1024 * 1024
 MULTIPART_CHUNKSIZE = 8 * 1024 * 1024
 MAX_CONCURRENCY = 10
+
+
+def _classify_s3_error(e: Exception, filename: str | None) -> Exception:
+    """Classify an S3 exception as transient or permanent upload error.
+
+    Args:
+        e: The exception to classify.
+        filename: The filename for error context.
+
+    Returns:
+        A TransientUploadError or PermanentUploadError wrapping the original.
+    """
+    error_type = type(e).__name__
+    error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+
+    if error_code in ("SlowDown", "ServiceUnavailable", "InternalError"):
+        return TransientUploadError(f"Transient S3 error: {e}", file_name=filename)
+    if error_code in ("AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch"):
+        return PermanentUploadError(f"S3 authentication error: {e}", file_name=filename)
+    if error_code in ("NoSuchBucket", "InvalidBucketName"):
+        return PermanentUploadError(f"S3 bucket error: {e}", file_name=filename)
+    if "Throttl" in error_type or "Throttl" in str(e):
+        return TransientUploadError(f"S3 throttling: {e}", file_name=filename)
+    return TransientUploadError(f"S3 upload failed: {e}", file_name=filename)
 
 
 def _get_file_path(file: FileInput) -> Path | None:
@@ -82,12 +110,6 @@ class BedrockFileUploader(FileUploader):
 
     Uploads files to S3 and returns S3 URIs that can be used with Bedrock's
     Converse API s3Location source format.
-
-    Attributes:
-        bucket_name: S3 bucket name for file uploads.
-        bucket_owner: Optional bucket owner account ID for cross-account access.
-        prefix: Optional S3 key prefix for uploaded files.
-        region: AWS region for the S3 bucket.
     """
 
     def __init__(
@@ -213,7 +235,6 @@ class BedrockFileUploader(FileUploader):
             multipart_threshold=MULTIPART_THRESHOLD,
             multipart_chunksize=MULTIPART_CHUNKSIZE,
             max_concurrency=MAX_CONCURRENCY,
-            use_threads=True,
         )
 
     def upload(self, file: FileInput, purpose: str | None = None) -> UploadResult:
@@ -234,11 +255,6 @@ class BedrockFileUploader(FileUploader):
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
         import io
-
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
 
         try:
             client = self._get_client()
@@ -292,32 +308,7 @@ class BedrockFileUploader(FileUploader):
         except ImportError:
             raise
         except Exception as e:
-            error_type = type(e).__name__
-            error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
-
-            if error_code in ("SlowDown", "ServiceUnavailable", "InternalError"):
-                raise TransientUploadError(
-                    f"Transient S3 error: {e}", file_name=file.filename
-                ) from e
-            if error_code in (
-                "AccessDenied",
-                "InvalidAccessKeyId",
-                "SignatureDoesNotMatch",
-            ):
-                raise PermanentUploadError(
-                    f"S3 authentication error: {e}", file_name=file.filename
-                ) from e
-            if error_code in ("NoSuchBucket", "InvalidBucketName"):
-                raise PermanentUploadError(
-                    f"S3 bucket error: {e}", file_name=file.filename
-                ) from e
-            if "Throttl" in error_type or "Throttl" in str(e):
-                raise TransientUploadError(
-                    f"S3 throttling: {e}", file_name=file.filename
-                ) from e
-            raise TransientUploadError(
-                f"S3 upload failed: {e}", file_name=file.filename
-            ) from e
+            raise _classify_s3_error(e, file.filename) from e
 
     def delete(self, file_id: str) -> bool:
         """Delete an uploaded file from S3.
@@ -412,11 +403,6 @@ class BedrockFileUploader(FileUploader):
 
         import aiofiles
 
-        from crewai.files.processing.exceptions import (
-            PermanentUploadError,
-            TransientUploadError,
-        )
-
         try:
             session = self._get_async_client()
             transfer_config = self._get_transfer_config()
@@ -471,32 +457,7 @@ class BedrockFileUploader(FileUploader):
         except ImportError:
             raise
         except Exception as e:
-            error_type = type(e).__name__
-            error_code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
-
-            if error_code in ("SlowDown", "ServiceUnavailable", "InternalError"):
-                raise TransientUploadError(
-                    f"Transient S3 error: {e}", file_name=file.filename
-                ) from e
-            if error_code in (
-                "AccessDenied",
-                "InvalidAccessKeyId",
-                "SignatureDoesNotMatch",
-            ):
-                raise PermanentUploadError(
-                    f"S3 authentication error: {e}", file_name=file.filename
-                ) from e
-            if error_code in ("NoSuchBucket", "InvalidBucketName"):
-                raise PermanentUploadError(
-                    f"S3 bucket error: {e}", file_name=file.filename
-                ) from e
-            if "Throttl" in error_type or "Throttl" in str(e):
-                raise TransientUploadError(
-                    f"S3 throttling: {e}", file_name=file.filename
-                ) from e
-            raise TransientUploadError(
-                f"S3 upload failed: {e}", file_name=file.filename
-            ) from e
+            raise _classify_s3_error(e, file.filename) from e
 
     async def adelete(self, file_id: str) -> bool:
         """Async delete an uploaded file from S3.

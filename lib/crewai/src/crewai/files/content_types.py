@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC
 from io import IOBase
 from pathlib import Path
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, BinaryIO, Literal, Self
 
 from pydantic import BaseModel, Field, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
@@ -37,15 +37,15 @@ class _FileSourceCoercer:
             return FilePath(path=Path(v))
         if isinstance(v, bytes):
             return FileBytes(data=v)
-        if isinstance(v, IOBase):
+        if isinstance(v, (IOBase, BinaryIO)):
             return FileStream(stream=v)
         raise ValueError(f"Cannot convert {type(v).__name__} to file source")
 
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        source_type: Any,
-        handler: GetCoreSchemaHandler,
+        _source_type: Any,
+        _handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         """Generate Pydantic core schema for FileSource coercion."""
         return core_schema.no_info_plain_validator_function(
@@ -261,7 +261,7 @@ class File(BaseFile):
     The content type is automatically detected from the file contents.
 
     Example:
-        >>> file = File(source="./document.pdf")
-        >>> file = File(source="./image.png")
-        >>> file = File(source=some_bytes)
+        >>> pdf_file = File(source="./document.pdf")
+        >>> image_file = File(source="./image.png")
+        >>> bytes_file = File(source=b"file content")
     """

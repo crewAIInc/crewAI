@@ -23,7 +23,9 @@ from pydantic_core import CoreSchema, core_schema
 class AsyncReadable(Protocol):
     """Protocol for async readable streams."""
 
-    async def read(self, size: int = -1) -> bytes: ...
+    async def read(self, size: int = -1) -> bytes:
+        """Read up to size bytes from the stream."""
+        ...
 
 
 class _AsyncReadableValidator:
