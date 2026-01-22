@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 
     FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
-
 logger = logging.getLogger(__name__)
 
 DEFAULT_TTL_SECONDS = 24 * 60 * 60  # 24 hours
@@ -139,7 +138,6 @@ class UploadCache:
             )
         else:
             self._cache = Cache(
-                Cache.MEMORY,
                 serializer=PickleSerializer(),
                 namespace=namespace,
             )
@@ -406,7 +404,8 @@ class UploadCache:
                 results.append(cached)
         return results
 
-    def _run_sync(self, coro: Any) -> Any:
+    @staticmethod
+    def _run_sync(coro: Any) -> Any:
         """Run an async coroutine from sync context without blocking event loop."""
         try:
             loop = asyncio.get_running_loop()
@@ -549,7 +548,7 @@ def _cleanup_on_exit() -> None:
     from crewai.files.cleanup import cleanup_uploaded_files
 
     try:
-        cleanup_uploaded_files(_default_cache, delete_from_provider=True)
+        cleanup_uploaded_files(_default_cache)
     except Exception as e:
         logger.debug(f"Error during exit cleanup: {e}")
 

@@ -1,6 +1,99 @@
 """Provider-specific file constraints for multimodal content."""
 
 from dataclasses import dataclass
+from typing import Literal
+
+
+ImageFormat = Literal[
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+]
+
+AudioFormat = Literal[
+    "audio/mp3",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "audio/flac",
+    "audio/aac",
+    "audio/m4a",
+    "audio/opus",
+]
+
+VideoFormat = Literal[
+    "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/x-flv",
+]
+
+ProviderName = Literal[
+    "anthropic",
+    "openai",
+    "gemini",
+    "bedrock",
+    "azure",
+]
+
+# Pre-typed format tuples for common combinations
+DEFAULT_IMAGE_FORMATS: tuple[ImageFormat, ...] = (
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+)
+
+GEMINI_IMAGE_FORMATS: tuple[ImageFormat, ...] = (
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+)
+
+DEFAULT_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
+    "audio/mp3",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "audio/flac",
+    "audio/aac",
+    "audio/m4a",
+)
+
+GEMINI_AUDIO_FORMATS: tuple[AudioFormat, ...] = (
+    "audio/mp3",
+    "audio/mpeg",
+    "audio/wav",
+    "audio/ogg",
+    "audio/flac",
+    "audio/aac",
+    "audio/m4a",
+    "audio/opus",
+)
+
+DEFAULT_VIDEO_FORMATS: tuple[VideoFormat, ...] = (
+    "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/quicktime",
+)
+
+GEMINI_VIDEO_FORMATS: tuple[VideoFormat, ...] = (
+    "video/mp4",
+    "video/mpeg",
+    "video/webm",
+    "video/quicktime",
+    "video/x-msvideo",
+    "video/x-flv",
+)
 
 
 @dataclass(frozen=True)
@@ -19,12 +112,7 @@ class ImageConstraints:
     max_width: int | None = None
     max_height: int | None = None
     max_images_per_request: int | None = None
-    supported_formats: tuple[str, ...] = (
-        "image/png",
-        "image/jpeg",
-        "image/gif",
-        "image/webp",
-    )
+    supported_formats: tuple[ImageFormat, ...] = DEFAULT_IMAGE_FORMATS
 
 
 @dataclass(frozen=True)
@@ -52,15 +140,7 @@ class AudioConstraints:
 
     max_size_bytes: int
     max_duration_seconds: int | None = None
-    supported_formats: tuple[str, ...] = (
-        "audio/mp3",
-        "audio/mpeg",
-        "audio/wav",
-        "audio/ogg",
-        "audio/flac",
-        "audio/aac",
-        "audio/m4a",
-    )
+    supported_formats: tuple[AudioFormat, ...] = DEFAULT_AUDIO_FORMATS
 
 
 @dataclass(frozen=True)
@@ -75,12 +155,7 @@ class VideoConstraints:
 
     max_size_bytes: int
     max_duration_seconds: int | None = None
-    supported_formats: tuple[str, ...] = (
-        "video/mp4",
-        "video/mpeg",
-        "video/webm",
-        "video/quicktime",
-    )
+    supported_formats: tuple[VideoFormat, ...] = DEFAULT_VIDEO_FORMATS
 
 
 @dataclass(frozen=True)
@@ -98,7 +173,7 @@ class ProviderConstraints:
         file_upload_threshold_bytes: Size threshold above which to use file upload.
     """
 
-    name: str
+    name: ProviderName
     image: ImageConstraints | None = None
     pdf: PDFConstraints | None = None
     audio: AudioConstraints | None = None
@@ -114,7 +189,6 @@ ANTHROPIC_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=5 * 1024 * 1024,
         max_width=8000,
         max_height=8000,
-        supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
     pdf=PDFConstraints(
         max_size_bytes=30 * 1024 * 1024,
@@ -129,9 +203,7 @@ OPENAI_CONSTRAINTS = ProviderConstraints(
     image=ImageConstraints(
         max_size_bytes=20 * 1024 * 1024,
         max_images_per_request=10,
-        supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
-    pdf=None,
     supports_file_upload=True,
     file_upload_threshold_bytes=5 * 1024 * 1024,
 )
@@ -140,41 +212,18 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
     name="gemini",
     image=ImageConstraints(
         max_size_bytes=100 * 1024 * 1024,
-        supported_formats=(
-            "image/png",
-            "image/jpeg",
-            "image/gif",
-            "image/webp",
-            "image/heic",
-            "image/heif",
-        ),
+        supported_formats=GEMINI_IMAGE_FORMATS,
     ),
     pdf=PDFConstraints(
         max_size_bytes=50 * 1024 * 1024,
     ),
     audio=AudioConstraints(
         max_size_bytes=100 * 1024 * 1024,
-        supported_formats=(
-            "audio/mp3",
-            "audio/mpeg",
-            "audio/wav",
-            "audio/ogg",
-            "audio/flac",
-            "audio/aac",
-            "audio/m4a",
-            "audio/opus",
-        ),
+        supported_formats=GEMINI_AUDIO_FORMATS,
     ),
     video=VideoConstraints(
         max_size_bytes=2 * 1024 * 1024 * 1024,
-        supported_formats=(
-            "video/mp4",
-            "video/mpeg",
-            "video/webm",
-            "video/quicktime",
-            "video/x-msvideo",
-            "video/x-flv",
-        ),
+        supported_formats=GEMINI_VIDEO_FORMATS,
     ),
     supports_file_upload=True,
     file_upload_threshold_bytes=20 * 1024 * 1024,
@@ -186,7 +235,6 @@ BEDROCK_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=4_608_000,
         max_width=8000,
         max_height=8000,
-        supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
     pdf=PDFConstraints(
         max_size_bytes=3_840_000,
@@ -199,9 +247,7 @@ AZURE_CONSTRAINTS = ProviderConstraints(
     image=ImageConstraints(
         max_size_bytes=20 * 1024 * 1024,
         max_images_per_request=10,
-        supported_formats=("image/png", "image/jpeg", "image/gif", "image/webp"),
     ),
-    pdf=None,
 )
 
 

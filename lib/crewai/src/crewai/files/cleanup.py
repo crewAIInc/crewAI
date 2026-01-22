@@ -237,9 +237,12 @@ async def acleanup_uploaded_files(
     if delete_from_provider:
         semaphore = asyncio.Semaphore(max_concurrency)
 
-        async def delete_one(uploader: FileUploader, upload: CachedUpload) -> bool:
+        async def delete_one(file_uploader: FileUploader, cached: CachedUpload) -> bool:
+            """Delete a single file with semaphore limiting."""
             async with semaphore:
-                return await _asafe_delete(uploader, upload.file_id, upload.provider)
+                return await _asafe_delete(
+                    file_uploader, cached.file_id, cached.provider
+                )
 
         tasks: list[asyncio.Task[bool]] = []
         for provider, uploads in provider_uploads.items():
@@ -251,7 +254,7 @@ async def acleanup_uploaded_files(
                 continue
 
             tasks.extend(
-                asyncio.create_task(delete_one(uploader, upload)) for upload in uploads
+                asyncio.create_task(delete_one(uploader, cached)) for cached in uploads
             )
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -291,19 +294,20 @@ async def acleanup_expired_files(
     if delete_from_provider and expired_entries:
         semaphore = asyncio.Semaphore(max_concurrency)
 
-        async def delete_expired(upload: CachedUpload) -> None:
+        async def delete_expired(cached: CachedUpload) -> None:
+            """Delete an expired file with semaphore limiting."""
             async with semaphore:
-                uploader = get_uploader(upload.provider)
-                if uploader is not None:
+                file_uploader = get_uploader(cached.provider)
+                if file_uploader is not None:
                     try:
-                        await uploader.adelete(upload.file_id)
+                        await file_uploader.adelete(cached.file_id)
                     except Exception as e:
                         logger.debug(
-                            f"Could not delete expired file {upload.file_id}: {e}"
+                            f"Could not delete expired file {cached.file_id}: {e}"
                         )
 
         await asyncio.gather(
-            *[delete_expired(upload) for upload in expired_entries],
+            *[delete_expired(cached) for cached in expired_entries],
             return_exceptions=True,
         )
 
@@ -337,18 +341,19 @@ async def acleanup_provider_files(
 
     semaphore = asyncio.Semaphore(max_concurrency)
 
-    async def delete_file(file_id: str) -> bool:
+    async def delete_single(target_file_id: str) -> bool:
+        """Delete a single file with semaphore limiting."""
         async with semaphore:
-            return await uploader.adelete(file_id)
+            return await uploader.adelete(target_file_id)
 
     if delete_all_from_provider:
         try:
             files = uploader.list_files()
             tasks = []
             for file_info in files:
-                file_id = file_info.get("id") or file_info.get("name")
-                if file_id:
-                    tasks.append(delete_file(file_id))
+                fid = file_info.get("id") or file_info.get("name")
+                if fid:
+                    tasks.append(delete_single(fid))
             results = await asyncio.gather(*tasks, return_exceptions=True)
             deleted = sum(1 for r in results if r is True)
         except Exception as e:
@@ -357,7 +362,7 @@ async def acleanup_provider_files(
         uploads = await cache.aget_all_for_provider(provider)
         tasks = []
         for upload in uploads:
-            tasks.append(delete_file(upload.file_id))
+            tasks.append(delete_single(upload.file_id))
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for upload, result in zip(uploads, results, strict=False):
             if result is True:

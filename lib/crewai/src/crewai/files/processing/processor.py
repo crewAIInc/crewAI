@@ -89,7 +89,8 @@ class FileProcessor:
         raise_on_error = mode == FileHandling.STRICT
         return validate_file(file, self.constraints, raise_on_error=raise_on_error)
 
-    def _get_mode(self, file: FileInput) -> FileHandling:
+    @staticmethod
+    def _get_mode(file: FileInput) -> FileHandling:
         """Get the mode mode for a file.
 
         Args:
@@ -201,32 +202,33 @@ class FileProcessor:
         """
         semaphore = asyncio.Semaphore(max_concurrency)
 
-        async def process_one(
-            name: str, file: FileInput
+        async def process_single(
+            key: str, input_file: FileInput
         ) -> tuple[str, FileInput | Sequence[FileInput]]:
+            """Process a single file with semaphore limiting."""
             async with semaphore:
                 loop = asyncio.get_running_loop()
-                processed = await loop.run_in_executor(None, self.process, file)
-                return name, processed
+                result = await loop.run_in_executor(None, self.process, input_file)
+                return key, result
 
-        tasks = [process_one(n, f) for n, f in files.items()]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = [process_single(n, f) for n, f in files.items()]
+        gather_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         output: dict[str, FileInput] = {}
-        for result in results:
-            if isinstance(result, BaseException):
-                logger.error(f"Processing failed: {result}")
+        for item in gather_results:
+            if isinstance(item, BaseException):
+                logger.error(f"Processing failed: {item}")
                 continue
-            name, processed = result
+            entry_name, processed = item
             if isinstance(processed, Sequence) and not isinstance(
                 processed, (str, bytes)
             ):
                 for i, chunk in enumerate(processed):
-                    output[f"{name}_chunk_{i}"] = chunk
+                    output[f"{entry_name}_chunk_{i}"] = chunk
             elif isinstance(
                 processed, (AudioFile, File, ImageFile, PDFFile, TextFile, VideoFile)
             ):
-                output[name] = processed
+                output[entry_name] = processed
 
         return output
 

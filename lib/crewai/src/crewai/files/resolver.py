@@ -16,7 +16,11 @@ from crewai.files.content_types import (
 )
 from crewai.files.metrics import measure_operation
 from crewai.files.processing.constraints import (
+    AudioConstraints,
+    ImageConstraints,
+    PDFConstraints,
     ProviderConstraints,
+    VideoConstraints,
     get_constraints_for_provider,
 )
 from crewai.files.resolved import (
@@ -91,7 +95,8 @@ class FileResolver:
     upload_cache: UploadCache | None = None
     _uploaders: dict[str, FileUploader] = field(default_factory=dict)
 
-    def _build_file_context(self, file: FileInput) -> FileContext:
+    @staticmethod
+    def _build_file_context(file: FileInput) -> FileContext:
         """Build context by reading file once.
 
         Args:
@@ -149,6 +154,30 @@ class FileResolver:
         """
         return {name: self.resolve(file, provider) for name, file in files.items()}
 
+    @staticmethod
+    def _get_type_constraint(
+        content_type: str,
+        constraints: ProviderConstraints,
+    ) -> ImageConstraints | PDFConstraints | AudioConstraints | VideoConstraints | None:
+        """Get type-specific constraint based on content type.
+
+        Args:
+            content_type: MIME type of the file.
+            constraints: Provider constraints.
+
+        Returns:
+            Type-specific constraint or None if not found.
+        """
+        if content_type.startswith("image/"):
+            return constraints.image
+        if content_type == "application/pdf":
+            return constraints.pdf
+        if content_type.startswith("audio/"):
+            return constraints.audio
+        if content_type.startswith("video/"):
+            return constraints.video
+        return None
+
     def _should_upload(
         self,
         file: FileInput,
@@ -157,6 +186,10 @@ class FileResolver:
         file_size: int,
     ) -> bool:
         """Determine if a file should be uploaded rather than inlined.
+
+        Uses type-specific constraints to make smarter decisions:
+        - Checks if file exceeds type-specific inline size limits
+        - Falls back to general threshold if no type-specific constraint
 
         Args:
             file: The file to check.
@@ -173,8 +206,21 @@ class FileResolver:
         if self.config.prefer_upload:
             return True
 
+        content_type = file.content_type
+        type_constraint = self._get_type_constraint(content_type, constraints)
+
+        if type_constraint is not None:
+            # Check if file exceeds type-specific inline limit
+            if file_size > type_constraint.max_size_bytes:
+                logger.debug(
+                    f"File {file.filename} ({file_size}B) exceeds {content_type} "
+                    f"inline limit ({type_constraint.max_size_bytes}B) for {provider}"
+                )
+                return True
+
+        # Fall back to general threshold
         threshold = self.config.upload_threshold_bytes
-        if threshold is None and constraints is not None:
+        if threshold is None:
             threshold = constraints.file_upload_threshold_bytes
 
         if threshold is not None and file_size > threshold:
@@ -239,8 +285,8 @@ class FileResolver:
             file_uri=result.file_uri,
         )
 
+    @staticmethod
     def _upload_with_retry(
-        self,
         uploader: FileUploader,
         file: FileInput,
         provider: str,
@@ -312,13 +358,14 @@ class FileResolver:
         """Resolve a file as inline content.
 
         Args:
-            file: The file to resolve.
+            file: The file to resolve (used for logging).
             provider: Provider name.
             context: Pre-computed file context.
 
         Returns:
             InlineBase64 or InlineBytes depending on provider.
         """
+        logger.debug(f"Resolving {file.filename} as inline for {provider}")
         if self.config.use_bytes_for_bedrock and "bedrock" in provider:
             return InlineBytes(
                 content_type=context.content_type,
@@ -374,21 +421,24 @@ class FileResolver:
         """
         semaphore = asyncio.Semaphore(max_concurrency)
 
-        async def resolve_one(name: str, file: FileInput) -> tuple[str, ResolvedFile]:
+        async def resolve_single(
+            entry_key: str, input_file: FileInput
+        ) -> tuple[str, ResolvedFile]:
+            """Resolve a single file with semaphore limiting."""
             async with semaphore:
-                resolved = await self.aresolve(file, provider)
-                return name, resolved
+                entry_resolved = await self.aresolve(input_file, provider)
+                return entry_key, entry_resolved
 
-        tasks = [resolve_one(n, f) for n, f in files.items()]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        tasks = [resolve_single(n, f) for n, f in files.items()]
+        gather_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         output: dict[str, ResolvedFile] = {}
-        for result in results:
-            if isinstance(result, BaseException):
-                logger.error(f"Resolution failed: {result}")
+        for item in gather_results:
+            if isinstance(item, BaseException):
+                logger.error(f"Resolution failed: {item}")
                 continue
-            name, resolved = result
-            output[name] = resolved
+            key, resolved = item
+            output[key] = resolved
 
         return output
 
@@ -451,8 +501,8 @@ class FileResolver:
             file_uri=result.file_uri,
         )
 
+    @staticmethod
     async def _aupload_with_retry(
-        self,
         uploader: FileUploader,
         file: FileInput,
         provider: str,
@@ -559,17 +609,24 @@ def create_resolver(
     """Create a configured FileResolver.
 
     Args:
-        provider: Optional provider name for provider-specific configuration.
+        provider: Optional provider name to load default threshold from constraints.
         prefer_upload: Whether to prefer upload over inline.
-        upload_threshold_bytes: Size threshold for using upload.
+        upload_threshold_bytes: Size threshold for using upload. If None and
+            provider is specified, uses provider's default threshold.
         enable_cache: Whether to enable upload caching.
 
     Returns:
         Configured FileResolver instance.
     """
+    threshold = upload_threshold_bytes
+    if threshold is None and provider is not None:
+        constraints = get_constraints_for_provider(provider)
+        if constraints is not None:
+            threshold = constraints.file_upload_threshold_bytes
+
     config = FileResolverConfig(
         prefer_upload=prefer_upload,
-        upload_threshold_bytes=upload_threshold_bytes,
+        upload_threshold_bytes=threshold,
     )
 
     cache = UploadCache() if enable_cache else None

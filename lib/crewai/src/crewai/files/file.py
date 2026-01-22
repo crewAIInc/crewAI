@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
+import mimetypes
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
 
 import aiofiles
-import magic
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -52,17 +52,30 @@ ValidatedAsyncReadable = Annotated[AsyncReadable, _AsyncReadableValidator()]
 DEFAULT_MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024  # 500MB
 
 
-def detect_content_type(data: bytes) -> str:
+def detect_content_type(data: bytes, filename: str | None = None) -> str:
     """Detect MIME type from file content.
+
+    Uses python-magic if available for accurate content-based detection,
+    falls back to mimetypes module using filename extension.
 
     Args:
         data: Raw bytes to analyze.
+        filename: Optional filename for extension-based fallback.
 
     Returns:
         The detected MIME type.
     """
-    result: str = magic.from_buffer(data, mime=True)
-    return result
+    try:
+        import magic
+
+        result: str = magic.from_buffer(data, mime=True)
+        return result
+    except ImportError:
+        if filename:
+            mime_type, _ = mimetypes.guess_type(filename)
+            if mime_type:
+                return mime_type
+        return "application/octet-stream"
 
 
 class _BinaryIOValidator:
@@ -139,7 +152,7 @@ class FilePath(BaseModel):
     @property
     def content_type(self) -> str:
         """Get the content type by reading file content."""
-        return detect_content_type(self.read())
+        return detect_content_type(self.read(), self.filename)
 
     def read(self) -> bytes:
         """Read the file content from disk."""
@@ -190,7 +203,7 @@ class FileBytes(BaseModel):
     @property
     def content_type(self) -> str:
         """Get the content type from the data."""
-        return detect_content_type(self.data)
+        return detect_content_type(self.data, self.filename)
 
     def read(self) -> bytes:
         """Return the bytes content."""
@@ -242,7 +255,7 @@ class FileStream(BaseModel):
     @property
     def content_type(self) -> str:
         """Get the content type from stream content."""
-        return detect_content_type(self.read())
+        return detect_content_type(self.read(), self.filename)
 
     def read(self) -> bytes:
         """Read the stream content. Content is cached after first read."""
@@ -310,7 +323,7 @@ class AsyncFileStream(BaseModel):
         """Get the content type from stream content. Requires aread() first."""
         if self._content is None:
             raise RuntimeError("Call aread() first to load content")
-        return detect_content_type(self._content)
+        return detect_content_type(self._content, self.filename)
 
     async def aread(self) -> bytes:
         """Async read the stream content. Content is cached after first read."""

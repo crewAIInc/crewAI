@@ -204,7 +204,8 @@ class BedrockFileUploader(FileUploader):
         """
         return f"s3://{self.bucket_name}/{key}"
 
-    def _get_transfer_config(self) -> Any:
+    @staticmethod
+    def _get_transfer_config() -> Any:
         """Get boto3 TransferConfig for multipart uploads."""
         from boto3.s3.transfer import TransferConfig
 

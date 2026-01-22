@@ -388,7 +388,8 @@ class OpenAIFileUploader(FileUploader):
                 logger.debug(f"Failed to cancel upload: {cancel_err}")
             raise
 
-    def _classify_error(self, e: Exception, filename: str | None) -> Exception:
+    @staticmethod
+    def _classify_error(e: Exception, filename: str | None) -> Exception:
         """Classify an exception as transient or permanent.
 
         Args:

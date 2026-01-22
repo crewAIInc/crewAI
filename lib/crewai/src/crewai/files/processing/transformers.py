@@ -305,7 +305,7 @@ def get_image_dimensions(file: ImageFile) -> tuple[int, int] | None:
     try:
         with Image.open(io.BytesIO(content)) as img:
             width, height = img.size
-            return (width, height)
+            return width, height
     except Exception as e:
         logger.warning(f"Failed to get image dimensions: {e}")
         return None
