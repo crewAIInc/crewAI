@@ -544,6 +544,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         from crewai.events import crewai_event_bus
         from crewai.events.types.tool_usage_events import (
+            ToolUsageErrorEvent,
             ToolUsageFinishedEvent,
             ToolUsageStartedEvent,
         )
@@ -611,6 +612,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             args_dict = func_args
 
+        agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+
         # Emit tool usage started event
         started_at = datetime.now()
         crewai_event_bus.emit(
@@ -620,6 +623,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 tool_args=args_dict,
                 from_agent=self.agent,
                 from_task=self.task,
+                agent_key=agent_key,
             ),
         )
 
@@ -633,6 +637,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     result = str(result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        error=e,
+                    ),
+                )
 
         # Emit tool usage finished event
         crewai_event_bus.emit(
@@ -643,6 +658,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 tool_args=args_dict,
                 from_agent=self.agent,
                 from_task=self.task,
+                agent_key=agent_key,
                 started_at=started_at,
                 finished_at=datetime.now(),
             ),

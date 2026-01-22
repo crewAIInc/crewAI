@@ -57,6 +57,12 @@ class WeatherTool(BaseTool):
         """Get weather (mock implementation)."""
         return f"The weather in {location} is sunny with a temperature of 72°F"
 
+class FailingTool(BaseTool):
+    """A tool that always fails."""
+    name: str = "failing_tool"
+    description: str = "This tool always fails"
+    def _run(self) -> str:
+        raise Exception("This tool always fails")
 
 @pytest.fixture
 def calculator_tool() -> CalculatorTool:
@@ -69,6 +75,12 @@ def weather_tool() -> WeatherTool:
     """Create a weather tool for testing."""
     return WeatherTool()
 
+@pytest.fixture
+def failing_tool() -> BaseTool:
+    """Create a weather tool for testing."""
+    return FailingTool(
+
+    )
 
 # =============================================================================
 # OpenAI Provider Tests
@@ -481,3 +493,41 @@ class TestNativeToolCallingTokenUsage:
         print(f"  Prompt tokens: {result.token_usage.prompt_tokens}")
         print(f"  Completion tokens: {result.token_usage.completion_tokens}")
         print(f"  Total tokens: {result.token_usage.total_tokens}")
+
+@pytest.mark.vcr()
+def test_native_tool_calling_error_handling(failing_tool: FailingTool):
+    """Test that native tool calling handles errors properly and emits error events."""
+    import threading
+    from crewai.events import crewai_event_bus
+    from crewai.events.types.tool_usage_events import ToolUsageErrorEvent
+
+    received_events = []
+    event_received = threading.Event()
+
+    @crewai_event_bus.on(ToolUsageErrorEvent)
+    def handle_tool_error(source, event):
+        received_events.append(event)
+        event_received.set()
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations efficiently",
+        backstory="You calculate things.",
+        tools=[failing_tool],
+        llm=LLM(model="gpt-4o-mini"),
+        verbose=False,
+        max_iter=3,
+    )
+
+    result = agent.kickoff("Use the failing_tool to do something.")
+    assert result is not None
+
+    # Verify error event was emitted
+    assert event_received.wait(timeout=10), "ToolUsageErrorEvent was not emitted"
+    assert len(received_events) >= 1
+
+    # Verify event attributes
+    error_event = received_events[0]
+    assert error_event.tool_name == "failing_tool"
+    assert error_event.agent_role == agent.role
+    assert "This tool always fails" in str(error_event.error)

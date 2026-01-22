@@ -27,6 +27,7 @@ from crewai.events.types.logging_events import (
     AgentLogsStartedEvent,
 )
 from crewai.events.types.tool_usage_events import (
+    ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
@@ -581,6 +582,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             else:
                 args_dict = func_args
 
+            # Get agent_key for event tracking
+            agent_key = (
+                getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+            )
+
             # Emit tool usage started event
             started_at = datetime.now()
             crewai_event_bus.emit(
@@ -590,6 +596,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     tool_args=args_dict,
                     from_agent=self.agent,
                     from_task=self.task,
+                    agent_key=agent_key,
                 ),
             )
 
@@ -603,6 +610,18 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                         result = str(result)
                 except Exception as e:
                     result = f"Error executing tool: {e}"
+                    # Emit tool usage error event
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageErrorEvent(
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            error=e,
+                        ),
+                    )
 
             # Emit tool usage finished event
             crewai_event_bus.emit(
@@ -613,6 +632,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     tool_args=args_dict,
                     from_agent=self.agent,
                     from_task=self.task,
+                    agent_key=agent_key,
                     started_at=started_at,
                     finished_at=datetime.now(),
                 ),
