@@ -18,11 +18,11 @@ interactions:
       x-ms-client-request-id:
       - X-MS-CLIENT-REQUEST-ID-XXX
     method: POST
-    uri: https://crewai-azure-openai.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
   response:
     body:
       string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"2
-        + 2 equals 4.","refusal":null,"role":"assistant"}}],"created":1769120025,"id":"chatcmpl-D0xDt1WJJVcrhorNUW33ppr7jWVsf","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":9,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":24,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":33}}
+        + 2 equals 4.","refusal":null,"role":"assistant"}}],"created":1769122120,"id":"chatcmpl-D0xlgavqCpAYyXume2W3z5vOy287A","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":9,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":24,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":33}}
 
         '
     headers:
@@ -31,7 +31,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 22:13:45 GMT
+      - Thu, 22 Jan 2026 22:48:40 GMT
       Strict-Transport-Security:
       - STS-XXX
       apim-request-id:

@@ -149,6 +149,13 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
                 request.headers[variant] = [replacement]
 
     request.method = request.method.upper()
+
+    # Normalize Azure OpenAI endpoints to a consistent placeholder for cassette matching.
+    if request.host and request.host.endswith(".openai.azure.com"):
+        original_host = request.host
+        placeholder_host = "fake-azure-endpoint.openai.azure.com"
+        request.uri = request.uri.replace(original_host, placeholder_host)
+
     return request
 
 
