@@ -1146,7 +1146,6 @@ wheels = [
 name = "crewai"
 source = { editable = "lib/crewai" }
 dependencies = [
-    { name = "aiocache" },
     { name = "aiosqlite" },
     { name = "appdirs" },
     { name = "chromadb" },
@@ -1167,7 +1166,6 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
-    { name = "python-magic" },
     { name = "regex" },
     { name = "tokenizers" },
     { name = "tomli" },
@@ -1202,14 +1200,13 @@ embeddings = [
     { name = "tiktoken" },
 ]
 file-processing = [
+    { name = "aiocache" },
     { name = "pillow" },
     { name = "pypdf" },
+    { name = "python-magic" },
 ]
 google-genai = [
     { name = "google-genai" },
-]
-image-processing = [
-    { name = "pillow" },
 ]
 litellm = [
     { name = "litellm" },
@@ -1222,9 +1219,6 @@ openpyxl = [
 ]
 pandas = [
     { name = "pandas" },
-]
-pdf-processing = [
-    { name = "pypdf" },
 ]
 qdrant = [
     { name = "qdrant-client", extra = ["fastembed"] },
@@ -1243,7 +1237,7 @@ watson = [
 requires-dist = [
     { name = "a2a-sdk", marker = "extra == 'a2a'", specifier = "~=0.3.10" },
     { name = "aiobotocore", marker = "extra == 'aws'", specifier = "~=2.25.2" },
-    { name = "aiocache", specifier = "~=0.12.3" },
+    { name = "aiocache", marker = "extra == 'file-processing'", specifier = "~=0.12.3" },
     { name = "aiocache", extras = ["memcached", "redis"], marker = "extra == 'a2a'", specifier = "~=0.12.3" },
     { name = "aiosqlite", specifier = "~=0.21.0" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = "~=0.71.0" },
@@ -1275,15 +1269,13 @@ requires-dist = [
     { name = "pandas", marker = "extra == 'pandas'", specifier = "~=2.2.3" },
     { name = "pdfplumber", specifier = "~=0.11.4" },
     { name = "pillow", marker = "extra == 'file-processing'", specifier = "~=10.4.0" },
-    { name = "pillow", marker = "extra == 'image-processing'", specifier = "~=10.4.0" },
     { name = "portalocker", specifier = "~=2.7.0" },
     { name = "pydantic", specifier = "~=2.11.9" },
     { name = "pydantic-settings", specifier = "~=2.10.1" },
     { name = "pyjwt", specifier = "~=2.9.0" },
     { name = "pypdf", marker = "extra == 'file-processing'", specifier = "~=4.0.0" },
-    { name = "pypdf", marker = "extra == 'pdf-processing'", specifier = "~=4.0.0" },
     { name = "python-dotenv", specifier = "~=1.1.1" },
-    { name = "python-magic", specifier = ">=0.4.27" },
+    { name = "python-magic", marker = "extra == 'file-processing'", specifier = ">=0.4.27" },
     { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = "~=1.14.3" },
     { name = "regex", specifier = "~=2024.9.11" },
     { name = "tiktoken", marker = "extra == 'embeddings'", specifier = "~=0.8.0" },
@@ -1293,7 +1285,7 @@ requires-dist = [
     { name = "uv", specifier = "~=0.9.13" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "image-processing", "litellm", "mem0", "openpyxl", "pandas", "pdf-processing", "qdrant", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-devtools"
