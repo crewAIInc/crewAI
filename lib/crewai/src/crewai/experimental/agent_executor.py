@@ -39,6 +39,7 @@ from crewai.hooks.llm_hooks import (
 from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
+    extract_tool_call_info,
     format_message_for_llm,
     get_llm_response,
     handle_agent_action_core,
@@ -50,7 +51,6 @@ from crewai.utilities.agent_utils import (
     is_context_length_exceeded,
     is_inside_event_loop,
     process_llm_response,
-    extract_tool_call_info,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
