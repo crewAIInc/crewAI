@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import io
 import logging
 import os
+from pathlib import Path
 import random
 import time
 from typing import Any
@@ -19,6 +20,7 @@ from crewai.files.content_types import (
     TextFile,
     VideoFile,
 )
+from crewai.files.file import FilePath
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
@@ -27,6 +29,36 @@ logger = logging.getLogger(__name__)
 FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
 
 GEMINI_FILE_TTL = timedelta(hours=48)
+
+
+def _get_file_path(file: FileInput) -> Path | None:
+    """Get the filesystem path if file source is FilePath.
+
+    Args:
+        file: The file input to check.
+
+    Returns:
+        Path if source is FilePath, None otherwise.
+    """
+    source = file._file_source
+    if isinstance(source, FilePath):
+        return source.path
+    return None
+
+
+def _get_file_size(file: FileInput) -> int | None:
+    """Get file size without reading content if possible.
+
+    Args:
+        file: The file input.
+
+    Returns:
+        Size in bytes if determinable without reading, None otherwise.
+    """
+    source = file._file_source
+    if isinstance(source, FilePath):
+        return source.path.stat().st_size
+    return None
 
 
 class GeminiFileUploader(FileUploader):
@@ -70,6 +102,9 @@ class GeminiFileUploader(FileUploader):
     def upload(self, file: FileInput, purpose: str | None = None) -> UploadResult:
         """Upload a file to Gemini.
 
+        For FilePath sources, passes the path directly to the SDK which handles
+        streaming internally via resumable uploads, avoiding memory overhead.
+
         Args:
             file: The file to upload.
             purpose: Optional purpose/description (used as display name).
@@ -88,24 +123,38 @@ class GeminiFileUploader(FileUploader):
 
         try:
             client = self._get_client()
-
-            content = file.read()
             display_name = purpose or file.filename
 
-            file_data = io.BytesIO(content)
-            file_data.name = file.filename
+            file_path = _get_file_path(file)
+            if file_path is not None:
+                file_size = file_path.stat().st_size
+                logger.info(
+                    f"Uploading file '{file.filename}' to Gemini via path "
+                    f"({file_size} bytes, streaming)"
+                )
+                uploaded_file = client.files.upload(
+                    file=file_path,
+                    config={
+                        "display_name": display_name,
+                        "mime_type": file.content_type,
+                    },
+                )
+            else:
+                content = file.read()
+                file_data = io.BytesIO(content)
+                file_data.name = file.filename
 
-            logger.info(
-                f"Uploading file '{file.filename}' to Gemini ({len(content)} bytes)"
-            )
+                logger.info(
+                    f"Uploading file '{file.filename}' to Gemini ({len(content)} bytes)"
+                )
 
-            uploaded_file = client.files.upload(
-                file=file_data,
-                config={
-                    "display_name": display_name,
-                    "mime_type": file.content_type,
-                },
-            )
+                uploaded_file = client.files.upload(
+                    file=file_data,
+                    config={
+                        "display_name": display_name,
+                        "mime_type": file.content_type,
+                    },
+                )
 
             if file.content_type.startswith("video/"):
                 if not self.wait_for_processing(uploaded_file.name):
@@ -174,7 +223,8 @@ class GeminiFileUploader(FileUploader):
     ) -> UploadResult:
         """Async upload a file to Gemini using native async client.
 
-        Uses async wait_for_processing for video files.
+        For FilePath sources, passes the path directly to the SDK which handles
+        streaming internally via resumable uploads, avoiding memory overhead.
 
         Args:
             file: The file to upload.
@@ -194,24 +244,38 @@ class GeminiFileUploader(FileUploader):
 
         try:
             client = self._get_client()
-
-            content = await file.aread()
             display_name = purpose or file.filename
 
-            file_data = io.BytesIO(content)
-            file_data.name = file.filename
+            file_path = _get_file_path(file)
+            if file_path is not None:
+                file_size = file_path.stat().st_size
+                logger.info(
+                    f"Uploading file '{file.filename}' to Gemini via path "
+                    f"({file_size} bytes, streaming)"
+                )
+                uploaded_file = await client.aio.files.upload(
+                    file=file_path,
+                    config={
+                        "display_name": display_name,
+                        "mime_type": file.content_type,
+                    },
+                )
+            else:
+                content = await file.aread()
+                file_data = io.BytesIO(content)
+                file_data.name = file.filename
 
-            logger.info(
-                f"Uploading file '{file.filename}' to Gemini ({len(content)} bytes)"
-            )
+                logger.info(
+                    f"Uploading file '{file.filename}' to Gemini ({len(content)} bytes)"
+                )
 
-            uploaded_file = await client.aio.files.upload(
-                file=file_data,
-                config={
-                    "display_name": display_name,
-                    "mime_type": file.content_type,
-                },
-            )
+                uploaded_file = await client.aio.files.upload(
+                    file=file_data,
+                    config={
+                        "display_name": display_name,
+                        "mime_type": file.content_type,
+                    },
+                )
 
             if file.content_type.startswith("video/"):
                 if not await self.await_for_processing(uploaded_file.name):

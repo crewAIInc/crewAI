@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+from pathlib import Path
 from typing import Any
 
 from crewai.files.content_types import (
@@ -15,12 +16,65 @@ from crewai.files.content_types import (
     TextFile,
     VideoFile,
 )
+from crewai.files.file import FileBytes, FilePath
 from crewai.files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
 
 FileInput = AudioFile | File | ImageFile | PDFFile | TextFile | VideoFile
+
+MULTIPART_THRESHOLD = 8 * 1024 * 1024
+MULTIPART_CHUNKSIZE = 8 * 1024 * 1024
+MAX_CONCURRENCY = 10
+
+
+def _get_file_path(file: FileInput) -> Path | None:
+    """Get the filesystem path if file source is FilePath.
+
+    Args:
+        file: The file input to check.
+
+    Returns:
+        Path if source is FilePath, None otherwise.
+    """
+    source = file._file_source
+    if isinstance(source, FilePath):
+        return source.path
+    return None
+
+
+def _get_file_size(file: FileInput) -> int | None:
+    """Get file size without reading content if possible.
+
+    Args:
+        file: The file input.
+
+    Returns:
+        Size in bytes if determinable without reading, None otherwise.
+    """
+    source = file._file_source
+    if isinstance(source, FilePath):
+        return source.path.stat().st_size
+    if isinstance(source, FileBytes):
+        return len(source.data)
+    return None
+
+
+def _compute_hash_streaming(file_path: Path) -> str:
+    """Compute SHA-256 hash by streaming file content.
+
+    Args:
+        file_path: Path to the file.
+
+    Returns:
+        First 16 characters of hex digest.
+    """
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(1024 * 1024):
+            hasher.update(chunk)
+    return hasher.hexdigest()[:16]
 
 
 class BedrockFileUploader(FileUploader):
@@ -112,19 +166,28 @@ class BedrockFileUploader(FileUploader):
                 ) from e
         return self._session
 
-    def _generate_s3_key(self, file: FileInput, content: bytes) -> str:
+    def _generate_s3_key(self, file: FileInput, content: bytes | None = None) -> str:
         """Generate a unique S3 key for the file.
+
+        For FilePath sources with no content provided, computes hash via streaming.
 
         Args:
             file: The file being uploaded.
-            content: The file content bytes.
+            content: The file content bytes (optional for FilePath sources).
 
         Returns:
             S3 key string.
         """
-        content_hash = hashlib.sha256(content).hexdigest()[:16]
-        filename = file.filename or "file"
+        if content is not None:
+            content_hash = hashlib.sha256(content).hexdigest()[:16]
+        else:
+            file_path = _get_file_path(file)
+            if file_path is not None:
+                content_hash = _compute_hash_streaming(file_path)
+            else:
+                content_hash = hashlib.sha256(file.read()).hexdigest()[:16]
 
+        filename = file.filename or "file"
         safe_filename = "".join(
             c if c.isalnum() or c in ".-_" else "_" for c in filename
         )
@@ -141,8 +204,22 @@ class BedrockFileUploader(FileUploader):
         """
         return f"s3://{self.bucket_name}/{key}"
 
+    def _get_transfer_config(self) -> Any:
+        """Get boto3 TransferConfig for multipart uploads."""
+        from boto3.s3.transfer import TransferConfig
+
+        return TransferConfig(
+            multipart_threshold=MULTIPART_THRESHOLD,
+            multipart_chunksize=MULTIPART_CHUNKSIZE,
+            max_concurrency=MAX_CONCURRENCY,
+            use_threads=True,
+        )
+
     def upload(self, file: FileInput, purpose: str | None = None) -> UploadResult:
         """Upload a file to S3 for use with Bedrock.
+
+        Uses streaming upload with automatic multipart for large files.
+        For FilePath sources, streams directly from disk without loading into memory.
 
         Args:
             file: The file to upload.
@@ -155,6 +232,8 @@ class BedrockFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, throttling).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
+        import io
+
         from crewai.files.processing.exceptions import (
             PermanentUploadError,
             TransientUploadError,
@@ -162,20 +241,42 @@ class BedrockFileUploader(FileUploader):
 
         try:
             client = self._get_client()
-            content = file.read()
-            s3_key = self._generate_s3_key(file, content)
+            transfer_config = self._get_transfer_config()
+            file_path = _get_file_path(file)
 
-            logger.info(
-                f"Uploading file '{file.filename}' to S3 bucket "
-                f"'{self.bucket_name}' ({len(content)} bytes)"
-            )
+            if file_path is not None:
+                file_size = file_path.stat().st_size
+                s3_key = self._generate_s3_key(file)
 
-            client.put_object(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Body=content,
-                ContentType=file.content_type,
-            )
+                logger.info(
+                    f"Uploading file '{file.filename}' to S3 bucket "
+                    f"'{self.bucket_name}' ({file_size} bytes, streaming)"
+                )
+
+                with open(file_path, "rb") as f:
+                    client.upload_fileobj(
+                        f,
+                        self.bucket_name,
+                        s3_key,
+                        ExtraArgs={"ContentType": file.content_type},
+                        Config=transfer_config,
+                    )
+            else:
+                content = file.read()
+                s3_key = self._generate_s3_key(file, content)
+
+                logger.info(
+                    f"Uploading file '{file.filename}' to S3 bucket "
+                    f"'{self.bucket_name}' ({len(content)} bytes)"
+                )
+
+                client.upload_fileobj(
+                    io.BytesIO(content),
+                    self.bucket_name,
+                    s3_key,
+                    ExtraArgs={"ContentType": file.content_type},
+                    Config=transfer_config,
+                )
 
             s3_uri = self._build_s3_uri(s3_key)
             logger.info(f"Uploaded to S3: {s3_uri}")
@@ -292,6 +393,9 @@ class BedrockFileUploader(FileUploader):
     ) -> UploadResult:
         """Async upload a file to S3 for use with Bedrock.
 
+        Uses streaming upload with automatic multipart for large files.
+        For FilePath sources, streams directly from disk without loading into memory.
+
         Args:
             file: The file to upload.
             purpose: Optional purpose (unused, kept for interface consistency).
@@ -303,6 +407,10 @@ class BedrockFileUploader(FileUploader):
             TransientUploadError: For retryable errors (network, throttling).
             PermanentUploadError: For non-retryable errors (auth, validation).
         """
+        import io
+
+        import aiofiles
+
         from crewai.files.processing.exceptions import (
             PermanentUploadError,
             TransientUploadError,
@@ -310,21 +418,44 @@ class BedrockFileUploader(FileUploader):
 
         try:
             session = self._get_async_client()
-            content = await file.aread()
-            s3_key = self._generate_s3_key(file, content)
+            transfer_config = self._get_transfer_config()
+            file_path = _get_file_path(file)
 
-            logger.info(
-                f"Uploading file '{file.filename}' to S3 bucket "
-                f"'{self.bucket_name}' ({len(content)} bytes)"
-            )
+            if file_path is not None:
+                file_size = file_path.stat().st_size
+                s3_key = self._generate_s3_key(file)
 
-            async with session.client("s3", region_name=self._region) as client:
-                await client.put_object(
-                    Bucket=self.bucket_name,
-                    Key=s3_key,
-                    Body=content,
-                    ContentType=file.content_type,
+                logger.info(
+                    f"Uploading file '{file.filename}' to S3 bucket "
+                    f"'{self.bucket_name}' ({file_size} bytes, streaming)"
                 )
+
+                async with session.client("s3", region_name=self._region) as client:
+                    async with aiofiles.open(file_path, "rb") as f:
+                        await client.upload_fileobj(
+                            f,
+                            self.bucket_name,
+                            s3_key,
+                            ExtraArgs={"ContentType": file.content_type},
+                            Config=transfer_config,
+                        )
+            else:
+                content = await file.aread()
+                s3_key = self._generate_s3_key(file, content)
+
+                logger.info(
+                    f"Uploading file '{file.filename}' to S3 bucket "
+                    f"'{self.bucket_name}' ({len(content)} bytes)"
+                )
+
+                async with session.client("s3", region_name=self._region) as client:
+                    await client.upload_fileobj(
+                        io.BytesIO(content),
+                        self.bucket_name,
+                        s3_key,
+                        ExtraArgs={"ContentType": file.content_type},
+                        Config=transfer_config,
+                    )
 
             s3_uri = self._build_s3_uri(s3_key)
             logger.info(f"Uploaded to S3: {s3_uri}")
