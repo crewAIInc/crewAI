@@ -32,6 +32,7 @@ from crewai.files.file import (
     FileSource,
     FileSourceInput,
     FileStream,
+    FileUrl,
     RawFileInput,
 )
 from crewai.files.processing import (
@@ -103,6 +104,7 @@ __all__ = [
     "FileStream",
     "FileTooLargeError",
     "FileUploader",
+    "FileUrl",
     "FileValidationError",
     "ImageConstraints",
     "ImageExtension",

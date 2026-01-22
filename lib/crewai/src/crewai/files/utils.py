@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 
 def is_file_source(v: object) -> TypeIs[FileSource]:
     """Type guard to narrow input to FileSource."""
-    from crewai.files.file import FileBytes, FilePath, FileStream
+    from crewai.files.file import FileBytes, FilePath, FileStream, FileUrl
 
-    return isinstance(v, (FilePath, FileBytes, FileStream))
+    return isinstance(v, (FilePath, FileBytes, FileStream, FileUrl))
 
 
 def wrap_file_source(source: FileSource) -> FileInput:
@@ -62,7 +62,7 @@ def normalize_input_files(
         Dictionary mapping names to FileInput wrappers.
     """
     from crewai.files.content_types import BaseFile
-    from crewai.files.file import FileBytes, FilePath, FileStream
+    from crewai.files.file import FileBytes, FilePath, FileStream, FileUrl
 
     result: dict[str, FileInput] = {}
 
@@ -74,13 +74,16 @@ def normalize_input_files(
             result[name] = item
             continue
 
-        file_source: FilePath | FileBytes | FileStream
-        if isinstance(item, (FilePath, FileBytes, FileStream)):
+        file_source: FilePath | FileBytes | FileStream | FileUrl
+        if isinstance(item, (FilePath, FileBytes, FileStream, FileUrl)):
             file_source = item
         elif isinstance(item, Path):
             file_source = FilePath(path=item)
         elif isinstance(item, str):
-            file_source = FilePath(path=Path(item))
+            if item.startswith(("http://", "https://")):
+                file_source = FileUrl(url=item)
+            else:
+                file_source = FilePath(path=Path(item))
         elif isinstance(item, (bytes, memoryview)):
             file_source = FileBytes(data=bytes(item))
         else:

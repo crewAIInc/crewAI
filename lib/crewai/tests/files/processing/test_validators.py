@@ -1,13 +1,17 @@
 """Tests for file validators."""
 
+from unittest.mock import patch
+
 import pytest
 
-from crewai.files import FileBytes, ImageFile, PDFFile, TextFile
+from crewai.files import AudioFile, FileBytes, ImageFile, PDFFile, TextFile, VideoFile
 from crewai.files.processing.constraints import (
     ANTHROPIC_CONSTRAINTS,
+    AudioConstraints,
     ImageConstraints,
     PDFConstraints,
     ProviderConstraints,
+    VideoConstraints,
 )
 from crewai.files.processing.exceptions import (
     FileTooLargeError,
@@ -15,10 +19,14 @@ from crewai.files.processing.exceptions import (
     UnsupportedFileTypeError,
 )
 from crewai.files.processing.validators import (
+    _get_audio_duration,
+    _get_video_duration,
+    validate_audio,
     validate_file,
     validate_image,
     validate_pdf,
     validate_text,
+    validate_video,
 )
 
 
@@ -206,3 +214,281 @@ class TestValidateFile:
             validate_file(file, constraints)
 
         assert "does not support PDFs" in str(exc_info.value)
+
+
+# Minimal audio bytes for testing (not a valid audio file, used for mocked tests)
+MINIMAL_AUDIO = b"\x00" * 100
+
+# Minimal video bytes for testing (not a valid video file, used for mocked tests)
+MINIMAL_VIDEO = b"\x00" * 100
+
+# Fallback content type when python-magic cannot detect
+FALLBACK_CONTENT_TYPE = "application/octet-stream"
+
+
+class TestValidateAudio:
+    """Tests for validate_audio function and audio duration validation."""
+
+    def test_validate_valid_audio(self):
+        """Test validating a valid audio file within constraints."""
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        errors = validate_audio(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+
+    def test_validate_audio_too_large(self):
+        """Test validating an audio file that exceeds size limit."""
+        constraints = AudioConstraints(
+            max_size_bytes=10,  # Very small limit
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        with pytest.raises(FileTooLargeError) as exc_info:
+            validate_audio(file, constraints)
+
+        assert "exceeds" in str(exc_info.value)
+        assert exc_info.value.file_name == "test.mp3"
+
+    def test_validate_audio_unsupported_format(self):
+        """Test validating an audio file with unsupported format."""
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("audio/wav",),  # Only WAV
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        with pytest.raises(UnsupportedFileTypeError) as exc_info:
+            validate_audio(file, constraints)
+
+        assert "not supported" in str(exc_info.value)
+
+    @patch("crewai.files.processing.validators._get_audio_duration")
+    def test_validate_audio_duration_passes(self, mock_get_duration):
+        """Test validating audio when duration is under limit."""
+        mock_get_duration.return_value = 30.0
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        errors = validate_audio(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+        mock_get_duration.assert_called_once()
+
+    @patch("crewai.files.processing.validators._get_audio_duration")
+    def test_validate_audio_duration_fails(self, mock_get_duration):
+        """Test validating audio when duration exceeds limit."""
+        mock_get_duration.return_value = 120.5
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_audio(file, constraints)
+
+        assert "duration" in str(exc_info.value).lower()
+        assert "120.5s" in str(exc_info.value)
+        assert "60s" in str(exc_info.value)
+
+    @patch("crewai.files.processing.validators._get_audio_duration")
+    def test_validate_audio_duration_no_raise(self, mock_get_duration):
+        """Test audio duration validation with raise_on_error=False."""
+        mock_get_duration.return_value = 120.5
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        errors = validate_audio(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 1
+        assert "duration" in errors[0].lower()
+
+    @patch("crewai.files.processing.validators._get_audio_duration")
+    def test_validate_audio_duration_none_skips(self, mock_get_duration):
+        """Test that duration validation is skipped when max_duration_seconds is None."""
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=None,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        errors = validate_audio(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+        mock_get_duration.assert_not_called()
+
+    @patch("crewai.files.processing.validators._get_audio_duration")
+    def test_validate_audio_duration_detection_returns_none(self, mock_get_duration):
+        """Test that validation passes when duration detection returns None."""
+        mock_get_duration.return_value = None
+        constraints = AudioConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("audio/mp3", "audio/mpeg", FALLBACK_CONTENT_TYPE),
+        )
+        file = AudioFile(source=FileBytes(data=MINIMAL_AUDIO, filename="test.mp3"))
+
+        errors = validate_audio(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+
+
+class TestValidateVideo:
+    """Tests for validate_video function and video duration validation."""
+
+    def test_validate_valid_video(self):
+        """Test validating a valid video file within constraints."""
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+
+    def test_validate_video_too_large(self):
+        """Test validating a video file that exceeds size limit."""
+        constraints = VideoConstraints(
+            max_size_bytes=10,  # Very small limit
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        with pytest.raises(FileTooLargeError) as exc_info:
+            validate_video(file, constraints)
+
+        assert "exceeds" in str(exc_info.value)
+        assert exc_info.value.file_name == "test.mp4"
+
+    def test_validate_video_unsupported_format(self):
+        """Test validating a video file with unsupported format."""
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            supported_formats=("video/webm",),  # Only WebM
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        with pytest.raises(UnsupportedFileTypeError) as exc_info:
+            validate_video(file, constraints)
+
+        assert "not supported" in str(exc_info.value)
+
+    @patch("crewai.files.processing.validators._get_video_duration")
+    def test_validate_video_duration_passes(self, mock_get_duration):
+        """Test validating video when duration is under limit."""
+        mock_get_duration.return_value = 30.0
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+        mock_get_duration.assert_called_once()
+
+    @patch("crewai.files.processing.validators._get_video_duration")
+    def test_validate_video_duration_fails(self, mock_get_duration):
+        """Test validating video when duration exceeds limit."""
+        mock_get_duration.return_value = 180.0
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        with pytest.raises(FileValidationError) as exc_info:
+            validate_video(file, constraints)
+
+        assert "duration" in str(exc_info.value).lower()
+        assert "180.0s" in str(exc_info.value)
+        assert "60s" in str(exc_info.value)
+
+    @patch("crewai.files.processing.validators._get_video_duration")
+    def test_validate_video_duration_no_raise(self, mock_get_duration):
+        """Test video duration validation with raise_on_error=False."""
+        mock_get_duration.return_value = 180.0
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 1
+        assert "duration" in errors[0].lower()
+
+    @patch("crewai.files.processing.validators._get_video_duration")
+    def test_validate_video_duration_none_skips(self, mock_get_duration):
+        """Test that duration validation is skipped when max_duration_seconds is None."""
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=None,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+        mock_get_duration.assert_not_called()
+
+    @patch("crewai.files.processing.validators._get_video_duration")
+    def test_validate_video_duration_detection_returns_none(self, mock_get_duration):
+        """Test that validation passes when duration detection returns None."""
+        mock_get_duration.return_value = None
+        constraints = VideoConstraints(
+            max_size_bytes=10 * 1024 * 1024,
+            max_duration_seconds=60,
+            supported_formats=("video/mp4", FALLBACK_CONTENT_TYPE),
+        )
+        file = VideoFile(source=FileBytes(data=MINIMAL_VIDEO, filename="test.mp4"))
+
+        errors = validate_video(file, constraints, raise_on_error=False)
+
+        assert len(errors) == 0
+
+
+class TestGetAudioDuration:
+    """Tests for _get_audio_duration helper function."""
+
+    def test_get_audio_duration_corrupt_file(self):
+        """Test handling of corrupt audio data."""
+        corrupt_data = b"not valid audio data at all"
+        result = _get_audio_duration(corrupt_data)
+
+        assert result is None
+
+
+class TestGetVideoDuration:
+    """Tests for _get_video_duration helper function."""
+
+    def test_get_video_duration_corrupt_file(self):
+        """Test handling of corrupt video data."""
+        corrupt_data = b"not valid video data at all"
+        result = _get_video_duration(corrupt_data)
+
+        assert result is None

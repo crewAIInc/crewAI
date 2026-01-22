@@ -8,6 +8,7 @@ import logging
 
 from crewai.files.constants import UPLOAD_MAX_RETRIES, UPLOAD_RETRY_DELAY_BASE
 from crewai.files.content_types import FileInput
+from crewai.files.file import FileUrl
 from crewai.files.metrics import measure_operation
 from crewai.files.processing.constraints import (
     AudioConstraints,
@@ -22,10 +23,12 @@ from crewai.files.resolved import (
     InlineBase64,
     InlineBytes,
     ResolvedFile,
+    UrlReference,
 )
 from crewai.files.upload_cache import CachedUpload, UploadCache
 from crewai.files.uploaders import UploadResult, get_uploader
 from crewai.files.uploaders.base import FileUploader
+from crewai.files.uploaders.factory import ProviderType
 
 
 logger = logging.getLogger(__name__)
@@ -102,7 +105,49 @@ class FileResolver:
             content_type=file.content_type,
         )
 
-    def resolve(self, file: FileInput, provider: str) -> ResolvedFile:
+    @staticmethod
+    def _is_url_source(file: FileInput) -> bool:
+        """Check if file source is a URL.
+
+        Args:
+            file: The file to check.
+
+        Returns:
+            True if the file source is a FileUrl, False otherwise.
+        """
+        return isinstance(file._file_source, FileUrl)
+
+    @staticmethod
+    def _supports_url(constraints: ProviderConstraints | None) -> bool:
+        """Check if provider supports URL references.
+
+        Args:
+            constraints: Provider constraints.
+
+        Returns:
+            True if the provider supports URL references, False otherwise.
+        """
+        return constraints is not None and constraints.supports_url_references
+
+    @staticmethod
+    def _resolve_as_url(file: FileInput) -> UrlReference:
+        """Resolve a URL source as UrlReference.
+
+        Args:
+            file: The file with URL source.
+
+        Returns:
+            UrlReference with the URL and content type.
+        """
+        source = file._file_source
+        if not isinstance(source, FileUrl):
+            raise TypeError(f"Expected FileUrl source, got {type(source).__name__}")
+        return UrlReference(
+            content_type=file.content_type,
+            url=source.url,
+        )
+
+    def resolve(self, file: FileInput, provider: ProviderType) -> ResolvedFile:
         """Resolve a file to its delivery format for a provider.
 
         Args:
@@ -112,25 +157,26 @@ class FileResolver:
         Returns:
             ResolvedFile representing the appropriate delivery format.
         """
-        provider_lower = provider.lower()
         constraints = get_constraints_for_provider(provider)
+
+        if self._is_url_source(file) and self._supports_url(constraints):
+            return self._resolve_as_url(file)
+
         context = self._build_file_context(file)
 
-        should_upload = self._should_upload(
-            file, provider_lower, constraints, context.size
-        )
+        should_upload = self._should_upload(file, provider, constraints, context.size)
 
         if should_upload:
-            resolved = self._resolve_via_upload(file, provider_lower, context)
+            resolved = self._resolve_via_upload(file, provider, context)
             if resolved is not None:
                 return resolved
 
-        return self._resolve_inline(file, provider_lower, context)
+        return self._resolve_inline(file, provider, context)
 
     def resolve_files(
         self,
         files: dict[str, FileInput],
-        provider: str,
+        provider: ProviderType,
     ) -> dict[str, ResolvedFile]:
         """Resolve multiple files for a provider.
 
@@ -220,7 +266,7 @@ class FileResolver:
     def _resolve_via_upload(
         self,
         file: FileInput,
-        provider: str,
+        provider: ProviderType,
         context: FileContext,
     ) -> ResolvedFile | None:
         """Resolve a file by uploading it.
@@ -367,7 +413,7 @@ class FileResolver:
             data=encoded,
         )
 
-    async def aresolve(self, file: FileInput, provider: str) -> ResolvedFile:
+    async def aresolve(self, file: FileInput, provider: ProviderType) -> ResolvedFile:
         """Async resolve a file to its delivery format for a provider.
 
         Args:
@@ -377,25 +423,26 @@ class FileResolver:
         Returns:
             ResolvedFile representing the appropriate delivery format.
         """
-        provider_lower = provider.lower()
         constraints = get_constraints_for_provider(provider)
+
+        if self._is_url_source(file) and self._supports_url(constraints):
+            return self._resolve_as_url(file)
+
         context = self._build_file_context(file)
 
-        should_upload = self._should_upload(
-            file, provider_lower, constraints, context.size
-        )
+        should_upload = self._should_upload(file, provider, constraints, context.size)
 
         if should_upload:
-            resolved = await self._aresolve_via_upload(file, provider_lower, context)
+            resolved = await self._aresolve_via_upload(file, provider, context)
             if resolved is not None:
                 return resolved
 
-        return self._resolve_inline(file, provider_lower, context)
+        return self._resolve_inline(file, provider, context)
 
     async def aresolve_files(
         self,
         files: dict[str, FileInput],
-        provider: str,
+        provider: ProviderType,
         max_concurrency: int = 10,
     ) -> dict[str, ResolvedFile]:
         """Async resolve multiple files in parallel.
@@ -434,7 +481,7 @@ class FileResolver:
     async def _aresolve_via_upload(
         self,
         file: FileInput,
-        provider: str,
+        provider: ProviderType,
         context: FileContext,
     ) -> ResolvedFile | None:
         """Async resolve a file by uploading it.
@@ -552,7 +599,7 @@ class FileResolver:
         )
         return None
 
-    def _get_uploader(self, provider: str) -> FileUploader | None:
+    def _get_uploader(self, provider: ProviderType) -> FileUploader | None:
         """Get or create an uploader for a provider.
 
         Args:

@@ -43,7 +43,7 @@ def _get_image_dimensions(content: bytes) -> tuple[int, int] | None:
 
         with Image.open(io.BytesIO(content)) as img:
             width, height = img.size
-            return (int(width), int(height))
+            return int(width), int(height)
     except ImportError:
         logger.warning(
             "Pillow not installed - cannot validate image dimensions. "
@@ -71,6 +71,81 @@ def _get_pdf_page_count(content: bytes) -> int | None:
             "pypdf not installed - cannot validate PDF page count. "
             "Install with: pip install pypdf"
         )
+        return None
+
+
+def _get_audio_duration(content: bytes, filename: str | None = None) -> float | None:
+    """Get audio duration in seconds using tinytag if available.
+
+    Args:
+        content: Raw audio bytes.
+        filename: Optional filename for format detection hint.
+
+    Returns:
+        Duration in seconds or None if tinytag unavailable.
+    """
+    try:
+        from tinytag import TinyTag  # type: ignore[import-untyped]
+    except ImportError:
+        logger.warning(
+            "tinytag not installed - cannot validate audio duration. "
+            "Install with: pip install tinytag"
+        )
+        return None
+
+    try:
+        tag = TinyTag.get(file_obj=io.BytesIO(content), filename=filename)
+        duration: float | None = tag.duration
+        return duration
+    except Exception as e:
+        logger.debug(f"Could not determine audio duration: {e}")
+        return None
+
+
+_VIDEO_FORMAT_MAP: dict[str, str] = {
+    "video/mp4": "mp4",
+    "video/webm": "webm",
+    "video/x-matroska": "matroska",
+    "video/quicktime": "mov",
+    "video/x-msvideo": "avi",
+    "video/x-flv": "flv",
+}
+
+
+def _get_video_duration(
+    content: bytes, content_type: str | None = None
+) -> float | None:
+    """Get video duration in seconds using av if available.
+
+    Args:
+        content: Raw video bytes.
+        content_type: Optional MIME type for format detection hint.
+
+    Returns:
+        Duration in seconds or None if av unavailable.
+    """
+    try:
+        import av
+    except ImportError:
+        logger.warning(
+            "av (PyAV) not installed - cannot validate video duration. "
+            "Install with: pip install av"
+        )
+        return None
+
+    format_hint = _VIDEO_FORMAT_MAP.get(content_type) if content_type else None
+
+    try:
+        container = av.open(io.BytesIO(content), format=format_hint)  # type: ignore[attr-defined]
+        try:
+            duration = getattr(container, "duration", None)
+            if duration is None:
+                return None
+            return float(duration) / 1_000_000
+        finally:
+            container.close()
+    except Exception as e:
+        logger.debug(f"Could not determine video duration: {e}")
         return None
 
 
@@ -273,14 +348,17 @@ def validate_audio(
 
     Raises:
         FileTooLargeError: If the file exceeds size limits.
+        FileValidationError: If the file exceeds duration limits.
         UnsupportedFileTypeError: If the format is not supported.
     """
     errors: list[str] = []
-    file_size = len(file.read())
+    content = file.read()
+    file_size = len(content)
+    filename = file.filename
 
     _validate_size(
         "Audio",
-        file.filename,
+        filename,
         file_size,
         constraints.max_size_bytes,
         errors,
@@ -288,12 +366,23 @@ def validate_audio(
     )
     _validate_format(
         "Audio",
-        file.filename,
+        filename,
         file.content_type,
         constraints.supported_formats,
         errors,
         raise_on_error,
     )
+
+    if constraints.max_duration_seconds is not None:
+        duration = _get_audio_duration(content, filename)
+        if duration is not None and duration > constraints.max_duration_seconds:
+            msg = (
+                f"Audio '{filename}' duration ({duration:.1f}s) exceeds "
+                f"maximum ({constraints.max_duration_seconds}s)"
+            )
+            errors.append(msg)
+            if raise_on_error:
+                raise FileValidationError(msg, file_name=filename)
 
     return errors
 
@@ -316,14 +405,17 @@ def validate_video(
 
     Raises:
         FileTooLargeError: If the file exceeds size limits.
+        FileValidationError: If the file exceeds duration limits.
         UnsupportedFileTypeError: If the format is not supported.
     """
     errors: list[str] = []
-    file_size = len(file.read())
+    content = file.read()
+    file_size = len(content)
+    filename = file.filename
 
     _validate_size(
         "Video",
-        file.filename,
+        filename,
         file_size,
         constraints.max_size_bytes,
         errors,
@@ -331,12 +423,23 @@ def validate_video(
     )
     _validate_format(
         "Video",
-        file.filename,
+        filename,
         file.content_type,
         constraints.supported_formats,
         errors,
         raise_on_error,
     )
+
+    if constraints.max_duration_seconds is not None:
+        duration = _get_video_duration(content, file.content_type)
+        if duration is not None and duration > constraints.max_duration_seconds:
+            msg = (
+                f"Video '{filename}' duration ({duration:.1f}s) exceeds "
+                f"maximum ({constraints.max_duration_seconds}s)"
+            )
+            errors.append(msg)
+            if raise_on_error:
+                raise FileValidationError(msg, file_name=filename)
 
     return errors
 

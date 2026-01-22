@@ -148,6 +148,7 @@ class ProviderConstraints:
         general_max_size_bytes: Maximum size for any file type.
         supports_file_upload: Whether the provider supports file upload APIs.
         file_upload_threshold_bytes: Size threshold above which to use file upload.
+        supports_url_references: Whether the provider supports URL-based file references.
     """
 
     name: ProviderName
@@ -158,21 +159,24 @@ class ProviderConstraints:
     general_max_size_bytes: int | None = None
     supports_file_upload: bool = False
     file_upload_threshold_bytes: int | None = None
+    supports_url_references: bool = False
 
 
 ANTHROPIC_CONSTRAINTS = ProviderConstraints(
     name="anthropic",
     image=ImageConstraints(
-        max_size_bytes=5_242_880,
+        max_size_bytes=5_242_880,  # 5 MB per image
         max_width=8000,
         max_height=8000,
+        max_images_per_request=100,
     ),
     pdf=PDFConstraints(
-        max_size_bytes=31_457_280,
+        max_size_bytes=33_554_432,  # 32 MB request size limit
         max_pages=100,
     ),
     supports_file_upload=True,
     file_upload_threshold_bytes=5_242_880,
+    supports_url_references=True,
 )
 
 OPENAI_CONSTRAINTS = ProviderConstraints(
@@ -181,8 +185,13 @@ OPENAI_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=20_971_520,
         max_images_per_request=10,
     ),
+    audio=AudioConstraints(
+        max_size_bytes=26_214_400,  # 25 MB - whisper limit
+        max_duration_seconds=1500,  # 25 minutes, arbitrary-ish, this is from the transcriptions limit
+    ),
     supports_file_upload=True,
     file_upload_threshold_bytes=5_242_880,
+    supports_url_references=True,
 )
 
 GEMINI_CONSTRAINTS = ProviderConstraints(
@@ -196,14 +205,17 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
     ),
     audio=AudioConstraints(
         max_size_bytes=104_857_600,
+        max_duration_seconds=34200,  # 9.5 hours
         supported_formats=GEMINI_AUDIO_FORMATS,
     ),
     video=VideoConstraints(
         max_size_bytes=2_147_483_648,
+        max_duration_seconds=3600,  # 1 hour at default resolution
         supported_formats=GEMINI_VIDEO_FORMATS,
     ),
     supports_file_upload=True,
     file_upload_threshold_bytes=20_971_520,
+    supports_url_references=True,
 )
 
 BEDROCK_CONSTRAINTS = ProviderConstraints(
@@ -225,6 +237,11 @@ AZURE_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=20_971_520,
         max_images_per_request=10,
     ),
+    audio=AudioConstraints(
+        max_size_bytes=26_214_400,  # 25 MB - same as openai
+        max_duration_seconds=1500,  # 25 minutes - same as openai
+    ),
+    supports_url_references=True,
 )
 
 

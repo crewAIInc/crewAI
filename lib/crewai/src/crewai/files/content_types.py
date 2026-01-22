@@ -16,6 +16,7 @@ from crewai.files.file import (
     FilePath,
     FileSource,
     FileStream,
+    FileUrl,
 )
 from crewai.files.utils import is_file_source
 
@@ -29,12 +30,14 @@ class _FileSourceCoercer:
     @classmethod
     def _coerce(cls, v: Any) -> FileSource:
         """Convert raw input to appropriate FileSource type."""
-        if isinstance(v, (FilePath, FileBytes, FileStream)):
+        if isinstance(v, (FilePath, FileBytes, FileStream, FileUrl)):
             return v
+        if isinstance(v, str):
+            if v.startswith(("http://", "https://")):
+                return FileUrl(url=v)
+            return FilePath(path=Path(v))
         if isinstance(v, Path):
             return FilePath(path=v)
-        if isinstance(v, str):
-            return FilePath(path=Path(v))
         if isinstance(v, bytes):
             return FileBytes(data=v)
         if isinstance(v, (IOBase, BinaryIO)):
@@ -203,7 +206,7 @@ class BaseFile(ABC, BaseModel):
             TypeError: If the underlying source doesn't support async read.
         """
         source = self._file_source
-        if isinstance(source, (FilePath, FileBytes, AsyncFileStream)):
+        if isinstance(source, (FilePath, FileBytes, AsyncFileStream, FileUrl)):
             return await source.aread()
         raise TypeError(f"{type(source).__name__} does not support async read")
 

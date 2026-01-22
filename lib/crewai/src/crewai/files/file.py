@@ -414,17 +414,84 @@ class AsyncFileStream(BaseModel):
             yield chunk
 
 
-FileSource = FilePath | FileBytes | FileStream | AsyncFileStream
+class FileUrl(BaseModel):
+    """File referenced by URL.
+
+    For providers that support URL references, the URL is passed directly.
+    For providers that don't, content is fetched on demand.
+
+    Attributes:
+        url: URL where the file can be accessed.
+        filename: Optional filename (extracted from URL if not provided).
+    """
+
+    url: str = Field(description="URL where the file can be accessed.")
+    filename: str | None = Field(default=None, description="Optional filename.")
+    _content_type: str | None = PrivateAttr(default=None)
+    _content: bytes | None = PrivateAttr(default=None)
+
+    @model_validator(mode="after")
+    def _validate_url(self) -> FileUrl:
+        """Validate URL format."""
+        if not self.url.startswith(("http://", "https://")):
+            raise ValueError(f"Invalid URL scheme: {self.url}")
+        return self
+
+    @property
+    def content_type(self) -> str:
+        """Get the content type, guessing from URL extension if not set."""
+        if self._content_type is None:
+            self._content_type = self._guess_content_type()
+        return self._content_type
+
+    def _guess_content_type(self) -> str:
+        """Guess content type from URL extension."""
+        from urllib.parse import urlparse
+
+        parsed = urlparse(self.url)
+        path = parsed.path
+        guessed, _ = mimetypes.guess_type(path)
+        return guessed or "application/octet-stream"
+
+    def read(self) -> bytes:
+        """Fetch content from URL (for providers that don't support URL references)."""
+        if self._content is None:
+            import httpx
+
+            response = httpx.get(self.url, follow_redirects=True)
+            response.raise_for_status()
+            self._content = response.content
+            if "content-type" in response.headers:
+                self._content_type = response.headers["content-type"].split(";")[0]
+        return self._content
+
+    async def aread(self) -> bytes:
+        """Async fetch content from URL."""
+        if self._content is None:
+            import httpx
+
+            async with httpx.AsyncClient() as client:
+                response = await client.get(self.url, follow_redirects=True)
+                response.raise_for_status()
+                self._content = response.content
+                if "content-type" in response.headers:
+                    self._content_type = response.headers["content-type"].split(";")[0]
+        return self._content
+
+
+FileSource = FilePath | FileBytes | FileStream | AsyncFileStream | FileUrl
 
 
 def _normalize_source(value: Any) -> FileSource:
     """Convert raw input to appropriate source type."""
-    if isinstance(value, (FilePath, FileBytes, FileStream, AsyncFileStream)):
+    if isinstance(value, (FilePath, FileBytes, FileStream, AsyncFileStream, FileUrl)):
         return value
+    if isinstance(value, str):
+        if value.startswith(("http://", "https://")):
+            return FileUrl(url=value)
+        return FilePath(path=Path(value))
     if isinstance(value, Path):
         return FilePath(path=value)
-    if isinstance(value, str):
-        return FilePath(path=Path(value))
     if isinstance(value, bytes):
         return FileBytes(data=value)
     if isinstance(value, AsyncReadable):
