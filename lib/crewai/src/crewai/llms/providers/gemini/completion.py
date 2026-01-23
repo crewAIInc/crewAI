@@ -546,6 +546,53 @@ class GeminiCompletion(BaseLLM):
                     system_instruction += f"\n\n{text_content}"
                 else:
                     system_instruction = text_content
+            elif role == "tool":
+                tool_call_id = message.get("tool_call_id")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+
+                tool_name = message.get("name", "")
+
+                response_data: dict[str, Any]
+                try:
+                    response_data = json.loads(text_content) if text_content else {}
+                except (json.JSONDecodeError, TypeError):
+                    response_data = {"result": text_content}
+
+                function_response_part = types.Part.from_function_response(
+                    name=tool_name, response=response_data
+                )
+                contents.append(
+                    types.Content(role="user", parts=[function_response_part])
+                )
+            elif role == "assistant" and message.get("tool_calls"):
+                parts: list[types.Part] = []
+
+                if text_content:
+                    parts.append(types.Part.from_text(text=text_content))
+
+                tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
+                for tool_call in tool_calls:
+                    func: dict[str, Any] = tool_call.get("function") or {}
+                    func_name: str = str(func.get("name") or "")
+                    func_args_raw: str | dict[str, Any] = func.get("arguments") or {}
+
+                    func_args: dict[str, Any]
+                    if isinstance(func_args_raw, str):
+                        try:
+                            func_args = (
+                                json.loads(func_args_raw) if func_args_raw else {}
+                            )
+                        except (json.JSONDecodeError, TypeError):
+                            func_args = {}
+                    else:
+                        func_args = func_args_raw
+
+                    parts.append(
+                        types.Part.from_function_call(name=func_name, args=func_args)
+                    )
+
+                contents.append(types.Content(role="model", parts=parts))
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
@@ -666,6 +713,24 @@ class GeminiCompletion(BaseLLM):
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
+                # Collect function call parts
+                function_call_parts = [
+                    part for part in candidate.content.parts if part.function_call
+                ]
+
+                # If there are function calls but no available_functions,
+                # return them for the executor to handle (like OpenAI/Anthropic)
+                if function_call_parts and not available_functions:
+                    self._emit_call_completed_event(
+                        response=function_call_parts,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=self._convert_contents_to_dict(contents),
+                    )
+                    return function_call_parts
+
+                # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
@@ -780,7 +845,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -797,6 +862,29 @@ class GeminiCompletion(BaseLLM):
             Final response content after processing
         """
         self._track_token_usage_internal(usage_data)
+
+        # If there are function calls but no available_functions,
+        # return them for the executor to handle
+        if function_calls and not available_functions:
+            formatted_function_calls = [
+                {
+                    "id": call_data["id"],
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": json.dumps(call_data["args"]),
+                    },
+                    "type": "function",
+                }
+                for call_data in function_calls.values()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return formatted_function_calls
 
         # Handle completed function calls
         if function_calls and available_functions:

@@ -3,6 +3,7 @@
 from typing import Any, Literal, TypedDict
 
 from crewai_files import FileInput
+from typing_extensions import NotRequired
 
 
 class LLMMessage(TypedDict):
@@ -13,8 +14,11 @@ class LLMMessage(TypedDict):
           instead of str | list[dict[str, str]]
     """
 
-    role: Literal["user", "assistant", "system"]
-    content: str | list[dict[str, Any]]
+    role: Literal["user", "assistant", "system", "tool"]
+    content: str | list[dict[str, Any]] | None
+    tool_call_id: NotRequired[str]
+    name: NotRequired[str]
+    tool_calls: NotRequired[list[dict[str, Any]]]
 
 
 class KickoffInputs(TypedDict, total=False):

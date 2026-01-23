@@ -108,7 +108,7 @@ def test_tool_usage_render():
     rendered = tool_usage._render()
 
     # Check that the rendered output contains the expected tool information
-    assert "Tool Name: Random Number Generator" in rendered
+    assert "Tool Name: random_number_generator" in rendered
     assert "Tool Arguments:" in rendered
     assert (
         "Tool Description: Generates a random number within a specified range"
@@ -488,7 +488,7 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == "Non Existent Tool"
     assert event.tool_args == {}
-    assert "Tool Name: Test Tool" in event.tool_class
+    assert "Tool Name: test_tool" in event.tool_class
     assert "A test tool" in event.tool_class
     assert "don't exist" in event.error
 
@@ -503,7 +503,7 @@ def test_tool_selection_error_event_direct():
     assert event.agent_role == "test_role"
     assert event.tool_name == ""
     assert event.tool_args == {}
-    assert "Test Tool" in event.tool_class
+    assert "test_tool" in event.tool_class
     assert "forgot the Action name" in event.error
 
 
@@ -654,7 +654,7 @@ def test_tool_usage_finished_event_with_result():
     # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
+    assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
     assert event.run_attempts == 1  # Default value from ToolUsage
@@ -734,7 +734,7 @@ def test_tool_usage_finished_event_with_cached_result():
     # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
-    assert event.tool_name == "Test Tool"
+    assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
     assert event.run_attempts == 1  # Default value from ToolUsage

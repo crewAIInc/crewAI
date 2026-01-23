@@ -106,6 +106,7 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import KickoffInputs
@@ -1264,10 +1265,14 @@ class Crew(FlowTrackable, BaseModel):
             return existing_tools
 
         # Create mapping of tool names to new tools
-        new_tool_map = {tool.name: tool for tool in new_tools}
+        new_tool_map = {sanitize_tool_name(tool.name): tool for tool in new_tools}
 
         # Remove any existing tools that will be replaced
-        tools = [tool for tool in existing_tools if tool.name not in new_tool_map]
+        tools = [
+            tool
+            for tool in existing_tools
+            if sanitize_tool_name(tool.name) not in new_tool_map
+        ]
 
         # Add all new tools
         tools.extend(new_tools)
