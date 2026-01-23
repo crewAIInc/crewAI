@@ -1417,7 +1417,7 @@ async def test_kickoff_async_basic_functionality_and_output():
 
         assert isinstance(result, str), "Result should be a string"
         assert result == expected_output, "Result should match expected output"
-        mock_kickoff.assert_called_once_with(inputs)
+        mock_kickoff.assert_called_once_with(inputs, None)
 
 
 @pytest.mark.asyncio
@@ -1463,7 +1463,7 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         assert len(results) == len(inputs)
         assert results == expected_outputs
         for input_data in inputs:
-            mock_kickoff_async.assert_any_call(inputs=input_data)
+            mock_kickoff_async.assert_any_call(inputs=input_data, input_files=None)
 
 
 @pytest.mark.asyncio
