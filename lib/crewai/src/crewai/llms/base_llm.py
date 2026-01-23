@@ -31,6 +31,14 @@ from crewai.events.types.tool_usage_events import (
 from crewai.types.usage_metrics import UsageMetrics
 
 
+try:
+    from crewai_files import format_multimodal_content
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
@@ -546,6 +554,48 @@ class BaseLLM(ABC):
                 raise ValueError(
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
+
+        messages = self._process_message_files(messages)
+
+        return messages
+
+    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+        """Process files attached to messages and format for the provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            content_blocks = format_multimodal_content(files, provider)
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            existing_content = msg.get("content", "")
+            if isinstance(existing_content, str):
+                msg["content"] = [
+                    self.format_text_content(existing_content),
+                    *content_blocks,
+                ]
+            elif isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+
+            msg.pop("files", None)
 
         return messages
 
