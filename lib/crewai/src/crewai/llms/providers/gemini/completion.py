@@ -1201,14 +1201,6 @@ class GeminiCompletion(BaseLLM):
         """
         return True
 
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported by Gemini for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        return ["image/", "audio/", "video/", "application/pdf", "text/"]
-
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a Gemini content block.
 

@@ -1627,44 +1627,6 @@ class BedrockCompletion(BaseLLM):
         model_lower = self.model.lower()
         return "amazon.nova-" in model_lower
 
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported by Bedrock for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        if not self.supports_multimodal():
-            return []
-
-        types = ["image/png", "image/jpeg", "image/gif", "image/webp"]
-
-        if self._is_nova_model():
-            types.extend(
-                [
-                    "application/pdf",
-                    "text/csv",
-                    "text/plain",
-                    "text/markdown",
-                    "text/html",
-                    "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.ms-excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "video/mp4",
-                    "video/quicktime",
-                    "video/x-matroska",
-                    "video/webm",
-                    "video/x-flv",
-                    "video/mpeg",
-                    "video/x-ms-wmv",
-                    "video/3gpp",
-                ]
-            )
-        else:
-            types.append("application/pdf")
-
-        return types
-
     def get_file_uploader(self) -> Any:
         """Get a Bedrock S3 file uploader using this LLM's AWS credentials.
 

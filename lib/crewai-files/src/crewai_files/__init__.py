@@ -71,6 +71,7 @@ from crewai_files.processing import (
     UnsupportedFileTypeError,
     VideoConstraints,
     get_constraints_for_provider,
+    get_supported_content_types,
 )
 from crewai_files.resolution.resolver import (
     FileResolver,
@@ -143,6 +144,7 @@ __all__ = [
     "create_resolver",
     "format_multimodal_content",
     "get_constraints_for_provider",
+    "get_supported_content_types",
     "get_upload_cache",
     "get_uploader",
     "normalize_input_files",

@@ -2342,22 +2342,3 @@ class LLM(BaseLLM):
         return any(
             model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
         )
-
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported for multimodal input.
-
-        Determines supported types based on the underlying model.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        if not self.supports_multimodal():
-            return []
-
-        model_lower = self.model.lower()
-
-        if "gemini" in model_lower:
-            return ["image/", "audio/", "video/", "application/pdf", "text/"]
-        if "claude-3" in model_lower or "claude-4" in model_lower:
-            return ["image/", "application/pdf"]
-        return ["image/"]

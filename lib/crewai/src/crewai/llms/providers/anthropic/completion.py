@@ -1365,16 +1365,6 @@ class AnthropicCompletion(BaseLLM):
         """
         return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
 
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported by Anthropic for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        if not self.supports_multimodal():
-            return []
-        return ["image/", "application/pdf"]
-
     def get_file_uploader(self) -> Any:
         """Get an Anthropic file uploader using this LLM's clients.
 

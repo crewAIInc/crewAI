@@ -296,14 +296,6 @@ class BaseLLM(ABC):
         """
         return False
 
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get the content types supported by this LLM for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes (e.g., ["image/", "application/pdf"]).
-        """
-        return []
-
     def format_text_content(self, text: str) -> dict[str, Any]:
         """Format text as a content block for the LLM.
 
@@ -575,25 +567,27 @@ class BaseLLM(ABC):
             return messages
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        api = getattr(self, "api", None)
 
         for msg in messages:
             files = msg.get("files")
             if not files:
                 continue
 
-            content_blocks = format_multimodal_content(files, provider)
+            existing_content = msg.get("content", "")
+            text = existing_content if isinstance(existing_content, str) else None
+
+            content_blocks = format_multimodal_content(
+                files, provider, api=api, text=text
+            )
             if not content_blocks:
                 msg.pop("files", None)
                 continue
 
-            existing_content = msg.get("content", "")
-            if isinstance(existing_content, str):
-                msg["content"] = [
-                    self.format_text_content(existing_content),
-                    *content_blocks,
-                ]
-            elif isinstance(existing_content, list):
+            if isinstance(existing_content, list):
                 msg["content"] = [*existing_content, *content_blocks]
+            else:
+                msg["content"] = content_blocks
 
             msg.pop("files", None)
 

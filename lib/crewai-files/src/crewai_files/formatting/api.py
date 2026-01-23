@@ -54,16 +54,40 @@ def _normalize_provider(provider: str | None) -> ProviderType:
     return "openai"
 
 
+def _format_text_block(
+    text: str, provider: str | None = None, api: str | None = None
+) -> dict[str, Any]:
+    """Format text as a provider-specific content block.
+
+    Args:
+        text: The text content to format.
+        provider: Provider name for provider-specific formatting.
+        api: API variant (e.g., "responses" for OpenAI Responses API).
+
+    Returns:
+        A content block dict in the provider's expected format.
+    """
+    if api == "responses":
+        return OpenAIResponsesFormatter.format_text_content(text)
+    if provider and ("bedrock" in provider.lower() or "aws" in provider.lower()):
+        return {"text": text}
+    if provider and ("gemini" in provider.lower() or "google" in provider.lower()):
+        return {"text": text}
+    return {"type": "text", "text": text}
+
+
 def format_multimodal_content(
     files: dict[str, FileInput],
     provider: str | None = None,
     api: str | None = None,
     prefer_upload: bool | None = None,
+    text: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Format files as provider-specific multimodal content blocks.
+    """Format text and files as provider-specific multimodal content blocks.
 
     This is the main high-level API for converting files to content blocks
     suitable for sending to LLM providers. It handles:
+    - Text formatting according to API variant
     - File processing according to provider constraints
     - Resolution (upload vs inline) based on provider capabilities
     - Formatting into provider-specific content block structures
@@ -74,45 +98,52 @@ def format_multimodal_content(
         api: API variant (e.g., "responses" for OpenAI Responses API).
         prefer_upload: Whether to prefer uploading files instead of inlining.
             If None, uses provider-specific defaults.
+        text: Optional text content to include as the first content block.
 
     Returns:
         List of content blocks in the provider's expected format.
+        If text is provided, it will be the first block.
 
     Example:
         >>> from crewai_files import format_multimodal_content, ImageFile
         >>> files = {"photo": ImageFile(source="image.jpg")}
-        >>> blocks = format_multimodal_content(files, "openai")
+        >>> blocks = format_multimodal_content(files, "openai", text="Describe this")
         >>> # For OpenAI Responses API:
         >>> blocks = format_multimodal_content(files, "openai", api="responses")
-        >>> # With file upload:
-        >>> blocks = format_multimodal_content(
-        ...     files, "openai", api="responses", prefer_upload=True
-        ... )
     """
-    if not files:
-        return []
-
+    content_blocks: list[dict[str, Any]] = []
     provider_type = _normalize_provider(provider)
 
-    processor = FileProcessor(constraints=provider_type)
+    # Add text block first if provided
+    if text:
+        content_blocks.append(_format_text_block(text, provider_type, api))
+
+    if not files:
+        return content_blocks
+
+    # Use API-specific constraints for OpenAI
+    constraints_key = provider_type
+    if api == "responses" and "openai" in provider_type.lower():
+        constraints_key = "openai_responses"
+
+    processor = FileProcessor(constraints=constraints_key)
     processed_files = processor.process_files(files)
 
     if not processed_files:
-        return []
+        return content_blocks
 
-    constraints = get_constraints_for_provider(provider_type)
+    constraints = get_constraints_for_provider(constraints_key)
     supported_types = _get_supported_types(constraints)
     supported_files = _filter_supported_files(processed_files, supported_types)
 
     if not supported_files:
-        return []
+        return content_blocks
 
     config = _get_resolver_config(provider_type, prefer_upload)
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
     formatter = _get_formatter(provider_type, api)
-    content_blocks: list[dict[str, Any]] = []
 
     for name, file_input in supported_files.items():
         resolved = resolver.resolve(file_input, provider_type)
@@ -128,8 +159,9 @@ async def aformat_multimodal_content(
     provider: str | None = None,
     api: str | None = None,
     prefer_upload: bool | None = None,
+    text: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Async format files as provider-specific multimodal content blocks.
+    """Async format text and files as provider-specific multimodal content blocks.
 
     Async version of format_multimodal_content with parallel file resolution.
 
@@ -139,27 +171,38 @@ async def aformat_multimodal_content(
         api: API variant (e.g., "responses" for OpenAI Responses API).
         prefer_upload: Whether to prefer uploading files instead of inlining.
             If None, uses provider-specific defaults.
+        text: Optional text content to include as the first content block.
 
     Returns:
         List of content blocks in the provider's expected format.
+        If text is provided, it will be the first block.
     """
-    if not files:
-        return []
-
+    content_blocks: list[dict[str, Any]] = []
     provider_type = _normalize_provider(provider)
 
-    processor = FileProcessor(constraints=provider_type)
+    if text:
+        content_blocks.append(_format_text_block(text, provider_type, api))
+
+    if not files:
+        return content_blocks
+
+    # Use API-specific constraints for OpenAI
+    constraints_key = provider_type
+    if api == "responses" and "openai" in provider_type.lower():
+        constraints_key = "openai_responses"
+
+    processor = FileProcessor(constraints=constraints_key)
     processed_files = await processor.aprocess_files(files)
 
     if not processed_files:
-        return []
+        return content_blocks
 
-    constraints = get_constraints_for_provider(provider_type)
+    constraints = get_constraints_for_provider(constraints_key)
     supported_types = _get_supported_types(constraints)
     supported_files = _filter_supported_files(processed_files, supported_types)
 
     if not supported_files:
-        return []
+        return content_blocks
 
     config = _get_resolver_config(provider_type, prefer_upload)
     upload_cache = get_upload_cache()
@@ -168,7 +211,6 @@ async def aformat_multimodal_content(
     resolved_files = await resolver.aresolve_files(supported_files, provider_type)
 
     formatter = _get_formatter(provider_type, api)
-    content_blocks: list[dict[str, Any]] = []
 
     for name, resolved in resolved_files.items():
         file_input = supported_files[name]
