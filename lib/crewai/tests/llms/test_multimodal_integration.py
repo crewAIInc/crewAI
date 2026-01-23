@@ -111,6 +111,50 @@ class TestOpenAIMultimodalIntegration:
         assert len(response) > 0
 
 
+class TestOpenAIO4MiniMultimodalIntegration:
+    """Integration tests for OpenAI o4-mini reasoning model with vision."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test o4-mini can describe an image."""
+        llm = LLM(model="openai/o4-mini")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+class TestOpenAIGPT41MiniMultimodalIntegration:
+    """Integration tests for OpenAI GPT-4.1-mini with vision."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test GPT-4.1-mini can describe an image."""
+        llm = LLM(model="openai/gpt-4.1-mini")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
 class TestAnthropicMultimodalIntegration:
     """Integration tests for Anthropic multimodal with real API calls."""
 
