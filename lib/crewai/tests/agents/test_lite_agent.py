@@ -860,17 +860,17 @@ def test_agent_kickoff_with_files_parameter():
     )
 
     test_file = File(source=b"mock pdf content")
-    files = {"document.pdf": test_file}
+    input_files = {"document.pdf": test_file}
 
     with patch.object(
         agent, "_prepare_kickoff", wraps=agent._prepare_kickoff
     ) as mock_prepare:
-        result = agent.kickoff(messages="Analyze the document", files=files)
+        result = agent.kickoff(messages="Analyze the document", input_files=input_files)
 
         mock_prepare.assert_called_once()
         call_args = mock_prepare.call_args
         assert call_args.args[0] == "Analyze the document"
-        called_files = call_args.kwargs.get("files") or call_args.args[2]
+        called_files = call_args.kwargs.get("input_files") or call_args.args[2]
         assert "document.pdf" in called_files
         assert called_files["document.pdf"] is test_file
 
@@ -950,10 +950,10 @@ def test_prepare_kickoff_merges_files_from_messages_and_parameter():
     messages = [
         {"role": "user", "content": "Analyze these", "files": {"from_msg.png": msg_file}}
     ]
-    files = {"from_param.pdf": param_file}
+    input_files = {"from_param.pdf": param_file}
 
     executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
-        messages=messages, files=files
+        messages=messages, input_files=input_files
     )
 
     assert "files" in inputs
