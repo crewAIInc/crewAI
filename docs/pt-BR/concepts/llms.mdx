@@ -150,6 +150,37 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | o1-mini              | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
     | o1-preview           | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
     | o1                   | 200.000 tokens      | Raciocínio rápido, tarefas complexas     |
+
+    **Responses API:**
+
+    A OpenAI oferece duas APIs: Chat Completions (padrão) e a nova Responses API. A Responses API foi projetada desde o início com suporte multimodal nativo—texto, imagens, áudio e chamadas de função são todos cidadãos de primeira classe. Ela oferece melhor performance com modelos de raciocínio e suporta recursos adicionais como auto-encadeamento e ferramentas integradas.
+
+    ```python Code
+    from crewai import LLM
+
+    # Usar Responses API em vez de Chat Completions
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Habilitar Responses API
+        store=True,  # Armazenar respostas para multi-turno (opcional)
+        auto_chain=True,  # Auto-encadeamento para modelos de raciocínio (opcional)
+    )
+    ```
+
+    **Parâmetros da Responses API:**
+    - `api`: Defina como `"responses"` para usar a Responses API (padrão: `"completions"`)
+    - `instructions`: Instruções de nível de sistema (apenas Responses API)
+    - `store`: Se deve armazenar respostas para conversas multi-turno
+    - `previous_response_id`: ID da resposta anterior para multi-turno
+    - `include`: Dados adicionais para incluir na resposta (ex: `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: Lista de ferramentas integradas da OpenAI: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: Retornar `ResponsesAPIResult` estruturado com saídas de ferramentas integradas parseadas
+    - `auto_chain`: Rastrear e usar automaticamente IDs de resposta para conversas multi-turno
+    - `auto_chain_reasoning`: Rastrear itens de raciocínio criptografados para conformidade ZDR (Zero Data Retention)
+
+    <Tip>
+      Use a Responses API para novos projetos, especialmente ao trabalhar com modelos de raciocínio (o1, o3, o4) ou quando precisar de suporte multimodal nativo para [arquivos](/pt-BR/concepts/files).
+    </Tip>
   </Accordion>
 
   <Accordion title="Meta-Llama">
