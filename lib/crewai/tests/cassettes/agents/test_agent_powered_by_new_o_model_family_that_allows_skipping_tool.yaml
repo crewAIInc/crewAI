@@ -1,7 +1,12 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"user","content":"You are test role. test backstory\nYour personal goal is: test goal\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'': {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when you need to multiply two numbers together.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [multiplier], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer
-      to the original input question\n```\nCurrent Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer: The result of the multiplication.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"o3-mini"}'
+    body: '{"messages":[{"role":"user","content":"You are test role. test backstory\nYour
+      personal goal is: test goal\nCurrent Task: What is 3 times 4?\n\nThis is the
+      expected criteria for your final answer: The result of the multiplication.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"}],"model":"o3-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -14,7 +19,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1375'
+      - '756'
       content-type:
       - application/json
       host:
@@ -36,13 +41,26 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CjDraiM0mStibrNFjxmakKNWjAj6s\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894086,\n  \"model\": \"o3-mini-2025-01-31\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I need to multiply 3 and 4, so I'll use the multiplier tool.\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\\nObservation: 12\\n```\\n```\\nThought: I now know the final answer\\nFinal Answer: 12\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 289,\n    \"completion_tokens\": 336,\n    \"total_tokens\": 625,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 256,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
-        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_ddf739c152\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D0tOoTpApyKybeCF0qzTskNmL5ddy\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105326,\n  \"model\": \"o3-mini-2025-01-31\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_C6S0MxPN2zHqNiCsVq3EdnPn\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\": 3, \\\"second_number\\\":
+        4}\"\n            }\n          }\n        ],\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 133,\n    \"completion_tokens\":
+        165,\n    \"total_tokens\": 298,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_d48b29c73d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -51,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 05 Dec 2025 00:21:29 GMT
+      - Thu, 22 Jan 2026 18:08:48 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -71,13 +89,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3797'
+      - '2228'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '3818'
+      - '2250'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -98,8 +116,16 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"user","content":"You are test role. test backstory\nYour personal goal is: test goal\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'': {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when you need to multiply two numbers together.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [multiplier], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer
-      to the original input question\n```\nCurrent Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer: The result of the multiplication.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"```\nThought: I need to multiply 3 and 4, so I''ll use the multiplier tool.\nAction: multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 4}\nObservation: 12"}],"model":"o3-mini"}'
+    body: '{"messages":[{"role":"user","content":"You are test role. test backstory\nYour
+      personal goal is: test goal\nCurrent Task: What is 3 times 4?\n\nThis is the
+      expected criteria for your final answer: The result of the multiplication.\nyou
+      MUST return the actual complete content as the final answer, not a summary.\n\nThis
+      is VERY important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_C6S0MxPN2zHqNiCsVq3EdnPn","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":
+      3, \"second_number\": 4}"}}]},{"role":"tool","tool_call_id":"call_C6S0MxPN2zHqNiCsVq3EdnPn","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"o3-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -112,7 +138,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1579'
+      - '1217'
       content-type:
       - application/json
       cookie:
@@ -136,12 +162,22 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CjDreUyivKzqEdFl4JCQWK0huxFX8\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894090,\n  \"model\": \"o3-mini-2025-01-31\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal Answer: 12\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 339,\n    \"completion_tokens\": 159,\n    \"total_tokens\": 498,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_ddf739c152\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D0tOquG6ZFa9kTlX80mBspFAvYnGX\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105328,\n  \"model\": \"o3-mini-2025-01-31\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"12\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 197,\n    \"completion_tokens\":
+        80,\n    \"total_tokens\": 277,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_d48b29c73d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -150,7 +186,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 05 Dec 2025 00:21:31 GMT
+      - Thu, 22 Jan 2026 18:08:51 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -168,13 +204,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1886'
+      - '2879'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '1909'
+      - '2900'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

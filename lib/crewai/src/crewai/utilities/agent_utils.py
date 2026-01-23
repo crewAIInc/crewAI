@@ -28,6 +28,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
@@ -96,15 +97,15 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
 
 def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
-    """Get the names of the tools.
+    """Get the sanitized names of the tools.
 
     Args:
         tools: List of tools to get names from.
 
     Returns:
-        Comma-separated string of tool names.
+        Comma-separated string of sanitized tool names.
     """
-    return ", ".join([t.name for t in tools])
+    return ", ".join([sanitize_tool_name(t.name) for t in tools])
 
 
 def render_text_description_and_args(
@@ -124,6 +125,66 @@ def render_text_description_and_args(
     """
     tool_strings = [tool.description for tool in tools]
     return "\n".join(tool_strings)
+
+
+def convert_tools_to_openai_schema(
+    tools: Sequence[BaseTool | CrewStructuredTool],
+) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+    """Convert CrewAI tools to OpenAI function calling format.
+
+    This function converts CrewAI BaseTool and CrewStructuredTool objects
+    into the OpenAI-compatible tool schema format that can be passed to
+    LLM providers for native function calling.
+
+    Args:
+        tools: List of CrewAI tool objects to convert.
+
+    Returns:
+        Tuple containing:
+        - List of OpenAI-format tool schema dictionaries
+        - Dict mapping tool names to their callable run() methods
+
+    Example:
+        >>> tools = [CalculatorTool(), SearchTool()]
+        >>> schemas, functions = convert_tools_to_openai_schema(tools)
+        >>> # schemas can be passed to llm.call(tools=schemas)
+        >>> # functions can be passed to llm.call(available_functions=functions)
+    """
+    openai_tools: list[dict[str, Any]] = []
+    available_functions: dict[str, Callable[..., Any]] = {}
+
+    for tool in tools:
+        # Get the JSON schema for tool parameters
+        parameters: dict[str, Any] = {}
+        if hasattr(tool, "args_schema") and tool.args_schema is not None:
+            try:
+                parameters = tool.args_schema.model_json_schema()
+                # Remove title and description from schema root as they're redundant
+                parameters.pop("title", None)
+                parameters.pop("description", None)
+            except Exception:
+                parameters = {}
+
+        # Extract original description from formatted description
+        # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
+        description = tool.description
+        if "Tool Description:" in description:
+            description = description.split("Tool Description:")[-1].strip()
+
+        sanitized_name = sanitize_tool_name(tool.name)
+
+        schema: dict[str, Any] = {
+            "type": "function",
+            "function": {
+                "name": sanitized_name,
+                "description": description,
+                "parameters": parameters,
+            },
+        }
+        openai_tools.append(schema)
+        available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
+
+    return openai_tools, available_functions
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
@@ -252,11 +313,13 @@ def get_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | LiteAgent | None = None,
-) -> str:
+) -> str | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
     Args:
@@ -264,13 +327,16 @@ def get_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, or tool call results if
+        native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -285,7 +351,9 @@ def get_llm_response(
     try:
         answer = llm.call(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
@@ -307,11 +375,13 @@ async def aget_llm_response(
     messages: list[LLMMessage],
     callbacks: list[TokenCalcHandler],
     printer: Printer,
+    tools: list[dict[str, Any]] | None = None,
+    available_functions: dict[str, Callable[..., Any]] | None = None,
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | None = None,
-) -> str:
+) -> str | Any:
     """Call the LLM asynchronously and return the response.
 
     Args:
@@ -319,13 +389,16 @@ async def aget_llm_response(
         messages: The messages to send to the LLM.
         callbacks: List of callbacks for the LLM call.
         printer: Printer instance for output.
+        tools: Optional list of tool schemas for native function calling.
+        available_functions: Optional dict mapping function names to callables.
         from_task: Optional task context for the LLM call.
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string.
+        The response from the LLM as a string, or tool call results if
+        native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -339,7 +412,9 @@ async def aget_llm_response(
     try:
         answer = await llm.acall(
             messages,
+            tools=tools,
             callbacks=callbacks,
+            available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,  # type: ignore[arg-type]
             response_model=response_model,
@@ -742,6 +817,71 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
             else:
                 attributes[key] = value
     return attributes
+
+
+DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
+    [
+        sanitize_tool_name("Delegate work to coworker"),
+        sanitize_tool_name("Ask question to coworker"),
+    ]
+)
+
+
+# native tool calling tracking for delegation
+def track_delegation_if_needed(
+    tool_name: str,
+    tool_args: dict[str, Any],
+    task: Task | None,
+) -> None:
+    """Track delegation if the tool is a delegation tool.
+
+    Args:
+        tool_name: Name of the tool being executed.
+        tool_args: Arguments passed to the tool.
+        task: The task being executed (used to track delegations).
+    """
+    if sanitize_tool_name(tool_name) in DELEGATION_TOOL_NAMES and task is not None:
+        coworker = tool_args.get("coworker")
+        task.increment_delegations(coworker)
+
+
+def extract_tool_call_info(
+    tool_call: Any,
+) -> tuple[str, str, dict[str, Any] | str] | None:
+    """Extract tool call ID, name, and arguments from various provider formats.
+
+    Args:
+        tool_call: The tool call object to extract info from.
+
+    Returns:
+        Tuple of (call_id, func_name, func_args) or None if format is unrecognized.
+    """
+    if hasattr(tool_call, "function"):
+        # OpenAI-style: has .function.name and .function.arguments
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return call_id, sanitize_tool_name(tool_call.function.name), tool_call.function.arguments
+    if hasattr(tool_call, "function_call") and tool_call.function_call:
+        # Gemini-style: has .function_call.name and .function_call.args
+        call_id = f"call_{id(tool_call)}"
+        return (
+            call_id,
+            sanitize_tool_name(tool_call.function_call.name),
+            dict(tool_call.function_call.args) if tool_call.function_call.args else {},
+        )
+    if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
+        # Anthropic format: has .name and .input (ToolUseBlock)
+        call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+        return call_id, sanitize_tool_name(tool_call.name), tool_call.input
+    if isinstance(tool_call, dict):
+        # Support OpenAI "id", Bedrock "toolUseId", or generate one
+        call_id = (
+            tool_call.get("id") or tool_call.get("toolUseId") or f"call_{id(tool_call)}"
+        )
+        func_info = tool_call.get("function", {})
+        func_name = func_info.get("name", "") or tool_call.get("name", "")
+        func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        return call_id, sanitize_tool_name(func_name), func_args
+    return None
 
 
 def _setup_before_llm_call_hooks(

@@ -366,6 +366,32 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, f"🔧 Tool Execution Started (#{iteration})", "yellow")
 
+    def handle_tool_usage_finished(
+        self,
+        tool_name: str,
+        output: str,
+        run_attempts: int | None = None,
+    ) -> None:
+        """Handle tool usage finished event with panel display."""
+        if not self.verbose:
+            return
+
+        iteration = self.tool_usage_counts.get(tool_name, 1)
+
+        content = Text()
+        content.append("Tool Completed\n", style="green bold")
+        content.append("Tool: ", style="white")
+        content.append(f"{tool_name}\n", style="green bold")
+
+        if output:
+            content.append("Output: ", style="white")
+
+            content.append(f"{output}\n", style="green")
+
+        self.print_panel(
+            content, f"✅ Tool Execution Completed (#{iteration})", "green"
+        )
+
     def handle_tool_usage_error(
         self,
         tool_name: str,

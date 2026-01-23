@@ -196,4 +196,5 @@ async def test_anthropic_async_with_tools():
     logging.debug("result: %s", result)
 
     assert result is not None
-    assert isinstance(result, str)
+    # Result can be either a string or a list of tool calls (native tool calling)
+    assert isinstance(result, (str, list))

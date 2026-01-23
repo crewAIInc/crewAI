@@ -26,6 +26,7 @@ from typing_extensions import TypeIs
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.printer import Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 _printer = Printer()
@@ -154,7 +155,6 @@ class BaseTool(BaseModel, ABC):
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self._run(*args, **kwargs)
 
         # If _run is async, we safely run it
@@ -260,10 +260,12 @@ class BaseTool(BaseModel, ABC):
                 else:
                     fields[name] = (param_annotation, param.default)
             if fields:
-                args_schema = create_model(f"{tool.name}Input", **fields)
+                args_schema = create_model(
+                    f"{sanitize_tool_name(tool.name)}_input", **fields
+                )
             else:
                 args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
+                    f"{sanitize_tool_name(tool.name)}_input", __base__=PydanticBaseModel
                 )
 
         return cls(
@@ -302,7 +304,7 @@ class BaseTool(BaseModel, ABC):
         schema = generate_model_description(self.args_schema)
         args_json = json.dumps(schema["json_schema"]["schema"], indent=2)
         self.description = (
-            f"Tool Name: {self.name}\n"
+            f"Tool Name: {sanitize_tool_name(self.name)}\n"
             f"Tool Arguments: {args_json}\n"
             f"Tool Description: {self.description}"
         )
@@ -329,7 +331,6 @@ class Tool(BaseTool, Generic[P, R]):
         Returns:
             The result of the tool execution.
         """
-        _printer.print(f"Using Tool: {self.name}", color="cyan")
         result = self.func(*args, **kwargs)
 
         if asyncio.iscoroutine(result):
@@ -381,7 +382,7 @@ class Tool(BaseTool, Generic[P, R]):
         if _is_awaitable(result):
             return await result
         raise NotImplementedError(
-            f"{self.name} does not have an async function. "
+            f"{sanitize_tool_name(self.name)} does not have an async function. "
             "Use run() for sync execution or provide an async function."
         )
 
@@ -423,10 +424,12 @@ class Tool(BaseTool, Generic[P, R]):
                 else:
                     fields[name] = (param_annotation, param.default)
             if fields:
-                args_schema = create_model(f"{tool.name}Input", **fields)
+                args_schema = create_model(
+                    f"{sanitize_tool_name(tool.name)}_input", **fields
+                )
             else:
                 args_schema = create_model(
-                    f"{tool.name}Input", __base__=PydanticBaseModel
+                    f"{sanitize_tool_name(tool.name)}_input", __base__=PydanticBaseModel
                 )
 
         return cls(

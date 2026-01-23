@@ -1,496 +1,394 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a specific task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task,
-      so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'':
-      ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following format:\n\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all necessary information is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are
+      a seasoned manager with a knack for getting the best out of your team.\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\nEven though you don''t
+      perform tasks by yourself, you have a lot of experience in the field, which
+      allows you to properly evaluate the work of your team members.\nYour personal
+      goal is: Manage the team to complete the task in the best way possible."},{"role":"user","content":"\nCurrent
+      Task: Ask the researched to say hi!\n\nThis is the expected criteria for your
+      final answer: Howdy!\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}],"model":"gpt-4o","tool_choice":"auto","tools":[{"type":"function","function":{"name":"Delegate_work_to_coworker","description":"Delegate
+      a specific task to one of the following coworkers: Researcher\nThe input to
+      this tool should be the coworker, the task you want them to do, and ALL necessary
+      context to execute the task, they know nothing about the task, so share absolutely
+      everything you know, don''t reference things but instead explain them.","parameters":{"properties":{"task":{"description":"The
+      task to delegate","title":"Task","type":"string"},"context":{"description":"The
+      context for the task","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to delegate to","title":"Coworker","type":"string"}},"required":["task","context","coworker"],"type":"object"}}},{"type":"function","function":{"name":"Ask_question_to_coworker","description":"Ask
+      a specific question to one of the following coworkers: Researcher\nThe input
+      to this tool should be the coworker, the question you have for them, and ALL
+      necessary context to ask the question properly, they know nothing about the
+      question, so share absolutely everything you know, don''t reference things but
+      instead explain them.","parameters":{"properties":{"question":{"description":"The
+      question to ask","title":"Question","type":"string"},"context":{"description":"The
+      context for the question","title":"Context","type":"string"},"coworker":{"description":"The
+      role/name of the coworker to ask","title":"Coworker","type":"string"}},"required":["question","context","coworker"],"type":"object"}}}]}'
     headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '2904'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cCDhcGe826aJEs22GQ3mDsfDsN\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214244,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: To complete the task, I need to ask the researcher to say \\\"Howdy!\\\" I will use the \\\"Ask question to coworker\\\" tool to instruct the researcher accordingly.\\n\\nAction: Ask question to coworker\\nAction Input: {\\\"question\\\": \\\"Can you please say hi?\\\", \\\"context\\\": \\\"The expected greeting is: Howdy!\\\", \\\"coworker\\\": \\\"Researcher\\\"}\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 642,\n    \"completion_tokens\": 78,\n    \"total_tokens\": 720,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
-      : \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85f4244b1a1cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:44:06 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '1465'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999290'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_f9cddfa4dfe1d6c598bb53615194b9cb
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: !!binary |
-      Cr4vCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSlS8KEgoQY3Jld2FpLnRl
-      bGVtZXRyeRKOAQoQQ8il8kZDNNHJE3HtaHeVxBIIK2VXP64Z6RMqClRvb2wgVXNhZ2UwATnonoGP
-      M0z4F0E42YOPM0z4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoJdG9vbF9uYW1lEg0K
-      C3JldHVybl9kYXRhSg4KCGF0dGVtcHRzEgIYAXoCGAGFAQABAAASkAIKEC4AjbWoU6CMg6Jyheoj
-      fGUSCGvjPk56xaAhKg5UYXNrIEV4ZWN1dGlvbjABOVCBvkkzTPgXQThyysgzTPgXSi4KCGNyZXdf
-      a2V5EiIKIDE3YTZjYTAzZDg1MGZlMmYzMGMwYTEwNTFhZDVmN2U0SjEKB2NyZXdfaWQSJgokYWZj
-      MzJjNzMtOGEzNy00NjUyLTk2ZmItZjhjZjczODE2MTM5Si4KCHRhc2tfa2V5EiIKIGY1OTQ5MjA4
-      ZDZmMzllZTkwYWQwMGU5NzFjMTRhZGQzSjEKB3Rhc2tfaWQSJgokOTQwNzQ0NjAtNTljMC00MGY1
-      LTk0M2ItYjlhN2IyNjY1YTExegIYAYUBAAEAABKdBwoQAp5l3FcWwU4RwV0ZT604xxII599Eiq7V
-      JTkqDENyZXcgQ3JlYXRlZDABOZBkJ8wzTPgXQdjDKswzTPgXShoKDmNyZXdhaV92ZXJzaW9uEggK
-      BjAuNjEuMEoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogOWM5ZDUy
-      NThmZjEwNzgzMGE5Yzk2NWJiNzUyN2I4MGRKMQoHY3Jld19pZBImCiRhMzNiZGNmYS0yMzllLTRm
-      NzAtYWRkYS01ZjAxZDNlYTI5YTlKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jl
-      d19tZW1vcnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9v
-      Zl9hZ2VudHMSAhgBSssCCgtjcmV3X2FnZW50cxK7Agq4Alt7ImtleSI6ICI5N2Y0MTdmM2UxZTMx
-      Y2YwYzEwOWY3NTI5YWM4ZjZiYyIsICJpZCI6ICI2ZGIzNDhiNC02MmRlLTQ1ZjctOWMyZC1mZWNk
-      Zjc1NjYxMDUiLCAicm9sZSI6ICJQcm9ncmFtbWVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhf
-      aXRlciI6IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAi
-      bGxtIjogImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2Rl
-      X2V4ZWN1dGlvbj8iOiB0cnVlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjog
-      W119XUr/AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICI4ZWM4YmNmMjhlNzdhMzY5MmQ2NjMw
-      NDVmMjVhYzI5MiIsICJpZCI6ICJlMzEyNDYxMi1kYTQ4LTQ5MjAtOTk0Yy1iMWQ4Y2I2N2ZiMTgi
-      LCAiYXN5bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2Vu
-      dF9yb2xlIjogIlByb2dyYW1tZXIiLCAiYWdlbnRfa2V5IjogIjk3ZjQxN2YzZTFlMzFjZjBjMTA5
-      Zjc1MjlhYzhmNmJjIiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEG4frTLO4Bfa
-      NicQjhmuFiESCLR6CoCiKgAQKgxUYXNrIENyZWF0ZWQwATnAd2HMM0z4F0HQmGLMM0z4F0ouCghj
-      cmV3X2tleRIiCiA5YzlkNTI1OGZmMTA3ODMwYTljOTY1YmI3NTI3YjgwZEoxCgdjcmV3X2lkEiYK
-      JGEzM2JkY2ZhLTIzOWUtNGY3MC1hZGRhLTVmMDFkM2VhMjlhOUouCgh0YXNrX2tleRIiCiA4ZWM4
-      YmNmMjhlNzdhMzY5MmQ2NjMwNDVmMjVhYzI5MkoxCgd0YXNrX2lkEiYKJGUzMTI0NjEyLWRhNDgt
-      NDkyMC05OTRjLWIxZDhjYjY3ZmIxOHoCGAGFAQABAAASkAIKEHU3PdNpz3JRC4m2p9JUu0YSCOm3
-      6m5d9vigKg5UYXNrIEV4ZWN1dGlvbjABOfDmYswzTPgXQWD4Y8wzTPgXSi4KCGNyZXdfa2V5EiIK
-      IDljOWQ1MjU4ZmYxMDc4MzBhOWM5NjViYjc1MjdiODBkSjEKB2NyZXdfaWQSJgokYTMzYmRjZmEt
-      MjM5ZS00ZjcwLWFkZGEtNWYwMWQzZWEyOWE5Si4KCHRhc2tfa2V5EiIKIDhlYzhiY2YyOGU3N2Ez
-      NjkyZDY2MzA0NWYyNWFjMjkySjEKB3Rhc2tfaWQSJgokZTMxMjQ2MTItZGE0OC00OTIwLTk5NGMt
-      YjFkOGNiNjdmYjE4egIYAYUBAAEAABKdBwoQzYcqndu4aYxkza4uqBe40hIIXfKm+J/4UlAqDENy
-      ZXcgQ3JlYXRlZDABOZAnw8wzTPgXQbg4xswzTPgXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEu
-      MEoaCg5weXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogMTdhNmNhMDNkODUw
-      ZmUyZjMwYzBhMTA1MWFkNWY3ZTRKMQoHY3Jld19pZBImCiRkN2M3NGEzMy1jNmViLTQ0NzktODE3
-      NC03ZjZhMWQ5OWM0YjRKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1v
-      cnkSAhAAShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2Vu
-      dHMSAhgBSssCCgtjcmV3X2FnZW50cxK7Agq4Alt7ImtleSI6ICI4YmQyMTM5YjU5NzUxODE1MDZl
-      NDFmZDljNDU2M2Q3NSIsICJpZCI6ICIzODAzZmIxYS1lYzI0LTQ1ZDctYjlmZC04ZTlkYTJjYmRm
-      YzAiLCAicm9sZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6
-      IDE1LCAibWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjog
-      ImdwdC00byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogdHJ1ZSwgImFsbG93X2NvZGVfZXhlY3V0
-      aW9uPyI6IGZhbHNlLCAibWF4X3JldHJ5X2xpbWl0IjogMiwgInRvb2xzX25hbWVzIjogW119XUr/
-      AQoKY3Jld190YXNrcxLwAQrtAVt7ImtleSI6ICJmNTk0OTIwOGQ2ZjM5ZWU5MGFkMDBlOTcxYzE0
-      YWRkMyIsICJpZCI6ICJiODdjY2M1Ni1mZjJkLTQ1OGItODM4Ny1iNmE2NGYzNDNmMTMiLCAiYXN5
-      bmNfZXhlY3V0aW9uPyI6IGZhbHNlLCAiaHVtYW5faW5wdXQ/IjogZmFsc2UsICJhZ2VudF9yb2xl
-      IjogIlJlc2VhcmNoZXIiLCAiYWdlbnRfa2V5IjogIjhiZDIxMzliNTk3NTE4MTUwNmU0MWZkOWM0
-      NTYzZDc1IiwgInRvb2xzX25hbWVzIjogW119XXoCGAGFAQABAAASjgIKEC4TO88xwYcM6KyQacrG
-      VRISCE1ju0Qq1kn2KgxUYXNrIENyZWF0ZWQwATmI1NfMM0z4F0FIMtjMM0z4F0ouCghjcmV3X2tl
-      eRIiCiAxN2E2Y2EwM2Q4NTBmZTJmMzBjMGExMDUxYWQ1ZjdlNEoxCgdjcmV3X2lkEiYKJGQ3Yzc0
-      YTMzLWM2ZWItNDQ3OS04MTc0LTdmNmExZDk5YzRiNEouCgh0YXNrX2tleRIiCiBmNTk0OTIwOGQ2
-      ZjM5ZWU5MGFkMDBlOTcxYzE0YWRkM0oxCgd0YXNrX2lkEiYKJGI4N2NjYzU2LWZmMmQtNDU4Yi04
-      Mzg3LWI2YTY0ZjM0M2YxM3oCGAGFAQABAAASkAIKEIdDgoaGTmEgTZLUwxtsneoSCNxWYfO0Kqrs
-      Kg5UYXNrIEV4ZWN1dGlvbjABOShh2MwzTPgXQYgyiRw0TPgXSi4KCGNyZXdfa2V5EiIKIDE3YTZj
-      YTAzZDg1MGZlMmYzMGMwYTEwNTFhZDVmN2U0SjEKB2NyZXdfaWQSJgokZDdjNzRhMzMtYzZlYi00
-      NDc5LTgxNzQtN2Y2YTFkOTljNGI0Si4KCHRhc2tfa2V5EiIKIGY1OTQ5MjA4ZDZmMzllZTkwYWQw
-      MGU5NzFjMTRhZGQzSjEKB3Rhc2tfaWQSJgokYjg3Y2NjNTYtZmYyZC00NThiLTgzODctYjZhNjRm
-      MzQzZjEzegIYAYUBAAEAABKeBwoQjeHlZijtrmlBjLPN1NnodRIIv0sKieGNvv4qDENyZXcgQ3Jl
-      YXRlZDABOehPNx40TPgXQeg3Ox40TPgXShoKDmNyZXdhaV92ZXJzaW9uEggKBjAuNjEuMEoaCg5w
-      eXRob25fdmVyc2lvbhIICgYzLjExLjdKLgoIY3Jld19rZXkSIgogNjFhNjBkNWIzNjAyMWQxYWRh
-      NTQzNGViMmUzODg2ZWVKMQoHY3Jld19pZBImCiQ0YTBkMGJlOC0wZTFmLTQyYTItYWM0Ni1lNjRi
-      NzNhYjdkYTJKHAoMY3Jld19wcm9jZXNzEgwKCnNlcXVlbnRpYWxKEQoLY3Jld19tZW1vcnkSAhAA
-      ShoKFGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgB
-      SswCCgtjcmV3X2FnZW50cxK8Agq5Alt7ImtleSI6ICJmNWVhOTcwNWI3ODdmNzgyNTE0MmM4NzRi
-      NTg3MjZjOCIsICJpZCI6ICI4OTI1YWQ4MS0wMjE1LTQzODgtOGE2NS1kNzljN2Y2Yjc2MmMiLCAi
-      cm9sZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAi
-      bWF4X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00
-      byIsICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8i
-      OiBmYWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K/wEKCmNy
-      ZXdfdGFza3MS8AEK7QFbeyJrZXkiOiAiZjQ1Njc5MjEyZDdiZjM3NWQxMWMyODQyMGZiNzJkMjQi
-      LCAiaWQiOiAiZDYzOGVlMDYtY2Q2ZC00MzJlLTgwNTEtZDdhZjMwMjA2NDZjIiwgImFzeW5jX2V4
-      ZWN1dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJS
-      ZXNlYXJjaGVyIiwgImFnZW50X2tleSI6ICJmNWVhOTcwNWI3ODdmNzgyNTE0MmM4NzRiNTg3MjZj
-      OCIsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChCQa4N5cC4q5zdmxwrQuZO4Egh6
-      U16EAvPetSoMVGFzayBDcmVhdGVkMAE5mORRHjRM+BdBmGFSHjRM+BdKLgoIY3Jld19rZXkSIgog
-      NjFhNjBkNWIzNjAyMWQxYWRhNTQzNGViMmUzODg2ZWVKMQoHY3Jld19pZBImCiQ0YTBkMGJlOC0w
-      ZTFmLTQyYTItYWM0Ni1lNjRiNzNhYjdkYTJKLgoIdGFza19rZXkSIgogZjQ1Njc5MjEyZDdiZjM3
-      NWQxMWMyODQyMGZiNzJkMjRKMQoHdGFza19pZBImCiRkNjM4ZWUwNi1jZDZkLTQzMmUtODA1MS1k
-      N2FmMzAyMDY0NmN6AhgBhQEAAQAAEpACChCql9MAgd+JaH8kEOL+e8VSEggrkIY8i2+XjSoOVGFz
-      ayBFeGVjdXRpb24wATlglFIeNEz4F0HI2pFENEz4F0ouCghjcmV3X2tleRIiCiA2MWE2MGQ1YjM2
-      MDIxZDFhZGE1NDM0ZWIyZTM4ODZlZUoxCgdjcmV3X2lkEiYKJDRhMGQwYmU4LTBlMWYtNDJhMi1h
-      YzQ2LWU2NGI3M2FiN2RhMkouCgh0YXNrX2tleRIiCiBmNDU2NzkyMTJkN2JmMzc1ZDExYzI4NDIw
-      ZmI3MmQyNEoxCgd0YXNrX2lkEiYKJGQ2MzhlZTA2LWNkNmQtNDMyZS04MDUxLWQ3YWYzMDIwNjQ2
-      Y3oCGAGFAQABAAAS/AYKEJvmWxKazrNSIjm6xMw0QYgSCFXzIOfLj1BMKgxDcmV3IENyZWF0ZWQw
-      ATnQQcdFNEz4F0HYe8tFNEz4F0oaCg5jcmV3YWlfdmVyc2lvbhIICgYwLjYxLjBKGgoOcHl0aG9u
-      X3ZlcnNpb24SCAoGMy4xMS43Si4KCGNyZXdfa2V5EiIKIGZiNTE1ODk1YmU2YzdkM2M4ZDZmMWQ5
-      Mjk5OTYxZDUxSjEKB2NyZXdfaWQSJgokNDMwZjc3MWUtYWEzYS00NDU2LWFhMjMtNjZjMDcxY2M5
-      OTE4Sh4KDGNyZXdfcHJvY2VzcxIOCgxoaWVyYXJjaGljYWxKEQoLY3Jld19tZW1vcnkSAhAAShoK
-      FGNyZXdfbnVtYmVyX29mX3Rhc2tzEgIYAUobChVjcmV3X251bWJlcl9vZl9hZ2VudHMSAhgBSswC
-      CgtjcmV3X2FnZW50cxK8Agq5Alt7ImtleSI6ICJmNWVhOTcwNWI3ODdmNzgyNTE0MmM4NzRiNTg3
-      MjZjOCIsICJpZCI6ICJkMjM2NjBmZS04ODUwLTRhMDEtYTk4Zi0xYzZjYzVmMDk4MWEiLCAicm9s
-      ZSI6ICJSZXNlYXJjaGVyIiwgInZlcmJvc2U/IjogZmFsc2UsICJtYXhfaXRlciI6IDE1LCAibWF4
-      X3JwbSI6IG51bGwsICJmdW5jdGlvbl9jYWxsaW5nX2xsbSI6ICIiLCAibGxtIjogImdwdC00byIs
-      ICJkZWxlZ2F0aW9uX2VuYWJsZWQ/IjogZmFsc2UsICJhbGxvd19jb2RlX2V4ZWN1dGlvbj8iOiBm
-      YWxzZSwgIm1heF9yZXRyeV9saW1pdCI6IDIsICJ0b29sc19uYW1lcyI6IFtdfV1K2wEKCmNyZXdf
-      dGFza3MSzAEKyQFbeyJrZXkiOiAiYjk0OWZiMGIwYTFkMjRlMjg2NDhhYzRmZjk1ZGUyNTkiLCAi
-      aWQiOiAiYzAxYmU2Y2QtODQ4Mi00ZGRjLWJjODktNjg4MzM1ZTE3NzgwIiwgImFzeW5jX2V4ZWN1
-      dGlvbj8iOiBmYWxzZSwgImh1bWFuX2lucHV0PyI6IGZhbHNlLCAiYWdlbnRfcm9sZSI6ICJOb25l
-      IiwgImFnZW50X2tleSI6IG51bGwsICJ0b29sc19uYW1lcyI6IFtdfV16AhgBhQEAAQAAEo4CChDZ
-      /zRCA0cLfwy3dJ3Y7z7bEgiUzwCc+w6cUyoMVGFzayBDcmVhdGVkMAE5eK5RRzRM+BdBWFpSRzRM
-      +BdKLgoIY3Jld19rZXkSIgogZmI1MTU4OTViZTZjN2QzYzhkNmYxZDkyOTk5NjFkNTFKMQoHY3Jl
-      d19pZBImCiQ0MzBmNzcxZS1hYTNhLTQ0NTYtYWEyMy02NmMwNzFjYzk5MThKLgoIdGFza19rZXkS
-      IgogYjk0OWZiMGIwYTFkMjRlMjg2NDhhYzRmZjk1ZGUyNTlKMQoHdGFza19pZBImCiRjMDFiZTZj
-      ZC04NDgyLTRkZGMtYmM4OS02ODgzMzVlMTc3ODB6AhgBhQEAAQAA
-    headers:
-      Accept:
-      - '*/*'
-      Accept-Encoding:
-      - gzip, deflate
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '6081'
-      Content-Type:
-      - application/x-protobuf
       User-Agent:
-      - OTel-OTLP-Exporter-Python/1.27.0
-    method: POST
-    uri: https://telemetry.crewai.com:4319/v1/traces
-  response:
-    body:
-      string: "\n\0"
-    headers:
-      Content-Length:
-      - '2'
-      Content-Type:
-      - application/x-protobuf
-      Date:
-      - Tue, 24 Sep 2024 21:44:06 GMT
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Researcher. You''re love to sey howdy.\nYour personal goal is: Be super empathetic.\nTo give my best complete final answer to the task use the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Can you please say hi?\n\nThis is the expect criteria for your final answer: Your best answer to your coworker asking you this, accounting for the context shared.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe expected greeting is: Howdy!\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o"}'
-    headers:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '954'
+      - '2406'
       content-type:
       - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cEYSMG7ZRHFgtiueRTVpSuWaJT\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214246,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Howdy!\\n\\nThought: I now can give a great answer\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 191,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 209,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85f42fec891cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:44:07 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '294'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999772'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_0ecc61a5d7c24a205dc24378a9af0646
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker(task: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Delegate a specific task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task,
-      so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''task'': {''title'': ''Task'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'': ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\nTool Name: Ask question to coworker(question: str, context: str, coworker: Optional[str] = None, **kwargs)\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolute everything you know, don''t reference things but instead explain them.\nTool Arguments: {''question'': {''title'': ''Question'', ''type'': ''string''}, ''context'': {''title'': ''Context'', ''type'': ''string''}, ''coworker'': {''title'': ''Coworker'', ''type'':
-      ''string''}, ''kwargs'': {''title'': ''Kwargs'', ''type'': ''object''}}\n\nUse the following format:\n\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple python dictionary, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n\nOnce all necessary information is gathered:\n\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expect criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant",
-      "content": "Thought: To complete the task, I need to ask the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\" tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o"}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '3304'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=9.8sBYBkvBR8R1K_bVF7xgU..80XKlEIg3N2OBbTSCU-1727214102-1.0.1.1-.qiTLXbPamYUMSuyNsOEB9jhGu.jOifujOrx9E2JZvStbIZ9RTIiE44xKKNfLPxQkOi6qAT3h6htK8lPDGV_5g; _cfuvid=lbRdAddVWV6W3f5Dm9SaOPWDUOxqtZBSPr_fTW26nEA-1727213194587-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.47.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.47.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.11.7
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    content: "{\n  \"id\": \"chatcmpl-AB7cFqi2W0uV3SlrqWLWdfmWau08H\",\n  \"object\": \"chat.completion\",\n  \"created\": 1727214247,\n  \"model\": \"gpt-4o-2024-05-13\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer.\\nFinal Answer: Howdy!\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 729,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 744,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
-    headers:
-      CF-Cache-Status:
-      - DYNAMIC
-      CF-RAY:
-      - 8c85f4357d061cf3-GRU
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 24 Sep 2024 21:44:07 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '342'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-ratelimit-limit-requests:
-      - '10000'
-      x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-requests:
-      - '9999'
-      x-ratelimit-remaining-tokens:
-      - '29999203'
-      x-ratelimit-reset-requests:
-      - 6ms
-      x-ratelimit-reset-tokens:
-      - 1ms
-      x-request-id:
-      - req_80eed127ea0361c637657470cf9b647e
-    http_version: HTTP/1.1
-    status_code: 200
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific
-      task to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: Researcher\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following
-      format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "\nCurrent Task: Ask the researched to say hi!\n\nThis is the expected criteria for your final answer: Howdy!\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}, {"role": "assistant", "content": "Thought: To complete
-      the task, I need to ask the researcher to say \"Howdy!\" I will use the \"Ask question to coworker\" tool to instruct the researcher accordingly.\n\nAction: Ask question to coworker\nAction Input: {\"question\": \"Can you please say hi?\", \"context\": \"The expected greeting is: Howdy!\", \"coworker\": \"Researcher\"}\nObservation: Howdy!"}], "model": "gpt-4o", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '3318'
-      content-type:
-      - application/json
-      cookie:
-      - _cfuvid=g371YzJ.yOdjD9dcZxJ8VI4huWlRJL2j8lbKDhE0qV8-1743463280779-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.93.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.93.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-C8bMFhqM6SSksUZByQpXyuszFsI4J\",\n  \"object\": \"chat.completion\",\n  \"created\": 1756166263,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer  \\nFinal Answer: Howdy!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 702,\n    \"completion_tokens\": 15,\n    \"total_tokens\": 717,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_80956533cb\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D0uJE1SXURFBibueh7TimF25kmsNZ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769108824,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_eKl48uBEqvY2C9dCeOE3GLSk\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"Ask_question_to_coworker\",\n
+        \             \"arguments\": \"{\\\"question\\\":\\\"Could you please say
+        hi?\\\",\\\"context\\\":\\\"I need you to simply say hi. It's important to
+        convey friendliness, as the greeting required is 'Howdy!'\\\",\\\"coworker\\\":\\\"Researcher\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 433,\n    \"completion_tokens\":
+        57,\n    \"total_tokens\": 490,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
     headers:
       CF-RAY:
-      - 974f08878cb7239e-SJC
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Mon, 25 Aug 2025 23:57:43 GMT
+      - Thu, 22 Jan 2026 19:07:07 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=veVLwO9uj9FvIBC_v55vfVlSdU8NHY.wdBapmpmtHn4-1756166263-1.0.1.1-LJ9bNXe6v06jg_mjVZp8vfvLT.9Hf8xUHOf2FempuntDnL5ogQXRuJvIJipz1trGr96_3WUCWlsexhQlkdtveEH6NbFMrm__Y61khA_IyPM; path=/; expires=Tue, 26-Aug-25 00:27:43 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=miqmxIsNDZtXvrtcyhpeSI3TjT_zcUas9Enn6gGtIsI-1756166263603-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '472'
+      - '3060'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '550'
-      x-ratelimit-limit-project-requests:
-      - '10000'
+      - '3320'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '30000000'
-      x-ratelimit-remaining-project-requests:
-      - '9999'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '29999222'
-      x-ratelimit-reset-project-requests:
-      - 6ms
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 1ms
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_4f627ee303b9429db117e9699b00656a
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Researcher. You''re love
+      to sey howdy.\nYour personal goal is: Be super empathetic.\nTo give my best
+      complete final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task:
+      Could you please say hi?\n\nThis is the expected criteria for your final answer:
+      Your best answer to your coworker asking you this, accounting for the context
+      shared.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is the context you''re working with:\nI need you to simply
+      say hi. It''s important to convey friendliness, as the greeting required is
+      ''Howdy!''\n\nBegin! This is VERY important to you, use the tools available
+      and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1036'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0uJIpxw911VDtCMrXyPk3ciftQnz\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769108828,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
+        Answer: Howdy! It's great to connect with you\u2014hope your day is going
+        wonderfully!\",\n        \"refusal\": null,\n        \"annotations\": []\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 207,\n    \"completion_tokens\":
+        30,\n    \"total_tokens\": 237,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 19:07:09 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '752'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1008'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are Crew Manager.
+      You are a seasoned manager with a knack for getting the best out of your team.\\nYou
+      are also known for your ability to delegate work to the right people, and to
+      ask the right questions to get the best out of your team.\\nEven though you
+      don't perform tasks by yourself, you have a lot of experience in the field,
+      which allows you to properly evaluate the work of your team members.\\nYour
+      personal goal is: Manage the team to complete the task in the best way possible.\"},{\"role\":\"user\",\"content\":\"\\nCurrent
+      Task: Ask the researched to say hi!\\n\\nThis is the expected criteria for your
+      final answer: Howdy!\\nyou MUST return the actual complete content as the final
+      answer, not a summary.\\n\\nThis is VERY important to you, your job depends
+      on it!\"},{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\"call_eKl48uBEqvY2C9dCeOE3GLSk\",\"type\":\"function\",\"function\":{\"name\":\"Ask_question_to_coworker\",\"arguments\":\"{\\\"question\\\":\\\"Could
+      you please say hi?\\\",\\\"context\\\":\\\"I need you to simply say hi. It's
+      important to convey friendliness, as the greeting required is 'Howdy!'\\\",\\\"coworker\\\":\\\"Researcher\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_eKl48uBEqvY2C9dCeOE3GLSk\",\"content\":\"Howdy!
+      It's great to connect with you\u2014hope your day is going wonderfully!\"},{\"role\":\"user\",\"content\":\"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary.\"}],\"model\":\"gpt-4o\",\"tool_choice\":\"auto\",\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"Delegate_work_to_coworker\",\"description\":\"Delegate
+      a specific task to one of the following coworkers: Researcher\\nThe input to
+      this tool should be the coworker, the task you want them to do, and ALL necessary
+      context to execute the task, they know nothing about the task, so share absolutely
+      everything you know, don't reference things but instead explain them.\",\"parameters\":{\"properties\":{\"task\":{\"description\":\"The
+      task to delegate\",\"title\":\"Task\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the task\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to delegate to\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"task\",\"context\",\"coworker\"],\"type\":\"object\"}}},{\"type\":\"function\",\"function\":{\"name\":\"Ask_question_to_coworker\",\"description\":\"Ask
+      a specific question to one of the following coworkers: Researcher\\nThe input
+      to this tool should be the coworker, the question you have for them, and ALL
+      necessary context to ask the question properly, they know nothing about the
+      question, so share absolutely everything you know, don't reference things but
+      instead explain them.\",\"parameters\":{\"properties\":{\"question\":{\"description\":\"The
+      question to ask\",\"title\":\"Question\",\"type\":\"string\"},\"context\":{\"description\":\"The
+      context for the question\",\"title\":\"Context\",\"type\":\"string\"},\"coworker\":{\"description\":\"The
+      role/name of the coworker to ask\",\"title\":\"Coworker\",\"type\":\"string\"}},\"required\":[\"question\",\"context\",\"coworker\"],\"type\":\"object\"}}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3103'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0uJJRd0Mk0WTmZtHTY7F9lOHepU7\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769108829,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Howdy!\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 554,\n    \"completion_tokens\":
+        3,\n    \"total_tokens\": 557,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_deacdd5f6f\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 19:07:09 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '359'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '380'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

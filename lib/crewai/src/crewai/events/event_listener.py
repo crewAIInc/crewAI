@@ -378,6 +378,12 @@ class EventListener(BaseEventListener):
                 self.formatter.handle_llm_tool_usage_finished(
                     event.tool_name,
                 )
+            else:
+                self.formatter.handle_tool_usage_finished(
+                    event.tool_name,
+                    event.output,
+                    getattr(event, "run_attempts", None),
+                )
 
         @crewai_event_bus.on(ToolUsageErrorEvent)
         def on_tool_usage_error(source: Any, event: ToolUsageErrorEvent) -> None:

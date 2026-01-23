@@ -10,6 +10,7 @@ from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ class CrewAgentExecutorMixin:
             self.crew
             and self.agent
             and self.task
-            and "Action: Delegate work to coworker" not in output.text
+            and f"Action: {sanitize_tool_name('Delegate work to coworker')}" not in output.text
         ):
             try:
                 if (
