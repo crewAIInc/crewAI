@@ -228,8 +228,14 @@ def prepare_kickoff(
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
+    from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
+
+    if get_current_parent_id() is None:
+        reset_emission_counter()
+        reset_last_event_id()
 
     # Normalize inputs to dict[str, Any] for internal processing
     normalized: dict[str, Any] | None = dict(inputs) if inputs is not None else None

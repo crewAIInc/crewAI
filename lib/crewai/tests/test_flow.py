@@ -1204,7 +1204,8 @@ def test_complex_and_or_branching():
 
 
     # Final should be after both 2a and 2b
-    assert execution_order[-1] == "final"
+    # Note: we don't assert final is last because branch_1c has no downstream
+    # dependencies and can complete after final due to parallel execution
     assert execution_order.index("final") > execution_order.index("branch_2a")
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
