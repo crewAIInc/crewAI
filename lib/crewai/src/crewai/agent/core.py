@@ -1646,7 +1646,7 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-        files: dict[str, FileInput] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
         """Prepare common setup for kickoff execution.
 
@@ -1657,7 +1657,7 @@ class Agent(BaseAgent):
         Args:
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
-            files: Optional dict of named files to attach to the message.
+            input_files: Optional dict of named files to attach to the message.
 
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
@@ -1745,8 +1745,8 @@ class Agent(BaseAgent):
                 if msg.get("files"):
                     all_files.update(msg["files"])
 
-        if files:
-            all_files.update(files)
+        if input_files:
+            all_files.update(input_files)
 
         # Build the input dict for the executor
         inputs: dict[str, Any] = {
@@ -1763,10 +1763,9 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-        files: dict[str, FileInput] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
-        """
-        Execute the agent with the given messages using the AgentExecutor.
+        """Execute the agent with the given messages using the AgentExecutor.
 
         This method provides standalone agent execution without requiring a Crew.
         It supports tools, response formatting, guardrails, and file inputs.
@@ -1781,7 +1780,7 @@ class Agent(BaseAgent):
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
             response_format: Optional Pydantic model for structured output.
-            files: Optional dict of named files to attach to the message.
+            input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
@@ -1794,10 +1793,10 @@ class Agent(BaseAgent):
         # Magic auto-async: if inside event loop (e.g., inside a Flow),
         # return coroutine for Flow to await
         if is_inside_event_loop():
-            return self.kickoff_async(messages, response_format, files)
+            return self.kickoff_async(messages, response_format, input_files)
 
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, files
+            messages, response_format, input_files
         )
 
         try:
@@ -2043,10 +2042,9 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-        files: dict[str, FileInput] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
-        """
-        Execute the agent asynchronously with the given messages.
+        """Execute the agent asynchronously with the given messages.
 
         This is the async version of the kickoff method that uses native async
         execution. It is designed for use within async contexts, such as when
@@ -2058,14 +2056,14 @@ class Agent(BaseAgent):
                      If a list is provided, each dict should have 'role' and 'content' keys.
                      Messages can include a 'files' field with file inputs.
             response_format: Optional Pydantic model for structured output.
-            files: Optional dict of named files to attach to the message.
+            input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format, files
+            messages, response_format, input_files
         )
 
         try:
@@ -2114,10 +2112,19 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-        files: dict[str, FileInput] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
-        """Async version of kickoff. Alias for kickoff_async."""
-        return await self.kickoff_async(messages, response_format, files)
+        """Async version of kickoff. Alias for kickoff_async.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        return await self.kickoff_async(messages, response_format, input_files)
 
 
 # Rebuild Agent model to resolve A2A type forward references

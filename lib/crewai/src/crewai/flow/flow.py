@@ -1412,13 +1412,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     object.__setattr__(self._state, key, value)
 
     def kickoff(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, Any] | None = None,
     ) -> Any | FlowStreamingOutput:
-        """
-        Start the flow execution in a synchronous context.
+        """Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
         emission is handled in the asynchronous method.
+
+        Args:
+            inputs: Optional dictionary containing input values and/or a state ID.
+            input_files: Optional dict of named file inputs for the flow.
+
+        Returns:
+            The final output from the flow or FlowStreamingOutput if streaming.
         """
         if self.stream:
             result_holder: list[Any] = []
@@ -1438,7 +1446,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             def run_flow() -> None:
                 try:
                     self.stream = False
-                    result = self.kickoff(inputs=inputs)
+                    result = self.kickoff(inputs=inputs, input_files=input_files)
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -1460,15 +1468,16 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return streaming_output
 
         async def _run_flow() -> Any:
-            return await self.kickoff_async(inputs)
+            return await self.kickoff_async(inputs, input_files)
 
         return asyncio.run(_run_flow())
 
     async def kickoff_async(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, Any] | None = None,
     ) -> Any | FlowStreamingOutput:
-        """
-        Start the flow execution asynchronously.
+        """Start the flow execution asynchronously.
 
         This method performs state restoration (if an 'id' is provided and persistence is available)
         and updates the flow state with any additional inputs. It then emits the FlowStartedEvent,
@@ -1477,6 +1486,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
+            input_files: Optional dict of named file inputs for the flow.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
@@ -1499,7 +1509,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             async def run_flow() -> None:
                 try:
                     self.stream = False
-                    result = await self.kickoff_async(inputs=inputs)
+                    result = await self.kickoff_async(
+                        inputs=inputs, input_files=input_files
+                    )
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -1523,6 +1535,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             return streaming_output
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
+        ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
         flow_token = attach(ctx)
 
         try:
@@ -1705,18 +1718,20 @@ class Flow(Generic[T], metaclass=FlowMeta):
             detach(flow_token)
 
     async def akickoff(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, Any] | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
-
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
+            input_files: Optional dict of named file inputs for the flow.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        return await self.kickoff_async(inputs)
+        return await self.kickoff_async(inputs, input_files)
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.

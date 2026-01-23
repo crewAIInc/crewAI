@@ -27,13 +27,3 @@ class LLMMessage(TypedDict):
     name: NotRequired[str]
     tool_calls: NotRequired[list[dict[str, Any]]]
     files: NotRequired[dict[str, FileInput]]
-
-
-class KickoffInputs(TypedDict, total=False):
-    """Type for crew kickoff inputs.
-
-    Attributes:
-        files: Named file inputs accessible to tasks during execution.
-    """
-
-    files: dict[str, FileInput]

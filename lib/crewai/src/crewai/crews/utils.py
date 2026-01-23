@@ -6,6 +6,8 @@ import asyncio
 from collections.abc import Callable, Coroutine, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
+from opentelemetry import baggage
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -16,7 +18,6 @@ from crewai.utilities.streaming import (
     TaskInfo,
     create_streaming_state,
 )
-from crewai.utilities.types import KickoffInputs
 
 
 try:
@@ -222,7 +223,9 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
 
 
 def prepare_kickoff(
-    crew: Crew, inputs: KickoffInputs | dict[str, Any] | None
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """Prepare crew for kickoff execution.
 
@@ -232,6 +235,7 @@ def prepare_kickoff(
     Args:
         crew: The crew instance to prepare.
         inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
 
     Returns:
         The potentially modified inputs dictionary after before callbacks.
@@ -272,20 +276,26 @@ def prepare_kickoff(
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
 
-    if normalized is not None:
-        # Extract files from dedicated "files" key
-        files = normalized.pop("files", None) or {}
+    # Check for flow input files in baggage context (inherited from parent Flow)
+    _flow_files = baggage.get_baggage("flow_input_files")
+    flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
 
+    if normalized is not None:
         # Extract file objects unpacked directly into inputs
         unpacked_files = _extract_files_from_inputs(normalized)
 
-        # Merge files (unpacked files take precedence over explicit files dict)
-        all_files = {**files, **unpacked_files}
+        # Merge files: flow_files < input_files < unpacked_files (later takes precedence)
+        all_files = {**flow_files, **(input_files or {}), **unpacked_files}
         if all_files:
             store_files(crew.id, all_files)
 
         crew._inputs = normalized
         crew._interpolate_inputs(normalized)
+    else:
+        # No inputs dict provided
+        all_files = {**flow_files, **(input_files or {})}
+        if all_files:
+            store_files(crew.id, all_files)
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
