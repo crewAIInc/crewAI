@@ -31,6 +31,14 @@ from crewai.events.types.tool_usage_events import (
 from crewai.types.usage_metrics import UsageMetrics
 
 
+try:
+    from crewai_files import format_multimodal_content
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
@@ -71,6 +79,7 @@ class BaseLLM(ABC):
         api_key: str | None = None,
         base_url: str | None = None,
         provider: str | None = None,
+        prefer_upload: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
@@ -79,6 +88,7 @@ class BaseLLM(ABC):
             model: The model identifier/name.
             temperature: Optional temperature setting for response generation.
             stop: Optional list of stop sequences for generation.
+            prefer_upload: Whether to prefer file upload over inline base64.
             **kwargs: Additional provider-specific parameters.
         """
         if not model:
@@ -88,6 +98,7 @@ class BaseLLM(ABC):
         self.temperature = temperature
         self.api_key = api_key
         self.base_url = base_url
+        self.prefer_upload = prefer_upload
         # Store additional parameters for provider-specific use
         self.additional_params = kwargs
         self._provider = provider or "openai"
@@ -279,6 +290,39 @@ class BaseLLM(ABC):
         """
         # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
+
+    def supports_multimodal(self) -> bool:
+        """Check if the LLM supports multimodal inputs.
+
+        Returns:
+            True if the LLM supports images, PDFs, audio, or video.
+        """
+        return False
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a content block for the LLM.
+
+        Default implementation uses OpenAI/Anthropic format.
+        Subclasses should override for provider-specific formatting.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in the provider's expected format.
+        """
+        return {"type": "text", "text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a file uploader configured with this LLM's client.
+
+        Returns an uploader instance that reuses this LLM's authenticated client,
+        avoiding the need to create a new connection for file uploads.
+
+        Returns:
+            A FileUploader instance, or None if not supported by this provider.
+        """
+        return None
 
     # Common helper methods for native SDK implementations
 
@@ -505,6 +549,48 @@ class BaseLLM(ABC):
                 raise ValueError(
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
+
+        return self._process_message_files(messages)
+
+    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+        """Process files attached to messages and format for the provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        api = getattr(self, "api", None)
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            existing_content = msg.get("content", "")
+            text = existing_content if isinstance(existing_content, str) else None
+
+            content_blocks = format_multimodal_content(
+                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+            )
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            if isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+            else:
+                msg["content"] = content_blocks
+
+            msg.pop("files", None)
 
         return messages
 

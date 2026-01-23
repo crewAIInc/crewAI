@@ -1360,11 +1360,15 @@ class BedrockCompletion(BaseLLM):
                 )
             else:
                 # Convert to Converse API format with proper content structure
-                # Ensure content is not None
-                text_content = content if content else ""
-                converse_messages.append(
-                    {"role": role, "content": [{"text": text_content}]}
-                )
+                if isinstance(content, list):
+                    # Already formatted as multimodal content blocks
+                    converse_messages.append({"role": role, "content": content})
+                else:
+                    # String content - wrap in text block
+                    text_content = content if content else ""
+                    converse_messages.append(
+                        {"role": role, "content": [{"text": text_content}]}
+                    )
 
         # CRITICAL: Handle model-specific conversation requirements
         # Cohere and some other models require conversation to end with user message
@@ -1591,3 +1595,118 @@ class BedrockCompletion(BaseLLM):
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        model_lower = self.model.lower()
+        vision_models = (
+            "anthropic.claude-3",
+            "amazon.nova-lite",
+            "amazon.nova-pro",
+            "amazon.nova-premier",
+            "us.amazon.nova-lite",
+            "us.amazon.nova-pro",
+            "us.amazon.nova-premier",
+        )
+        return any(model_lower.startswith(m) for m in vision_models)
+
+    def _is_nova_model(self) -> bool:
+        """Check if the model is an Amazon Nova model.
+
+        Only Nova models support S3 links for multimedia.
+
+        Returns:
+            True if the model is a Nova model.
+        """
+        model_lower = self.model.lower()
+        return "amazon.nova-" in model_lower
+
+    def get_file_uploader(self) -> Any:
+        """Get a Bedrock S3 file uploader using this LLM's AWS credentials.
+
+        Creates an S3 client using the same AWS credentials configured for
+        this Bedrock LLM instance.
+
+        Returns:
+            BedrockFileUploader instance with pre-configured S3 client,
+            or None if crewai_files is not installed.
+        """
+        try:
+            import boto3
+            from crewai_files.uploaders.bedrock import BedrockFileUploader
+
+            s3_client = boto3.client(
+                "s3",
+                region_name=self.region_name,
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                aws_session_token=self.aws_session_token,
+            )
+            return BedrockFileUploader(
+                region=self.region_name,
+                client=s3_client,
+            )
+        except ImportError:
+            return None
+
+    def _get_document_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock document format.
+
+        Args:
+            content_type: MIME type of the document.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "application/pdf": "pdf",
+            "text/csv": "csv",
+            "text/plain": "txt",
+            "text/markdown": "md",
+            "text/html": "html",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        }
+        return format_map.get(content_type)
+
+    def _get_video_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock video format.
+
+        Args:
+            content_type: MIME type of the video.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "video/mp4": "mp4",
+            "video/quicktime": "mov",
+            "video/x-matroska": "mkv",
+            "video/webm": "webm",
+            "video/x-flv": "flv",
+            "video/mpeg": "mpeg",
+            "video/x-ms-wmv": "wmv",
+            "video/3gpp": "three_gp",
+        }
+        return format_map.get(content_type)
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Bedrock content block.
+
+        Bedrock uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Bedrock's expected format.
+        """
+        return {"text": text}

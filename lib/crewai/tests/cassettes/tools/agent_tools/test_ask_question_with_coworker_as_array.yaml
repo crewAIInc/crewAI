@@ -50,24 +50,27 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7Wy6aW1XM0lWaMyQUNB9qhbCZlH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213920,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: As an expert researcher specializing in technology and AI, I have a
-      deep appreciation for AI agents. These advanced tools have the potential to
-      revolutionize countless industries by improving efficiency, accuracy, and decision-making
-      processes. They can augment human capabilities, handle mundane and repetitive
-      tasks, and even offer insights that might be beyond human reach. While it's
-      crucial to approach AI with a balanced perspective, understanding both its capabilities
-      and limitations, my stance is one of optimism and fascination. Properly developed
-      and ethically managed, AI agents hold immense promise for driving innovation
-      and solving complex problems. So yes, I do love AI agents for their transformative
-      potential and the positive impact they can have on society.\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\":
-      146,\n    \"total_tokens\": 345,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7Wy6aW1XM0lWaMyQUNB9qhbCZlH\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727213920,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: As an expert researcher specializing\
+        \ in technology and AI, I have a deep appreciation for AI agents. These advanced\
+        \ tools have the potential to revolutionize countless industries by improving\
+        \ efficiency, accuracy, and decision-making processes. They can augment human\
+        \ capabilities, handle mundane and repetitive tasks, and even offer insights\
+        \ that might be beyond human reach. While it's crucial to approach AI with\
+        \ a balanced perspective, understanding both its capabilities and limitations,\
+        \ my stance is one of optimism and fascination. Properly developed and ethically\
+        \ managed, AI agents hold immense promise for driving innovation and solving\
+        \ complex problems. So yes, I do love AI agents for their transformative potential\
+        \ and the positive impact they can have on society.\",\n        \"refusal\"\
+        : null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+        \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\"\
+        : 146,\n    \"total_tokens\": 345,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -109,6 +112,7 @@ interactions:
       - 0s
       x-request-id:
       - req_a249567d37ada11bc8857404338b24cc
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

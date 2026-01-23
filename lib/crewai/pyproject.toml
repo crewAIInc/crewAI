@@ -98,6 +98,9 @@ a2a = [
      "httpx-sse~=0.4.0",
      "aiocache[redis,memcached]~=0.12.3",
 ]
+file-processing = [
+    "crewai-files",
+]
 
 
 [project.scripts]
@@ -124,6 +127,7 @@ torchvision = [
   { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
+crewai-files = { workspace = true }
 
 
 [build-system]

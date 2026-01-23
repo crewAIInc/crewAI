@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -516,17 +517,31 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Convert content to string if it's a list
+            # Build parts list from content
+            parts: list[types.Part] = []
             if isinstance(content, list):
-                text_content = " ".join(
-                    str(item.get("text", "")) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
+                for item in content:
+                    if isinstance(item, dict):
+                        if "text" in item:
+                            parts.append(types.Part.from_text(text=str(item["text"])))
+                        elif "inlineData" in item:
+                            inline = item["inlineData"]
+                            parts.append(
+                                types.Part.from_bytes(
+                                    data=base64.b64decode(inline["data"]),
+                                    mime_type=inline["mimeType"],
+                                )
+                            )
+                    else:
+                        parts.append(types.Part.from_text(text=str(item)))
             else:
-                text_content = str(content) if content else ""
+                parts.append(types.Part.from_text(text=str(content) if content else ""))
 
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
+                text_content = " ".join(
+                    p.text for p in parts if hasattr(p, "text") and p.text
+                )
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
@@ -587,9 +602,7 @@ class GeminiCompletion(BaseLLM):
                 gemini_role = "model" if role == "assistant" else "user"
 
                 # Create Content object
-                gemini_content = types.Content(
-                    role=gemini_role, parts=[types.Part.from_text(text=text_content)]
-                )
+                gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
         return contents, system_instruction
@@ -1181,3 +1194,39 @@ class GeminiCompletion(BaseLLM):
                 )
             )
         return result
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Gemini models support images, audio, video, and PDFs.
+
+        Returns:
+            True if the model supports multimodal inputs.
+        """
+        return True
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Gemini content block.
+
+        Gemini uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Gemini's expected format.
+        """
+        return {"text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a Gemini file uploader using this LLM's client.
+
+        Returns:
+            GeminiFileUploader instance with pre-configured client.
+        """
+        try:
+            from crewai_files.uploaders.gemini import GeminiFileUploader
+
+            return GeminiFileUploader(client=self.client)
+        except ImportError:
+            return None
