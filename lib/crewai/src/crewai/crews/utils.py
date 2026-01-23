@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Callable, Coroutine, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -246,7 +246,13 @@ def prepare_kickoff(
         reset_last_event_id()
 
     # Normalize inputs to dict[str, Any] for internal processing
-    normalized: dict[str, Any] | None = dict(inputs) if inputs is not None else None
+    normalized: dict[str, Any] | None = None
+    if inputs is not None:
+        if not isinstance(inputs, Mapping):
+            raise TypeError(
+                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+            )
+        normalized = dict(inputs)
 
     for before_callback in crew.before_kickoff_callbacks:
         if normalized is None:

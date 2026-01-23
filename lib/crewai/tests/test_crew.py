@@ -1346,8 +1346,8 @@ def test_kickoff_for_each_invalid_input():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
-        # Pass a string instead of a list
+    with pytest.raises(TypeError, match="inputs must be a dict or Mapping"):
+        # Pass a string instead of a dict
         crew.kickoff_for_each(["invalid input"])
 
 
@@ -3944,7 +3944,8 @@ def test_task_tools_preserve_code_execution_tools():
 @pytest.mark.vcr()
 def test_multimodal_flag_adds_multimodal_tools():
     """
-    Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
+    Test that an agent with multimodal=True automatically has multimodal tools added
+    when the LLM does not natively support multimodal content.
     """
     # Create an agent that supports multimodal
     multimodal_agent = Agent(
@@ -3970,9 +3971,13 @@ def test_multimodal_flag_adds_multimodal_tools():
     )
 
     # Mock execute_sync to verify the tools passed at runtime
-    with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
-    ) as mock_execute_sync:
+    # Mock supports_multimodal to return False so AddImageTool gets added
+    with (
+        patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync,
+        patch.object(
+            multimodal_agent.llm, "supports_multimodal", return_value=False
+        ),
+    ):
         crew.kickoff()
 
         # Get the tools that were actually used in execution
@@ -3981,7 +3986,7 @@ def test_multimodal_flag_adds_multimodal_tools():
 
         # Check that the multimodal tool was added
         assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
-            "AddImageTool should be present when agent is multimodal"
+            "AddImageTool should be present when agent is multimodal and LLM doesn't support it natively"
         )
 
         # Verify we have exactly one tool (just the AddImageTool)
