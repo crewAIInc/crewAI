@@ -1,4 +1,4 @@
-"""Unit tests for CrewAgentExecutorFlow.
+"""Unit tests for AgentExecutor.
 
 Tests the Flow-based agent executor implementation including state management,
 flow methods, routing logic, and error handling.
@@ -8,9 +8,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crewai.experimental.crew_agent_executor_flow import (
+from crewai.experimental.agent_executor import (
     AgentReActState,
-    CrewAgentExecutorFlow,
+    AgentExecutor,
 )
 from crewai.agents.parser import AgentAction, AgentFinish
 
@@ -43,8 +43,8 @@ class TestAgentReActState:
         assert state.ask_for_human_input is True
 
 
-class TestCrewAgentExecutorFlow:
-    """Test CrewAgentExecutorFlow class."""
+class TestAgentExecutor:
+    """Test AgentExecutor class."""
 
     @pytest.fixture
     def mock_dependencies(self):
@@ -87,8 +87,8 @@ class TestCrewAgentExecutorFlow:
         }
 
     def test_executor_initialization(self, mock_dependencies):
-        """Test CrewAgentExecutorFlow initialization."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        """Test AgentExecutor initialization."""
+        executor = AgentExecutor(**mock_dependencies)
 
         assert executor.llm == mock_dependencies["llm"]
         assert executor.task == mock_dependencies["task"]
@@ -100,9 +100,9 @@ class TestCrewAgentExecutorFlow:
     def test_initialize_reasoning(self, mock_dependencies):
         """Test flow entry point."""
         with patch.object(
-            CrewAgentExecutorFlow, "_show_start_logs"
+            AgentExecutor, "_show_start_logs"
         ) as mock_show_start:
-            executor = CrewAgentExecutorFlow(**mock_dependencies)
+            executor = AgentExecutor(**mock_dependencies)
             result = executor.initialize_reasoning()
 
             assert result == "initialized"
@@ -110,7 +110,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_check_max_iterations_not_reached(self, mock_dependencies):
         """Test routing when iterations < max."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.iterations = 5
 
         result = executor.check_max_iterations()
@@ -118,7 +118,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_check_max_iterations_reached(self, mock_dependencies):
         """Test routing when iterations >= max."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.iterations = 10
 
         result = executor.check_max_iterations()
@@ -126,7 +126,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_route_by_answer_type_action(self, mock_dependencies):
         """Test routing for AgentAction."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="search", tool_input="query", text="action text"
         )
@@ -136,7 +136,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_route_by_answer_type_finish(self, mock_dependencies):
         """Test routing for AgentFinish."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.current_answer = AgentFinish(
             thought="final thoughts", output="Final answer", text="complete"
         )
@@ -146,7 +146,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_continue_iteration(self, mock_dependencies):
         """Test iteration continuation."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
 
         result = executor.continue_iteration()
 
@@ -154,8 +154,8 @@ class TestCrewAgentExecutorFlow:
 
     def test_finalize_success(self, mock_dependencies):
         """Test finalize with valid AgentFinish."""
-        with patch.object(CrewAgentExecutorFlow, "_show_logs") as mock_show_logs:
-            executor = CrewAgentExecutorFlow(**mock_dependencies)
+        with patch.object(AgentExecutor, "_show_logs") as mock_show_logs:
+            executor = AgentExecutor(**mock_dependencies)
             executor.state.current_answer = AgentFinish(
                 thought="final thinking", output="Done", text="complete"
             )
@@ -168,7 +168,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_finalize_failure(self, mock_dependencies):
         """Test finalize skips when given AgentAction instead of AgentFinish."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="search", tool_input="query", text="action text"
         )
@@ -181,7 +181,7 @@ class TestCrewAgentExecutorFlow:
 
     def test_format_prompt(self, mock_dependencies):
         """Test prompt formatting."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         inputs = {"input": "test input", "tool_names": "tool1, tool2", "tools": "desc"}
 
         result = executor._format_prompt("Prompt {input} {tool_names} {tools}", inputs)
@@ -192,18 +192,18 @@ class TestCrewAgentExecutorFlow:
 
     def test_is_training_mode_false(self, mock_dependencies):
         """Test training mode detection when not in training."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         assert executor._is_training_mode() is False
 
     def test_is_training_mode_true(self, mock_dependencies):
         """Test training mode detection when in training."""
         mock_dependencies["crew"]._train = True
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         assert executor._is_training_mode() is True
 
     def test_append_message_to_state(self, mock_dependencies):
         """Test message appending to state."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         initial_count = len(executor.state.messages)
 
         executor._append_message_to_state("test message")
@@ -216,7 +216,7 @@ class TestCrewAgentExecutorFlow:
         callback = Mock()
         mock_dependencies["step_callback"] = callback
 
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         answer = AgentFinish(thought="thinking", output="test", text="final")
 
         executor._invoke_step_callback(answer)
@@ -226,14 +226,14 @@ class TestCrewAgentExecutorFlow:
     def test_invoke_step_callback_none(self, mock_dependencies):
         """Test step callback when none provided."""
         mock_dependencies["step_callback"] = None
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
 
         # Should not raise error
         executor._invoke_step_callback(
             AgentFinish(thought="thinking", output="test", text="final")
         )
 
-    @patch("crewai.experimental.crew_agent_executor_flow.handle_output_parser_exception")
+    @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(
         self, mock_handle_exception, mock_dependencies
     ):
@@ -242,7 +242,7 @@ class TestCrewAgentExecutorFlow:
 
         mock_handle_exception.return_value = None
 
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor._last_parser_error = OutputParserError("test error")
         initial_iterations = executor.state.iterations
 
@@ -252,12 +252,12 @@ class TestCrewAgentExecutorFlow:
         assert executor.state.iterations == initial_iterations + 1
         mock_handle_exception.assert_called_once()
 
-    @patch("crewai.experimental.crew_agent_executor_flow.handle_context_length")
+    @patch("crewai.experimental.agent_executor.handle_context_length")
     def test_recover_from_context_length(
         self, mock_handle_context, mock_dependencies
     ):
         """Test recovery from context length error."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor._last_context_error = Exception("context too long")
         initial_iterations = executor.state.iterations
 
@@ -270,16 +270,16 @@ class TestCrewAgentExecutorFlow:
     def test_use_stop_words_property(self, mock_dependencies):
         """Test use_stop_words property."""
         mock_dependencies["llm"].supports_stop_words.return_value = True
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         assert executor.use_stop_words is True
 
         mock_dependencies["llm"].supports_stop_words.return_value = False
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         assert executor.use_stop_words is False
 
     def test_compatibility_properties(self, mock_dependencies):
         """Test compatibility properties for mixin."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.messages = [{"role": "user", "content": "test"}]
         executor.state.iterations = 5
 
@@ -321,8 +321,8 @@ class TestFlowErrorHandling:
             "tools_handler": Mock(),
         }
 
-    @patch("crewai.experimental.crew_agent_executor_flow.get_llm_response")
-    @patch("crewai.experimental.crew_agent_executor_flow.enforce_rpm_limit")
+    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
     def test_call_llm_parser_error(
         self, mock_enforce_rpm, mock_get_llm, mock_dependencies
     ):
@@ -332,15 +332,15 @@ class TestFlowErrorHandling:
         mock_enforce_rpm.return_value = None
         mock_get_llm.side_effect = OutputParserError("parse failed")
 
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         result = executor.call_llm_and_parse()
 
         assert result == "parser_error"
         assert executor._last_parser_error is not None
 
-    @patch("crewai.experimental.crew_agent_executor_flow.get_llm_response")
-    @patch("crewai.experimental.crew_agent_executor_flow.enforce_rpm_limit")
-    @patch("crewai.experimental.crew_agent_executor_flow.is_context_length_exceeded")
+    @patch("crewai.experimental.agent_executor.get_llm_response")
+    @patch("crewai.experimental.agent_executor.enforce_rpm_limit")
+    @patch("crewai.experimental.agent_executor.is_context_length_exceeded")
     def test_call_llm_context_error(
         self,
         mock_is_context_exceeded,
@@ -353,7 +353,7 @@ class TestFlowErrorHandling:
         mock_get_llm.side_effect = Exception("context length")
         mock_is_context_exceeded.return_value = True
 
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         result = executor.call_llm_and_parse()
 
         assert result == "context_error"
@@ -397,10 +397,10 @@ class TestFlowInvoke:
             "tools_handler": Mock(),
         }
 
-    @patch.object(CrewAgentExecutorFlow, "kickoff")
-    @patch.object(CrewAgentExecutorFlow, "_create_short_term_memory")
-    @patch.object(CrewAgentExecutorFlow, "_create_long_term_memory")
-    @patch.object(CrewAgentExecutorFlow, "_create_external_memory")
+    @patch.object(AgentExecutor, "kickoff")
+    @patch.object(AgentExecutor, "_create_short_term_memory")
+    @patch.object(AgentExecutor, "_create_long_term_memory")
+    @patch.object(AgentExecutor, "_create_external_memory")
     def test_invoke_success(
         self,
         mock_external_memory,
@@ -410,7 +410,7 @@ class TestFlowInvoke:
         mock_dependencies,
     ):
         """Test successful invoke without human feedback."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
 
         # Mock kickoff to set the final answer in state
         def mock_kickoff_side_effect():
@@ -429,10 +429,10 @@ class TestFlowInvoke:
         mock_long_term_memory.assert_called_once()
         mock_external_memory.assert_called_once()
 
-    @patch.object(CrewAgentExecutorFlow, "kickoff")
+    @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
         """Test invoke fails without AgentFinish."""
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
         executor.state.current_answer = AgentAction(
             thought="thinking", tool="test", tool_input="test", text="action text"
         )
@@ -442,10 +442,10 @@ class TestFlowInvoke:
         with pytest.raises(RuntimeError, match="without reaching a final answer"):
             executor.invoke(inputs)
 
-    @patch.object(CrewAgentExecutorFlow, "kickoff")
-    @patch.object(CrewAgentExecutorFlow, "_create_short_term_memory")
-    @patch.object(CrewAgentExecutorFlow, "_create_long_term_memory")
-    @patch.object(CrewAgentExecutorFlow, "_create_external_memory")
+    @patch.object(AgentExecutor, "kickoff")
+    @patch.object(AgentExecutor, "_create_short_term_memory")
+    @patch.object(AgentExecutor, "_create_long_term_memory")
+    @patch.object(AgentExecutor, "_create_external_memory")
     def test_invoke_with_system_prompt(
         self,
         mock_external_memory,
@@ -459,7 +459,7 @@ class TestFlowInvoke:
             "system": "System: {input}",
             "user": "User: {input} {tool_names} {tools}",
         }
-        executor = CrewAgentExecutorFlow(**mock_dependencies)
+        executor = AgentExecutor(**mock_dependencies)
 
         def mock_kickoff_side_effect():
             executor.state.current_answer = AgentFinish(

@@ -71,12 +71,12 @@ def test_tools_method_empty():
 
 def test_sanitize_tool_name_with_spaces():
     adapter = ConcreteToolAdapter()
-    assert adapter.sanitize_tool_name("Tool With Spaces") == "Tool_With_Spaces"
+    assert adapter.sanitize_tool_name("Tool With Spaces") == "tool_with_spaces"
 
 
 def test_sanitize_tool_name_without_spaces():
     adapter = ConcreteToolAdapter()
-    assert adapter.sanitize_tool_name("ToolWithoutSpaces") == "ToolWithoutSpaces"
+    assert adapter.sanitize_tool_name("ToolWithoutSpaces") == "tool_without_spaces"
 
 
 def test_sanitize_tool_name_empty():
