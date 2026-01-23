@@ -50,22 +50,24 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7Wq7edXMCGJR1zDd2QoySLdo8mM\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213912,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I don't hate AI agents; on the contrary, I find them fascinating and
-      incredibly useful. Considering the rapid advancements in AI technology, these
-      agents have the potential to revolutionize various industries by automating
-      tasks, improving efficiency, and providing insights that were previously unattainable.
-      My expertise in researching and analyzing AI and AI agents has allowed me to
-      appreciate the intricate design and the vast possibilities they offer. Therefore,
-      it's more accurate to say that I love AI agents for their potential to drive
-      innovation and improve our daily lives.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 199,\n    \"completion_tokens\": 116,\n
-      \   \"total_tokens\": 315,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7Wq7edXMCGJR1zDd2QoySLdo8mM\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727213912,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: I don't hate AI agents; on the contrary,\
+        \ I find them fascinating and incredibly useful. Considering the rapid advancements\
+        \ in AI technology, these agents have the potential to revolutionize various\
+        \ industries by automating tasks, improving efficiency, and providing insights\
+        \ that were previously unattainable. My expertise in researching and analyzing\
+        \ AI and AI agents has allowed me to appreciate the intricate design and the\
+        \ vast possibilities they offer. Therefore, it's more accurate to say that\
+        \ I love AI agents for their potential to drive innovation and improve our\
+        \ daily lives.\",\n        \"refusal\": null\n      },\n      \"logprobs\"\
+        : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n\
+        \    \"prompt_tokens\": 199,\n    \"completion_tokens\": 116,\n    \"total_tokens\"\
+        : 315,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":\
+        \ 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -107,6 +109,7 @@ interactions:
       - 0s
       x-request-id:
       - req_d9e1e9458d5539061397a618345c27d4
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1
