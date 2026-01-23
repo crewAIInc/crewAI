@@ -960,6 +960,38 @@ async def test_usage_info_non_streaming_with_acall():
 
 
 @pytest.mark.asyncio
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+async def test_usage_info_non_streaming_with_acall_and_stop():
+    llm = LLM(
+        model="openai/gpt-4o-mini",
+        is_litellm=True,
+        stream=False,
+        stop=["END"],
+    )
+
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_ahandle_non_streaming_response", wraps=llm._ahandle_non_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
 @pytest.mark.vcr(record_mode="none",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
 async def test_usage_info_streaming_with_acall():
     llm = LLM(
