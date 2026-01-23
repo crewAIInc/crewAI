@@ -833,7 +833,9 @@ def test_lite_agent_standalone_still_works():
 
 def test_agent_kickoff_with_files_parameter():
     """Test that Agent.kickoff() accepts and passes files to the executor."""
-    from unittest.mock import MagicMock, Mock, patch
+    from unittest.mock import Mock, patch
+
+    from crewai_files import File
 
     from crewai.types.usage_metrics import UsageMetrics
 
@@ -857,8 +859,8 @@ def test_agent_kickoff_with_files_parameter():
         verbose=False,
     )
 
-    mock_file = MagicMock()
-    files = {"document.pdf": mock_file}
+    test_file = File(source=b"mock pdf content")
+    files = {"document.pdf": test_file}
 
     with patch.object(
         agent, "_prepare_kickoff", wraps=agent._prepare_kickoff
@@ -868,14 +870,18 @@ def test_agent_kickoff_with_files_parameter():
         mock_prepare.assert_called_once()
         call_args = mock_prepare.call_args
         assert call_args.args[0] == "Analyze the document"
-        assert call_args.kwargs.get("files") == files or call_args.args[2] == files
+        called_files = call_args.kwargs.get("files") or call_args.args[2]
+        assert "document.pdf" in called_files
+        assert called_files["document.pdf"] is test_file
 
     assert result is not None
 
 
 def test_prepare_kickoff_extracts_files_from_messages():
     """Test that _prepare_kickoff extracts files from messages."""
-    from unittest.mock import MagicMock, Mock
+    from unittest.mock import Mock
+
+    from crewai_files import File
 
     from crewai.types.usage_metrics import UsageMetrics
 
@@ -899,21 +905,23 @@ def test_prepare_kickoff_extracts_files_from_messages():
         verbose=False,
     )
 
-    mock_file = MagicMock()
+    test_file = File(source=b"mock image content")
     messages = [
-        {"role": "user", "content": "Analyze this", "files": {"img.png": mock_file}}
+        {"role": "user", "content": "Analyze this", "files": {"img.png": test_file}}
     ]
 
     executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(messages=messages)
 
     assert "files" in inputs
     assert "img.png" in inputs["files"]
-    assert inputs["files"]["img.png"] is mock_file
+    assert inputs["files"]["img.png"] is test_file
 
 
 def test_prepare_kickoff_merges_files_from_messages_and_parameter():
     """Test that _prepare_kickoff merges files from messages and parameter."""
-    from unittest.mock import MagicMock, Mock
+    from unittest.mock import Mock
+
+    from crewai_files import File
 
     from crewai.types.usage_metrics import UsageMetrics
 
@@ -937,8 +945,8 @@ def test_prepare_kickoff_merges_files_from_messages_and_parameter():
         verbose=False,
     )
 
-    msg_file = MagicMock()
-    param_file = MagicMock()
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
     messages = [
         {"role": "user", "content": "Analyze these", "files": {"from_msg.png": msg_file}}
     ]
@@ -957,7 +965,9 @@ def test_prepare_kickoff_merges_files_from_messages_and_parameter():
 
 def test_prepare_kickoff_param_files_override_message_files():
     """Test that files parameter overrides files from messages with same name."""
-    from unittest.mock import MagicMock, Mock
+    from unittest.mock import Mock
+
+    from crewai_files import File
 
     from crewai.types.usage_metrics import UsageMetrics
 
@@ -981,8 +991,8 @@ def test_prepare_kickoff_param_files_override_message_files():
         verbose=False,
     )
 
-    msg_file = MagicMock(name="msg_file")
-    param_file = MagicMock(name="param_file")
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
     messages = [
         {"role": "user", "content": "Analyze", "files": {"same.png": msg_file}}
     ]
