@@ -79,6 +79,7 @@ class BaseLLM(ABC):
         api_key: str | None = None,
         base_url: str | None = None,
         provider: str | None = None,
+        prefer_upload: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
@@ -87,6 +88,7 @@ class BaseLLM(ABC):
             model: The model identifier/name.
             temperature: Optional temperature setting for response generation.
             stop: Optional list of stop sequences for generation.
+            prefer_upload: Whether to prefer file upload over inline base64.
             **kwargs: Additional provider-specific parameters.
         """
         if not model:
@@ -96,6 +98,7 @@ class BaseLLM(ABC):
         self.temperature = temperature
         self.api_key = api_key
         self.base_url = base_url
+        self.prefer_upload = prefer_upload
         # Store additional parameters for provider-specific use
         self.additional_params = kwargs
         self._provider = provider or "openai"
@@ -547,9 +550,7 @@ class BaseLLM(ABC):
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
 
-        messages = self._process_message_files(messages)
-
-        return messages
+        return self._process_message_files(messages)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
@@ -578,7 +579,7 @@ class BaseLLM(ABC):
             text = existing_content if isinstance(existing_content, str) else None
 
             content_blocks = format_multimodal_content(
-                files, provider, api=api, text=text
+                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
             )
             if not content_blocks:
                 msg.pop("files", None)

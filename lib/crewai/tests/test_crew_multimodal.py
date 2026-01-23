@@ -18,22 +18,7 @@ TEST_IMAGE_PATH = TEST_FIXTURES_DIR / "revenue_chart.png"
 TEST_TEXT_PATH = TEST_FIXTURES_DIR / "review_guidelines.txt"
 TEST_VIDEO_PATH = TEST_FIXTURES_DIR / "sample_video.mp4"
 TEST_AUDIO_PATH = TEST_FIXTURES_DIR / "sample_audio.wav"
-
-MINIMAL_PDF = b"""%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >> endobj
-xref
-0 4
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-trailer << /Size 4 /Root 1 0 R >>
-startxref
-196
-%%EOF
-"""
+TEST_PDF_PATH = TEST_FIXTURES_DIR / "agents.pdf"
 
 OPENAI_IMAGE_MODELS = [
     "openai/gpt-4o-mini",
@@ -87,8 +72,8 @@ def text_bytes() -> bytes:
 
 @pytest.fixture
 def pdf_file() -> PDFFile:
-    """Create a PDFFile from minimal PDF bytes."""
-    return PDFFile(source=MINIMAL_PDF)
+    """Create a PDFFile from test fixture."""
+    return PDFFile(source=str(TEST_PDF_PATH))
 
 
 @pytest.fixture
@@ -436,3 +421,40 @@ class TestCrewMultimodalUnsupportedTypes:
         result = crew.kickoff(input_files={"audio": audio_file})
 
         assert result.raw
+
+
+class TestCrewMultimodalFileUpload:
+    """Test file upload functionality with prefer_upload=True."""
+
+    @pytest.mark.vcr()
+    def test_image_upload_anthropic(self, image_file: ImageFile) -> None:
+        """Test image upload to Anthropic Files API."""
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022", prefer_upload=True)
+        crew = _create_analyst_crew(llm)
+
+        result = crew.kickoff(input_files={"chart": image_file})
+
+        assert result.raw
+        assert len(result.raw) > 0
+
+    @pytest.mark.vcr()
+    def test_image_upload_openai_responses(self, image_file: ImageFile) -> None:
+        """Test image upload to OpenAI Files API via Responses API."""
+        llm = LLM(model="openai/gpt-4o-mini", api="responses", prefer_upload=True)
+        crew = _create_analyst_crew(llm)
+
+        result = crew.kickoff(input_files={"chart": image_file})
+
+        assert result.raw
+        assert len(result.raw) > 0
+
+    @pytest.mark.vcr()
+    def test_pdf_upload_anthropic(self, pdf_file: PDFFile) -> None:
+        """Test PDF upload to Anthropic Files API."""
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022", prefer_upload=True)
+        crew = _create_analyst_crew(llm)
+
+        result = crew.kickoff(input_files={"document": pdf_file})
+
+        assert result.raw
+        assert len(result.raw) > 0

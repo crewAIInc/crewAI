@@ -596,6 +596,7 @@ class LLM(BaseLLM):
         stream: bool = False,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
+        prefer_upload: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
@@ -632,6 +633,7 @@ class LLM(BaseLLM):
         self.callbacks = callbacks
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
+        self.prefer_upload = prefer_upload
         self.additional_params = {
             k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
         }
@@ -2223,6 +2225,7 @@ class LLM(BaseLLM):
                 "reasoning_effort",
                 "stream",
                 "stop",
+                "prefer_upload",
             ]
         }
 
@@ -2250,6 +2253,7 @@ class LLM(BaseLLM):
             reasoning_effort=self.reasoning_effort,
             stream=self.stream,
             stop=self.stop,
+            prefer_upload=self.prefer_upload,
             **filtered_params,
         )
 
@@ -2285,6 +2289,7 @@ class LLM(BaseLLM):
                 "reasoning_effort",
                 "stream",
                 "stop",
+                "prefer_upload",
             ]
         }
 
@@ -2318,6 +2323,7 @@ class LLM(BaseLLM):
             reasoning_effort=self.reasoning_effort,
             stream=self.stream,
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
+            prefer_upload=self.prefer_upload,
             **filtered_params,
         )
 
