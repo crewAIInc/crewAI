@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Literal, TypeAlias, TypedDict, overload
+from typing import Any as AnyType, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired, Unpack
 
@@ -34,9 +34,6 @@ ProviderType: TypeAlias = (
     | OpenAIProviderType
     | BedrockProviderType
 )
-
-
-from typing import Any as AnyType
 
 
 class _BaseOpts(TypedDict):
