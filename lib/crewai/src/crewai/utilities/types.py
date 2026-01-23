@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 from typing_extensions import NotRequired, TypedDict
 
+
 try:
     from crewai_files import FileInput
 except ImportError:

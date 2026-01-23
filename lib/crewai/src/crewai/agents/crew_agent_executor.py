@@ -192,7 +192,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
-        self._inject_multimodal_files()
+        self._inject_multimodal_files(inputs)
 
         self._show_start_logs()
 
@@ -218,16 +218,26 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
-    def _inject_multimodal_files(self) -> None:
+    def _inject_multimodal_files(self, inputs: dict[str, Any] | None = None) -> None:
         """Attach files to the last user message for LLM-layer formatting.
 
-        Retrieves crew and task files and attaches them to the message's
-        `files` field. The LLM layer handles provider-specific formatting.
-        """
-        if not self.crew or not self.task:
-            return
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
 
-        files = get_all_files(self.crew.id, self.task.id)
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = get_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
         if not files:
             return
 
@@ -237,16 +247,28 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 msg["files"] = files
                 break
 
-    async def _ainject_multimodal_files(self) -> None:
+    async def _ainject_multimodal_files(
+        self, inputs: dict[str, Any] | None = None
+    ) -> None:
         """Async attach files to the last user message for LLM-layer formatting.
 
-        Retrieves crew and task files and attaches them to the message's
-        `files` field. The LLM layer handles provider-specific formatting.
-        """
-        if not self.crew or not self.task:
-            return
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
 
-        files = await aget_all_files(self.crew.id, self.task.id)
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = await aget_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
         if not files:
             return
 
@@ -851,7 +873,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
-        await self._ainject_multimodal_files()
+        await self._ainject_multimodal_files(inputs)
 
         self._show_start_logs()
 

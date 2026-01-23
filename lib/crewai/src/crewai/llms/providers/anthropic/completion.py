@@ -31,6 +31,32 @@ except ImportError:
     ) from None
 
 
+ANTHROPIC_FILES_API_BETA = "files-api-2025-04-14"
+
+
+def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+    """Check if any message content contains a file_id reference.
+
+    Anthropic's Files API is in beta and requires a special header when
+    file_id references are used in content blocks.
+
+    Args:
+        messages: List of message dicts to check.
+
+    Returns:
+        True if any content block contains a file_id reference.
+    """
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    source = block.get("source", {})
+                    if isinstance(source, dict) and source.get("type") == "file":
+                        return True
+    return False
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -549,8 +575,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = self.client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = self.client.beta.messages.create(**params)
+            else:
+                response = self.client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -973,8 +1005,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = await self.async_client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = await self.async_client.beta.messages.create(**params)
+            else:
+                response = await self.async_client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):

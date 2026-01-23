@@ -767,7 +767,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             return sanitize_tool_name(tool_call.name)
         if isinstance(tool_call, dict):
             func_info = tool_call.get("function", {})
-            return sanitize_tool_name(func_info.get("name", "") or tool_call.get("name", "unknown"))
+            return sanitize_tool_name(
+                func_info.get("name", "") or tool_call.get("name", "unknown")
+            )
         return "unknown"
 
     @router(execute_native_tool)
@@ -913,6 +915,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
                 self.state.messages.append(format_message_for_llm(user_prompt))
 
+            self._inject_files_from_inputs(inputs)
+
             self.state.ask_for_human_input = bool(
                 inputs.get("ask_for_human_input", False)
             )
@@ -995,6 +999,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
                 self.state.messages.append(format_message_for_llm(user_prompt))
 
+            self._inject_files_from_inputs(inputs)
+
             self.state.ask_for_human_input = bool(
                 inputs.get("ask_for_human_input", False)
             )
@@ -1032,6 +1038,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise
         finally:
             self._is_executing = False
+
+    async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Async version of invoke. Alias for invoke_async."""
+        return await self.invoke_async(inputs)
 
     def _handle_agent_action(
         self, formatted_answer: AgentAction, tool_result: ToolResult
@@ -1179,6 +1189,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         # Update the training data and save
         training_data[agent_id] = agent_training_data
         training_handler.save(training_data)
+
+    def _inject_files_from_inputs(self, inputs: dict[str, Any]) -> None:
+        """Inject files from inputs into the last user message.
+
+        Args:
+            inputs: Input dictionary that may contain a 'files' key.
+        """
+        files = inputs.get("files")
+        if not files:
+            return
+
+        for i in range(len(self.state.messages) - 1, -1, -1):
+            msg = self.state.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
 
     @staticmethod
     def _format_prompt(prompt: str, inputs: dict[str, str]) -> str:
