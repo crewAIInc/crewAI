@@ -36,16 +36,13 @@ O CrewAI suporta cinco tipos de arquivo específicos mais uma classe genérica `
 ```python
 from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
 
-# Tipos de arquivo específicos
 image = ImageFile(source="screenshot.png")
 pdf = PDFFile(source="report.pdf")
 audio = AudioFile(source="meeting.mp3")
 video = VideoFile(source="demo.mp4")
 text = TextFile(source="data.csv")
 
-# Arquivo genérico (detecta automaticamente o tipo)
-file = File(source="document.pdf")  # Detectado como PDF
-file = File(source="photo.jpg")     # Detectado como Imagem
+file = File(source="document.pdf")
 ```
 
 ## Fontes de Arquivo
@@ -73,11 +70,8 @@ image = ImageFile(source="https://example.com/image.png")
 ```python
 from crewai_files import ImageFile, FileBytes
 
-# Quando você tem bytes brutos (ex: de uma resposta de API)
 image_bytes = download_image_from_api()
 image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
-
-# Ou sem nome de arquivo (será detectado automaticamente conforme necessário)
 image = ImageFile(source=image_bytes)
 ```
 
@@ -177,10 +171,11 @@ Diferentes provedores suportam diferentes tipos de arquivo. O CrewAI formata aut
 
 | Provedor | Imagem | PDF | Áudio | Vídeo | Texto |
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
-| **OpenAI** (gpt-4o, gpt-4o-mini) | ✓ | ✓ | ✓ | | |
+| **OpenAI** (API completions) | ✓ | | | | |
+| **OpenAI** (API responses) | ✓ | ✓ | ✓ | | |
 | **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude, titan) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="Gemini para Máximo Suporte de Arquivos">
@@ -222,16 +217,9 @@ Controle como os arquivos são processados quando excedem os limites do provedor
 ```python
 from crewai_files import ImageFile, PDFFile
 
-# Strict: Levanta erro se o arquivo exceder os limites
 image = ImageFile(source="large.png", mode="strict")
-
-# Auto: Redimensiona/divide automaticamente para caber nos limites (padrão)
 image = ImageFile(source="large.png", mode="auto")
-
-# Warn: Registra aviso mas tenta enviar mesmo assim
 image = ImageFile(source="large.png", mode="warn")
-
-# Chunk: Divide arquivos grandes em múltiplos chunks
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 

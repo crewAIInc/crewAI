@@ -36,16 +36,13 @@ CrewAI는 5가지 특정 파일 타입과 타입을 자동 감지하는 일반 `
 ```python
 from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
 
-# 특정 파일 타입
 image = ImageFile(source="screenshot.png")
 pdf = PDFFile(source="report.pdf")
 audio = AudioFile(source="meeting.mp3")
 video = VideoFile(source="demo.mp4")
 text = TextFile(source="data.csv")
 
-# 일반 파일 (타입 자동 감지)
-file = File(source="document.pdf")  # PDF로 감지됨
-file = File(source="photo.jpg")     # 이미지로 감지됨
+file = File(source="document.pdf")
 ```
 
 ## 파일 소스
@@ -73,11 +70,8 @@ image = ImageFile(source="https://example.com/image.png")
 ```python
 from crewai_files import ImageFile, FileBytes
 
-# 원시 바이트가 있을 때 (예: API 응답에서)
 image_bytes = download_image_from_api()
 image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
-
-# 또는 파일명 없이 (필요에 따라 자동 감지됨)
 image = ImageFile(source=image_bytes)
 ```
 
@@ -177,10 +171,11 @@ Flow input_files < Crew input_files < Task input_files
 
 | 프로바이더 | 이미지 | PDF | 오디오 | 비디오 | 텍스트 |
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
-| **OpenAI** (gpt-4o, gpt-4o-mini) | ✓ | ✓ | ✓ | | |
+| **OpenAI** (completions API) | ✓ | | | | |
+| **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
 | **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude, titan) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="최대 파일 지원을 위한 Gemini">
@@ -222,16 +217,9 @@ CrewAI는 각 프로바이더에 파일을 전송하는 최적의 방법을 자�
 ```python
 from crewai_files import ImageFile, PDFFile
 
-# Strict: 파일이 제한을 초과하면 오류 발생
 image = ImageFile(source="large.png", mode="strict")
-
-# Auto: 제한에 맞게 자동으로 크기 조정/청크 (기본값)
 image = ImageFile(source="large.png", mode="auto")
-
-# Warn: 경고를 로그하지만 전송 시도
 image = ImageFile(source="large.png", mode="warn")
-
-# Chunk: 큰 파일을 여러 청크로 분할
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 

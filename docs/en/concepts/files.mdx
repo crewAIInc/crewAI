@@ -36,16 +36,13 @@ CrewAI supports five specific file types plus a generic `File` class that auto-d
 ```python
 from crewai_files import File, ImageFile, PDFFile, AudioFile, VideoFile, TextFile
 
-# Specific file types
 image = ImageFile(source="screenshot.png")
 pdf = PDFFile(source="report.pdf")
 audio = AudioFile(source="meeting.mp3")
 video = VideoFile(source="demo.mp4")
 text = TextFile(source="data.csv")
 
-# Generic file (auto-detects type)
-file = File(source="document.pdf")  # Detected as PDF
-file = File(source="photo.jpg")     # Detected as Image
+file = File(source="document.pdf")
 ```
 
 ## File Sources
@@ -73,11 +70,8 @@ image = ImageFile(source="https://example.com/image.png")
 ```python
 from crewai_files import ImageFile, FileBytes
 
-# When you have raw bytes (e.g., from an API response)
 image_bytes = download_image_from_api()
 image = ImageFile(source=FileBytes(data=image_bytes, filename="downloaded.png"))
-
-# Or without filename (will be auto-detected as needed)
 image = ImageFile(source=image_bytes)
 ```
 
@@ -177,10 +171,11 @@ Different providers support different file types. CrewAI automatically formats f
 
 | Provider | Image | PDF | Audio | Video | Text |
 |:---------|:-----:|:---:|:-----:|:-----:|:----:|
-| **OpenAI** (gpt-4o, gpt-4o-mini) | ✓ | ✓ | ✓ | | |
+| **OpenAI** (completions API) | ✓ | | | | |
+| **OpenAI** (responses API) | ✓ | ✓ | ✓ | | |
 | **Anthropic** (claude-3.x) | ✓ | ✓ | | | |
 | **Google Gemini** (gemini-1.5, 2.0, 2.5) | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **AWS Bedrock** (claude, titan) | ✓ | ✓ | | | |
+| **AWS Bedrock** (claude-3) | ✓ | ✓ | | | |
 | **Azure OpenAI** (gpt-4o) | ✓ | | ✓ | | |
 
 <Note type="info" title="Gemini for Maximum File Support">
@@ -222,16 +217,9 @@ Control how files are processed when they exceed provider limits:
 ```python
 from crewai_files import ImageFile, PDFFile
 
-# Strict: Raise error if file exceeds limits
 image = ImageFile(source="large.png", mode="strict")
-
-# Auto: Automatically resize/chunk to fit limits (default)
 image = ImageFile(source="large.png", mode="auto")
-
-# Warn: Log warning but attempt to send anyway
 image = ImageFile(source="large.png", mode="warn")
-
-# Chunk: Split large files into multiple chunks
 pdf = PDFFile(source="large.pdf", mode="chunk")
 ```
 
