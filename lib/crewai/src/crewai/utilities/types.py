@@ -1,9 +1,9 @@
 """Types for CrewAI utilities."""
 
-from typing import Any, Literal, TypedDict
+from typing import Any, Literal
 
 from crewai_files import FileInput
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 
 class LLMMessage(TypedDict):
