@@ -89,6 +89,7 @@ from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -1339,10 +1340,10 @@ class Agent(BaseAgent):
                     args_schema = None
                     if hasattr(tool, "inputSchema") and tool.inputSchema:
                         args_schema = self._json_schema_to_pydantic(
-                            tool.name, tool.inputSchema
+                            sanitize_tool_name(tool.name), tool.inputSchema
                         )
 
-                    schemas[tool.name] = {
+                    schemas[sanitize_tool_name(tool.name)] = {
                         "description": getattr(tool, "description", ""),
                         "args_schema": args_schema,
                     }
@@ -1498,7 +1499,7 @@ class Agent(BaseAgent):
         """
         return "\n".join(
             [
-                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                f"Tool name: {sanitize_tool_name(tool.name)}\nTool description:\n{tool.description}"
                 for tool in tools
             ]
         )
