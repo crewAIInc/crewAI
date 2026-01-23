@@ -5,10 +5,11 @@ from __future__ import annotations
 from abc import ABC
 from io import IOBase
 from pathlib import Path
-from typing import Annotated, Any, BinaryIO, Literal, Self
+from typing import Annotated, Any, BinaryIO, Literal
 
 from pydantic import BaseModel, Field, GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+from typing_extensions import Self
 
 from crewai_files.core.sources import (
     AsyncFileStream,
