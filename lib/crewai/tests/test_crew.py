@@ -4038,7 +4038,11 @@ def test_multimodal_agent_image_tool_handling():
         messages=[],
     )
 
-    with patch.object(Task, "execute_sync") as mock_execute_sync:
+    # Mock supports_multimodal to return False so AddImageTool gets added
+    with (
+        patch.object(Task, "execute_sync") as mock_execute_sync,
+        patch.object(multimodal_agent.llm, "supports_multimodal", return_value=False),
+    ):
         # Set up the mock to return our task output
         mock_execute_sync.return_value = mock_task_output
 
@@ -4315,9 +4319,9 @@ def test_before_kickoff_callback():
     # Call kickoff
     test_crew.kickoff(inputs=inputs)
 
-    # Check that the before_kickoff function was called and modified inputs
+    # Check that the before_kickoff function was called
+    # Note: inputs is copied internally, so the original dict is not modified
     assert test_crew_instance.inputs_modified
-    assert inputs.get("modified")
 
 
 @pytest.mark.vcr()
