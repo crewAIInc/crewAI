@@ -51,6 +51,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -1071,7 +1072,6 @@ class LLM(BaseLLM):
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
             if not tool_calls or not available_functions:
-
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -1284,8 +1284,12 @@ class LLM(BaseLLM):
             if response_model:
                 params["response_model"] = response_model
             response = litellm.completion(**params)
-            
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1339,16 +1343,19 @@ class LLM(BaseLLM):
             )
             return text_response
 
-        # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
-        if tool_calls and not available_functions and not text_response:
+        # --- 6) If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
             return tool_calls
 
-        # --- 7) Handle tool calls if present
-        tool_result = self._handle_tool_call(
-            tool_calls, available_functions, from_task, from_agent
-        )
-        if tool_result is not None:
-            return tool_result
+        # --- 7) Handle tool calls if present (execute when available_functions provided)
+        if tool_calls and available_functions:
+            tool_result = self._handle_tool_call(
+                tool_calls, available_functions, from_task, from_agent
+            )
+            if tool_result is not None:
+                return tool_result
+
         # --- 8) If tool call handling didn't return a result, emit completion event and return text response
         self._handle_emit_call_events(
             response=text_response,
@@ -1413,7 +1420,11 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
-            if hasattr(response,"usage") and not isinstance(response.usage, type) and response.usage:
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
                 usage_info = response.usage
                 self._track_token_usage_internal(usage_info)
 
@@ -1461,14 +1472,18 @@ class LLM(BaseLLM):
             )
             return text_response
 
-        if tool_calls and not available_functions and not text_response:
+        # If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
             return tool_calls
 
-        tool_result = self._handle_tool_call(
-            tool_calls, available_functions, from_task, from_agent
-        )
-        if tool_result is not None:
-            return tool_result
+        # Handle tool calls if present (execute when available_functions provided)
+        if tool_calls and available_functions:
+            tool_result = self._handle_tool_call(
+                tool_calls, available_functions, from_task, from_agent
+            )
+            if tool_result is not None:
+                return tool_result
 
         self._handle_emit_call_events(
             response=text_response,
@@ -1503,7 +1518,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
-        
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
@@ -1666,7 +1681,7 @@ class LLM(BaseLLM):
 
         # --- 2) Extract function name from first tool call
         tool_call = tool_calls[0]
-        function_name = tool_call.function.name
+        function_name = sanitize_tool_name(tool_call.function.name)
         function_args = {}  # Initialize to empty dict to avoid unbound variable
 
         # --- 3) Check if function is available

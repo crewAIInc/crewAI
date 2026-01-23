@@ -1,0 +1,499 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '907'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"calculator\",\n
+        \             \"args\": {\n                \"expression\": \"15 * 8\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.00062879999833447594\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 103,\n    \"candidatesTokenCount\":
+        7,\n    \"totalTokenCount\": 110,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 103\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n
+        \ \"responseId\": \"PpByabfUHsih_uMPlu2ysAM\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:50 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=521
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text":
+      "The result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1219'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"calculator\",\n
+        \             \"args\": {\n                \"expression\": \"15 * 8\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.013549212898526872\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 149,\n    \"candidatesTokenCount\":
+        7,\n    \"totalTokenCount\": 156,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 149\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n
+        \ \"responseId\": \"P5Byadc8kJT-4w_p99XQAQ\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:51 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=444
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text":
+      "The result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1531'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"calculator\",\n
+        \             \"args\": {\n                \"expression\": \"15 * 8\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.0409286447933742\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 195,\n    \"candidatesTokenCount\":
+        7,\n    \"totalTokenCount\": 202,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 195\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n
+        \ \"responseId\": \"P5Byadn5HOK6_uMPnvmXwAk\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:51 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=503
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text":
+      "The result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1843'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"calculator\",\n
+        \             \"args\": {\n                \"expression\": \"15 * 8\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.018002046006066457\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 241,\n    \"candidatesTokenCount\":
+        7,\n    \"totalTokenCount\": 248,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 241\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n
+        \ \"responseId\": \"P5Byafi2PKbn_uMPtIbfuQI\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:52 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=482
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text":
+      "The result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2155'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"calculator\",\n
+        \             \"args\": {\n                \"expression\": \"15 * 8\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.10329001290457589\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 287,\n    \"candidatesTokenCount\":
+        7,\n    \"totalTokenCount\": 294,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 287\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n
+        \ \"responseId\": \"QJByaamVIP_g_uMPt6mI0Qg\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:52 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=534
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate what is 15
+      * 8\n\nThis is the expected criteria for your final answer: The result of the
+      calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nThis is VERY important to you, your job depends on it!"}],
+      "role": "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text":
+      "The result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}, {"parts": [{"text": ""}], "role": "model"}, {"parts": [{"text": "The
+      result of 15 * 8 is 120"}], "role": "user"}, {"parts": [{"text": "Analyze the
+      tool result. If requirements are met, provide the Final Answer. Otherwise, call
+      the next tool. Deliver only the answer without meta-commentary."}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Math Assistant.
+      You are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}], "role": "user"}, "tools": [{"functionDeclarations": [{"description":
+      "Perform mathematical calculations. Use this for any math operations.", "name":
+      "calculator", "parameters": {"properties": {"expression": {"description": "Mathematical
+      expression to evaluate", "title": "Expression", "type": "STRING"}}, "required":
+      ["expression"], "type": "OBJECT"}}]}], "generationConfig": {"stopSequences":
+      ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2467'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"120\\n\"\n          }\n        ],\n
+        \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
+        \     \"avgLogprobs\": -0.0097615998238325119\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 333,\n    \"candidatesTokenCount\": 4,\n    \"totalTokenCount\":
+        337,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 333\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 4\n      }\n
+        \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-exp\",\n  \"responseId\":
+        \"QZByaZHABO-i_uMP58aYqAk\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 22 Jan 2026 21:01:53 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=412
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
