@@ -1,7 +1,8 @@
 interactions:
 - request:
     body: '{"contents": [{"parts": [{"text": "Summarize what this text file says in
-      one sentence."}], "role": "user"}], "generationConfig": {}}'
+      one sentence."}, {"inlineData": {"data": "UmV2aWV3IEd1aWRlbGluZXMKCjEuIEJlIGNsZWFyIGFuZCBjb25jaXNlOiBXcml0ZSBmZWVkYmFjayB0aGF0IGlzIGVhc3kgdG8gdW5kZXJzdGFuZC4KMi4gRm9jdXMgb24gYmVoYXZpb3IgYW5kIG91dGNvbWVzOiBEZXNjcmliZSB3aGF0IGhhcHBlbmVkIGFuZCB3aHkgaXQgbWF0dGVycy4KMy4gQmUgc3BlY2lmaWM6IFByb3ZpZGUgZXhhbXBsZXMgdG8gc3VwcG9ydCB5b3VyIHBvaW50cy4KNC4gQmFsYW5jZSBwb3NpdGl2ZXMgYW5kIGltcHJvdmVtZW50czogSGlnaGxpZ2h0IHN0cmVuZ3RocyBhbmQgYXJlYXMgdG8gZ3Jvdy4KNS4gQmUgcmVzcGVjdGZ1bCBhbmQgY29uc3RydWN0aXZlOiBBc3N1bWUgcG9zaXRpdmUgaW50ZW50IGFuZCBvZmZlciBzb2x1dGlvbnMuCjYuIFVzZSBvYmplY3RpdmUgY3JpdGVyaWE6IFJlZmVyZW5jZSBnb2FscywgbWV0cmljcywgb3IgZXhwZWN0YXRpb25zIHdoZXJlIHBvc3NpYmxlLgo3LiBTdWdnZXN0IG5leHQgc3RlcHM6IFJlY29tbWVuZCBhY3Rpb25hYmxlIHdheXMgdG8gaW1wcm92ZS4KOC4gUHJvb2ZyZWFkOiBDaGVjayB0b25lLCBncmFtbWFyLCBhbmQgY2xhcml0eSBiZWZvcmUgc3VibWl0dGluZy4K",
+      "mimeType": "text/plain"}}], "role": "user"}], "generationConfig": {}}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -12,7 +13,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '132'
+      - '976'
       content-type:
       - application/json
       host:
@@ -26,27 +27,28 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Please provide the text file so I
-        can summarize it for you. I need the content of the file to be able to understand
-        and summarize it in one sentence.\\n\"\n          }\n        ],\n        \"role\":
+        [\n          {\n            \"text\": \"The text file outlines guidelines
+        for providing effective feedback, emphasizing clarity, specificity, a balance
+        of positive and constructive criticism, respect, objectivity, actionable suggestions,
+        and careful proofreading.\\n\"\n          }\n        ],\n        \"role\":
         \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -0.17782547979643851\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        11,\n    \"candidatesTokenCount\": 33,\n    \"totalTokenCount\": 44,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 11\n
+        -0.17109338442484537\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        136,\n    \"candidatesTokenCount\": 36,\n    \"totalTokenCount\": 172,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 136\n
         \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 33\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-2.0-flash\",\n  \"responseId\": \"b-dyabKwN8a9jrEP7JT1yAo\"\n}\n"
+        \"TEXT\",\n        \"tokenCount\": 36\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash\",\n  \"responseId\": \"wxZzaYaiGYG2_uMPtMjFiAw\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 23 Jan 2026 03:13:52 GMT
+      - Fri, 23 Jan 2026 06:35:48 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=631
+      - gfet4t7; dur=675
       Transfer-Encoding:
       - chunked
       Vary:

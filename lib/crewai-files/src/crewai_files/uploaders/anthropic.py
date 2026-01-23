@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import io
 import logging
 import os
 from typing import Any
 
+from crewai_files.core.sources import generate_filename
 from crewai_files.core.types import FileInput
 from crewai_files.processing.exceptions import classify_upload_error
 from crewai_files.uploaders.base import FileUploader, UploadResult
@@ -91,17 +91,14 @@ class AnthropicFileUploader(FileUploader):
             client = self._get_client()
 
             content = file.read()
-            file_purpose = purpose or "user_upload"
-
-            file_data = io.BytesIO(content)
 
             logger.info(
                 f"Uploading file '{file.filename}' to Anthropic ({len(content)} bytes)"
             )
 
-            uploaded_file = client.files.create(
-                file=(file.filename, file_data, file.content_type),
-                purpose=file_purpose,
+            filename = file.filename or generate_filename(file.content_type)
+            uploaded_file = client.beta.files.upload(
+                file=(filename, content, file.content_type),
             )
 
             logger.info(f"Uploaded to Anthropic: {uploaded_file.id}")
@@ -129,7 +126,7 @@ class AnthropicFileUploader(FileUploader):
         """
         try:
             client = self._get_client()
-            client.files.delete(file_id=file_id)
+            client.beta.files.delete(file_id=file_id)
             logger.info(f"Deleted Anthropic file: {file_id}")
             return True
         except Exception as e:
@@ -147,7 +144,7 @@ class AnthropicFileUploader(FileUploader):
         """
         try:
             client = self._get_client()
-            file_info = client.files.retrieve(file_id=file_id)
+            file_info = client.beta.files.retrieve(file_id=file_id)
             return {
                 "id": file_info.id,
                 "filename": file_info.filename,
@@ -167,7 +164,7 @@ class AnthropicFileUploader(FileUploader):
         """
         try:
             client = self._get_client()
-            files = client.files.list()
+            files = client.beta.files.list()
             return [
                 {
                     "id": f.id,
@@ -202,17 +199,14 @@ class AnthropicFileUploader(FileUploader):
             client = self._get_async_client()
 
             content = await file.aread()
-            file_purpose = purpose or "user_upload"
-
-            file_data = io.BytesIO(content)
 
             logger.info(
                 f"Uploading file '{file.filename}' to Anthropic ({len(content)} bytes)"
             )
 
-            uploaded_file = await client.files.create(
-                file=(file.filename, file_data, file.content_type),
-                purpose=file_purpose,
+            filename = file.filename or generate_filename(file.content_type)
+            uploaded_file = await client.beta.files.upload(
+                file=(filename, content, file.content_type),
             )
 
             logger.info(f"Uploaded to Anthropic: {uploaded_file.id}")
@@ -240,7 +234,7 @@ class AnthropicFileUploader(FileUploader):
         """
         try:
             client = self._get_async_client()
-            await client.files.delete(file_id=file_id)
+            await client.beta.files.delete(file_id=file_id)
             logger.info(f"Deleted Anthropic file: {file_id}")
             return True
         except Exception as e:

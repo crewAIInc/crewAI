@@ -7,6 +7,7 @@ from typing import Literal
 from crewai_files.core.types import (
     AudioMimeType,
     ImageMimeType,
+    TextContentType,
     VideoMimeType,
 )
 
@@ -70,6 +71,27 @@ GEMINI_VIDEO_FORMATS: tuple[VideoMimeType, ...] = (
     "video/quicktime",
     "video/x-msvideo",
     "video/x-flv",
+)
+
+DEFAULT_TEXT_FORMATS: tuple[TextContentType, ...] = (
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/json",
+    "text/xml",
+    "text/html",
+)
+
+GEMINI_TEXT_FORMATS: tuple[TextContentType, ...] = (
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "application/json",
+    "application/xml",
+    "text/xml",
+    "application/x-yaml",
+    "text/yaml",
+    "text/html",
 )
 
 
@@ -136,6 +158,19 @@ class VideoConstraints:
 
 
 @dataclass(frozen=True)
+class TextConstraints:
+    """Constraints for text files.
+
+    Attributes:
+        max_size_bytes: Maximum file size in bytes.
+        supported_formats: Supported text MIME types.
+    """
+
+    max_size_bytes: int
+    supported_formats: tuple[TextContentType, ...] = DEFAULT_TEXT_FORMATS
+
+
+@dataclass(frozen=True)
 class ProviderConstraints:
     """Complete set of constraints for a provider.
 
@@ -145,6 +180,7 @@ class ProviderConstraints:
         pdf: PDF file constraints.
         audio: Audio file constraints.
         video: Video file constraints.
+        text: Text file constraints.
         general_max_size_bytes: Maximum size for any file type.
         supports_file_upload: Whether the provider supports file upload APIs.
         file_upload_threshold_bytes: Size threshold above which to use file upload.
@@ -156,6 +192,7 @@ class ProviderConstraints:
     pdf: PDFConstraints | None = None
     audio: AudioConstraints | None = None
     video: VideoConstraints | None = None
+    text: TextConstraints | None = None
     general_max_size_bytes: int | None = None
     supports_file_upload: bool = False
     file_upload_threshold_bytes: int | None = None
@@ -212,6 +249,10 @@ GEMINI_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=2_147_483_648,
         max_duration_seconds=3600,  # 1 hour at default resolution
         supported_formats=GEMINI_VIDEO_FORMATS,
+    ),
+    text=TextConstraints(
+        max_size_bytes=104_857_600,
+        supported_formats=GEMINI_TEXT_FORMATS,
     ),
     supports_file_upload=True,
     file_upload_threshold_bytes=20_971_520,

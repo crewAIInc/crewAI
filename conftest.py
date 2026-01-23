@@ -1,5 +1,6 @@
 """Pytest configuration for crewAI workspace."""
 
+import base64
 from collections.abc import Generator
 import gzip
 import os
@@ -10,11 +11,31 @@ from typing import Any
 from dotenv import load_dotenv
 import pytest
 from vcr.request import Request  # type: ignore[import-untyped]
+import vcr.stubs.httpx_stubs as httpx_stubs  # type: ignore[import-untyped]
 
 
 env_test_path = Path(__file__).parent / ".env.test"
 load_dotenv(env_test_path, override=True)
 load_dotenv(override=True)
+
+
+def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
+    """Patched version of VCR's _make_vcr_request that handles binary content.
+
+    The original implementation fails on binary request bodies (like file uploads)
+    because it assumes all content can be decoded as UTF-8.
+    """
+    raw_body = httpx_request.read()
+    try:
+        body = raw_body.decode("utf-8")
+    except UnicodeDecodeError:
+        body = base64.b64encode(raw_body).decode("ascii")
+    uri = str(httpx_request.url)
+    headers = dict(httpx_request.headers)
+    return Request(httpx_request.method, uri, body, headers)
+
+
+httpx_stubs._make_vcr_request = _patched_make_vcr_request
 
 
 @pytest.fixture(autouse=True, scope="function")

@@ -54,7 +54,7 @@ class FileOperationMetrics:
         }
 
         if self.filename:
-            result["filename"] = self.filename
+            result["file_name"] = self.filename
         if self.provider:
             result["provider"] = self.provider
         if self.size_bytes is not None:

@@ -64,6 +64,21 @@ def _fallback_content_type(filename: str | None) -> str:
     return "application/octet-stream"
 
 
+def generate_filename(content_type: str) -> str:
+    """Generate a UUID-based filename with extension from content type.
+
+    Args:
+        content_type: MIME type to derive extension from.
+
+    Returns:
+        Filename in format "{uuid}{ext}" where ext includes the dot.
+    """
+    import uuid
+
+    ext = mimetypes.guess_extension(content_type) or ""
+    return f"{uuid.uuid4()}{ext}"
+
+
 def detect_content_type(data: bytes, filename: str | None = None) -> str:
     """Detect MIME type from file content.
 

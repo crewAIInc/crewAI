@@ -18,6 +18,7 @@ from crewai_files import (
     VideoFile,
     format_multimodal_content,
 )
+from crewai_files.resolution.resolver import FileResolver, FileResolverConfig
 
 
 # Path to test data files
@@ -556,6 +557,153 @@ class TestGenericFileIntegration:
             "What types of files did I send? List them briefly.",
             files,
         )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+def _build_multimodal_message_with_upload(
+    llm: LLM, prompt: str, files: dict
+) -> tuple[list[dict], list[dict]]:
+    """Build a multimodal message using file_id uploads instead of inline base64.
+
+    Note: OpenAI Chat Completions API only supports file_id for PDFs via
+    type="file", not for images. For image file_id support, OpenAI requires
+    the Responses API (type="input_image"). Since crewAI uses Chat Completions,
+    we test file_id uploads with Anthropic which supports file_id for all types.
+
+    Returns:
+        Tuple of (messages, content_blocks) where content_blocks can be inspected
+        to verify file_id was used.
+    """
+    from crewai_files.formatting.anthropic import AnthropicFormatter
+
+    config = FileResolverConfig(prefer_upload=True)
+    resolver = FileResolver(config=config)
+    formatter = AnthropicFormatter()
+
+    content_blocks = []
+    for file in files.values():
+        resolved = resolver.resolve(file, "anthropic")
+        block = formatter.format_block(file, resolved)
+        if block is not None:
+            content_blocks.append(block)
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                llm.format_text_content(prompt),
+                *content_blocks,
+            ],
+        }
+    ]
+    return messages, content_blocks
+
+
+def _build_responses_message_with_upload(
+    llm: LLM, prompt: str, files: dict
+) -> tuple[list[dict], list[dict]]:
+    """Build a Responses API message using file_id uploads.
+
+    The Responses API supports file_id for images via type="input_image".
+
+    Returns:
+        Tuple of (messages, content_blocks) where content_blocks can be inspected
+        to verify file_id was used.
+    """
+    from crewai_files.formatting import OpenAIResponsesFormatter
+
+    config = FileResolverConfig(prefer_upload=True)
+    resolver = FileResolver(config=config)
+
+    content_blocks = []
+    for file in files.values():
+        resolved = resolver.resolve(file, "openai")
+        block = OpenAIResponsesFormatter.format_block(resolved, file.content_type)
+        content_blocks.append(block)
+
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": prompt},
+                *content_blocks,
+            ],
+        }
+    ]
+    return messages, content_blocks
+
+
+class TestAnthropicFileUploadIntegration:
+    """Integration tests for Anthropic multimodal with file_id uploads.
+
+    We test file_id uploads with Anthropic because OpenAI Chat Completions API
+    only supports file_id references for PDFs (type="file"), not images.
+    OpenAI's Responses API supports image file_id (type="input_image"), but
+    crewAI currently uses Chat Completions. Anthropic supports file_id for
+    all content types including images.
+    """
+
+    @pytest.mark.vcr()
+    def test_describe_image_with_file_id(self, test_image_bytes: bytes) -> None:
+        """Test Anthropic can describe an image uploaded via Files API."""
+        llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages, content_blocks = _build_multimodal_message_with_upload(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        # Verify we're using file_id, not base64
+        assert len(content_blocks) == 1
+        source = content_blocks[0].get("source", {})
+        assert source.get("type") == "file", (
+            f"Expected source type 'file' for file_id upload, got '{source.get('type')}'. "
+            "This test verifies file_id uploads work - if falling back to base64, "
+            "check that the Anthropic Files API uploader is working correctly."
+        )
+        assert "file_id" in source, "Expected file_id in source for file_id upload"
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+class TestOpenAIResponsesFileUploadIntegration:
+    """Integration tests for OpenAI Responses API with file_id uploads.
+
+    The Responses API supports file_id for images via type="input_image",
+    unlike Chat Completions which only supports file_id for PDFs.
+    """
+
+    @pytest.mark.vcr()
+    def test_describe_image_with_file_id(self, test_image_bytes: bytes) -> None:
+        """Test OpenAI Responses API can describe an image uploaded via Files API."""
+        llm = LLM(model="openai/gpt-4o-mini", api="responses")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages, content_blocks = _build_responses_message_with_upload(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        # Verify we're using file_id with input_image type
+        assert len(content_blocks) == 1
+        block = content_blocks[0]
+        assert block.get("type") == "input_image", (
+            f"Expected type 'input_image' for Responses API, got '{block.get('type')}'. "
+            "This test verifies file_id uploads work with the Responses API."
+        )
+        assert "file_id" in block, "Expected file_id in block for file_id upload"
 
         response = llm.call(messages)
 

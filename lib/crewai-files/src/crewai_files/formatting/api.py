@@ -186,6 +186,11 @@ def _get_supported_types(
         supported.append("audio/")
     if constraints.video is not None:
         supported.append("video/")
+    if constraints.text is not None:
+        supported.append("text/")
+        supported.append("application/json")
+        supported.append("application/xml")
+        supported.append("application/x-yaml")
     return supported
 
 

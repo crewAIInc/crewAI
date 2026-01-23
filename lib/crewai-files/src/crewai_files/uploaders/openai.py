@@ -9,7 +9,7 @@ import os
 from typing import Any
 
 from crewai_files.core.constants import DEFAULT_UPLOAD_CHUNK_SIZE, FILES_API_MAX_SIZE
-from crewai_files.core.sources import FileBytes, FilePath, FileStream
+from crewai_files.core.sources import FileBytes, FilePath, FileStream, generate_filename
 from crewai_files.core.types import FileInput
 from crewai_files.processing.exceptions import (
     PermanentUploadError,
@@ -20,6 +20,27 @@ from crewai_files.uploaders.base import FileUploader, UploadResult
 
 
 logger = logging.getLogger(__name__)
+
+
+def _get_purpose_for_content_type(content_type: str, purpose: str | None) -> str:
+    """Get the appropriate purpose for a file based on content type.
+
+    OpenAI Files API requires different purposes for different file types:
+    - Images (for Responses API vision): "vision"
+    - PDFs and other documents: "user_data"
+
+    Args:
+        content_type: MIME type of the file.
+        purpose: Optional explicit purpose override.
+
+    Returns:
+        The purpose string to use for upload.
+    """
+    if purpose is not None:
+        return purpose
+    if content_type.startswith("image/"):
+        return "vision"
+    return "user_data"
 
 
 def _get_file_size(file: FileInput) -> int | None:
@@ -219,13 +240,14 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_client()
-        file_purpose = purpose or "user_data"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
+        filename = file.filename or generate_filename(file.content_type)
 
         file_data = io.BytesIO(content)
-        file_data.name = file.filename or "file"
+        file_data.name = filename
 
         logger.info(
-            f"Uploading file '{file.filename}' to OpenAI Files API ({len(content)} bytes)"
+            f"Uploading file '{filename}' to OpenAI Files API ({len(content)} bytes)"
         )
 
         uploaded_file = client.files.create(
@@ -254,8 +276,8 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_client()
-        file_purpose = purpose or "user_data"
-        filename = file.filename or "file"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
+        filename = file.filename or generate_filename(file.content_type)
         file_size = len(content)
 
         logger.info(
@@ -329,8 +351,8 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_client()
-        file_purpose = purpose or "user_data"
-        filename = file.filename or "file"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
+        filename = file.filename or generate_filename(file.content_type)
 
         logger.info(
             f"Uploading file '{filename}' to OpenAI Uploads API (streaming) "
@@ -496,10 +518,10 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_async_client()
-        file_purpose = purpose or "user_data"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
 
         file_data = io.BytesIO(content)
-        file_data.name = file.filename or "file"
+        file_data.name = file.filename or generate_filename(file.content_type)
 
         logger.info(
             f"Uploading file '{file.filename}' to OpenAI Files API ({len(content)} bytes)"
@@ -531,8 +553,8 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_async_client()
-        file_purpose = purpose or "user_data"
-        filename = file.filename or "file"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
+        filename = file.filename or generate_filename(file.content_type)
         file_size = len(content)
 
         logger.info(
@@ -606,8 +628,8 @@ class OpenAIFileUploader(FileUploader):
             UploadResult with the file ID and metadata.
         """
         client = self._get_async_client()
-        file_purpose = purpose or "user_data"
-        filename = file.filename or "file"
+        file_purpose = _get_purpose_for_content_type(file.content_type, purpose)
+        filename = file.filename or generate_filename(file.content_type)
 
         logger.info(
             f"Uploading file '{filename}' to OpenAI Uploads API (streaming) "
