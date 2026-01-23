@@ -1,103 +1,363 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Research Assistant. You are a helpful research assistant.\nYour personal goal is: Find information about the population of Tokyo\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "\nCurrent Task: Find information about the population of Tokyo\n\nThis is the expected criteria for your final answer: The population of Tokyo is 10 million\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}], "model": "gpt-4o-mini", "stream": false}'
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
+      are a helpful research assistant.\nYour personal goal is: Find information about
+      the population of Tokyo\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"},{"role":"user","content":"\nCurrent Task: Find information about the population
+      of Tokyo\n\nThis is the expected criteria for your final answer: The population
+      of Tokyo is 10 million\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '932'
+      - '906'
       content-type:
       - application/json
       host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
+      - crewai-azure-openai.openai.azure.com
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.12.10
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/chat/completions
+  response:
+    body:
+      string: '{"error":{"code":"404","message": "Resource not found"}}'
+    headers:
+      Content-Length:
+      - '56'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 05:53:31 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 404
+      message: Resource Not Found
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
+      are a helpful research assistant.\nYour personal goal is: Find information about
+      the population of Tokyo\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"},{"role":"user","content":"\nCurrent Task: Find information about the population
+      of Tokyo\n\nThis is the expected criteria for your final answer: The population
+      of Tokyo is 10 million\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"system","content":"You
+      are Research Assistant. You are a helpful research assistant.\nYour personal
+      goal is: Find information about the population of Tokyo\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task:
+      Find information about the population of Tokyo\n\nThis is the expected criteria
+      for your final answer: The population of Tokyo is 10 million\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1775'
+      content-type:
+      - application/json
+      host:
+      - crewai-azure-openai.openai.azure.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/chat/completions
+  response:
+    body:
+      string: '{"error":{"code":"404","message": "Resource not found"}}'
+    headers:
+      Content-Length:
+      - '56'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 05:53:31 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 404
+      message: Resource Not Found
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
+      are a helpful research assistant.\nYour personal goal is: Find information about
+      the population of Tokyo\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"},{"role":"user","content":"\nCurrent Task: Find information about the population
+      of Tokyo\n\nThis is the expected criteria for your final answer: The population
+      of Tokyo is 10 million\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"system","content":"You
+      are Research Assistant. You are a helpful research assistant.\nYour personal
+      goal is: Find information about the population of Tokyo\nTo give my best complete
+      final answer to the task respond using the exact following format:\n\nThought:
+      I now can give a great answer\nFinal Answer: Your final answer must be the great
+      and the most complete as possible, it must be outcome described.\n\nI MUST use
+      these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task:
+      Find information about the population of Tokyo\n\nThis is the expected criteria
+      for your final answer: The population of Tokyo is 10 million\nyou MUST return
+      the actual complete content as the final answer, not a summary.\n\nBegin! This
+      is VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"},{"role":"system","content":"You are Research
+      Assistant. You are a helpful research assistant.\nYour personal goal is: Find
+      information about the population of Tokyo\nTo give my best complete final answer
+      to the task respond using the exact following format:\n\nThought: I now can
+      give a great answer\nFinal Answer: Your final answer must be the great and the
+      most complete as possible, it must be outcome described.\n\nI MUST use these
+      formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Find
+      information about the population of Tokyo\n\nThis is the expected criteria for
+      your final answer: The population of Tokyo is 10 million\nyou MUST return the
+      actual complete content as the final answer, not a summary.\n\nBegin! This is
+      VERY important to you, use the tools available and give your best Final Answer,
+      your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2644'
+      content-type:
+      - application/json
+      host:
+      - crewai-azure-openai.openai.azure.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/chat/completions
+  response:
+    body:
+      string: '{"error":{"code":"404","message": "Resource not found"}}'
+    headers:
+      Content-Length:
+      - '56'
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 05:53:31 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 404
+      message: Resource Not Found
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
+      are a helpful research assistant.\nYour personal goal is: Find information about
+      the population of Tokyo\nTo give my best complete final answer to the task respond
+      using the exact following format:\n\nThought: I now can give a great answer\nFinal
+      Answer: Your final answer must be the great and the most complete as possible,
+      it must be outcome described.\n\nI MUST use these formats, my job depends on
+      it!"},{"role":"user","content":"\nCurrent Task: Find information about the population
+      of Tokyo\n\nThis is the expected criteria for your final answer: The population
+      of Tokyo is 10 million\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nBegin! This is VERY important to you, use the tools
+      available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '905'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CQQ5CBZ2V7R7cHju9WwEXAzZlAz4i\",\n  \"object\": \"chat.completion\",\n  \"created\": 1760412826,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: As of my last update in October 2023, the population of Tokyo is approximately 14 million people in the central area, while the Greater Tokyo Area, which includes surrounding prefectures, has a staggering population of over 37 million, making it the most populous metropolitan area in the world. The city of Tokyo itself is renowned for its vibrant culture, diverse economy, and significant global influence. The population figures may fluctuate due to various factors such as migration, urbanization, and demographic trends, but generally, it remains one of the largest urban agglomerations globally.\",\n        \"refusal\": null,\n        \"annotations\"\
-        : []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 173,\n    \"completion_tokens\": 125,\n    \"total_tokens\": 298,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_560af6e559\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D14RS0FWG5BiSFl5yB0HiQOqcGsB3\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769147774,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
+        Answer: As of October 2023, the population of Tokyo is approximately 14 million
+        people in the 23 special wards area, and around 37 million people in the Greater
+        Tokyo Area, making it one of the most populous metropolitan areas in the world.
+        Tokyo is renowned for its diverse neighborhoods, rich cultural heritage, and
+        dynamic economy. The population density in the city is exceptionally high,
+        leading to efficient public transport systems and urban infrastructure. Population
+        fluctuations occur due to various factors, including birth rates, migration,
+        and economic opportunities. The city continues to be a global hub for business,
+        technology, and tourism, attracting people from all over the world.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        173,\n    \"completion_tokens\": 139,\n    \"total_tokens\": 312,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_29330a9688\"\n}\n"
     headers:
       CF-RAY:
-      - 98e404605874fad2-SJC
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 14 Oct 2025 03:33:48 GMT
+      - Fri, 23 Jan 2026 05:56:17 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=o5Vy5q.qstP73vjTrIb7GX6EjMltWq26Vk1ctm8rrcQ-1760412828-1.0.1.1-6PmDQhWH5.60C02WBN9ENJiBEZ0hYXY1YJ6TKxTAflRETSCaMVA2j1.xE2KPFpUrsSsmbkopxQ1p2NYmLzuRy08dingIYyz5HZGz8ghl.nM; path=/; expires=Tue, 14-Oct-25 04:03:48 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=TkrzMwZH3VZy7i4ED_kVxlx4MUrHeXnluoFfmeqTT2w-1760412828927-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2644'
+      - '2984'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '2793'
+      - '3225'
       x-openai-proxy-wasm:
       - v0.1
-      x-ratelimit-limit-project-tokens:
-      - '150000000'
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-project-tokens:
-      - '149999797'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999797'
-      x-ratelimit-reset-project-tokens:
-      - 0s
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_5c4fad6d3e4743d1a43ab65bd333b477
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

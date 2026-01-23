@@ -37,17 +37,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AoEzIjusutsoPh1EmGgeXifkYvbfH\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Hello! How can I assist you today?\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 11,\n    \"completion_tokens\":
-      10,\n    \"total_tokens\": 21,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_01aeff40ea\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AoEzIjusutsoPh1EmGgeXifkYvbfH\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Hello! How can I assist\
+        \ you today?\",\n        \"refusal\": null\n      },\n      \"logprobs\":\
+        \ null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n\
+        \    \"prompt_tokens\": 11,\n    \"completion_tokens\": 10,\n    \"total_tokens\"\
+        : 21,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n   \
+        \   \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n  \
+        \    \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_01aeff40ea\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -97,8 +99,9 @@ interactions:
       - 0s
       x-request-id:
       - req_18f5593ddf37824bb9a7690407170dc0
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Hello, world from another agent!"}],
       "model": "gpt-4o-mini"}'
@@ -141,18 +144,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AoEzIOYUDsd7SpYDQeQmbNGS7IBLE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Hello! It's great to connect with another
-      agent. How can I assist you today?\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 14,\n    \"completion_tokens\": 18,\n
-      \   \"total_tokens\": 32,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_01aeff40ea\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AoEzIOYUDsd7SpYDQeQmbNGS7IBLE\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1736537376,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Hello! It's great\
+        \ to connect with another agent. How can I assist you today?\",\n        \"\
+        refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 14,\n    \"\
+        completion_tokens\": 18,\n    \"total_tokens\": 32,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_01aeff40ea\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -196,8 +201,9 @@ interactions:
       - 0s
       x-request-id:
       - req_366bcd7dfe94e2a2b5640fd9bb1c5a6b
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CtcMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSrgwKEgoQY3Jld2FpLnRl

@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"user","content":"Tell me a joke."}],"model":"gpt-4o-mini","stop":[]}'
+    body: '{"messages":[{"role":"user","content":"Tell me a joke."}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -13,7 +13,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '90'
+      - '80'
       content-type:
       - application/json
       host:
@@ -27,7 +27,7 @@ interactions:
       x-stainless-os:
       - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 2.14.0
+      - 1.83.0
       x-stainless-raw-response:
       - 'true'
       x-stainless-read-timeout:
@@ -37,13 +37,13 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.11.14
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CvErx9mbnUKFHKkhPChO93eUzKJqy\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1767757889,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D12kRWBYMQqvQO0np2uAxgXMuDytW\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769141263,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Why did the scarecrow win an award?
         \\n\\nBecause he was outstanding in his field!\",\n        \"refusal\": null,\n
@@ -64,7 +64,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Wed, 07 Jan 2026 03:51:29 GMT
+      - Fri, 23 Jan 2026 04:07:43 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -84,13 +84,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '466'
+      - '497'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '483'
+      - '517'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
