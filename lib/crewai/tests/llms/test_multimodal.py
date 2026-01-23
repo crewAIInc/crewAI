@@ -89,36 +89,6 @@ class TestLiteLLMMultimodal:
         llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
         assert llm.supports_multimodal() is False
 
-    def test_supported_content_types_openai(self) -> None:
-        """Test OpenAI models support images only."""
-        llm = LLM(model="gpt-4o", is_litellm=True)
-        types = llm.supported_multimodal_content_types()
-        assert "image/" in types
-        assert "application/pdf" not in types
-
-    def test_supported_content_types_claude(self) -> None:
-        """Test Claude models support images and PDFs via litellm."""
-        # Use litellm/ prefix to avoid native provider import
-        llm = LLM(model="litellm/claude-3-sonnet-20240229")
-        types = llm.supported_multimodal_content_types()
-        assert "image/" in types
-        assert "application/pdf" in types
-
-    def test_supported_content_types_gemini(self) -> None:
-        """Test Gemini models support wide range of content."""
-        llm = LLM(model="gemini/gemini-pro", is_litellm=True)
-        types = llm.supported_multimodal_content_types()
-        assert "image/" in types
-        assert "audio/" in types
-        assert "video/" in types
-        assert "application/pdf" in types
-        assert "text/" in types
-
-    def test_supported_content_types_non_multimodal(self) -> None:
-        """Test non-multimodal models return empty list."""
-        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
-        assert llm.supported_multimodal_content_types() == []
-
     def test_format_multimodal_content_image(self) -> None:
         """Test formatting image content."""
         llm = LLM(model="gpt-4o", is_litellm=True)
@@ -153,13 +123,6 @@ class TestAnthropicMultimodal:
         """Test Claude 4 supports multimodal."""
         llm = LLM(model="anthropic/claude-4-opus")
         assert llm.supports_multimodal() is True
-
-    def test_supported_content_types(self) -> None:
-        """Test Anthropic supports images and PDFs."""
-        llm = LLM(model="anthropic/claude-3-sonnet-20240229")
-        types = llm.supported_multimodal_content_types()
-        assert "image/" in types
-        assert "application/pdf" in types
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Anthropic image format uses source-based structure."""
@@ -210,12 +173,6 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-3.5-turbo")
         assert llm.supports_multimodal() is False
 
-    def test_supported_content_types(self) -> None:
-        """Test OpenAI supports only images."""
-        llm = LLM(model="openai/gpt-4o")
-        types = llm.supported_multimodal_content_types()
-        assert types == ["image/"]
-
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
         llm = LLM(model="openai/gpt-4o")
@@ -239,16 +196,6 @@ class TestGeminiMultimodal:
         """Test Gemini always supports multimodal."""
         llm = LLM(model="gemini/gemini-pro")
         assert llm.supports_multimodal() is True
-
-    def test_supported_content_types(self) -> None:
-        """Test Gemini supports wide range of types."""
-        llm = LLM(model="gemini/gemini-pro")
-        types = llm.supported_multimodal_content_types()
-        assert "image/" in types
-        assert "audio/" in types
-        assert "video/" in types
-        assert "application/pdf" in types
-        assert "text/" in types
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Gemini uses inlineData format."""
@@ -301,12 +248,6 @@ class TestAzureMultimodal:
         llm = LLM(model="azure/gpt-35-turbo")
         assert llm.supports_multimodal() is False
 
-    def test_supported_content_types(self) -> None:
-        """Test Azure supports only images."""
-        llm = LLM(model="azure/gpt-4o")
-        types = llm.supported_multimodal_content_types()
-        assert types == ["image/"]
-
     def test_format_multimodal_content_image(self) -> None:
         """Test Azure uses same format as OpenAI."""
         llm = LLM(model="azure/gpt-4o")
@@ -343,13 +284,6 @@ class TestBedrockMultimodal:
         """Test Bedrock Claude 2 does not support multimodal."""
         llm = LLM(model="bedrock/anthropic.claude-v2")
         assert llm.supports_multimodal() is False
-
-    def test_supported_content_types(self) -> None:
-        """Test Bedrock supports images and PDFs."""
-        llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
-        types = llm.supported_multimodal_content_types()
-        assert any(t.startswith("image/") for t in types)
-        assert "application/pdf" in types
 
     def test_format_multimodal_content_image(self) -> None:
         """Test Bedrock uses Converse API image format."""
@@ -391,17 +325,6 @@ class TestBaseLLMMultimodal:
         llm = TestLLM(model="test")
         assert llm.supports_multimodal() is False
 
-    def test_base_supported_content_types_empty(self) -> None:
-        """Test base implementation returns empty list."""
-        from crewai.llms.base_llm import BaseLLM
-
-        class TestLLM(BaseLLM):
-            def call(self, messages, tools=None, callbacks=None):
-                return "test"
-
-        llm = TestLLM(model="test")
-        assert llm.supported_multimodal_content_types() == []
-
     def test_base_format_text_content(self) -> None:
         """Test base text formatting uses OpenAI/Anthropic style."""
         from crewai.llms.base_llm import BaseLLM
@@ -432,16 +355,16 @@ class TestMultipleFilesFormatting:
 
     def test_format_mixed_supported_and_unsupported(self) -> None:
         """Test only supported types are formatted."""
-        llm = LLM(model="gpt-4o")  # OpenAI - images and PDFs, not text
+        llm = LLM(model="gpt-4o")  # OpenAI - images only
         files = {
             "chart": ImageFile(source=MINIMAL_PNG),
-            "doc": PDFFile(source=MINIMAL_PDF),  # Supported
+            "doc": PDFFile(source=MINIMAL_PDF),  # Not supported by OpenAI
             "text": TextFile(source=b"hello"),  # Not supported
         }
 
         result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
-        assert len(result) == 2  # image + pdf, text filtered out
+        assert len(result) == 1  # Only image supported
 
     def test_format_empty_files_dict(self) -> None:
         """Test empty files dict returns empty list."""
