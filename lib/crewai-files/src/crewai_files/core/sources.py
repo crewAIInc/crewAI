@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
+import inspect
 import mimetypes
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
@@ -401,7 +402,7 @@ class AsyncFileStream(BaseModel):
         """Async close the underlying stream."""
         if hasattr(self.stream, "close"):
             result = self.stream.close()
-            if hasattr(result, "__await__"):
+            if inspect.isawaitable(result):
                 await result
 
     async def __aenter__(self) -> AsyncFileStream:

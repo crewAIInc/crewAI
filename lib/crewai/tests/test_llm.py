@@ -930,7 +930,7 @@ def test_usage_info_streaming_with_call():
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
 async def test_usage_info_non_streaming_with_acall():
     llm = LLM(
-        model="openai/gpt-4o-mini", 
+        model="openai/gpt-4o-mini",
         is_litellm=True,
         stream=False,
     )
@@ -992,7 +992,7 @@ async def test_usage_info_non_streaming_with_acall_and_stop():
 
 
 @pytest.mark.asyncio
-@pytest.mark.vcr(record_mode="none",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+@pytest.mark.vcr()
 async def test_usage_info_streaming_with_acall():
     llm = LLM(
         model="gpt-4o-mini",
@@ -1008,7 +1008,7 @@ async def test_usage_info_streaming_with_acall():
         "successful_requests": 0,
         "cached_prompt_tokens": 0,
     }
-    
+
     with patch.object(
         llm, "_ahandle_streaming_response", wraps=llm._ahandle_streaming_response
     ) as mock_handle:
