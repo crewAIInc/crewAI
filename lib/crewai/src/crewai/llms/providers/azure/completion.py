@@ -1084,13 +1084,3 @@ class AzureCompletion(BaseLLM):
         """
         vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
         return any(self.model.lower().startswith(m) for m in vision_models)
-
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported by Azure for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        if not self.supports_multimodal():
-            return []
-        return ["image/"]

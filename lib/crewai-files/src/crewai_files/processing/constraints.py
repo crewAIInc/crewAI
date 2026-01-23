@@ -216,8 +216,19 @@ ANTHROPIC_CONSTRAINTS = ProviderConstraints(
     supports_url_references=True,
 )
 
-OPENAI_CONSTRAINTS = ProviderConstraints(
+OPENAI_COMPLETIONS_CONSTRAINTS = ProviderConstraints(
     name="openai",
+    image=ImageConstraints(
+        max_size_bytes=20_971_520,
+        max_images_per_request=10,
+    ),
+    supports_file_upload=True,
+    file_upload_threshold_bytes=5_242_880,
+    supports_url_references=True,
+)
+
+OPENAI_RESPONSES_CONSTRAINTS = ProviderConstraints(
+    name="openai_responses",
     image=ImageConstraints(
         max_size_bytes=20_971_520,
         max_images_per_request=10,
@@ -234,6 +245,8 @@ OPENAI_CONSTRAINTS = ProviderConstraints(
     file_upload_threshold_bytes=5_242_880,
     supports_url_references=True,
 )
+
+OPENAI_CONSTRAINTS = OPENAI_COMPLETIONS_CONSTRAINTS
 
 GEMINI_CONSTRAINTS = ProviderConstraints(
     name="gemini",
@@ -294,6 +307,7 @@ AZURE_CONSTRAINTS = ProviderConstraints(
 _PROVIDER_CONSTRAINTS_MAP: dict[str, ProviderConstraints] = {
     "anthropic": ANTHROPIC_CONSTRAINTS,
     "openai": OPENAI_CONSTRAINTS,
+    "openai_responses": OPENAI_RESPONSES_CONSTRAINTS,
     "gemini": GEMINI_CONSTRAINTS,
     "bedrock": BEDROCK_CONSTRAINTS,
     "azure": AZURE_CONSTRAINTS,
@@ -329,3 +343,35 @@ def get_constraints_for_provider(
             return constraints
 
     return None
+
+
+def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+    """Get supported MIME type prefixes for a provider.
+
+    Args:
+        provider: Provider name string.
+        api: Optional API variant (e.g., "responses" for OpenAI Responses API).
+
+    Returns:
+        List of supported MIME type prefixes (e.g., ["image/", "application/pdf"]).
+    """
+    lookup_key = provider
+    if api == "responses" and "openai" in provider.lower():
+        lookup_key = "openai_responses"
+
+    constraints = get_constraints_for_provider(lookup_key)
+    if not constraints:
+        return []
+
+    types: list[str] = []
+    if constraints.image:
+        types.append("image/")
+    if constraints.pdf:
+        types.append("application/pdf")
+    if constraints.audio:
+        types.append("audio/")
+    if constraints.video:
+        types.append("video/")
+    if constraints.text:
+        types.append("text/")
+    return types

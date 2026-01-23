@@ -26,9 +26,9 @@ pdf = PDFFile(source="report.pdf")
 ### Passing Files to Crews
 
 ```python
-crew.kickoff(inputs={
-    "files": {"chart": ImageFile(source="chart.png")}
-})
+crew.kickoff(
+    input_files={"chart": ImageFile(source="chart.png")}
+)
 ```
 
 ### Passing Files to Tasks

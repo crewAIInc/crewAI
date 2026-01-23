@@ -36,6 +36,17 @@ from typing_extensions import Self
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
+try:
+    from crewai_files import get_supported_content_types
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+    def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+        return []
+
+
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
@@ -1294,7 +1305,11 @@ class Crew(FlowTrackable, BaseModel):
         if files:
             supported_types: list[str] = []
             if agent and agent.llm and agent.llm.supports_multimodal():
-                supported_types = agent.llm.supported_multimodal_content_types()
+                provider = getattr(agent.llm, "provider", None) or getattr(
+                    agent.llm, "model", "openai"
+                )
+                api = getattr(agent.llm, "api", None)
+                supported_types = get_supported_content_types(provider, api)
 
             def is_auto_injected(content_type: str) -> bool:
                 return any(content_type.startswith(t) for t in supported_types)

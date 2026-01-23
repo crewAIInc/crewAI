@@ -2249,16 +2249,6 @@ class OpenAICompletion(BaseLLM):
         )
         return any(self.model.lower().startswith(m) for m in vision_models)
 
-    def supported_multimodal_content_types(self) -> list[str]:
-        """Get content types supported by OpenAI for multimodal input.
-
-        Returns:
-            List of supported MIME type prefixes.
-        """
-        if not self.supports_multimodal():
-            return []
-        return ["image/"]
-
     def get_file_uploader(self) -> Any:
         """Get an OpenAI file uploader using this LLM's clients.
 

@@ -18,9 +18,22 @@ class OpenAIResponsesFormatter:
     """Formats resolved files into OpenAI Responses API content blocks.
 
     The Responses API uses a different format than Chat Completions:
+    - Text uses `type: "input_text"` instead of `type: "text"`
     - Images use `type: "input_image"` with `file_id` or `image_url`
     - PDFs use `type: "input_file"` with `file_id`, `file_url`, or `file_data`
     """
+
+    @staticmethod
+    def format_text_content(text: str) -> dict[str, Any]:
+        """Format text as an OpenAI Responses API content block.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block with type "input_text".
+        """
+        return {"type": "input_text", "text": text}
 
     @staticmethod
     def format_block(resolved: ResolvedFileType, content_type: str) -> dict[str, Any]:
@@ -78,6 +91,7 @@ class OpenAIResponsesFormatter:
             if is_pdf:
                 return {
                     "type": "input_file",
+                    "filename": "document.pdf",
                     "file_data": f"data:{resolved.content_type};base64,{resolved.data}",
                 }
             raise TypeError(
@@ -94,6 +108,7 @@ class OpenAIResponsesFormatter:
             if is_pdf:
                 return {
                     "type": "input_file",
+                    "filename": "document.pdf",
                     "file_data": f"data:{resolved.content_type};base64,{data}",
                 }
             raise TypeError(

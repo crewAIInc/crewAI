@@ -52,12 +52,17 @@ from crewai.utilities.file_store import (
 
 
 try:
-    from crewai_files import FileInput, FilePath
+    from crewai_files import FileInput, FilePath, get_supported_content_types
 
     HAS_CREWAI_FILES = True
 except ImportError:
     FileInput = Any  # type: ignore[misc,assignment]
     HAS_CREWAI_FILES = False
+
+    def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+        return []
+
+
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -762,9 +767,11 @@ class Task(BaseModel):
             if files:
                 supported_types: list[str] = []
                 if self.agent.llm and self.agent.llm.supports_multimodal():
-                    supported_types = (
-                        self.agent.llm.supported_multimodal_content_types()
+                    provider = getattr(self.agent.llm, "provider", None) or getattr(
+                        self.agent.llm, "model", "openai"
                     )
+                    api = getattr(self.agent.llm, "api", None)
+                    supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
                     return any(content_type.startswith(t) for t in supported_types)
