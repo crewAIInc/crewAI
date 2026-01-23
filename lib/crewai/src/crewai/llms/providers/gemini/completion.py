@@ -740,7 +740,7 @@ class GeminiCompletion(BaseLLM):
                         if result is not None:
                             return result
 
-        content = response.text or ""
+        content = self._extract_text_from_response(response)
         content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
@@ -1122,6 +1122,35 @@ class GeminiCompletion(BaseLLM):
                 "total_tokens": getattr(usage, "total_token_count", 0),
             }
         return {"total_tokens": 0}
+
+    @staticmethod
+    def _extract_text_from_response(response: GenerateContentResponse) -> str:
+        """Extract text content from Gemini response without triggering warnings.
+
+        This method directly accesses the response parts to extract text content,
+        avoiding the warning that occurs when using response.text on responses
+        containing non-text parts (e.g., 'thought_signature' from thinking models).
+
+        Args:
+            response: The Gemini API response
+
+        Returns:
+            Concatenated text content from all text parts
+        """
+        if not response.candidates:
+            return ""
+
+        candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+            return ""
+
+        text_parts = [
+            part.text
+            for part in candidate.content.parts
+            if hasattr(part, "text") and part.text
+        ]
+
+        return "".join(text_parts)
 
     @staticmethod
     def _convert_contents_to_dict(
