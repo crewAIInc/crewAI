@@ -1343,12 +1343,21 @@ def test_deeply_nested_conditions():
     assert "c" in execution_order
     assert "d" in execution_order
 
-    # Result should execute after all starts
+    # Result should execute after at least one AND condition is satisfied
+    # With or_(and_(a, b), and_(c, d)), result fires when EITHER:
+    # - Both a AND b have completed, OR
+    # - Both c AND d have completed
     assert "result" in execution_order
-    assert execution_order.index("result") > execution_order.index("a")
-    assert execution_order.index("result") > execution_order.index("b")
-    assert execution_order.index("result") > execution_order.index("c")
-    assert execution_order.index("result") > execution_order.index("d")
+    result_idx = execution_order.index("result")
+    a_idx = execution_order.index("a")
+    b_idx = execution_order.index("b")
+    c_idx = execution_order.index("c")
+    d_idx = execution_order.index("d")
+
+    # Result must come after at least one complete AND group
+    and_ab_satisfied = result_idx > a_idx and result_idx > b_idx
+    and_cd_satisfied = result_idx > c_idx and result_idx > d_idx
+    assert and_ab_satisfied or and_cd_satisfied
 
 
 def test_mixed_sync_async_execution_order():
