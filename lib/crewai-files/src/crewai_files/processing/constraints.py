@@ -222,6 +222,10 @@ OPENAI_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=20_971_520,
         max_images_per_request=10,
     ),
+    pdf=PDFConstraints(
+        max_size_bytes=33_554_432,  # 32 MB total across all file inputs
+        max_pages=100,
+    ),
     audio=AudioConstraints(
         max_size_bytes=26_214_400,  # 25 MB - whisper limit
         max_duration_seconds=1500,  # 25 minutes, arbitrary-ish, this is from the transcriptions limit
@@ -270,6 +274,7 @@ BEDROCK_CONSTRAINTS = ProviderConstraints(
         max_size_bytes=3_840_000,
         max_pages=100,
     ),
+    supports_url_references=True,  # S3 URIs supported
 )
 
 AZURE_CONSTRAINTS = ProviderConstraints(
