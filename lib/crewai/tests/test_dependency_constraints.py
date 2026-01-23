@@ -1,7 +1,12 @@
 """Test that dependency constraints are compatible with common integrations."""
 
-import tomllib
+import sys
 from pathlib import Path
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
