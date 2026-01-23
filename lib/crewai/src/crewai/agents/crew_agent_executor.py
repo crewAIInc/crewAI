@@ -576,12 +576,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if hasattr(tool_call, "function"):
             # OpenAI-style: has .function.name and .function.arguments
             call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
-            func_name = tool_call.function.name
+            func_name = sanitize_tool_name(tool_call.function.name)
             func_args = tool_call.function.arguments
         elif hasattr(tool_call, "function_call") and tool_call.function_call:
             # Gemini-style: has .function_call.name and .function_call.args
             call_id = f"call_{id(tool_call)}"
-            func_name = tool_call.function_call.name
+            func_name = sanitize_tool_name(tool_call.function_call.name)
             func_args = (
                 dict(tool_call.function_call.args)
                 if tool_call.function_call.args
@@ -590,7 +590,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         elif hasattr(tool_call, "name") and hasattr(tool_call, "input"):
             # Anthropic format: has .name and .input (ToolUseBlock)
             call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
-            func_name = tool_call.name
+            func_name = sanitize_tool_name(tool_call.name)
             func_args = tool_call.input  # Already a dict in Anthropic
         elif isinstance(tool_call, dict):
             # Support OpenAI "id", Bedrock "toolUseId", or generate one
@@ -600,7 +600,9 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 or f"call_{id(tool_call)}"
             )
             func_info = tool_call.get("function", {})
-            func_name = func_info.get("name", "") or tool_call.get("name", "")
+            func_name = sanitize_tool_name(
+                func_info.get("name", "") or tool_call.get("name", "")
+            )
             func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
         else:
             return None

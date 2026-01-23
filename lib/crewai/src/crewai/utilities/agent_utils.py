@@ -821,10 +821,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
 DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
     [
-        "Delegate work to coworker",
-        "Delegate_work_to_coworker",
-        "Ask question to coworker",
-        "Ask_question_to_coworker",
+        sanitize_tool_name("Delegate work to coworker"),
+        sanitize_tool_name("Ask question to coworker"),
     ]
 )
 
@@ -842,7 +840,7 @@ def track_delegation_if_needed(
         tool_args: Arguments passed to the tool.
         task: The task being executed (used to track delegations).
     """
-    if tool_name in DELEGATION_TOOL_NAMES and task is not None:
+    if sanitize_tool_name(tool_name) in DELEGATION_TOOL_NAMES and task is not None:
         coworker = tool_args.get("coworker")
         task.increment_delegations(coworker)
 
@@ -861,19 +859,19 @@ def extract_tool_call_info(
     if hasattr(tool_call, "function"):
         # OpenAI-style: has .function.name and .function.arguments
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
-        return call_id, tool_call.function.name, tool_call.function.arguments
+        return call_id, sanitize_tool_name(tool_call.function.name), tool_call.function.arguments
     if hasattr(tool_call, "function_call") and tool_call.function_call:
         # Gemini-style: has .function_call.name and .function_call.args
         call_id = f"call_{id(tool_call)}"
         return (
             call_id,
-            tool_call.function_call.name,
+            sanitize_tool_name(tool_call.function_call.name),
             dict(tool_call.function_call.args) if tool_call.function_call.args else {},
         )
     if hasattr(tool_call, "name") and hasattr(tool_call, "input"):
         # Anthropic format: has .name and .input (ToolUseBlock)
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
-        return call_id, tool_call.name, tool_call.input
+        return call_id, sanitize_tool_name(tool_call.name), tool_call.input
     if isinstance(tool_call, dict):
         # Support OpenAI "id", Bedrock "toolUseId", or generate one
         call_id = (
@@ -882,7 +880,7 @@ def extract_tool_call_info(
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
         func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
-        return call_id, func_name, func_args
+        return call_id, sanitize_tool_name(func_name), func_args
     return None
 
 

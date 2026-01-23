@@ -56,6 +56,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
 from crewai.utilities.types import LLMMessage
@@ -602,8 +603,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
 
             # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
-            from crewai.utilities.string_utils import sanitize_tool_name
-
             original_tool = None
             for tool in self.original_tools or []:
                 if sanitize_tool_name(tool.name) == func_name:
@@ -761,14 +760,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     def _extract_tool_name(self, tool_call: Any) -> str:
         """Extract tool name from various tool call formats."""
         if hasattr(tool_call, "function"):
-            return tool_call.function.name
+            return sanitize_tool_name(tool_call.function.name)
         if hasattr(tool_call, "function_call") and tool_call.function_call:
-            return tool_call.function_call.name
+            return sanitize_tool_name(tool_call.function_call.name)
         if hasattr(tool_call, "name"):
-            return tool_call.name
+            return sanitize_tool_name(tool_call.name)
         if isinstance(tool_call, dict):
             func_info = tool_call.get("function", {})
-            return func_info.get("name", "") or tool_call.get("name", "unknown")
+            return sanitize_tool_name(func_info.get("name", "") or tool_call.get("name", "unknown"))
         return "unknown"
 
     @router(execute_native_tool)

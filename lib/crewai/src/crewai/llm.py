@@ -50,6 +50,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -1540,7 +1541,7 @@ class LLM(BaseLLM):
 
         # --- 2) Extract function name from first tool call
         tool_call = tool_calls[0]
-        function_name = tool_call.function.name
+        function_name = sanitize_tool_name(tool_call.function.name)
         function_args = {}  # Initialize to empty dict to avoid unbound variable
 
         # --- 3) Check if function is available

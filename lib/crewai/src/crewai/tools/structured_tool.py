@@ -296,6 +296,4 @@ class CrewStructuredTool:
         return self.args_schema.model_json_schema()["properties"]
 
     def __repr__(self) -> str:
-        return (
-            f"CrewStructuredTool(name='{self.name}', description='{self.description}')"
-        )
+        return f"CrewStructuredTool(name='{sanitize_tool_name(self.name)}', description='{self.description}')"

@@ -18,6 +18,7 @@ from crewai.types.streaming import (
     StreamChunkType,
     ToolCallChunk,
 )
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class TaskInfo(TypedDict):
@@ -58,7 +59,7 @@ def _extract_tool_call_info(
             StreamChunkType.TOOL_CALL,
             ToolCallChunk(
                 tool_id=event.tool_call.id,
-                tool_name=event.tool_call.function.name,
+                tool_name=sanitize_tool_name(event.tool_call.function.name),
                 arguments=event.tool_call.function.arguments,
                 index=event.tool_call.index,
             ),
