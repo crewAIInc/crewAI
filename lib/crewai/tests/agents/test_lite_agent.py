@@ -996,10 +996,10 @@ def test_prepare_kickoff_param_files_override_message_files():
     messages = [
         {"role": "user", "content": "Analyze", "files": {"same.png": msg_file}}
     ]
-    files = {"same.png": param_file}
+    input_files = {"same.png": param_file}
 
     executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
-        messages=messages, files=files
+        messages=messages, input_files=input_files
     )
 
     assert "files" in inputs
