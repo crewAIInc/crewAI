@@ -635,6 +635,54 @@ def test_gemini_token_usage_tracking():
     assert usage.total_tokens > 0
 
 
+@pytest.mark.vcr()
+def test_gemini_tool_returning_float():
+    """
+    Test that Gemini properly handles tools that return non-dict values like floats.
+
+    This is an end-to-end test that verifies the agent can use a tool that returns
+    a float (which gets wrapped in {"result": value} for Gemini's FunctionResponse).
+    """
+    from pydantic import BaseModel, Field
+    from typing import Type
+    from crewai.tools import BaseTool
+
+    class SumNumbersToolInput(BaseModel):
+        a: float = Field(..., description="The first number to add")
+        b: float = Field(..., description="The second number to add")
+
+    class SumNumbersTool(BaseTool):
+        name: str = "sum_numbers"
+        description: str = "Add two numbers together and return the result"
+        args_schema: Type[BaseModel] = SumNumbersToolInput
+
+        def _run(self, a: float, b: float) -> float:
+            return a + b
+
+    sum_tool = SumNumbersTool()
+
+    agent = Agent(
+        role="Calculator",
+        goal="Calculate numbers accurately",
+        backstory="You are a calculator that adds numbers.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[sum_tool],
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is 10000 + 20000? Use the sum_numbers tool to calculate this.",
+        expected_output="The sum of the two numbers",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    result = crew.kickoff()
+
+    # The result should contain 30000 (the sum)
+    assert "30000" in result.raw
+
+
 def test_gemini_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="google/gemini-2.0-flash-001")
