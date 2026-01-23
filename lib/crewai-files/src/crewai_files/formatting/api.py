@@ -58,6 +58,7 @@ def format_multimodal_content(
     files: dict[str, FileInput],
     provider: str | None = None,
     api: str | None = None,
+    prefer_upload: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Format files as provider-specific multimodal content blocks.
 
@@ -71,6 +72,8 @@ def format_multimodal_content(
         files: Dictionary mapping file names to FileInput objects.
         provider: Provider name (e.g., "openai", "anthropic", "bedrock", "gemini").
         api: API variant (e.g., "responses" for OpenAI Responses API).
+        prefer_upload: Whether to prefer uploading files instead of inlining.
+            If None, uses provider-specific defaults.
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -81,6 +84,10 @@ def format_multimodal_content(
         >>> blocks = format_multimodal_content(files, "openai")
         >>> # For OpenAI Responses API:
         >>> blocks = format_multimodal_content(files, "openai", api="responses")
+        >>> # With file upload:
+        >>> blocks = format_multimodal_content(
+        ...     files, "openai", api="responses", prefer_upload=True
+        ... )
     """
     if not files:
         return []
@@ -100,7 +107,7 @@ def format_multimodal_content(
     if not supported_files:
         return []
 
-    config = _get_resolver_config(provider_type)
+    config = _get_resolver_config(provider_type, prefer_upload)
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
@@ -120,6 +127,7 @@ async def aformat_multimodal_content(
     files: dict[str, FileInput],
     provider: str | None = None,
     api: str | None = None,
+    prefer_upload: bool | None = None,
 ) -> list[dict[str, Any]]:
     """Async format files as provider-specific multimodal content blocks.
 
@@ -129,6 +137,8 @@ async def aformat_multimodal_content(
         files: Dictionary mapping file names to FileInput objects.
         provider: Provider name (e.g., "openai", "anthropic", "bedrock", "gemini").
         api: API variant (e.g., "responses" for OpenAI Responses API).
+        prefer_upload: Whether to prefer uploading files instead of inlining.
+            If None, uses provider-specific defaults.
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -151,7 +161,7 @@ async def aformat_multimodal_content(
     if not supported_files:
         return []
 
-    config = _get_resolver_config(provider_type)
+    config = _get_resolver_config(provider_type, prefer_upload)
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
@@ -220,23 +230,35 @@ def _filter_supported_files(
     }
 
 
-def _get_resolver_config(provider_lower: str) -> FileResolverConfig:
+def _get_resolver_config(
+    provider_lower: str,
+    prefer_upload_override: bool | None = None,
+) -> FileResolverConfig:
     """Get resolver config for provider.
 
     Args:
         provider_lower: Lowercase provider name.
+        prefer_upload_override: Override for prefer_upload setting.
+            If None, uses provider-specific defaults.
 
     Returns:
         Configured FileResolverConfig.
     """
     if "bedrock" in provider_lower:
         s3_bucket = os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
-        prefer_upload = bool(s3_bucket)
+        prefer_upload = (
+            prefer_upload_override
+            if prefer_upload_override is not None
+            else bool(s3_bucket)
+        )
         return FileResolverConfig(
             prefer_upload=prefer_upload, use_bytes_for_bedrock=True
         )
 
-    return FileResolverConfig(prefer_upload=False)
+    prefer_upload = (
+        prefer_upload_override if prefer_upload_override is not None else False
+    )
+    return FileResolverConfig(prefer_upload=prefer_upload)
 
 
 def _get_formatter(

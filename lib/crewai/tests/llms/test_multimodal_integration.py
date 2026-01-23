@@ -710,3 +710,73 @@ class TestOpenAIResponsesFileUploadIntegration:
         assert response
         assert isinstance(response, str)
         assert len(response) > 0
+
+    @pytest.mark.vcr()
+    def test_describe_image_via_format_api(self, test_image_bytes: bytes) -> None:
+        """Test format_multimodal_content with api='responses' parameter."""
+        llm = LLM(model="openai/gpt-4o-mini", api="responses")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        content_blocks = format_multimodal_content(files, "openai", api="responses")
+
+        # Verify content blocks use Responses API format
+        assert len(content_blocks) == 1
+        block = content_blocks[0]
+        assert block.get("type") == "input_image", (
+            f"Expected type 'input_image' for Responses API, got '{block.get('type')}'"
+        )
+        # Should have image_url (base64 data URL) since we're not forcing upload
+        assert "image_url" in block, "Expected image_url in block for inline image"
+
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Describe this image in one sentence."},
+                    *content_blocks,
+                ],
+            }
+        ]
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+    @pytest.mark.vcr()
+    def test_describe_image_via_format_api_with_upload(self, test_image_bytes: bytes) -> None:
+        """Test format_multimodal_content with prefer_upload=True uploads the file."""
+        llm = LLM(model="openai/gpt-4o-mini", api="responses")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        content_blocks = format_multimodal_content(
+            files, "openai", api="responses", prefer_upload=True
+        )
+
+        # Verify content blocks use file_id from upload
+        assert len(content_blocks) == 1
+        block = content_blocks[0]
+        assert block.get("type") == "input_image", (
+            f"Expected type 'input_image' for Responses API, got '{block.get('type')}'"
+        )
+        assert "file_id" in block, (
+            "Expected file_id in block when prefer_upload=True. "
+            f"Got keys: {list(block.keys())}"
+        )
+
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": "Describe this image in one sentence."},
+                    *content_blocks,
+                ],
+            }
+        ]
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
