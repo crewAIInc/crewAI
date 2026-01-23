@@ -10,7 +10,7 @@ This module provides the event infrastructure that allows users to:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.depends import Depends
@@ -34,6 +34,8 @@ from crewai.events.types.flow_events import (
     FlowFinishedEvent,
     FlowPlotEvent,
     FlowStartedEvent,
+    HumanFeedbackReceivedEvent,
+    HumanFeedbackRequestedEvent,
     MethodExecutionFailedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
@@ -73,6 +75,7 @@ from crewai.events.types.memory_events import (
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -145,6 +148,8 @@ __all__ = [
     "FlowFinishedEvent",
     "FlowPlotEvent",
     "FlowStartedEvent",
+    "HumanFeedbackReceivedEvent",
+    "HumanFeedbackRequestedEvent",
     "KnowledgeQueryCompletedEvent",
     "KnowledgeQueryFailedEvent",
     "KnowledgeQueryStartedEvent",
@@ -170,6 +175,7 @@ __all__ = [
     "MemoryQueryFailedEvent",
     "MemoryQueryStartedEvent",
     "MemoryRetrievalCompletedEvent",
+    "MemoryRetrievalFailedEvent",
     "MemoryRetrievalStartedEvent",
     "MemorySaveCompletedEvent",
     "MemorySaveFailedEvent",
@@ -205,7 +211,7 @@ _AGENT_EVENT_MAPPING = {
 }
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazy import for agent events to avoid circular imports."""
     if name in _AGENT_EVENT_MAPPING:
         import importlib

@@ -114,7 +114,6 @@ To enable tracing, do any one of these:
         New streaming sessions will be created on-demand when needed.
         This method exists for API compatibility with HITL callers.
         """
-        pass
 
     def print_panel(
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
@@ -366,6 +365,32 @@ To enable tracing, do any one of these:
             content.append(f"{args_str}\n", style="yellow ")
 
         self.print_panel(content, f"🔧 Tool Execution Started (#{iteration})", "yellow")
+
+    def handle_tool_usage_finished(
+        self,
+        tool_name: str,
+        output: str,
+        run_attempts: int | None = None,
+    ) -> None:
+        """Handle tool usage finished event with panel display."""
+        if not self.verbose:
+            return
+
+        iteration = self.tool_usage_counts.get(tool_name, 1)
+
+        content = Text()
+        content.append("Tool Completed\n", style="green bold")
+        content.append("Tool: ", style="white")
+        content.append(f"{tool_name}\n", style="green bold")
+
+        if output:
+            content.append("Output: ", style="white")
+
+            content.append(f"{output}\n", style="green")
+
+        self.print_panel(
+            content, f"✅ Tool Execution Completed (#{iteration})", "green"
+        )
 
     def handle_tool_usage_error(
         self,
@@ -1417,3 +1442,49 @@ To enable tracing, do any one of these:
         panel = self.create_panel(content, "❌ MCP Tool Failed", "red")
         self.print(panel)
         self.print()
+
+    def handle_a2a_polling_started(
+        self,
+        task_id: str,
+        polling_interval: float,
+        endpoint: str,
+    ) -> None:
+        """Handle A2A polling started event with panel display."""
+        content = Text()
+        content.append("A2A Polling Started\n", style="cyan bold")
+        content.append("Task ID: ", style="white")
+        content.append(f"{task_id[:8]}...\n", style="cyan")
+        content.append("Interval: ", style="white")
+        content.append(f"{polling_interval}s\n", style="cyan")
+
+        self.print_panel(content, "⏳ A2A Polling", "cyan")
+
+    def handle_a2a_polling_status(
+        self,
+        task_id: str,
+        state: str,
+        elapsed_seconds: float,
+        poll_count: int,
+    ) -> None:
+        """Handle A2A polling status event with panel display."""
+        if state == "completed":
+            style = "green"
+            status_indicator = "✓"
+        elif state == "failed":
+            style = "red"
+            status_indicator = "✗"
+        elif state == "working":
+            style = "yellow"
+            status_indicator = "⋯"
+        else:
+            style = "cyan"
+            status_indicator = "•"
+
+        content = Text()
+        content.append(f"Poll #{poll_count}\n", style=f"{style} bold")
+        content.append("Status: ", style="white")
+        content.append(f"{status_indicator} {state}\n", style=style)
+        content.append("Elapsed: ", style="white")
+        content.append(f"{elapsed_seconds:.1f}s\n", style=style)
+
+        self.print_panel(content, f"📊 A2A Poll #{poll_count}", style)
