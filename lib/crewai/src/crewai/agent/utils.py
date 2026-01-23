@@ -17,6 +17,7 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -237,8 +238,8 @@ def save_last_messages(agent: Agent) -> None:
     """Save the last messages from agent executor.
 
     Sanitizes messages to be compatible with TaskOutput's LLMMessage type,
-    which only accepts 'user', 'assistant', 'system' roles and requires
-    content to be a string or list (not None).
+    which accepts 'user', 'assistant', 'system', and 'tool' roles.
+    Preserves tool_call_id/name for tool messages and tool_calls for assistant messages.
 
     Args:
         agent: The agent instance.
@@ -247,17 +248,27 @@ def save_last_messages(agent: Agent) -> None:
         agent._last_messages = []
         return
 
-    sanitized_messages = []
+    sanitized_messages: list[LLMMessage] = []
     for msg in agent.agent_executor.messages:
         role = msg.get("role", "")
-        # Only include messages with valid LLMMessage roles
-        if role not in ("user", "assistant", "system"):
+        if role not in ("user", "assistant", "system", "tool"):
             continue
-        # Ensure content is not None (can happen with tool call assistant messages)
         content = msg.get("content")
         if content is None:
             content = ""
-        sanitized_messages.append({"role": role, "content": content})
+        sanitized_msg: LLMMessage = {"role": role, "content": content}
+        if role == "tool":
+            tool_call_id = msg.get("tool_call_id")
+            if tool_call_id:
+                sanitized_msg["tool_call_id"] = tool_call_id
+            name = msg.get("name")
+            if name:
+                sanitized_msg["name"] = name
+        elif role == "assistant":
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                sanitized_msg["tool_calls"] = tool_calls
+        sanitized_messages.append(sanitized_msg)
 
     agent._last_messages = sanitized_messages
 
