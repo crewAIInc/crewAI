@@ -10,7 +10,6 @@ import logging
 from pathlib import Path
 import threading
 from typing import (
-    TYPE_CHECKING,
     Any,
     ClassVar,
     cast,
@@ -30,10 +29,6 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
-
-
-if TYPE_CHECKING:
-    from crewai_files import FileInput
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
@@ -57,10 +52,11 @@ from crewai.utilities.file_store import (
 
 
 try:
-    from crewai_files import FilePath
+    from crewai_files import FileInput, FilePath
 
     HAS_CREWAI_FILES = True
 except ImportError:
+    FileInput = Any  # type: ignore[misc,assignment]
     HAS_CREWAI_FILES = False
 from crewai.utilities.guardrail import (
     process_guardrail,
