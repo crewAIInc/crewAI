@@ -89,6 +89,7 @@ from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -313,6 +314,22 @@ class Agent(BaseAgent):
         ]
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
+
+    def _supports_native_tool_calling(self, tools: list[BaseTool]) -> bool:
+        """Check if the LLM supports native function calling with the given tools.
+
+        Args:
+            tools: List of tools to check against.
+
+        Returns:
+            True if native function calling is supported and tools are available.
+        """
+        return (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+            and len(tools) > 0
+        )
 
     def execute_task(
         self,
@@ -762,9 +779,12 @@ class Agent(BaseAgent):
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -1320,10 +1340,10 @@ class Agent(BaseAgent):
                     args_schema = None
                     if hasattr(tool, "inputSchema") and tool.inputSchema:
                         args_schema = self._json_schema_to_pydantic(
-                            tool.name, tool.inputSchema
+                            sanitize_tool_name(tool.name), tool.inputSchema
                         )
 
-                    schemas[tool.name] = {
+                    schemas[sanitize_tool_name(tool.name)] = {
                         "description": getattr(tool, "description", ""),
                         "args_schema": args_schema,
                     }
@@ -1479,7 +1499,7 @@ class Agent(BaseAgent):
         """
         return "\n".join(
             [
-                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                f"Tool name: {sanitize_tool_name(tool.name)}\nTool description:\n{tool.description}"
                 for tool in tools
             ]
         )
@@ -1663,9 +1683,11 @@ class Agent(BaseAgent):
         }
 
         # Build prompt for standalone execution
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -1773,7 +1795,6 @@ class Agent(BaseAgent):
             )
 
             output = self._execute_and_build_output(executor, inputs, response_format)
-
             if self.guardrail is not None:
                 output = self._process_kickoff_guardrail(
                     output=output,

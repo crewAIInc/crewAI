@@ -30,6 +30,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -145,7 +146,8 @@ class ToolUsage:
 
         if (
             isinstance(tool, CrewStructuredTool)
-            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+            and sanitize_tool_name(tool.name)
+            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return self._use(tool_string=tool_string, tool=tool, calling=calling)
@@ -192,7 +194,8 @@ class ToolUsage:
 
         if (
             isinstance(tool, CrewStructuredTool)
-            and tool.name == self._i18n.tools("add_image")["name"]  # type: ignore
+            and sanitize_tool_name(tool.name)
+            == sanitize_tool_name(self._i18n.tools("add_image")["name"])  # type: ignore
         ):
             try:
                 return await self._ause(
@@ -233,7 +236,7 @@ class ToolUsage:
                 )
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
-                    tool_name=tool.name,
+                    tool_name=sanitize_tool_name(tool.name),
                     attempts=self._run_attempts,
                 )
                 return self._format_result(result=result)
@@ -278,7 +281,7 @@ class ToolUsage:
                         input_str = str(calling.arguments)
 
                 result = self.tools_handler.cache.read(
-                    tool=calling.tool_name, input=input_str
+                    tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
                 from_cache = result is not None
 
@@ -286,12 +289,15 @@ class ToolUsage:
                 (
                     available_tool
                     for available_tool in self.tools
-                    if available_tool.name == tool.name
+                    if sanitize_tool_name(available_tool.name)
+                    == sanitize_tool_name(tool.name)
                 ),
                 None,
             )
 
-            usage_limit_error = self._check_usage_limit(available_tool, tool.name)
+            usage_limit_error = self._check_usage_limit(
+                available_tool, sanitize_tool_name(tool.name)
+            )
             if usage_limit_error:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -299,9 +305,9 @@ class ToolUsage:
                 # Don't return early - fall through to finally block
             elif result is None:
                 try:
-                    if calling.tool_name in [
-                        "Delegate work to coworker",
-                        "Ask question to coworker",
+                    if sanitize_tool_name(calling.tool_name) in [
+                        sanitize_tool_name("Delegate work to coworker"),
+                        sanitize_tool_name("Ask question to coworker"),
                     ]:
                         coworker = (
                             calling.arguments.get("coworker")
@@ -333,13 +339,16 @@ class ToolUsage:
 
                     if self.tools_handler:
                         should_cache = True
-                        if (
-                            hasattr(available_tool, "cache_function")
-                            and available_tool.cache_function
-                        ):
-                            should_cache = available_tool.cache_function(
-                                calling.arguments, result
-                            )
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache
@@ -347,13 +356,13 @@ class ToolUsage:
 
                     self._telemetry.tool_usage(
                         llm=self.function_calling_llm,
-                        tool_name=tool.name,
+                        tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
                     result = self._format_result(result=result)
                     data = {
                         "result": result,
-                        "tool_name": tool.name,
+                        "tool_name": sanitize_tool_name(tool.name),
                         "tool_args": calling.arguments,
                     }
 
@@ -368,6 +377,19 @@ class ToolUsage:
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
                         available_tool, "current_usage_count"
                     ):
                         available_tool.current_usage_count += 1
@@ -376,7 +398,7 @@ class ToolUsage:
                             and available_tool.max_usage_count is not None
                         ):
                             self._printer.print(
-                                content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
 
@@ -387,7 +409,11 @@ class ToolUsage:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                         error_message = self._i18n.errors(
                             "tool_usage_exception"
-                        ).format(error=e, tool=tool.name, tool_inputs=tool.description)
+                        ).format(
+                            error=e,
+                            tool=sanitize_tool_name(tool.name),
+                            tool_inputs=tool.description,
+                        )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                         ).message
@@ -434,7 +460,7 @@ class ToolUsage:
                 )
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
-                    tool_name=tool.name,
+                    tool_name=sanitize_tool_name(tool.name),
                     attempts=self._run_attempts,
                 )
                 return self._format_result(result=result)
@@ -481,7 +507,7 @@ class ToolUsage:
                         input_str = str(calling.arguments)
 
                 result = self.tools_handler.cache.read(
-                    tool=calling.tool_name, input=input_str
+                    tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
                 from_cache = result is not None
 
@@ -489,12 +515,15 @@ class ToolUsage:
                 (
                     available_tool
                     for available_tool in self.tools
-                    if available_tool.name == tool.name
+                    if sanitize_tool_name(available_tool.name)
+                    == sanitize_tool_name(tool.name)
                 ),
                 None,
             )
 
-            usage_limit_error = self._check_usage_limit(available_tool, tool.name)
+            usage_limit_error = self._check_usage_limit(
+                available_tool, sanitize_tool_name(tool.name)
+            )
             if usage_limit_error:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
@@ -502,9 +531,9 @@ class ToolUsage:
                 # Don't return early - fall through to finally block
             elif result is None:
                 try:
-                    if calling.tool_name in [
-                        "Delegate work to coworker",
-                        "Ask question to coworker",
+                    if sanitize_tool_name(calling.tool_name) in [
+                        sanitize_tool_name("Delegate work to coworker"),
+                        sanitize_tool_name("Ask question to coworker"),
                     ]:
                         coworker = (
                             calling.arguments.get("coworker")
@@ -536,13 +565,16 @@ class ToolUsage:
 
                     if self.tools_handler:
                         should_cache = True
-                        if (
-                            hasattr(available_tool, "cache_function")
-                            and available_tool.cache_function
-                        ):
-                            should_cache = available_tool.cache_function(
-                                calling.arguments, result
-                            )
+                        # Check cache_function on original tool (for tools converted via to_structured_tool)
+                        original_tool = getattr(available_tool, "_original_tool", None)
+                        cache_func = None
+                        if original_tool and hasattr(original_tool, "cache_function"):
+                            cache_func = original_tool.cache_function
+                        elif hasattr(available_tool, "cache_function"):
+                            cache_func = available_tool.cache_function
+
+                        if cache_func:
+                            should_cache = cache_func(calling.arguments, result)
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache
@@ -550,13 +582,13 @@ class ToolUsage:
 
                     self._telemetry.tool_usage(
                         llm=self.function_calling_llm,
-                        tool_name=tool.name,
+                        tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
                     result = self._format_result(result=result)
                     data = {
                         "result": result,
-                        "tool_name": tool.name,
+                        "tool_name": sanitize_tool_name(tool.name),
                         "tool_args": calling.arguments,
                     }
 
@@ -571,6 +603,19 @@ class ToolUsage:
                         self.agent.tools_results.append(data)
 
                     if available_tool and hasattr(
+                        available_tool, "_increment_usage_count"
+                    ):
+                        # Use _increment_usage_count to sync count to original tool
+                        available_tool._increment_usage_count()
+                        if (
+                            hasattr(available_tool, "max_usage_count")
+                            and available_tool.max_usage_count is not None
+                        ):
+                            self._printer.print(
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                color="blue",
+                            )
+                    elif available_tool and hasattr(
                         available_tool, "current_usage_count"
                     ):
                         available_tool.current_usage_count += 1
@@ -579,7 +624,7 @@ class ToolUsage:
                             and available_tool.max_usage_count is not None
                         ):
                             self._printer.print(
-                                content=f"Tool '{available_tool.name}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
+                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
                                 color="blue",
                             )
 
@@ -590,7 +635,11 @@ class ToolUsage:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                         error_message = self._i18n.errors(
                             "tool_usage_exception"
-                        ).format(error=e, tool=tool.name, tool_inputs=tool.description)
+                        ).format(
+                            error=e,
+                            tool=sanitize_tool_name(tool.name),
+                            tool_inputs=tool.description,
+                        )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {self._i18n.slice('format').format(tool_names=self.tools_names)}"
                         ).message
@@ -648,9 +697,10 @@ class ToolUsage:
         if not self.tools_handler:
             return False
         if last_tool_usage := self.tools_handler.last_used_tool:
-            return (calling.tool_name == last_tool_usage.tool_name) and (
-                calling.arguments == last_tool_usage.arguments
-            )
+            return (
+                sanitize_tool_name(calling.tool_name)
+                == sanitize_tool_name(last_tool_usage.tool_name)
+            ) and (calling.arguments == last_tool_usage.arguments)
         return False
 
     @staticmethod
@@ -673,20 +723,19 @@ class ToolUsage:
         return None
 
     def _select_tool(self, tool_name: str) -> Any:
+        sanitized_input = sanitize_tool_name(tool_name)
         order_tools = sorted(
             self.tools,
             key=lambda tool: SequenceMatcher(
-                None, tool.name.lower().strip(), tool_name.lower().strip()
+                None, sanitize_tool_name(tool.name), sanitized_input
             ).ratio(),
             reverse=True,
         )
         for tool in order_tools:
+            sanitized_tool = sanitize_tool_name(tool.name)
             if (
-                tool.name.lower().strip() == tool_name.lower().strip()
-                or SequenceMatcher(
-                    None, tool.name.lower().strip(), tool_name.lower().strip()
-                ).ratio()
-                > 0.85
+                sanitized_tool == sanitized_input
+                or SequenceMatcher(None, sanitized_tool, sanitized_input).ratio() > 0.85
             ):
                 return tool
         if self.task:
@@ -771,7 +820,7 @@ class ToolUsage:
             return ToolUsageError(f"{self._i18n.errors('tool_arguments_error')}")
 
         return ToolCalling(
-            tool_name=tool.name,
+            tool_name=sanitize_tool_name(tool.name),
             arguments=arguments,
         )
 
@@ -925,7 +974,7 @@ class ToolUsage:
         event_data = {
             "run_attempts": self._run_attempts,
             "delegations": self.task.delegations if self.task else 0,
-            "tool_name": tool.name,
+            "tool_name": sanitize_tool_name(tool.name),
             "tool_args": tool_calling.arguments,
             "tool_class": tool.__class__.__name__,
             "agent_key": (

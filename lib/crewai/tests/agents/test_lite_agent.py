@@ -268,7 +268,13 @@ async def test_lite_agent_returns_usage_metrics_async():
         "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
     assert isinstance(result, LiteAgentOutput)
-    assert "21 million" in result.raw or "37 million" in result.raw
+    # Check for population data in various formats (text or numeric)
+    assert (
+        "21 million" in result.raw
+        or "37 million" in result.raw
+        or "21000000" in result.raw
+        or "37000000" in result.raw
+    )
     assert result.usage_metrics is not None
     assert result.usage_metrics["total_tokens"] > 0
 
