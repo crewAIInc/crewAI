@@ -159,12 +159,23 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
     return request
 
 
-def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
-    """Filter sensitive headers from response before recording."""
+def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any] | None:
+    """Filter sensitive headers from response before recording.
+
+    Returns None to skip recording responses with empty bodies. This handles
+    duplicate recordings caused by OpenAI's stainless client using
+    with_raw_response which triggers httpx to re-read the consumed stream.
+    """
+    body = response.get("body", {}).get("string", "")
+    headers = response.get("headers", {})
+    content_length = headers.get("content-length", headers.get("Content-Length", []))
+
+    if body == "" or body == b"" or content_length == ["0"]:
+        return None
 
     for encoding_header in ["Content-Encoding", "content-encoding"]:
-        if encoding_header in response["headers"]:
-            encoding = response["headers"].pop(encoding_header)
+        if encoding_header in headers:
+            encoding = headers.pop(encoding_header)
             if encoding and encoding[0] == "gzip":
                 body = response.get("body", {}).get("string", b"")
                 if isinstance(body, bytes) and body.startswith(b"\x1f\x8b"):
@@ -172,8 +183,8 @@ def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any]:
 
     for header_name, replacement in HEADERS_TO_FILTER.items():
         for variant in [header_name, header_name.upper(), header_name.title()]:
-            if variant in response["headers"]:
-                response["headers"][variant] = [replacement]
+            if variant in headers:
+                headers[variant] = [replacement]
     return response
 
 
