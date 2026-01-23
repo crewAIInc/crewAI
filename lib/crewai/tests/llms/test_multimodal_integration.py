@@ -155,6 +155,28 @@ class TestOpenAIGPT41MiniMultimodalIntegration:
         assert len(response) > 0
 
 
+class TestOpenAIGPT5MultimodalIntegration:
+    """Integration tests for OpenAI GPT-5 with vision."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test GPT-5 can describe an image."""
+        llm = LLM(model="openai/gpt-5")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
 class TestOpenAIGPT5MiniMultimodalIntegration:
     """Integration tests for OpenAI GPT-5-mini with vision."""
 
@@ -162,6 +184,28 @@ class TestOpenAIGPT5MiniMultimodalIntegration:
     def test_describe_image(self, test_image_bytes: bytes) -> None:
         """Test GPT-5-mini can describe an image."""
         llm = LLM(model="openai/gpt-5-mini")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+class TestOpenAIGPT5NanoMultimodalIntegration:
+    """Integration tests for OpenAI GPT-5-nano with vision."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test GPT-5-nano can describe an image."""
+        llm = LLM(model="openai/gpt-5-nano")
         files = {"image": ImageFile(source=test_image_bytes)}
 
         messages = _build_multimodal_message(
