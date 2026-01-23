@@ -1,9 +1,14 @@
 """Types for CrewAI utilities."""
 
-from typing import Any, Literal
+from __future__ import annotations
 
-from crewai_files import FileInput
+from typing import TYPE_CHECKING, Any, Literal
+
 from typing_extensions import NotRequired, TypedDict
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
 
 
 class LLMMessage(TypedDict):
@@ -19,6 +24,7 @@ class LLMMessage(TypedDict):
     tool_call_id: NotRequired[str]
     name: NotRequired[str]
     tool_calls: NotRequired[list[dict[str, Any]]]
+    files: NotRequired[dict[str, FileInput]]
 
 
 class KickoffInputs(TypedDict, total=False):

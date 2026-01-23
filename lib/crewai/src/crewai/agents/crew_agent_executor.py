@@ -10,7 +10,6 @@ from collections.abc import Callable
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from crewai_files import aformat_multimodal_content, format_multimodal_content
 from pydantic import BaseModel, GetCoreSchemaHandler, ValidationError
 from pydantic_core import CoreSchema, core_schema
 
@@ -46,7 +45,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.file_store import get_all_files
+from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -220,71 +219,41 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return {"output": formatted_answer.output}
 
     def _inject_multimodal_files(self) -> None:
-        """Inject files as multimodal content into messages.
+        """Attach files to the last user message for LLM-layer formatting.
 
-        For crews with input files and LLMs that support multimodal,
-        uses crewai_files to process, resolve, and format files into
-        provider-specific content blocks.
+        Retrieves crew and task files and attaches them to the message's
+        `files` field. The LLM layer handles provider-specific formatting.
         """
         if not self.crew or not self.task:
-            return
-
-        if not self.llm.supports_multimodal():
             return
 
         files = get_all_files(self.crew.id, self.task.id)
         if not files:
             return
 
-        provider = getattr(self.llm, "provider", None) or getattr(self.llm, "model", "")
-        content_blocks = format_multimodal_content(files, provider)
-
-        if not content_blocks:
-            return
-
         for i in range(len(self.messages) - 1, -1, -1):
             msg = self.messages[i]
             if msg.get("role") == "user":
-                existing_content = msg.get("content", "")
-                if isinstance(existing_content, str):
-                    msg["content"] = [
-                        self.llm.format_text_content(existing_content),
-                        *content_blocks,
-                    ]
+                msg["files"] = files
                 break
 
     async def _ainject_multimodal_files(self) -> None:
-        """Async inject files as multimodal content into messages.
+        """Async attach files to the last user message for LLM-layer formatting.
 
-        For crews with input files and LLMs that support multimodal,
-        uses crewai_files to process, resolve, and format files into
-        provider-specific content blocks with parallel file resolution.
+        Retrieves crew and task files and attaches them to the message's
+        `files` field. The LLM layer handles provider-specific formatting.
         """
         if not self.crew or not self.task:
             return
 
-        if not self.llm.supports_multimodal():
-            return
-
-        files = get_all_files(self.crew.id, self.task.id)
+        files = await aget_all_files(self.crew.id, self.task.id)
         if not files:
-            return
-
-        provider = getattr(self.llm, "provider", None) or getattr(self.llm, "model", "")
-        content_blocks = await aformat_multimodal_content(files, provider)
-
-        if not content_blocks:
             return
 
         for i in range(len(self.messages) - 1, -1, -1):
             msg = self.messages[i]
             if msg.get("role") == "user":
-                existing_content = msg.get("content", "")
-                if isinstance(existing_content, str):
-                    msg["content"] = [
-                        self.llm.format_text_content(existing_content),
-                        *content_blocks,
-                    ]
+                msg["files"] = files
                 break
 
     def _invoke_loop(self) -> AgentFinish:
@@ -772,7 +741,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         if (
                             original_tool
                             and hasattr(original_tool, "cache_function")
-                            and original_tool.cache_function
+                            and callable(original_tool.cache_function)
                         ):
                             should_cache = original_tool.cache_function(
                                 args_dict, raw_result
@@ -803,7 +772,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
-        elif max_usage_reached:
+        elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
 

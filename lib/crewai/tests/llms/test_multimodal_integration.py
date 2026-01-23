@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 
 from crewai.llm import LLM
-from crewai.files import File, ImageFile, PDFFile, TextFile
+from crewai_files import File, ImageFile, PDFFile, TextFile, format_multimodal_content
 
 
 # Path to test data files
-TEST_DATA_DIR = Path(__file__).parent.parent.parent.parent.parent / "data"
-TEST_IMAGE_PATH = TEST_DATA_DIR / "revenue_chart.png"
-TEST_TEXT_PATH = TEST_DATA_DIR / "review_guidelines.txt"
+TEST_FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "crewai-files" / "tests" / "fixtures"
+TEST_IMAGE_PATH = TEST_FIXTURES_DIR / "revenue_chart.png"
+TEST_TEXT_PATH = TEST_FIXTURES_DIR / "review_guidelines.txt"
 
 
 @pytest.fixture
@@ -50,7 +50,8 @@ startxref
 
 def _build_multimodal_message(llm: LLM, prompt: str, files: dict) -> list[dict]:
     """Build a multimodal message with text and file content."""
-    content_blocks = llm.format_multimodal_content(files)
+    provider = getattr(llm, "provider", None) or llm.model
+    content_blocks = format_multimodal_content(files, provider)
     return [
         {
             "role": "user",
@@ -109,6 +110,68 @@ class TestAnthropicMultimodalIntegration:
     def test_analyze_pdf(self) -> None:
         """Test Anthropic can analyze a PDF."""
         llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+        files = {"document": PDFFile(source=MINIMAL_PDF)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "What type of document is this? Answer in one word.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+class TestAzureMultimodalIntegration:
+    """Integration tests for Azure OpenAI multimodal with real API calls."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test Azure OpenAI can describe an image."""
+        llm = LLM(model="azure/gpt-4o")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+
+class TestBedrockMultimodalIntegration:
+    """Integration tests for AWS Bedrock multimodal with real API calls."""
+
+    @pytest.mark.vcr()
+    def test_describe_image(self, test_image_bytes: bytes) -> None:
+        """Test Bedrock Claude can describe an image."""
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+        files = {"image": ImageFile(source=test_image_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe this image in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+    @pytest.mark.vcr()
+    def test_analyze_pdf(self) -> None:
+        """Test Bedrock Claude can analyze a PDF."""
+        llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
         files = {"document": PDFFile(source=MINIMAL_PDF)}
 
         messages = _build_multimodal_message(

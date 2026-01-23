@@ -3,15 +3,6 @@ from typing import Any
 import urllib.request
 import warnings
 
-from crewai_files import (
-    AudioFile,
-    File,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
-
 from crewai.agent.core import Agent
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
@@ -83,20 +74,14 @@ _track_install_async()
 __all__ = [
     "LLM",
     "Agent",
-    "AudioFile",
     "BaseLLM",
     "Crew",
     "CrewOutput",
-    "File",
     "Flow",
-    "ImageFile",
     "Knowledge",
     "LLMGuardrail",
-    "PDFFile",
     "Process",
     "Task",
     "TaskOutput",
-    "TextFile",
-    "VideoFile",
     "__version__",
 ]

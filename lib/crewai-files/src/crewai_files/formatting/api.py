@@ -274,4 +274,8 @@ def _format_block(
     """
     if isinstance(formatter, BedrockFormatter):
         return formatter.format_block(file_input, resolved, name=name)
-    return formatter.format_block(file_input, resolved)
+    if isinstance(formatter, AnthropicFormatter):
+        return formatter.format_block(file_input, resolved)
+    if isinstance(formatter, (OpenAIFormatter, GeminiFormatter)):
+        return formatter.format_block(resolved)
+    raise TypeError(f"Unknown formatter type: {type(formatter).__name__}")

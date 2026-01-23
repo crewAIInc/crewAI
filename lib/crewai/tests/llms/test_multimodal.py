@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from crewai.llm import LLM
-from crewai.files import ImageFile, PDFFile, TextFile
+from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
 # Check for optional provider dependencies
 try:
@@ -124,27 +124,18 @@ class TestLiteLLMMultimodal:
         llm = LLM(model="gpt-4o", is_litellm=True)
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "image_url"
         assert "data:image/png;base64," in result[0]["image_url"]["url"]
-
-    def test_format_multimodal_content_non_multimodal(self) -> None:
-        """Test non-multimodal model returns empty list."""
-        llm = LLM(model="gpt-3.5-turbo", is_litellm=True)
-        files = {"chart": ImageFile(source=MINIMAL_PNG)}
-
-        result = llm.format_multimodal_content(files)
-
-        assert result == []
 
     def test_format_multimodal_content_unsupported_type(self) -> None:
         """Test unsupported content type is skipped."""
         llm = LLM(model="gpt-4o", is_litellm=True)  # OpenAI doesn't support PDF
         files = {"doc": PDFFile(source=MINIMAL_PDF)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert result == []
 
@@ -175,7 +166,7 @@ class TestAnthropicMultimodal:
         llm = LLM(model="anthropic/claude-3-sonnet-20240229")
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "image"
@@ -188,7 +179,7 @@ class TestAnthropicMultimodal:
         llm = LLM(model="anthropic/claude-3-sonnet-20240229")
         files = {"doc": PDFFile(source=MINIMAL_PDF)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "document"
@@ -230,7 +221,7 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-4o")
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "image_url"
@@ -264,7 +255,7 @@ class TestGeminiMultimodal:
         llm = LLM(model="gemini/gemini-pro")
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert "inlineData" in result[0]
@@ -321,7 +312,7 @@ class TestAzureMultimodal:
         llm = LLM(model="azure/gpt-4o")
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "image_url"
@@ -357,7 +348,7 @@ class TestBedrockMultimodal:
         """Test Bedrock supports images and PDFs."""
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
         types = llm.supported_multimodal_content_types()
-        assert "image/" in types
+        assert any(t.startswith("image/") for t in types)
         assert "application/pdf" in types
 
     def test_format_multimodal_content_image(self) -> None:
@@ -365,7 +356,7 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
         files = {"chart": ImageFile(source=MINIMAL_PNG)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert "image" in result[0]
@@ -378,7 +369,7 @@ class TestBedrockMultimodal:
         llm = LLM(model="bedrock/anthropic.claude-3-sonnet")
         files = {"doc": PDFFile(source=MINIMAL_PDF)}
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert "document" in result[0]
@@ -411,18 +402,6 @@ class TestBaseLLMMultimodal:
         llm = TestLLM(model="test")
         assert llm.supported_multimodal_content_types() == []
 
-    def test_base_format_multimodal_content_empty(self) -> None:
-        """Test base implementation returns empty list."""
-        from crewai.llms.base_llm import BaseLLM
-
-        class TestLLM(BaseLLM):
-            def call(self, messages, tools=None, callbacks=None):
-                return "test"
-
-        llm = TestLLM(model="test")
-        files = {"chart": ImageFile(source=MINIMAL_PNG)}
-        assert llm.format_multimodal_content(files) == []
-
     def test_base_format_text_content(self) -> None:
         """Test base text formatting uses OpenAI/Anthropic style."""
         from crewai.llms.base_llm import BaseLLM
@@ -447,7 +426,7 @@ class TestMultipleFilesFormatting:
             "chart2": ImageFile(source=MINIMAL_PNG),
         }
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 2
 
@@ -460,7 +439,7 @@ class TestMultipleFilesFormatting:
             "text": TextFile(source=b"hello"),  # Not supported
         }
 
-        result = llm.format_multimodal_content(files)
+        result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
         assert len(result) == 1
         assert result[0]["type"] == "image_url"
@@ -469,6 +448,6 @@ class TestMultipleFilesFormatting:
         """Test empty files dict returns empty list."""
         llm = LLM(model="gpt-4o")
 
-        result = llm.format_multimodal_content({})
+        result = format_multimodal_content({}, llm.model)
 
         assert result == []

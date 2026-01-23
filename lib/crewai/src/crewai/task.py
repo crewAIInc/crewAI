@@ -19,12 +19,6 @@ from typing import (
 import uuid
 import warnings
 
-from crewai_files import (
-    FileInput,
-    FilePath,
-    FileSourceInput,
-    normalize_input_files,
-)
 from pydantic import (
     UUID4,
     BaseModel,
@@ -55,6 +49,17 @@ from crewai.utilities.file_store import (
     get_all_files,
     store_task_files,
 )
+
+
+try:
+    from crewai_files import (
+        FilePath,
+        normalize_input_files,
+    )
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -153,7 +158,7 @@ class Task(BaseModel):
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
-    input_files: list[FileSourceInput | FileInput] = Field(
+    input_files: list[Any] = Field(
         default_factory=list,
         description="List of input files for this task. Accepts paths, bytes, or File objects.",
     )
@@ -377,6 +382,9 @@ class Task(BaseModel):
     def _normalize_input_files(cls, v: list[Any]) -> list[Any]:
         """Convert string paths to FilePath objects."""
         if not v:
+            return v
+
+        if not HAS_CREWAI_FILES:
             return v
 
         result = []
@@ -1034,7 +1042,7 @@ Follow these guidelines:
 
         Converts input_files list to a named dict and stores under task ID.
         """
-        if not self.input_files:
+        if not HAS_CREWAI_FILES or not self.input_files:
             return
 
         files_dict = normalize_input_files(self.input_files)

@@ -8,32 +8,31 @@ from typing import Any
 from crewai_files.core.resolved import (
     FileReference,
     InlineBase64,
-    ResolvedFile,
+    InlineBytes,
+    ResolvedFileType,
     UrlReference,
 )
-from crewai_files.core.types import FileInput
 
 
 class GeminiFormatter:
     """Formats resolved files into Gemini content blocks."""
 
-    def format_block(
-        self,
-        file: FileInput,
-        resolved: ResolvedFile,
-    ) -> dict[str, Any] | None:
+    @staticmethod
+    def format_block(resolved: ResolvedFileType) -> dict[str, Any]:
         """Format a resolved file into a Gemini content block.
 
         Args:
-            file: Original file input with metadata.
             resolved: Resolved file.
 
         Returns:
-            Content block dict or None if not supported.
-        """
-        content_type = file.content_type
+            Content block dict.
 
-        if isinstance(resolved, FileReference) and resolved.file_uri:
+        Raises:
+            TypeError: If resolved type is not supported.
+        """
+        if isinstance(resolved, FileReference):
+            if not resolved.file_uri:
+                raise ValueError("Gemini requires file_uri for FileReference")
             return {
                 "fileData": {
                     "mimeType": resolved.content_type,
@@ -44,7 +43,7 @@ class GeminiFormatter:
         if isinstance(resolved, UrlReference):
             return {
                 "fileData": {
-                    "mimeType": content_type,
+                    "mimeType": resolved.content_type,
                     "fileUri": resolved.url,
                 }
             }
@@ -57,10 +56,12 @@ class GeminiFormatter:
                 }
             }
 
-        data = base64.b64encode(file.read()).decode("ascii")
-        return {
-            "inlineData": {
-                "mimeType": content_type,
-                "data": data,
+        if isinstance(resolved, InlineBytes):
+            return {
+                "inlineData": {
+                    "mimeType": resolved.content_type,
+                    "data": base64.b64encode(resolved.data).decode("ascii"),
+                }
             }
-        }
+
+        raise TypeError(f"Unexpected resolved type: {type(resolved).__name__}")

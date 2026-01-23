@@ -6,14 +6,6 @@ import asyncio
 from collections.abc import Callable, Coroutine, Iterable
 from typing import TYPE_CHECKING, Any
 
-from crewai_files import (
-    AudioFile,
-    ImageFile,
-    PDFFile,
-    TextFile,
-    VideoFile,
-)
-
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -25,6 +17,20 @@ from crewai.utilities.streaming import (
     create_streaming_state,
 )
 from crewai.utilities.types import KickoffInputs
+
+
+try:
+    from crewai_files import (
+        AudioFile,
+        ImageFile,
+        PDFFile,
+        TextFile,
+        VideoFile,
+    )
+
+    _FILE_TYPES: tuple[type, ...] = (AudioFile, ImageFile, PDFFile, TextFile, VideoFile)
+except ImportError:
+    _FILE_TYPES = ()
 
 
 if TYPE_CHECKING:
@@ -198,12 +204,14 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dictionary of extracted file objects.
     """
-    file_types = (AudioFile, ImageFile, PDFFile, TextFile, VideoFile)
+    if not _FILE_TYPES:
+        return {}
+
     files: dict[str, Any] = {}
     keys_to_remove: list[str] = []
 
     for key, value in inputs.items():
-        if isinstance(value, file_types):
+        if isinstance(value, _FILE_TYPES):
             files[key] = value
             keys_to_remove.append(key)
 

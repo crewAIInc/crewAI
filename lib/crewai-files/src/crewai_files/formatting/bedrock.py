@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import base64
 from typing import Any
 
 from crewai_files.core.resolved import (
     FileReference,
+    InlineBase64,
     InlineBytes,
-    ResolvedFile,
+    ResolvedFileType,
+    UrlReference,
 )
 from crewai_files.core.types import FileInput
 
@@ -49,7 +52,7 @@ class BedrockFormatter:
     def format_block(
         self,
         file: FileInput,
-        resolved: ResolvedFile,
+        resolved: ResolvedFileType,
         name: str | None = None,
     ) -> dict[str, Any] | None:
         """Format a resolved file into a Bedrock content block.
@@ -64,15 +67,24 @@ class BedrockFormatter:
         """
         content_type = file.content_type
 
-        if isinstance(resolved, FileReference) and resolved.file_uri:
+        if isinstance(resolved, FileReference):
+            if not resolved.file_uri:
+                raise ValueError("Bedrock requires file_uri for FileReference (S3 URI)")
             return self._format_s3_block(content_type, resolved.file_uri, name)
 
         if isinstance(resolved, InlineBytes):
-            file_bytes = resolved.data
-        else:
-            file_bytes = file.read()
+            return self._format_bytes_block(content_type, resolved.data, name)
 
-        return self._format_bytes_block(content_type, file_bytes, name)
+        if isinstance(resolved, InlineBase64):
+            file_bytes = base64.b64decode(resolved.data)
+            return self._format_bytes_block(content_type, file_bytes, name)
+
+        if isinstance(resolved, UrlReference):
+            raise ValueError(
+                "Bedrock does not support URL references - resolve to bytes first"
+            )
+
+        raise TypeError(f"Unexpected resolved type: {type(resolved).__name__}")
 
     def _format_s3_block(
         self,

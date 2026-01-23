@@ -53,6 +53,14 @@ from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
+try:
+    from crewai_files import aformat_multimodal_content, format_multimodal_content
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+
 if TYPE_CHECKING:
     from litellm.exceptions import ContextWindowExceededError
     from litellm.litellm_core_utils.get_supported_openai_params import (
@@ -661,12 +669,14 @@ class LLM(BaseLLM):
         self,
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
+        skip_file_processing: bool = False,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
+            skip_file_processing: Skip file processing (used when already done async)
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -674,6 +684,9 @@ class LLM(BaseLLM):
         # --- 1) Format messages according to provider requirements
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        # --- 1a) Process any file attachments into multimodal content
+        if not skip_file_processing:
+            messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
 
         # --- 2) Prepare the parameters for the completion call
@@ -1799,6 +1812,9 @@ class LLM(BaseLLM):
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
+        # Process file attachments asynchronously before preparing params
+        messages = await self._aprocess_message_files(messages)
+
         if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
@@ -1809,7 +1825,9 @@ class LLM(BaseLLM):
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
             try:
-                params = self._prepare_completion_params(messages, tools)
+                params = self._prepare_completion_params(
+                    messages, tools, skip_file_processing=True
+                )
 
                 if self.stream:
                     return await self._ahandle_streaming_response(
@@ -1895,6 +1913,88 @@ class LLM(BaseLLM):
                 model=self.model,
             ),
         )
+
+    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+        """Process files attached to messages and format for provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or self.model
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            content_blocks = format_multimodal_content(files, provider)
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            existing_content = msg.get("content", "")
+            if isinstance(existing_content, str):
+                msg["content"] = [
+                    self.format_text_content(existing_content),
+                    *content_blocks,
+                ]
+            elif isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+
+            msg.pop("files", None)
+
+        return messages
+
+    async def _aprocess_message_files(
+        self, messages: list[LLMMessage]
+    ) -> list[LLMMessage]:
+        """Async process files attached to messages and format for provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or self.model
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            content_blocks = await aformat_multimodal_content(files, provider)
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            existing_content = msg.get("content", "")
+            if isinstance(existing_content, str):
+                msg["content"] = [
+                    self.format_text_content(existing_content),
+                    *content_blocks,
+                ]
+            elif isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+
+            msg.pop("files", None)
+
+        return messages
 
     def _format_messages_for_provider(
         self, messages: list[LLMMessage]

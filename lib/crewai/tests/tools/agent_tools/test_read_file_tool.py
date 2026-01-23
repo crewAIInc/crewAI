@@ -5,7 +5,7 @@ import base64
 import pytest
 
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
-from crewai.files import ImageFile, PDFFile, TextFile
+from crewai_files import ImageFile, PDFFile, TextFile
 
 
 class TestReadFileTool:

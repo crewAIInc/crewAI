@@ -8,7 +8,8 @@ from typing import Any
 from crewai_files.core.resolved import (
     FileReference,
     InlineBase64,
-    ResolvedFile,
+    InlineBytes,
+    ResolvedFileType,
     UrlReference,
 )
 from crewai_files.core.types import FileInput
@@ -20,7 +21,7 @@ class AnthropicFormatter:
     def format_block(
         self,
         file: FileInput,
-        resolved: ResolvedFile,
+        resolved: ResolvedFileType,
     ) -> dict[str, Any] | None:
         """Format a resolved file into an Anthropic content block.
 
@@ -43,6 +44,7 @@ class AnthropicFormatter:
                     "type": "file",
                     "file_id": resolved.file_id,
                 },
+                "cache_control": {"type": "ephemeral"},
             }
 
         if isinstance(resolved, UrlReference):
@@ -52,6 +54,7 @@ class AnthropicFormatter:
                     "type": "url",
                     "url": resolved.url,
                 },
+                "cache_control": {"type": "ephemeral"},
             }
 
         if isinstance(resolved, InlineBase64):
@@ -62,17 +65,21 @@ class AnthropicFormatter:
                     "media_type": resolved.content_type,
                     "data": resolved.data,
                 },
+                "cache_control": {"type": "ephemeral"},
             }
 
-        data = base64.b64encode(file.read()).decode("ascii")
-        return {
-            "type": block_type,
-            "source": {
-                "type": "base64",
-                "media_type": content_type,
-                "data": data,
-            },
-        }
+        if isinstance(resolved, InlineBytes):
+            return {
+                "type": block_type,
+                "source": {
+                    "type": "base64",
+                    "media_type": resolved.content_type,
+                    "data": base64.b64encode(resolved.data).decode("ascii"),
+                },
+                "cache_control": {"type": "ephemeral"},
+            }
+
+        raise TypeError(f"Unexpected resolved type: {type(resolved).__name__}")
 
     @staticmethod
     def _get_block_type(content_type: str) -> str | None:
