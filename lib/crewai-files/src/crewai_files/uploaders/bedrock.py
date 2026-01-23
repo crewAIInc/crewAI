@@ -110,6 +110,8 @@ class BedrockFileUploader(FileUploader):
         bucket_owner: str | None = None,
         prefix: str = "crewai-files",
         region: str | None = None,
+        client: Any = None,
+        async_client: Any = None,
     ) -> None:
         """Initialize the Bedrock S3 uploader.
 
@@ -120,6 +122,8 @@ class BedrockFileUploader(FileUploader):
                 Uses CREWAI_BEDROCK_S3_BUCKET_OWNER environment variable if not provided.
             prefix: S3 key prefix for uploaded files (default: "crewai-files").
             region: AWS region. Uses AWS_REGION or AWS_DEFAULT_REGION if not provided.
+            client: Optional pre-instantiated boto3 S3 client.
+            async_client: Optional pre-instantiated aioboto3 S3 client.
         """
         self._bucket_name = bucket_name or os.environ.get("CREWAI_BEDROCK_S3_BUCKET")
         self._bucket_owner = bucket_owner or os.environ.get(
@@ -129,8 +133,8 @@ class BedrockFileUploader(FileUploader):
         self._region = region or os.environ.get(
             "AWS_REGION", os.environ.get("AWS_DEFAULT_REGION")
         )
-        self._client: Any = None
-        self._async_client: Any = None
+        self._client: Any = client
+        self._async_client: Any = async_client
 
     @property
     def provider_name(self) -> str:

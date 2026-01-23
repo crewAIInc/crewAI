@@ -100,6 +100,8 @@ class OpenAIFileUploader(FileUploader):
         self,
         api_key: str | None = None,
         chunk_size: int = DEFAULT_UPLOAD_CHUNK_SIZE,
+        client: Any = None,
+        async_client: Any = None,
     ) -> None:
         """Initialize the OpenAI uploader.
 
@@ -107,11 +109,13 @@ class OpenAIFileUploader(FileUploader):
             api_key: Optional OpenAI API key. If not provided, uses
                 OPENAI_API_KEY environment variable.
             chunk_size: Chunk size in bytes for multipart uploads (default 64MB).
+            client: Optional pre-instantiated OpenAI client.
+            async_client: Optional pre-instantiated async OpenAI client.
         """
         self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
         self._chunk_size = chunk_size
-        self._client: Any = None
-        self._async_client: Any = None
+        self._client: Any = client
+        self._async_client: Any = async_client
 
     @property
     def provider_name(self) -> str:

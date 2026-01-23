@@ -36,10 +36,15 @@ ProviderType: TypeAlias = (
 )
 
 
+from typing import Any as AnyType
+
+
 class _BaseOpts(TypedDict):
     """Kwargs for uploader factory."""
 
     api_key: NotRequired[str | None]
+    client: NotRequired[AnyType]
+    async_client: NotRequired[AnyType]
 
 
 class OpenAIOpts(_BaseOpts):
@@ -48,8 +53,11 @@ class OpenAIOpts(_BaseOpts):
     chunk_size: NotRequired[int]
 
 
-class GeminiOpts(_BaseOpts):
+class GeminiOpts(TypedDict):
     """Kwargs for gemini uploader factory."""
+
+    api_key: NotRequired[str | None]
+    client: NotRequired[AnyType]
 
 
 class AnthropicOpts(_BaseOpts):
@@ -63,6 +71,8 @@ class BedrockOpts(TypedDict):
     bucket_owner: NotRequired[str | None]
     prefix: NotRequired[str]
     region: NotRequired[str | None]
+    client: NotRequired[AnyType]
+    async_client: NotRequired[AnyType]
 
 
 class AllOptions(TypedDict):
@@ -74,6 +84,8 @@ class AllOptions(TypedDict):
     bucket_owner: NotRequired[str | None]
     prefix: NotRequired[str]
     region: NotRequired[str | None]
+    client: NotRequired[AnyType]
+    async_client: NotRequired[AnyType]
 
 
 @overload
@@ -133,7 +145,10 @@ def get_uploader(
         try:
             from crewai_files.uploaders.gemini import GeminiFileUploader
 
-            return GeminiFileUploader(api_key=kwargs.get("api_key"))
+            return GeminiFileUploader(
+                api_key=kwargs.get("api_key"),
+                client=kwargs.get("client"),
+            )
         except ImportError:
             logger.warning(
                 "google-genai not installed. Install with: pip install google-genai"
@@ -144,7 +159,11 @@ def get_uploader(
         try:
             from crewai_files.uploaders.anthropic import AnthropicFileUploader
 
-            return AnthropicFileUploader(api_key=kwargs.get("api_key"))
+            return AnthropicFileUploader(
+                api_key=kwargs.get("api_key"),
+                client=kwargs.get("client"),
+                async_client=kwargs.get("async_client"),
+            )
         except ImportError:
             logger.warning(
                 "anthropic not installed. Install with: pip install anthropic"
@@ -162,6 +181,8 @@ def get_uploader(
             return OpenAIFileUploader(
                 api_key=kwargs.get("api_key"),
                 chunk_size=kwargs.get("chunk_size", 67_108_864),
+                client=kwargs.get("client"),
+                async_client=kwargs.get("async_client"),
             )
         except ImportError:
             logger.warning("openai not installed. Install with: pip install openai")
@@ -187,6 +208,8 @@ def get_uploader(
                 bucket_owner=kwargs.get("bucket_owner"),
                 prefix=kwargs.get("prefix", "crewai-files"),
                 region=kwargs.get("region"),
+                client=kwargs.get("client"),
+                async_client=kwargs.get("async_client"),
             )
         except ImportError:
             logger.warning("boto3 not installed. Install with: pip install boto3")

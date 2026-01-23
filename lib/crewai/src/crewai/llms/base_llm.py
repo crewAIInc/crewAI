@@ -310,6 +310,17 @@ class BaseLLM(ABC):
         """
         return {"type": "text", "text": text}
 
+    def get_file_uploader(self) -> Any:
+        """Get a file uploader configured with this LLM's client.
+
+        Returns an uploader instance that reuses this LLM's authenticated client,
+        avoiding the need to create a new connection for file uploads.
+
+        Returns:
+            A FileUploader instance, or None if not supported by this provider.
+        """
+        return None
+
     # Common helper methods for native SDK implementations
 
     def _emit_call_started_event(

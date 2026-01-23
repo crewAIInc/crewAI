@@ -1336,3 +1336,19 @@ class AnthropicCompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
         return ["image/", "application/pdf"]
+
+    def get_file_uploader(self) -> Any:
+        """Get an Anthropic file uploader using this LLM's clients.
+
+        Returns:
+            AnthropicFileUploader instance with pre-configured sync and async clients.
+        """
+        try:
+            from crewai_files.uploaders.anthropic import AnthropicFileUploader
+
+            return AnthropicFileUploader(
+                client=self.client,
+                async_client=self.async_client,
+            )
+        except ImportError:
+            return None

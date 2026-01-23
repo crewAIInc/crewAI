@@ -1221,3 +1221,16 @@ class GeminiCompletion(BaseLLM):
             A content block in Gemini's expected format.
         """
         return {"text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a Gemini file uploader using this LLM's client.
+
+        Returns:
+            GeminiFileUploader instance with pre-configured client.
+        """
+        try:
+            from crewai_files.uploaders.gemini import GeminiFileUploader
+
+            return GeminiFileUploader(client=self.client)
+        except ImportError:
+            return None

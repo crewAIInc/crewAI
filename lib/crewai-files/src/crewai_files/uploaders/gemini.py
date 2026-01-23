@@ -93,15 +93,20 @@ class GeminiFileUploader(FileUploader):
     Uses the google-genai SDK to upload files. Files are stored for 48 hours.
     """
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        client: Any = None,
+    ) -> None:
         """Initialize the Gemini uploader.
 
         Args:
             api_key: Optional Google API key. If not provided, uses
                 GOOGLE_API_KEY environment variable.
+            client: Optional pre-instantiated Gemini client.
         """
         self._api_key = api_key or os.environ.get("GOOGLE_API_KEY")
-        self._client: Any = None
+        self._client: Any = client
 
     @property
     def provider_name(self) -> str:

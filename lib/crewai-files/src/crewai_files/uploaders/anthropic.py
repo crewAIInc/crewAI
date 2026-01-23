@@ -22,16 +22,23 @@ class AnthropicFileUploader(FileUploader):
     until explicitly deleted.
     """
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        client: Any = None,
+        async_client: Any = None,
+    ) -> None:
         """Initialize the Anthropic uploader.
 
         Args:
             api_key: Optional Anthropic API key. If not provided, uses
                 ANTHROPIC_API_KEY environment variable.
+            client: Optional pre-instantiated Anthropic client.
+            async_client: Optional pre-instantiated async Anthropic client.
         """
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        self._client: Any = None
-        self._async_client: Any = None
+        self._client: Any = client
+        self._async_client: Any = async_client
 
     @property
     def provider_name(self) -> str:

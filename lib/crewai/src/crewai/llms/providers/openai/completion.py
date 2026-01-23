@@ -1103,3 +1103,19 @@ class OpenAICompletion(BaseLLM):
         if not self.supports_multimodal():
             return []
         return ["image/"]
+
+    def get_file_uploader(self) -> Any:
+        """Get an OpenAI file uploader using this LLM's clients.
+
+        Returns:
+            OpenAIFileUploader instance with pre-configured sync and async clients.
+        """
+        try:
+            from crewai_files.uploaders.openai import OpenAIFileUploader
+
+            return OpenAIFileUploader(
+                client=self.client,
+                async_client=self.async_client,
+            )
+        except ImportError:
+            return None
