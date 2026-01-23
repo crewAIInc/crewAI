@@ -47,6 +47,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
     execute_tool_and_check_finality,
@@ -636,12 +637,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
 
         # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
-        import re
 
         original_tool = None
         for tool in self.original_tools or []:
-            sanitized_name = re.sub(r"[^a-zA-Z0-9_.\-:]", "_", tool.name)
-            if sanitized_name == func_name:
+            if sanitize_tool_name(tool.name) == func_name:
                 original_tool = tool
                 break
 
@@ -753,6 +752,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         tool_message: LLMMessage = {
             "role": "tool",
             "tool_call_id": call_id,
+            "name": func_name,
             "content": result,
         }
         self.messages.append(tool_message)

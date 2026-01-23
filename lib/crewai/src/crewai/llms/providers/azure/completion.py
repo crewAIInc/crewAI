@@ -517,9 +517,10 @@ class AzureCompletion(BaseLLM):
             # Handle None content - Azure requires string content
             content = message.get("content") or ""
 
-            # Handle tool role messages - keep as tool role for Azure OpenAI
             if role == "tool":
-                tool_call_id = message.get("tool_call_id", "unknown")
+                tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
                 azure_messages.append(
                     {
                         "role": "tool",

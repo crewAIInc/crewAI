@@ -602,12 +602,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
 
             # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
-            import re
+            from crewai.utilities.string_utils import sanitize_tool_name
 
             original_tool = None
             for tool in self.original_tools or []:
-                sanitized_name = re.sub(r"[^a-zA-Z0-9_.\-:]", "_", tool.name)
-                if sanitized_name == func_name:
+                if sanitize_tool_name(tool.name) == func_name:
                     original_tool = tool
                     break
 
@@ -721,6 +720,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             tool_message: LLMMessage = {
                 "role": "tool",
                 "tool_call_id": call_id,
+                "name": func_name,
                 "content": result,
             }
             self.state.messages.append(tool_message)

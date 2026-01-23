@@ -28,6 +28,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
@@ -96,15 +97,15 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
 
 def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
-    """Get the names of the tools.
+    """Get the sanitized names of the tools.
 
     Args:
         tools: List of tools to get names from.
 
     Returns:
-        Comma-separated string of tool names.
+        Comma-separated string of sanitized tool names.
     """
-    return ", ".join([t.name for t in tools])
+    return ", ".join([sanitize_tool_name(t.name) for t in tools])
 
 
 def render_text_description_and_args(
@@ -168,10 +169,9 @@ def convert_tools_to_openai_schema(
         # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
         description = tool.description
         if "Tool Description:" in description:
-            # Extract the original description after "Tool Description:"
             description = description.split("Tool Description:")[-1].strip()
 
-        sanitized_name = re.sub(r"[^a-zA-Z0-9_.\-:]", "_", tool.name)
+        sanitized_name = sanitize_tool_name(tool.name)
 
         schema: dict[str, Any] = {
             "type": "function",
@@ -182,7 +182,7 @@ def convert_tools_to_openai_schema(
             },
         }
         openai_tools.append(schema)
-        available_functions[sanitized_name] = tool.run  # type: ignore[attr-defined]
+        available_functions[sanitized_name] = tool.run  # type: ignore[union-attr]
 
     return openai_tools, available_functions
 

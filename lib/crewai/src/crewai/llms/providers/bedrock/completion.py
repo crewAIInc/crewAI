@@ -1340,8 +1340,9 @@ class BedrockCompletion(BaseLLM):
                 converse_messages.append(
                     {"role": "assistant", "content": bedrock_content}
                 )
-            elif role == "tool" and tool_call_id:
-                # Convert OpenAI-style tool response to Bedrock toolResult format
+            elif role == "tool":
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
                 converse_messages.append(
                     {
                         "role": "user",

@@ -444,9 +444,9 @@ class AnthropicCompletion(BaseLLM):
                 else:
                     system_message = cast(str, content)
             elif role == "tool":
-                # Convert OpenAI-style tool message to Anthropic tool_result format
-                # These will be collected and added as a user message
                 tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
                 tool_result = {
                     "type": "tool_result",
                     "tool_use_id": tool_call_id,

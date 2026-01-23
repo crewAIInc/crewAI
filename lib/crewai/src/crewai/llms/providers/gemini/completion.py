@@ -531,6 +531,53 @@ class GeminiCompletion(BaseLLM):
                     system_instruction += f"\n\n{text_content}"
                 else:
                     system_instruction = text_content
+            elif role == "tool":
+                tool_call_id = message.get("tool_call_id")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+
+                tool_name = message.get("name", "")
+
+                response_data: dict[str, Any]
+                try:
+                    response_data = json.loads(text_content) if text_content else {}
+                except (json.JSONDecodeError, TypeError):
+                    response_data = {"result": text_content}
+
+                function_response_part = types.Part.from_function_response(
+                    name=tool_name, response=response_data
+                )
+                contents.append(
+                    types.Content(role="user", parts=[function_response_part])
+                )
+            elif role == "assistant" and message.get("tool_calls"):
+                parts: list[types.Part] = []
+
+                if text_content:
+                    parts.append(types.Part.from_text(text=text_content))
+
+                tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
+                for tool_call in tool_calls:
+                    func: dict[str, Any] = tool_call.get("function") or {}
+                    func_name: str = str(func.get("name") or "")
+                    func_args_raw: str | dict[str, Any] = func.get("arguments") or {}
+
+                    func_args: dict[str, Any]
+                    if isinstance(func_args_raw, str):
+                        try:
+                            func_args = (
+                                json.loads(func_args_raw) if func_args_raw else {}
+                            )
+                        except (json.JSONDecodeError, TypeError):
+                            func_args = {}
+                    else:
+                        func_args = func_args_raw
+
+                    parts.append(
+                        types.Part.from_function_call(name=func_name, args=func_args)
+                    )
+
+                contents.append(types.Content(role="model", parts=parts))
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
