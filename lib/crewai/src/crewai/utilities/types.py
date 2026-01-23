@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from typing_extensions import NotRequired, TypedDict
 
-
-if TYPE_CHECKING:
+try:
     from crewai_files import FileInput
+except ImportError:
+    FileInput = Any  # type: ignore[misc,assignment]
 
 
 class LLMMessage(TypedDict):
