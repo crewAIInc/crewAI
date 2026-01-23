@@ -9,13 +9,23 @@ from pathlib import Path
 import pytest
 
 from crewai.llm import LLM
-from crewai_files import File, ImageFile, PDFFile, TextFile, format_multimodal_content
+from crewai_files import (
+    AudioFile,
+    File,
+    ImageFile,
+    PDFFile,
+    TextFile,
+    VideoFile,
+    format_multimodal_content,
+)
 
 
 # Path to test data files
 TEST_FIXTURES_DIR = Path(__file__).parent.parent.parent.parent / "crewai-files" / "tests" / "fixtures"
 TEST_IMAGE_PATH = TEST_FIXTURES_DIR / "revenue_chart.png"
 TEST_TEXT_PATH = TEST_FIXTURES_DIR / "review_guidelines.txt"
+TEST_VIDEO_PATH = TEST_FIXTURES_DIR / "sample_video.mp4"
+TEST_AUDIO_PATH = TEST_FIXTURES_DIR / "sample_audio.wav"
 
 
 @pytest.fixture
@@ -28,6 +38,22 @@ def test_image_bytes() -> bytes:
 def test_text_bytes() -> bytes:
     """Load test text bytes."""
     return TEST_TEXT_PATH.read_bytes()
+
+
+@pytest.fixture
+def test_video_bytes() -> bytes:
+    """Load test video bytes."""
+    if not TEST_VIDEO_PATH.exists():
+        pytest.skip("sample_video.mp4 fixture not found")
+    return TEST_VIDEO_PATH.read_bytes()
+
+
+@pytest.fixture
+def test_audio_bytes() -> bytes:
+    """Load test audio bytes."""
+    if not TEST_AUDIO_PATH.exists():
+        pytest.skip("sample_audio.wav fixture not found")
+    return TEST_AUDIO_PATH.read_bytes()
 
 
 # Minimal PDF for testing (real PDF structure)
@@ -217,6 +243,42 @@ class TestGeminiMultimodalIntegration:
         messages = _build_multimodal_message(
             llm,
             "Summarize what this text file says in one sentence.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+    @pytest.mark.vcr()
+    def test_analyze_video_file(self, test_video_bytes: bytes) -> None:
+        """Test Gemini can analyze a video file."""
+        llm = LLM(model="gemini/gemini-2.0-flash")
+        files = {"video": VideoFile(source=test_video_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe what you see in this video in one sentence. Be brief.",
+            files,
+        )
+
+        response = llm.call(messages)
+
+        assert response
+        assert isinstance(response, str)
+        assert len(response) > 0
+
+    @pytest.mark.vcr()
+    def test_analyze_audio_file(self, test_audio_bytes: bytes) -> None:
+        """Test Gemini can analyze an audio file."""
+        llm = LLM(model="gemini/gemini-2.0-flash")
+        files = {"audio": AudioFile(source=test_audio_bytes)}
+
+        messages = _build_multimodal_message(
+            llm,
+            "Describe what you hear in this audio in one sentence. Be brief.",
             files,
         )
 
