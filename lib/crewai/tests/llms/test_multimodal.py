@@ -132,8 +132,8 @@ class TestLiteLLMMultimodal:
 
     def test_format_multimodal_content_unsupported_type(self) -> None:
         """Test unsupported content type is skipped."""
-        llm = LLM(model="gpt-4o", is_litellm=True)  # OpenAI doesn't support PDF
-        files = {"doc": PDFFile(source=MINIMAL_PDF)}
+        llm = LLM(model="gpt-4o", is_litellm=True)  # OpenAI doesn't support text files
+        files = {"doc": TextFile(source=b"hello world")}
 
         result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
@@ -432,17 +432,16 @@ class TestMultipleFilesFormatting:
 
     def test_format_mixed_supported_and_unsupported(self) -> None:
         """Test only supported types are formatted."""
-        llm = LLM(model="gpt-4o")  # OpenAI - images only
+        llm = LLM(model="gpt-4o")  # OpenAI - images and PDFs, not text
         files = {
             "chart": ImageFile(source=MINIMAL_PNG),
-            "doc": PDFFile(source=MINIMAL_PDF),  # Not supported
+            "doc": PDFFile(source=MINIMAL_PDF),  # Supported
             "text": TextFile(source=b"hello"),  # Not supported
         }
 
         result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
-        assert len(result) == 1
-        assert result[0]["type"] == "image_url"
+        assert len(result) == 2  # image + pdf, text filtered out
 
     def test_format_empty_files_dict(self) -> None:
         """Test empty files dict returns empty list."""
