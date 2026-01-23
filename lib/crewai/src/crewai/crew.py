@@ -8,6 +8,7 @@ from hashlib import md5
 import json
 import re
 from typing import (
+    TYPE_CHECKING,
     Any,
     cast,
 )
@@ -30,6 +31,10 @@ from pydantic_core import PydanticCustomError
 from rich.console import Console
 from rich.panel import Panel
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -679,7 +684,7 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Execute the crew's workflow.
 
@@ -751,7 +756,7 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff_for_each(
         self,
         inputs: list[dict[str, Any]],
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput]:
         """Executes the Crew's workflow for each input and aggregates results.
 
@@ -787,7 +792,7 @@ class Crew(FlowTrackable, BaseModel):
     async def kickoff_async(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
 
@@ -834,7 +839,7 @@ class Crew(FlowTrackable, BaseModel):
     async def kickoff_for_each_async(
         self,
         inputs: list[dict[str, Any]],
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Executes the Crew's workflow for each input asynchronously.
 
@@ -860,7 +865,7 @@ class Crew(FlowTrackable, BaseModel):
     async def akickoff(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
@@ -936,7 +941,7 @@ class Crew(FlowTrackable, BaseModel):
     async def akickoff_for_each(
         self,
         inputs: list[dict[str, Any]],
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Native async execution of the Crew's workflow for each input.
 

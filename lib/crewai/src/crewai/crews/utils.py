@@ -35,6 +35,8 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput
+
     from crewai.crew import Crew
 
 
@@ -225,7 +227,7 @@ def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
 def prepare_kickoff(
     crew: Crew,
     inputs: dict[str, Any] | None,
-    input_files: dict[str, Any] | None = None,
+    input_files: dict[str, FileInput] | None = None,
 ) -> dict[str, Any] | None:
     """Prepare crew for kickoff execution.
 

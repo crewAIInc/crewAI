@@ -83,6 +83,8 @@ from crewai.flow.utils import (
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput
+
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
@@ -1414,7 +1416,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -1475,7 +1477,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def kickoff_async(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -1720,7 +1722,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     async def akickoff(
         self,
         inputs: dict[str, Any] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 

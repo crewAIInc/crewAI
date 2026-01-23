@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 import threading
 from typing import (
+    TYPE_CHECKING,
     Any,
     ClassVar,
     cast,
@@ -29,6 +30,10 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
@@ -52,10 +57,7 @@ from crewai.utilities.file_store import (
 
 
 try:
-    from crewai_files import (
-        FilePath,
-        normalize_input_files,
-    )
+    from crewai_files import FilePath
 
     HAS_CREWAI_FILES = True
 except ImportError:
@@ -158,9 +160,9 @@ class Task(BaseModel):
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
     )
-    input_files: list[Any] = Field(
-        default_factory=list,
-        description="List of input files for this task. Accepts paths, bytes, or File objects.",
+    input_files: dict[str, FileInput] = Field(
+        default_factory=dict,
+        description="Named input files for this task. Keys are reference names, values are paths or File objects.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
@@ -379,7 +381,7 @@ class Task(BaseModel):
 
     @field_validator("input_files", mode="before")
     @classmethod
-    def _normalize_input_files(cls, v: list[Any]) -> list[Any]:
+    def _normalize_input_files(cls, v: dict[str, Any]) -> dict[str, Any]:
         """Convert string paths to FilePath objects."""
         if not v:
             return v
@@ -387,12 +389,12 @@ class Task(BaseModel):
         if not HAS_CREWAI_FILES:
             return v
 
-        result = []
-        for item in v:
-            if isinstance(item, str):
-                result.append(FilePath(path=Path(item)))
+        result = {}
+        for key, value in v.items():
+            if isinstance(value, str):
+                result[key] = FilePath(path=Path(value))
             else:
-                result.append(item)
+                result[key] = value
         return result
 
     @field_validator("output_file")
@@ -1038,16 +1040,11 @@ Follow these guidelines:
         return
 
     def _store_input_files(self) -> None:
-        """Store task input files in the file store.
-
-        Converts input_files list to a named dict and stores under task ID.
-        """
+        """Store task input files in the file store."""
         if not HAS_CREWAI_FILES or not self.input_files:
             return
 
-        files_dict = normalize_input_files(self.input_files)
-        if files_dict:
-            store_task_files(self.id, files_dict)
+        store_task_files(self.id, self.input_files)
 
     def __repr__(self) -> str:
         return f"Task(description={self.description}, expected_output={self.expected_output})"

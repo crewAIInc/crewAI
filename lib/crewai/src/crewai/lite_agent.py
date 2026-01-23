@@ -3,6 +3,7 @@ from collections.abc import Callable
 import inspect
 import json
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
     cast,
@@ -22,6 +23,10 @@ from pydantic import (
     model_validator,
 )
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -296,7 +301,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent with the given messages.
 
@@ -470,7 +475,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously with the given messages.
 
@@ -492,7 +497,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
         """Async version of kickoff. Alias for kickoff_async.
 
@@ -548,7 +553,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
-        input_files: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[LLMMessage]:
         """Format messages for the LLM.
 
