@@ -10,7 +10,7 @@ from crewai_files.core.types import FileInput
 from crewai_files.formatting.anthropic import AnthropicFormatter
 from crewai_files.formatting.bedrock import BedrockFormatter
 from crewai_files.formatting.gemini import GeminiFormatter
-from crewai_files.formatting.openai import OpenAIFormatter
+from crewai_files.formatting.openai import OpenAIFormatter, OpenAIResponsesFormatter
 from crewai_files.processing.constraints import get_constraints_for_provider
 from crewai_files.processing.processor import FileProcessor
 from crewai_files.resolution.resolver import FileResolver, FileResolverConfig
@@ -57,6 +57,7 @@ def _normalize_provider(provider: str | None) -> ProviderType:
 def format_multimodal_content(
     files: dict[str, FileInput],
     provider: str | None = None,
+    api: str | None = None,
 ) -> list[dict[str, Any]]:
     """Format files as provider-specific multimodal content blocks.
 
@@ -69,6 +70,7 @@ def format_multimodal_content(
     Args:
         files: Dictionary mapping file names to FileInput objects.
         provider: Provider name (e.g., "openai", "anthropic", "bedrock", "gemini").
+        api: API variant (e.g., "responses" for OpenAI Responses API).
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -77,6 +79,8 @@ def format_multimodal_content(
         >>> from crewai_files import format_multimodal_content, ImageFile
         >>> files = {"photo": ImageFile(source="image.jpg")}
         >>> blocks = format_multimodal_content(files, "openai")
+        >>> # For OpenAI Responses API:
+        >>> blocks = format_multimodal_content(files, "openai", api="responses")
     """
     if not files:
         return []
@@ -100,7 +104,7 @@ def format_multimodal_content(
     upload_cache = get_upload_cache()
     resolver = FileResolver(config=config, upload_cache=upload_cache)
 
-    formatter = _get_formatter(provider_type)
+    formatter = _get_formatter(provider_type, api)
     content_blocks: list[dict[str, Any]] = []
 
     for name, file_input in supported_files.items():
@@ -115,6 +119,7 @@ def format_multimodal_content(
 async def aformat_multimodal_content(
     files: dict[str, FileInput],
     provider: str | None = None,
+    api: str | None = None,
 ) -> list[dict[str, Any]]:
     """Async format files as provider-specific multimodal content blocks.
 
@@ -123,6 +128,7 @@ async def aformat_multimodal_content(
     Args:
         files: Dictionary mapping file names to FileInput objects.
         provider: Provider name (e.g., "openai", "anthropic", "bedrock", "gemini").
+        api: API variant (e.g., "responses" for OpenAI Responses API).
 
     Returns:
         List of content blocks in the provider's expected format.
@@ -151,7 +157,7 @@ async def aformat_multimodal_content(
 
     resolved_files = await resolver.aresolve_files(supported_files, provider_type)
 
-    formatter = _get_formatter(provider_type)
+    formatter = _get_formatter(provider_type, api)
     content_blocks: list[dict[str, Any]] = []
 
     for name, resolved in resolved_files.items():
@@ -235,11 +241,19 @@ def _get_resolver_config(provider_lower: str) -> FileResolverConfig:
 
 def _get_formatter(
     provider_lower: str,
-) -> OpenAIFormatter | AnthropicFormatter | BedrockFormatter | GeminiFormatter:
+    api: str | None = None,
+) -> (
+    OpenAIFormatter
+    | OpenAIResponsesFormatter
+    | AnthropicFormatter
+    | BedrockFormatter
+    | GeminiFormatter
+):
     """Get formatter for provider.
 
     Args:
         provider_lower: Lowercase provider name.
+        api: API variant (e.g., "responses" for OpenAI Responses API).
 
     Returns:
         Provider-specific formatter instance.
@@ -254,11 +268,15 @@ def _get_formatter(
     if "gemini" in provider_lower or "google" in provider_lower:
         return GeminiFormatter()
 
+    if api == "responses":
+        return OpenAIResponsesFormatter()
+
     return OpenAIFormatter()
 
 
 def _format_block(
     formatter: OpenAIFormatter
+    | OpenAIResponsesFormatter
     | AnthropicFormatter
     | BedrockFormatter
     | GeminiFormatter,
@@ -281,6 +299,8 @@ def _format_block(
         return formatter.format_block(file_input, resolved, name=name)
     if isinstance(formatter, AnthropicFormatter):
         return formatter.format_block(file_input, resolved)
+    if isinstance(formatter, OpenAIResponsesFormatter):
+        return formatter.format_block(resolved, file_input.content_type)
     if isinstance(formatter, (OpenAIFormatter, GeminiFormatter)):
         return formatter.format_block(resolved)
     raise TypeError(f"Unknown formatter type: {type(formatter).__name__}")
