@@ -1360,11 +1360,15 @@ class BedrockCompletion(BaseLLM):
                 )
             else:
                 # Convert to Converse API format with proper content structure
-                # Ensure content is not None
-                text_content = content if content else ""
-                converse_messages.append(
-                    {"role": role, "content": [{"text": text_content}]}
-                )
+                if isinstance(content, list):
+                    # Already formatted as multimodal content blocks
+                    converse_messages.append({"role": role, "content": content})
+                else:
+                    # String content - wrap in text block
+                    text_content = content if content else ""
+                    converse_messages.append(
+                        {"role": role, "content": [{"text": text_content}]}
+                    )
 
         # CRITICAL: Handle model-specific conversation requirements
         # Cohere and some other models require conversation to end with user message
@@ -1703,3 +1707,16 @@ class BedrockCompletion(BaseLLM):
             "video/3gpp": "three_gp",
         }
         return format_map.get(content_type)
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Bedrock content block.
+
+        Bedrock uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Bedrock's expected format.
+        """
+        return {"text": text}
