@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, get_type_hints
 from pydantic import BaseModel, Field, create_model
 
 from crewai.utilities.logger import Logger
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -229,7 +230,7 @@ class CrewStructuredTool:
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
 
         self._increment_usage_count()
@@ -261,7 +262,7 @@ class CrewStructuredTool:
 
         if self.has_reached_max_usage_count():
             raise ToolUsageLimitExceededError(
-                f"Tool '{self.name}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {self.name} tool again."
+                f"Tool '{sanitize_tool_name(self.name)}' has reached its maximum usage limit of {self.max_usage_count}. You should not use the {sanitize_tool_name(self.name)} tool again."
             )
 
         self._increment_usage_count()
