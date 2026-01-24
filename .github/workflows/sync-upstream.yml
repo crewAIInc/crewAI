@@ -1,0 +1,53 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    # Run daily at 00:00 UTC
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      sync_branch:
+        description: 'Branch to sync (default: main)'
+        required: false
+        default: 'main'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/crewAIInc/crewAI.git
+          git fetch upstream
+
+      - name: Sync branch with upstream
+        run: |
+          BRANCH="${{ github.event.inputs.sync_branch || 'main' }}"
+          echo "Syncing branch: $BRANCH"
+
+          git checkout "$BRANCH"
+          git merge upstream/"$BRANCH" --no-edit
+          git push origin "$BRANCH"
+
+      - name: Report sync status
+        if: always()
+        run: |
+          echo "Sync completed for branch: ${{ github.event.inputs.sync_branch || 'main' }}"
+          echo "Upstream: crewAIInc/crewAI"
+          echo "Latest upstream commit:"
+          git log upstream/main -1 --oneline
