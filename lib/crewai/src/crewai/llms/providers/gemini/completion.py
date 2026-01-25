@@ -555,7 +555,11 @@ class GeminiCompletion(BaseLLM):
 
                 response_data: dict[str, Any]
                 try:
-                    response_data = json.loads(text_content) if text_content else {}
+                    parsed = json.loads(text_content) if text_content else {}
+                    if isinstance(parsed, dict):
+                        response_data = parsed
+                    else:
+                        response_data = {"result": parsed}
                 except (json.JSONDecodeError, TypeError):
                     response_data = {"result": text_content}
 
