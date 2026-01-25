@@ -193,3 +193,40 @@ def test_dimension_mismatch_error_handling(mock_get_client: MagicMock) -> None:
 
     with pytest.raises(ValueError, match="Embedding dimension mismatch"):
         storage.save(["test document"])
+
+
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+def test_save_empty_documents_list(mock_get_client: MagicMock) -> None:
+    """Test that save() handles empty documents list gracefully.
+
+    Calling save() with an empty documents list should be a no-op and not
+    propagate low-level storage exceptions from ChromaDB.
+    """
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    storage = KnowledgeStorage(collection_name="empty_docs_test")
+
+    storage.save([])
+
+    mock_client.get_or_create_collection.assert_not_called()
+    mock_client.add_documents.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")
+async def test_asave_empty_documents_list(mock_get_client: MagicMock) -> None:
+    """Test that asave() handles empty documents list gracefully.
+
+    Calling asave() with an empty documents list should be a no-op and not
+    propagate low-level storage exceptions from ChromaDB.
+    """
+    mock_client = MagicMock()
+    mock_get_client.return_value = mock_client
+
+    storage = KnowledgeStorage(collection_name="empty_docs_async_test")
+
+    await storage.asave([])
+
+    mock_client.aget_or_create_collection.assert_not_called()
+    mock_client.aadd_documents.assert_not_called()
