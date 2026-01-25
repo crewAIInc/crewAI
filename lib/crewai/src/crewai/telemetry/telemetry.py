@@ -52,6 +52,7 @@ from crewai.telemetry.utils import (
     close_span,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 logger = logging.getLogger(__name__)
@@ -323,7 +324,8 @@ class Telemetry:
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                                 # Add agent fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -372,7 +374,8 @@ class Telemetry:
                                     else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                                 # Add task fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -425,7 +428,8 @@ class Telemetry:
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -447,7 +451,8 @@ class Telemetry:
                                 ),
                                 "agent_key": task.agent.key if task.agent else None,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -832,7 +837,8 @@ class Telemetry:
                             "llm": agent.llm.model,
                             "delegation_enabled?": agent.allow_delegation,
                             "tools_names": [
-                                tool.name.casefold() for tool in agent.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in agent.tools or []
                             ],
                         }
                         for agent in crew.agents
@@ -858,7 +864,8 @@ class Telemetry:
                                 else None
                             ),
                             "tools_names": [
-                                tool.name.casefold() for tool in task.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in task.tools or []
                             ],
                         }
                         for task in crew.tasks
@@ -966,6 +973,38 @@ class Telemetry:
             span = tracer.start_span("Flow Execution")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def human_feedback_span(
+        self,
+        event_type: str,
+        has_routing: bool,
+        num_outcomes: int = 0,
+        feedback_provided: bool | None = None,
+        outcome: str | None = None,
+    ) -> None:
+        """Records human feedback feature usage.
+
+        Args:
+            event_type: Type of event - "requested" or "received".
+            has_routing: Whether emit options were configured for routing.
+            num_outcomes: Number of possible outcomes if routing is used.
+            feedback_provided: Whether user provided feedback or skipped (None if requested).
+            outcome: The collapsed outcome string if routing was used.
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Human Feedback")
+            self._add_attribute(span, "event_type", event_type)
+            self._add_attribute(span, "has_routing", has_routing)
+            self._add_attribute(span, "num_outcomes", num_outcomes)
+            if feedback_provided is not None:
+                self._add_attribute(span, "feedback_provided", feedback_provided)
+            if outcome is not None:
+                self._add_attribute(span, "outcome", outcome)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)

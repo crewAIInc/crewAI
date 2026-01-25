@@ -10,17 +10,21 @@ mode: "wide"
 Use the Gmail Trigger to kick off your deployed crews when Gmail events happen in connected accounts, such as receiving a new email or messages matching a label/filter.
 
 <Tip>
-  Make sure Gmail is connected in Tools & Integrations and the trigger is enabled for your deployment.
+  Make sure Gmail is connected in Tools & Integrations and the trigger is
+  enabled for your deployment.
 </Tip>
 
 ## Enabling the Gmail Trigger
 
-1. Open your deployment in CrewAI AOP
+1. Open your deployment in CrewAI AMP
 2. Go to the **Triggers** tab
 3. Locate **Gmail** and switch the toggle to enable
 
 <Frame>
-  <img src="/images/enterprise/trigger-selected.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/trigger-selected.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Process new emails
@@ -62,13 +66,14 @@ CrewAI CLI를 사용하여 Gmail 트리거 통합을 로컬에서 테스트하�
 crewai triggers list
 
 # 실제 payload로 Gmail 트리거 시뮬레이션
-crewai triggers run gmail/new_email
+crewai triggers run gmail/new_email_received
 ```
 
 `crewai triggers run` 명령은 완전한 Gmail payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
 
 <Warning>
-  개발 중에는 `crewai triggers run gmail/new_email`을 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+  개발 중에는 `crewai triggers run gmail/new_email_received`을 사용하세요
+  (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
 </Warning>
 
 ## Monitoring Executions
@@ -76,13 +81,16 @@ crewai triggers run gmail/new_email
 Track history and performance of triggered runs:
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Troubleshooting
 
 - Ensure Gmail is connected in Tools & Integrations
 - Verify the Gmail Trigger is enabled on the Triggers tab
-- `crewai triggers run gmail/new_email`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
+- `crewai triggers run gmail/new_email_received`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
 - Check the execution logs and confirm the payload is passed as `crewai_trigger_payload`
 - 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

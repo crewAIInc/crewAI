@@ -443,7 +443,7 @@ class AzureCompletion(BaseLLM):
             params["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
-        if self.stop:
+        if self.stop and self.supports_stop_words():
             params["stop"] = self.stop
 
         # Handle tools/functions for Azure OpenAI models
@@ -514,10 +514,32 @@ class AzureCompletion(BaseLLM):
 
         for message in base_formatted:
             role = message.get("role", "user")  # Default to user if no role
-            content = message.get("content", "")
+            # Handle None content - Azure requires string content
+            content = message.get("content") or ""
 
-            # Azure AI Inference requires both 'role' and 'content'
-            azure_messages.append({"role": role, "content": content})
+            if role == "tool":
+                tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+                azure_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": content,
+                    }
+                )
+            # Handle assistant messages with tool_calls
+            elif role == "assistant" and message.get("tool_calls"):
+                tool_calls = message.get("tool_calls", [])
+                azure_msg: LLMMessage = {
+                    "role": "assistant",
+                    "content": content,  # Already defaulted to "" above
+                    "tool_calls": tool_calls,
+                }
+                azure_messages.append(azure_msg)
+            else:
+                # Azure AI Inference requires both 'role' and 'content'
+                azure_messages.append({"role": role, "content": content})
 
         return azure_messages
 
@@ -604,6 +626,18 @@ class AzureCompletion(BaseLLM):
                 from_agent=from_agent,
             )
 
+        # If there are tool_calls but no available_functions, return the tool_calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if message.tool_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=list(message.tool_calls),
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return list(message.tool_calls)
+
         # Handle tool calls
         if message.tool_calls and available_functions:
             tool_call = message.tool_calls[0]  # Handle first tool call
@@ -674,7 +708,7 @@ class AzureCompletion(BaseLLM):
         self,
         update: StreamingChatCompletionsUpdate,
         full_response: str,
-        tool_calls: dict[str, dict[str, str]],
+        tool_calls: dict[int, dict[str, Any]],
         from_task: Any | None = None,
         from_agent: Any | None = None,
     ) -> str:
@@ -702,25 +736,45 @@ class AzureCompletion(BaseLLM):
                 )
 
             if choice.delta and choice.delta.tool_calls:
-                for tool_call in choice.delta.tool_calls:
-                    call_id = tool_call.id or "default"
-                    if call_id not in tool_calls:
-                        tool_calls[call_id] = {
+                for idx, tool_call in enumerate(choice.delta.tool_calls):
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {
+                            "id": tool_call.id,
                             "name": "",
                             "arguments": "",
                         }
+                    elif tool_call.id and not tool_calls[idx]["id"]:
+                        tool_calls[idx]["id"] = tool_call.id
 
                     if tool_call.function and tool_call.function.name:
-                        tool_calls[call_id]["name"] = tool_call.function.name
+                        tool_calls[idx]["name"] = tool_call.function.name
                     if tool_call.function and tool_call.function.arguments:
-                        tool_calls[call_id]["arguments"] += tool_call.function.arguments
+                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": tool_calls[idx]["id"],
+                            "function": {
+                                "name": tool_calls[idx]["name"],
+                                "arguments": tool_calls[idx]["arguments"],
+                            },
+                            "type": "function",
+                            "index": idx,
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                    )
 
         return full_response
 
     def _finalize_streaming_response(
         self,
         full_response: str,
-        tool_calls: dict[str, dict[str, str]],
+        tool_calls: dict[int, dict[str, Any]],
         usage_data: dict[str, int],
         params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
@@ -754,6 +808,29 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+
+        # If there are tool_calls but no available_functions, return them
+        # in OpenAI-compatible format for executor to handle
+        if tool_calls and not available_functions:
+            formatted_tool_calls = [
+                {
+                    "id": call_data.get("id", f"call_{idx}"),
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for idx, call_data in tool_calls.items()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
 
         # Handle completed tool calls
         if tool_calls and available_functions:
@@ -804,7 +881,7 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle streaming chat completion."""
         full_response = ""
-        tool_calls: dict[str, dict[str, Any]] = {}
+        tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data = {"total_tokens": 0}
         for update in self.client.complete(**params):  # type: ignore[arg-type]
@@ -870,7 +947,7 @@ class AzureCompletion(BaseLLM):
     ) -> str | Any:
         """Handle streaming chat completion asynchronously."""
         full_response = ""
-        tool_calls: dict[str, dict[str, Any]] = {}
+        tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data = {"total_tokens": 0}
 
@@ -911,8 +988,28 @@ class AzureCompletion(BaseLLM):
         return self.is_openai_model
 
     def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True  # Most Azure models support stop sequences
+        """Check if the model supports stop words.
+
+        Models using the Responses API (GPT-5 family, o-series reasoning models,
+        computer-use-preview) do not support stop sequences.
+        See: https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure
+        """
+        model_lower = self.model.lower() if self.model else ""
+
+        if "gpt-5" in model_lower:
+            return False
+
+        o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]
+
+        responses_api_models = ["computer-use-preview"]
+
+        unsupported_stop_models = o_series_models + responses_api_models
+
+        for unsupported in unsupported_stop_models:
+            if unsupported in model_lower:
+                return False
+
+        return True
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
@@ -976,3 +1073,14 @@ class AzureCompletion(BaseLLM):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.aclose()
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
+        return any(self.model.lower().startswith(m) for m in vision_models)

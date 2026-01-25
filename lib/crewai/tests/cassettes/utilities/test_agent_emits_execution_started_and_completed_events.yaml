@@ -47,17 +47,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AzTXAk4GatJOmLO9sEOCCITIjf1Dx\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739214900,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AzTXAk4GatJOmLO9sEOCCITIjf1Dx\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739214900,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: hi\",\n        \"refusal\": null\n      },\n  \
+        \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 12,\n\
+        \    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-RAY:
       - 90fe6ce92eba67b3-SJC
@@ -107,8 +110,9 @@ interactions:
       - 0s
       x-request-id:
       - req_a95183a7a85e6bdfe381b2510bf70f34
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
       completed based on the description, expected output, and actual results.\n\nTask
@@ -174,23 +178,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AzTXDcgKWq3yosIyBal8LcY8dDrn1\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739214903,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_c41SAnqyEKNXEAZd5XV3jKF3\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
-      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Consider specifying
-      the tone or context of the greeting for more engaging interactions.\\\",\\\"Clarify
-      if additional greetings or responses are acceptable to enhance the task's scope.\\\"],\\\"quality\\\":10,\\\"entities\\\":[]
-      }\"\n            }\n          }\n        ],\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 43,\n
-      \   \"total_tokens\": 316,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AzTXDcgKWq3yosIyBal8LcY8dDrn1\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739214903,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+        : [\n          {\n            \"id\": \"call_c41SAnqyEKNXEAZd5XV3jKF3\",\n\
+        \            \"type\": \"function\",\n            \"function\": {\n      \
+        \        \"name\": \"TaskEvaluation\",\n              \"arguments\": \"{\\\
+        \"suggestions\\\":[\\\"Consider specifying the tone or context of the greeting\
+        \ for more engaging interactions.\\\",\\\"Clarify if additional greetings\
+        \ or responses are acceptable to enhance the task's scope.\\\"],\\\"quality\\\
+        \":10,\\\"entities\\\":[] }\"\n            }\n          }\n        ],\n  \
+        \      \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 273,\n   \
+        \ \"completion_tokens\": 43,\n    \"total_tokens\": 316,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -234,6 +241,7 @@ interactions:
       - 0s
       x-request-id:
       - req_b2286c8ae6f9b2a42f46a3e2c52b4211
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

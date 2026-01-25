@@ -50,6 +50,15 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
+
+
+try:
+    from crewai_files import aformat_multimodal_content, format_multimodal_content
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
 
 
 if TYPE_CHECKING:
@@ -587,6 +596,7 @@ class LLM(BaseLLM):
         stream: bool = False,
         interceptor: BaseInterceptor[httpx.Request, httpx.Response] | None = None,
         thinking: AnthropicThinkingConfig | dict[str, Any] | None = None,
+        prefer_upload: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize LLM instance.
@@ -623,6 +633,7 @@ class LLM(BaseLLM):
         self.callbacks = callbacks
         self.context_window_size = 0
         self.reasoning_effort = reasoning_effort
+        self.prefer_upload = prefer_upload
         self.additional_params = {
             k: v for k, v in kwargs.items() if k not in ("is_litellm", "provider")
         }
@@ -660,12 +671,14 @@ class LLM(BaseLLM):
         self,
         messages: str | list[LLMMessage],
         tools: list[dict[str, BaseTool]] | None = None,
+        skip_file_processing: bool = False,
     ) -> dict[str, Any]:
         """Prepare parameters for the completion call.
 
         Args:
             messages: Input messages for the LLM
             tools: Optional list of tool schemas
+            skip_file_processing: Skip file processing (used when already done async)
 
         Returns:
             Dict[str, Any]: Parameters for the completion call
@@ -673,6 +686,9 @@ class LLM(BaseLLM):
         # --- 1) Format messages according to provider requirements
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
+        # --- 1a) Process any file attachments into multimodal content
+        if not skip_file_processing:
+            messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
 
         # --- 2) Prepare the parameters for the completion call
@@ -683,7 +699,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop,
+            "stop": self.stop or None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -925,12 +941,12 @@ class LLM(BaseLLM):
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
 
-            if not tool_calls or not available_functions:
-                # Track token usage and log callbacks if available in streaming mode
-                if usage_info:
-                    self._track_token_usage_internal(usage_info)
-                self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
+            # Track token usage and log callbacks if available in streaming mode
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
 
+            if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
                         content=full_response,
@@ -962,12 +978,7 @@ class LLM(BaseLLM):
             if tool_result is not None:
                 return tool_result
 
-            # --- 10) Track token usage and log callbacks if available in streaming mode
-            if usage_info:
-                self._track_token_usage_internal(usage_info)
-            self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
-
-            # --- 11) Emit completion event and return response
+            # --- 10) Emit completion event and return response
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1149,6 +1160,14 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = litellm.completion(**params)
 
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
+                usage_info = response.usage
+                self._track_token_usage_internal(usage_info)
+
         except ContextWindowExceededError as e:
             # Convert litellm's context window error to our own exception type
             # for consistent handling in the rest of the codebase
@@ -1199,16 +1218,19 @@ class LLM(BaseLLM):
             )
             return text_response
 
-        # --- 6) If there is no text response, no available functions, but there are tool calls, return the tool calls
-        if tool_calls and not available_functions and not text_response:
+        # --- 6) If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
             return tool_calls
 
-        # --- 7) Handle tool calls if present
-        tool_result = self._handle_tool_call(
-            tool_calls, available_functions, from_task, from_agent
-        )
-        if tool_result is not None:
-            return tool_result
+        # --- 7) Handle tool calls if present (execute when available_functions provided)
+        if tool_calls and available_functions:
+            tool_result = self._handle_tool_call(
+                tool_calls, available_functions, from_task, from_agent
+            )
+            if tool_result is not None:
+                return tool_result
+
         # --- 8) If tool call handling didn't return a result, emit completion event and return text response
         self._handle_emit_call_events(
             response=text_response,
@@ -1273,6 +1295,14 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
+            if (
+                hasattr(response, "usage")
+                and not isinstance(response.usage, type)
+                and response.usage
+            ):
+                usage_info = response.usage
+                self._track_token_usage_internal(usage_info)
+
         except ContextWindowExceededError as e:
             raise LLMContextLengthExceededError(str(e)) from e
 
@@ -1317,14 +1347,18 @@ class LLM(BaseLLM):
             )
             return text_response
 
-        if tool_calls and not available_functions and not text_response:
+        # If there are tool calls but no available functions, return the tool calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
             return tool_calls
 
-        tool_result = self._handle_tool_call(
-            tool_calls, available_functions, from_task, from_agent
-        )
-        if tool_result is not None:
-            return tool_result
+        # Handle tool calls if present (execute when available_functions provided)
+        if tool_calls and available_functions:
+            tool_result = self._handle_tool_call(
+                tool_calls, available_functions, from_task, from_agent
+            )
+            if tool_result is not None:
+                return tool_result
 
         self._handle_emit_call_events(
             response=text_response,
@@ -1359,6 +1393,7 @@ class LLM(BaseLLM):
         """
         full_response = ""
         chunk_count = 0
+
         usage_info = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
@@ -1444,6 +1479,9 @@ class LLM(BaseLLM):
                             end_time=0,
                         )
 
+            if usage_info:
+                self._track_token_usage_internal(usage_info)
+
             if accumulated_tool_args and available_functions:
                 # Convert accumulated tool args to ChatCompletionDeltaToolCall objects
                 tool_calls_list: list[ChatCompletionDeltaToolCall] = [
@@ -1518,7 +1556,7 @@ class LLM(BaseLLM):
 
         # --- 2) Extract function name from first tool call
         tool_call = tool_calls[0]
-        function_name = tool_call.function.name
+        function_name = sanitize_tool_name(tool_call.function.name)
         function_args = {}  # Initialize to empty dict to avoid unbound variable
 
         # --- 3) Check if function is available
@@ -1776,6 +1814,9 @@ class LLM(BaseLLM):
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
+        # Process file attachments asynchronously before preparing params
+        messages = await self._aprocess_message_files(messages)
+
         if "o1" in self.model.lower():
             for message in messages:
                 if message.get("role") == "system":
@@ -1786,7 +1827,9 @@ class LLM(BaseLLM):
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
             try:
-                params = self._prepare_completion_params(messages, tools)
+                params = self._prepare_completion_params(
+                    messages, tools, skip_file_processing=True
+                )
 
                 if self.stream:
                     return await self._ahandle_streaming_response(
@@ -1872,6 +1915,88 @@ class LLM(BaseLLM):
                 model=self.model,
             ),
         )
+
+    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+        """Process files attached to messages and format for provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or self.model
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            content_blocks = format_multimodal_content(files, provider)
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            existing_content = msg.get("content", "")
+            if isinstance(existing_content, str):
+                msg["content"] = [
+                    self.format_text_content(existing_content),
+                    *content_blocks,
+                ]
+            elif isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+
+            msg.pop("files", None)
+
+        return messages
+
+    async def _aprocess_message_files(
+        self, messages: list[LLMMessage]
+    ) -> list[LLMMessage]:
+        """Async process files attached to messages and format for provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or self.model
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            content_blocks = await aformat_multimodal_content(files, provider)
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            existing_content = msg.get("content", "")
+            if isinstance(existing_content, str):
+                msg["content"] = [
+                    self.format_text_content(existing_content),
+                    *content_blocks,
+                ]
+            elif isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+
+            msg.pop("files", None)
+
+        return messages
 
     def _format_messages_for_provider(
         self, messages: list[LLMMessage]
@@ -2100,6 +2225,7 @@ class LLM(BaseLLM):
                 "reasoning_effort",
                 "stream",
                 "stop",
+                "prefer_upload",
             ]
         }
 
@@ -2127,6 +2253,7 @@ class LLM(BaseLLM):
             reasoning_effort=self.reasoning_effort,
             stream=self.stream,
             stop=self.stop,
+            prefer_upload=self.prefer_upload,
             **filtered_params,
         )
 
@@ -2162,6 +2289,7 @@ class LLM(BaseLLM):
                 "reasoning_effort",
                 "stream",
                 "stop",
+                "prefer_upload",
             ]
         }
 
@@ -2195,5 +2323,28 @@ class LLM(BaseLLM):
             reasoning_effort=self.reasoning_effort,
             stream=self.stream,
             stop=copy.deepcopy(self.stop, memo) if self.stop else None,
+            prefer_upload=self.prefer_upload,
             **filtered_params,
+        )
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        For litellm, check common vision-enabled model prefixes.
+
+        Returns:
+            True if the model likely supports images.
+        """
+        vision_prefixes = (
+            "gpt-4o",
+            "gpt-4-turbo",
+            "gpt-4-vision",
+            "gpt-4.1",
+            "claude-3",
+            "claude-4",
+            "gemini",
+        )
+        model_lower = self.model.lower()
+        return any(
+            model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
         )

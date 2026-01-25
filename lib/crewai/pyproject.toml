@@ -25,7 +25,7 @@ dependencies = [
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv~=1.1.1",
-    "pyjwt~=2.9.0",
+    "pyjwt>=2.9.0,<3",
     # Configuration and Utils
     "click~=8.1.7",
     "appdirs~=1.4.4",
@@ -36,7 +36,7 @@ dependencies = [
     "json5~=0.10.0",
     "portalocker~=2.7.0",
     "pydantic-settings~=2.10.1",
-    "mcp~=1.16.0",
+    "mcp~=1.23.1",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
 ]
@@ -49,7 +49,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.7.2",
+    "crewai-tools==1.8.1",
 ]
 embeddings = [
     "tiktoken~=0.8.0"
@@ -98,6 +98,9 @@ a2a = [
      "httpx-sse~=0.4.0",
      "aiocache[redis,memcached]~=0.12.3",
 ]
+file-processing = [
+    "crewai-files",
+]
 
 
 [project.scripts]
@@ -124,6 +127,7 @@ torchvision = [
   { index = "pytorch-nightly", marker = "python_version >= '3.13'" },
   { index = "pytorch", marker = "python_version < '3.13'" },
 ]
+crewai-files = { workspace = true }
 
 
 [build-system]
