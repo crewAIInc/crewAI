@@ -56,6 +56,7 @@ class GeminiCompletion(BaseLLM):
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         use_vertexai: bool | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -86,6 +87,8 @@ class GeminiCompletion(BaseLLM):
                          - None (default): Check GOOGLE_GENAI_USE_VERTEXAI env var
                          When using Vertex AI with API key (Express mode), http_options with
                          api_version="v1" is automatically configured.
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -121,6 +124,7 @@ class GeminiCompletion(BaseLLM):
         self.safety_settings = safety_settings or {}
         self.stop_sequences = stop_sequences or []
         self.tools: list[dict[str, Any]] | None = None
+        self.response_format = response_format
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
@@ -292,6 +296,7 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
             )
             self.tools = tools
+            effective_response_model = response_model or self.response_format
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
                 messages
@@ -303,7 +308,7 @@ class GeminiCompletion(BaseLLM):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
             config = self._prepare_generation_config(
-                system_instruction, tools, response_model
+                system_instruction, tools, effective_response_model
             )
 
             if self.stream:
@@ -313,7 +318,7 @@ class GeminiCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return self._handle_completion(
@@ -322,7 +327,7 @@ class GeminiCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except APIError as e:
@@ -374,13 +379,14 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
             )
             self.tools = tools
+            effective_response_model = response_model or self.response_format
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
                 messages
             )
 
             config = self._prepare_generation_config(
-                system_instruction, tools, response_model
+                system_instruction, tools, effective_response_model
             )
 
             if self.stream:
@@ -390,7 +396,7 @@ class GeminiCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return await self._ahandle_completion(
@@ -399,7 +405,7 @@ class GeminiCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except APIError as e:
@@ -570,10 +576,10 @@ class GeminiCompletion(BaseLLM):
                     types.Content(role="user", parts=[function_response_part])
                 )
             elif role == "assistant" and message.get("tool_calls"):
-                parts: list[types.Part] = []
+                tool_parts: list[types.Part] = []
 
                 if text_content:
-                    parts.append(types.Part.from_text(text=text_content))
+                    tool_parts.append(types.Part.from_text(text=text_content))
 
                 tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
                 for tool_call in tool_calls:
@@ -592,11 +598,11 @@ class GeminiCompletion(BaseLLM):
                     else:
                         func_args = func_args_raw
 
-                    parts.append(
+                    tool_parts.append(
                         types.Part.from_function_call(name=func_name, args=func_args)
                     )
 
-                contents.append(types.Content(role="model", parts=parts))
+                contents.append(types.Content(role="model", parts=tool_parts))
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
@@ -790,7 +796,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Tuple of (updated full_response, updated function_calls, updated usage_data)
         """
-        response_id=chunk.response_id if hasattr(chunk,"response_id") else None
+        response_id = chunk.response_id if hasattr(chunk, "response_id") else None
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
@@ -800,7 +806,7 @@ class GeminiCompletion(BaseLLM):
                 chunk=chunk.text,
                 from_task=from_task,
                 from_agent=from_agent,
-                response_id=response_id
+                response_id=response_id,
             )
 
         if chunk.candidates:
@@ -837,7 +843,7 @@ class GeminiCompletion(BaseLLM):
                                 "index": call_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
-                            response_id=response_id
+                            response_id=response_id,
                         )
 
         return full_response, function_calls, usage_data
@@ -972,7 +978,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -1050,7 +1056,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
