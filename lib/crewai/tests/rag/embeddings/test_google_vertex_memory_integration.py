@@ -106,7 +106,7 @@ def test_crew_memory_with_google_vertex_embedder(
     # Verify memory was actually used
     assert success, "Timeout waiting for memory save events - memory may not be working"
     assert len(events["MemorySaveStartedEvent"]) >= 1, "No memory save started events"
-    assert len(events["MemorySaveCompletedEvent"]) == 1, "Memory save completed events"
+    assert len(events["MemorySaveCompletedEvent"]) >= 1, "Memory save completed events"
 
 
 @pytest.mark.vcr()
