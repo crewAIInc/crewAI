@@ -9,7 +9,7 @@ from anthropic.types import ThinkingBlock
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -207,33 +207,44 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            # Emit call started event
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                # Emit call started event
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            # Format messages for Anthropic
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                # Format messages for Anthropic
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            # Prepare completion parameters
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                # Prepare completion parameters
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools
+                )
 
-            # Handle streaming vs non-streaming
-            if self.stream:
-                return self._handle_streaming_completion(
+                # Handle streaming vs non-streaming
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        response_model,
+                    )
+
+                return self._handle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -241,21 +252,13 @@ class AnthropicCompletion(BaseLLM):
                     response_model,
                 )
 
-            return self._handle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def acall(
         self,
@@ -280,26 +283,35 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools
+                )
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        response_model,
+                    )
+
+                return await self._ahandle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -307,21 +319,13 @@ class AnthropicCompletion(BaseLLM):
                     response_model,
                 )
 
-            return await self._ahandle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _prepare_completion_params(
         self,
@@ -704,7 +708,7 @@ class AnthropicCompletion(BaseLLM):
             for event in stream:
                 if hasattr(event, "message") and hasattr(event.message, "id"):
                     response_id = event.message.id
-                
+
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -712,7 +716,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
-                        response_id=response_id
+                        response_id=response_id,
                     )
 
                 if event.type == "content_block_start":
@@ -739,7 +743,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
-                            response_id=response_id
+                            response_id=response_id,
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -763,7 +767,7 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
-                                response_id=response_id
+                                response_id=response_id,
                             )
 
             final_message: Message = stream.get_final_message()
@@ -1133,7 +1137,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
-                        response_id=response_id
+                        response_id=response_id,
                     )
 
                 if event.type == "content_block_start":
@@ -1160,7 +1164,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
-                            response_id=response_id
+                            response_id=response_id,
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -1184,7 +1188,7 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
-                                response_id=response_id
+                                response_id=response_id,
                             )
 
             final_message: Message = await stream.get_final_message()

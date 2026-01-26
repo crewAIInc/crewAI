@@ -10,6 +10,7 @@ class LLMEventBase(BaseEvent):
     from_task: Any | None = None
     from_agent: Any | None = None
     model: str | None = None
+    call_id: str
 
     def __init__(self, **data: Any) -> None:
         if data.get("from_task"):

@@ -37,7 +37,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, get_current_call_id, llm_call_context
 from crewai.llms.constants import (
     ANTHROPIC_MODELS,
     AZURE_MODELS,
@@ -770,7 +770,7 @@ class LLM(BaseLLM):
                 chunk_content = None
                 response_id = None
 
-                if hasattr(chunk,'id'):
+                if hasattr(chunk, "id"):
                     response_id = chunk.id
 
                 # Safely extract content from various chunk formats
@@ -827,7 +827,7 @@ class LLM(BaseLLM):
                                         available_functions=available_functions,
                                         from_task=from_task,
                                         from_agent=from_agent,
-                                        response_id=response_id
+                                        response_id=response_id,
                                     )
 
                                     if result is not None:
@@ -849,7 +849,8 @@ class LLM(BaseLLM):
                             from_task=from_task,
                             from_agent=from_agent,
                             call_type=LLMCallType.LLM_CALL,
-                            response_id=response_id
+                            response_id=response_id,
+                            call_id=get_current_call_id(),
                         ),
                     )
             # --- 4) Fallback to non-streaming if no content received
@@ -1015,7 +1016,10 @@ class LLM(BaseLLM):
             crewai_event_bus.emit(
                 self,
                 event=LLMCallFailedEvent(
-                    error=str(e), from_task=from_task, from_agent=from_agent
+                    error=str(e),
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    call_id=get_current_call_id(),
                 ),
             )
             raise Exception(f"Failed to get streaming response: {e!s}") from e
@@ -1048,7 +1052,8 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     call_type=LLMCallType.TOOL_CALL,
-                    response_id=response_id
+                    response_id=response_id,
+                    call_id=get_current_call_id(),
                 ),
             )
 
@@ -1476,7 +1481,8 @@ class LLM(BaseLLM):
                             chunk=chunk_content,
                             from_task=from_task,
                             from_agent=from_agent,
-                            response_id=response_id
+                            response_id=response_id,
+                            call_id=get_current_call_id(),
                         ),
                     )
 
@@ -1619,7 +1625,12 @@ class LLM(BaseLLM):
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
-                    event=LLMCallFailedEvent(error=f"Tool execution error: {e!s}"),
+                    event=LLMCallFailedEvent(
+                        error=f"Tool execution error: {e!s}",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        call_id=get_current_call_id(),
+                    ),
                 )
                 crewai_event_bus.emit(
                     self,
@@ -1669,108 +1680,117 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        crewai_event_bus.emit(
-            self,
-            event=LLMCallStartedEvent(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                model=self.model,
-            ),
-        )
+        with llm_call_context() as call_id:
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallStartedEvent(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    model=self.model,
+                    call_id=call_id,
+                ),
+            )
 
-        # --- 2) Validate parameters before proceeding with the call
-        self._validate_call_params()
+            # --- 2) Validate parameters before proceeding with the call
+            self._validate_call_params()
 
-        # --- 3) Convert string messages to proper format if needed
-        if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
-        # --- 4) Handle O1 model special case (system messages not supported)
-        if "o1" in self.model.lower():
-            for message in messages:
-                if message.get("role") == "system":
-                    msg_role: Literal["assistant"] = "assistant"
-                    message["role"] = msg_role
+            # --- 3) Convert string messages to proper format if needed
+            if isinstance(messages, str):
+                messages = [{"role": "user", "content": messages}]
+            # --- 4) Handle O1 model special case (system messages not supported)
+            if "o1" in self.model.lower():
+                for message in messages:
+                    if message.get("role") == "system":
+                        msg_role: Literal["assistant"] = "assistant"
+                        message["role"] = msg_role
 
-        if not self._invoke_before_llm_call_hooks(messages, from_agent):
-            raise ValueError("LLM call blocked by before_llm_call hook")
+            if not self._invoke_before_llm_call_hooks(messages, from_agent):
+                raise ValueError("LLM call blocked by before_llm_call hook")
 
-        # --- 5) Set up callbacks if provided
-        with suppress_warnings():
-            if callbacks and len(callbacks) > 0:
-                self.set_callbacks(callbacks)
-            try:
-                # --- 6) Prepare parameters for the completion call
-                params = self._prepare_completion_params(messages, tools)
-                # --- 7) Make the completion call and handle response
-                if self.stream:
-                    result = self._handle_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
-                else:
-                    result = self._handle_non_streaming_response(
-                        params=params,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
-                    )
-
-                if isinstance(result, str):
-                    result = self._invoke_after_llm_call_hooks(
-                        messages, result, from_agent
-                    )
-
-                return result
-            except LLMContextLengthExceededError:
-                # Re-raise LLMContextLengthExceededError as it should be handled
-                # by the CrewAgentExecutor._invoke_loop method, which can then decide
-                # whether to summarize the content or abort based on the respect_context_window flag
-                raise
-            except Exception as e:
-                unsupported_stop = "Unsupported parameter" in str(
-                    e
-                ) and "'stop'" in str(e)
-
-                if unsupported_stop:
-                    if (
-                        "additional_drop_params" in self.additional_params
-                        and isinstance(
-                            self.additional_params["additional_drop_params"], list
+            # --- 5) Set up callbacks if provided
+            with suppress_warnings():
+                if callbacks and len(callbacks) > 0:
+                    self.set_callbacks(callbacks)
+                try:
+                    # --- 6) Prepare parameters for the completion call
+                    params = self._prepare_completion_params(messages, tools)
+                    # --- 7) Make the completion call and handle response
+                    if self.stream:
+                        result = self._handle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
                         )
-                    ):
-                        self.additional_params["additional_drop_params"].append("stop")
                     else:
-                        self.additional_params = {"additional_drop_params": ["stop"]}
+                        result = self._handle_non_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
 
-                    logging.info("Retrying LLM call without the unsupported 'stop'")
+                    if isinstance(result, str):
+                        result = self._invoke_after_llm_call_hooks(
+                            messages, result, from_agent
+                        )
 
-                    return self.call(
-                        messages,
-                        tools=tools,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
+                    return result
+                except LLMContextLengthExceededError:
+                    # Re-raise LLMContextLengthExceededError as it should be handled
+                    # by the CrewAgentExecutor._invoke_loop method, which can then decide
+                    # whether to summarize the content or abort based on the respect_context_window flag
+                    raise
+                except Exception as e:
+                    unsupported_stop = "Unsupported parameter" in str(
+                        e
+                    ) and "'stop'" in str(e)
+
+                    if unsupported_stop:
+                        if (
+                            "additional_drop_params" in self.additional_params
+                            and isinstance(
+                                self.additional_params["additional_drop_params"], list
+                            )
+                        ):
+                            self.additional_params["additional_drop_params"].append(
+                                "stop"
+                            )
+                        else:
+                            self.additional_params = {
+                                "additional_drop_params": ["stop"]
+                            }
+
+                        logging.info("Retrying LLM call without the unsupported 'stop'")
+
+                        return self.call(
+                            messages,
+                            tools=tools,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e),
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            call_id=get_current_call_id(),
+                        ),
                     )
-
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
-                    ),
-                )
-                raise
+                    raise
 
     async def acall(
         self,
@@ -1808,43 +1828,54 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        crewai_event_bus.emit(
-            self,
-            event=LLMCallStartedEvent(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                model=self.model,
-            ),
-        )
+        with llm_call_context() as call_id:
+            crewai_event_bus.emit(
+                self,
+                event=LLMCallStartedEvent(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    model=self.model,
+                    call_id=call_id,
+                ),
+            )
 
-        self._validate_call_params()
+            self._validate_call_params()
 
-        if isinstance(messages, str):
-            messages = [{"role": "user", "content": messages}]
+            if isinstance(messages, str):
+                messages = [{"role": "user", "content": messages}]
 
-        # Process file attachments asynchronously before preparing params
-        messages = await self._aprocess_message_files(messages)
+            # Process file attachments asynchronously before preparing params
+            messages = await self._aprocess_message_files(messages)
 
-        if "o1" in self.model.lower():
-            for message in messages:
-                if message.get("role") == "system":
-                    msg_role: Literal["assistant"] = "assistant"
-                    message["role"] = msg_role
+            if "o1" in self.model.lower():
+                for message in messages:
+                    if message.get("role") == "system":
+                        msg_role: Literal["assistant"] = "assistant"
+                        message["role"] = msg_role
 
-        with suppress_warnings():
-            if callbacks and len(callbacks) > 0:
-                self.set_callbacks(callbacks)
-            try:
-                params = self._prepare_completion_params(
-                    messages, tools, skip_file_processing=True
-                )
+            with suppress_warnings():
+                if callbacks and len(callbacks) > 0:
+                    self.set_callbacks(callbacks)
+                try:
+                    params = self._prepare_completion_params(
+                        messages, tools, skip_file_processing=True
+                    )
 
-                if self.stream:
-                    return await self._ahandle_streaming_response(
+                    if self.stream:
+                        return await self._ahandle_streaming_response(
+                            params=params,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
+                        )
+
+                    return await self._ahandle_non_streaming_response(
                         params=params,
                         callbacks=callbacks,
                         available_functions=available_functions,
@@ -1852,52 +1883,50 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         response_model=response_model,
                     )
+                except LLMContextLengthExceededError:
+                    raise
+                except Exception as e:
+                    unsupported_stop = "Unsupported parameter" in str(
+                        e
+                    ) and "'stop'" in str(e)
 
-                return await self._ahandle_non_streaming_response(
-                    params=params,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
-            except LLMContextLengthExceededError:
-                raise
-            except Exception as e:
-                unsupported_stop = "Unsupported parameter" in str(
-                    e
-                ) and "'stop'" in str(e)
+                    if unsupported_stop:
+                        if (
+                            "additional_drop_params" in self.additional_params
+                            and isinstance(
+                                self.additional_params["additional_drop_params"], list
+                            )
+                        ):
+                            self.additional_params["additional_drop_params"].append(
+                                "stop"
+                            )
+                        else:
+                            self.additional_params = {
+                                "additional_drop_params": ["stop"]
+                            }
 
-                if unsupported_stop:
-                    if (
-                        "additional_drop_params" in self.additional_params
-                        and isinstance(
-                            self.additional_params["additional_drop_params"], list
+                        logging.info("Retrying LLM call without the unsupported 'stop'")
+
+                        return await self.acall(
+                            messages,
+                            tools=tools,
+                            callbacks=callbacks,
+                            available_functions=available_functions,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            response_model=response_model,
                         )
-                    ):
-                        self.additional_params["additional_drop_params"].append("stop")
-                    else:
-                        self.additional_params = {"additional_drop_params": ["stop"]}
 
-                    logging.info("Retrying LLM call without the unsupported 'stop'")
-
-                    return await self.acall(
-                        messages,
-                        tools=tools,
-                        callbacks=callbacks,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        response_model=response_model,
+                    crewai_event_bus.emit(
+                        self,
+                        event=LLMCallFailedEvent(
+                            error=str(e),
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            call_id=get_current_call_id(),
+                        ),
                     )
-
-                crewai_event_bus.emit(
-                    self,
-                    event=LLMCallFailedEvent(
-                        error=str(e), from_task=from_task, from_agent=from_agent
-                    ),
-                )
-                raise
+                    raise
 
     def _handle_emit_call_events(
         self,
@@ -1925,6 +1954,7 @@ class LLM(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
