@@ -172,6 +172,7 @@ class BedrockCompletion(BaseLLM):
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize AWS Bedrock completion client.
@@ -192,6 +193,8 @@ class BedrockCompletion(BaseLLM):
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
             interceptor: HTTP interceptor (not yet supported for Bedrock).
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -248,6 +251,7 @@ class BedrockCompletion(BaseLLM):
         self.top_k = top_k
         self.stream = stream
         self.stop_sequences = stop_sequences
+        self.response_format = response_format
 
         # Store advanced features (optional)
         self.guardrail_config = guardrail_config
@@ -299,6 +303,8 @@ class BedrockCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call AWS Bedrock Converse API."""
+        effective_response_model = response_model or self.response_format
+
         try:
             # Emit call started event
             self._emit_call_started_event(
@@ -375,6 +381,7 @@ class BedrockCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
+                    effective_response_model,
                 )
 
             return self._handle_converse(
@@ -383,6 +390,7 @@ class BedrockCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -425,6 +433,8 @@ class BedrockCompletion(BaseLLM):
             NotImplementedError: If aiobotocore is not installed.
             LLMContextLengthExceededError: If context window is exceeded.
         """
+        effective_response_model = response_model or self.response_format
+
         if not AIOBOTOCORE_AVAILABLE:
             raise NotImplementedError(
                 "Async support for AWS Bedrock requires aiobotocore. "
@@ -494,11 +504,21 @@ class BedrockCompletion(BaseLLM):
 
             if self.stream:
                 return await self._ahandle_streaming_converse(
-                    formatted_messages, body, available_functions, from_task, from_agent
+                    formatted_messages,
+                    body,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    effective_response_model,
                 )
 
             return await self._ahandle_converse(
-                formatted_messages, body, available_functions, from_task, from_agent
+                formatted_messages,
+                body,
+                available_functions,
+                from_task,
+                from_agent,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -520,10 +540,29 @@ class BedrockCompletion(BaseLLM):
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
         """Handle non-streaming converse API call following AWS best practices."""
+        if response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": "structured_output",
+                    "description": "Returns structured data according to the schema",
+                    "inputSchema": {"json": response_model.model_json_schema()},
+                }
+            }
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(
+                    object,
+                    {
+                        "tools": [structured_tool],
+                        "toolChoice": {"tool": {"name": "structured_output"}},
+                    },
+                ),
+            )
+
         try:
-            # Validate messages format before API call
             if not messages:
                 raise ValueError("Messages cannot be empty")
 
@@ -571,6 +610,21 @@ class BedrockCompletion(BaseLLM):
 
             # If there are tool uses but no available_functions, return them for the executor to handle
             tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+
+            if response_model and tool_uses:
+                for tool_use in tool_uses:
+                    if tool_use.get("name") == "structured_output":
+                        structured_data = tool_use.get("input", {})
+                        result = response_model.model_validate(structured_data)
+                        self._emit_call_completed_event(
+                            response=result.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=messages,
+                        )
+                        return result
+
             if tool_uses and not available_functions:
                 self._emit_call_completed_event(
                     response=tool_uses,
@@ -717,8 +771,28 @@ class BedrockCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle streaming converse API call with comprehensive event handling."""
+        if response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": "structured_output",
+                    "description": "Returns structured data according to the schema",
+                    "inputSchema": {"json": response_model.model_json_schema()},
+                }
+            }
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(
+                    object,
+                    {
+                        "tools": [structured_tool],
+                        "toolChoice": {"tool": {"name": "structured_output"}},
+                    },
+                ),
+            )
+
         full_response = ""
         current_tool_use: dict[str, Any] | None = None
         tool_use_id: str | None = None
@@ -805,7 +879,7 @@ class BedrockCompletion(BaseLLM):
                                         "index": tool_use_index,
                                     },
                                     call_type=LLMCallType.TOOL_CALL,
-                                    response_id=response_id
+                                    response_id=response_id,
                                 )
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
@@ -929,8 +1003,28 @@ class BedrockCompletion(BaseLLM):
         available_functions: Mapping[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
         """Handle async non-streaming converse API call."""
+        if response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": "structured_output",
+                    "description": "Returns structured data according to the schema",
+                    "inputSchema": {"json": response_model.model_json_schema()},
+                }
+            }
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(
+                    object,
+                    {
+                        "tools": [structured_tool],
+                        "toolChoice": {"tool": {"name": "structured_output"}},
+                    },
+                ),
+            )
+
         try:
             if not messages:
                 raise ValueError("Messages cannot be empty")
@@ -976,6 +1070,21 @@ class BedrockCompletion(BaseLLM):
 
             # If there are tool uses but no available_functions, return them for the executor to handle
             tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+
+            if response_model and tool_uses:
+                for tool_use in tool_uses:
+                    if tool_use.get("name") == "structured_output":
+                        structured_data = tool_use.get("input", {})
+                        result = response_model.model_validate(structured_data)
+                        self._emit_call_completed_event(
+                            response=result.model_dump_json(),
+                            call_type=LLMCallType.LLM_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=messages,
+                        )
+                        return result
+
             if tool_uses and not available_functions:
                 self._emit_call_completed_event(
                     response=tool_uses,
@@ -1106,8 +1215,28 @@ class BedrockCompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
     ) -> str:
         """Handle async streaming converse API call."""
+        if response_model:
+            structured_tool: ConverseToolTypeDef = {
+                "toolSpec": {
+                    "name": "structured_output",
+                    "description": "Returns structured data according to the schema",
+                    "inputSchema": {"json": response_model.model_json_schema()},
+                }
+            }
+            body["toolConfig"] = cast(
+                "ToolConfigurationTypeDef",
+                cast(
+                    object,
+                    {
+                        "tools": [structured_tool],
+                        "toolChoice": {"tool": {"name": "structured_output"}},
+                    },
+                ),
+            )
+
         full_response = ""
         current_tool_use: dict[str, Any] | None = None
         tool_use_id: str | None = None
@@ -1174,7 +1303,7 @@ class BedrockCompletion(BaseLLM):
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
-                                response_id=response_id
+                                response_id=response_id,
                             )
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
