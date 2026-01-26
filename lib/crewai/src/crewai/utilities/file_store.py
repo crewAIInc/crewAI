@@ -5,12 +5,19 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Coroutine
 import concurrent.futures
-from typing import TYPE_CHECKING, Any, TypeVar
+import logging
+from typing import TYPE_CHECKING, TypeVar
 from uuid import UUID
 
 
 if TYPE_CHECKING:
+    from aiocache import Cache
     from crewai_files import FileInput
+
+logger = logging.getLogger(__name__)
+
+_file_store: Cache | None = None
+_HAS_AIOCACHE = False
 
 try:
     from aiocache import Cache
@@ -19,31 +26,10 @@ try:
     _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
     _HAS_AIOCACHE = True
 except ImportError:
-    _HAS_AIOCACHE = False
-    _file_store = None
-
-
-class _SimpleMemoryCache:
-    """Simple in-memory cache fallback when aiocache is not installed."""
-
-    def __init__(self) -> None:
-        self._data: dict[str, Any] = {}
-
-    async def get(self, key: str) -> Any:
-        return self._data.get(key)
-
-    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
-        self._data[key] = value
-
-    async def delete(self, key: str) -> bool:
-        if key in self._data:
-            del self._data[key]
-            return True
-        return False
-
-
-if not _HAS_AIOCACHE:
-    _file_store = _SimpleMemoryCache()
+    logger.debug(
+        "aiocache is not installed. File store features will be disabled. "
+        "Install with: uv add aiocache"
+    )
 
 T = TypeVar("T")
 
@@ -87,6 +73,8 @@ async def astore_files(
         files: Dictionary mapping names to file inputs.
         ttl: Time-to-live in seconds.
     """
+    if _file_store is None:
+        return
     await _file_store.set(f"{_CREW_PREFIX}{execution_id}", files, ttl=ttl)
 
 
@@ -99,6 +87,8 @@ async def aget_files(execution_id: UUID) -> dict[str, FileInput] | None:
     Returns:
         Dictionary of files or None if not found.
     """
+    if _file_store is None:
+        return None
     result: dict[str, FileInput] | None = await _file_store.get(
         f"{_CREW_PREFIX}{execution_id}"
     )
@@ -111,6 +101,8 @@ async def aclear_files(execution_id: UUID) -> None:
     Args:
         execution_id: Unique identifier for the crew execution.
     """
+    if _file_store is None:
+        return
     await _file_store.delete(f"{_CREW_PREFIX}{execution_id}")
 
 
@@ -126,6 +118,8 @@ async def astore_task_files(
         files: Dictionary mapping names to file inputs.
         ttl: Time-to-live in seconds.
     """
+    if _file_store is None:
+        return
     await _file_store.set(f"{_TASK_PREFIX}{task_id}", files, ttl=ttl)
 
 
@@ -138,6 +132,8 @@ async def aget_task_files(task_id: UUID) -> dict[str, FileInput] | None:
     Returns:
         Dictionary of files or None if not found.
     """
+    if _file_store is None:
+        return None
     result: dict[str, FileInput] | None = await _file_store.get(
         f"{_TASK_PREFIX}{task_id}"
     )
@@ -150,6 +146,8 @@ async def aclear_task_files(task_id: UUID) -> None:
     Args:
         task_id: Unique identifier for the task.
     """
+    if _file_store is None:
+        return
     await _file_store.delete(f"{_TASK_PREFIX}{task_id}")
 
 
