@@ -99,6 +99,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
 
     def save(self, documents: list[str]) -> None:
+        if not documents:
+            return
+
         try:
             client = self._get_client()
             collection_name = (
@@ -177,6 +180,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
         Args:
             documents: List of document strings to save.
         """
+        if not documents:
+            return
+
         try:
             client = self._get_client()
             collection_name = (
