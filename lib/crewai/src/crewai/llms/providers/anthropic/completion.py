@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, Final, Literal, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
 
 try:
-    from anthropic import Anthropic, AsyncAnthropic
+    from anthropic import Anthropic, AsyncAnthropic, transform_schema
     from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
     from anthropic.types.beta import BetaMessage
     import httpx
@@ -36,22 +36,33 @@ ANTHROPIC_STRUCTURED_OUTPUTS_BETA: Final = "structured-outputs-2025-11-13"
 
 NATIVE_STRUCTURED_OUTPUT_MODELS: Final[
     tuple[
-        Literal["claude-sonnet-4"],
-        Literal["claude-opus-4"],
-        Literal["claude-haiku-4"],
+        Literal["claude-sonnet-4-5"],
+        Literal["claude-sonnet-4.5"],
+        Literal["claude-opus-4-5"],
+        Literal["claude-opus-4.5"],
+        Literal["claude-opus-4-1"],
+        Literal["claude-opus-4.1"],
+        Literal["claude-haiku-4-5"],
+        Literal["claude-haiku-4.5"],
     ]
 ] = (
-    "claude-sonnet-4",
-    "claude-opus-4",
-    "claude-haiku-4",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4.5",
+    "claude-opus-4-5",
+    "claude-opus-4.5",
+    "claude-opus-4-1",
+    "claude-opus-4.1",
+    "claude-haiku-4-5",
+    "claude-haiku-4.5",
 )
 
 
 def _supports_native_structured_outputs(model: str) -> bool:
     """Check if the model supports native structured outputs.
 
-    Native structured outputs are only available for Claude 4.x models.
-    Claude 3.x models require the tool-based fallback approach.
+    Native structured outputs are only available for Claude 4.5 models
+    (Sonnet 4.5, Opus 4.5, Opus 4.1, Haiku 4.5).
+    Other models require the tool-based fallback approach.
 
     Args:
         model: The model name/identifier.
@@ -61,6 +72,21 @@ def _supports_native_structured_outputs(model: str) -> bool:
     """
     model_lower = model.lower()
     return any(prefix in model_lower for prefix in NATIVE_STRUCTURED_OUTPUT_MODELS)
+
+
+def _is_pydantic_model_class(obj: Any) -> TypeGuard[type[BaseModel]]:
+    """Check if an object is a Pydantic model class.
+
+    This distinguishes between Pydantic model classes that support structured
+    outputs (have model_json_schema) and plain dicts like {"type": "json_object"}.
+
+    Args:
+        obj: The object to check.
+
+    Returns:
+        True if obj is a Pydantic model class.
+    """
+    return isinstance(obj, type) and issubclass(obj, BaseModel)
 
 
 def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
@@ -609,19 +635,23 @@ class AnthropicCompletion(BaseLLM):
         if uses_file_api:
             betas.append(ANTHROPIC_FILES_API_BETA)
 
-        if response_model:
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
-                params["output_format"] = {
-                    "type": "json_schema",
-                    "schema": response_model.model_json_schema(),
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
                 }
             else:
                 structured_tool = {
                     "name": "structured_output",
                     "description": "Output the structured response",
-                    "input_schema": response_model.model_json_schema(),
+                    "input_schema": schema,
                 }
                 params["tools"] = [structured_tool]
                 params["tool_choice"] = {"type": "tool", "name": "structured_output"}
@@ -629,7 +659,9 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = self.client.beta.messages.create(**params)
+                response = self.client.beta.messages.create(
+                    **params, extra_body=extra_body
+                )
             else:
                 response = self.client.messages.create(**params)
 
@@ -642,7 +674,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        if response_model and response.content:
+        if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
                     if isinstance(block, TextBlock):
@@ -744,19 +776,23 @@ class AnthropicCompletion(BaseLLM):
         betas: list[str] = []
         use_native_structured_output = False
 
-        if response_model:
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
-                params["output_format"] = {
-                    "type": "json_schema",
-                    "schema": response_model.model_json_schema(),
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
                 }
             else:
                 structured_tool = {
                     "name": "structured_output",
                     "description": "Output the structured response",
-                    "input_schema": response_model.model_json_schema(),
+                    "input_schema": schema,
                 }
                 params["tools"] = [structured_tool]
                 params["tool_choice"] = {"type": "tool", "name": "structured_output"}
@@ -773,7 +809,7 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self.client.beta.messages.stream(**stream_params)
+            self.client.beta.messages.stream(**stream_params, extra_body=extra_body)
             if betas
             else self.client.messages.stream(**stream_params)
         )
@@ -859,7 +895,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        if response_model:
+        if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 self._emit_call_completed_event(
                     response=full_response,
@@ -1088,19 +1124,23 @@ class AnthropicCompletion(BaseLLM):
         if uses_file_api:
             betas.append(ANTHROPIC_FILES_API_BETA)
 
-        if response_model:
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
-                params["output_format"] = {
-                    "type": "json_schema",
-                    "schema": response_model.model_json_schema(),
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
                 }
             else:
                 structured_tool = {
                     "name": "structured_output",
                     "description": "Output the structured response",
-                    "input_schema": response_model.model_json_schema(),
+                    "input_schema": schema,
                 }
                 params["tools"] = [structured_tool]
                 params["tool_choice"] = {"type": "tool", "name": "structured_output"}
@@ -1108,7 +1148,9 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = await self.async_client.beta.messages.create(**params)
+                response = await self.async_client.beta.messages.create(
+                    **params, extra_body=extra_body
+                )
             else:
                 response = await self.async_client.messages.create(**params)
 
@@ -1121,7 +1163,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        if response_model and response.content:
+        if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
                     if isinstance(block, TextBlock):
@@ -1209,19 +1251,23 @@ class AnthropicCompletion(BaseLLM):
         betas: list[str] = []
         use_native_structured_output = False
 
-        if response_model:
+        extra_body: dict[str, Any] | None = None
+        if _is_pydantic_model_class(response_model):
+            schema = transform_schema(response_model.model_json_schema())
             if _supports_native_structured_outputs(self.model):
                 use_native_structured_output = True
                 betas.append(ANTHROPIC_STRUCTURED_OUTPUTS_BETA)
-                params["output_format"] = {
-                    "type": "json_schema",
-                    "schema": response_model.model_json_schema(),
+                extra_body = {
+                    "output_format": {
+                        "type": "json_schema",
+                        "schema": schema,
+                    }
                 }
             else:
                 structured_tool = {
                     "name": "structured_output",
                     "description": "Output the structured response",
-                    "input_schema": response_model.model_json_schema(),
+                    "input_schema": schema,
                 }
                 params["tools"] = [structured_tool]
                 params["tool_choice"] = {"type": "tool", "name": "structured_output"}
@@ -1236,7 +1282,9 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self.async_client.beta.messages.stream(**stream_params)
+            self.async_client.beta.messages.stream(
+                **stream_params, extra_body=extra_body
+            )
             if betas
             else self.async_client.messages.stream(**stream_params)
         )
@@ -1312,7 +1360,7 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
-        if response_model:
+        if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 self._emit_call_completed_event(
                     response=full_response,
