@@ -247,7 +247,7 @@ class BedrockCompletion(BaseLLM):
         self.top_p = top_p
         self.top_k = top_k
         self.stream = stream
-        self.stop_sequences = stop_sequences or []
+        self.stop_sequences = stop_sequences
 
         # Store advanced features (optional)
         self.guardrail_config = guardrail_config
@@ -267,7 +267,7 @@ class BedrockCompletion(BaseLLM):
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
-        return list(self.stop_sequences)
+        return [] if self.stop_sequences is None else list(self.stop_sequences)
 
     @stop.setter
     def stop(self, value: Sequence[str] | str | None) -> None:
@@ -736,6 +736,7 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
+            response_id = None
             if stream:
                 for event in stream:
                     if "messageStart" in event:
@@ -767,6 +768,7 @@ class BedrockCompletion(BaseLLM):
                                     "index": tool_use_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
                         logging.debug(
                             f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
@@ -782,6 +784,7 @@ class BedrockCompletion(BaseLLM):
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                response_id=response_id,
                             )
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
@@ -802,6 +805,7 @@ class BedrockCompletion(BaseLLM):
                                         "index": tool_use_index,
                                     },
                                     call_type=LLMCallType.TOOL_CALL,
+                                    response_id=response_id
                                 )
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
@@ -1122,6 +1126,7 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
+            response_id = None
             if stream:
                 async for event in stream:
                     if "messageStart" in event:
@@ -1153,6 +1158,7 @@ class BedrockCompletion(BaseLLM):
                                     "index": tool_use_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
                             logging.debug(
                                 f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
@@ -1168,6 +1174,7 @@ class BedrockCompletion(BaseLLM):
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                response_id=response_id
                             )
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
@@ -1188,6 +1195,7 @@ class BedrockCompletion(BaseLLM):
                                         "index": tool_use_index,
                                     },
                                     call_type=LLMCallType.TOOL_CALL,
+                                    response_id=response_id,
                                 )
 
                     elif "contentBlockStop" in event:
@@ -1360,11 +1368,15 @@ class BedrockCompletion(BaseLLM):
                 )
             else:
                 # Convert to Converse API format with proper content structure
-                # Ensure content is not None
-                text_content = content if content else ""
-                converse_messages.append(
-                    {"role": role, "content": [{"text": text_content}]}
-                )
+                if isinstance(content, list):
+                    # Already formatted as multimodal content blocks
+                    converse_messages.append({"role": role, "content": content})
+                else:
+                    # String content - wrap in text block
+                    text_content = content if content else ""
+                    converse_messages.append(
+                        {"role": role, "content": [{"text": text_content}]}
+                    )
 
         # CRITICAL: Handle model-specific conversation requirements
         # Cohere and some other models require conversation to end with user message
@@ -1591,3 +1603,118 @@ class BedrockCompletion(BaseLLM):
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        model_lower = self.model.lower()
+        vision_models = (
+            "anthropic.claude-3",
+            "amazon.nova-lite",
+            "amazon.nova-pro",
+            "amazon.nova-premier",
+            "us.amazon.nova-lite",
+            "us.amazon.nova-pro",
+            "us.amazon.nova-premier",
+        )
+        return any(model_lower.startswith(m) for m in vision_models)
+
+    def _is_nova_model(self) -> bool:
+        """Check if the model is an Amazon Nova model.
+
+        Only Nova models support S3 links for multimedia.
+
+        Returns:
+            True if the model is a Nova model.
+        """
+        model_lower = self.model.lower()
+        return "amazon.nova-" in model_lower
+
+    def get_file_uploader(self) -> Any:
+        """Get a Bedrock S3 file uploader using this LLM's AWS credentials.
+
+        Creates an S3 client using the same AWS credentials configured for
+        this Bedrock LLM instance.
+
+        Returns:
+            BedrockFileUploader instance with pre-configured S3 client,
+            or None if crewai_files is not installed.
+        """
+        try:
+            import boto3
+            from crewai_files.uploaders.bedrock import BedrockFileUploader
+
+            s3_client = boto3.client(
+                "s3",
+                region_name=self.region_name,
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                aws_session_token=self.aws_session_token,
+            )
+            return BedrockFileUploader(
+                region=self.region_name,
+                client=s3_client,
+            )
+        except ImportError:
+            return None
+
+    def _get_document_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock document format.
+
+        Args:
+            content_type: MIME type of the document.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "application/pdf": "pdf",
+            "text/csv": "csv",
+            "text/plain": "txt",
+            "text/markdown": "md",
+            "text/html": "html",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        }
+        return format_map.get(content_type)
+
+    def _get_video_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock video format.
+
+        Args:
+            content_type: MIME type of the video.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "video/mp4": "mp4",
+            "video/quicktime": "mov",
+            "video/x-matroska": "mkv",
+            "video/webm": "webm",
+            "video/x-flv": "flv",
+            "video/mpeg": "mpeg",
+            "video/x-ms-wmv": "wmv",
+            "video/3gpp": "three_gp",
+        }
+        return format_map.get(content_type)
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Bedrock content block.
+
+        Bedrock uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Bedrock's expected format.
+        """
+        return {"text": text}

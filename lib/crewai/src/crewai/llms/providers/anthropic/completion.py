@@ -31,6 +31,32 @@ except ImportError:
     ) from None
 
 
+ANTHROPIC_FILES_API_BETA = "files-api-2025-04-14"
+
+
+def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+    """Check if any message content contains a file_id reference.
+
+    Anthropic's Files API is in beta and requires a special header when
+    file_id references are used in content blocks.
+
+    Args:
+        messages: List of message dicts to check.
+
+    Returns:
+        True if any content block contains a file_id reference.
+    """
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    source = block.get("source", {})
+                    if isinstance(source, dict) and source.get("type") == "file":
+                        return True
+    return False
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -549,8 +575,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = self.client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = self.client.beta.messages.create(**params)
+            else:
+                response = self.client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -668,7 +700,11 @@ class AnthropicCompletion(BaseLLM):
 
         # Make streaming API call
         with self.client.messages.stream(**stream_params) as stream:
+            response_id = None
             for event in stream:
+                if hasattr(event, "message") and hasattr(event.message, "id"):
+                    response_id = event.message.id
+                
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -676,6 +712,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id
                     )
 
                 if event.type == "content_block_start":
@@ -702,6 +739,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -725,6 +763,7 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id
                             )
 
             final_message: Message = stream.get_final_message()
@@ -973,8 +1012,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = await self.async_client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = await self.async_client.beta.messages.create(**params)
+            else:
+                response = await self.async_client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1076,7 +1121,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         async with self.async_client.messages.stream(**stream_params) as stream:
+            response_id = None
             async for event in stream:
+                if hasattr(event, "message") and hasattr(event.message, "id"):
+                    response_id = event.message.id
+
                 if hasattr(event, "delta") and hasattr(event.delta, "text"):
                     text_delta = event.delta.text
                     full_response += text_delta
@@ -1084,6 +1133,7 @@ class AnthropicCompletion(BaseLLM):
                         chunk=text_delta,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id
                     )
 
                 if event.type == "content_block_start":
@@ -1110,6 +1160,7 @@ class AnthropicCompletion(BaseLLM):
                                 "index": block_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id
                         )
                 elif event.type == "content_block_delta":
                     if event.delta.type == "input_json_delta":
@@ -1133,6 +1184,7 @@ class AnthropicCompletion(BaseLLM):
                                     "index": block_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id
                             )
 
             final_message: Message = await stream.get_final_message()
@@ -1316,3 +1368,29 @@ class AnthropicCompletion(BaseLLM):
                 "total_tokens": input_tokens + output_tokens,
             }
         return {"total_tokens": 0}
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        All Claude 3+ models support vision and PDFs.
+
+        Returns:
+            True if the model supports images and PDFs.
+        """
+        return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
+
+    def get_file_uploader(self) -> Any:
+        """Get an Anthropic file uploader using this LLM's clients.
+
+        Returns:
+            AnthropicFileUploader instance with pre-configured sync and async clients.
+        """
+        try:
+            from crewai_files.uploaders.anthropic import AnthropicFileUploader
+
+            return AnthropicFileUploader(
+                client=self.client,
+                async_client=self.async_client,
+            )
+        except ImportError:
+            return None

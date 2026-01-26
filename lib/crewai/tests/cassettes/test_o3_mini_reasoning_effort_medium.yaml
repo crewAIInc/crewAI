@@ -1,100 +1,108 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "user", "content": "What is the capital of France?"}],
-      "model": "o3-mini", "reasoning_effort": "medium", "stop": []}'
+    body: '{"messages":[{"role":"user","content":"What is the capital of France?"}],"model":"o3-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '139'
+      - '91'
       content-type:
       - application/json
-      cookie:
-      - _cfuvid=JBfx8Sl7w82A0S_K1tQd5ZcwzWaZP5Gg5W1dqAdgwNU-1738683830528-0.0.1.1-604800000;
-        __cf_bm=.AP74BirsYr.lu61bSaimK2HRF6126qr5vCrr3HC6ak-1738683830-1.0.1.1-feh.bcMOv9wYnitoPpr.7UR7JrzCsbRLlzct09xCDm2SwmnRQQk5ZSSV41Ywer2S0rptbvufFwklV9wo9ATvWw
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.61.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.61.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.7
+      - 3.12.10
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxFS8IuMeYs6Rky2UbG8wH8P5PR4k\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738684116,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The capital of France is Paris.\",\n
-      \       \"refusal\": null\n      },\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 13,\n    \"completion_tokens\":
-      145,\n    \"total_tokens\": 158,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_8bcaa0ca21\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D15uNqDUbZIUh2hLx3GF5EiaK3am4\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769153411,\n  \"model\": \"o3-mini-2025-01-31\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The capital of France is Paris.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 13,\n    \"completion_tokens\":
+        84,\n    \"total_tokens\": 97,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_d48b29c73d\"\n}\n"
     headers:
       CF-RAY:
-      - 90cbce51b946afb4-ATL
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 04 Feb 2025 15:48:39 GMT
+      - Fri, 23 Jan 2026 07:30:13 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2365'
+      - '1291'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1313'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999974'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_bfd83679e674c3894991477f1fb043b2
-    http_version: HTTP/1.1
-    status_code: 200
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -829,3 +829,178 @@ def test_lite_agent_standalone_still_works():
     assert result is not None
     assert isinstance(result, LiteAgentOutput)
     assert result.raw is not None
+
+
+def test_agent_kickoff_with_files_parameter():
+    """Test that Agent.kickoff() accepts and passes files to the executor."""
+    from unittest.mock import Mock, patch
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: I can see the file content."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="File Analyzer",
+        goal="Analyze files",
+        backstory="An agent that analyzes files",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    test_file = File(source=b"mock pdf content")
+    input_files = {"document.pdf": test_file}
+
+    with patch.object(
+        agent, "_prepare_kickoff", wraps=agent._prepare_kickoff
+    ) as mock_prepare:
+        result = agent.kickoff(messages="Analyze the document", input_files=input_files)
+
+        mock_prepare.assert_called_once()
+        call_args = mock_prepare.call_args
+        assert call_args.args[0] == "Analyze the document"
+        called_files = call_args.kwargs.get("input_files") or call_args.args[2]
+        assert "document.pdf" in called_files
+        assert called_files["document.pdf"] is test_file
+
+    assert result is not None
+
+
+def test_prepare_kickoff_extracts_files_from_messages():
+    """Test that _prepare_kickoff extracts files from messages."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    test_file = File(source=b"mock image content")
+    messages = [
+        {"role": "user", "content": "Analyze this", "files": {"img.png": test_file}}
+    ]
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(messages=messages)
+
+    assert "files" in inputs
+    assert "img.png" in inputs["files"]
+    assert inputs["files"]["img.png"] is test_file
+
+
+def test_prepare_kickoff_merges_files_from_messages_and_parameter():
+    """Test that _prepare_kickoff merges files from messages and parameter."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
+    messages = [
+        {"role": "user", "content": "Analyze these", "files": {"from_msg.png": msg_file}}
+    ]
+    input_files = {"from_param.pdf": param_file}
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
+        messages=messages, input_files=input_files
+    )
+
+    assert "files" in inputs
+    assert "from_msg.png" in inputs["files"]
+    assert "from_param.pdf" in inputs["files"]
+    assert inputs["files"]["from_msg.png"] is msg_file
+    assert inputs["files"]["from_param.pdf"] is param_file
+
+
+def test_prepare_kickoff_param_files_override_message_files():
+    """Test that files parameter overrides files from messages with same name."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
+    messages = [
+        {"role": "user", "content": "Analyze", "files": {"same.png": msg_file}}
+    ]
+    input_files = {"same.png": param_file}
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
+        messages=messages, input_files=input_files
+    )
+
+    assert "files" in inputs
+    assert inputs["files"]["same.png"] is param_file  # param takes precedence

@@ -726,6 +726,7 @@ class AzureCompletion(BaseLLM):
         """
         if update.choices:
             choice = update.choices[0]
+            response_id = update.id if hasattr(update,"id") else None
             if choice.delta and choice.delta.content:
                 content_delta = choice.delta.content
                 full_response += content_delta
@@ -733,6 +734,7 @@ class AzureCompletion(BaseLLM):
                     chunk=content_delta,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id
                 )
 
             if choice.delta and choice.delta.tool_calls:
@@ -767,6 +769,7 @@ class AzureCompletion(BaseLLM):
                             "index": idx,
                         },
                         call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id
                     )
 
         return full_response
@@ -1073,3 +1076,14 @@ class AzureCompletion(BaseLLM):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.aclose()
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
+        return any(self.model.lower().startswith(m) for m in vision_models)

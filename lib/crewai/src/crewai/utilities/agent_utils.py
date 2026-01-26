@@ -613,13 +613,23 @@ def summarize_messages(
 ) -> None:
     """Summarize messages to fit within context window.
 
+    Preserves any files attached to user messages and re-attaches them to
+    the summarized message. Files from all user messages are merged.
+
     Args:
-        messages: List of messages to summarize
+        messages: List of messages to summarize (modified in-place)
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
     """
-    messages_string = " ".join([message["content"] for message in messages])  # type: ignore[misc]
+    preserved_files: dict[str, Any] = {}
+    for msg in messages:
+        if msg.get("role") == "user" and msg.get("files"):
+            preserved_files.update(msg["files"])
+
+    messages_string = " ".join(
+        [str(message.get("content", "")) for message in messages]
+    )
     cut_size = llm.get_context_window_size()
 
     messages_groups = [
@@ -636,7 +646,7 @@ def summarize_messages(
             color="yellow",
         )
 
-        messages = [
+        summarization_messages = [
             format_message_for_llm(
                 i18n.slice("summarizer_system_message"), role="system"
             ),
@@ -645,7 +655,7 @@ def summarize_messages(
             ),
         ]
         summary = llm.call(
-            messages,
+            summarization_messages,
             callbacks=callbacks,
         )
         summarized_contents.append({"content": str(summary)})
@@ -653,11 +663,12 @@ def summarize_messages(
     merged_summary = " ".join(content["content"] for content in summarized_contents)
 
     messages.clear()
-    messages.append(
-        format_message_for_llm(
-            i18n.slice("summary").format(merged_summary=merged_summary)
-        )
+    summary_message = format_message_for_llm(
+        i18n.slice("summary").format(merged_summary=merged_summary)
     )
+    if preserved_files:
+        summary_message["files"] = preserved_files
+    messages.append(summary_message)
 
 
 def show_agent_logs(
@@ -859,7 +870,11 @@ def extract_tool_call_info(
     if hasattr(tool_call, "function"):
         # OpenAI-style: has .function.name and .function.arguments
         call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
-        return call_id, sanitize_tool_name(tool_call.function.name), tool_call.function.arguments
+        return (
+            call_id,
+            sanitize_tool_name(tool_call.function.name),
+            tool_call.function.arguments,
+        )
     if hasattr(tool_call, "function_call") and tool_call.function_call:
         # Gemini-style: has .function_call.name and .function_call.args
         call_id = f"call_{id(tool_call)}"

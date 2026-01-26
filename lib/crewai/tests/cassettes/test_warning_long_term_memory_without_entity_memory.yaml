@@ -109,46 +109,52 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BLceqFO97kLaTEPUSKGHkGlckpxLe\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744493188,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: \\n\\n**Topic:** Introduction to Addition\\n\\n**Explanation:**  \\nAddition
-      is a fundamental concept in math that means putting together two or more numbers
-      to find out how many there are in total. When we add, we combine quantities
-      to see the total amount we have. The symbol for addition is \\\"+\\\". \\n\\nLet's
-      break it down so it's easy to understand. If you have a small group of apples
-      and then you get more apples, to find out how many apples you have altogether,
-      you add them up! \\n\\n**Angle:**  \\nTo teach this concept to a 6-year-old,
-      we can use tangible objects they can relate to, such as fruits, toys, or stickers.
-      Kids learn best through play and visual representation, so using real-life examples
-      will make the concept of addition exciting and engaging!\\n\\n**Examples:**
-      \ \\n1. **Using Fruits:** \\n   - Start with 2 apples. \\n\\n     \U0001F34F\U0001F34F
-      (2 apples)\\n\\n   - Then, you receive 3 more apples. \\n\\n     \U0001F34F\U0001F34F\U0001F34F
-      (3 apples)\\n\\n   - To find out how many apples you have now, we add them together:
-      \\n\\n     2 + 3 = 5 \\n\\n   - Show them the total by counting all the apples
-      together: \\n\\n     \U0001F34F\U0001F34F\U0001F34F\U0001F34F\U0001F34F (5 apples)\\n\\n2.
-      **Using Toys:** \\n   - Let\u2019s say there are 4 toy cars. \\n\\n     \U0001F697\U0001F697\U0001F697\U0001F697
-      (4 toy cars)\\n\\n   - If you get 2 more toy cars. \\n\\n     \U0001F697\U0001F697
-      (2 toy cars)\\n\\n   - How many do we have in total? \\n\\n     4 + 2 = 6 \\n\\n
-      \  - Count them all together: \\n\\n     \U0001F697\U0001F697\U0001F697\U0001F697\U0001F697\U0001F697
-      (6 toy cars)\\n\\n3. **Using Stickers:**  \\n   - You have 5 stickers. \\n\\n
-      \    \U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F (5 stickers)\\n\\n   -
-      Your friend gives you 4 more stickers. \\n\\n     \U0001F31F\U0001F31F\U0001F31F\U0001F31F
-      (4 stickers)\\n\\n   - Now, let\u2019s see how many stickers you have in total:
-      \\n\\n     5 + 4 = 9 \\n\\n   - Count them together: \\n\\n     \U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F
-      (9 stickers)\\n\\n**Conclusion:**  \\nTry to make addition fun! Use snacks or
-      play time to practice addition. Ask questions during snack time, such as \u201CIf
-      you eat one of your 5 cookies, how many will you have left?\u201D This approach
-      makes learning relatable and enjoyable, enhancing their understanding of math
-      in everyday situations. Happy adding!\",\n        \"refusal\": null,\n        \"annotations\":
-      []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 182,\n    \"completion_tokens\":
-      561,\n    \"total_tokens\": 743,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_44added55e\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BLceqFO97kLaTEPUSKGHkGlckpxLe\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744493188,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: \\n\\n**Topic:** Introduction to Addition\\n\\\
+        n**Explanation:**  \\nAddition is a fundamental concept in math that means\
+        \ putting together two or more numbers to find out how many there are in total.\
+        \ When we add, we combine quantities to see the total amount we have. The\
+        \ symbol for addition is \\\"+\\\". \\n\\nLet's break it down so it's easy\
+        \ to understand. If you have a small group of apples and then you get more\
+        \ apples, to find out how many apples you have altogether, you add them up!\
+        \ \\n\\n**Angle:**  \\nTo teach this concept to a 6-year-old, we can use tangible\
+        \ objects they can relate to, such as fruits, toys, or stickers. Kids learn\
+        \ best through play and visual representation, so using real-life examples\
+        \ will make the concept of addition exciting and engaging!\\n\\n**Examples:**\
+        \  \\n1. **Using Fruits:** \\n   - Start with 2 apples. \\n\\n     \U0001F34F\
+        \U0001F34F (2 apples)\\n\\n   - Then, you receive 3 more apples. \\n\\n  \
+        \   \U0001F34F\U0001F34F\U0001F34F (3 apples)\\n\\n   - To find out how many\
+        \ apples you have now, we add them together: \\n\\n     2 + 3 = 5 \\n\\n \
+        \  - Show them the total by counting all the apples together: \\n\\n     \U0001F34F\
+        \U0001F34F\U0001F34F\U0001F34F\U0001F34F (5 apples)\\n\\n2. **Using Toys:**\
+        \ \\n   - Let’s say there are 4 toy cars. \\n\\n     \U0001F697\U0001F697\U0001F697\
+        \U0001F697 (4 toy cars)\\n\\n   - If you get 2 more toy cars. \\n\\n     \U0001F697\
+        \U0001F697 (2 toy cars)\\n\\n   - How many do we have in total? \\n\\n   \
+        \  4 + 2 = 6 \\n\\n   - Count them all together: \\n\\n     \U0001F697\U0001F697\
+        \U0001F697\U0001F697\U0001F697\U0001F697 (6 toy cars)\\n\\n3. **Using Stickers:**\
+        \  \\n   - You have 5 stickers. \\n\\n     \U0001F31F\U0001F31F\U0001F31F\U0001F31F\
+        \U0001F31F (5 stickers)\\n\\n   - Your friend gives you 4 more stickers. \\\
+        n\\n     \U0001F31F\U0001F31F\U0001F31F\U0001F31F (4 stickers)\\n\\n   - Now,\
+        \ let’s see how many stickers you have in total: \\n\\n     5 + 4 = 9 \\n\\\
+        n   - Count them together: \\n\\n     \U0001F31F\U0001F31F\U0001F31F\U0001F31F\
+        \U0001F31F\U0001F31F\U0001F31F\U0001F31F\U0001F31F (9 stickers)\\n\\n**Conclusion:**\
+        \  \\nTry to make addition fun! Use snacks or play time to practice addition.\
+        \ Ask questions during snack time, such as “If you eat one of your 5 cookies,\
+        \ how many will you have left?” This approach makes learning relatable and\
+        \ enjoyable, enhancing their understanding of math in everyday situations.\
+        \ Happy adding!\",\n        \"refusal\": null,\n        \"annotations\": []\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 182,\n    \"completion_tokens\"\
+        : 561,\n    \"total_tokens\": 743,\n    \"prompt_tokens_details\": {\n   \
+        \   \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_44added55e\"\n}\n"
     headers:
       CF-RAY:
       - 92f5cd5a19257e0f-GRU
@@ -198,6 +204,7 @@ interactions:
       - 0s
       x-request-id:
       - req_dda2c2217b856a9012403aeb7378a9e2
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

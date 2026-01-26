@@ -47,17 +47,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJJzafmayYpGTsTAWbOyZkmQJNa5\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJJzafmayYpGTsTAWbOyZkmQJNa5\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: hi\",\n        \"refusal\": null\n      },\n  \
+        \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 12,\n\
+        \    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -107,8 +110,9 @@ interactions:
       - 0s
       x-request-id:
       - req_577b484a927b455c40ed80f9fd4d9106
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
       completed based on the description, expected output, and actual results.\n\nTask
@@ -174,23 +178,26 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJJz10KP7iadNPdKsbcsvHBa7cic\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_czeHQgy5eiOVa0zlrtcfwepe\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
-      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Provide more context
-      or details for similar tasks to enhance output expectations.\\\",\\\"Encourage
-      creativity in responses for simple tasks to engage users more effectively.\\\"],\\\"quality\\\":10,\\\"entities\\\":[]
-      }\"\n            }\n          }\n        ],\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\": 40,\n
-      \   \"total_tokens\": 313,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJJz10KP7iadNPdKsbcsvHBa7cic\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738698987,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+        : [\n          {\n            \"id\": \"call_czeHQgy5eiOVa0zlrtcfwepe\",\n\
+        \            \"type\": \"function\",\n            \"function\": {\n      \
+        \        \"name\": \"TaskEvaluation\",\n              \"arguments\": \"{\\\
+        \"suggestions\\\":[\\\"Provide more context or details for similar tasks to\
+        \ enhance output expectations.\\\",\\\"Encourage creativity in responses for\
+        \ simple tasks to engage users more effectively.\\\"],\\\"quality\\\":10,\\\
+        \"entities\\\":[] }\"\n            }\n          }\n        ],\n        \"\
+        refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 273,\n   \
+        \ \"completion_tokens\": 40,\n    \"total_tokens\": 313,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 90cd39615b281698-SJC
@@ -234,6 +241,7 @@ interactions:
       - 0s
       x-request-id:
       - req_3e717a80c7d9c5ea19893dd990aaae26
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

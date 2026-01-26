@@ -150,6 +150,37 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
     | o1-mini           | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
     | o1-preview        | 128,000 토큰      | 빠른 추론, 복잡한 추론                       |
     | o1                | 200,000 토큰      | 빠른 추론, 복잡한 추론                       |
+
+    **Responses API:**
+
+    OpenAI는 Chat Completions(기본값)와 새로운 Responses API, 두 가지 API를 제공합니다. Responses API는 네이티브 멀티모달 지원을 기반으로 처음부터 설계되었으며, 텍스트, 이미지, 오디오, 함수 호출이 모두 일급 객체입니다. 추론 모델에서 더 나은 성능을 제공하고 자동 체이닝 및 내장 도구와 같은 추가 기능을 지원합니다.
+
+    ```python Code
+    from crewai import LLM
+
+    # Chat Completions 대신 Responses API 사용
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Responses API 활성화
+        store=True,  # 멀티턴을 위한 응답 저장 (선택사항)
+        auto_chain=True,  # 추론 모델용 자동 체이닝 (선택사항)
+    )
+    ```
+
+    **Responses API 파라미터:**
+    - `api`: Responses API를 사용하려면 `"responses"`로 설정 (기본값: `"completions"`)
+    - `instructions`: 시스템 레벨 지침 (Responses API 전용)
+    - `store`: 멀티턴 대화를 위한 응답 저장 여부
+    - `previous_response_id`: 멀티턴을 위한 이전 응답 ID
+    - `include`: 응답에 포함할 추가 데이터 (예: `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: OpenAI 내장 도구 목록: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: 파싱된 내장 도구 출력과 함께 구조화된 `ResponsesAPIResult` 반환
+    - `auto_chain`: 멀티턴 대화를 위한 응답 ID 자동 추적 및 사용
+    - `auto_chain_reasoning`: ZDR(제로 데이터 보존) 준수를 위한 암호화된 추론 항목 추적
+
+    <Tip>
+      새 프로젝트, 특히 추론 모델(o1, o3, o4)을 사용하거나 [파일](/ko/concepts/files)에 대한 네이티브 멀티모달 지원이 필요한 경우 Responses API를 사용하세요.
+    </Tip>
   </Accordion>
 
   <Accordion title="Meta-Llama">

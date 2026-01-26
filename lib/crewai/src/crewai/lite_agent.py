@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable
 import inspect
 import json
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
     cast,
@@ -22,6 +25,10 @@ from pydantic import (
     model_validator,
 )
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
@@ -296,9 +303,9 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
-        """
-        Execute the agent with the given messages.
+        """Execute the agent with the given messages.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
@@ -306,6 +313,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                      If a list is provided, each dict should have 'role' and 'content' keys.
             response_format: Optional Pydantic model for structured output. If provided,
                            overrides self.response_format for this execution.
+            input_files: Optional dict of named files to attach to the message.
+                   Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -327,7 +336,7 @@ class LiteAgent(FlowTrackable, BaseModel):
 
             # Format messages for the LLM
             self._messages = self._format_messages(
-                messages, response_format=response_format
+                messages, response_format=response_format, input_files=input_files
             )
 
             return self._execute_core(
@@ -464,19 +473,45 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         return output
 
-    async def kickoff_async(self, messages: str | list[LLMMessage]) -> LiteAgentOutput:
-        """
-        Execute the agent asynchronously with the given messages.
+    async def kickoff_async(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[BaseModel] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent asynchronously with the given messages.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        return await asyncio.to_thread(self.kickoff, messages)
+        return await asyncio.to_thread(
+            self.kickoff, messages, response_format, input_files
+        )
+
+    async def akickoff(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[BaseModel] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput:
+        """Async version of kickoff. Alias for kickoff_async.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        return await self.kickoff_async(messages, response_format, input_files)
 
     def _get_default_system_prompt(
         self, response_format: type[BaseModel] | None = None
@@ -520,12 +555,14 @@ class LiteAgent(FlowTrackable, BaseModel):
         self,
         messages: str | list[LLMMessage],
         response_format: type[BaseModel] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[LLMMessage]:
         """Format messages for the LLM.
 
         Args:
-            messages: Input messages to format
-            response_format: Optional response format to use instead of self.response_format
+            messages: Input messages to format.
+            response_format: Optional response format to use instead of self.response_format.
+            input_files: Optional dict of named files to include with the messages.
         """
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
@@ -539,6 +576,13 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         # Add the rest of the messages
         formatted_messages.extend(messages)
+
+        # Attach files to the last user message if provided
+        if input_files:
+            for msg in reversed(formatted_messages):
+                if msg.get("role") == "user":
+                    msg["files"] = input_files
+                    break
 
         return formatted_messages
 

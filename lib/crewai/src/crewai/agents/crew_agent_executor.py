@@ -45,6 +45,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -191,6 +192,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
+        self._inject_multimodal_files(inputs)
+
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
@@ -214,6 +217,66 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
+
+    def _inject_multimodal_files(self, inputs: dict[str, Any] | None = None) -> None:
+        """Attach files to the last user message for LLM-layer formatting.
+
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
+
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = get_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
+        if not files:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
+
+    async def _ainject_multimodal_files(
+        self, inputs: dict[str, Any] | None = None
+    ) -> None:
+        """Async attach files to the last user message for LLM-layer formatting.
+
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
+
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = await aget_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
+        if not files:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
 
     def _invoke_loop(self) -> AgentFinish:
         """Execute agent loop until completion.
@@ -700,7 +763,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         if (
                             original_tool
                             and hasattr(original_tool, "cache_function")
-                            and original_tool.cache_function
+                            and callable(original_tool.cache_function)
                         ):
                             should_cache = original_tool.cache_function(
                                 args_dict, raw_result
@@ -731,7 +794,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
-        elif max_usage_reached:
+        elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
 
@@ -809,6 +872,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
+
+        await self._ainject_multimodal_files(inputs)
 
         self._show_start_logs()
 

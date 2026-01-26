@@ -41,17 +41,19 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxFNWljEYFrf5qRwYj73OPQtAnPbF\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738683830,\n  \"model\": \"o3-mini-2025-01-31\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"The capital of France is Paris.\",\n
-      \       \"refusal\": null\n      },\n      \"finish_reason\": \"stop\"\n    }\n
-      \ ],\n  \"usage\": {\n    \"prompt_tokens\": 13,\n    \"completion_tokens\":
-      17,\n    \"total_tokens\": 30,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_8bcaa0ca21\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxFNWljEYFrf5qRwYj73OPQtAnPbF\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738683830,\n  \"model\": \"o3-mini-2025-01-31\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"The capital of France\
+        \ is Paris.\",\n        \"refusal\": null\n      },\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 13,\n    \"\
+        completion_tokens\": 17,\n    \"total_tokens\": 30,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\"\
+        : \"fp_8bcaa0ca21\"\n}\n"
     headers:
       CF-RAY:
       - 90cbc7551fe0b0ca-ATL
@@ -95,6 +97,7 @@ interactions:
       - 0s
       x-request-id:
       - req_fd7178a0e5060216d04f3bd023e8bca1
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

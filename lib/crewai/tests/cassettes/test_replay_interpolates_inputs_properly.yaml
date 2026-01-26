@@ -47,14 +47,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7dNDXti7bOsw9kra0QNMJNvOK8p\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214317,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: {name}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      153,\n    \"completion_tokens\": 16,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dNDXti7bOsw9kra0QNMJNvOK8p\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214317,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: {name}\",\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 153,\n    \"completion_tokens\"\
+        : 16,\n    \"total_tokens\": 169,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -96,8 +99,9 @@ interactions:
       - 0s
       x-request-id:
       - req_58f7c7076ac0f79f04a096a7555c9621
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test_agent. Test Description\nYour
       personal goal is: Test Goal\nTo give my best complete final answer to the task
@@ -147,14 +151,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7dNguikGmTEHJUzd7BpLiisSqmE\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214317,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi {name}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      165,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 182,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dNguikGmTEHJUzd7BpLiisSqmE\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214317,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: Hi {name}\",\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 165,\n    \"completion_tokens\"\
+        : 17,\n    \"total_tokens\": 182,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_52a7f40b0b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -196,8 +203,9 @@ interactions:
       - 0s
       x-request-id:
       - req_bdbcea773f09ad13e2e29a748696d898
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are test_agent. Test Description\nYour
       personal goal is: Test Goal\nTo give my best complete final answer to the task
@@ -247,14 +255,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7dOMkHewDrIkagS04MkzAekcgrJ\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214318,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi {name}\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      167,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 184,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_52a7f40b0b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7dOMkHewDrIkagS04MkzAekcgrJ\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214318,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: Hi {name}\",\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 167,\n    \"completion_tokens\"\
+        : 17,\n    \"total_tokens\": 184,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_52a7f40b0b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -296,6 +307,7 @@ interactions:
       - 0s
       x-request-id:
       - req_131d34341ba3bb2c52b0cb823246ec54
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

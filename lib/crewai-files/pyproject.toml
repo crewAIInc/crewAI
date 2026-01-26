@@ -1,0 +1,25 @@
+[project]
+name = "crewai-files"
+dynamic = ["version"]
+description = "File handling utilities for CrewAI multimodal inputs"
+readme = "README.md"
+authors = [
+    { name = "Greyson LaLonde", email = "greyson@crewai.com" }
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "Pillow~=10.4.0",
+    "pypdf~=4.0.0",
+    "python-magic>=0.4.27",
+    "aiocache~=0.12.3",
+    "aiofiles~=24.1.0",
+    "tinytag~=1.10.0",
+    "av~=13.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_files/__init__.py"

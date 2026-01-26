@@ -8,6 +8,7 @@ from hashlib import md5
 import json
 import re
 from typing import (
+    TYPE_CHECKING,
     Any,
     cast,
 )
@@ -30,6 +31,21 @@ from pydantic_core import PydanticCustomError
 from rich.console import Console
 from rich.panel import Panel
 from typing_extensions import Self
+
+
+if TYPE_CHECKING:
+    from crewai_files import FileInput
+
+try:
+    from crewai_files import get_supported_content_types
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+    def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+        return []
+
 
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
@@ -80,6 +96,7 @@ from crewai.task import Task
 from crewai.tasks.conditional_task import ConditionalTask
 from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -88,6 +105,7 @@ from crewai.utilities.crew.models import CrewContext
 from crewai.utilities.evaluators.crew_evaluator_handler import CrewEvaluator
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.file_handler import FileHandler
+from crewai.utilities.file_store import clear_files, get_all_files
 from crewai.utilities.formatter import (
     aggregate_raw_outputs_from_task_outputs,
     aggregate_raw_outputs_from_tasks,
@@ -677,7 +695,17 @@ class Crew(FlowTrackable, BaseModel):
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
+        """Execute the crew's workflow.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
+        """
         if self.stream:
             enable_agent_streaming(self.agents)
             ctx = StreamingContext()
@@ -686,7 +714,7 @@ class Crew(FlowTrackable, BaseModel):
                 """Execute the crew and capture the result."""
                 try:
                     self.stream = False
-                    crew_result = self.kickoff(inputs=inputs)
+                    crew_result = self.kickoff(inputs=inputs, input_files=input_files)
                     if isinstance(crew_result, CrewOutput):
                         ctx.result_holder.append(crew_result)
                 except Exception as exc:
@@ -709,7 +737,7 @@ class Crew(FlowTrackable, BaseModel):
         token = attach(baggage_ctx)
 
         try:
-            inputs = prepare_kickoff(self, inputs)
+            inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = self._run_sequential_process()
@@ -733,12 +761,22 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            clear_files(self.id)
             detach(token)
 
     def kickoff_for_each(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput]:
         """Executes the Crew's workflow for each input and aggregates results.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
 
         If stream=True, returns a list of CrewStreamingOutput objects that must
         each be iterated to get stream chunks and access results.
@@ -750,7 +788,7 @@ class Crew(FlowTrackable, BaseModel):
         for input_data in inputs:
             crew = self.copy()
 
-            output = crew.kickoff(inputs=input_data)
+            output = crew.kickoff(inputs=input_data, input_files=input_files)
 
             if not self.stream and crew.usage_metrics:
                 total_usage_metrics.add_usage_metrics(crew.usage_metrics)
@@ -763,9 +801,18 @@ class Crew(FlowTrackable, BaseModel):
         return results
 
     async def kickoff_async(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Asynchronous kickoff method to start the crew execution.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
 
         If stream=True, returns a CrewStreamingOutput that can be async-iterated
         to get stream chunks. After iteration completes, access the final result
@@ -780,7 +827,7 @@ class Crew(FlowTrackable, BaseModel):
             async def run_crew() -> None:
                 try:
                     self.stream = False
-                    result = await asyncio.to_thread(self.kickoff, inputs)
+                    result = await asyncio.to_thread(self.kickoff, inputs, input_files)
                     if isinstance(result, CrewOutput):
                         ctx.result_holder.append(result)
                 except Exception as e:
@@ -798,12 +845,21 @@ class Crew(FlowTrackable, BaseModel):
 
             return streaming_output
 
-        return await asyncio.to_thread(self.kickoff, inputs)
+        return await asyncio.to_thread(self.kickoff, inputs, input_files)
 
     async def kickoff_for_each_async(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Executes the Crew's workflow for each input asynchronously.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
 
         If stream=True, returns a single CrewStreamingOutput that yields chunks
         from all crews as they arrive. After iteration, access results via .results
@@ -813,18 +869,27 @@ class Crew(FlowTrackable, BaseModel):
         async def kickoff_fn(
             crew: Crew, input_data: dict[str, Any]
         ) -> CrewOutput | CrewStreamingOutput:
-            return await crew.kickoff_async(inputs=input_data)
+            return await crew.kickoff_async(inputs=input_data, input_files=input_files)
 
         return await run_for_each_async(self, inputs, kickoff_fn)
 
     async def akickoff(
-        self, inputs: dict[str, Any] | None = None
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> CrewOutput | CrewStreamingOutput:
         """Native async kickoff method using async task execution throughout.
 
         Unlike kickoff_async which wraps sync kickoff in a thread, this method
         uses native async/await for all operations including task execution,
         memory operations, and knowledge queries.
+
+        Args:
+            inputs: Optional input dictionary for task interpolation.
+            input_files: Optional dict of named file inputs for the crew.
+
+        Returns:
+            CrewOutput or CrewStreamingOutput if streaming is enabled.
         """
         if self.stream:
             enable_agent_streaming(self.agents)
@@ -833,7 +898,7 @@ class Crew(FlowTrackable, BaseModel):
             async def run_crew() -> None:
                 try:
                     self.stream = False
-                    inner_result = await self.akickoff(inputs)
+                    inner_result = await self.akickoff(inputs, input_files)
                     if isinstance(inner_result, CrewOutput):
                         ctx.result_holder.append(inner_result)
                 except Exception as exc:
@@ -857,7 +922,7 @@ class Crew(FlowTrackable, BaseModel):
         token = attach(baggage_ctx)
 
         try:
-            inputs = prepare_kickoff(self, inputs)
+            inputs = prepare_kickoff(self, inputs, input_files)
 
             if self.process == Process.sequential:
                 result = await self._arun_sequential_process()
@@ -881,14 +946,25 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
+            clear_files(self.id)
             detach(token)
 
     async def akickoff_for_each(
-        self, inputs: list[dict[str, Any]]
+        self,
+        inputs: list[dict[str, Any]],
+        input_files: dict[str, FileInput] | None = None,
     ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
         """Native async execution of the Crew's workflow for each input.
 
         Uses native async throughout rather than thread-based async.
+
+        Args:
+            inputs: List of input dictionaries, one per execution.
+            input_files: Optional dict of named file inputs shared across all executions.
+
+        Returns:
+            List of CrewOutput or CrewStreamingOutput objects.
+
         If stream=True, returns a single CrewStreamingOutput that yields chunks
         from all crews as they arrive.
         """
@@ -896,7 +972,7 @@ class Crew(FlowTrackable, BaseModel):
         async def kickoff_fn(
             crew: Crew, input_data: dict[str, Any]
         ) -> CrewOutput | CrewStreamingOutput:
-            return await crew.akickoff(inputs=input_data)
+            return await crew.akickoff(inputs=input_data, input_files=input_files)
 
         return await run_for_each_async(self, inputs, kickoff_fn)
 
@@ -1216,7 +1292,8 @@ class Crew(FlowTrackable, BaseModel):
             and hasattr(agent, "multimodal")
             and getattr(agent, "multimodal", False)
         ):
-            tools = self._add_multimodal_tools(agent, tools)
+            if not (agent.llm and agent.llm.supports_multimodal()):
+                tools = self._add_multimodal_tools(agent, tools)
 
         if agent and (hasattr(agent, "apps") and getattr(agent, "apps", None)):
             tools = self._add_platform_tools(task, tools)
@@ -1224,7 +1301,28 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
-        # Return a list[BaseTool] compatible with Task.execute_sync and execute_async
+        files = get_all_files(self.id, task.id)
+        if files:
+            supported_types: list[str] = []
+            if agent and agent.llm and agent.llm.supports_multimodal():
+                provider = getattr(agent.llm, "provider", None) or getattr(
+                    agent.llm, "model", "openai"
+                )
+                api = getattr(agent.llm, "api", None)
+                supported_types = get_supported_content_types(provider, api)
+
+            def is_auto_injected(content_type: str) -> bool:
+                return any(content_type.startswith(t) for t in supported_types)
+
+            # Only add read_file tool if there are files that need it
+            files_needing_tool = {
+                name: f
+                for name, f in files.items()
+                if not is_auto_injected(f.content_type)
+            }
+            if files_needing_tool:
+                tools = self._add_file_tools(tools, files_needing_tool)
+
         return tools
 
     def _get_agent_to_use(self, task: Task) -> BaseAgent | None:
@@ -1307,6 +1405,22 @@ class Crew(FlowTrackable, BaseModel):
             # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
+
+    def _add_file_tools(
+        self, tools: list[BaseTool], files: dict[str, Any]
+    ) -> list[BaseTool]:
+        """Add file reading tool when input files are available.
+
+        Args:
+            tools: Current list of tools.
+            files: Dictionary of input files.
+
+        Returns:
+            Updated list with file tool added.
+        """
+        read_file_tool = ReadFileTool()
+        read_file_tool.set_files(files)
+        return self._merge_tools(tools, [read_file_tool])
 
     def _add_delegation_tools(
         self, task: Task, tools: list[BaseTool]

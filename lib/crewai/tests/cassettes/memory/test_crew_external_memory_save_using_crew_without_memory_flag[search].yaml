@@ -113,33 +113,35 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-BLbjXyMvmR8ctf0sqhp7F1ePskveM\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1744489635,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: Here is a list of relevant URLs based on the search query:\\n\\n1. **Artificial
-      Intelligence in Healthcare**\\n   - https://www.healthit.gov/topic/scientific-initiatives/ai-healthcare\\n
-      \  - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317789/\\n   - https://www.forbes.com/sites/bernardmarr/2021/10/18/the-top-5-ways-ai-is-being-used-in-healthcare/?sh=3edf5df51c9c\\n\\n2.
-      **Blockchain Technology in Supply Chain Management**\\n   - https://www.ibm.com/blockchain/supply-chain\\n
-      \  - https://www.gartner.com/en/newsroom/press-releases/2021-06-23-gartner-says-three-use-cases-for-blockchain-in-supply-chain-are-scaling\\n
-      \  - https://www2.deloitte.com/us/en/insights/industry/retail-distribution/blockchain-in-supply-chain.html\\n\\n3.
-      **Renewable Energy Innovations**\\n   - https://www.irena.org/publications/2020/Sep/Renewable-Power-Generation-Costs-in-2020\\n
-      \  - https://www.nrel.gov/docs/fy20osti/77021.pdf\\n   - https://www.cnbc.com/2021/11/03/renewable-energy-could-get-its-first-taste-of-markets-in-2021.html\\n\\n4.
-      **7G Technology Developments**\\n   - https://www.sciencedirect.com/science/article/pii/S1389128619308189\\n
-      \  - https://www.forbes.com/sites/bernardmarr/2021/11/01/what-is-7g-technology-a-beginners-guide-to-the-future-of-mobile-communications/?sh=51b8a7e1464a\\n
-      \  - https://www.ericsson.com/en/reports-and-research/reports/7g-networks-a-powerful-future-for-connected-society\\n\\n5.
-      **Impact of Quantum Computing on Cybersecurity**\\n   - https://www.ibm.com/blogs/research/2021/09/quantum-computing-cybersecurity/\\n
-      \  - https://www.sciencedirect.com/science/article/pii/S0167739X21000072\\n
-      \  - https://www.techrepublic.com/article/how-quantum-computing-will-change-cybersecurity/\\n\\nThese
-      URLs should provide comprehensive information on the topics searched, providing
-      valuable insights and data for your research needs.\",\n        \"refusal\":
-      null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 185,\n    \"completion_tokens\":
-      534,\n    \"total_tokens\": 719,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BLbjXyMvmR8ctf0sqhp7F1ePskveM\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1744489635,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: Here is a list of relevant URLs based on the search\
+        \ query:\\n\\n1. **Artificial Intelligence in Healthcare**\\n   - https://www.healthit.gov/topic/scientific-initiatives/ai-healthcare\\\
+        n   - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317789/\\n   - https://www.forbes.com/sites/bernardmarr/2021/10/18/the-top-5-ways-ai-is-being-used-in-healthcare/?sh=3edf5df51c9c\\\
+        n\\n2. **Blockchain Technology in Supply Chain Management**\\n   - https://www.ibm.com/blockchain/supply-chain\\\
+        n   - https://www.gartner.com/en/newsroom/press-releases/2021-06-23-gartner-says-three-use-cases-for-blockchain-in-supply-chain-are-scaling\\\
+        n   - https://www2.deloitte.com/us/en/insights/industry/retail-distribution/blockchain-in-supply-chain.html\\\
+        n\\n3. **Renewable Energy Innovations**\\n   - https://www.irena.org/publications/2020/Sep/Renewable-Power-Generation-Costs-in-2020\\\
+        n   - https://www.nrel.gov/docs/fy20osti/77021.pdf\\n   - https://www.cnbc.com/2021/11/03/renewable-energy-could-get-its-first-taste-of-markets-in-2021.html\\\
+        n\\n4. **7G Technology Developments**\\n   - https://www.sciencedirect.com/science/article/pii/S1389128619308189\\\
+        n   - https://www.forbes.com/sites/bernardmarr/2021/11/01/what-is-7g-technology-a-beginners-guide-to-the-future-of-mobile-communications/?sh=51b8a7e1464a\\\
+        n   - https://www.ericsson.com/en/reports-and-research/reports/7g-networks-a-powerful-future-for-connected-society\\\
+        n\\n5. **Impact of Quantum Computing on Cybersecurity**\\n   - https://www.ibm.com/blogs/research/2021/09/quantum-computing-cybersecurity/\\\
+        n   - https://www.sciencedirect.com/science/article/pii/S0167739X21000072\\\
+        n   - https://www.techrepublic.com/article/how-quantum-computing-will-change-cybersecurity/\\\
+        n\\nThese URLs should provide comprehensive information on the topics searched,\
+        \ providing valuable insights and data for your research needs.\",\n     \
+        \   \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\"\
+        : null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n\
+        \    \"prompt_tokens\": 185,\n    \"completion_tokens\": 534,\n    \"total_tokens\"\
+        : 719,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n  \
+        \    \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n \
+        \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_80cf447eee\"\n}\n"
     headers:
       CF-RAY:
       - 92f576a01d3b7e05-GRU
@@ -183,6 +185,7 @@ interactions:
       - 0s
       x-request-id:
       - req_7c2d313d0b5997e903553a782b2afa25
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1
