@@ -1410,11 +1410,13 @@ class LLM(BaseLLM):
 
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
+        response_id = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
+                response_id = chunk.id if hasattr(chunk, "id") else None
 
                 try:
                     choices = None
@@ -1474,6 +1476,7 @@ class LLM(BaseLLM):
                             chunk=chunk_content,
                             from_task=from_task,
                             from_agent=from_agent,
+                            response_id=response_id
                         ),
                     )
 
@@ -1511,6 +1514,7 @@ class LLM(BaseLLM):
                         available_functions=available_functions,
                         from_task=from_task,
                         from_agent=from_agent,
+                        response_id=response_id,
                     )
                     if result is not None:
                         return result

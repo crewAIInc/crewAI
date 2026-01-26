@@ -790,6 +790,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Tuple of (updated full_response, updated function_calls, updated usage_data)
         """
+        response_id=chunk.response_id if hasattr(chunk,"response_id") else None
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
@@ -799,7 +800,7 @@ class GeminiCompletion(BaseLLM):
                 chunk=chunk.text,
                 from_task=from_task,
                 from_agent=from_agent,
-                response_id=chunk.response_id if hasattr(chunk,"response_id") else None
+                response_id=response_id
             )
 
         if chunk.candidates:
@@ -836,6 +837,7 @@ class GeminiCompletion(BaseLLM):
                                 "index": call_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id
                         )
 
         return full_response, function_calls, usage_data
