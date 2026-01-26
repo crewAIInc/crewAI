@@ -92,6 +92,7 @@ class AzureCompletion(BaseLLM):
         stop: list[str] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
@@ -111,6 +112,9 @@ class AzureCompletion(BaseLLM):
             stop: Stop sequences
             stream: Enable streaming responses
             interceptor: HTTP interceptor (not yet supported for Azure).
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
+                           Only works with OpenAI models deployed on Azure.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -165,6 +169,7 @@ class AzureCompletion(BaseLLM):
         self.presence_penalty = presence_penalty
         self.max_tokens = max_tokens
         self.stream = stream
+        self.response_format = response_format
 
         self.is_openai_model = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
@@ -298,6 +303,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            effective_response_model = response_model or self.response_format
 
             # Format messages for Azure
             formatted_messages = self._format_messages_for_azure(messages)
@@ -307,7 +313,7 @@ class AzureCompletion(BaseLLM):
 
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
-                formatted_messages, tools, response_model
+                formatted_messages, tools, effective_response_model
             )
 
             # Handle streaming vs non-streaming
@@ -317,7 +323,7 @@ class AzureCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return self._handle_completion(
@@ -325,7 +331,7 @@ class AzureCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -364,11 +370,12 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            effective_response_model = response_model or self.response_format
 
             formatted_messages = self._format_messages_for_azure(messages)
 
             completion_params = self._prepare_completion_params(
-                formatted_messages, tools, response_model
+                formatted_messages, tools, effective_response_model
             )
 
             if self.stream:
@@ -377,7 +384,7 @@ class AzureCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return await self._ahandle_completion(
@@ -385,7 +392,7 @@ class AzureCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -726,7 +733,7 @@ class AzureCompletion(BaseLLM):
         """
         if update.choices:
             choice = update.choices[0]
-            response_id = update.id if hasattr(update,"id") else None
+            response_id = update.id if hasattr(update, "id") else None
             if choice.delta and choice.delta.content:
                 content_delta = choice.delta.content
                 full_response += content_delta
@@ -734,7 +741,7 @@ class AzureCompletion(BaseLLM):
                     chunk=content_delta,
                     from_task=from_task,
                     from_agent=from_agent,
-                    response_id=response_id
+                    response_id=response_id,
                 )
 
             if choice.delta and choice.delta.tool_calls:
@@ -769,7 +776,7 @@ class AzureCompletion(BaseLLM):
                             "index": idx,
                         },
                         call_type=LLMCallType.TOOL_CALL,
-                        response_id=response_id
+                        response_id=response_id,
                     )
 
         return full_response
