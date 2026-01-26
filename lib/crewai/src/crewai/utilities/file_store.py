@@ -17,14 +17,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _file_store: Cache | None = None
-_HAS_AIOCACHE = False
 
 try:
     from aiocache import Cache
     from aiocache.serializers import PickleSerializer
 
     _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
-    _HAS_AIOCACHE = True
 except ImportError:
     logger.debug(
         "aiocache is not installed. File store features will be disabled. "
