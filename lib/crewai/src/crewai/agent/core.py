@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Coroutine, Sequence
 import shutil
 import subprocess
 import time
@@ -14,10 +14,16 @@ from typing import (
 )
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, InstanceOf, PrivateAttr, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    PrivateAttr,
+    model_validator,
+)
 from typing_extensions import Self
 
-from crewai.a2a.config import A2AConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -35,6 +41,11 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.agent_events import (
+    LiteAgentExecutionCompletedEvent,
+    LiteAgentExecutionErrorEvent,
+    LiteAgentExecutionStartedEvent,
+)
 from crewai.events.types.knowledge_events import (
     KnowledgeQueryCompletedEvent,
     KnowledgeQueryFailedEvent,
@@ -42,12 +53,13 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.events.types.memory_events import (
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
 )
-from crewai.experimental.crew_agent_executor_flow import CrewAgentExecutorFlow
+from crewai.experimental.agent_executor import AgentExecutor
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
-from crewai.lite_agent import LiteAgent
+from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp import (
     MCPClient,
@@ -65,26 +77,32 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities.agent_utils import (
     get_tool_names,
+    is_inside_event_loop,
     load_agent_from_repository,
     parse_tools,
     render_text_description_and_args,
 )
 from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
-from crewai.utilities.converter import Converter
+from crewai.utilities.converter import Converter, ConverterError
+from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.prompts import Prompts
+from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
+from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput
     from crewai_tools import CodeInterpreterTool
 
+    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
-    from crewai.lite_agent_output import LiteAgentOutput
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
+    from crewai.tools.structured_tool import CrewStructuredTool
     from crewai.utilities.types import LLMMessage
 
 
@@ -106,7 +124,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or CrewAgentExecutorFlow class.
+            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -125,6 +143,8 @@ class Agent(BaseAgent):
             apps: List of applications that the agent can access through CrewAI Platform.
             mcps: List of MCP server references for tool integration.
     """
+
+    model_config = ConfigDict()
 
     _times_executed: int = PrivateAttr(default=0)
     _mcp_clients: list[Any] = PrivateAttr(default_factory=list)
@@ -169,7 +189,8 @@ class Agent(BaseAgent):
     )
     multimodal: bool = Field(
         default=False,
-        description="Whether the agent is multimodal.",
+        deprecated=True,
+        description="[DEPRECATED, will be removed in v2.0 - pass files natively.] Whether the agent is multimodal.",
     )
     inject_date: bool = Field(
         default=False,
@@ -218,13 +239,22 @@ class Agent(BaseAgent):
     guardrail_max_retries: int = Field(
         default=3, description="Maximum number of retries when guardrail fails"
     )
-    a2a: list[A2AConfig] | A2AConfig | None = Field(
+    a2a: (
+        list[A2AConfig | A2AServerConfig | A2AClientConfig]
+        | A2AConfig
+        | A2AServerConfig
+        | A2AClientConfig
+        | None
+    ) = Field(
         default=None,
-        description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. Can be a single A2AConfig or a dict mapping agent IDs to configs.",
+        description="""
+        A2A (Agent-to-Agent) configuration for delegating tasks to remote agents.
+        Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
+        """,
     )
-    executor_class: type[CrewAgentExecutor] | type[CrewAgentExecutorFlow] = Field(
+    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
         default=CrewAgentExecutor,
-        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use CrewAgentExecutorFlow.",
+        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
 
     @model_validator(mode="before")
@@ -287,6 +317,22 @@ class Agent(BaseAgent):
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
 
+    def _supports_native_tool_calling(self, tools: list[BaseTool]) -> bool:
+        """Check if the LLM supports native function calling with the given tools.
+
+        Args:
+            tools: List of tools to check against.
+
+        Returns:
+            True if native function calling is supported and tools are available.
+        """
+        return (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+            and len(tools) > 0
+        )
+
     def execute_task(
         self,
         task: Task,
@@ -330,30 +376,43 @@ class Agent(BaseAgent):
             )
 
             start_time = time.time()
+            memory = ""
 
-            contextual_memory = ContextualMemory(
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._external_memory,
-                agent=self,
-                task=task,
-            )
-            memory = contextual_memory.build_context_for_task(task, context or "")
-            if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+            try:
+                contextual_memory = ContextualMemory(
+                    self.crew._short_term_memory,
+                    self.crew._long_term_memory,
+                    self.crew._entity_memory,
+                    self.crew._external_memory,
+                    agent=self,
+                    task=task,
+                )
+                memory = contextual_memory.build_context_for_task(task, context or "")
+                if memory.strip() != "":
+                    task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalCompletedEvent(
-                    task_id=str(task.id) if task else None,
-                    memory_content=memory,
-                    retrieval_time_ms=(time.time() - start_time) * 1000,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=str(task.id) if task else None,
+                        memory_content=memory,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=str(task.id) if task else None,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                        error=str(e),
+                    ),
+                )
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = handle_knowledge_retrieval(
@@ -539,32 +598,45 @@ class Agent(BaseAgent):
             )
 
             start_time = time.time()
+            memory = ""
 
-            contextual_memory = ContextualMemory(
-                self.crew._short_term_memory,
-                self.crew._long_term_memory,
-                self.crew._entity_memory,
-                self.crew._external_memory,
-                agent=self,
-                task=task,
-            )
-            memory = await contextual_memory.abuild_context_for_task(
-                task, context or ""
-            )
-            if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+            try:
+                contextual_memory = ContextualMemory(
+                    self.crew._short_term_memory,
+                    self.crew._long_term_memory,
+                    self.crew._entity_memory,
+                    self.crew._external_memory,
+                    agent=self,
+                    task=task,
+                )
+                memory = await contextual_memory.abuild_context_for_task(
+                    task, context or ""
+                )
+                if memory.strip() != "":
+                    task_prompt += self.i18n.slice("memory").format(memory=memory)
 
-            crewai_event_bus.emit(
-                self,
-                event=MemoryRetrievalCompletedEvent(
-                    task_id=str(task.id) if task else None,
-                    memory_content=memory,
-                    retrieval_time_ms=(time.time() - start_time) * 1000,
-                    source_type="agent",
-                    from_agent=self,
-                    from_task=task,
-                ),
-            )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=str(task.id) if task else None,
+                        memory_content=memory,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=str(task.id) if task else None,
+                        source_type="agent",
+                        from_agent=self,
+                        from_task=task,
+                        error=str(e),
+                    ),
+                )
 
         knowledge_config = get_knowledge_config(self)
         task_prompt = await ahandle_knowledge_retrieval(
@@ -709,9 +781,12 @@ class Agent(BaseAgent):
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -733,7 +808,7 @@ class Agent(BaseAgent):
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,
+                tools=parsed_tools,  # type: ignore[arg-type]
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
@@ -742,7 +817,7 @@ class Agent(BaseAgent):
         else:
             self.agent_executor = self.executor_class(
                 llm=cast(BaseLLM, self.llm),
-                task=task,
+                task=task,  # type: ignore[arg-type]
                 i18n=self.i18n,
                 agent=self,
                 crew=self.crew,
@@ -765,11 +840,11 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list,
+        tools: list[BaseTool],
         raw_tools: list[BaseTool],
-        prompt: dict,
+        prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
-        rpm_limit_fn: Callable | None,
+        rpm_limit_fn: Callable | None,  # type: ignore[type-arg]
     ) -> None:
         """Update executor parameters without recreating instance.
 
@@ -1267,10 +1342,10 @@ class Agent(BaseAgent):
                     args_schema = None
                     if hasattr(tool, "inputSchema") and tool.inputSchema:
                         args_schema = self._json_schema_to_pydantic(
-                            tool.name, tool.inputSchema
+                            sanitize_tool_name(tool.name), tool.inputSchema
                         )
 
-                    schemas[tool.name] = {
+                    schemas[sanitize_tool_name(tool.name)] = {
                         "description": getattr(tool, "description", ""),
                         "args_schema": args_schema,
                     }
@@ -1426,7 +1501,7 @@ class Agent(BaseAgent):
         """
         return "\n".join(
             [
-                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                f"Tool name: {sanitize_tool_name(tool.name)}\nTool description:\n{tool.description}"
                 for tool in tools
             ]
         )
@@ -1567,26 +1642,27 @@ class Agent(BaseAgent):
             )
             return None
 
-    def kickoff(
+    def _prepare_kickoff(
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-    ) -> LiteAgentOutput:
-        """
-        Execute the agent with the given messages using a LiteAgent instance.
+        input_files: dict[str, FileInput] | None = None,
+    ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
+        """Prepare common setup for kickoff execution.
 
-        This method is useful when you want to use the Agent configuration but
-        with the simpler and more direct execution flow of LiteAgent.
+        This method handles all the common preparation logic shared between
+        kickoff() and kickoff_async(), including tool processing, prompt building,
+        executor creation, and input formatting.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
-                     If a string is provided, it will be converted to a user message.
-                     If a list is provided, each dict should have 'role' and 'content' keys.
             response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
 
         Returns:
-            LiteAgentOutput: The result of the agent execution.
+            Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        # Process platform apps and MCP tools
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools and self.tools is not None:
@@ -1596,60 +1672,475 @@ class Agent(BaseAgent):
             if mcps and self.tools is not None:
                 self.tools.extend(mcps)
 
-        lite_agent = LiteAgent(
-            id=self.id,
-            role=self.role,
-            goal=self.goal,
-            backstory=self.backstory,
-            llm=self.llm,
-            tools=self.tools or [],
-            max_iterations=self.max_iter,
-            max_execution_time=self.max_execution_time,
-            respect_context_window=self.respect_context_window,
-            verbose=self.verbose,
-            response_format=response_format,
+        # Prepare tools
+        raw_tools: list[BaseTool] = self.tools or []
+        parsed_tools = parse_tools(raw_tools)
+
+        # Build agent_info for backward-compatible event emission
+        agent_info = {
+            "id": self.id,
+            "role": self.role,
+            "goal": self.goal,
+            "backstory": self.backstory,
+            "tools": raw_tools,
+            "verbose": self.verbose,
+        }
+
+        # Build prompt for standalone execution
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+        prompt = Prompts(
+            agent=self,
+            has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
-            original_agent=self,
-            guardrail=self.guardrail,
-            guardrail_max_retries=self.guardrail_max_retries,
+            use_system_prompt=self.use_system_prompt,
+            system_template=self.system_template,
+            prompt_template=self.prompt_template,
+            response_template=self.response_template,
+        ).task_execution()
+
+        # Prepare stop words
+        stop_words = [self.i18n.slice("observation")]
+        if self.response_template:
+            stop_words.append(
+                self.response_template.split("{{ .Response }}")[1].strip()
+            )
+
+        # Get RPM limit function
+        rpm_limit_fn = (
+            self._rpm_controller.check_or_wait if self._rpm_controller else None
         )
 
-        return lite_agent.kickoff(messages)
+        # Create the executor for standalone mode (no crew, no task)
+        executor = AgentExecutor(
+            task=None,
+            crew=None,
+            llm=cast(BaseLLM, self.llm),
+            agent=self,
+            prompt=prompt,
+            max_iter=self.max_iter,
+            tools=parsed_tools,
+            tools_names=get_tool_names(parsed_tools),
+            stop_words=stop_words,
+            tools_description=render_text_description_and_args(parsed_tools),
+            tools_handler=self.tools_handler,
+            original_tools=raw_tools,
+            step_callback=self.step_callback,
+            function_calling_llm=self.function_calling_llm,
+            respect_context_window=self.respect_context_window,
+            request_within_rpm_limit=rpm_limit_fn,
+            callbacks=[TokenCalcHandler(self._token_process)],
+            response_model=response_format,
+            i18n=self.i18n,
+        )
 
-    async def kickoff_async(
+        all_files: dict[str, Any] = {}
+        if isinstance(messages, str):
+            formatted_messages = messages
+        else:
+            formatted_messages = "\n".join(
+                str(msg.get("content", "")) for msg in messages if msg.get("content")
+            )
+            for msg in messages:
+                if msg.get("files"):
+                    all_files.update(msg["files"])
+
+        if input_files:
+            all_files.update(input_files)
+
+        # Build the input dict for the executor
+        inputs: dict[str, Any] = {
+            "input": formatted_messages,
+            "tool_names": get_tool_names(parsed_tools),
+            "tools": render_text_description_and_args(parsed_tools),
+        }
+        if all_files:
+            inputs["files"] = all_files
+
+        return executor, inputs, agent_info, parsed_tools
+
+    def kickoff(
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-    ) -> LiteAgentOutput:
-        """
-        Execute the agent asynchronously with the given messages using a LiteAgent instance.
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
+        """Execute the agent with the given messages using the AgentExecutor.
 
-        This is the async version of the kickoff method.
+        This method provides standalone agent execution without requiring a Crew.
+        It supports tools, response formatting, guardrails, and file inputs.
+
+        When called from within a Flow (sync or async method), this automatically
+        detects the event loop and returns a coroutine that the Flow framework
+        awaits. Users don't need to handle async explicitly.
 
         Args:
             messages: Either a string query or a list of message dictionaries.
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
+                     Messages can include a 'files' field with file inputs.
             response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+                   Files can be paths, bytes, or File objects from crewai_files.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+            When inside a Flow, returns a coroutine that resolves to LiteAgentOutput.
+
+        Note:
+            For explicit async usage outside of Flow, use kickoff_async() directly.
+        """
+        # Magic auto-async: if inside event loop (e.g., inside a Flow),
+        # return coroutine for Flow to await
+        if is_inside_event_loop():
+            return self.kickoff_async(messages, response_format, input_files)
+
+        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+            messages, response_format, input_files
+        )
+
+        try:
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=parsed_tools,
+                    messages=messages,
+                ),
+            )
+
+            output = self._execute_and_build_output(executor, inputs, response_format)
+            if self.guardrail is not None:
+                output = self._process_kickoff_guardrail(
+                    output=output,
+                    executor=executor,
+                    inputs=inputs,
+                    response_format=response_format,
+                )
+
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=output.raw,
+                ),
+            )
+
+            return output
+
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise
+
+    def _execute_and_build_output(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent and build the output object.
+
+        Args:
+            executor: The executor instance.
+            inputs: Input dictionary for execution.
+            response_format: Optional response format.
+
+        Returns:
+            LiteAgentOutput with raw output, formatted result, and metrics.
+        """
+        import json
+
+        # Execute the agent (this is called from sync path, so invoke returns dict)
+        result = cast(dict[str, Any], executor.invoke(inputs))
+        raw_output = result.get("output", "")
+
+        # Handle response format conversion
+        formatted_result: BaseModel | None = None
+        if response_format:
+            try:
+                model_schema = generate_model_description(response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=raw_output,
+                    model=response_format,
+                    instructions=instructions,
+                )
+
+                conversion_result = converter.to_pydantic()
+                if isinstance(conversion_result, BaseModel):
+                    formatted_result = conversion_result
+            except ConverterError:
+                pass  # Keep raw output if conversion fails
+
+        # Get token usage metrics
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+
+        return LiteAgentOutput(
+            raw=raw_output,
+            pydantic=formatted_result,
+            agent_role=self.role,
+            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=executor.messages,
+        )
+
+    async def _execute_and_build_output_async(
+        self,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent asynchronously and build the output object.
+
+        This is the async version of _execute_and_build_output that uses
+        invoke_async() for native async execution within event loops.
+
+        Args:
+            executor: The executor instance.
+            inputs: Input dictionary for execution.
+            response_format: Optional response format.
+
+        Returns:
+            LiteAgentOutput with raw output, formatted result, and metrics.
+        """
+        import json
+
+        # Execute the agent asynchronously
+        result = await executor.invoke_async(inputs)
+        raw_output = result.get("output", "")
+
+        # Handle response format conversion
+        formatted_result: BaseModel | None = None
+        if response_format:
+            try:
+                model_schema = generate_model_description(response_format)
+                schema = json.dumps(model_schema, indent=2)
+                instructions = self.i18n.slice("formatted_task_instructions").format(
+                    output_format=schema
+                )
+
+                converter = Converter(
+                    llm=self.llm,
+                    text=raw_output,
+                    model=response_format,
+                    instructions=instructions,
+                )
+
+                conversion_result = converter.to_pydantic()
+                if isinstance(conversion_result, BaseModel):
+                    formatted_result = conversion_result
+            except ConverterError:
+                pass  # Keep raw output if conversion fails
+
+        # Get token usage metrics
+        if isinstance(self.llm, BaseLLM):
+            usage_metrics = self.llm.get_token_usage_summary()
+        else:
+            usage_metrics = self._token_process.get_summary()
+
+        return LiteAgentOutput(
+            raw=raw_output,
+            pydantic=formatted_result,
+            agent_role=self.role,
+            usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
+            messages=executor.messages,
+        )
+
+    def _process_kickoff_guardrail(
+        self,
+        output: LiteAgentOutput,
+        executor: AgentExecutor,
+        inputs: dict[str, str],
+        response_format: type[Any] | None = None,
+        retry_count: int = 0,
+    ) -> LiteAgentOutput:
+        """Process guardrail for kickoff execution with retry logic.
+
+        Args:
+            output: Current agent output.
+            executor: The executor instance.
+            inputs: Input dictionary for re-execution.
+            response_format: Optional response format.
+            retry_count: Current retry count.
+
+        Returns:
+            Validated/updated output.
+        """
+        from crewai.utilities.guardrail_types import GuardrailCallable
+
+        # Ensure guardrail is callable
+        guardrail_callable: GuardrailCallable
+        if isinstance(self.guardrail, str):
+            from crewai.tasks.llm_guardrail import LLMGuardrail
+
+            guardrail_callable = cast(
+                GuardrailCallable,
+                LLMGuardrail(description=self.guardrail, llm=cast(BaseLLM, self.llm)),
+            )
+        elif callable(self.guardrail):
+            guardrail_callable = self.guardrail
+        else:
+            # Should not happen if called from kickoff with guardrail check
+            return output
+
+        guardrail_result = process_guardrail(
+            output=output,
+            guardrail=guardrail_callable,
+            retry_count=retry_count,
+            event_source=self,
+            from_agent=self,
+        )
+
+        if not guardrail_result.success:
+            if retry_count >= self.guardrail_max_retries:
+                raise ValueError(
+                    f"Agent's guardrail failed validation after {self.guardrail_max_retries} retries. "
+                    f"Last error: {guardrail_result.error}"
+                )
+
+            # Add feedback and re-execute
+            executor._append_message_to_state(
+                guardrail_result.error or "Guardrail validation failed",
+                role="user",
+            )
+
+            # Re-execute and build new output
+            output = self._execute_and_build_output(executor, inputs, response_format)
+
+            # Recursively retry guardrail
+            return self._process_kickoff_guardrail(
+                output=output,
+                executor=executor,
+                inputs=inputs,
+                response_format=response_format,
+                retry_count=retry_count + 1,
+            )
+
+        # Apply guardrail result if available
+        if guardrail_result.result is not None:
+            if isinstance(guardrail_result.result, str):
+                output.raw = guardrail_result.result
+            elif isinstance(guardrail_result.result, BaseModel):
+                output.pydantic = guardrail_result.result
+
+        return output
+
+    async def kickoff_async(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput:
+        """Execute the agent asynchronously with the given messages.
+
+        This is the async version of the kickoff method that uses native async
+        execution. It is designed for use within async contexts, such as when
+        called from within an async Flow method.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+                     If a string is provided, it will be converted to a user message.
+                     If a list is provided, each dict should have 'role' and 'content' keys.
+                     Messages can include a 'files' field with file inputs.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+                   Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        lite_agent = LiteAgent(
-            role=self.role,
-            goal=self.goal,
-            backstory=self.backstory,
-            llm=self.llm,
-            tools=self.tools or [],
-            max_iterations=self.max_iter,
-            max_execution_time=self.max_execution_time,
-            respect_context_window=self.respect_context_window,
-            verbose=self.verbose,
-            response_format=response_format,
-            i18n=self.i18n,
-            original_agent=self,
-            guardrail=self.guardrail,
-            guardrail_max_retries=self.guardrail_max_retries,
+        executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
+            messages, response_format, input_files
         )
 
-        return await lite_agent.kickoff_async(messages)
+        try:
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionStartedEvent(
+                    agent_info=agent_info,
+                    tools=parsed_tools,
+                    messages=messages,
+                ),
+            )
+
+            output = await self._execute_and_build_output_async(
+                executor, inputs, response_format
+            )
+
+            if self.guardrail is not None:
+                output = self._process_kickoff_guardrail(
+                    output=output,
+                    executor=executor,
+                    inputs=inputs,
+                    response_format=response_format,
+                )
+
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionCompletedEvent(
+                    agent_info=agent_info,
+                    output=output.raw,
+                ),
+            )
+
+            return output
+
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=LiteAgentExecutionErrorEvent(
+                    agent_info=agent_info,
+                    error=str(e),
+                ),
+            )
+            raise
+
+    async def akickoff(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput:
+        """Async version of kickoff. Alias for kickoff_async.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        return await self.kickoff_async(messages, response_format, input_files)
+
+
+# Rebuild Agent model to resolve A2A type forward references
+try:
+    from crewai.a2a.config import (
+        A2AClientConfig as _A2AClientConfig,
+        A2AConfig as _A2AConfig,
+        A2AServerConfig as _A2AServerConfig,
+    )
+
+    Agent.model_rebuild(
+        _types_namespace={
+            "A2AConfig": _A2AConfig,
+            "A2AClientConfig": _A2AClientConfig,
+            "A2AServerConfig": _A2AServerConfig,
+        }
+    )
+except ImportError:
+    pass

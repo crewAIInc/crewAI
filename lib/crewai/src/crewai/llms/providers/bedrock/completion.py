@@ -247,7 +247,7 @@ class BedrockCompletion(BaseLLM):
         self.top_p = top_p
         self.top_k = top_k
         self.stream = stream
-        self.stop_sequences = stop_sequences or []
+        self.stop_sequences = stop_sequences
 
         # Store advanced features (optional)
         self.guardrail_config = guardrail_config
@@ -267,7 +267,7 @@ class BedrockCompletion(BaseLLM):
     @property
     def stop(self) -> list[str]:
         """Get stop sequences sent to the API."""
-        return list(self.stop_sequences)
+        return [] if self.stop_sequences is None else list(self.stop_sequences)
 
     @stop.setter
     def stop(self, value: Sequence[str] | str | None) -> None:
@@ -330,7 +330,8 @@ class BedrockCompletion(BaseLLM):
                     cast(object, [{"text": system_message}]),
                 )
 
-            # Add tool config if present
+            # Add tool config if present or if messages contain tool content
+            # Bedrock requires toolConfig when messages have toolUse/toolResult
             if tools:
                 tool_config: ToolConfigurationTypeDef = {
                     "tools": cast(
@@ -339,6 +340,16 @@ class BedrockCompletion(BaseLLM):
                     )
                 }
                 body["toolConfig"] = tool_config
+            elif self._messages_contain_tool_content(formatted_messages):
+                # Create minimal toolConfig from tool history in messages
+                tools_from_history = self._extract_tools_from_message_history(
+                    formatted_messages
+                )
+                if tools_from_history:
+                    body["toolConfig"] = cast(
+                        "ToolConfigurationTypeDef",
+                        cast(object, {"tools": tools_from_history}),
+                    )
 
             # Add optional advanced features if configured
             if self.guardrail_config:
@@ -444,6 +455,8 @@ class BedrockCompletion(BaseLLM):
                     cast(object, [{"text": system_message}]),
                 )
 
+            # Add tool config if present or if messages contain tool content
+            # Bedrock requires toolConfig when messages have toolUse/toolResult
             if tools:
                 tool_config: ToolConfigurationTypeDef = {
                     "tools": cast(
@@ -452,6 +465,16 @@ class BedrockCompletion(BaseLLM):
                     )
                 }
                 body["toolConfig"] = tool_config
+            elif self._messages_contain_tool_content(formatted_messages):
+                # Create minimal toolConfig from tool history in messages
+                tools_from_history = self._extract_tools_from_message_history(
+                    formatted_messages
+                )
+                if tools_from_history:
+                    body["toolConfig"] = cast(
+                        "ToolConfigurationTypeDef",
+                        cast(object, {"tools": tools_from_history}),
+                    )
 
             if self.guardrail_config:
                 guardrail_config: GuardrailConfigurationTypeDef = cast(
@@ -545,6 +568,18 @@ class BedrockCompletion(BaseLLM):
                 return (
                     "I apologize, but I received an empty response. Please try again."
                 )
+
+            # If there are tool uses but no available_functions, return them for the executor to handle
+            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            if tool_uses and not available_functions:
+                self._emit_call_completed_event(
+                    response=tool_uses,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                )
+                return tool_uses
 
             # Process content blocks and handle tool use correctly
             text_content = ""
@@ -935,6 +970,18 @@ class BedrockCompletion(BaseLLM):
                     "I apologize, but I received an empty response. Please try again."
                 )
 
+            # If there are tool uses but no available_functions, return them for the executor to handle
+            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            if tool_uses and not available_functions:
+                self._emit_call_completed_event(
+                    response=tool_uses,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=messages,
+                )
+                return tool_uses
+
             text_content = ""
 
             for content_block in content:
@@ -1268,6 +1315,8 @@ class BedrockCompletion(BaseLLM):
         for message in formatted_messages:
             role = message.get("role")
             content = message.get("content", "")
+            tool_calls = message.get("tool_calls")
+            tool_call_id = message.get("tool_call_id")
 
             if role == "system":
                 # Extract system message - Converse API handles it separately
@@ -1275,9 +1324,53 @@ class BedrockCompletion(BaseLLM):
                     system_message += f"\n\n{content}"
                 else:
                     system_message = cast(str, content)
+            elif role == "assistant" and tool_calls:
+                # Convert OpenAI-style tool_calls to Bedrock toolUse format
+                bedrock_content = []
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    tool_use_block = {
+                        "toolUse": {
+                            "toolUseId": tc.get("id", f"call_{id(tc)}"),
+                            "name": func.get("name", ""),
+                            "input": func.get("arguments", {})
+                            if isinstance(func.get("arguments"), dict)
+                            else json.loads(func.get("arguments", "{}") or "{}"),
+                        }
+                    }
+                    bedrock_content.append(tool_use_block)
+                converse_messages.append(
+                    {"role": "assistant", "content": bedrock_content}
+                )
+            elif role == "tool":
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+                converse_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "toolResult": {
+                                    "toolUseId": tool_call_id,
+                                    "content": [
+                                        {"text": str(content) if content else ""}
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                )
             else:
                 # Convert to Converse API format with proper content structure
-                converse_messages.append({"role": role, "content": [{"text": content}]})
+                if isinstance(content, list):
+                    # Already formatted as multimodal content blocks
+                    converse_messages.append({"role": role, "content": content})
+                else:
+                    # String content - wrap in text block
+                    text_content = content if content else ""
+                    converse_messages.append(
+                        {"role": role, "content": [{"text": text_content}]}
+                    )
 
         # CRITICAL: Handle model-specific conversation requirements
         # Cohere and some other models require conversation to end with user message
@@ -1326,6 +1419,58 @@ class BedrockCompletion(BaseLLM):
             )
 
         return converse_messages, system_message
+
+    @staticmethod
+    def _messages_contain_tool_content(messages: list[LLMMessage]) -> bool:
+        """Check if messages contain toolUse or toolResult content blocks.
+
+        Bedrock requires toolConfig when messages have tool-related content.
+        """
+        for message in messages:
+            content = message.get("content", [])
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict):
+                        if "toolUse" in block or "toolResult" in block:
+                            return True
+        return False
+
+    @staticmethod
+    def _extract_tools_from_message_history(
+        messages: list[LLMMessage],
+    ) -> list[dict[str, Any]]:
+        """Extract tool definitions from toolUse blocks in message history.
+
+        When no tools are passed but messages contain toolUse, we need to
+        recreate a minimal toolConfig to satisfy Bedrock's API requirements.
+        """
+        tools: list[dict[str, Any]] = []
+        seen_tool_names: set[str] = set()
+
+        for message in messages:
+            content = message.get("content", [])
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict) and "toolUse" in block:
+                        tool_use = block["toolUse"]
+                        tool_name = tool_use.get("name", "")
+                        if tool_name and tool_name not in seen_tool_names:
+                            seen_tool_names.add(tool_name)
+                            # Create a minimal tool spec from the toolUse block
+                            tool_spec: dict[str, Any] = {
+                                "toolSpec": {
+                                    "name": tool_name,
+                                    "description": f"Tool: {tool_name}",
+                                    "inputSchema": {
+                                        "json": {
+                                            "type": "object",
+                                            "properties": {},
+                                        }
+                                    },
+                                }
+                            }
+                            tools.append(tool_spec)
+        return tools
 
     @staticmethod
     def _format_tools_for_converse(
@@ -1452,3 +1597,118 @@ class BedrockCompletion(BaseLLM):
 
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Claude 3+ and Nova Lite/Pro/Premier on Bedrock support vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        model_lower = self.model.lower()
+        vision_models = (
+            "anthropic.claude-3",
+            "amazon.nova-lite",
+            "amazon.nova-pro",
+            "amazon.nova-premier",
+            "us.amazon.nova-lite",
+            "us.amazon.nova-pro",
+            "us.amazon.nova-premier",
+        )
+        return any(model_lower.startswith(m) for m in vision_models)
+
+    def _is_nova_model(self) -> bool:
+        """Check if the model is an Amazon Nova model.
+
+        Only Nova models support S3 links for multimedia.
+
+        Returns:
+            True if the model is a Nova model.
+        """
+        model_lower = self.model.lower()
+        return "amazon.nova-" in model_lower
+
+    def get_file_uploader(self) -> Any:
+        """Get a Bedrock S3 file uploader using this LLM's AWS credentials.
+
+        Creates an S3 client using the same AWS credentials configured for
+        this Bedrock LLM instance.
+
+        Returns:
+            BedrockFileUploader instance with pre-configured S3 client,
+            or None if crewai_files is not installed.
+        """
+        try:
+            import boto3
+            from crewai_files.uploaders.bedrock import BedrockFileUploader
+
+            s3_client = boto3.client(
+                "s3",
+                region_name=self.region_name,
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+                aws_session_token=self.aws_session_token,
+            )
+            return BedrockFileUploader(
+                region=self.region_name,
+                client=s3_client,
+            )
+        except ImportError:
+            return None
+
+    def _get_document_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock document format.
+
+        Args:
+            content_type: MIME type of the document.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "application/pdf": "pdf",
+            "text/csv": "csv",
+            "text/plain": "txt",
+            "text/markdown": "md",
+            "text/html": "html",
+            "application/msword": "doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+            "application/vnd.ms-excel": "xls",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+        }
+        return format_map.get(content_type)
+
+    def _get_video_format(self, content_type: str) -> str | None:
+        """Map content type to Bedrock video format.
+
+        Args:
+            content_type: MIME type of the video.
+
+        Returns:
+            Bedrock format string or None if unsupported.
+        """
+        format_map = {
+            "video/mp4": "mp4",
+            "video/quicktime": "mov",
+            "video/x-matroska": "mkv",
+            "video/webm": "webm",
+            "video/x-flv": "flv",
+            "video/mpeg": "mpeg",
+            "video/x-ms-wmv": "wmv",
+            "video/3gpp": "three_gp",
+        }
+        return format_map.get(content_type)
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Bedrock content block.
+
+        Bedrock uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Bedrock's expected format.
+        """
+        return {"text": text}

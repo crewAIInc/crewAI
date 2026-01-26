@@ -6,7 +6,7 @@ import openai
 import pytest
 
 from crewai.llm import LLM
-from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesAPIResult
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
@@ -43,6 +43,7 @@ def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
         role="Research Assistant",
         goal="Find information about the population of Tokyo",
         backstory="You are a helpful research assistant.",
+        llm=LLM(model="gpt-4o-mini"),
     )
     task = Task(
         description="Find information about the population of Tokyo",
@@ -52,7 +53,7 @@ def test_openai_is_default_provider_without_explicit_llm_set_on_agent():
     crew = Crew(agents=[agent], tasks=[task])
     crew.kickoff()
     assert crew.agents[0].llm.__class__.__name__ == "OpenAICompletion"
-    assert crew.agents[0].llm.model == DEFAULT_LLM_MODEL
+    assert crew.agents[0].llm.model == "gpt-4o-mini"
 
 
 
@@ -622,3 +623,773 @@ def test_openai_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+def test_openai_responses_api_initialization():
+    """Test that OpenAI Responses API can be initialized with api='responses'."""
+    llm = OpenAICompletion(
+        model="gpt-5",
+        api="responses",
+        instructions="You are a helpful assistant.",
+        store=True,
+    )
+
+    assert llm.api == "responses"
+    assert llm.instructions == "You are a helpful assistant."
+    assert llm.store is True
+    assert llm.model == "gpt-5"
+
+
+def test_openai_responses_api_default_is_completions():
+    """Test that the default API is 'completions' for backward compatibility."""
+    llm = OpenAICompletion(model="gpt-4o")
+
+    assert llm.api == "completions"
+
+
+def test_openai_responses_api_prepare_params():
+    """Test that Responses API params are prepared correctly."""
+    llm = OpenAICompletion(
+        model="gpt-5",
+        api="responses",
+        instructions="Base instructions.",
+        store=True,
+        temperature=0.7,
+    )
+
+    messages = [
+        {"role": "system", "content": "System message."},
+        {"role": "user", "content": "Hello!"},
+    ]
+
+    params = llm._prepare_responses_params(messages)
+
+    assert params["model"] == "gpt-5"
+    assert "Base instructions." in params["instructions"]
+    assert "System message." in params["instructions"]
+    assert params["store"] is True
+    assert params["temperature"] == 0.7
+    assert params["input"] == [{"role": "user", "content": "Hello!"}]
+
+
+def test_openai_responses_api_tool_format():
+    """Test that tools are converted to Responses API format (internally-tagged)."""
+    llm = OpenAICompletion(model="gpt-5", api="responses")
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        }
+    ]
+
+    responses_tools = llm._convert_tools_for_responses(tools)
+
+    assert len(responses_tools) == 1
+    tool = responses_tools[0]
+    assert tool["type"] == "function"
+    assert tool["name"] == "get_weather"
+    assert tool["description"] == "Get the weather for a location"
+    assert "parameters" in tool
+    assert "function" not in tool
+
+
+def test_openai_completions_api_tool_format():
+    """Test that tools are converted to Chat Completions API format (externally-tagged)."""
+    llm = OpenAICompletion(model="gpt-4o", api="completions")
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {"location": {"type": "string"}},
+                "required": ["location"],
+            },
+        }
+    ]
+
+    completions_tools = llm._convert_tools_for_interference(tools)
+
+    assert len(completions_tools) == 1
+    tool = completions_tools[0]
+    assert tool["type"] == "function"
+    assert "function" in tool
+    assert tool["function"]["name"] == "get_weather"
+    assert tool["function"]["description"] == "Get the weather for a location"
+
+
+def test_openai_responses_api_structured_output_format():
+    """Test that structured outputs use text.format for Responses API."""
+    from pydantic import BaseModel
+
+    class Person(BaseModel):
+        name: str
+        age: int
+
+    llm = OpenAICompletion(model="gpt-5", api="responses")
+
+    messages = [{"role": "user", "content": "Extract: Jane, 25"}]
+    params = llm._prepare_responses_params(messages, response_model=Person)
+
+    assert "text" in params
+    assert "format" in params["text"]
+    assert params["text"]["format"]["type"] == "json_schema"
+    assert params["text"]["format"]["name"] == "Person"
+    assert params["text"]["format"]["strict"] is True
+
+
+def test_openai_responses_api_with_previous_response_id():
+    """Test that previous_response_id is passed for multi-turn conversations."""
+    llm = OpenAICompletion(
+        model="gpt-5",
+        api="responses",
+        previous_response_id="resp_abc123",
+        store=True,
+    )
+
+    messages = [{"role": "user", "content": "Continue our conversation."}]
+    params = llm._prepare_responses_params(messages)
+
+    assert params["previous_response_id"] == "resp_abc123"
+    assert params["store"] is True
+
+
+def test_openai_responses_api_call_routing():
+    """Test that call() routes to the correct API based on the api parameter."""
+    from unittest.mock import patch, MagicMock
+
+    llm_completions = OpenAICompletion(model="gpt-4o", api="completions")
+    llm_responses = OpenAICompletion(model="gpt-5", api="responses")
+
+    with patch.object(
+        llm_completions, "_call_completions", return_value="completions result"
+    ) as mock_completions:
+        result = llm_completions.call("Hello")
+        mock_completions.assert_called_once()
+        assert result == "completions result"
+
+    with patch.object(
+        llm_responses, "_call_responses", return_value="responses result"
+    ) as mock_responses:
+        result = llm_responses.call("Hello")
+        mock_responses.assert_called_once()
+        assert result == "responses result"
+
+
+# =============================================================================
+# VCR Integration Tests for Responses API
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_basic_call():
+    """Test basic Responses API call with text generation."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        instructions="You are a helpful assistant. Be concise.",
+    )
+
+    result = llm.call("What is 2 + 2? Answer with just the number.")
+
+    assert isinstance(result, str)
+    assert "4" in result
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_with_structured_output():
+    """Test Responses API with structured output using Pydantic model."""
+    from pydantic import BaseModel, Field
+
+    class MathAnswer(BaseModel):
+        """Structured math answer."""
+
+        result: int = Field(description="The numerical result")
+        explanation: str = Field(description="Brief explanation")
+
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+    )
+
+    result = llm.call("What is 5 * 7?", response_model=MathAnswer)
+
+    assert isinstance(result, MathAnswer)
+    assert result.result == 35
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_with_system_message_extraction():
+    """Test that system messages are properly extracted to instructions."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+    )
+
+    messages = [
+        {"role": "system", "content": "You always respond in uppercase letters only."},
+        {"role": "user", "content": "Say hello"},
+    ]
+
+    result = llm.call(messages)
+
+    assert isinstance(result, str)
+    assert result.isupper() or "HELLO" in result.upper()
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_streaming():
+    """Test Responses API with streaming enabled."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        stream=True,
+        instructions="Be very concise.",
+    )
+
+    result = llm.call("Count from 1 to 3, separated by commas.")
+
+    assert isinstance(result, str)
+    assert "1" in result
+    assert "2" in result
+    assert "3" in result
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_returns_usage_metrics():
+    """Test that Responses API calls return proper token usage metrics."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+    )
+
+    llm.call("Say hello")
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+
+
+def test_openai_responses_api_builtin_tools_param():
+    """Test that builtin_tools parameter is properly configured."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        builtin_tools=["web_search", "code_interpreter"],
+    )
+
+    assert llm.builtin_tools == ["web_search", "code_interpreter"]
+
+    messages = [{"role": "user", "content": "Test"}]
+    params = llm._prepare_responses_params(messages)
+
+    assert "tools" in params
+    tool_types = [t["type"] for t in params["tools"]]
+    assert "web_search_preview" in tool_types
+    assert "code_interpreter" in tool_types
+
+
+def test_openai_responses_api_builtin_tools_with_custom_tools():
+    """Test that builtin_tools can be combined with custom function tools."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        builtin_tools=["web_search"],
+    )
+
+    custom_tools = [
+        {
+            "name": "get_weather",
+            "description": "Get weather for a location",
+            "parameters": {"type": "object", "properties": {}},
+        }
+    ]
+
+    messages = [{"role": "user", "content": "Test"}]
+    params = llm._prepare_responses_params(messages, tools=custom_tools)
+
+    assert len(params["tools"]) == 2
+    tool_types = [t.get("type") for t in params["tools"]]
+    assert "web_search_preview" in tool_types
+    assert "function" in tool_types
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_with_web_search():
+    """Test Responses API with web_search built-in tool."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        builtin_tools=["web_search"],
+    )
+
+    result = llm.call("What is the current population of Tokyo? Be brief.")
+
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_responses_api_result_dataclass():
+    """Test ResponsesAPIResult dataclass functionality."""
+    result = ResponsesAPIResult(
+        text="Hello, world!",
+        response_id="resp_123",
+    )
+
+    assert result.text == "Hello, world!"
+    assert result.response_id == "resp_123"
+    assert result.web_search_results == []
+    assert result.file_search_results == []
+    assert result.code_interpreter_results == []
+    assert result.computer_use_results == []
+    assert result.reasoning_summaries == []
+    assert result.function_calls == []
+    assert not result.has_tool_outputs()
+    assert not result.has_reasoning()
+
+
+def test_responses_api_result_has_tool_outputs():
+    """Test ResponsesAPIResult.has_tool_outputs() method."""
+    result_with_web = ResponsesAPIResult(
+        text="Test",
+        web_search_results=[{"id": "ws_1", "status": "completed", "type": "web_search_call"}],
+    )
+    assert result_with_web.has_tool_outputs()
+
+    result_with_file = ResponsesAPIResult(
+        text="Test",
+        file_search_results=[{"id": "fs_1", "status": "completed", "type": "file_search_call", "queries": [], "results": []}],
+    )
+    assert result_with_file.has_tool_outputs()
+
+
+def test_responses_api_result_has_reasoning():
+    """Test ResponsesAPIResult.has_reasoning() method."""
+    result_with_reasoning = ResponsesAPIResult(
+        text="Test",
+        reasoning_summaries=[{"id": "r_1", "type": "reasoning", "summary": []}],
+    )
+    assert result_with_reasoning.has_reasoning()
+
+    result_without = ResponsesAPIResult(text="Test")
+    assert not result_without.has_reasoning()
+
+
+def test_openai_responses_api_parse_tool_outputs_param():
+    """Test that parse_tool_outputs parameter is properly configured."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        parse_tool_outputs=True,
+    )
+
+    assert llm.parse_tool_outputs is True
+
+
+def test_openai_responses_api_parse_tool_outputs_default_false():
+    """Test that parse_tool_outputs defaults to False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+    )
+
+    assert llm.parse_tool_outputs is False
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_with_parse_tool_outputs():
+    """Test Responses API with parse_tool_outputs enabled returns ResponsesAPIResult."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        builtin_tools=["web_search"],
+        parse_tool_outputs=True,
+    )
+
+    result = llm.call("What is the current population of Tokyo? Be very brief.")
+
+    assert isinstance(result, ResponsesAPIResult)
+    assert len(result.text) > 0
+    assert result.response_id is not None
+    # Web search should have been used
+    assert len(result.web_search_results) > 0
+    assert result.has_tool_outputs()
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_parse_tool_outputs_basic_call():
+    """Test Responses API with parse_tool_outputs but no built-in tools."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        parse_tool_outputs=True,
+    )
+
+    result = llm.call("Say hello in exactly 3 words.")
+
+    assert isinstance(result, ResponsesAPIResult)
+    assert len(result.text) > 0
+    assert result.response_id is not None
+    # No built-in tools used
+    assert not result.has_tool_outputs()
+
+
+# ============================================================================
+# Auto-Chaining Tests (Responses API)
+# ============================================================================
+
+
+def test_openai_responses_api_auto_chain_param():
+    """Test that auto_chain parameter is properly configured."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+    )
+
+    assert llm.auto_chain is True
+    assert llm._last_response_id is None
+
+
+def test_openai_responses_api_auto_chain_default_false():
+    """Test that auto_chain defaults to False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+    )
+
+    assert llm.auto_chain is False
+
+
+def test_openai_responses_api_last_response_id_property():
+    """Test last_response_id property."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+    )
+
+    # Initially None
+    assert llm.last_response_id is None
+
+    # Simulate setting the internal value
+    llm._last_response_id = "resp_test_123"
+    assert llm.last_response_id == "resp_test_123"
+
+
+def test_openai_responses_api_reset_chain():
+    """Test reset_chain() method clears the response ID."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+    )
+
+    # Set a response ID
+    llm._last_response_id = "resp_test_123"
+    assert llm.last_response_id == "resp_test_123"
+
+    # Reset the chain
+    llm.reset_chain()
+    assert llm.last_response_id is None
+
+
+def test_openai_responses_api_auto_chain_prepare_params():
+    """Test that _prepare_responses_params uses auto-chained response ID."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+    )
+
+    # No previous response ID yet
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert "previous_response_id" not in params
+
+    # Set a previous response ID
+    llm._last_response_id = "resp_previous_123"
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert params.get("previous_response_id") == "resp_previous_123"
+
+
+def test_openai_responses_api_explicit_previous_response_id_takes_precedence():
+    """Test that explicit previous_response_id overrides auto-chained ID."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+        previous_response_id="resp_explicit_456",
+    )
+
+    # Set an auto-chained response ID
+    llm._last_response_id = "resp_auto_123"
+
+    # Explicit should take precedence
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert params.get("previous_response_id") == "resp_explicit_456"
+
+
+def test_openai_responses_api_auto_chain_disabled_no_tracking():
+    """Test that response ID is not tracked when auto_chain is False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=False,
+    )
+
+    # Even with a "previous" response ID set internally, params shouldn't use it
+    llm._last_response_id = "resp_should_not_use"
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert "previous_response_id" not in params
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_auto_chain_integration():
+    """Test auto-chaining tracks response IDs across calls."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        auto_chain=True,
+    )
+
+    # First call - should not have previous_response_id
+    assert llm.last_response_id is None
+    result1 = llm.call("My name is Alice. Remember this.")
+
+    # After first call, should have a response ID
+    assert llm.last_response_id is not None
+    first_response_id = llm.last_response_id
+    assert first_response_id.startswith("resp_")
+
+    # Second call - should use the first response ID
+    result2 = llm.call("What is my name?")
+
+    # Response ID should be updated
+    assert llm.last_response_id is not None
+    assert llm.last_response_id != first_response_id  # Should be a new ID
+
+    # The response should remember context (Alice)
+    assert isinstance(result1, str)
+    assert isinstance(result2, str)
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_auto_chain_with_reset():
+    """Test that reset_chain() properly starts a new conversation."""
+    llm = OpenAICompletion(
+        model="gpt-4o-mini",
+        api="responses",
+        auto_chain=True,
+    )
+
+    # First conversation
+    llm.call("My favorite color is blue.")
+    first_chain_id = llm.last_response_id
+    assert first_chain_id is not None
+
+    # Reset and start new conversation
+    llm.reset_chain()
+    assert llm.last_response_id is None
+
+    # New call should start fresh
+    llm.call("Hello!")
+    second_chain_id = llm.last_response_id
+    assert second_chain_id is not None
+    # New conversation, so different response ID
+    assert second_chain_id != first_chain_id
+
+
+# =============================================================================
+# Encrypted Reasoning for ZDR (Zero Data Retention) Tests
+# =============================================================================
+
+
+def test_openai_responses_api_auto_chain_reasoning_param():
+    """Test that auto_chain_reasoning parameter is properly configured."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+    )
+
+    assert llm.auto_chain_reasoning is True
+    assert llm._last_reasoning_items is None
+
+
+def test_openai_responses_api_auto_chain_reasoning_default_false():
+    """Test that auto_chain_reasoning defaults to False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+    )
+
+    assert llm.auto_chain_reasoning is False
+
+
+def test_openai_responses_api_last_reasoning_items_property():
+    """Test last_reasoning_items property."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+    )
+
+    # Initially None
+    assert llm.last_reasoning_items is None
+
+    # Simulate setting the internal value
+    mock_items = [{"id": "rs_test_123", "type": "reasoning"}]
+    llm._last_reasoning_items = mock_items
+    assert llm.last_reasoning_items == mock_items
+
+
+def test_openai_responses_api_reset_reasoning_chain():
+    """Test reset_reasoning_chain() method clears reasoning items."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+    )
+
+    # Set reasoning items
+    mock_items = [{"id": "rs_test_123", "type": "reasoning"}]
+    llm._last_reasoning_items = mock_items
+    assert llm.last_reasoning_items == mock_items
+
+    # Reset the reasoning chain
+    llm.reset_reasoning_chain()
+    assert llm.last_reasoning_items is None
+
+
+def test_openai_responses_api_auto_chain_reasoning_adds_include():
+    """Test that auto_chain_reasoning adds reasoning.encrypted_content to include."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+    )
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert "include" in params
+    assert "reasoning.encrypted_content" in params["include"]
+
+
+def test_openai_responses_api_auto_chain_reasoning_preserves_existing_include():
+    """Test that auto_chain_reasoning preserves existing include items."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+        include=["file_search_call.results"],
+    )
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert "include" in params
+    assert "reasoning.encrypted_content" in params["include"]
+    assert "file_search_call.results" in params["include"]
+
+
+def test_openai_responses_api_auto_chain_reasoning_no_duplicate_include():
+    """Test that reasoning.encrypted_content is not duplicated if already in include."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+        include=["reasoning.encrypted_content"],
+    )
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    assert "include" in params
+    # Should only appear once
+    assert params["include"].count("reasoning.encrypted_content") == 1
+
+
+def test_openai_responses_api_auto_chain_reasoning_prepends_to_input():
+    """Test that stored reasoning items are prepended to input."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=True,
+    )
+
+    # Simulate stored reasoning items
+    mock_reasoning = MagicMock()
+    mock_reasoning.type = "reasoning"
+    mock_reasoning.id = "rs_test_123"
+    llm._last_reasoning_items = [mock_reasoning]
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+    # Input should have reasoning item first, then the message
+    assert len(params["input"]) == 2
+    assert params["input"][0] == mock_reasoning
+    assert params["input"][1]["role"] == "user"
+
+
+def test_openai_responses_api_auto_chain_reasoning_disabled_no_include():
+    """Test that reasoning.encrypted_content is not added when auto_chain_reasoning is False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=False,
+    )
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+    # Should not have include at all (unless explicitly set)
+    assert "include" not in params or "reasoning.encrypted_content" not in params.get("include", [])
+
+
+def test_openai_responses_api_auto_chain_reasoning_disabled_no_prepend():
+    """Test that reasoning items are not prepended when auto_chain_reasoning is False."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain_reasoning=False,
+    )
+
+    # Even with stored reasoning items, they should not be prepended
+    mock_reasoning = MagicMock()
+    mock_reasoning.type = "reasoning"
+    llm._last_reasoning_items = [mock_reasoning]
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+    # Input should only have the message, not the reasoning item
+    assert len(params["input"]) == 1
+    assert params["input"][0]["role"] == "user"
+
+
+def test_openai_responses_api_both_auto_chains_work_together():
+    """Test that auto_chain and auto_chain_reasoning can be used together."""
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        api="responses",
+        auto_chain=True,
+        auto_chain_reasoning=True,
+    )
+
+    assert llm.auto_chain is True
+    assert llm.auto_chain_reasoning is True
+    assert llm._last_response_id is None
+    assert llm._last_reasoning_items is None
+
+    # Set both internal values
+    llm._last_response_id = "resp_123"
+    mock_reasoning = MagicMock()
+    mock_reasoning.type = "reasoning"
+    llm._last_reasoning_items = [mock_reasoning]
+
+    params = llm._prepare_responses_params(messages=[{"role": "user", "content": "test"}])
+
+    # Both should be applied
+    assert params.get("previous_response_id") == "resp_123"
+    assert "reasoning.encrypted_content" in params["include"]
+    assert len(params["input"]) == 2  # Reasoning item + message

@@ -617,35 +617,70 @@ def test_gemini_environment_variable_api_key():
         assert llm.api_key == "test-google-key"
 
 
+@pytest.mark.vcr()
 def test_gemini_token_usage_tracking():
     """
     Test that token usage is properly tracked for Gemini responses
     """
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the Gemini response with usage information
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
-        mock_response = MagicMock()
-        mock_response.text = "test response"
-        mock_response.candidates = []
-        mock_response.usage_metadata = MagicMock(
-            prompt_token_count=50,
-            candidates_token_count=25,
-            total_token_count=75
-        )
-        mock_generate.return_value = mock_response
+    result = llm.call("Hello")
 
-        result = llm.call("Hello")
+    assert result.strip() == "Hi there! How can I help you today?"
 
-        # Verify the response
-        assert result == "test response"
+    usage = llm.get_token_usage_summary()
+    assert usage.successful_requests == 1
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.total_tokens > 0
 
-        # Verify token usage was extracted
-        usage = llm._extract_token_usage(mock_response)
-        assert usage["prompt_token_count"] == 50
-        assert usage["candidates_token_count"] == 25
-        assert usage["total_token_count"] == 75
-        assert usage["total_tokens"] == 75
+
+@pytest.mark.vcr()
+def test_gemini_tool_returning_float():
+    """
+    Test that Gemini properly handles tools that return non-dict values like floats.
+
+    This is an end-to-end test that verifies the agent can use a tool that returns
+    a float (which gets wrapped in {"result": value} for Gemini's FunctionResponse).
+    """
+    from pydantic import BaseModel, Field
+    from typing import Type
+    from crewai.tools import BaseTool
+
+    class SumNumbersToolInput(BaseModel):
+        a: float = Field(..., description="The first number to add")
+        b: float = Field(..., description="The second number to add")
+
+    class SumNumbersTool(BaseTool):
+        name: str = "sum_numbers"
+        description: str = "Add two numbers together and return the result"
+        args_schema: Type[BaseModel] = SumNumbersToolInput
+
+        def _run(self, a: float, b: float) -> float:
+            return a + b
+
+    sum_tool = SumNumbersTool()
+
+    agent = Agent(
+        role="Calculator",
+        goal="Calculate numbers accurately",
+        backstory="You are a calculator that adds numbers.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[sum_tool],
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is 10000 + 20000? Use the sum_numbers tool to calculate this.",
+        expected_output="The sum of the two numbers",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    result = crew.kickoff()
+
+    # The result should contain 30000 (the sum)
+    assert "30000" in result.raw
 
 
 def test_gemini_stop_sequences_sync():
@@ -728,3 +763,39 @@ def test_google_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+@pytest.mark.vcr()
+def test_google_express_mode_works() -> None:
+    """
+    Test Google Vertex AI Express mode with API key authentication.
+    This tests Vertex AI Express mode (aiplatform.googleapis.com) with API key
+    authentication.
+
+    """
+    with patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}):
+        agent = Agent(
+            role="Research Assistant",
+            goal="Find information about the capital of Japan",
+            backstory="You are a helpful research assistant.",
+            llm=LLM(
+                model="gemini/gemini-2.0-flash-exp",
+            ),
+            verbose=True,
+        )
+
+        task = Task(
+            description="What is the capital of Japan?",
+            expected_output="The capital of Japan",
+            agent=agent,
+        )
+
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result.token_usage is not None
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.prompt_tokens > 0
+        assert result.token_usage.completion_tokens > 0
+        assert result.token_usage.successful_requests >= 1

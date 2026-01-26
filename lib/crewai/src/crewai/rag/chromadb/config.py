@@ -41,6 +41,7 @@ def _default_settings() -> Settings:
         persist_directory=DEFAULT_STORAGE_PATH,
         allow_reset=True,
         is_persistent=True,
+        anonymized_telemetry=False,
     )
 
 

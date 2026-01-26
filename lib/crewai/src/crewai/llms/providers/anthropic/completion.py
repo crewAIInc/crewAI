@@ -31,6 +31,32 @@ except ImportError:
     ) from None
 
 
+ANTHROPIC_FILES_API_BETA = "files-api-2025-04-14"
+
+
+def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
+    """Check if any message content contains a file_id reference.
+
+    Anthropic's Files API is in beta and requires a special header when
+    file_id references are used in content blocks.
+
+    Args:
+        messages: List of message dicts to check.
+
+    Returns:
+        True if any content block contains a file_id reference.
+    """
+    for message in messages:
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict):
+                    source = block.get("source", {})
+                    if isinstance(source, dict) and source.get("type") == "file":
+                        return True
+    return False
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -418,6 +444,7 @@ class AnthropicCompletion(BaseLLM):
         - System messages are separate from conversation messages
         - Messages must alternate between user and assistant
         - First message must be from user
+        - Tool results must be in user messages with tool_result content blocks
         - When thinking is enabled, assistant messages must start with thinking blocks
 
         Args:
@@ -431,6 +458,7 @@ class AnthropicCompletion(BaseLLM):
 
         formatted_messages: list[LLMMessage] = []
         system_message: str | None = None
+        pending_tool_results: list[dict[str, Any]] = []
 
         for message in base_formatted:
             role = message.get("role")
@@ -441,16 +469,47 @@ class AnthropicCompletion(BaseLLM):
                     system_message += f"\n\n{content}"
                 else:
                     system_message = cast(str, content)
-            else:
-                role_str = role if role is not None else "user"
+            elif role == "tool":
+                tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+                tool_result = {
+                    "type": "tool_result",
+                    "tool_use_id": tool_call_id,
+                    "content": content if content else "",
+                }
+                pending_tool_results.append(tool_result)
+            elif role == "assistant":
+                # First, flush any pending tool results as a user message
+                if pending_tool_results:
+                    formatted_messages.append(
+                        {"role": "user", "content": pending_tool_results}
+                    )
+                    pending_tool_results = []
 
-                if isinstance(content, list):
-                    formatted_messages.append({"role": role_str, "content": content})
-                elif (
-                    role_str == "assistant"
-                    and self.thinking
-                    and self.previous_thinking_blocks
-                ):
+                # Handle assistant message with tool_calls (convert to Anthropic format)
+                tool_calls = message.get("tool_calls", [])
+                if tool_calls:
+                    assistant_content: list[dict[str, Any]] = []
+                    for tc in tool_calls:
+                        if isinstance(tc, dict):
+                            func = tc.get("function", {})
+                            tool_use = {
+                                "type": "tool_use",
+                                "id": tc.get("id", ""),
+                                "name": func.get("name", ""),
+                                "input": json.loads(func.get("arguments", "{}"))
+                                if isinstance(func.get("arguments"), str)
+                                else func.get("arguments", {}),
+                            }
+                            assistant_content.append(tool_use)
+                    if assistant_content:
+                        formatted_messages.append(
+                            {"role": "assistant", "content": assistant_content}
+                        )
+                elif isinstance(content, list):
+                    formatted_messages.append({"role": "assistant", "content": content})
+                elif self.thinking and self.previous_thinking_blocks:
                     structured_content = cast(
                         list[dict[str, Any]],
                         [
@@ -459,13 +518,33 @@ class AnthropicCompletion(BaseLLM):
                         ],
                     )
                     formatted_messages.append(
-                        LLMMessage(role=role_str, content=structured_content)
+                        LLMMessage(role="assistant", content=structured_content)
                     )
+                else:
+                    content_str = content if content is not None else ""
+                    formatted_messages.append(
+                        LLMMessage(role="assistant", content=content_str)
+                    )
+            else:
+                # User message - first flush any pending tool results
+                if pending_tool_results:
+                    formatted_messages.append(
+                        {"role": "user", "content": pending_tool_results}
+                    )
+                    pending_tool_results = []
+
+                role_str = role if role is not None else "user"
+                if isinstance(content, list):
+                    formatted_messages.append({"role": role_str, "content": content})
                 else:
                     content_str = content if content is not None else ""
                     formatted_messages.append(
                         LLMMessage(role=role_str, content=content_str)
                     )
+
+        # Flush any remaining pending tool results
+        if pending_tool_results:
+            formatted_messages.append({"role": "user", "content": pending_tool_results})
 
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
@@ -496,8 +575,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = self.client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = self.client.beta.messages.create(**params)
+            else:
+                response = self.client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -526,13 +611,26 @@ class AnthropicCompletion(BaseLLM):
                 return structured_json
 
         # Check if Claude wants to use tools
-        if response.content and available_functions:
+        if response.content:
             tool_uses = [
                 block for block in response.content if isinstance(block, ToolUseBlock)
             ]
 
             if tool_uses:
-                # Handle tool use conversation flow
+                # If no available_functions, return tool calls for executor to handle
+                # This allows the executor to manage tool execution with proper
+                # message history and post-tool reasoning prompts
+                if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return list(tool_uses)
+
+                # Handle tool use conversation flow internally
                 return self._handle_tool_use_conversation(
                     response,
                     tool_uses,
@@ -701,7 +799,7 @@ class AnthropicCompletion(BaseLLM):
 
                 return structured_json
 
-        if final_message.content and available_functions:
+        if final_message.content:
             tool_uses = [
                 block
                 for block in final_message.content
@@ -709,7 +807,11 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
-                # Handle tool use conversation flow
+                # If no available_functions, return tool calls for executor to handle
+                if not available_functions:
+                    return list(tool_uses)
+
+                # Handle tool use conversation flow internally
                 return self._handle_tool_use_conversation(
                     final_message,
                     tool_uses,
@@ -908,8 +1010,14 @@ class AnthropicCompletion(BaseLLM):
             params["tools"] = [structured_tool]
             params["tool_choice"] = {"type": "tool", "name": "structured_output"}
 
+        uses_file_api = _contains_file_id_reference(params.get("messages", []))
+
         try:
-            response: Message = await self.async_client.messages.create(**params)
+            if uses_file_api:
+                params["betas"] = [ANTHROPIC_FILES_API_BETA]
+                response = await self.async_client.beta.messages.create(**params)
+            else:
+                response = await self.async_client.messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -938,12 +1046,23 @@ class AnthropicCompletion(BaseLLM):
 
                 return structured_json
 
-        if response.content and available_functions:
+        if response.content:
             tool_uses = [
                 block for block in response.content if isinstance(block, ToolUseBlock)
             ]
 
             if tool_uses:
+                # If no available_functions, return tool calls for executor to handle
+                if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return list(tool_uses)
+
                 return await self._ahandle_tool_use_conversation(
                     response,
                     tool_uses,
@@ -1084,7 +1203,7 @@ class AnthropicCompletion(BaseLLM):
 
                 return structured_json
 
-        if final_message.content and available_functions:
+        if final_message.content:
             tool_uses = [
                 block
                 for block in final_message.content
@@ -1092,6 +1211,10 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
+                # If no available_functions, return tool calls for executor to handle
+                if not available_functions:
+                    return list(tool_uses)
+
                 return await self._ahandle_tool_use_conversation(
                     final_message,
                     tool_uses,
@@ -1236,3 +1359,29 @@ class AnthropicCompletion(BaseLLM):
                 "total_tokens": input_tokens + output_tokens,
             }
         return {"total_tokens": 0}
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        All Claude 3+ models support vision and PDFs.
+
+        Returns:
+            True if the model supports images and PDFs.
+        """
+        return "claude-3" in self.model.lower() or "claude-4" in self.model.lower()
+
+    def get_file_uploader(self) -> Any:
+        """Get an Anthropic file uploader using this LLM's clients.
+
+        Returns:
+            AnthropicFileUploader instance with pre-configured sync and async clients.
+        """
+        try:
+            from crewai_files.uploaders.anthropic import AnthropicFileUploader
+
+            return AnthropicFileUploader(
+                client=self.client,
+                async_client=self.async_client,
+            )
+        except ImportError:
+            return None

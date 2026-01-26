@@ -50,17 +50,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJiiHEQwIXsiG0Sd5wofcuhxVbo9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738700520,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJiiHEQwIXsiG0Sd5wofcuhxVbo9\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738700520,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: hi\",\n        \"refusal\": null\n      },\n  \
+        \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 12,\n\
+        \    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-RAY:
       - 90cd5ecd0f7667ee-SJC
@@ -108,8 +111,9 @@ interactions:
       - 0s
       x-request-id:
       - req_10eaafc81640a98a0a4789d270dd94d9
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": "Assess the quality of the task
       completed based on the description, expected output, and actual results.\n\nTask
@@ -175,24 +179,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AxJijOhk12Ua6lS23IwtZTachfjq9\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1738700521,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-      \           \"id\": \"call_DSteeMHHPf5RanJb8qjCo4qx\",\n            \"type\":
-      \"function\",\n            \"function\": {\n              \"name\": \"TaskEvaluation\",\n
-      \             \"arguments\": \"{\\\"suggestions\\\":[\\\"Consider adding context
-      for the greeting to make it more engaging.\\\",\\\"Specify if any additional
-      information or tone is desired in the greeting.\\\"],\\\"quality\\\":10,\\\"entities\\\":[{\\\"name\\\":\\\"greeting\\\",\\\"type\\\":\\\"text\\\",\\\"description\\\":\\\"A
-      simple greeting phrase\\\",\\\"relationships\\\":[\\\"is a\\\",\\\"is part of
-      a conversation\\\"]}]}\"\n            }\n          }\n        ],\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 273,\n    \"completion_tokens\":
-      67,\n    \"total_tokens\": 340,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AxJijOhk12Ua6lS23IwtZTachfjq9\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1738700521,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": null,\n        \"tool_calls\"\
+        : [\n          {\n            \"id\": \"call_DSteeMHHPf5RanJb8qjCo4qx\",\n\
+        \            \"type\": \"function\",\n            \"function\": {\n      \
+        \        \"name\": \"TaskEvaluation\",\n              \"arguments\": \"{\\\
+        \"suggestions\\\":[\\\"Consider adding context for the greeting to make it\
+        \ more engaging.\\\",\\\"Specify if any additional information or tone is\
+        \ desired in the greeting.\\\"],\\\"quality\\\":10,\\\"entities\\\":[{\\\"\
+        name\\\":\\\"greeting\\\",\\\"type\\\":\\\"text\\\",\\\"description\\\":\\\
+        \"A simple greeting phrase\\\",\\\"relationships\\\":[\\\"is a\\\",\\\"is\
+        \ part of a conversation\\\"]}]}\"\n            }\n          }\n        ],\n\
+        \        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 273,\n    \"completion_tokens\": 67,\n    \"total_tokens\": 340,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 90cd5ed20cb267ee-SJC
@@ -236,6 +244,7 @@ interactions:
       - 0s
       x-request-id:
       - req_4ee944acdd3928afbf6c5562403b064a
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1
