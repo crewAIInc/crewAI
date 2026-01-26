@@ -19,12 +19,20 @@ from crewai.events.types.memory_events import (
 
 
 @pytest.fixture(autouse=True)
-def mock_google_api_key():
-    """Mock GOOGLE_API_KEY for tests."""
+def setup_vertex_ai_env():
+    """Set up environment for Vertex AI tests.
+    
+    Sets GOOGLE_GENAI_USE_VERTEXAI=true to ensure the SDK uses the Vertex AI
+    backend (aiplatform.googleapis.com) which matches the VCR cassettes.
+    Also mocks GOOGLE_API_KEY if not already set.
+    """
+    env_updates = {"GOOGLE_GENAI_USE_VERTEXAI": "true"}
+    
+    # Add a mock API key if none exists
     if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" not in os.environ:
-        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
-            yield
-    else:
+        env_updates["GOOGLE_API_KEY"] = "test-key"
+    
+    with patch.dict(os.environ, env_updates):
         yield
 
 
