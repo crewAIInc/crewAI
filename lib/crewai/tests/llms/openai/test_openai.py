@@ -511,10 +511,13 @@ def test_openai_streaming_with_response_model():
         mock_chunk1 = MagicMock()
         mock_chunk1.type = "content.delta"
         mock_chunk1.delta = '{"answer": "test", '
+        mock_chunk1.id = "response-1"
 
+        # Second chunk
         mock_chunk2 = MagicMock()
         mock_chunk2.type = "content.delta"
         mock_chunk2.delta = '"confidence": 0.95}'
+        mock_chunk2.id = "response-2"
 
         # Create mock final completion with parsed result
         mock_parsed = TestResponse(answer="test", confidence=0.95)

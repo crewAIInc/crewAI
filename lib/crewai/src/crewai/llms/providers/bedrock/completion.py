@@ -736,6 +736,7 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
+            response_id = None
             if stream:
                 for event in stream:
                     if "messageStart" in event:
@@ -767,6 +768,7 @@ class BedrockCompletion(BaseLLM):
                                     "index": tool_use_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
                         logging.debug(
                             f"Tool use started in stream: {json.dumps(current_tool_use)} (ID: {tool_use_id})"
@@ -782,6 +784,7 @@ class BedrockCompletion(BaseLLM):
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                response_id=response_id,
                             )
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
@@ -802,6 +805,7 @@ class BedrockCompletion(BaseLLM):
                                         "index": tool_use_index,
                                     },
                                     call_type=LLMCallType.TOOL_CALL,
+                                    response_id=response_id
                                 )
                     elif "contentBlockStop" in event:
                         logging.debug("Content block stopped in stream")
@@ -1122,6 +1126,7 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
+            response_id = None
             if stream:
                 async for event in stream:
                     if "messageStart" in event:
@@ -1153,6 +1158,7 @@ class BedrockCompletion(BaseLLM):
                                     "index": tool_use_index,
                                 },
                                 call_type=LLMCallType.TOOL_CALL,
+                                response_id=response_id,
                             )
                             logging.debug(
                                 f"Tool use started in stream: {current_tool_use.get('name')} (ID: {tool_use_id})"
@@ -1168,6 +1174,7 @@ class BedrockCompletion(BaseLLM):
                                 chunk=text_chunk,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                response_id=response_id
                             )
                         elif "toolUse" in delta and current_tool_use:
                             tool_input = delta["toolUse"].get("input", "")
@@ -1188,6 +1195,7 @@ class BedrockCompletion(BaseLLM):
                                         "index": tool_use_index,
                                     },
                                     call_type=LLMCallType.TOOL_CALL,
+                                    response_id=response_id,
                                 )
 
                     elif "contentBlockStop" in event:

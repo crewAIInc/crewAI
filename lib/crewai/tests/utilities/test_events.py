@@ -984,8 +984,8 @@ def test_streaming_fallback_to_non_streaming():
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
         nonlocal fallback_called
         # Emit a couple of chunks to simulate partial streaming
-        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1"))
-        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 2"))
+        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1", response_id = "Id"))
+        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 2", response_id = "Id"))
 
         # Mark that fallback would be called
         fallback_called = True
@@ -1041,7 +1041,7 @@ def test_streaming_empty_response_handling():
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
         # Emit a few empty chunks
         for _ in range(3):
-            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk=""))
+            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="",response_id="id"))
 
         # Return the default message for empty responses
         return "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
