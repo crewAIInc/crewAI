@@ -5,17 +5,45 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Coroutine
 import concurrent.futures
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID
-
-from aiocache import Cache  # type: ignore[import-untyped]
-from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
-_file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
+try:
+    from aiocache import Cache
+    from aiocache.serializers import PickleSerializer
+
+    _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
+    _HAS_AIOCACHE = True
+except ImportError:
+    _HAS_AIOCACHE = False
+    _file_store = None
+
+
+class _SimpleMemoryCache:
+    """Simple in-memory cache fallback when aiocache is not installed."""
+
+    def __init__(self) -> None:
+        self._data: dict[str, Any] = {}
+
+    async def get(self, key: str) -> Any:
+        return self._data.get(key)
+
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
+        self._data[key] = value
+
+    async def delete(self, key: str) -> bool:
+        if key in self._data:
+            del self._data[key]
+            return True
+        return False
+
+
+if not _HAS_AIOCACHE:
+    _file_store = _SimpleMemoryCache()
 
 T = TypeVar("T")
 
