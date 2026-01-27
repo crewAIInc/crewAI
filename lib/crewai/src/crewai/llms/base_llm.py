@@ -404,7 +404,7 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
-        response_id: str | None = None
+        response_id: str | None = None,
     ) -> None:
         """Emit stream chunk event.
 
@@ -427,7 +427,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
-                response_id=response_id
+                response_id=response_id,
             ),
         )
 
@@ -620,13 +620,11 @@ class BaseLLM(ABC):
         try:
             # Try to parse as JSON first
             if response.strip().startswith("{") or response.strip().startswith("["):
-                data = json.loads(response)
-                return response_format.model_validate(data)
+                return response_format.model_validate_json(response)
 
             json_match = _JSON_EXTRACTION_PATTERN.search(response)
             if json_match:
-                data = json.loads(json_match.group())
-                return response_format.model_validate(data)
+                return response_format.model_validate_json(json_match.group())
 
             raise ValueError("No JSON found in response")
 

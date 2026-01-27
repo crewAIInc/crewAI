@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from contextlib import AsyncExitStack
 import json
 import logging
@@ -538,7 +538,7 @@ class BedrockCompletion(BaseLLM):
         self,
         messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
-        available_functions: Mapping[str, Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
@@ -1009,7 +1009,7 @@ class BedrockCompletion(BaseLLM):
         self,
         messages: list[LLMMessage],
         body: BedrockConverseRequestBody,
-        available_functions: Mapping[str, Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,

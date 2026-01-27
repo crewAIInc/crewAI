@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -24,7 +24,7 @@ class MCPEvent(BaseEvent):
 class MCPConnectionStartedEvent(MCPEvent):
     """Event emitted when starting to connect to an MCP server."""
 
-    type: str = "mcp_connection_started"
+    type: Literal["mcp_connection_started"] = "mcp_connection_started"
     connect_timeout: int | None = None
     is_reconnect: bool = (
         False  # True if this is a reconnection, False for first connection
@@ -34,7 +34,7 @@ class MCPConnectionStartedEvent(MCPEvent):
 class MCPConnectionCompletedEvent(MCPEvent):
     """Event emitted when successfully connected to an MCP server."""
 
-    type: str = "mcp_connection_completed"
+    type: Literal["mcp_connection_completed"] = "mcp_connection_completed"
     started_at: datetime | None = None
     completed_at: datetime | None = None
     connection_duration_ms: float | None = None
@@ -46,7 +46,7 @@ class MCPConnectionCompletedEvent(MCPEvent):
 class MCPConnectionFailedEvent(MCPEvent):
     """Event emitted when connection to an MCP server fails."""
 
-    type: str = "mcp_connection_failed"
+    type: Literal["mcp_connection_failed"] = "mcp_connection_failed"
     error: str
     error_type: str | None = None  # "timeout", "authentication", "network", etc.
     started_at: datetime | None = None
@@ -56,7 +56,7 @@ class MCPConnectionFailedEvent(MCPEvent):
 class MCPToolExecutionStartedEvent(MCPEvent):
     """Event emitted when starting to execute an MCP tool."""
 
-    type: str = "mcp_tool_execution_started"
+    type: Literal["mcp_tool_execution_started"] = "mcp_tool_execution_started"
     tool_name: str
     tool_args: dict[str, Any] | None = None
 
@@ -64,7 +64,7 @@ class MCPToolExecutionStartedEvent(MCPEvent):
 class MCPToolExecutionCompletedEvent(MCPEvent):
     """Event emitted when MCP tool execution completes."""
 
-    type: str = "mcp_tool_execution_completed"
+    type: Literal["mcp_tool_execution_completed"] = "mcp_tool_execution_completed"
     tool_name: str
     tool_args: dict[str, Any] | None = None
     result: Any | None = None
@@ -76,7 +76,7 @@ class MCPToolExecutionCompletedEvent(MCPEvent):
 class MCPToolExecutionFailedEvent(MCPEvent):
     """Event emitted when MCP tool execution fails."""
 
-    type: str = "mcp_tool_execution_failed"
+    type: Literal["mcp_tool_execution_failed"] = "mcp_tool_execution_failed"
     tool_name: str
     tool_args: dict[str, Any] | None = None
     error: str

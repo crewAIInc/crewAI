@@ -1,3 +1,7 @@
+from typing import Annotated
+
+from pydantic import Field
+
 from crewai.events.types.a2a_events import (
     A2AAgentCardFetchedEvent,
     A2AArtifactReceivedEvent,
@@ -102,7 +106,7 @@ from crewai.events.types.tool_usage_events import (
 )
 
 
-EventTypes = (
+EventTypes = Annotated[
     A2AAgentCardFetchedEvent
     | A2AArtifactReceivedEvent
     | A2AAuthenticationFailedEvent
@@ -180,5 +184,6 @@ EventTypes = (
     | MCPConnectionFailedEvent
     | MCPToolExecutionStartedEvent
     | MCPToolExecutionCompletedEvent
-    | MCPToolExecutionFailedEvent
-)
+    | MCPToolExecutionFailedEvent,
+    Field(discriminator="type"),
+]

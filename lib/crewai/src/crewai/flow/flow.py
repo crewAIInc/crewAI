@@ -7,7 +7,7 @@ for building event-driven workflows with conditional execution and routing.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from concurrent.futures import Future
 import copy
 import inspect
@@ -2382,7 +2382,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         message: str,
         output: Any,
         metadata: dict[str, Any] | None = None,
-        emit: Sequence[str] | None = None,
+        emit: list[str] | None = None,
     ) -> str:
         """Request feedback from a human.
         Args:

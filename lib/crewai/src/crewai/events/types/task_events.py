@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 from crewai.tasks.task_output import TaskOutput
@@ -7,7 +7,7 @@ from crewai.tasks.task_output import TaskOutput
 class TaskStartedEvent(BaseEvent):
     """Event emitted when a task starts"""
 
-    type: str = "task_started"
+    type: Literal["task_started"] = "task_started"
     context: str | None
     task: Any | None = None
 
@@ -28,7 +28,7 @@ class TaskCompletedEvent(BaseEvent):
     """Event emitted when a task completes"""
 
     output: TaskOutput
-    type: str = "task_completed"
+    type: Literal["task_completed"] = "task_completed"
     task: Any | None = None
 
     def __init__(self, **data):
@@ -48,7 +48,7 @@ class TaskFailedEvent(BaseEvent):
     """Event emitted when a task fails"""
 
     error: str
-    type: str = "task_failed"
+    type: Literal["task_failed"] = "task_failed"
     task: Any | None = None
 
     def __init__(self, **data):
@@ -67,7 +67,7 @@ class TaskFailedEvent(BaseEvent):
 class TaskEvaluationEvent(BaseEvent):
     """Event emitted when a task evaluation is completed"""
 
-    type: str = "task_evaluation"
+    type: Literal["task_evaluation"] = "task_evaluation"
     evaluation_type: str
     task: Any | None = None
 
