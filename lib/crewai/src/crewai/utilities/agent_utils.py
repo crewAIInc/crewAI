@@ -28,6 +28,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
@@ -36,6 +37,7 @@ from crewai.utilities.types import LLMMessage
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -158,7 +160,8 @@ def convert_tools_to_openai_schema(
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
-                parameters = tool.args_schema.model_json_schema()
+                schema_output = generate_model_description(tool.args_schema)
+                parameters = schema_output.get("json_schema", {}).get("schema", {})
                 # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
                 parameters.pop("description", None)
@@ -318,7 +321,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | LiteAgent | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
 ) -> str | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -380,7 +383,7 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
 ) -> str | Any:
     """Call the LLM asynchronously and return the response.
 
@@ -900,7 +903,8 @@ def extract_tool_call_info(
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    printer: Printer,
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
@@ -950,7 +954,7 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     answer: str,
     printer: Printer,
 ) -> str:
