@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -55,6 +56,7 @@ class GeminiCompletion(BaseLLM):
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         use_vertexai: bool | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
@@ -85,6 +87,8 @@ class GeminiCompletion(BaseLLM):
                          - None (default): Check GOOGLE_GENAI_USE_VERTEXAI env var
                          When using Vertex AI with API key (Express mode), http_options with
                          api_version="v1" is automatically configured.
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -120,6 +124,7 @@ class GeminiCompletion(BaseLLM):
         self.safety_settings = safety_settings or {}
         self.stop_sequences = stop_sequences or []
         self.tools: list[dict[str, Any]] | None = None
+        self.response_format = response_format
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
@@ -291,6 +296,7 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
             )
             self.tools = tools
+            effective_response_model = response_model or self.response_format
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
                 messages
@@ -302,7 +308,7 @@ class GeminiCompletion(BaseLLM):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
             config = self._prepare_generation_config(
-                system_instruction, tools, response_model
+                system_instruction, tools, effective_response_model
             )
 
             if self.stream:
@@ -312,7 +318,7 @@ class GeminiCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return self._handle_completion(
@@ -321,7 +327,7 @@ class GeminiCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except APIError as e:
@@ -373,13 +379,14 @@ class GeminiCompletion(BaseLLM):
                 from_agent=from_agent,
             )
             self.tools = tools
+            effective_response_model = response_model or self.response_format
 
             formatted_content, system_instruction = self._format_messages_for_gemini(
                 messages
             )
 
             config = self._prepare_generation_config(
-                system_instruction, tools, response_model
+                system_instruction, tools, effective_response_model
             )
 
             if self.stream:
@@ -389,7 +396,7 @@ class GeminiCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return await self._ahandle_completion(
@@ -398,7 +405,7 @@ class GeminiCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except APIError as e:
@@ -516,29 +523,92 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Convert content to string if it's a list
+            # Build parts list from content
+            parts: list[types.Part] = []
             if isinstance(content, list):
-                text_content = " ".join(
-                    str(item.get("text", "")) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
+                for item in content:
+                    if isinstance(item, dict):
+                        if "text" in item:
+                            parts.append(types.Part.from_text(text=str(item["text"])))
+                        elif "inlineData" in item:
+                            inline = item["inlineData"]
+                            parts.append(
+                                types.Part.from_bytes(
+                                    data=base64.b64decode(inline["data"]),
+                                    mime_type=inline["mimeType"],
+                                )
+                            )
+                    else:
+                        parts.append(types.Part.from_text(text=str(item)))
             else:
-                text_content = str(content) if content else ""
+                parts.append(types.Part.from_text(text=str(content) if content else ""))
 
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
+                text_content = " ".join(
+                    p.text for p in parts if hasattr(p, "text") and p.text
+                )
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
                     system_instruction = text_content
+            elif role == "tool":
+                tool_call_id = message.get("tool_call_id")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+
+                tool_name = message.get("name", "")
+
+                response_data: dict[str, Any]
+                try:
+                    parsed = json.loads(text_content) if text_content else {}
+                    if isinstance(parsed, dict):
+                        response_data = parsed
+                    else:
+                        response_data = {"result": parsed}
+                except (json.JSONDecodeError, TypeError):
+                    response_data = {"result": text_content}
+
+                function_response_part = types.Part.from_function_response(
+                    name=tool_name, response=response_data
+                )
+                contents.append(
+                    types.Content(role="user", parts=[function_response_part])
+                )
+            elif role == "assistant" and message.get("tool_calls"):
+                tool_parts: list[types.Part] = []
+
+                if text_content:
+                    tool_parts.append(types.Part.from_text(text=text_content))
+
+                tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
+                for tool_call in tool_calls:
+                    func: dict[str, Any] = tool_call.get("function") or {}
+                    func_name: str = str(func.get("name") or "")
+                    func_args_raw: str | dict[str, Any] = func.get("arguments") or {}
+
+                    func_args: dict[str, Any]
+                    if isinstance(func_args_raw, str):
+                        try:
+                            func_args = (
+                                json.loads(func_args_raw) if func_args_raw else {}
+                            )
+                        except (json.JSONDecodeError, TypeError):
+                            func_args = {}
+                    else:
+                        func_args = func_args_raw
+
+                    tool_parts.append(
+                        types.Part.from_function_call(name=func_name, args=func_args)
+                    )
+
+                contents.append(types.Content(role="model", parts=tool_parts))
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
 
                 # Create Content object
-                gemini_content = types.Content(
-                    role=gemini_role, parts=[types.Part.from_text(text=text_content)]
-                )
+                gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
         return contents, system_instruction
@@ -653,6 +723,24 @@ class GeminiCompletion(BaseLLM):
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
+                # Collect function call parts
+                function_call_parts = [
+                    part for part in candidate.content.parts if part.function_call
+                ]
+
+                # If there are function calls but no available_functions,
+                # return them for the executor to handle (like OpenAI/Anthropic)
+                if function_call_parts and not available_functions:
+                    self._emit_call_completed_event(
+                        response=function_call_parts,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=self._convert_contents_to_dict(contents),
+                    )
+                    return function_call_parts
+
+                # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
@@ -675,7 +763,7 @@ class GeminiCompletion(BaseLLM):
                         if result is not None:
                             return result
 
-        content = response.text or ""
+        content = self._extract_text_from_response(response)
         content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
@@ -708,6 +796,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Tuple of (updated full_response, updated function_calls, updated usage_data)
         """
+        response_id = chunk.response_id if hasattr(chunk, "response_id") else None
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
@@ -717,6 +806,7 @@ class GeminiCompletion(BaseLLM):
                 chunk=chunk.text,
                 from_task=from_task,
                 from_agent=from_agent,
+                response_id=response_id,
             )
 
         if chunk.candidates:
@@ -753,6 +843,7 @@ class GeminiCompletion(BaseLLM):
                                 "index": call_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id,
                         )
 
         return full_response, function_calls, usage_data
@@ -767,7 +858,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -784,6 +875,29 @@ class GeminiCompletion(BaseLLM):
             Final response content after processing
         """
         self._track_token_usage_internal(usage_data)
+
+        # If there are function calls but no available_functions,
+        # return them for the executor to handle
+        if function_calls and not available_functions:
+            formatted_function_calls = [
+                {
+                    "id": call_data["id"],
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": json.dumps(call_data["args"]),
+                    },
+                    "type": "function",
+                }
+                for call_data in function_calls.values()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return formatted_function_calls
 
         # Handle completed function calls
         if function_calls and available_functions:
@@ -864,7 +978,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -942,7 +1056,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -1036,6 +1150,35 @@ class GeminiCompletion(BaseLLM):
         return {"total_tokens": 0}
 
     @staticmethod
+    def _extract_text_from_response(response: GenerateContentResponse) -> str:
+        """Extract text content from Gemini response without triggering warnings.
+
+        This method directly accesses the response parts to extract text content,
+        avoiding the warning that occurs when using response.text on responses
+        containing non-text parts (e.g., 'thought_signature' from thinking models).
+
+        Args:
+            response: The Gemini API response
+
+        Returns:
+            Concatenated text content from all text parts
+        """
+        if not response.candidates:
+            return ""
+
+        candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+            return ""
+
+        text_parts = [
+            part.text
+            for part in candidate.content.parts
+            if hasattr(part, "text") and part.text
+        ]
+
+        return "".join(text_parts)
+
+    @staticmethod
     def _convert_contents_to_dict(
         contents: list[types.Content],
     ) -> list[LLMMessage]:
@@ -1060,3 +1203,39 @@ class GeminiCompletion(BaseLLM):
                 )
             )
         return result
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Gemini models support images, audio, video, and PDFs.
+
+        Returns:
+            True if the model supports multimodal inputs.
+        """
+        return True
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Gemini content block.
+
+        Gemini uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Gemini's expected format.
+        """
+        return {"text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a Gemini file uploader using this LLM's client.
+
+        Returns:
+            GeminiFileUploader instance with pre-configured client.
+        """
+        try:
+            from crewai_files.uploaders.gemini import GeminiFileUploader
+
+            return GeminiFileUploader(client=self.client)
+        except ImportError:
+            return None

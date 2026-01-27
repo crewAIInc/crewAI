@@ -17,7 +17,7 @@ def test_creating_a_tool_using_annotation():
 
     # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
-    assert "Tool Name: Name of my tool" in my_tool.description
+    assert "Tool Name: name_of_my_tool" in my_tool.description
     assert "Tool Arguments:" in my_tool.description
     assert '"question"' in my_tool.description
     assert '"type": "string"' in my_tool.description
@@ -32,7 +32,7 @@ def test_creating_a_tool_using_annotation():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert "Tool Name: Name of my tool" in converted_tool.description
+    assert "Tool Name: name_of_my_tool" in converted_tool.description
     assert "Tool Arguments:" in converted_tool.description
     assert '"question"' in converted_tool.description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {
@@ -56,7 +56,7 @@ def test_creating_a_tool_using_baseclass():
     # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
 
-    assert "Tool Name: Name of my tool" in my_tool.description
+    assert "Tool Name: name_of_my_tool" in my_tool.description
     assert "Tool Arguments:" in my_tool.description
     assert '"question"' in my_tool.description
     assert '"type": "string"' in my_tool.description
@@ -69,7 +69,7 @@ def test_creating_a_tool_using_baseclass():
     converted_tool = my_tool.to_structured_tool()
     assert converted_tool.name == "Name of my tool"
 
-    assert "Tool Name: Name of my tool" in converted_tool.description
+    assert "Tool Name: name_of_my_tool" in converted_tool.description
     assert "Tool Arguments:" in converted_tool.description
     assert '"question"' in converted_tool.description
     assert converted_tool.args_schema.model_json_schema()["properties"] == {

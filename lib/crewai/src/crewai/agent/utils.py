@@ -17,6 +17,7 @@ from crewai.events.types.knowledge_events import (
 )
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
@@ -236,14 +237,40 @@ def process_tool_results(agent: Agent, result: Any) -> Any:
 def save_last_messages(agent: Agent) -> None:
     """Save the last messages from agent executor.
 
+    Sanitizes messages to be compatible with TaskOutput's LLMMessage type,
+    which accepts 'user', 'assistant', 'system', and 'tool' roles.
+    Preserves tool_call_id/name for tool messages and tool_calls for assistant messages.
+
     Args:
         agent: The agent instance.
     """
-    agent._last_messages = (
-        agent.agent_executor.messages.copy()
-        if agent.agent_executor and hasattr(agent.agent_executor, "messages")
-        else []
-    )
+    if not agent.agent_executor or not hasattr(agent.agent_executor, "messages"):
+        agent._last_messages = []
+        return
+
+    sanitized_messages: list[LLMMessage] = []
+    for msg in agent.agent_executor.messages:
+        role = msg.get("role", "")
+        if role not in ("user", "assistant", "system", "tool"):
+            continue
+        content = msg.get("content")
+        if content is None:
+            content = ""
+        sanitized_msg: LLMMessage = {"role": role, "content": content}
+        if role == "tool":
+            tool_call_id = msg.get("tool_call_id")
+            if tool_call_id:
+                sanitized_msg["tool_call_id"] = tool_call_id
+            name = msg.get("name")
+            if name:
+                sanitized_msg["name"] = name
+        elif role == "assistant":
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                sanitized_msg["tool_calls"] = tool_calls
+        sanitized_messages.append(sanitized_msg)
+
+    agent._last_messages = sanitized_messages
 
 
 def prepare_tools(

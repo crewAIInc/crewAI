@@ -89,11 +89,13 @@ from crewai.utilities.guardrail_types import GuardrailType
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 if TYPE_CHECKING:
+    from crewai_files import FileInput
     from crewai_tools import CodeInterpreterTool
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
@@ -187,7 +189,8 @@ class Agent(BaseAgent):
     )
     multimodal: bool = Field(
         default=False,
-        description="Whether the agent is multimodal.",
+        deprecated=True,
+        description="[DEPRECATED, will be removed in v2.0 - pass files natively.] Whether the agent is multimodal.",
     )
     inject_date: bool = Field(
         default=False,
@@ -313,6 +316,22 @@ class Agent(BaseAgent):
         ]
 
         return any(getattr(self.crew, attr) for attr in memory_attributes)
+
+    def _supports_native_tool_calling(self, tools: list[BaseTool]) -> bool:
+        """Check if the LLM supports native function calling with the given tools.
+
+        Args:
+            tools: List of tools to check against.
+
+        Returns:
+            True if native function calling is supported and tools are available.
+        """
+        return (
+            hasattr(self.llm, "supports_function_calling")
+            and callable(getattr(self.llm, "supports_function_calling", None))
+            and self.llm.supports_function_calling()
+            and len(tools) > 0
+        )
 
     def execute_task(
         self,
@@ -762,9 +781,12 @@ class Agent(BaseAgent):
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
 
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
+
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -1320,10 +1342,10 @@ class Agent(BaseAgent):
                     args_schema = None
                     if hasattr(tool, "inputSchema") and tool.inputSchema:
                         args_schema = self._json_schema_to_pydantic(
-                            tool.name, tool.inputSchema
+                            sanitize_tool_name(tool.name), tool.inputSchema
                         )
 
-                    schemas[tool.name] = {
+                    schemas[sanitize_tool_name(tool.name)] = {
                         "description": getattr(tool, "description", ""),
                         "args_schema": args_schema,
                     }
@@ -1479,7 +1501,7 @@ class Agent(BaseAgent):
         """
         return "\n".join(
             [
-                f"Tool name: {tool.name}\nTool description:\n{tool.description}"
+                f"Tool name: {sanitize_tool_name(tool.name)}\nTool description:\n{tool.description}"
                 for tool in tools
             ]
         )
@@ -1624,7 +1646,8 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
-    ) -> tuple[AgentExecutor, dict[str, str], dict[str, Any], list[CrewStructuredTool]]:
+        input_files: dict[str, FileInput] | None = None,
+    ) -> tuple[AgentExecutor, dict[str, Any], dict[str, Any], list[CrewStructuredTool]]:
         """Prepare common setup for kickoff execution.
 
         This method handles all the common preparation logic shared between
@@ -1634,6 +1657,7 @@ class Agent(BaseAgent):
         Args:
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
 
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
@@ -1663,9 +1687,11 @@ class Agent(BaseAgent):
         }
 
         # Build prompt for standalone execution
+        use_native_tool_calling = self._supports_native_tool_calling(raw_tools)
         prompt = Prompts(
             agent=self,
             has_tools=len(raw_tools) > 0,
+            use_native_tool_calling=use_native_tool_calling,
             i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
@@ -1708,20 +1734,28 @@ class Agent(BaseAgent):
             i18n=self.i18n,
         )
 
-        # Format messages
+        all_files: dict[str, Any] = {}
         if isinstance(messages, str):
             formatted_messages = messages
         else:
             formatted_messages = "\n".join(
                 str(msg.get("content", "")) for msg in messages if msg.get("content")
             )
+            for msg in messages:
+                if msg.get("files"):
+                    all_files.update(msg["files"])
+
+        if input_files:
+            all_files.update(input_files)
 
         # Build the input dict for the executor
-        inputs = {
+        inputs: dict[str, Any] = {
             "input": formatted_messages,
             "tool_names": get_tool_names(parsed_tools),
             "tools": render_text_description_and_args(parsed_tools),
         }
+        if all_files:
+            inputs["files"] = all_files
 
         return executor, inputs, agent_info, parsed_tools
 
@@ -1729,12 +1763,12 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
-        """
-        Execute the agent with the given messages using the AgentExecutor.
+        """Execute the agent with the given messages using the AgentExecutor.
 
         This method provides standalone agent execution without requiring a Crew.
-        It supports tools, response formatting, and guardrails.
+        It supports tools, response formatting, guardrails, and file inputs.
 
         When called from within a Flow (sync or async method), this automatically
         detects the event loop and returns a coroutine that the Flow framework
@@ -1744,7 +1778,10 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
+                     Messages can include a 'files' field with file inputs.
             response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+                   Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -1756,10 +1793,10 @@ class Agent(BaseAgent):
         # Magic auto-async: if inside event loop (e.g., inside a Flow),
         # return coroutine for Flow to await
         if is_inside_event_loop():
-            return self.kickoff_async(messages, response_format)
+            return self.kickoff_async(messages, response_format, input_files)
 
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format
+            messages, response_format, input_files
         )
 
         try:
@@ -1773,7 +1810,6 @@ class Agent(BaseAgent):
             )
 
             output = self._execute_and_build_output(executor, inputs, response_format)
-
             if self.guardrail is not None:
                 output = self._process_kickoff_guardrail(
                     output=output,
@@ -2006,9 +2042,9 @@ class Agent(BaseAgent):
         self,
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
     ) -> LiteAgentOutput:
-        """
-        Execute the agent asynchronously with the given messages.
+        """Execute the agent asynchronously with the given messages.
 
         This is the async version of the kickoff method that uses native async
         execution. It is designed for use within async contexts, such as when
@@ -2018,13 +2054,16 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
                      If a string is provided, it will be converted to a user message.
                      If a list is provided, each dict should have 'role' and 'content' keys.
+                     Messages can include a 'files' field with file inputs.
             response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+                   Files can be paths, bytes, or File objects from crewai_files.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
-            messages, response_format
+            messages, response_format, input_files
         )
 
         try:
@@ -2068,6 +2107,24 @@ class Agent(BaseAgent):
                 ),
             )
             raise
+
+    async def akickoff(
+        self,
+        messages: str | list[LLMMessage],
+        response_format: type[Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+    ) -> LiteAgentOutput:
+        """Async version of kickoff. Alias for kickoff_async.
+
+        Args:
+            messages: Either a string query or a list of message dictionaries.
+            response_format: Optional Pydantic model for structured output.
+            input_files: Optional dict of named files to attach to the message.
+
+        Returns:
+            LiteAgentOutput: The result of the agent execution.
+        """
+        return await self.kickoff_async(messages, response_format, input_files)
 
 
 # Rebuild Agent model to resolve A2A type forward references

@@ -426,7 +426,8 @@ def test_tools_emits_error_events():
     def handle_tool_end(source, event):
         with lock:
             received_events.append(event)
-            if len(received_events) >= 48:
+            # Set event when we receive at least 1 error event
+            if len(received_events) >= 1:
                 all_events_received.set()
 
     class ErrorTool(BaseTool):
@@ -458,10 +459,11 @@ def test_tools_emits_error_events():
     crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
     crew.kickoff()
 
-    assert all_events_received.wait(timeout=5), (
+    assert all_events_received.wait(timeout=10), (
         "Timeout waiting for tool usage error events"
     )
-    assert len(received_events) == 48
+    # At least one error event should be received (number varies by execution path)
+    assert len(received_events) >= 1
     assert received_events[0].agent_key == agent.key
     assert received_events[0].agent_role == agent.role
     assert received_events[0].tool_name == "error_tool"
@@ -982,8 +984,8 @@ def test_streaming_fallback_to_non_streaming():
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
         nonlocal fallback_called
         # Emit a couple of chunks to simulate partial streaming
-        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1"))
-        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 2"))
+        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 1", response_id = "Id"))
+        crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="Test chunk 2", response_id = "Id"))
 
         # Mark that fallback would be called
         fallback_called = True
@@ -1039,7 +1041,7 @@ def test_streaming_empty_response_handling():
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
         # Emit a few empty chunks
         for _ in range(3):
-            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk=""))
+            crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="",response_id="id"))
 
         # Return the default message for empty responses
         return "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."

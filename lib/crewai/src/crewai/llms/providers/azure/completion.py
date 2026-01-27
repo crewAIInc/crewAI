@@ -92,6 +92,7 @@ class AzureCompletion(BaseLLM):
         stop: list[str] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
@@ -111,6 +112,9 @@ class AzureCompletion(BaseLLM):
             stop: Stop sequences
             stream: Enable streaming responses
             interceptor: HTTP interceptor (not yet supported for Azure).
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
+                           Only works with OpenAI models deployed on Azure.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -165,6 +169,7 @@ class AzureCompletion(BaseLLM):
         self.presence_penalty = presence_penalty
         self.max_tokens = max_tokens
         self.stream = stream
+        self.response_format = response_format
 
         self.is_openai_model = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
@@ -298,6 +303,7 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            effective_response_model = response_model or self.response_format
 
             # Format messages for Azure
             formatted_messages = self._format_messages_for_azure(messages)
@@ -307,7 +313,7 @@ class AzureCompletion(BaseLLM):
 
             # Prepare completion parameters
             completion_params = self._prepare_completion_params(
-                formatted_messages, tools, response_model
+                formatted_messages, tools, effective_response_model
             )
 
             # Handle streaming vs non-streaming
@@ -317,7 +323,7 @@ class AzureCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return self._handle_completion(
@@ -325,7 +331,7 @@ class AzureCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -364,11 +370,12 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+            effective_response_model = response_model or self.response_format
 
             formatted_messages = self._format_messages_for_azure(messages)
 
             completion_params = self._prepare_completion_params(
-                formatted_messages, tools, response_model
+                formatted_messages, tools, effective_response_model
             )
 
             if self.stream:
@@ -377,7 +384,7 @@ class AzureCompletion(BaseLLM):
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
             return await self._ahandle_completion(
@@ -385,7 +392,7 @@ class AzureCompletion(BaseLLM):
                 available_functions,
                 from_task,
                 from_agent,
-                response_model,
+                effective_response_model,
             )
 
         except Exception as e:
@@ -514,10 +521,32 @@ class AzureCompletion(BaseLLM):
 
         for message in base_formatted:
             role = message.get("role", "user")  # Default to user if no role
-            content = message.get("content", "")
+            # Handle None content - Azure requires string content
+            content = message.get("content") or ""
 
-            # Azure AI Inference requires both 'role' and 'content'
-            azure_messages.append({"role": role, "content": content})
+            if role == "tool":
+                tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+                azure_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": content,
+                    }
+                )
+            # Handle assistant messages with tool_calls
+            elif role == "assistant" and message.get("tool_calls"):
+                tool_calls = message.get("tool_calls", [])
+                azure_msg: LLMMessage = {
+                    "role": "assistant",
+                    "content": content,  # Already defaulted to "" above
+                    "tool_calls": tool_calls,
+                }
+                azure_messages.append(azure_msg)
+            else:
+                # Azure AI Inference requires both 'role' and 'content'
+                azure_messages.append({"role": role, "content": content})
 
         return azure_messages
 
@@ -603,6 +632,18 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+
+        # If there are tool_calls but no available_functions, return the tool_calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if message.tool_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=list(message.tool_calls),
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return list(message.tool_calls)
 
         # Handle tool calls
         if message.tool_calls and available_functions:
@@ -692,6 +733,7 @@ class AzureCompletion(BaseLLM):
         """
         if update.choices:
             choice = update.choices[0]
+            response_id = update.id if hasattr(update, "id") else None
             if choice.delta and choice.delta.content:
                 content_delta = choice.delta.content
                 full_response += content_delta
@@ -699,6 +741,7 @@ class AzureCompletion(BaseLLM):
                     chunk=content_delta,
                     from_task=from_task,
                     from_agent=from_agent,
+                    response_id=response_id,
                 )
 
             if choice.delta and choice.delta.tool_calls:
@@ -733,6 +776,7 @@ class AzureCompletion(BaseLLM):
                             "index": idx,
                         },
                         call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id,
                     )
 
         return full_response
@@ -774,6 +818,29 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+
+        # If there are tool_calls but no available_functions, return them
+        # in OpenAI-compatible format for executor to handle
+        if tool_calls and not available_functions:
+            formatted_tool_calls = [
+                {
+                    "id": call_data.get("id", f"call_{idx}"),
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for idx, call_data in tool_calls.items()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
 
         # Handle completed tool calls
         if tool_calls and available_functions:
@@ -1016,3 +1083,14 @@ class AzureCompletion(BaseLLM):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """Async context manager exit."""
         await self.aclose()
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
+        return any(self.model.lower().startswith(m) for m in vision_models)
