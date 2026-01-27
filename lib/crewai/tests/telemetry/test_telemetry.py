@@ -1,6 +1,6 @@
 import os
 import threading
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
@@ -121,3 +121,90 @@ def test_telemetry_singleton_pattern():
         thread.join()
 
     assert all(instance is telemetry1 for instance in instances)
+
+
+def test_signal_handler_registration_skipped_in_non_main_thread():
+    """Test that signal handler registration is skipped when running from a non-main thread.
+
+    This test verifies that when Telemetry is initialized from a non-main thread,
+    the signal handler registration is skipped without raising noisy ValueError tracebacks.
+    See: https://github.com/crewAIInc/crewAI/issues/4289
+    """
+    Telemetry._instance = None
+
+    result = {"register_signal_handler_called": False, "error": None}
+
+    def init_telemetry_in_thread():
+        try:
+            with patch("crewai.telemetry.telemetry.TracerProvider"):
+                with patch.object(
+                    Telemetry,
+                    "_register_signal_handler",
+                    wraps=lambda *args, **kwargs: None,
+                ) as mock_register:
+                    telemetry = Telemetry()
+                    result["register_signal_handler_called"] = mock_register.called
+                    result["telemetry"] = telemetry
+        except Exception as e:
+            result["error"] = e
+
+    thread = threading.Thread(target=init_telemetry_in_thread)
+    thread.start()
+    thread.join()
+
+    assert result["error"] is None, f"Unexpected error: {result['error']}"
+    assert (
+        result["register_signal_handler_called"] is False
+    ), "Signal handler should not be registered in non-main thread"
+
+
+def test_signal_handler_registration_skipped_logs_debug_message():
+    """Test that a debug message is logged when signal handler registration is skipped.
+
+    This test verifies that when Telemetry is initialized from a non-main thread,
+    a debug message is logged indicating that signal handler registration was skipped.
+    """
+    Telemetry._instance = None
+
+    result = {"telemetry": None, "error": None, "debug_calls": []}
+
+    mock_logger_debug = MagicMock()
+
+    def init_telemetry_in_thread():
+        try:
+            with patch("crewai.telemetry.telemetry.TracerProvider"):
+                with patch(
+                    "crewai.telemetry.telemetry.logger.debug", mock_logger_debug
+                ):
+                    result["telemetry"] = Telemetry()
+                    result["debug_calls"] = [
+                        str(call) for call in mock_logger_debug.call_args_list
+                    ]
+        except Exception as e:
+            result["error"] = e
+
+    thread = threading.Thread(target=init_telemetry_in_thread)
+    thread.start()
+    thread.join()
+
+    assert result["error"] is None, f"Unexpected error: {result['error']}"
+    assert result["telemetry"] is not None
+
+    debug_calls = result["debug_calls"]
+    assert any(
+        "Skipping signal handler registration" in call for call in debug_calls
+    ), f"Expected debug message about skipping signal handler registration, got: {debug_calls}"
+
+
+def test_signal_handlers_registered_in_main_thread():
+    """Test that signal handlers are registered when running from the main thread."""
+    Telemetry._instance = None
+
+    with patch("crewai.telemetry.telemetry.TracerProvider"):
+        with patch(
+            "crewai.telemetry.telemetry.Telemetry._register_signal_handler"
+        ) as mock_register:
+            telemetry = Telemetry()
+
+            assert telemetry.ready is True
+            assert mock_register.call_count >= 2
