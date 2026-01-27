@@ -810,7 +810,7 @@ class TestNativeToolCallingHooksIntegration:
                 verbose=True,
             )
 
-            result = crew.kickoff()
+            crew.kickoff()
 
             # Verify before hook was called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
