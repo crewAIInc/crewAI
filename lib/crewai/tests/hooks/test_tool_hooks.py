@@ -602,9 +602,6 @@ class TestNativeToolCallingHooksIntegration:
         from crewai import Agent
         from crewai.tools import tool
 
-        if not os.environ.get("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not set")
-
         hook_calls = {"before": [], "after": []}
 
         @tool("multiply_numbers")
@@ -670,8 +667,6 @@ class TestNativeToolCallingHooksIntegration:
         from crewai import Agent, Crew, Task
         from crewai.tools import tool
 
-        if not os.environ.get("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not set")
 
         hook_calls = {"before": [], "after": []}
 
@@ -757,9 +752,6 @@ class TestNativeToolCallingHooksIntegration:
         import os
         from crewai import Agent, Crew, Task
         from crewai.tools import tool
-
-        if not os.environ.get("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not set")
 
         hook_calls = {"before": [], "after": [], "tool_executed": False}
 
