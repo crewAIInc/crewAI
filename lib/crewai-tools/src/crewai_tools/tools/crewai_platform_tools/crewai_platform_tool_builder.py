@@ -29,14 +29,14 @@ class CrewaiPlatformToolBuilder:
     ) -> None:
         self._apps = apps
         self._actions_schema: dict[str, dict[str, Any]] = {}
-        self._tools: list[CrewAIPlatformActionTool] | None = None
+        self._tools: list[BaseTool] | None = None
 
     def tools(self) -> list[BaseTool]:
         """Fetch actions and return built tools."""
         if self._tools is None:
             self._fetch_actions()
             self._create_tools()
-        return list(self._tools) if self._tools is not None else []
+        return self._tools if self._tools is not None else []
 
     def _fetch_actions(self) -> None:
         """Fetch action schemas from the platform API."""
@@ -81,7 +81,7 @@ class CrewaiPlatformToolBuilder:
 
     def _create_tools(self) -> None:
         """Create tool instances from fetched action schemas."""
-        tools: list[CrewAIPlatformActionTool] = []
+        tools: list[BaseTool] = []
 
         for action_name, action_schema in self._actions_schema.items():
             function_details = action_schema.get("function", {})
