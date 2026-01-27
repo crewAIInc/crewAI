@@ -493,7 +493,7 @@ class GeminiCompletion(BaseLLM):
             function_declaration = types.FunctionDeclaration(
                 name=name,
                 description=description,
-                parameters=parameters if parameters else None,
+                parameters_json_schema=parameters if parameters else None,
             )
 
             gemini_tool = types.Tool(function_declarations=[function_declaration])
