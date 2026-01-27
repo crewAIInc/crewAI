@@ -694,7 +694,15 @@ class OpenAICompletion(BaseLLM):
             format_model = response_model or self.response_format
             if isinstance(format_model, type) and issubclass(format_model, BaseModel):
                 schema_output = generate_model_description(format_model)
-                params["text"] = {"format": schema_output}
+                json_schema = schema_output.get("json_schema", {})
+                params["text"] = {
+                    "format": {
+                        "type": "json_schema",
+                        "name": json_schema.get("name", format_model.__name__),
+                        "strict": json_schema.get("strict", True),
+                        "schema": json_schema.get("schema", {}),
+                    }
+                }
             elif isinstance(format_model, dict):
                 params["text"] = {"format": format_model}
 
