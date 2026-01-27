@@ -750,3 +750,81 @@ class TestNativeToolCallingHooksIntegration:
         finally:
             unregister_before_tool_call_hook(before_hook)
             unregister_after_tool_call_hook(after_hook)
+
+    @pytest.mark.vcr()
+    def test_before_hook_blocks_tool_execution_in_crew(self):
+        """Test that returning False from before hook blocks tool execution."""
+        import os
+        from crewai import Agent, Crew, Task
+        from crewai.tools import tool
+
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set")
+
+        hook_calls = {"before": [], "after": [], "tool_executed": False}
+
+        @tool("dangerous_operation")
+        def dangerous_operation(action: str) -> str:
+            """Perform a dangerous operation that should be blocked."""
+            hook_calls["tool_executed"] = True
+            return f"Executed: {action}"
+
+        def blocking_before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+            })
+            # Block all calls to dangerous_operation
+            if context.tool_name == "dangerous_operation":
+                return False
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+            })
+            return None
+
+        register_before_tool_call_hook(blocking_before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Test Agent",
+                goal="Try to use the dangerous operation tool",
+                backstory="You are a test agent",
+                tools=[dangerous_operation],
+                verbose=True,
+            )
+
+            task = Task(
+                description="Use the dangerous_operation tool with action 'delete_all'.",
+                expected_output="The result of the operation",
+                agent=agent,
+            )
+
+            crew = Crew(
+                agents=[agent],
+                tasks=[task],
+                verbose=True,
+            )
+
+            result = crew.kickoff()
+
+            # Verify before hook was called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "dangerous_operation"
+
+            # Verify the actual tool function was NOT executed
+            assert hook_calls["tool_executed"] is False, "Tool should have been blocked"
+
+            # Verify after hook was still called (with blocked message)
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert "blocked" in after_call["tool_result"].lower()
+
+        finally:
+            unregister_before_tool_call_hook(blocking_before_hook)
+            unregister_after_tool_call_hook(after_hook)
