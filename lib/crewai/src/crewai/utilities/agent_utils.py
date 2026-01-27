@@ -36,6 +36,7 @@ from crewai.utilities.types import LLMMessage
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -318,7 +319,7 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | LiteAgent | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
 ) -> str | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -380,7 +381,7 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
 ) -> str | Any:
     """Call the LLM asynchronously and return the response.
 
@@ -900,7 +901,8 @@ def extract_tool_call_info(
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    printer: Printer,
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
@@ -950,7 +952,7 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     answer: str,
     printer: Printer,
 ) -> str:

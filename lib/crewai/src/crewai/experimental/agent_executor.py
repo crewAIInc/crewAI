@@ -36,6 +36,7 @@ from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
 )
+from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
 from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
@@ -185,8 +186,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         self._instance_id = str(uuid4())[:8]
 
-        self.before_llm_call_hooks: list[Callable] = []
-        self.after_llm_call_hooks: list[Callable] = []
+        self.before_llm_call_hooks: list[BeforeLLMCallHookType] = []
+        self.after_llm_call_hooks: list[AfterLLMCallHookType] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
@@ -299,10 +300,20 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         """Compatibility property for mixin - returns state messages."""
         return self._state.messages
 
+    @messages.setter
+    def messages(self, value: list[LLMMessage]) -> None:
+        """Set state messages."""
+        self._state.messages = value
+
     @property
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""
         return self._state.iterations
+
+    @iterations.setter
+    def iterations(self, value: int) -> None:
+        """Set state iterations."""
+        self._state.iterations = value
 
     @start()
     def initialize_reasoning(self) -> Literal["initialized"]:
@@ -577,6 +588,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 "content": None,
                 "tool_calls": tool_calls_to_report,
             }
+            if all(
+                type(tc).__qualname__ == "Part" for tc in self.state.pending_tool_calls
+            ):
+                assistant_message["raw_tool_call_parts"] = list(
+                    self.state.pending_tool_calls
+                )
             self.state.messages.append(assistant_message)
 
         # Now execute each tool
@@ -611,14 +628,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
             # Check if tool has reached max usage count
             max_usage_reached = False
-            if original_tool:
-                if (
-                    hasattr(original_tool, "max_usage_count")
-                    and original_tool.max_usage_count is not None
-                    and original_tool.current_usage_count
-                    >= original_tool.max_usage_count
-                ):
-                    max_usage_reached = True
+            if (
+                original_tool
+                and original_tool.max_usage_count is not None
+                and original_tool.current_usage_count >= original_tool.max_usage_count
+            ):
+                max_usage_reached = True
 
             # Check cache before executing
             from_cache = False
@@ -661,11 +676,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                         # Add to cache after successful execution (before string conversion)
                         if self.tools_handler and self.tools_handler.cache:
                             should_cache = True
-                            if (
-                                original_tool
-                                and hasattr(original_tool, "cache_function")
-                                and original_tool.cache_function
-                            ):
+                            if original_tool:
                                 should_cache = original_tool.cache_function(
                                     args_dict, raw_result
                                 )
@@ -696,7 +707,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                                 error=e,
                             ),
                         )
-            elif max_usage_reached:
+            elif max_usage_reached and original_tool:
                 # Return error message when max usage limit is reached
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
 
@@ -833,6 +844,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @listen("parser_error")
     def recover_from_parser_error(self) -> Literal["initialized"]:
         """Recover from output parser errors and retry."""
+        if not self._last_parser_error:
+            self.state.iterations += 1
+            return "initialized"
+
         formatted_answer = handle_output_parser_exception(
             e=self._last_parser_error,
             messages=list(self.state.messages),
