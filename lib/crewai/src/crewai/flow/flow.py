@@ -2453,7 +2453,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     def _collapse_to_outcome(
         self,
         feedback: str,
-        outcomes: Sequence[str],
+        outcomes: list[str],
         llm: str | BaseLLM,
     ) -> str:
         """Collapse free-form feedback to a predefined outcome using LLM.
