@@ -4,6 +4,74 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 1월 26일">
+  ## v1.9.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.9.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 프로바이더 전반에 걸친 구조화된 출력 및 response_format 지원 추가
+  - 스트리밍 응답에 응답 ID 추가
+  - 부모-자식 계층 구조를 가진 이벤트 순서 추가
+  - Keycloak SSO 인증 지원 추가
+  - 멀티모달 파일 처리 기능 추가
+  - 네이티브 OpenAI responses API 지원 추가
+  - A2A 작업 실행 유틸리티 추가
+  - A2A 서버 구성 및 에이전트 카드 생성 추가
+  - 이벤트 시스템 향상 및 전송 옵션 확장
+  - 도구 호출 메커니즘 개선
+
+  ### 버그 수정
+  - aiocache를 사용할 수 없을 때 폴백 메모리 캐시로 파일 저장소 향상
+  - 문서 목록이 비어 있지 않도록 보장
+  - Bedrock 중지 시퀀스 적절히 처리
+  - Google Vertex API 키 지원 추가
+  - Azure 모델 중지 단어 감지 향상
+  - 흐름 실행 시 HumanFeedbackPending 오류 처리 개선
+  - 실행 스팬 작업 연결 해제 수정
+
+  ### 문서
+  - 네이티브 파일 처리 문서 추가
+  - OpenAI responses API 문서 추가
+  - 에이전트 카드 구현 가이드 추가
+  - A2A 문서 개선
+  - v1.8.0 변경 로그 업데이트
+
+  ### 기여자
+  @Anaisdg, @GininDenis, @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @koushiv777, @lorenzejay, @nicoferdi96, @vinibrsl
+
+</Update>
+
+<Update label="2026년 1월 15일">
+  ## v1.8.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.8.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - A2A 작업 실행 유틸리티 추가
+  - A2A 서버 구성 및 에이전트 카드 생성 추가
+  - 추가 전송 메커니즘 추가
+  - Galileo 통합 지원 추가
+
+  ### 버그 수정
+  - Azure 모델 호환성 개선
+  - parent_flow 감지를 위한 프레임 검사 깊이 확장
+  - 작업 실행 스팬 관리 문제 해결
+  - 흐름 실행 중 휴먼 피드백 시나리오에 대한 오류 처리 향상
+
+  ### 문서
+  - A2A 에이전트 카드 문서 추가
+  - PII 삭제 기능 문서 추가
+
+  ### 기여자
+  @Anaisdg, @GininDenis, @greysonlalonde, @joaomdmoura, @koushiv777, @lorenzejay, @vinibrsl
+
+</Update>
+
 <Update label="2026년 1월 8일">
   ## v1.8.0
 
