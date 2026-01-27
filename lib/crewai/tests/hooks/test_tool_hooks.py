@@ -590,3 +590,163 @@ class TestToolHooksIntegration:
             # Clean up hooks
             unregister_before_tool_call_hook(before_tool_call_hook)
             unregister_after_tool_call_hook(after_tool_call_hook)
+
+
+class TestNativeToolCallingHooksIntegration:
+    """Integration tests for hooks with native function calling (Agent and Crew)."""
+
+    @pytest.mark.vcr()
+    def test_agent_native_tool_hooks_before_and_after(self):
+        """Test that Agent with native tool calling executes before/after hooks."""
+        import os
+        from crewai import Agent
+        from crewai.tools import tool
+
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set")
+
+        hook_calls = {"before": [], "after": []}
+
+        @tool("multiply_numbers")
+        def multiply_numbers(a: int, b: int) -> int:
+            """Multiply two numbers together."""
+            return a * b
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+                "has_agent": context.agent is not None,
+            })
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_agent": context.agent is not None,
+            })
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Calculator",
+                goal="Perform calculations",
+                backstory="You are a calculator assistant",
+                tools=[multiply_numbers],
+                verbose=True,
+            )
+
+            result = agent.kickoff(
+                messages="What is 7 times 6? Use the multiply_numbers tool."
+            )
+
+            # Verify before hook was called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "multiply_numbers"
+            assert "a" in before_call["tool_input"]
+            assert "b" in before_call["tool_input"]
+            assert before_call["has_agent"] is True
+
+            # Verify after hook was called
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert after_call["tool_name"] == "multiply_numbers"
+            assert "42" in str(after_call["tool_result"])
+            assert after_call["has_agent"] is True
+
+        finally:
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
+
+    @pytest.mark.vcr()
+    def test_crew_native_tool_hooks_before_and_after(self):
+        """Test that Crew with Agent executes before/after hooks with full context."""
+        import os
+        from crewai import Agent, Crew, Task
+        from crewai.tools import tool
+
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set")
+
+        hook_calls = {"before": [], "after": []}
+
+        @tool("divide_numbers")
+        def divide_numbers(a: int, b: int) -> float:
+            """Divide first number by second number."""
+            return a / b
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+                "agent_role": context.agent.role if context.agent else None,
+            })
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+            })
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Perform division calculations accurately",
+                backstory="You are a math assistant that helps with division",
+                tools=[divide_numbers],
+                verbose=True,
+            )
+
+            task = Task(
+                description="Calculate 100 divided by 4 using the divide_numbers tool.",
+                expected_output="The result of the division",
+                agent=agent,
+            )
+
+            crew = Crew(
+                agents=[agent],
+                tasks=[task],
+                verbose=True,
+            )
+
+            result = crew.kickoff()
+
+            # Verify before hook was called with full context
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "divide_numbers"
+            assert "a" in before_call["tool_input"]
+            assert "b" in before_call["tool_input"]
+            assert before_call["has_agent"] is True
+            assert before_call["has_task"] is True
+            assert before_call["has_crew"] is True
+            assert before_call["agent_role"] == "Math Assistant"
+
+            # Verify after hook was called with full context
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert after_call["tool_name"] == "divide_numbers"
+            assert "25" in str(after_call["tool_result"])
+            assert after_call["has_agent"] is True
+            assert after_call["has_task"] is True
+            assert after_call["has_crew"] is True
+
+        finally:
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
