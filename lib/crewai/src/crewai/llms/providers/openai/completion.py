@@ -693,16 +693,8 @@ class OpenAICompletion(BaseLLM):
         if response_model or self.response_format:
             format_model = response_model or self.response_format
             if isinstance(format_model, type) and issubclass(format_model, BaseModel):
-                schema = format_model.model_json_schema()
-                schema["additionalProperties"] = False
-                params["text"] = {
-                    "format": {
-                        "type": "json_schema",
-                        "name": format_model.__name__,
-                        "strict": True,
-                        "schema": schema,
-                    }
-                }
+                schema_output = generate_model_description(format_model)
+                params["text"] = {"format": schema_output}
             elif isinstance(format_model, dict):
                 params["text"] = {"format": format_model}
 
@@ -1060,7 +1052,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=delta_text,
                     from_task=from_task,
                     from_agent=from_agent,
-                    response_id=response_id_stream
+                    response_id=response_id_stream,
                 )
 
             elif event.type == "response.function_call_arguments.delta":
@@ -1709,7 +1701,7 @@ class OpenAICompletion(BaseLLM):
                 **parse_params, response_format=response_model
             ) as stream:
                 for chunk in stream:
-                    response_id_stream=chunk.id if hasattr(chunk,"id") else None
+                    response_id_stream = chunk.id if hasattr(chunk, "id") else None
 
                     if chunk.type == "content.delta":
                         delta_content = chunk.delta
@@ -1718,7 +1710,7 @@ class OpenAICompletion(BaseLLM):
                                 chunk=delta_content,
                                 from_task=from_task,
                                 from_agent=from_agent,
-                                response_id=response_id_stream
+                                response_id=response_id_stream,
                             )
 
                 final_completion = stream.get_final_completion()
@@ -1748,7 +1740,9 @@ class OpenAICompletion(BaseLLM):
         usage_data = {"total_tokens": 0}
 
         for completion_chunk in completion_stream:
-            response_id_stream=completion_chunk.id if hasattr(completion_chunk,"id") else None
+            response_id_stream = (
+                completion_chunk.id if hasattr(completion_chunk, "id") else None
+            )
 
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
@@ -1766,7 +1760,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
-                    response_id=response_id_stream
+                    response_id=response_id_stream,
                 )
 
             if chunk_delta.tool_calls:
@@ -1805,7 +1799,7 @@ class OpenAICompletion(BaseLLM):
                             "index": tool_calls[tool_index]["index"],
                         },
                         call_type=LLMCallType.TOOL_CALL,
-                        response_id=response_id_stream
+                        response_id=response_id_stream,
                     )
 
         self._track_token_usage_internal(usage_data)
@@ -2017,7 +2011,7 @@ class OpenAICompletion(BaseLLM):
             accumulated_content = ""
             usage_data = {"total_tokens": 0}
             async for chunk in completion_stream:
-                response_id_stream=chunk.id if hasattr(chunk,"id") else None
+                response_id_stream = chunk.id if hasattr(chunk, "id") else None
 
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
@@ -2035,7 +2029,7 @@ class OpenAICompletion(BaseLLM):
                         chunk=delta.content,
                         from_task=from_task,
                         from_agent=from_agent,
-                        response_id=response_id_stream
+                        response_id=response_id_stream,
                     )
 
             self._track_token_usage_internal(usage_data)
@@ -2071,7 +2065,7 @@ class OpenAICompletion(BaseLLM):
         usage_data = {"total_tokens": 0}
 
         async for chunk in stream:
-            response_id_stream=chunk.id if hasattr(chunk,"id") else None
+            response_id_stream = chunk.id if hasattr(chunk, "id") else None
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
@@ -2089,7 +2083,7 @@ class OpenAICompletion(BaseLLM):
                     chunk=chunk_delta.content,
                     from_task=from_task,
                     from_agent=from_agent,
-                    response_id=response_id_stream
+                    response_id=response_id_stream,
                 )
 
             if chunk_delta.tool_calls:
@@ -2128,7 +2122,7 @@ class OpenAICompletion(BaseLLM):
                             "index": tool_calls[tool_index]["index"],
                         },
                         call_type=LLMCallType.TOOL_CALL,
-                        response_id=response_id_stream
+                        response_id=response_id_stream,
                     )
 
         self._track_token_usage_internal(usage_data)

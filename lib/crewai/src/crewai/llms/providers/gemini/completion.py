@@ -15,6 +15,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
@@ -464,7 +465,10 @@ class GeminiCompletion(BaseLLM):
 
         if response_model:
             config_params["response_mime_type"] = "application/json"
-            config_params["response_schema"] = response_model.model_json_schema()
+            schema_output = generate_model_description(response_model)
+            config_params["response_schema"] = schema_output.get("json_schema", {}).get(
+                "schema", {}
+            )
 
         # Handle tools for supported models
         if tools and self.supports_tools:
