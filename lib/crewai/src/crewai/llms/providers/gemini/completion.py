@@ -543,11 +543,10 @@ class GeminiCompletion(BaseLLM):
             else:
                 parts.append(types.Part.from_text(text=str(content) if content else ""))
 
+            text_content: str = " ".join(p.text for p in parts if p.text is not None)
+
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
-                text_content = " ".join(
-                    p.text for p in parts if hasattr(p, "text") and p.text
-                )
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
@@ -576,31 +575,40 @@ class GeminiCompletion(BaseLLM):
                     types.Content(role="user", parts=[function_response_part])
                 )
             elif role == "assistant" and message.get("tool_calls"):
-                tool_parts: list[types.Part] = []
+                raw_parts: list[Any] | None = message.get("raw_tool_call_parts")
+                if raw_parts and all(isinstance(p, types.Part) for p in raw_parts):
+                    tool_parts: list[types.Part] = list(raw_parts)
+                    if text_content:
+                        tool_parts.insert(0, types.Part.from_text(text=text_content))
+                else:
+                    tool_parts = []
+                    if text_content:
+                        tool_parts.append(types.Part.from_text(text=text_content))
 
-                if text_content:
-                    tool_parts.append(types.Part.from_text(text=text_content))
+                    tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
+                    for tool_call in tool_calls:
+                        func: dict[str, Any] = tool_call.get("function") or {}
+                        func_name: str = str(func.get("name") or "")
+                        func_args_raw: str | dict[str, Any] = (
+                            func.get("arguments") or {}
+                        )
 
-                tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
-                for tool_call in tool_calls:
-                    func: dict[str, Any] = tool_call.get("function") or {}
-                    func_name: str = str(func.get("name") or "")
-                    func_args_raw: str | dict[str, Any] = func.get("arguments") or {}
+                        func_args: dict[str, Any]
+                        if isinstance(func_args_raw, str):
+                            try:
+                                func_args = (
+                                    json.loads(func_args_raw) if func_args_raw else {}
+                                )
+                            except (json.JSONDecodeError, TypeError):
+                                func_args = {}
+                        else:
+                            func_args = func_args_raw
 
-                    func_args: dict[str, Any]
-                    if isinstance(func_args_raw, str):
-                        try:
-                            func_args = (
-                                json.loads(func_args_raw) if func_args_raw else {}
+                        tool_parts.append(
+                            types.Part.from_function_call(
+                                name=func_name, args=func_args
                             )
-                        except (json.JSONDecodeError, TypeError):
-                            func_args = {}
-                    else:
-                        func_args = func_args_raw
-
-                    tool_parts.append(
-                        types.Part.from_function_call(name=func_name, args=func_args)
-                    )
+                        )
 
                 contents.append(types.Content(role="model", parts=tool_parts))
             else:
