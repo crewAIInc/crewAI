@@ -640,7 +640,7 @@ class TestNativeToolCallingHooksIntegration:
                 verbose=True,
             )
 
-            result = agent.kickoff(
+            agent.kickoff(
                 messages="What is 7 times 6? Use the multiply_numbers tool."
             )
 
@@ -725,7 +725,7 @@ class TestNativeToolCallingHooksIntegration:
                 verbose=True,
             )
 
-            result = crew.kickoff()
+            crew.kickoff()
 
             # Verify before hook was called with full context
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
