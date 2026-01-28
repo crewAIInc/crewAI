@@ -341,6 +341,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             messages=list(self.state.messages),
             llm=self.llm,
             callbacks=self.callbacks,
+            verbose=self.agent.verbose,
         )
 
         self.state.current_answer = formatted_answer
@@ -366,6 +367,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 from_agent=self.agent,
                 response_model=None,
                 executor_context=self,
+                verbose=self.agent.verbose,
             )
 
             # Parse the LLM response
@@ -401,7 +403,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
     @listen("continue_reasoning_native")
@@ -436,6 +438,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 from_agent=self.agent,
                 response_model=None,
                 executor_context=self,
+                verbose=self.agent.verbose,
             )
 
             # Check if the response is a list of tool calls
@@ -474,7 +477,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 return "context_error"
             if e.__class__.__module__.startswith("litellm"):
                 raise e
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
     @router(call_llm_and_parse)
@@ -670,10 +673,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
             track_delegation_if_needed(func_name, args_dict, self.task)
 
-            structured_tool = None
-            for tool in self.tools or []:
-                if sanitize_tool_name(tool.name) == func_name:
-                    structured_tool = tool
+            structured_tool: CrewStructuredTool | None = None
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
                     break
 
             hook_blocked = False
@@ -693,10 +696,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                         hook_blocked = True
                         break
             except Exception as hook_error:
-                self._printer.print(
-                    content=f"Error in before_tool_call hook: {hook_error}",
-                    color="red",
-                )
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=f"Error in before_tool_call hook: {hook_error}",
+                        color="red",
+                    )
 
             if hook_blocked:
                 result = f"Tool execution blocked by hook. Tool: {func_name}"
@@ -758,15 +762,16 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             after_hooks = get_after_tool_call_hooks()
             try:
                 for after_hook in after_hooks:
-                    hook_result = after_hook(after_hook_context)
-                    if hook_result is not None:
-                        result = hook_result
+                    after_hook_result = after_hook(after_hook_context)
+                    if after_hook_result is not None:
+                        result = after_hook_result
                         after_hook_context.tool_result = result
             except Exception as hook_error:
-                self._printer.print(
-                    content=f"Error in after_tool_call hook: {hook_error}",
-                    color="red",
-                )
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=f"Error in after_tool_call hook: {hook_error}",
+                        color="red",
+                    )
 
             # Emit tool usage finished event
             crewai_event_bus.emit(
@@ -911,6 +916,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             iterations=self.state.iterations,
             log_error_after=self.log_error_after,
             printer=self._printer,
+            verbose=self.agent.verbose,
         )
 
         if formatted_answer:
@@ -930,6 +936,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             llm=self.llm,
             callbacks=self.callbacks,
             i18n=self._i18n,
+            verbose=self.agent.verbose,
         )
 
         self.state.iterations += 1
@@ -1021,7 +1028,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
@@ -1106,7 +1113,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self._console.print(fail_text)
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
         finally:
             self._is_executing = False
