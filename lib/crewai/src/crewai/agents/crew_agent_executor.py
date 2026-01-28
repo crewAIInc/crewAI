@@ -28,6 +28,11 @@ from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
 )
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    get_after_tool_call_hooks,
+    get_before_tool_call_hooks,
+)
 from crewai.utilities.agent_utils import (
     aget_llm_response,
     convert_tools_to_openai_schema,
@@ -749,8 +754,41 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
-        # Execute the tool (only if not cached and not at max usage)
-        if not from_cache and not max_usage_reached:
+        # Find the structured tool for hook context
+        structured_tool = None
+        for tool in self.tools or []:
+            if sanitize_tool_name(tool.name) == func_name:
+                structured_tool = tool
+                break
+
+        # Execute before_tool_call hooks
+        hook_blocked = False
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        before_hooks = get_before_tool_call_hooks()
+        try:
+            for hook in before_hooks:
+                hook_result = hook(before_hook_context)
+                if hook_result is False:
+                    hook_blocked = True
+                    break
+        except Exception as hook_error:
+            self._printer.print(
+                content=f"Error in before_tool_call hook: {hook_error}",
+                color="red",
+            )
+
+        # If hook blocked execution, set result and skip tool execution
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        # Execute the tool (only if not cached, not at max usage, and not blocked by hook)
+        elif not from_cache and not max_usage_reached:
             result = "Tool not found"
             if func_name in available_functions:
                 try:
@@ -797,6 +835,28 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+
+        after_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+            tool_result=result,
+        )
+        after_hooks = get_after_tool_call_hooks()
+        try:
+            for after_hook in after_hooks:
+                hook_result = after_hook(after_hook_context)
+                if hook_result is not None:
+                    result = hook_result
+                    after_hook_context.tool_result = result
+        except Exception as hook_error:
+            self._printer.print(
+                content=f"Error in after_tool_call hook: {hook_error}",
+                color="red",
+            )
 
         # Emit tool usage finished event
         crewai_event_bus.emit(
