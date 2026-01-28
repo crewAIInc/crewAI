@@ -16,6 +16,7 @@ from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
@@ -548,7 +549,11 @@ class BedrockCompletion(BaseLLM):
                 "toolSpec": {
                     "name": "structured_output",
                     "description": "Returns structured data according to the schema",
-                    "inputSchema": {"json": response_model.model_json_schema()},
+                    "inputSchema": {
+                        "json": generate_model_description(response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
                 }
             }
             body["toolConfig"] = cast(
@@ -779,7 +784,11 @@ class BedrockCompletion(BaseLLM):
                 "toolSpec": {
                     "name": "structured_output",
                     "description": "Returns structured data according to the schema",
-                    "inputSchema": {"json": response_model.model_json_schema()},
+                    "inputSchema": {
+                        "json": generate_model_description(response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
                 }
             }
             body["toolConfig"] = cast(
@@ -1011,7 +1020,11 @@ class BedrockCompletion(BaseLLM):
                 "toolSpec": {
                     "name": "structured_output",
                     "description": "Returns structured data according to the schema",
-                    "inputSchema": {"json": response_model.model_json_schema()},
+                    "inputSchema": {
+                        "json": generate_model_description(response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
                 }
             }
             body["toolConfig"] = cast(
@@ -1223,7 +1236,11 @@ class BedrockCompletion(BaseLLM):
                 "toolSpec": {
                     "name": "structured_output",
                     "description": "Returns structured data according to the schema",
-                    "inputSchema": {"json": response_model.model_json_schema()},
+                    "inputSchema": {
+                        "json": generate_model_description(response_model)
+                        .get("json_schema", {})
+                        .get("schema", {})
+                    },
                 }
             }
             body["toolConfig"] = cast(

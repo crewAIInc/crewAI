@@ -9,6 +9,7 @@ from crewai.utilities.printer import Printer
 
 if TYPE_CHECKING:
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llms.base_llm import BaseLLM
     from crewai.utilities.types import LLMMessage
@@ -41,7 +42,7 @@ class LLMCallHookContext:
             Can be modified by returning a new string from after_llm_call hook.
     """
 
-    executor: CrewAgentExecutor | LiteAgent | None
+    executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None
     messages: list[LLMMessage]
     agent: Any
     task: Any
@@ -52,7 +53,7 @@ class LLMCallHookContext:
 
     def __init__(
         self,
-        executor: CrewAgentExecutor | LiteAgent | None = None,
+        executor: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
         response: str | None = None,
         messages: list[LLMMessage] | None = None,
         llm: BaseLLM | str | Any | None = None,  # TODO: look into

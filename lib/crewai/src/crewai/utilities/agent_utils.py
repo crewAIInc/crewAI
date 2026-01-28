@@ -28,6 +28,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.i18n import I18N
 from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
@@ -36,6 +37,7 @@ from crewai.utilities.types import LLMMessage
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
@@ -158,7 +160,8 @@ def convert_tools_to_openai_schema(
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
-                parameters = tool.args_schema.model_json_schema()
+                schema_output = generate_model_description(tool.args_schema)
+                parameters = schema_output.get("json_schema", {}).get("schema", {})
                 # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
                 parameters.pop("description", None)
@@ -207,6 +210,7 @@ def handle_max_iterations_exceeded(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
+    verbose: bool = True,
 ) -> AgentFinish:
     """Handles the case when the maximum number of iterations is exceeded. Performs one more LLM call to get the final answer.
 
@@ -217,14 +221,16 @@ def handle_max_iterations_exceeded(
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
+        verbose: Whether to print output.
 
     Returns:
         AgentFinish with the final answer after exceeding max iterations.
     """
-    printer.print(
-        content="Maximum iterations reached. Requesting final answer.",
-        color="yellow",
-    )
+    if verbose:
+        printer.print(
+            content="Maximum iterations reached. Requesting final answer.",
+            color="yellow",
+        )
 
     if formatted_answer and hasattr(formatted_answer, "text"):
         assistant_message = (
@@ -242,10 +248,11 @@ def handle_max_iterations_exceeded(
     )
 
     if answer is None or answer == "":
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
     formatted = format_answer(answer=answer)
@@ -318,7 +325,8 @@ def get_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | LiteAgent | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
+    verbose: bool = True,
 ) -> str | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
@@ -344,7 +352,7 @@ def get_llm_response(
     """
 
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
+        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
@@ -361,13 +369,16 @@ def get_llm_response(
     except Exception as e:
         raise e
     if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(executor_context, answer, printer)
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
+    )
 
 
 async def aget_llm_response(
@@ -380,7 +391,8 @@ async def aget_llm_response(
     from_task: Task | None = None,
     from_agent: Agent | LiteAgent | None = None,
     response_model: type[BaseModel] | None = None,
-    executor_context: CrewAgentExecutor | None = None,
+    executor_context: CrewAgentExecutor | AgentExecutor | None = None,
+    verbose: bool = True,
 ) -> str | Any:
     """Call the LLM asynchronously and return the response.
 
@@ -405,7 +417,7 @@ async def aget_llm_response(
         ValueError: If the response is None or empty.
     """
     if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer):
+        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
             raise ValueError("LLM call blocked by before_llm_call hook")
         messages = executor_context.messages
 
@@ -422,13 +434,16 @@ async def aget_llm_response(
     except Exception as e:
         raise e
     if not answer:
-        printer.print(
-            content="Received None or empty response from LLM call.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
         raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(executor_context, answer, printer)
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
+    )
 
 
 def process_llm_response(
@@ -495,13 +510,19 @@ def handle_agent_action_core(
     return formatted_answer
 
 
-def handle_unknown_error(printer: Printer, exception: Exception) -> None:
+def handle_unknown_error(
+    printer: Printer, exception: Exception, verbose: bool = True
+) -> None:
     """Handle unknown errors by informing the user.
 
     Args:
         printer: Printer instance for output
         exception: The exception that occurred
+        verbose: Whether to print output.
     """
+    if not verbose:
+        return
+
     error_message = str(exception)
 
     if "litellm" in error_message:
@@ -523,6 +544,7 @@ def handle_output_parser_exception(
     iterations: int,
     log_error_after: int = 3,
     printer: Printer | None = None,
+    verbose: bool = True,
 ) -> AgentAction:
     """Handle OutputParserError by updating messages and formatted_answer.
 
@@ -545,7 +567,7 @@ def handle_output_parser_exception(
         thought="",
     )
 
-    if iterations > log_error_after and printer:
+    if verbose and iterations > log_error_after and printer:
         printer.print(
             content=f"Error parsing LLM output, agent will retry: {e.error}",
             color="red",
@@ -575,6 +597,7 @@ def handle_context_length(
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
     i18n: I18N,
+    verbose: bool = True,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
 
@@ -590,16 +613,20 @@ def handle_context_length(
         SystemExit: If context length is exceeded and user opts not to summarize
     """
     if respect_context_window:
-        printer.print(
-            content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
-            color="yellow",
+        if verbose:
+            printer.print(
+                content="Context length exceeded. Summarizing content to fit the model context window. Might take a while...",
+                color="yellow",
+            )
+        summarize_messages(
+            messages=messages, llm=llm, callbacks=callbacks, i18n=i18n, verbose=verbose
         )
-        summarize_messages(messages=messages, llm=llm, callbacks=callbacks, i18n=i18n)
     else:
-        printer.print(
-            content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
-            color="red",
-        )
+        if verbose:
+            printer.print(
+                content="Context length exceeded. Consider using smaller text or RAG tools from crewai_tools.",
+                color="red",
+            )
         raise SystemExit(
             "Context length exceeded and user opted not to summarize. Consider using smaller text or RAG tools from crewai_tools."
         )
@@ -610,6 +637,7 @@ def summarize_messages(
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
     i18n: I18N,
+    verbose: bool = True,
 ) -> None:
     """Summarize messages to fit within context window.
 
@@ -641,10 +669,11 @@ def summarize_messages(
 
     total_groups = len(messages_groups)
     for idx, group in enumerate(messages_groups, 1):
-        Printer().print(
-            content=f"Summarizing {idx}/{total_groups}...",
-            color="yellow",
-        )
+        if verbose:
+            Printer().print(
+                content=f"Summarizing {idx}/{total_groups}...",
+                color="yellow",
+            )
 
         summarization_messages = [
             format_message_for_llm(
@@ -900,13 +929,16 @@ def extract_tool_call_info(
 
 
 def _setup_before_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None, printer: Printer
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    printer: Printer,
+    verbose: bool = True,
 ) -> bool:
     """Setup and invoke before_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
         printer: Printer instance for error logging.
+        verbose: Whether to print output.
 
     Returns:
         True if LLM execution should proceed, False if blocked by a hook.
@@ -921,26 +953,29 @@ def _setup_before_llm_call_hooks(
             for hook in executor_context.before_llm_call_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    printer.print(
-                        content="LLM call blocked by before_llm_call hook",
-                        color="yellow",
-                    )
+                    if verbose:
+                        printer.print(
+                            content="LLM call blocked by before_llm_call hook",
+                            color="yellow",
+                        )
                     return False
         except Exception as e:
-            printer.print(
-                content=f"Error in before_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in before_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         if not isinstance(executor_context.messages, list):
-            printer.print(
-                content=(
-                    "Warning: before_llm_call hook replaced messages with non-list. "
-                    "Restoring original messages list. Hooks should modify messages in-place, "
-                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
-                ),
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=(
+                        "Warning: before_llm_call hook replaced messages with non-list. "
+                        "Restoring original messages list. Hooks should modify messages in-place, "
+                        "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                    ),
+                    color="yellow",
+                )
             if isinstance(original_messages, list):
                 executor_context.messages = original_messages
             else:
@@ -950,9 +985,10 @@ def _setup_before_llm_call_hooks(
 
 
 def _setup_after_llm_call_hooks(
-    executor_context: CrewAgentExecutor | LiteAgent | None,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
     answer: str,
     printer: Printer,
+    verbose: bool = True,
 ) -> str:
     """Setup and invoke after_llm_call hooks for the executor context.
 
@@ -960,6 +996,7 @@ def _setup_after_llm_call_hooks(
         executor_context: The executor context to setup the hooks for.
         answer: The LLM response string.
         printer: Printer instance for error logging.
+        verbose: Whether to print output.
 
     Returns:
         The potentially modified response string.
@@ -977,20 +1014,22 @@ def _setup_after_llm_call_hooks(
                     answer = modified_response
 
         except Exception as e:
-            printer.print(
-                content=f"Error in after_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in after_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         if not isinstance(executor_context.messages, list):
-            printer.print(
-                content=(
-                    "Warning: after_llm_call hook replaced messages with non-list. "
-                    "Restoring original messages list. Hooks should modify messages in-place, "
-                    "not replace the list (e.g., use context.messages.append() not context.messages = [])."
-                ),
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=(
+                        "Warning: after_llm_call hook replaced messages with non-list. "
+                        "Restoring original messages list. Hooks should modify messages in-place, "
+                        "not replace the list (e.g., use context.messages.append() not context.messages = [])."
+                    ),
+                    color="yellow",
+                )
             if isinstance(original_messages, list):
                 executor_context.messages = original_messages
             else:

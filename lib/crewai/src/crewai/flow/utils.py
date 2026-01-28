@@ -151,7 +151,9 @@ def _unwrap_function(function: Any) -> Any:
     return function
 
 
-def get_possible_return_constants(function: Any) -> list[str] | None:
+def get_possible_return_constants(
+    function: Any, verbose: bool = True
+) -> list[str] | None:
     """Extract possible string return values from a function using AST parsing.
 
     This function analyzes the source code of a router method to identify
@@ -178,10 +180,11 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         # Can't get source code
         return None
     except Exception as e:
-        _printer.print(
-            f"Error retrieving source code for function {function.__name__}: {e}",
-            color="red",
-        )
+        if verbose:
+            _printer.print(
+                f"Error retrieving source code for function {function.__name__}: {e}",
+                color="red",
+            )
         return None
 
     try:
@@ -190,25 +193,28 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
         # Parse the source code into an AST
         code_ast = ast.parse(source)
     except IndentationError as e:
-        _printer.print(
-            f"IndentationError while parsing source code of {function.__name__}: {e}",
-            color="red",
-        )
-        _printer.print(f"Source code:\n{source}", color="yellow")
+        if verbose:
+            _printer.print(
+                f"IndentationError while parsing source code of {function.__name__}: {e}",
+                color="red",
+            )
+            _printer.print(f"Source code:\n{source}", color="yellow")
         return None
     except SyntaxError as e:
-        _printer.print(
-            f"SyntaxError while parsing source code of {function.__name__}: {e}",
-            color="red",
-        )
-        _printer.print(f"Source code:\n{source}", color="yellow")
+        if verbose:
+            _printer.print(
+                f"SyntaxError while parsing source code of {function.__name__}: {e}",
+                color="red",
+            )
+            _printer.print(f"Source code:\n{source}", color="yellow")
         return None
     except Exception as e:
-        _printer.print(
-            f"Unexpected error while parsing source code of {function.__name__}: {e}",
-            color="red",
-        )
-        _printer.print(f"Source code:\n{source}", color="yellow")
+        if verbose:
+            _printer.print(
+                f"Unexpected error while parsing source code of {function.__name__}: {e}",
+                color="red",
+            )
+            _printer.print(f"Source code:\n{source}", color="yellow")
         return None
 
     return_values: set[str] = set()
@@ -388,15 +394,17 @@ def get_possible_return_constants(function: Any) -> list[str] | None:
 
                 StateAttributeVisitor().visit(class_ast)
             except Exception as e:
-                _printer.print(
-                    f"Could not analyze class context for {function.__name__}: {e}",
-                    color="yellow",
-                )
+                if verbose:
+                    _printer.print(
+                        f"Could not analyze class context for {function.__name__}: {e}",
+                        color="yellow",
+                    )
     except Exception as e:
-        _printer.print(
-            f"Could not introspect class for {function.__name__}: {e}",
-            color="yellow",
-        )
+        if verbose:
+            _printer.print(
+                f"Could not introspect class for {function.__name__}: {e}",
+                color="yellow",
+            )
 
     VariableAssignmentVisitor().visit(code_ast)
     ReturnVisitor().visit(code_ast)

@@ -404,7 +404,7 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
-        response_id: str | None = None
+        response_id: str | None = None,
     ) -> None:
         """Emit stream chunk event.
 
@@ -427,7 +427,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
-                response_id=response_id
+                response_id=response_id,
             ),
         )
 
@@ -497,7 +497,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
             )
 
-            return result
+            return str(result) if not isinstance(result, str) else result
 
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"
@@ -737,22 +737,25 @@ class BaseLLM(ABC):
             task=None,
             crew=None,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    printer.print(
-                        content="LLM call blocked by before_llm_call hook",
-                        color="yellow",
-                    )
+                    if verbose:
+                        printer.print(
+                            content="LLM call blocked by before_llm_call hook",
+                            color="yellow",
+                        )
                     return False
         except Exception as e:
-            printer.print(
-                content=f"Error in before_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in before_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return True
 
@@ -805,6 +808,7 @@ class BaseLLM(ABC):
             crew=None,
             response=response,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
         modified_response = response
 
@@ -815,9 +819,10 @@ class BaseLLM(ABC):
                     modified_response = result
                     hook_context.response = modified_response
         except Exception as e:
-            printer.print(
-                content=f"Error in after_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in after_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return modified_response

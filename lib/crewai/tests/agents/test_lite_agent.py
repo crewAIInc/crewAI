@@ -1004,3 +1004,53 @@ def test_prepare_kickoff_param_files_override_message_files():
 
     assert "files" in inputs
     assert inputs["files"]["same.png"] is param_file  # param takes precedence
+
+
+def test_lite_agent_verbose_false_suppresses_printer_output():
+    """Test that setting verbose=False suppresses all printer output."""
+    from crewai.agents.parser import AgentFinish
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Hello!"
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    with pytest.warns(DeprecationWarning):
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    result = agent.kickoff("Say hello")
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    # Verify the printer was never called
+    agent._printer.print = Mock()
+    # For a clean verification, patch printer before execution
+    with pytest.warns(DeprecationWarning):
+        agent2 = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    mock_printer = Mock()
+    agent2._printer = mock_printer
+
+    agent2.kickoff("Say hello")
+
+    mock_printer.print.assert_not_called()

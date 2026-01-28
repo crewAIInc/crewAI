@@ -12,15 +12,17 @@ from crewai.utilities.paths import db_storage_path
 class LTMSQLiteStorage:
     """SQLite storage class for long-term memory data."""
 
-    def __init__(self, db_path: str | None = None) -> None:
+    def __init__(self, db_path: str | None = None, verbose: bool = True) -> None:
         """Initialize the SQLite storage.
 
         Args:
             db_path: Optional path to the database file.
+            verbose: Whether to print error messages.
         """
         if db_path is None:
             db_path = str(Path(db_storage_path()) / "long_term_memory_storage.db")
         self.db_path = db_path
+        self._verbose = verbose
         self._printer: Printer = Printer()
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         self._initialize_db()
@@ -44,10 +46,11 @@ class LTMSQLiteStorage:
 
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred during database initialization: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred during database initialization: {e}",
+                    color="red",
+                )
 
     def save(
         self,
@@ -69,10 +72,11 @@ class LTMSQLiteStorage:
                 )
                 conn.commit()
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while saving to LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while saving to LTM: {e}",
+                    color="red",
+                )
 
     def load(self, task_description: str, latest_n: int) -> list[dict[str, Any]] | None:
         """Queries the LTM table by task description with error handling."""
@@ -101,10 +105,11 @@ class LTMSQLiteStorage:
                     ]
 
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while querying LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while querying LTM: {e}",
+                    color="red",
+                )
         return None
 
     def reset(self) -> None:
@@ -116,10 +121,11 @@ class LTMSQLiteStorage:
                 conn.commit()
 
         except sqlite3.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
+                    color="red",
+                )
 
     async def asave(
         self,
@@ -147,10 +153,11 @@ class LTMSQLiteStorage:
                 )
                 await conn.commit()
         except aiosqlite.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while saving to LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while saving to LTM: {e}",
+                    color="red",
+                )
 
     async def aload(
         self, task_description: str, latest_n: int
@@ -187,10 +194,11 @@ class LTMSQLiteStorage:
                         for row in rows
                     ]
         except aiosqlite.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while querying LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while querying LTM: {e}",
+                    color="red",
+                )
         return None
 
     async def areset(self) -> None:
@@ -200,7 +208,8 @@ class LTMSQLiteStorage:
                 await conn.execute("DELETE FROM long_term_memories")
                 await conn.commit()
         except aiosqlite.Error as e:
-            self._printer.print(
-                content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
-                color="red",
-            )
+            if self._verbose:
+                self._printer.print(
+                    content=f"MEMORY ERROR: An error occurred while deleting all rows in LTM: {e}",
+                    color="red",
+                )

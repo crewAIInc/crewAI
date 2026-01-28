@@ -384,6 +384,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -396,6 +398,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -610,6 +614,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -622,6 +628,8 @@ class ToolUsage:
                         if (
                             hasattr(available_tool, "max_usage_count")
                             and available_tool.max_usage_count is not None
+                            and self.agent
+                            and self.agent.verbose
                         ):
                             self._printer.print(
                                 content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
@@ -884,15 +892,17 @@ class ToolUsage:
         # Attempt 4: Repair JSON
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
-            self._printer.print(
-                content=f"Repaired JSON: {repaired_input}", color="blue"
-            )
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content=f"Repaired JSON: {repaired_input}", color="blue"
+                )
             arguments = json.loads(repaired_input)
             if isinstance(arguments, dict):
                 return arguments
         except Exception as e:
             error = f"Failed to repair JSON: {e}"
-            self._printer.print(content=error, color="red")
+            if self.agent and self.agent.verbose:
+                self._printer.print(content=error, color="red")
 
         error_message = (
             "Tool input must be a valid dictionary in JSON or Python literal format"

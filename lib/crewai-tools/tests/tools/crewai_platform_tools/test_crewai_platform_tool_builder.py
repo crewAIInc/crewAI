@@ -224,43 +224,6 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
             _, kwargs = mock_get.call_args
             assert kwargs["params"]["apps"] == ""
 
-    def test_detailed_description_generation(self):
-        builder = CrewaiPlatformToolBuilder(apps=["test"])
-
-        complex_schema = {
-            "type": "object",
-            "properties": {
-                "simple_string": {"type": "string", "description": "A simple string"},
-                "nested_object": {
-                    "type": "object",
-                    "properties": {
-                        "inner_prop": {
-                            "type": "integer",
-                            "description": "Inner property",
-                        }
-                    },
-                    "description": "Nested object",
-                },
-                "array_prop": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Array of strings",
-                },
-            },
-        }
-
-        descriptions = builder._generate_detailed_description(complex_schema)
-
-        assert isinstance(descriptions, list)
-        assert len(descriptions) > 0
-
-        description_text = "\n".join(descriptions)
-        assert "simple_string" in description_text
-        assert "nested_object" in description_text
-        assert "array_prop" in description_text
-
-
-
 class TestCrewaiPlatformToolBuilderVerify(unittest.TestCase):
     """Test suite for SSL verification behavior in CrewaiPlatformToolBuilder"""
 
