@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from functools import reduce
+from functools import lru_cache, reduce
 import hashlib
 import importlib.util
 import inspect
@@ -555,21 +555,16 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
     try:
         spec.loader.exec_module(module)
 
-        if not hasattr(module, "__all__"):
+        exported_names = getattr(module, "__all__", None)
+        if not exported_names:
             return []
 
         tools_metadata = []
-        for name in module.__all__:
-            if not hasattr(module, name):
+        for name in exported_names:
+            obj = getattr(module, name, None)
+            if obj is None or not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
                 continue
-
-            obj = getattr(module, name)
-
-            if not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
-                continue
-
-            tool_info = _extract_single_tool_metadata(obj)
-            if tool_info:
+            if tool_info := _extract_single_tool_metadata(obj):
                 tools_metadata.append(tool_info)
 
         return tools_metadata
@@ -637,6 +632,7 @@ def _extract_field_default(
     return default if isinstance(default, (list, str, int)) else fallback
 
 
+@lru_cache(maxsize=1)
 def _get_schema_generator() -> type:
     """Get a SchemaGenerator that omits non-serializable defaults."""
     from pydantic.json_schema import GenerateJsonSchema
@@ -670,32 +666,32 @@ def _extract_run_params_schema(args_schema_field: dict[str, Any] | None) -> dict
         return {}
 
 
+_IGNORED_INIT_PARAMS = frozenset({
+    "name",
+    "description",
+    "env_vars",
+    "args_schema",
+    "description_updated",
+    "cache_function",
+    "result_as_answer",
+    "max_usage_count",
+    "current_usage_count",
+    "package_dependencies",
+})
+
+
 def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:
     """
     Extract JSON Schema for the tool's __init__ parameters, filtering out base fields.
     """
-    ignored_init_params = [
-        "name",
-        "description",
-        "env_vars",
-        "args_schema",
-        "description_updated",
-        "cache_function",
-        "result_as_answer",
-        "max_usage_count",
-        "current_usage_count",
-        "package_dependencies",
-    ]
-
     try:
         json_schema = tool_class.model_json_schema(
             schema_generator=_get_schema_generator(), mode="serialization"
         )
-
         json_schema["properties"] = {
             key: value
             for key, value in json_schema.get("properties", {}).items()
-            if key not in ignored_init_params
+            if key not in _IGNORED_INIT_PARAMS
         }
         return json_schema
     except Exception:

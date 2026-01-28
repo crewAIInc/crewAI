@@ -99,7 +99,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         console.print("[bold blue]Extracting tool metadata...[/bold blue]")
         try:
             tools_metadata = extract_tools_metadata()
-            console.print(f"[dim]DEBUG: Extracted metadata: {tools_metadata}[/dim]")
         except Exception as e:
             console.print(
                 f"[bold red]Failed to extract tool metadata.[/bold red]\n"
@@ -109,7 +108,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                 f"* Are properly exported in __init__.py with __all__\n"
                 f"* Have valid Pydantic field definitions"
             )
-            raise SystemExit()
+            raise SystemExit(1)
 
         self._print_current_organization()
 
@@ -128,7 +127,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
                     "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
                     style="bold red",
                 )
-                raise SystemExit
+                raise SystemExit(1)
 
             tarball_path = os.path.join(temp_build_dir, tarball_filename)
             with open(tarball_path, "rb") as file:
@@ -137,7 +136,6 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
 
         console.print("[bold blue]Publishing tool to repository...[/bold blue]")
-        console.print(f"[dim]DEBUG: Payload (excluding encoded_file): handle={project_name}, is_public={is_public}, version={project_version}, description={project_description}, available_exports={available_exports}, tools_metadata={tools_metadata}[/dim]")
         publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
             is_public=is_public,
