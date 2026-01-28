@@ -396,7 +396,7 @@ def test_publish_api_error(
     "crewai.cli.tools.main.extract_tools_metadata",
     side_effect=Exception("Failed to extract metadata"),
 )
-def test_publish_metadata_extraction_failure(
+def test_publish_metadata_extraction_failure_continues_with_warning(
     mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
@@ -406,11 +406,15 @@ def test_publish_metadata_extraction_failure(
     capsys,
     tool_command,
 ):
-    with raises(SystemExit):
+    """Test that metadata extraction failure shows warning but continues publishing."""
+    try:
         tool_command.publish(is_public=True)
+    except SystemExit:
+        pass  # May fail later due to API mock, but should get past metadata extraction
     output = capsys.readouterr().out
-    assert "Failed to extract tool metadata" in output
-    assert "Inherit from BaseTool" in output
+    assert "Warning: Could not extract tool metadata" in output
+    assert "Publishing will continue without detailed metadata" in output
+    assert "No tool metadata extracted" in output
 
 
 @patch("crewai.cli.tools.main.Settings")
