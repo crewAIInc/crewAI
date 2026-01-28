@@ -72,13 +72,13 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
-    generate_model_description,
 )
 from crewai.utilities.guardrail import process_guardrail
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.printer import Printer
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
@@ -344,11 +344,12 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
         except Exception as e:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
-            handle_unknown_error(self._printer, e)
+            if self.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
+            handle_unknown_error(self._printer, e, verbose=self.verbose)
             # Emit error event
             crewai_event_bus.emit(
                 self,
@@ -396,10 +397,11 @@ class LiteAgent(FlowTrackable, BaseModel):
                 if isinstance(result, BaseModel):
                     formatted_result = result
             except ConverterError as e:
-                self._printer.print(
-                    content=f"Failed to parse output into response format after retries: {e.message}",
-                    color="yellow",
-                )
+                if self.verbose:
+                    self._printer.print(
+                        content=f"Failed to parse output into response format after retries: {e.message}",
+                        color="yellow",
+                    )
 
         # Calculate token usage metrics
         if isinstance(self.llm, BaseLLM):
@@ -605,6 +607,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         messages=self._messages,
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
+                        verbose=self.verbose,
                     )
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
@@ -617,6 +620,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                         printer=self._printer,
                         from_agent=self,
                         executor_context=self,
+                        verbose=self.verbose,
                     )
 
                 except Exception as e:
@@ -646,16 +650,18 @@ class LiteAgent(FlowTrackable, BaseModel):
 
                 self._append_message(formatted_answer.text, role="assistant")
             except OutputParserError as e:  # noqa: PERF203
-                self._printer.print(
-                    content="Failed to parse LLM output. Retrying...",
-                    color="yellow",
-                )
+                if self.verbose:
+                    self._printer.print(
+                        content="Failed to parse LLM output. Retrying...",
+                        color="yellow",
+                    )
                 formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self._messages,
                     iterations=self._iterations,
                     log_error_after=3,
                     printer=self._printer,
+                    verbose=self.verbose,
                 )
 
             except Exception as e:
@@ -670,9 +676,10 @@ class LiteAgent(FlowTrackable, BaseModel):
                         llm=cast(LLM, self.llm),
                         callbacks=self._callbacks,
                         i18n=self.i18n,
+                        verbose=self.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.verbose)
                 raise e
 
             finally:

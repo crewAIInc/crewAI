@@ -767,10 +767,11 @@ class Task(BaseModel):
             if files:
                 supported_types: list[str] = []
                 if self.agent.llm and self.agent.llm.supports_multimodal():
-                    provider = getattr(self.agent.llm, "provider", None) or getattr(
-                        self.agent.llm, "model", "openai"
+                    provider: str = str(
+                        getattr(self.agent.llm, "provider", None)
+                        or getattr(self.agent.llm, "model", "openai")
                     )
-                    api = getattr(self.agent.llm, "api", None)
+                    api: str | None = getattr(self.agent.llm, "api", None)
                     supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
@@ -887,10 +888,11 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                _printer.print(
-                    f"An error occurred while parsing crew chat messages: {e}",
-                    color="red",
-                )
+                if self.agent and self.agent.verbose:
+                    _printer.print(
+                        f"An error occurred while parsing crew chat messages: {e}",
+                        color="red",
+                    )
                 raise
 
             conversation_history = "\n".join(
@@ -1132,11 +1134,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             # Regenerate output from agent
             result = agent.execute_task(
@@ -1229,11 +1232,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             result = await agent.aexecute_task(
                 task=self,

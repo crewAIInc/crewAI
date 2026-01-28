@@ -2585,6 +2585,7 @@ def test_warning_long_term_memory_without_entity_memory():
         goal="You research about math.",
         backstory="You're an expert in research and you love to learn new things.",
         allow_delegation=False,
+        verbose=True,
     )
 
     task1 = Task(
