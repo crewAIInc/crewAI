@@ -1011,12 +1011,10 @@ def _setup_after_llm_call_hooks(
         if isinstance(answer, BaseModel):
             pydantic_answer = answer
             hook_response: str = pydantic_answer.model_dump_json()
-            original_json: str | None = hook_response
+            original_json: str = hook_response
         else:
             pydantic_answer = None
-            # For strings, use directly
             hook_response = str(answer)
-            original_json = None
 
         hook_context = LLMCallHookContext(executor_context, response=hook_response)
         try:
@@ -1048,7 +1046,7 @@ def _setup_after_llm_call_hooks(
                 executor_context.messages = []
 
         # If hooks modified the response, update answer accordingly
-        if pydantic_answer is not None and original_json is not None:
+        if pydantic_answer is not None:
             # For Pydantic models, reparse the JSON if it was modified
             if hook_response != original_json:
                 try:
