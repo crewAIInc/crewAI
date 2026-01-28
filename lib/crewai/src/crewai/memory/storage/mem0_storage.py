@@ -104,8 +104,6 @@ class Mem0Storage(Storage):
             if provider in {"valkey", "redis"}:
                 if len(filter.get("AND", [])) == 1 and "OR" not in filter:
                     return filter["AND"][0]
-                if len(filter.get("OR", [])) == 1 and "AND" not in filter:
-                    return filter["OR"][0]
 
         return filter
 
