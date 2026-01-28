@@ -644,7 +644,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -655,24 +655,23 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
@@ -685,7 +684,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
         Args:
@@ -696,7 +695,7 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Final response content after processing
+            Final response content after processing (str or Pydantic model if response_model provided)
         """
         messages_for_event = self._convert_contents_to_dict(contents)
 
@@ -882,7 +881,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | list[dict[str, Any]]:
+    ) -> str | BaseModel | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -1002,7 +1001,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | Any:
+    ) -> str | BaseModel | list[dict[str, Any]] | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}

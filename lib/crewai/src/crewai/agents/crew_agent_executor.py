@@ -348,18 +348,36 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 # breakpoint()
                 if self.response_model is not None:
                     try:
-                        self.response_model.model_validate_json(answer)
-                        formatted_answer = AgentFinish(
-                            thought="",
-                            output=answer,
-                            text=answer,
-                        )
+                        if isinstance(answer, BaseModel):
+                            output_json = answer.model_dump_json()
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=output_json,
+                                text=output_json,
+                            )
+                        else:
+                            self.response_model.model_validate_json(answer)
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=answer,
+                            )
                     except ValidationError:
+                        # If validation fails, convert BaseModel to JSON string for parsing
+                        answer_str = (
+                            answer.model_dump_json()
+                            if isinstance(answer, BaseModel)
+                            else str(answer)
+                        )
                         formatted_answer = process_llm_response(
-                            answer, self.use_stop_words
+                            answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+                    # When no response_model, answer should be a string
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
+                    formatted_answer = process_llm_response(
+                        answer_str, self.use_stop_words
+                    )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -1031,18 +1049,36 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
                 if self.response_model is not None:
                     try:
-                        self.response_model.model_validate_json(answer)
-                        formatted_answer = AgentFinish(
-                            thought="",
-                            output=answer,
-                            text=answer,
-                        )
+                        if isinstance(answer, BaseModel):
+                            output_json = answer.model_dump_json()
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=output_json,
+                                text=output_json,
+                            )
+                        else:
+                            self.response_model.model_validate_json(answer)
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=answer,
+                            )
                     except ValidationError:
+                        # If validation fails, convert BaseModel to JSON string for parsing
+                        answer_str = (
+                            answer.model_dump_json()
+                            if isinstance(answer, BaseModel)
+                            else str(answer)
+                        )
                         formatted_answer = process_llm_response(
-                            answer, self.use_stop_words
+                            answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+                    # When no response_model, answer should be a string
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
+                    formatted_answer = process_llm_response(
+                        answer_str, self.use_stop_words
+                    )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}

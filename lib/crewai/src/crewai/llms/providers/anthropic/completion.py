@@ -337,6 +337,7 @@ class AnthropicCompletion(BaseLLM):
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            response_model: Optional response model.
 
         Returns:
             Chat completion response or tool call result
@@ -678,30 +679,30 @@ class AnthropicCompletion(BaseLLM):
             if use_native_structured_output:
                 for block in response.content:
                     if isinstance(block, TextBlock):
-                        structured_json = block.text
+                        structured_data = response_model.model_validate_json(block.text)
                         self._emit_call_completed_event(
-                            response=structured_json,
+                            response=structured_data.model_dump_json(),
                             call_type=LLMCallType.LLM_CALL,
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
                         )
-                        return structured_json
+                        return structured_data
             else:
                 for block in response.content:
                     if (
                         isinstance(block, ToolUseBlock)
                         and block.name == "structured_output"
                     ):
-                        structured_json = json.dumps(block.input)
+                        structured_data = response_model.model_validate(block.input)
                         self._emit_call_completed_event(
-                            response=structured_json,
+                            response=structured_data.model_dump_json(),
                             call_type=LLMCallType.LLM_CALL,
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
                         )
-                        return structured_json
+                        return structured_data
 
         # Check if Claude wants to use tools
         if response.content:
@@ -897,28 +898,29 @@ class AnthropicCompletion(BaseLLM):
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
+                structured_data = response_model.model_validate_json(full_response)
                 self._emit_call_completed_event(
-                    response=full_response,
+                    response=structured_data.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
-                return full_response
+                return structured_data
             for block in final_message.content:
                 if (
                     isinstance(block, ToolUseBlock)
                     and block.name == "structured_output"
                 ):
-                    structured_json = json.dumps(block.input)
+                    structured_data = response_model.model_validate(block.input)
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=structured_data.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return structured_data
 
         if final_message.content:
             tool_uses = [
@@ -1167,30 +1169,30 @@ class AnthropicCompletion(BaseLLM):
             if use_native_structured_output:
                 for block in response.content:
                     if isinstance(block, TextBlock):
-                        structured_json = block.text
+                        structured_data = response_model.model_validate_json(block.text)
                         self._emit_call_completed_event(
-                            response=structured_json,
+                            response=structured_data.model_dump_json(),
                             call_type=LLMCallType.LLM_CALL,
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
                         )
-                        return structured_json
+                        return structured_data
             else:
                 for block in response.content:
                     if (
                         isinstance(block, ToolUseBlock)
                         and block.name == "structured_output"
                     ):
-                        structured_json = json.dumps(block.input)
+                        structured_data = response_model.model_validate(block.input)
                         self._emit_call_completed_event(
-                            response=structured_json,
+                            response=structured_data.model_dump_json(),
                             call_type=LLMCallType.LLM_CALL,
                             from_task=from_task,
                             from_agent=from_agent,
                             messages=params["messages"],
                         )
-                        return structured_json
+                        return structured_data
 
         if response.content:
             tool_uses = [
@@ -1362,28 +1364,29 @@ class AnthropicCompletion(BaseLLM):
 
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
+                structured_data = response_model.model_validate_json(full_response)
                 self._emit_call_completed_event(
-                    response=full_response,
+                    response=structured_data.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
-                return full_response
+                return structured_data
             for block in final_message.content:
                 if (
                     isinstance(block, ToolUseBlock)
                     and block.name == "structured_output"
                 ):
-                    structured_json = json.dumps(block.input)
+                    structured_data = response_model.model_validate(block.input)
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=structured_data.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return structured_data
 
         if final_message.content:
             tool_uses = [
