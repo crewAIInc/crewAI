@@ -132,6 +132,9 @@ class GeminiCompletion(BaseLLM):
         self.supports_tools = bool(
             version_match and float(version_match.group(1)) >= 1.5
         )
+        self.is_gemini_2_0 = bool(
+            version_match and float(version_match.group(1)) >= 2.0
+        )
 
     @property
     def stop(self) -> list[str]:
@@ -439,6 +442,11 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             GenerateContentConfig object for Gemini API
+
+        Note:
+            Structured output support varies by model version:
+            - Gemini 1.5 and earlier: Uses response_schema (Pydantic model)
+            - Gemini 2.0+: Uses response_json_schema (JSON Schema) with propertyOrdering
         """
         self.tools = tools
         config_params: dict[str, Any] = {}
@@ -466,9 +474,13 @@ class GeminiCompletion(BaseLLM):
         if response_model:
             config_params["response_mime_type"] = "application/json"
             schema_output = generate_model_description(response_model)
-            config_params["response_json_schema"] = schema_output.get(
-                "json_schema", {}
-            ).get("schema", {})
+            schema = schema_output.get("json_schema", {}).get("schema", {})
+
+            if self.is_gemini_2_0:
+                schema = self._add_property_ordering(schema)
+                config_params["response_json_schema"] = schema
+            else:
+                config_params["response_schema"] = response_model
 
         # Handle tools for supported models
         if tools and self.supports_tools:
@@ -1189,6 +1201,36 @@ class GeminiCompletion(BaseLLM):
         ]
 
         return "".join(text_parts)
+
+    @staticmethod
+    def _add_property_ordering(schema: dict[str, Any]) -> dict[str, Any]:
+        """Add propertyOrdering to JSON schema for Gemini 2.0 compatibility.
+
+        Gemini 2.0 models require an explicit propertyOrdering list to define
+        the preferred structure of JSON objects. This recursively adds
+        propertyOrdering to all objects in the schema.
+
+        Args:
+            schema: JSON schema dictionary.
+
+        Returns:
+            Modified schema with propertyOrdering added to all objects.
+        """
+        if isinstance(schema, dict):
+            if schema.get("type") == "object" and "properties" in schema:
+                properties = schema["properties"]
+                if properties and "propertyOrdering" not in schema:
+                    schema["propertyOrdering"] = list(properties.keys())
+
+            for value in schema.values():
+                if isinstance(value, dict):
+                    GeminiCompletion._add_property_ordering(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            GeminiCompletion._add_property_ordering(item)
+
+        return schema
 
     @staticmethod
     def _convert_contents_to_dict(
