@@ -157,10 +157,10 @@ async def test_anthropic_async_with_response_model():
         "Say hello in French",
         response_model=GreetingResponse
     )
-    model = GreetingResponse.model_validate_json(result)
-    assert isinstance(model, GreetingResponse)
-    assert isinstance(model.greeting, str)
-    assert isinstance(model.language, str)
+    # When response_model is provided, the result is already a parsed Pydantic model instance
+    assert isinstance(result, GreetingResponse)
+    assert isinstance(result.greeting, str)
+    assert isinstance(result.language, str)
 
 
 @pytest.mark.vcr()
