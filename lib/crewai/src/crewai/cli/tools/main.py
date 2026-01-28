@@ -16,6 +16,7 @@ from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.utils import (
     build_env_with_tool_repository_credentials,
     extract_available_exports,
+    extract_tools_metadata,
     get_project_description,
     get_project_name,
     get_project_version,
@@ -94,6 +95,22 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             console.print(
                 f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
             )
+
+        console.print("[bold blue]Extracting tool metadata...[/bold blue]")
+        try:
+            tools_metadata = extract_tools_metadata()
+            console.print(f"[dim]DEBUG: Extracted metadata: {tools_metadata}[/dim]")
+        except Exception as e:
+            console.print(
+                f"[bold red]Failed to extract tool metadata.[/bold red]\n"
+                f"Error: {e}\n\n"
+                f"Please ensure your tools:\n"
+                f"* Inherit from BaseTool\n"
+                f"* Are properly exported in __init__.py with __all__\n"
+                f"* Have valid Pydantic field definitions"
+            )
+            raise SystemExit()
+
         self._print_current_organization()
 
         with tempfile.TemporaryDirectory() as temp_build_dir:
@@ -120,6 +137,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
 
         console.print("[bold blue]Publishing tool to repository...[/bold blue]")
+        console.print(f"[dim]DEBUG: Payload (excluding encoded_file): handle={project_name}, is_public={is_public}, version={project_version}, description={project_description}, available_exports={available_exports}, tools_metadata={tools_metadata}[/dim]")
         publish_response = self.plus_api_client.publish_tool(
             handle=project_name,
             is_public=is_public,
@@ -127,6 +145,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
             description=project_description,
             encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
             available_exports=available_exports,
+            tools_metadata=tools_metadata,
         )
 
         self._validate_response(publish_response)

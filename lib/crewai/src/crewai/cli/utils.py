@@ -1,5 +1,8 @@
+from collections.abc import Mapping
 from functools import reduce
+import hashlib
 import importlib.util
+import inspect
 from inspect import getmro, isclass, isfunction, ismethod
 import os
 from pathlib import Path
@@ -511,3 +514,210 @@ def _print_no_tools_warning() -> None:
         "    # ... implementation\n"
         "    return result\n"
     )
+
+
+def extract_tools_metadata(dir_path: str = "src") -> list[dict[str, Any]]:
+    """
+    Extract rich metadata from tool classes in the project.
+
+    Returns a list of tool metadata dictionaries containing:
+    - name: Class name
+    - humanized_name: From name field default
+    - description: From description field default
+    - run_params_schema: JSON Schema for _run() params (from args_schema)
+    - init_params_schema: JSON Schema for __init__ params (filtered)
+    - env_vars: List of environment variable dicts
+    """
+    tools_metadata: list[dict[str, Any]] = []
+
+    for init_file in Path(dir_path).glob("**/__init__.py"):
+        tools = _extract_tool_metadata_from_init(init_file)
+        tools_metadata.extend(tools)
+
+    return tools_metadata
+
+
+def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
+    """
+    Load module from init file and extract metadata from valid tool classes.
+    """
+    from crewai.tools.base_tool import BaseTool
+
+    module_name = f"temp_metadata_{hashlib.md5(str(init_file).encode()).hexdigest()[:8]}"
+    spec = importlib.util.spec_from_file_location(module_name, init_file)
+
+    if not spec or not spec.loader:
+        return []
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+
+    try:
+        spec.loader.exec_module(module)
+
+        if not hasattr(module, "__all__"):
+            return []
+
+        tools_metadata = []
+        for name in module.__all__:
+            if not hasattr(module, name):
+                continue
+
+            obj = getattr(module, name)
+
+            if not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
+                continue
+
+            tool_info = _extract_single_tool_metadata(obj)
+            if tool_info:
+                tools_metadata.append(tool_info)
+
+        return tools_metadata
+
+    except Exception as e:
+        console.print(
+            f"[yellow]Warning: Could not extract metadata from {init_file}: {e}[/yellow]"
+        )
+        return []
+
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
+    """
+    Extract metadata from a single tool class.
+    """
+    try:
+        core_schema = tool_class.__pydantic_core_schema__
+        if not core_schema:
+            return None
+
+        schema = _unwrap_schema(core_schema)
+        fields = schema.get("schema", {}).get("fields", {})
+
+        return {
+            "name": tool_class.__name__,
+            "humanized_name": _extract_field_default(
+                fields.get("name"), fallback=tool_class.__name__
+            ),
+            "description": str(
+                _extract_field_default(fields.get("description"))
+            ).strip(),
+            "run_params_schema": _extract_run_params_schema(fields.get("args_schema")),
+            "init_params_schema": _extract_init_params_schema(tool_class),
+            "env_vars": _extract_env_vars(fields.get("env_vars")),
+        }
+
+    except Exception:
+        return None
+
+
+def _unwrap_schema(schema: Mapping[str, Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Unwrap nested schema structures to get to the actual schema definition.
+    """
+    result: dict[str, Any] = dict(schema)
+    while result.get("type") in {"function-after", "default"} and "schema" in result:
+        result = dict(result["schema"])
+    return result
+
+
+def _extract_field_default(
+    field: dict[str, Any] | None, fallback: str | list[Any] = ""
+) -> str | list[Any] | int:
+    """
+    Extract the default value from a field schema.
+    """
+    if not field:
+        return fallback
+
+    schema = field.get("schema", {})
+    default = schema.get("default")
+    return default if isinstance(default, (list, str, int)) else fallback
+
+
+def _get_schema_generator() -> type:
+    """Get a SchemaGenerator that omits non-serializable defaults."""
+    from pydantic.json_schema import GenerateJsonSchema
+    from pydantic_core import PydanticOmit
+
+    class SchemaGenerator(GenerateJsonSchema):
+        def handle_invalid_for_json_schema(
+            self, schema: Any, error_info: Any
+        ) -> dict[str, Any]:
+            raise PydanticOmit
+
+    return SchemaGenerator
+
+
+def _extract_run_params_schema(args_schema_field: dict[str, Any] | None) -> dict[str, Any]:
+    """
+    Extract JSON Schema for the tool's run parameters from args_schema field.
+    """
+    from pydantic import BaseModel
+
+    if not args_schema_field:
+        return {}
+
+    args_schema_class = args_schema_field.get("schema", {}).get("default")
+    if not (inspect.isclass(args_schema_class) and issubclass(args_schema_class, BaseModel)):
+        return {}
+
+    try:
+        return args_schema_class.model_json_schema(schema_generator=_get_schema_generator())
+    except Exception:
+        return {}
+
+
+def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:
+    """
+    Extract JSON Schema for the tool's __init__ parameters, filtering out base fields.
+    """
+    ignored_init_params = [
+        "name",
+        "description",
+        "env_vars",
+        "args_schema",
+        "description_updated",
+        "cache_function",
+        "result_as_answer",
+        "max_usage_count",
+        "current_usage_count",
+        "package_dependencies",
+    ]
+
+    try:
+        json_schema = tool_class.model_json_schema(
+            schema_generator=_get_schema_generator(), mode="serialization"
+        )
+
+        json_schema["properties"] = {
+            key: value
+            for key, value in json_schema.get("properties", {}).items()
+            if key not in ignored_init_params
+        }
+        return json_schema
+    except Exception:
+        return {}
+
+
+def _extract_env_vars(env_vars_field: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """
+    Extract environment variable definitions from env_vars field.
+    """
+    from crewai.tools.base_tool import EnvVar
+
+    if not env_vars_field:
+        return []
+
+    return [
+        {
+            "name": env_var.name,
+            "description": env_var.description,
+            "required": env_var.required,
+            "default": env_var.default,
+        }
+        for env_var in env_vars_field.get("schema", {}).get("default", [])
+        if isinstance(env_var, EnvVar)
+    ]

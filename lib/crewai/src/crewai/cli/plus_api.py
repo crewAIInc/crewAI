@@ -60,6 +60,7 @@ class PlusAPI:
         description: str | None,
         encoded_file: str,
         available_exports: list[dict[str, Any]] | None = None,
+        tools_metadata: list[dict[str, Any]] | None = None,
     ) -> requests.Response:
         params = {
             "handle": handle,
@@ -68,6 +69,7 @@ class PlusAPI:
             "file": encoded_file,
             "description": description,
             "available_exports": available_exports,
+            "tools_metadata": tools_metadata,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 

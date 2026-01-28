@@ -185,9 +185,14 @@ def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 @patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
 def test_publish_when_not_in_sync_and_force(
     mock_print_org,
+    mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
     mock_publish,
@@ -222,6 +227,7 @@ def test_publish_when_not_in_sync_and_force(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
         available_exports=[{"name": "SampleTool"}],
+        tools_metadata=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
     )
     mock_print_org.assert_called_once()
 
@@ -242,7 +248,12 @@ def test_publish_when_not_in_sync_and_force(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_success(
+    mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
     mock_publish,
@@ -277,6 +288,7 @@ def test_publish_success(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
         available_exports=[{"name": "SampleTool"}],
+        tools_metadata=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
     )
 
 
@@ -295,7 +307,12 @@ def test_publish_success(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_failure(
+    mock_tools_metadata,
     mock_available_exports,
     mock_publish,
     mock_open,
@@ -336,7 +353,12 @@ def test_publish_failure(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_api_error(
+    mock_tools_metadata,
     mock_available_exports,
     mock_publish,
     mock_open,
@@ -360,6 +382,35 @@ def test_publish_api_error(
     assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
+
+
+@patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    side_effect=Exception("Failed to extract metadata"),
+)
+def test_publish_metadata_extraction_failure(
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_is_synced,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    capsys,
+    tool_command,
+):
+    with raises(SystemExit):
+        tool_command.publish(is_public=True)
+    output = capsys.readouterr().out
+    assert "Failed to extract tool metadata" in output
+    assert "Inherit from BaseTool" in output
 
 
 @patch("crewai.cli.tools.main.Settings")
