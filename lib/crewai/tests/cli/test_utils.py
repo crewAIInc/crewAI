@@ -363,3 +363,261 @@ def test_get_crews_ignores_template_directories(
     utils.get_crews()
 
     assert not template_crew_detected
+
+
+# Tests for extract_tools_metadata
+
+
+def test_extract_tools_metadata_empty_project(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list for empty project."""
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
+
+
+def test_extract_tools_metadata_no_init_file(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list when no __init__.py exists."""
+    (temp_project_dir / "some_file.py").write_text("print('hello')")
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
+
+
+def test_extract_tools_metadata_empty_init_file(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list for empty __init__.py."""
+    create_init_file(temp_project_dir, "")
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
+
+
+def test_extract_tools_metadata_no_all_variable(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list when __all__ is not defined."""
+    create_init_file(
+        temp_project_dir,
+        "from crewai.tools import BaseTool\n\nclass MyTool(BaseTool):\n    pass",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
+
+
+def test_extract_tools_metadata_valid_base_tool_class(temp_project_dir):
+    """Test that extract_tools_metadata extracts metadata from a valid BaseTool class."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+
+__all__ = ['MyTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    assert metadata[0]["name"] == "MyTool"
+    assert metadata[0]["humanized_name"] == "my_tool"
+    assert metadata[0]["description"] == "A test tool"
+
+
+def test_extract_tools_metadata_with_args_schema(temp_project_dir):
+    """Test that extract_tools_metadata extracts run_params_schema from args_schema."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+from pydantic import BaseModel
+
+class MyToolInput(BaseModel):
+    query: str
+    limit: int = 10
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+    args_schema: type[BaseModel] = MyToolInput
+
+__all__ = ['MyTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    assert metadata[0]["name"] == "MyTool"
+    run_params = metadata[0]["run_params_schema"]
+    assert "properties" in run_params
+    assert "query" in run_params["properties"]
+    assert "limit" in run_params["properties"]
+
+
+def test_extract_tools_metadata_with_env_vars(temp_project_dir):
+    """Test that extract_tools_metadata extracts env_vars."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+from crewai.tools.base_tool import EnvVar
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+    env_vars: list[EnvVar] = [
+        EnvVar(name="MY_API_KEY", description="API key for service", required=True),
+        EnvVar(name="MY_OPTIONAL_VAR", description="Optional var", required=False, default="default_value"),
+    ]
+
+__all__ = ['MyTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    env_vars = metadata[0]["env_vars"]
+    assert len(env_vars) == 2
+    assert env_vars[0]["name"] == "MY_API_KEY"
+    assert env_vars[0]["description"] == "API key for service"
+    assert env_vars[0]["required"] is True
+    assert env_vars[1]["name"] == "MY_OPTIONAL_VAR"
+    assert env_vars[1]["required"] is False
+    assert env_vars[1]["default"] == "default_value"
+
+
+def test_extract_tools_metadata_with_custom_init_params(temp_project_dir):
+    """Test that extract_tools_metadata extracts init_params_schema with custom params."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+    api_endpoint: str = "https://api.example.com"
+    timeout: int = 30
+
+__all__ = ['MyTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    init_params = metadata[0]["init_params_schema"]
+    assert "properties" in init_params
+    # Custom params should be included
+    assert "api_endpoint" in init_params["properties"]
+    assert "timeout" in init_params["properties"]
+    # Base params should be filtered out
+    assert "name" not in init_params["properties"]
+    assert "description" not in init_params["properties"]
+
+
+def test_extract_tools_metadata_multiple_tools(temp_project_dir):
+    """Test that extract_tools_metadata extracts metadata from multiple tools."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class FirstTool(BaseTool):
+    name: str = "first_tool"
+    description: str = "First test tool"
+
+class SecondTool(BaseTool):
+    name: str = "second_tool"
+    description: str = "Second test tool"
+
+__all__ = ['FirstTool', 'SecondTool']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 2
+    names = [m["name"] for m in metadata]
+    assert "FirstTool" in names
+    assert "SecondTool" in names
+
+
+def test_extract_tools_metadata_multiple_init_files(temp_project_dir):
+    """Test that extract_tools_metadata extracts metadata from multiple __init__.py files."""
+    # Create tool in root __init__.py
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class RootTool(BaseTool):
+    name: str = "root_tool"
+    description: str = "Root tool"
+
+__all__ = ['RootTool']
+""",
+    )
+
+    # Create nested package with another tool
+    nested_dir = temp_project_dir / "nested"
+    nested_dir.mkdir()
+    create_init_file(
+        nested_dir,
+        """from crewai.tools import BaseTool
+
+class NestedTool(BaseTool):
+    name: str = "nested_tool"
+    description: str = "Nested tool"
+
+__all__ = ['NestedTool']
+""",
+    )
+
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 2
+    names = [m["name"] for m in metadata]
+    assert "RootTool" in names
+    assert "NestedTool" in names
+
+
+def test_extract_tools_metadata_ignores_non_tool_exports(temp_project_dir):
+    """Test that extract_tools_metadata ignores non-BaseTool exports."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    name: str = "my_tool"
+    description: str = "A test tool"
+
+def not_a_tool():
+    pass
+
+SOME_CONSTANT = "value"
+
+__all__ = ['MyTool', 'not_a_tool', 'SOME_CONSTANT']
+""",
+    )
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert len(metadata) == 1
+    assert metadata[0]["name"] == "MyTool"
+
+
+def test_extract_tools_metadata_import_error_returns_empty(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list on import error."""
+    create_init_file(
+        temp_project_dir,
+        """from nonexistent_module import something
+
+class MyTool(BaseTool):
+    pass
+
+__all__ = ['MyTool']
+""",
+    )
+    # Should not raise, just return empty list
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
+
+
+def test_extract_tools_metadata_syntax_error_returns_empty(temp_project_dir):
+    """Test that extract_tools_metadata returns empty list on syntax error."""
+    create_init_file(
+        temp_project_dir,
+        """from crewai.tools import BaseTool
+
+class MyTool(BaseTool):
+    # Missing closing parenthesis
+    def __init__(self, name:
+        pass
+
+__all__ = ['MyTool']
+""",
+    )
+    # Should not raise, just return empty list
+    metadata = utils.extract_tools_metadata(dir_path=str(temp_project_dir))
+    assert metadata == []
