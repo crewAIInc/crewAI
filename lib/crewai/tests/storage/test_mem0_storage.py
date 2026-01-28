@@ -786,16 +786,13 @@ def test_search_method_with_memory_client_and_valkey_config():
         assert results[0]["content"] == "Result 1"
 
 
-def test_magicmock_with_spec_passes_isinstance_check():
+def test_magicmock_spec_isinstance_behavior():
     """
-    Test that demonstrates MagicMock(spec=Memory) DOES pass isinstance checks.
+    Verify that MagicMock with spec parameter passes isinstance checks.
     
-    This test serves as documentation/proof that the reviewer's comment about
-    MagicMock(spec=Memory) not passing isinstance checks is incorrect.
-    
-    In Python's unittest.mock, MagicMock(spec=SomeClass) is specifically designed
-    to pass isinstance(mock, SomeClass) checks to make mocks behave like the
-    specified class for testing purposes.
+    This is a critical assumption for our test suite - we use MagicMock(spec=Memory)
+    to mock Memory instances, and the production code uses isinstance(self.memory, Memory)
+    to guard flattening logic. This test ensures our mocking strategy is valid.
     """
     # Test that MagicMock with spec passes isinstance check
     mock_memory = MagicMock(spec=Memory)
