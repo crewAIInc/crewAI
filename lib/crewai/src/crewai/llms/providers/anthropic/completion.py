@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
     from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
-    from anthropic.types.beta import BetaMessage
+    from anthropic.types.beta import BetaMessage, BetaTextBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -678,7 +678,7 @@ class AnthropicCompletion(BaseLLM):
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
-                    if isinstance(block, TextBlock):
+                    if isinstance(block, (TextBlock, BetaTextBlock)):
                         structured_data = response_model.model_validate_json(block.text)
                         self._emit_call_completed_event(
                             response=structured_data.model_dump_json(),
@@ -1168,7 +1168,7 @@ class AnthropicCompletion(BaseLLM):
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
                 for block in response.content:
-                    if isinstance(block, TextBlock):
+                    if isinstance(block, (TextBlock, BetaTextBlock)):
                         structured_data = response_model.model_validate_json(block.text)
                         self._emit_call_completed_event(
                             response=structured_data.model_dump_json(),

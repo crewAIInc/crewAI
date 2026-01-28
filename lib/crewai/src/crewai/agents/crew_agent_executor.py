@@ -352,7 +352,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             output_json = answer.model_dump_json()
                             formatted_answer = AgentFinish(
                                 thought="",
-                                output=output_json,
+                                output=answer,
                                 text=output_json,
                             )
                         else:
@@ -538,6 +538,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
+                if isinstance(answer, BaseModel):
+                    output_json = answer.model_dump_json()
+                    formatted_answer = AgentFinish(
+                        thought="",
+                        output=answer,
+                        text=output_json,
+                    )
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(output_json)
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
                 # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
@@ -588,11 +600,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             verbose=self.agent.verbose,
         )
 
-        formatted_answer = AgentFinish(
-            thought="",
-            output=str(answer),
-            text=str(answer),
-        )
+        if isinstance(answer, BaseModel):
+            output_json = answer.model_dump_json()
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer,
+                text=output_json,
+            )
+        else:
+            answer_str = answer if isinstance(answer, str) else str(answer)
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer_str,
+                text=answer_str,
+            )
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -1053,7 +1074,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             output_json = answer.model_dump_json()
                             formatted_answer = AgentFinish(
                                 thought="",
-                                output=output_json,
+                                output=answer,
                                 text=output_json,
                             )
                         else:
@@ -1230,6 +1251,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
+                if isinstance(answer, BaseModel):
+                    output_json = answer.model_dump_json()
+                    formatted_answer = AgentFinish(
+                        thought="",
+                        output=answer,
+                        text=output_json,
+                    )
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(output_json)
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
                 # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
@@ -1280,11 +1313,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             verbose=self.agent.verbose,
         )
 
-        formatted_answer = AgentFinish(
-            thought="",
-            output=str(answer),
-            text=str(answer),
-        )
+        if isinstance(answer, BaseModel):
+            output_json = answer.model_dump_json()
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer,
+                text=output_json,
+            )
+        else:
+            answer_str = answer if isinstance(answer, str) else str(answer)
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer_str,
+                text=answer_str,
+            )
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -1457,7 +1499,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        output_str = (
+            formatted_answer.output
+            if isinstance(formatted_answer.output, str)
+            else formatted_answer.output.model_dump_json()
+        )
+        human_feedback = self._ask_human_input(output_str)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
@@ -1516,7 +1563,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                output_str = (
+                    answer.output
+                    if isinstance(answer.output, str)
+                    else answer.output.model_dump_json()
+                )
+                feedback = self._ask_human_input(output_str)
 
         return answer
 
