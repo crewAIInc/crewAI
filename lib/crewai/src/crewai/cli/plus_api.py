@@ -82,7 +82,7 @@ class PlusAPI:
             "file": encoded_file,
             "description": description,
             "available_exports": available_exports,
-            "tools_metadata": tools_metadata,
+            "tools_metadata": {"tools": tools_metadata} if tools_metadata else None,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
