@@ -206,13 +206,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = self._invoke_loop()
         except AssertionError:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -327,6 +328,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     break
 
@@ -341,6 +343,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
                 # breakpoint()
                 if self.response_model is not None:
@@ -399,6 +402,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    verbose=self.agent.verbose,
                 )
 
             except Exception as e:
@@ -413,9 +417,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -461,6 +466,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -482,6 +488,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
 
                 # Check if the response is a list of tool calls
@@ -535,9 +542,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -559,6 +567,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             from_agent=self.agent,
             response_model=self.response_model,
             executor_context=self,
+            verbose=self.agent.verbose,
         )
 
         formatted_answer = AgentFinish(
@@ -755,10 +764,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         track_delegation_if_needed(func_name, args_dict, self.task)
 
         # Find the structured tool for hook context
-        structured_tool = None
-        for tool in self.tools or []:
-            if sanitize_tool_name(tool.name) == func_name:
-                structured_tool = tool
+        structured_tool: CrewStructuredTool | None = None
+        for structured in self.tools or []:
+            if sanitize_tool_name(structured.name) == func_name:
+                structured_tool = structured
                 break
 
         # Execute before_tool_call hooks
@@ -779,10 +788,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     hook_blocked = True
                     break
         except Exception as hook_error:
-            self._printer.print(
-                content=f"Error in before_tool_call hook: {hook_error}",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in before_tool_call hook: {hook_error}",
+                    color="red",
+                )
 
         # If hook blocked execution, set result and skip tool execution
         if hook_blocked:
@@ -848,15 +858,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         after_hooks = get_after_tool_call_hooks()
         try:
             for after_hook in after_hooks:
-                hook_result = after_hook(after_hook_context)
-                if hook_result is not None:
-                    result = hook_result
+                after_hook_result = after_hook(after_hook_context)
+                if after_hook_result is not None:
+                    result = after_hook_result
                     after_hook_context.tool_result = result
         except Exception as hook_error:
-            self._printer.print(
-                content=f"Error in after_tool_call hook: {hook_error}",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in after_tool_call hook: {hook_error}",
+                    color="red",
+                )
 
         # Emit tool usage finished event
         crewai_event_bus.emit(
@@ -942,13 +953,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = await self._ainvoke_loop()
         except AssertionError:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -999,6 +1011,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     break
 
@@ -1013,6 +1026,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
 
                 if self.response_model is not None:
@@ -1070,6 +1084,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    verbose=self.agent.verbose,
                 )
 
             except Exception as e:
@@ -1083,9 +1098,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1125,6 +1141,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -1146,6 +1163,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
                 # Check if the response is a list of tool calls
                 if (
@@ -1198,9 +1216,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1222,6 +1241,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             from_agent=self.agent,
             response_model=self.response_model,
             executor_context=self,
+            verbose=self.agent.verbose,
         )
 
         formatted_answer = AgentFinish(
@@ -1339,10 +1359,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
         if train_iteration is None or not isinstance(train_iteration, int):
-            self._printer.print(
-                content="Invalid or missing train iteration. Cannot save training data.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Invalid or missing train iteration. Cannot save training data.",
+                    color="red",
+                )
             return
 
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
@@ -1362,13 +1383,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if train_iteration in agent_training_data:
                 agent_training_data[train_iteration]["improved_output"] = result.output
             else:
-                self._printer.print(
-                    content=(
-                        f"No existing training data for agent {agent_id} and iteration "
-                        f"{train_iteration}. Cannot save improved output."
-                    ),
-                    color="red",
-                )
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=(
+                            f"No existing training data for agent {agent_id} and iteration "
+                            f"{train_iteration}. Cannot save improved output."
+                        ),
+                        color="red",
+                    )
                 return
 
         # Update the training data and save

@@ -118,17 +118,20 @@ class PersistenceDecorator:
                 )
             except Exception as e:
                 error_msg = LOG_MESSAGES["save_error"].format(method_name, str(e))
-                cls._printer.print(error_msg, color="red")
+                if verbose:
+                    cls._printer.print(error_msg, color="red")
                 logger.error(error_msg)
                 raise RuntimeError(f"State persistence failed: {e!s}") from e
         except AttributeError as e:
             error_msg = LOG_MESSAGES["state_missing"]
-            cls._printer.print(error_msg, color="red")
+            if verbose:
+                cls._printer.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
         except (TypeError, ValueError) as e:
             error_msg = LOG_MESSAGES["id_missing"]
-            cls._printer.print(error_msg, color="red")
+            if verbose:
+                cls._printer.print(error_msg, color="red")
             logger.error(error_msg)
             raise ValueError(error_msg) from e
 
