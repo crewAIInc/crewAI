@@ -466,9 +466,9 @@ class GeminiCompletion(BaseLLM):
         if response_model:
             config_params["response_mime_type"] = "application/json"
             schema_output = generate_model_description(response_model)
-            config_params["response_schema"] = schema_output.get("json_schema", {}).get(
-                "schema", {}
-            )
+            config_params["response_json_schema"] = schema_output.get(
+                "json_schema", {}
+            ).get("schema", {})
 
         # Handle tools for supported models
         if tools and self.supports_tools:
