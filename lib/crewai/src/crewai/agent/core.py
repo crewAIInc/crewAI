@@ -1858,11 +1858,18 @@ class Agent(BaseAgent):
 
         # Execute the agent (this is called from sync path, so invoke returns dict)
         result = cast(dict[str, Any], executor.invoke(inputs))
-        raw_output = result.get("output", "")
+        output = result.get("output", "")
+        (f"output: {output}")
 
         # Handle response format conversion
         formatted_result: BaseModel | None = None
-        if response_format:
+        raw_output: str
+
+        if isinstance(output, BaseModel):
+            formatted_result = output
+            raw_output = output.model_dump_json()
+        elif response_format:
+            raw_output = str(output) if not isinstance(output, str) else output
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
@@ -1882,6 +1889,8 @@ class Agent(BaseAgent):
                     formatted_result = conversion_result
             except ConverterError:
                 pass  # Keep raw output if conversion fails
+        else:
+            raw_output = str(output) if not isinstance(output, str) else output
 
         # Get token usage metrics
         if isinstance(self.llm, BaseLLM):
@@ -1920,11 +1929,17 @@ class Agent(BaseAgent):
 
         # Execute the agent asynchronously
         result = await executor.invoke_async(inputs)
-        raw_output = result.get("output", "")
+        output = result.get("output", "")
 
         # Handle response format conversion
         formatted_result: BaseModel | None = None
-        if response_format:
+        raw_output: str
+
+        if isinstance(output, BaseModel):
+            formatted_result = output
+            raw_output = output.model_dump_json()
+        elif response_format:
+            raw_output = str(output) if not isinstance(output, str) else output
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
@@ -1944,6 +1959,8 @@ class Agent(BaseAgent):
                     formatted_result = conversion_result
             except ConverterError:
                 pass  # Keep raw output if conversion fails
+        else:
+            raw_output = str(output) if not isinstance(output, str) else output
 
         # Get token usage metrics
         if isinstance(self.llm, BaseLLM):

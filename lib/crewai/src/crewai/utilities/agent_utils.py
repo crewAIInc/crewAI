@@ -182,6 +182,7 @@ def convert_tools_to_openai_schema(
                 "name": sanitized_name,
                 "description": description,
                 "parameters": parameters,
+                "strict": True,
             },
         }
         openai_tools.append(schema)

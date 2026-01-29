@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
     from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
-    from anthropic.types.beta import BetaMessage, BetaTextBlock
+    from anthropic.types.beta import BetaMessage, BetaTextBlock, BetaToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -674,6 +674,23 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+
+        if "tools" in params and response.content:
+            tool_uses = [
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
+            ]
+            if tool_uses:
+                if not available_functions:
+                    self._emit_call_completed_event(
+                        response=list(tool_uses),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return list(tool_uses)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:

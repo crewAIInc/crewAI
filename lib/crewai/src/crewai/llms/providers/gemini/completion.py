@@ -471,7 +471,9 @@ class GeminiCompletion(BaseLLM):
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
 
-        if response_model:
+        if tools and self.supports_tools:
+            config_params["tools"] = self._convert_tools_for_interference(tools)
+        elif response_model:
             config_params["response_mime_type"] = "application/json"
             schema_output = generate_model_description(response_model)
             schema = schema_output.get("json_schema", {}).get("schema", {})
@@ -481,10 +483,6 @@ class GeminiCompletion(BaseLLM):
                 config_params["response_json_schema"] = schema
             else:
                 config_params["response_schema"] = response_model
-
-        # Handle tools for supported models
-        if tools and self.supports_tools:
-            config_params["tools"] = self._convert_tools_for_interference(tools)
 
         if self.safety_settings:
             config_params["safety_settings"] = self.safety_settings
@@ -789,10 +787,12 @@ class GeminiCompletion(BaseLLM):
         content = self._extract_text_from_response(response)
         content = self._apply_stop_words(content)
 
+        effective_response_model = None if self.tools else response_model
+
         return self._finalize_completion_response(
             content=content,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -948,10 +948,12 @@ class GeminiCompletion(BaseLLM):
                 if result is not None:
                     return result
 
+        effective_response_model = None if self.tools else response_model
+
         return self._finalize_completion_response(
             content=full_response,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )

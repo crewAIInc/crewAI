@@ -1530,6 +1530,7 @@ class OpenAICompletion(BaseLLM):
                 "function": {
                     "name": name,
                     "description": description,
+                    "strict": True,
                 },
             }
 
