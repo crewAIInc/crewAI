@@ -260,6 +260,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         for tool in tools_metadata:
             console.print(f"  [bold cyan]{tool.get('name', 'Unknown')}[/bold cyan]")
+            if tool.get("module"):
+                console.print(f"    Module: {tool.get('module')}")
             console.print(f"    Name: {tool.get('humanized_name', 'N/A')}")
             console.print(f"    Description: {tool.get('description', 'N/A')[:80]}{'...' if len(tool.get('description', '')) > 80 else ''}")
 

@@ -261,7 +261,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": available_exports,
-            "tools_metadata": {"tools": tools_metadata},
+            "tools_metadata": {"package": handle, "tools": tools_metadata},
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params

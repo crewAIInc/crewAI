@@ -591,8 +591,19 @@ def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
         schema = _unwrap_schema(core_schema)
         fields = schema.get("schema", {}).get("fields", {})
 
+        try:
+            file_path = inspect.getfile(tool_class)
+            relative_path = Path(file_path).relative_to(Path.cwd())
+            module_path = relative_path.with_suffix("")
+            if module_path.parts[0] == "src":
+                module_path = Path(*module_path.parts[1:])
+            module = ".".join(module_path.parts)
+        except (TypeError, ValueError):
+            module = tool_class.__module__
+
         return {
             "name": tool_class.__name__,
+            "module": module,
             "humanized_name": _extract_field_default(
                 fields.get("name"), fallback=tool_class.__name__
             ),
