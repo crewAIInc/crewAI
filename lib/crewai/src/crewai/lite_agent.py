@@ -662,6 +662,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                     log_error_after=3,
                     printer=self._printer,
                     verbose=self.verbose,
+                    raw_output=answer,
+                    agent_name=self.role,
                 )
 
             except Exception as e:

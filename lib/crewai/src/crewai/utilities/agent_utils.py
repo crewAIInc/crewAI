@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
@@ -33,6 +34,8 @@ from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
+# Set up logger for debug logging
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from crewai.agent import Agent
@@ -464,6 +467,14 @@ def process_llm_response(
             # Preliminary parsing to check for errors.
             format_answer(answer)
         except OutputParserError as e:
+            # Add debug logging for preliminary parsing failure
+            if logger.isEnabledFor(logging.DEBUG):
+                truncated_output = answer[:500]
+                if len(answer) > 500:
+                    truncated_output += "... [truncated]"
+                logger.debug(f"Preliminary parse failed: {e.error}")
+                logger.debug(f"Raw output (truncated): \"{truncated_output}\"")
+            
             if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
                 answer = answer.split("Observation:")[0].strip()
 
@@ -546,6 +557,8 @@ def handle_output_parser_exception(
     log_error_after: int = 3,
     printer: Printer | None = None,
     verbose: bool = True,
+    raw_output: str | None = None,
+    agent_name: str | None = None,
 ) -> AgentAction:
     """Handle OutputParserError by updating messages and formatted_answer.
 
@@ -555,6 +568,9 @@ def handle_output_parser_exception(
         iterations: Current iteration count
         log_error_after: Number of iterations after which to log errors
         printer: Optional printer instance for logging
+        verbose: Whether to print verbose output
+        raw_output: The raw LLM output that failed to parse (for debug logging)
+        agent_name: Name of the agent for debug logging
 
     Returns:
         AgentAction: A formatted answer with the error
@@ -567,6 +583,25 @@ def handle_output_parser_exception(
         tool_input="",
         thought="",
     )
+
+    # Add debug logging for OutputParserError
+    if logger.isEnabledFor(logging.DEBUG):
+        agent_identifier = agent_name or "Unknown Agent"
+        truncated_output = ""
+        if raw_output:
+            # Truncate raw output for safety (first 500 characters)
+            truncated_output = raw_output[:500]
+            if len(raw_output) > 500:
+                truncated_output += "... [truncated]"
+        
+        logger.debug(
+            f"Parse failed for agent '{agent_identifier}': {e.error}"
+        )
+        if truncated_output:
+            logger.debug(
+                f"Raw output (truncated): \"{truncated_output}\""
+            )
+        logger.debug(f"Retry {iterations}/{log_error_after + 5} initiated")
 
     if verbose and iterations > log_error_after and printer:
         printer.print(
