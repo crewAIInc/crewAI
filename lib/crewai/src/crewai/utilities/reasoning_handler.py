@@ -13,6 +13,7 @@ from crewai.events.types.reasoning_events import (
 )
 from crewai.llm import LLM
 from crewai.task import Task
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 class ReasoningPlan(BaseModel):
@@ -340,7 +341,9 @@ class AgentReasoning:
             str: Comma-separated list of tool names.
         """
         try:
-            return ", ".join([tool.name for tool in (self.task.tools or [])])
+            return ", ".join(
+                [sanitize_tool_name(tool.name) for tool in (self.task.tools or [])]
+            )
         except (AttributeError, TypeError):
             return "No tools available"
 
