@@ -1397,3 +1397,56 @@ def test_openai_responses_api_both_auto_chains_work_together():
     assert params.get("previous_response_id") == "resp_123"
     assert "reasoning.encrypted_content" in params["include"]
     assert len(params["input"]) == 2  # Reasoning item + message
+
+
+def test_openai_sdk_imports_compatibility():
+    """
+    Test that all OpenAI SDK imports used by CrewAI are available.
+
+    This test verifies that the OpenAI SDK version installed provides all the
+    types and classes that CrewAI depends on. If this test fails after updating
+    the OpenAI SDK, it indicates a breaking change in the SDK that needs to be
+    addressed.
+
+    Related to issue #4300: Dependency constraints in pyproject.toml are overly strict
+    """
+    from openai import APIConnectionError, AsyncOpenAI, NotFoundError, OpenAI, Stream
+    from openai.lib.streaming.chat import ChatCompletionStream
+    from openai.types.chat import ChatCompletion, ChatCompletionChunk
+    from openai.types.chat.chat_completion import Choice
+    from openai.types.chat.chat_completion_chunk import ChoiceDelta
+    from openai.types.responses import Response
+
+    assert OpenAI is not None
+    assert AsyncOpenAI is not None
+    assert Stream is not None
+    assert APIConnectionError is not None
+    assert NotFoundError is not None
+    assert ChatCompletionStream is not None
+    assert ChatCompletion is not None
+    assert ChatCompletionChunk is not None
+    assert Choice is not None
+    assert ChoiceDelta is not None
+    assert Response is not None
+
+
+def test_openai_sdk_client_instantiation():
+    """
+    Test that OpenAI client can be instantiated with the current SDK version.
+
+    This test verifies that the OpenAI client initialization works correctly
+    with the installed SDK version, ensuring compatibility with newer versions.
+
+    Related to issue #4300: Dependency constraints in pyproject.toml are overly strict
+    """
+    from openai import AsyncOpenAI, OpenAI
+
+    client = OpenAI(api_key="test-key")
+    async_client = AsyncOpenAI(api_key="test-key")
+
+    assert client is not None
+    assert async_client is not None
+    assert hasattr(client, "chat")
+    assert hasattr(client.chat, "completions")
+    assert hasattr(async_client, "chat")
+    assert hasattr(async_client.chat, "completions")
