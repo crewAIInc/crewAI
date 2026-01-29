@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 from collections.abc import AsyncIterator, Callable, MutableMapping
 from contextlib import asynccontextmanager
 import logging
@@ -12,6 +13,8 @@ import uuid
 from a2a.client import Client, ClientConfig, ClientFactory
 from a2a.types import (
     AgentCard,
+    FilePart,
+    FileWithBytes,
     Message,
     Part,
     PushNotificationConfig as A2APushNotificationConfig,
@@ -81,6 +84,38 @@ if TYPE_CHECKING:
 _DEFAULT_TRANSPORT: Final[TransportType] = "JSONRPC"
 
 
+def _create_file_parts(input_files: dict[str, Any] | None) -> list[Part]:
+    """Convert FileInput dictionary to FilePart objects.
+
+    Args:
+        input_files: Dictionary mapping names to FileInput objects.
+
+    Returns:
+        List of Part objects containing FilePart data.
+    """
+    if not input_files:
+        return []
+
+    try:
+        import crewai_files  # noqa: F401
+    except ImportError:
+        logger.debug("crewai_files not installed, skipping file parts")
+        return []
+
+    parts: list[Part] = []
+    for name, file_input in input_files.items():
+        content_bytes = file_input.read()
+        content_base64 = base64.b64encode(content_bytes).decode()
+        file_with_bytes = FileWithBytes(
+            bytes=content_base64,
+            mimeType=file_input.content_type,
+            name=file_input.filename or name,
+        )
+        parts.append(Part(root=FilePart(file=file_with_bytes)))
+
+    return parts
+
+
 def get_handler(config: UpdateConfig | None) -> HandlerType:
     """Get the handler class for a given update config.
 
@@ -119,6 +154,7 @@ def execute_a2a_delegation(
     client_extensions: list[str] | None = None,
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
+    input_files: dict[str, Any] | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent synchronously.
 
@@ -154,6 +190,7 @@ def execute_a2a_delegation(
         client_extensions: A2A protocol extension URIs the client supports.
         transport: Transport configuration (preferred, supported transports, gRPC settings).
         accepted_output_modes: MIME types the client can accept in responses.
+        input_files: Optional dictionary of files to send to remote agent.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -199,6 +236,7 @@ def execute_a2a_delegation(
                 client_extensions=client_extensions,
                 transport=transport,
                 accepted_output_modes=accepted_output_modes,
+                input_files=input_files,
             )
         )
     finally:
@@ -232,6 +270,7 @@ async def aexecute_a2a_delegation(
     client_extensions: list[str] | None = None,
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
+    input_files: dict[str, Any] | None = None,
 ) -> TaskStateResult:
     """Execute a task delegation to a remote A2A agent asynchronously.
 
@@ -262,6 +301,7 @@ async def aexecute_a2a_delegation(
         client_extensions: A2A protocol extension URIs the client supports.
         transport: Transport configuration (preferred, supported transports, gRPC settings).
         accepted_output_modes: MIME types the client can accept in responses.
+        input_files: Optional dictionary of files to send to remote agent.
 
     Returns:
         TaskStateResult with status, result/error, history, and agent_card.
@@ -299,6 +339,7 @@ async def aexecute_a2a_delegation(
             client_extensions=client_extensions,
             transport=transport,
             accepted_output_modes=accepted_output_modes,
+            input_files=input_files,
         )
     except Exception as e:
         crewai_event_bus.emit(
@@ -366,6 +407,7 @@ async def _aexecute_a2a_delegation_impl(
     client_extensions: list[str] | None = None,
     transport: ClientTransportConfig | None = None,
     accepted_output_modes: list[str] | None = None,
+    input_files: dict[str, Any] | None = None,
 ) -> TaskStateResult:
     """Internal async implementation of A2A delegation."""
     if transport is None:
@@ -517,10 +559,13 @@ async def _aexecute_a2a_delegation_impl(
     if skill_id:
         message_metadata["skill_id"] = skill_id
 
+    parts_list: list[Part] = [Part(root=TextPart(**parts))]
+    parts_list.extend(_create_file_parts(input_files))
+
     message = Message(
         role=Role.user,
         message_id=str(uuid.uuid4()),
-        parts=[Part(root=TextPart(**parts))],
+        parts=parts_list,
         context_id=context_id,
         task_id=task_id,
         reference_task_ids=reference_task_ids,

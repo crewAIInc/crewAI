@@ -17,6 +17,8 @@ from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
 from a2a.types import (
     Artifact,
+    FileWithBytes,
+    FileWithUri,
     InternalError,
     InvalidParamsError,
     Message,
@@ -28,6 +30,7 @@ from a2a.types import (
 )
 from a2a.utils import (
     get_data_parts,
+    get_file_parts,
     new_agent_text_message,
     new_data_artifact,
     new_text_artifact,
@@ -191,6 +194,37 @@ def cancellable(
     return wrapper
 
 
+def _convert_a2a_files_to_file_inputs(
+    a2a_files: list[FileWithBytes | FileWithUri],
+) -> dict[str, Any]:
+    """Convert a2a file types to crewai FileInput dict.
+
+    Args:
+        a2a_files: List of FileWithBytes or FileWithUri from a2a SDK.
+
+    Returns:
+        Dictionary mapping file names to FileInput objects.
+    """
+    try:
+        from crewai_files import File, FileBytes
+    except ImportError:
+        logger.debug("crewai_files not installed, returning empty file dict")
+        return {}
+
+    file_dict: dict[str, Any] = {}
+    for idx, a2a_file in enumerate(a2a_files):
+        if isinstance(a2a_file, FileWithBytes):
+            file_bytes = base64.b64decode(a2a_file.bytes)
+            name = a2a_file.name or f"file_{idx}"
+            file_source = FileBytes(data=file_bytes, filename=a2a_file.name)
+            file_dict[name] = File(source=file_source)
+        elif isinstance(a2a_file, FileWithUri):
+            name = a2a_file.name or f"file_{idx}"
+            file_dict[name] = File(source=a2a_file.uri)
+
+    return file_dict
+
+
 def _extract_response_schema(parts: list[Part]) -> dict[str, Any] | None:
     """Extract response schema from message parts metadata.
 
@@ -295,6 +329,7 @@ async def _execute_impl(
 
     response_model: type[BaseModel] | None = None
     structured_inputs: list[dict[str, Any]] = []
+    a2a_files: list[FileWithBytes | FileWithUri] = []
 
     if context.message and context.message.parts:
         schema = _extract_response_schema(context.message.parts)
@@ -308,6 +343,7 @@ async def _execute_impl(
                 )
 
         structured_inputs = get_data_parts(context.message.parts)
+        a2a_files = get_file_parts(context.message.parts)
 
     task_id = context.task_id
     context_id = context.context_id
@@ -329,6 +365,7 @@ async def _execute_impl(
         expected_output="Response to the user's request",
         agent=agent,
         response_model=response_model,
+        input_files=_convert_a2a_files_to_file_inputs(a2a_files),
     )
 
     crewai_event_bus.emit(

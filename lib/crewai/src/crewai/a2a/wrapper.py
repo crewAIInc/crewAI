@@ -977,6 +977,7 @@ def _delegate_to_a2a(
                 from_agent=self,
                 client_extensions=getattr(ctx.agent_config, "extensions", None),
                 accepted_output_modes=accepted_output_modes,
+                input_files=task.input_files,
             )
 
             conversation_history = a2a_result.get("history", [])
@@ -1320,6 +1321,7 @@ async def _adelegate_to_a2a(
                 from_agent=self,
                 client_extensions=getattr(ctx.agent_config, "extensions", None),
                 accepted_output_modes=accepted_output_modes,
+                input_files=task.input_files,
             )
 
             conversation_history = a2a_result.get("history", [])

@@ -134,6 +134,7 @@ def _kickoff_with_a2a_support(
         description=description,
         agent=agent,
         expected_output="Result from A2A delegation",
+        input_files=input_files or {},
     )
 
     def task_to_kickoff_adapter(
