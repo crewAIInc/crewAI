@@ -16,7 +16,6 @@ from qdrant_client.models import (  # type: ignore[import-not-found]
     HasIdCondition,
     HasVectorCondition,
     HnswConfigDiff,
-    InitFrom,
     IsEmptyCondition,
     IsNullCondition,
     NestedCondition,
@@ -129,7 +128,6 @@ class CommonCreateFields(TypedDict, total=False):
     optimizers_config: OptimizersConfigDiff
     wal_config: WalConfigDiff
     quantization_config: QuantizationConfig
-    init_from: InitFrom | str
     timeout: Annotated[int, "Operation timeout in seconds"]
 
 

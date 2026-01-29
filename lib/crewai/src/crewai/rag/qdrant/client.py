@@ -80,7 +80,6 @@ class QdrantClient(BaseClient):
             optimizers_config: Optional optimizer configuration.
             wal_config: Optional write-ahead log configuration.
             quantization_config: Optional quantization configuration.
-            init_from: Optional collection to initialize from.
             timeout: Optional timeout for the operation.
 
         Raises:
@@ -120,7 +119,6 @@ class QdrantClient(BaseClient):
             optimizers_config: Optional optimizer configuration.
             wal_config: Optional write-ahead log configuration.
             quantization_config: Optional quantization configuration.
-            init_from: Optional collection to initialize from.
             timeout: Optional timeout for the operation.
 
         Raises:
@@ -160,7 +158,6 @@ class QdrantClient(BaseClient):
             optimizers_config: Optional optimizer configuration.
             wal_config: Optional write-ahead log configuration.
             quantization_config: Optional quantization configuration.
-            init_from: Optional collection to initialize from.
             timeout: Optional timeout for the operation.
 
         Returns:
@@ -204,7 +201,6 @@ class QdrantClient(BaseClient):
             optimizers_config: Optional optimizer configuration.
             wal_config: Optional write-ahead log configuration.
             quantization_config: Optional quantization configuration.
-            init_from: Optional collection to initialize from.
             timeout: Optional timeout for the operation.
 
         Returns:

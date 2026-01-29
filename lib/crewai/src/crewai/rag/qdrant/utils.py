@@ -113,8 +113,6 @@ def _get_collection_params(
         params["wal_config"] = kwargs["wal_config"]
     if "quantization_config" in kwargs:
         params["quantization_config"] = kwargs["quantization_config"]
-    if "init_from" in kwargs:
-        params["init_from"] = kwargs["init_from"]
     if "timeout" in kwargs:
         params["timeout"] = kwargs["timeout"]
 
