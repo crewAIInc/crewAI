@@ -1859,7 +1859,6 @@ class Agent(BaseAgent):
         # Execute the agent (this is called from sync path, so invoke returns dict)
         result = cast(dict[str, Any], executor.invoke(inputs))
         output = result.get("output", "")
-        (f"output: {output}")
 
         # Handle response format conversion
         formatted_result: BaseModel | None = None
