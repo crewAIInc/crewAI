@@ -1297,7 +1297,7 @@ requires-dist = [
     { name = "litellm", marker = "extra == 'litellm'", specifier = "~=1.74.9" },
     { name = "mcp", specifier = "~=1.23.1" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = "~=0.1.94" },
-    { name = "openai", specifier = "~=1.83.0" },
+    { name = "openai", specifier = ">=1.83.0,<3.0.0" },
     { name = "openpyxl", specifier = "~=3.1.5" },
     { name = "openpyxl", marker = "extra == 'openpyxl'", specifier = "~=3.1.5" },
     { name = "opentelemetry-api", specifier = "~=1.34.0" },
