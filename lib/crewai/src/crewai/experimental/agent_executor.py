@@ -819,15 +819,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self.state.is_finished = True
                 return "tool_result_is_final"
 
-        # Add reflection prompt once after all tools in the batch
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
-
-        reasoning_message: LLMMessage = {
-            "role": "user",
-            "content": reasoning_prompt,
-        }
-        self.state.messages.append(reasoning_message)
-
         return "native_tool_completed"
 
     def _extract_tool_name(self, tool_call: Any) -> str:
