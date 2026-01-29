@@ -6,9 +6,7 @@ OAuth2, API keys, and HTTP authentication methods.
 
 import asyncio
 from collections.abc import Awaitable, Callable, MutableMapping
-import hashlib
 import re
-import threading
 from typing import Final, Literal, cast
 
 from a2a.client.errors import A2AClientHTTPError
@@ -30,40 +28,6 @@ from crewai.a2a.auth.client_schemes import (
     OAuth2ClientCredentials,
 )
 
-
-class _AuthStore:
-    """Store for authentication schemes with safe concurrent access."""
-
-    def __init__(self) -> None:
-        self._store: dict[str, ClientAuthScheme | None] = {}
-        self._lock = threading.RLock()
-
-    @staticmethod
-    def compute_key(auth_type: str, auth_data: str) -> str:
-        """Compute a collision-resistant key using SHA-256."""
-        content = f"{auth_type}:{auth_data}"
-        return hashlib.sha256(content.encode()).hexdigest()
-
-    def set(self, key: str, auth: ClientAuthScheme | None) -> None:
-        """Store an auth scheme."""
-        with self._lock:
-            self._store[key] = auth
-
-    def get(self, key: str) -> ClientAuthScheme | None:
-        """Retrieve an auth scheme by key."""
-        with self._lock:
-            return self._store.get(key)
-
-    def __setitem__(self, key: str, value: ClientAuthScheme | None) -> None:
-        with self._lock:
-            self._store[key] = value
-
-    def __getitem__(self, key: str) -> ClientAuthScheme | None:
-        with self._lock:
-            return self._store[key]
-
-
-_auth_store = _AuthStore()
 
 _SCHEME_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\w+)\s+(.+?)(?=,\s*\w+\s+|$)")
 _PARAM_PATTERN: Final[re.Pattern[str]] = re.compile(r'(\w+)=(?:"([^"]*)"|([^\s,]+))')
