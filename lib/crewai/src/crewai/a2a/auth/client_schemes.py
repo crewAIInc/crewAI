@@ -1,4 +1,4 @@
-"""Authentication schemes for A2A protocol agents.
+"""Authentication schemes for A2A protocol clients.
 
 Supported authentication methods:
 - Bearer tokens
@@ -6,24 +6,135 @@ Supported authentication methods:
 - API Keys (header, query, cookie)
 - HTTP Basic authentication
 - HTTP Digest authentication
+- mTLS (mutual TLS) client certificate authentication
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import asyncio
 import base64
 from collections.abc import Awaitable, Callable, MutableMapping
+from pathlib import Path
+import ssl
 import time
-from typing import Literal
+from typing import TYPE_CHECKING, ClassVar, Literal
 import urllib.parse
 
 import httpx
 from httpx import DigestAuth
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, FilePath, PrivateAttr
+from typing_extensions import deprecated
 
 
-class AuthScheme(ABC, BaseModel):
-    """Base class for authentication schemes."""
+if TYPE_CHECKING:
+    import grpc  # type: ignore[import-untyped]
+
+
+class TLSConfig(BaseModel):
+    """TLS/mTLS configuration for secure client connections.
+
+    Supports mutual TLS (mTLS) where the client presents a certificate to the server,
+    and standard TLS with custom CA verification.
+
+    Attributes:
+        client_cert_path: Path to client certificate file (PEM format) for mTLS.
+        client_key_path: Path to client private key file (PEM format) for mTLS.
+        ca_cert_path: Path to CA certificate bundle for server verification.
+        verify: Whether to verify server certificates. Set False only for development.
+    """
+
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
+
+    client_cert_path: FilePath | None = Field(
+        default=None,
+        description="Path to client certificate file (PEM format) for mTLS",
+    )
+    client_key_path: FilePath | None = Field(
+        default=None,
+        description="Path to client private key file (PEM format) for mTLS",
+    )
+    ca_cert_path: FilePath | None = Field(
+        default=None,
+        description="Path to CA certificate bundle for server verification",
+    )
+    verify: bool = Field(
+        default=True,
+        description="Whether to verify server certificates. Set False only for development.",
+    )
+
+    def get_httpx_ssl_context(self) -> ssl.SSLContext | bool | str:
+        """Build SSL context for httpx client.
+
+        Returns:
+            SSL context if certificates configured, True for default verification,
+            False if verification disabled, or path to CA bundle.
+        """
+        if not self.verify:
+            return False
+
+        if self.client_cert_path and self.client_key_path:
+            context = ssl.create_default_context()
+
+            if self.ca_cert_path:
+                context.load_verify_locations(cafile=str(self.ca_cert_path))
+
+            context.load_cert_chain(
+                certfile=str(self.client_cert_path),
+                keyfile=str(self.client_key_path),
+            )
+            return context
+
+        if self.ca_cert_path:
+            return str(self.ca_cert_path)
+
+        return True
+
+    def get_grpc_credentials(self) -> grpc.ChannelCredentials | None:  # type: ignore[no-any-unimported]
+        """Build gRPC channel credentials for secure connections.
+
+        Returns:
+            gRPC SSL credentials if certificates configured, None otherwise.
+        """
+        try:
+            import grpc
+        except ImportError:
+            return None
+
+        if not self.verify and not self.client_cert_path:
+            return None
+
+        root_certs: bytes | None = None
+        private_key: bytes | None = None
+        certificate_chain: bytes | None = None
+
+        if self.ca_cert_path:
+            root_certs = Path(self.ca_cert_path).read_bytes()
+
+        if self.client_cert_path and self.client_key_path:
+            private_key = Path(self.client_key_path).read_bytes()
+            certificate_chain = Path(self.client_cert_path).read_bytes()
+
+        return grpc.ssl_channel_credentials(
+            root_certificates=root_certs,
+            private_key=private_key,
+            certificate_chain=certificate_chain,
+        )
+
+
+class ClientAuthScheme(ABC, BaseModel):
+    """Base class for client-side authentication schemes.
+
+    Client auth schemes apply credentials to outgoing requests.
+
+    Attributes:
+        tls: Optional TLS/mTLS configuration for secure connections.
+    """
+
+    tls: TLSConfig | None = Field(
+        default=None,
+        description="TLS/mTLS configuration for secure connections",
+    )
 
     @abstractmethod
     async def apply_auth(
@@ -41,7 +152,12 @@ class AuthScheme(ABC, BaseModel):
         ...
 
 
-class BearerTokenAuth(AuthScheme):
+@deprecated("Use ClientAuthScheme instead", category=FutureWarning)
+class AuthScheme(ClientAuthScheme):
+    """Deprecated: Use ClientAuthScheme instead."""
+
+
+class BearerTokenAuth(ClientAuthScheme):
     """Bearer token authentication (Authorization: Bearer <token>).
 
     Attributes:
@@ -66,7 +182,7 @@ class BearerTokenAuth(AuthScheme):
         return headers
 
 
-class HTTPBasicAuth(AuthScheme):
+class HTTPBasicAuth(ClientAuthScheme):
     """HTTP Basic authentication.
 
     Attributes:
@@ -95,7 +211,7 @@ class HTTPBasicAuth(AuthScheme):
         return headers
 
 
-class HTTPDigestAuth(AuthScheme):
+class HTTPDigestAuth(ClientAuthScheme):
     """HTTP Digest authentication.
 
     Note: Uses httpx-auth library for digest implementation.
@@ -107,6 +223,8 @@ class HTTPDigestAuth(AuthScheme):
 
     username: str = Field(description="Username")
     password: str = Field(description="Password")
+
+    _configured_client_id: int | None = PrivateAttr(default=None)
 
     async def apply_auth(
         self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
@@ -125,13 +243,21 @@ class HTTPDigestAuth(AuthScheme):
     def configure_client(self, client: httpx.AsyncClient) -> None:
         """Configure client with Digest auth.
 
+        Idempotent: Only configures the client once. Subsequent calls on the same
+        client instance are no-ops to prevent overwriting auth configuration.
+
         Args:
             client: HTTP client to configure with Digest authentication.
         """
+        client_id = id(client)
+        if self._configured_client_id == client_id:
+            return
+
         client.auth = DigestAuth(self.username, self.password)
+        self._configured_client_id = client_id
 
 
-class APIKeyAuth(AuthScheme):
+class APIKeyAuth(ClientAuthScheme):
     """API Key authentication (header, query, or cookie).
 
     Attributes:
@@ -145,6 +271,8 @@ class APIKeyAuth(AuthScheme):
         default="header", description="Where to send the API key"
     )
     name: str = Field(default="X-API-Key", description="Parameter name for the API key")
+
+    _configured_client_ids: set[int] = PrivateAttr(default_factory=set)
 
     async def apply_auth(
         self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
@@ -167,20 +295,30 @@ class APIKeyAuth(AuthScheme):
     def configure_client(self, client: httpx.AsyncClient) -> None:
         """Configure client for query param API keys.
 
+        Idempotent: Only adds the request hook once per client instance.
+        Subsequent calls on the same client are no-ops to prevent hook accumulation.
+
         Args:
             client: HTTP client to configure with query param API key hook.
         """
         if self.location == "query":
+            client_id = id(client)
+            if client_id in self._configured_client_ids:
+                return
 
             async def _add_api_key_param(request: httpx.Request) -> None:
                 url = httpx.URL(request.url)
                 request.url = url.copy_add_param(self.name, self.api_key)
 
             client.event_hooks["request"].append(_add_api_key_param)
+            self._configured_client_ids.add(client_id)
 
 
-class OAuth2ClientCredentials(AuthScheme):
+class OAuth2ClientCredentials(ClientAuthScheme):
     """OAuth2 Client Credentials flow authentication.
+
+    Thread-safe implementation with asyncio.Lock to prevent concurrent token fetches
+    when multiple requests share the same auth instance.
 
     Attributes:
         token_url: OAuth2 token endpoint URL.
@@ -198,11 +336,16 @@ class OAuth2ClientCredentials(AuthScheme):
 
     _access_token: str | None = PrivateAttr(default=None)
     _token_expires_at: float | None = PrivateAttr(default=None)
+    _lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
 
     async def apply_auth(
         self, client: httpx.AsyncClient, headers: MutableMapping[str, str]
     ) -> MutableMapping[str, str]:
         """Apply OAuth2 access token to Authorization header.
+
+        Uses asyncio.Lock to ensure only one coroutine fetches tokens at a time,
+        preventing race conditions when multiple concurrent requests use the same
+        auth instance.
 
         Args:
             client: HTTP client for making token requests.
@@ -216,7 +359,13 @@ class OAuth2ClientCredentials(AuthScheme):
             or self._token_expires_at is None
             or time.time() >= self._token_expires_at
         ):
-            await self._fetch_token(client)
+            async with self._lock:
+                if (
+                    self._access_token is None
+                    or self._token_expires_at is None
+                    or time.time() >= self._token_expires_at
+                ):
+                    await self._fetch_token(client)
 
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
@@ -250,8 +399,10 @@ class OAuth2ClientCredentials(AuthScheme):
         self._token_expires_at = time.time() + expires_in - 60
 
 
-class OAuth2AuthorizationCode(AuthScheme):
+class OAuth2AuthorizationCode(ClientAuthScheme):
     """OAuth2 Authorization Code flow authentication.
+
+    Thread-safe implementation with asyncio.Lock to prevent concurrent token operations.
 
     Note: Requires interactive authorization.
 
@@ -279,6 +430,7 @@ class OAuth2AuthorizationCode(AuthScheme):
     _authorization_callback: Callable[[str], Awaitable[str]] | None = PrivateAttr(
         default=None
     )
+    _lock: asyncio.Lock = PrivateAttr(default_factory=asyncio.Lock)
 
     def set_authorization_callback(
         self, callback: Callable[[str], Awaitable[str]] | None
@@ -295,6 +447,9 @@ class OAuth2AuthorizationCode(AuthScheme):
     ) -> MutableMapping[str, str]:
         """Apply OAuth2 access token to Authorization header.
 
+        Uses asyncio.Lock to ensure only one coroutine handles token operations
+        (initial fetch or refresh) at a time.
+
         Args:
             client: HTTP client for making token requests.
             headers: Current request headers.
@@ -305,14 +460,17 @@ class OAuth2AuthorizationCode(AuthScheme):
         Raises:
             ValueError: If authorization callback is not set.
         """
-
         if self._access_token is None:
             if self._authorization_callback is None:
                 msg = "Authorization callback not set. Use set_authorization_callback()"
                 raise ValueError(msg)
-            await self._fetch_initial_token(client)
+            async with self._lock:
+                if self._access_token is None:
+                    await self._fetch_initial_token(client)
         elif self._token_expires_at and time.time() >= self._token_expires_at:
-            await self._refresh_access_token(client)
+            async with self._lock:
+                if self._token_expires_at and time.time() >= self._token_expires_at:
+                    await self._refresh_access_token(client)
 
         if self._access_token:
             headers["Authorization"] = f"Bearer {self._access_token}"
