@@ -8,6 +8,7 @@ AgentAction or AgentFinish objects.
 from dataclasses import dataclass
 
 from json_repair import repair_json  # type: ignore[import-untyped]
+from pydantic import BaseModel
 
 from crewai.agents.constants import (
     ACTION_INPUT_ONLY_REGEX,
@@ -40,7 +41,7 @@ class AgentFinish:
     """Represents the final answer from an agent."""
 
     thought: str
-    output: str
+    output: str | BaseModel
     text: str
 
 

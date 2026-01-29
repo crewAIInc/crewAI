@@ -62,7 +62,10 @@ class Converter(OutputConverter):
                     ],
                     response_model=self.model,
                 )
-                result = self.model.model_validate_json(response)
+                if isinstance(response, BaseModel):
+                    result = response
+                else:
+                    result = self.model.model_validate_json(response)
             else:
                 response = self.llm.call(
                     [

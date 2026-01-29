@@ -132,6 +132,9 @@ class GeminiCompletion(BaseLLM):
         self.supports_tools = bool(
             version_match and float(version_match.group(1)) >= 1.5
         )
+        self.is_gemini_2_0 = bool(
+            version_match and float(version_match.group(1)) >= 2.0
+        )
 
     @property
     def stop(self) -> list[str]:
@@ -439,6 +442,11 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             GenerateContentConfig object for Gemini API
+
+        Note:
+            Structured output support varies by model version:
+            - Gemini 1.5 and earlier: Uses response_schema (Pydantic model)
+            - Gemini 2.0+: Uses response_json_schema (JSON Schema) with propertyOrdering
         """
         self.tools = tools
         config_params: dict[str, Any] = {}
@@ -466,9 +474,13 @@ class GeminiCompletion(BaseLLM):
         if response_model:
             config_params["response_mime_type"] = "application/json"
             schema_output = generate_model_description(response_model)
-            config_params["response_schema"] = schema_output.get("json_schema", {}).get(
-                "schema", {}
-            )
+            schema = schema_output.get("json_schema", {}).get("schema", {})
+
+            if self.is_gemini_2_0:
+                schema = self._add_property_ordering(schema)
+                config_params["response_json_schema"] = schema
+            else:
+                config_params["response_schema"] = response_model
 
         # Handle tools for supported models
         if tools and self.supports_tools:
@@ -632,7 +644,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -643,24 +655,23 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
@@ -673,7 +684,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
         Args:
@@ -684,7 +695,7 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Final response content after processing
+            Final response content after processing (str or Pydantic model if response_model provided)
         """
         messages_for_event = self._convert_contents_to_dict(contents)
 
@@ -870,7 +881,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | list[dict[str, Any]]:
+    ) -> str | BaseModel | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -990,7 +1001,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | Any:
+    ) -> str | BaseModel | list[dict[str, Any]] | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -1189,6 +1200,36 @@ class GeminiCompletion(BaseLLM):
         ]
 
         return "".join(text_parts)
+
+    @staticmethod
+    def _add_property_ordering(schema: dict[str, Any]) -> dict[str, Any]:
+        """Add propertyOrdering to JSON schema for Gemini 2.0 compatibility.
+
+        Gemini 2.0 models require an explicit propertyOrdering list to define
+        the preferred structure of JSON objects. This recursively adds
+        propertyOrdering to all objects in the schema.
+
+        Args:
+            schema: JSON schema dictionary.
+
+        Returns:
+            Modified schema with propertyOrdering added to all objects.
+        """
+        if isinstance(schema, dict):
+            if schema.get("type") == "object" and "properties" in schema:
+                properties = schema["properties"]
+                if properties and "propertyOrdering" not in schema:
+                    schema["propertyOrdering"] = list(properties.keys())
+
+            for value in schema.values():
+                if isinstance(value, dict):
+                    GeminiCompletion._add_property_ordering(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            GeminiCompletion._add_property_ordering(item)
+
+        return schema
 
     @staticmethod
     def _convert_contents_to_dict(

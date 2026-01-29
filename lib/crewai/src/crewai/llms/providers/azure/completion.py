@@ -557,7 +557,7 @@ class AzureCompletion(BaseLLM):
         params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -568,24 +568,23 @@ class AzureCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
