@@ -51,13 +51,14 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01AQxfNxBBTHkxB2XjJ5Tnef","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01SxyUZ6vWTqa9a9fkbAnSUh","name":"structured_output","input":{"topic":"Benefits
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_013iHkpmto99iyH5kDvn8uER","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01Kpda2DzHBqWq9a2FS2Bdw6","name":"structured_output","input":{"topic":"Benefits
         of Remote Work","summary":"Remote work offers significant advantages for both
-        employees and employers, transforming traditional workplace dynamics.","key_points":["Increased
-        flexibility in work hours and location","Improved work-life balance","Reduced
-        commuting time and transportation costs","Higher employee productivity and
-        job satisfaction","Lower overhead expenses for companies","Access to a global
-        talent pool","Enhanced employee wellness and reduced workplace stress"]}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":589,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":146,"service_tier":"standard"}}'
+        employees and employers, transforming traditional work paradigms by providing
+        flexibility, increased productivity, and cost savings.","key_points":["Increased
+        employee flexibility and work-life balance","Reduced commuting time and associated
+        stress","Cost savings for companies on office infrastructure","Access to a
+        global talent pool","Higher employee productivity and job satisfaction","Lower
+        carbon footprint due to reduced travel"]}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":589,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":153,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 00:56:46 GMT
+      - Fri, 30 Jan 2026 18:56:19 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -94,7 +95,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-01-30T00:56:43Z'
+      - '2026-01-30T18:56:16Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -108,7 +109,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '2886'
+      - '3107'
     status:
       code: 200
       message: OK

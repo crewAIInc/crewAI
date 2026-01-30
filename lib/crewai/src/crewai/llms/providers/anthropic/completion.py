@@ -704,27 +704,12 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
-        if "tools" in params and response.content:
+        # Check if Claude wants to use tools
+        if response.content:
             tool_uses = [
                 block
                 for block in response.content
                 if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
-            ]
-            if tool_uses:
-                if not available_functions:
-                    self._emit_call_completed_event(
-                        response=list(tool_uses),
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                    )
-                    return list(tool_uses)
-
-        # Check if Claude wants to use tools
-        if response.content:
-            tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
             ]
 
             if tool_uses:
@@ -943,7 +928,7 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -975,7 +960,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_tools_and_collect_results(
         self,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -983,7 +968,7 @@ class AnthropicCompletion(BaseLLM):
         """Execute tools and collect results in Anthropic format.
 
         Args:
-            tool_uses: List of tool use blocks from Claude's response
+            tool_uses: List of tool use blocks from Claude's response (regular or beta API)
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
@@ -1019,7 +1004,7 @@ class AnthropicCompletion(BaseLLM):
     def _handle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -1211,9 +1196,12 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
+        # Handle both ToolUseBlock (regular API) and BetaToolUseBlock (beta API features)
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1409,7 +1397,7 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1440,7 +1428,7 @@ class AnthropicCompletion(BaseLLM):
     async def _ahandle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
