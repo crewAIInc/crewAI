@@ -207,10 +207,10 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
@@ -274,10 +274,10 @@ class TestCrewKickoffStreaming:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,
@@ -329,10 +329,10 @@ class TestCrewKickoffStreamingAsync:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return mock_output
 
@@ -356,7 +356,9 @@ class TestCrewKickoffStreamingAsync:
         mock_output = MagicMock()
         mock_output.raw = "Test output"
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(
+            self: Any, inputs: Any = None, input_files: Any = None, **kwargs: Any
+        ) -> Any:
             crewai_event_bus.emit(
                 crew,
                 LLMStreamChunkEvent(
@@ -439,10 +441,10 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     flow,
@@ -484,10 +486,10 @@ class TestFlowKickoffStreaming:
         original_kickoff = Flow.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 return "flow result"
 
@@ -532,10 +534,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 await asyncio.sleep(0.01)
                 crewai_event_bus.emit(
@@ -583,10 +585,10 @@ class TestFlowKickoffStreamingAsync:
         original_kickoff = Flow.kickoff_async
         call_count = [0]
 
-        async def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        async def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return await original_kickoff(self, inputs)
+                return await original_kickoff(self, inputs, **kwargs)
             else:
                 return "async flow result"
 
@@ -615,10 +617,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 raise ValueError("Test error")
 
@@ -673,10 +675,10 @@ class TestStreamingEdgeCases:
         original_kickoff = Crew.kickoff
         call_count = [0]
 
-        def mock_kickoff_fn(self: Any, inputs: Any = None) -> Any:
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 1:
-                return original_kickoff(self, inputs)
+                return original_kickoff(self, inputs, **kwargs)
             else:
                 crewai_event_bus.emit(
                     crew,

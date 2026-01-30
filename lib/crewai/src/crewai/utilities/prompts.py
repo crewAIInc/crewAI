@@ -23,7 +23,13 @@ class SystemPromptResult(StandardPromptResult):
 
 
 COMPONENTS = Literal[
-    "role_playing", "tools", "no_tools", "native_tools", "task", "native_task"
+    "role_playing",
+    "tools",
+    "no_tools",
+    "native_tools",
+    "task",
+    "native_task",
+    "task_no_tools",
 ]
 
 
@@ -74,11 +80,14 @@ class Prompts(BaseModel):
             slices.append("no_tools")
         system: str = self._build_prompt(slices)
 
-        # Use native_task for native tool calling (no "Thought:" prompt)
-        # Use task for ReAct pattern (includes "Thought:" prompt)
-        task_slice: COMPONENTS = (
-            "native_task" if self.use_native_tool_calling else "task"
-        )
+        # Determine which task slice to use:
+        task_slice: COMPONENTS
+        if self.use_native_tool_calling:
+            task_slice = "native_task"
+        elif self.has_tools:
+            task_slice = "task"
+        else:
+            task_slice = "task_no_tools"
         slices.append(task_slice)
 
         if (

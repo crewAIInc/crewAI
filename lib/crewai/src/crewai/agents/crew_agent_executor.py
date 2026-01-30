@@ -28,6 +28,11 @@ from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
 )
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    get_after_tool_call_hooks,
+    get_before_tool_call_hooks,
+)
 from crewai.utilities.agent_utils import (
     aget_llm_response,
     convert_tools_to_openai_schema,
@@ -45,6 +50,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -191,6 +197,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
+        self._inject_multimodal_files(inputs)
+
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
@@ -198,13 +206,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = self._invoke_loop()
         except AssertionError:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -214,6 +223,66 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self._create_long_term_memory(formatted_answer)
         self._create_external_memory(formatted_answer)
         return {"output": formatted_answer.output}
+
+    def _inject_multimodal_files(self, inputs: dict[str, Any] | None = None) -> None:
+        """Attach files to the last user message for LLM-layer formatting.
+
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
+
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = get_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
+        if not files:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
+
+    async def _ainject_multimodal_files(
+        self, inputs: dict[str, Any] | None = None
+    ) -> None:
+        """Async attach files to the last user message for LLM-layer formatting.
+
+        Merges files from crew/task store and inputs dict, then attaches them
+        to the message's `files` field. Input files take precedence over
+        crew/task files with the same name.
+
+        Args:
+            inputs: Optional inputs dict that may contain files.
+        """
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            crew_files = await aget_all_files(self.crew.id, self.task.id)
+            if crew_files:
+                files.update(crew_files)
+
+        if inputs and inputs.get("files"):
+            files.update(inputs["files"])
+
+        if not files:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
 
     def _invoke_loop(self) -> AgentFinish:
         """Execute agent loop until completion.
@@ -259,6 +328,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     break
 
@@ -273,22 +343,41 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
                 # breakpoint()
                 if self.response_model is not None:
                     try:
-                        self.response_model.model_validate_json(answer)
-                        formatted_answer = AgentFinish(
-                            thought="",
-                            output=answer,
-                            text=answer,
-                        )
+                        if isinstance(answer, BaseModel):
+                            output_json = answer.model_dump_json()
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=output_json,
+                            )
+                        else:
+                            self.response_model.model_validate_json(answer)
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=answer,
+                            )
                     except ValidationError:
+                        # If validation fails, convert BaseModel to JSON string for parsing
+                        answer_str = (
+                            answer.model_dump_json()
+                            if isinstance(answer, BaseModel)
+                            else str(answer)
+                        )
                         formatted_answer = process_llm_response(
-                            answer, self.use_stop_words
+                            answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+                    # When no response_model, answer should be a string
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
+                    formatted_answer = process_llm_response(
+                        answer_str, self.use_stop_words
+                    )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     # Extract agent fingerprint if available
@@ -331,6 +420,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    verbose=self.agent.verbose,
                 )
 
             except Exception as e:
@@ -345,9 +435,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -393,6 +484,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -414,6 +506,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
 
                 # Check if the response is a list of tool calls
@@ -445,6 +538,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
+                if isinstance(answer, BaseModel):
+                    output_json = answer.model_dump_json()
+                    formatted_answer = AgentFinish(
+                        thought="",
+                        output=answer,
+                        text=output_json,
+                    )
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(output_json)
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
                 # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
@@ -467,9 +572,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -491,13 +597,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             from_agent=self.agent,
             response_model=self.response_model,
             executor_context=self,
+            verbose=self.agent.verbose,
         )
 
-        formatted_answer = AgentFinish(
-            thought="",
-            output=str(answer),
-            text=str(answer),
-        )
+        if isinstance(answer, BaseModel):
+            output_json = answer.model_dump_json()
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer,
+                text=output_json,
+            )
+        else:
+            answer_str = answer if isinstance(answer, str) else str(answer)
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer_str,
+                text=answer_str,
+            )
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -686,8 +802,42 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
-        # Execute the tool (only if not cached and not at max usage)
-        if not from_cache and not max_usage_reached:
+        # Find the structured tool for hook context
+        structured_tool: CrewStructuredTool | None = None
+        for structured in self.tools or []:
+            if sanitize_tool_name(structured.name) == func_name:
+                structured_tool = structured
+                break
+
+        # Execute before_tool_call hooks
+        hook_blocked = False
+        before_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+        )
+        before_hooks = get_before_tool_call_hooks()
+        try:
+            for hook in before_hooks:
+                hook_result = hook(before_hook_context)
+                if hook_result is False:
+                    hook_blocked = True
+                    break
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in before_tool_call hook: {hook_error}",
+                    color="red",
+                )
+
+        # If hook blocked execution, set result and skip tool execution
+        if hook_blocked:
+            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        # Execute the tool (only if not cached, not at max usage, and not blocked by hook)
+        elif not from_cache and not max_usage_reached:
             result = "Tool not found"
             if func_name in available_functions:
                 try:
@@ -700,7 +850,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         if (
                             original_tool
                             and hasattr(original_tool, "cache_function")
-                            and original_tool.cache_function
+                            and callable(original_tool.cache_function)
                         ):
                             should_cache = original_tool.cache_function(
                                 args_dict, raw_result
@@ -731,9 +881,32 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
-        elif max_usage_reached:
+        elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
+
+        after_hook_context = ToolCallHookContext(
+            tool_name=func_name,
+            tool_input=args_dict,
+            tool=structured_tool,  # type: ignore[arg-type]
+            agent=self.agent,
+            task=self.task,
+            crew=self.crew,
+            tool_result=result,
+        )
+        after_hooks = get_after_tool_call_hooks()
+        try:
+            for after_hook in after_hooks:
+                after_hook_result = after_hook(after_hook_context)
+                if after_hook_result is not None:
+                    result = after_hook_result
+                    after_hook_context.tool_result = result
+        except Exception as hook_error:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Error in after_tool_call hook: {hook_error}",
+                    color="red",
+                )
 
         # Emit tool usage finished event
         crewai_event_bus.emit(
@@ -810,6 +983,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
+        await self._ainject_multimodal_files(inputs)
+
         self._show_start_logs()
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
@@ -817,13 +992,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         try:
             formatted_answer = await self._ainvoke_loop()
         except AssertionError:
-            self._printer.print(
-                content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                    color="red",
+                )
             raise
         except Exception as e:
-            handle_unknown_error(self._printer, e)
+            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
             raise
 
         if self.ask_for_human_input:
@@ -874,6 +1050,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     break
 
@@ -888,22 +1065,41 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
 
                 if self.response_model is not None:
                     try:
-                        self.response_model.model_validate_json(answer)
-                        formatted_answer = AgentFinish(
-                            thought="",
-                            output=answer,
-                            text=answer,
-                        )
+                        if isinstance(answer, BaseModel):
+                            output_json = answer.model_dump_json()
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=output_json,
+                            )
+                        else:
+                            self.response_model.model_validate_json(answer)
+                            formatted_answer = AgentFinish(
+                                thought="",
+                                output=answer,
+                                text=answer,
+                            )
                     except ValidationError:
+                        # If validation fails, convert BaseModel to JSON string for parsing
+                        answer_str = (
+                            answer.model_dump_json()
+                            if isinstance(answer, BaseModel)
+                            else str(answer)
+                        )
                         formatted_answer = process_llm_response(
-                            answer, self.use_stop_words
+                            answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    formatted_answer = process_llm_response(answer, self.use_stop_words)  # type: ignore[assignment]
+                    # When no response_model, answer should be a string
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
+                    formatted_answer = process_llm_response(
+                        answer_str, self.use_stop_words
+                    )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}
@@ -945,6 +1141,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
                     printer=self._printer,
+                    verbose=self.agent.verbose,
                 )
 
             except Exception as e:
@@ -958,9 +1155,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1000,6 +1198,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         messages=self.messages,
                         llm=self.llm,
                         callbacks=self.callbacks,
+                        verbose=self.agent.verbose,
                     )
                     self._show_logs(formatted_answer)
                     return formatted_answer
@@ -1021,6 +1220,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     from_agent=self.agent,
                     response_model=self.response_model,
                     executor_context=self,
+                    verbose=self.agent.verbose,
                 )
                 # Check if the response is a list of tool calls
                 if (
@@ -1051,6 +1251,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
+                if isinstance(answer, BaseModel):
+                    output_json = answer.model_dump_json()
+                    formatted_answer = AgentFinish(
+                        thought="",
+                        output=answer,
+                        text=output_json,
+                    )
+                    self._invoke_step_callback(formatted_answer)
+                    self._append_message(output_json)
+                    self._show_logs(formatted_answer)
+                    return formatted_answer
+
                 # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
@@ -1073,9 +1285,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                         llm=self.llm,
                         callbacks=self.callbacks,
                         i18n=self._i18n,
+                        verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e)
+                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1097,13 +1310,23 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             from_agent=self.agent,
             response_model=self.response_model,
             executor_context=self,
+            verbose=self.agent.verbose,
         )
 
-        formatted_answer = AgentFinish(
-            thought="",
-            output=str(answer),
-            text=str(answer),
-        )
+        if isinstance(answer, BaseModel):
+            output_json = answer.model_dump_json()
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer,
+                text=output_json,
+            )
+        else:
+            answer_str = answer if isinstance(answer, str) else str(answer)
+            formatted_answer = AgentFinish(
+                thought="",
+                output=answer_str,
+                text=answer_str,
+            )
         self._show_logs(formatted_answer)
         return formatted_answer
 
@@ -1214,10 +1437,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
         if train_iteration is None or not isinstance(train_iteration, int):
-            self._printer.print(
-                content="Invalid or missing train iteration. Cannot save training data.",
-                color="red",
-            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="Invalid or missing train iteration. Cannot save training data.",
+                    color="red",
+                )
             return
 
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
@@ -1237,13 +1461,14 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if train_iteration in agent_training_data:
                 agent_training_data[train_iteration]["improved_output"] = result.output
             else:
-                self._printer.print(
-                    content=(
-                        f"No existing training data for agent {agent_id} and iteration "
-                        f"{train_iteration}. Cannot save improved output."
-                    ),
-                    color="red",
-                )
+                if self.agent.verbose:
+                    self._printer.print(
+                        content=(
+                            f"No existing training data for agent {agent_id} and iteration "
+                            f"{train_iteration}. Cannot save improved output."
+                        ),
+                        color="red",
+                    )
                 return
 
         # Update the training data and save
@@ -1274,7 +1499,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        output_str = (
+            formatted_answer.output
+            if isinstance(formatted_answer.output, str)
+            else formatted_answer.output.model_dump_json()
+        )
+        human_feedback = self._ask_human_input(output_str)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
@@ -1333,7 +1563,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 self.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                output_str = (
+                    answer.output
+                    if isinstance(answer.output, str)
+                    else answer.output.model_dump_json()
+                )
+                feedback = self._ask_human_input(output_str)
 
         return answer
 

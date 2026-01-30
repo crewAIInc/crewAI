@@ -1346,8 +1346,8 @@ def test_kickoff_for_each_invalid_input():
 
     crew = Crew(agents=[agent], tasks=[task])
 
-    with pytest.raises(pydantic_core._pydantic_core.ValidationError):
-        # Pass a string instead of a list
+    with pytest.raises(TypeError, match="inputs must be a dict or Mapping"):
+        # Pass a string instead of a dict
         crew.kickoff_for_each(["invalid input"])
 
 
@@ -1417,7 +1417,7 @@ async def test_kickoff_async_basic_functionality_and_output():
 
         assert isinstance(result, str), "Result should be a string"
         assert result == expected_output, "Result should match expected output"
-        mock_kickoff.assert_called_once_with(inputs)
+        mock_kickoff.assert_called_once_with(inputs, None)
 
 
 @pytest.mark.asyncio
@@ -1463,7 +1463,7 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         assert len(results) == len(inputs)
         assert results == expected_outputs
         for input_data in inputs:
-            mock_kickoff_async.assert_any_call(inputs=input_data)
+            mock_kickoff_async.assert_any_call(inputs=input_data, input_files=None)
 
 
 @pytest.mark.asyncio
@@ -2585,6 +2585,7 @@ def test_warning_long_term_memory_without_entity_memory():
         goal="You research about math.",
         backstory="You're an expert in research and you love to learn new things.",
         allow_delegation=False,
+        verbose=True,
     )
 
     task1 = Task(
@@ -3944,7 +3945,8 @@ def test_task_tools_preserve_code_execution_tools():
 @pytest.mark.vcr()
 def test_multimodal_flag_adds_multimodal_tools():
     """
-    Test that an agent with multimodal=True automatically has multimodal tools added to the task execution.
+    Test that an agent with multimodal=True automatically has multimodal tools added
+    when the LLM does not natively support multimodal content.
     """
     # Create an agent that supports multimodal
     multimodal_agent = Agent(
@@ -3970,9 +3972,13 @@ def test_multimodal_flag_adds_multimodal_tools():
     )
 
     # Mock execute_sync to verify the tools passed at runtime
-    with patch.object(
-        Task, "execute_sync", return_value=mock_task_output
-    ) as mock_execute_sync:
+    # Mock supports_multimodal to return False so AddImageTool gets added
+    with (
+        patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync,
+        patch.object(
+            multimodal_agent.llm, "supports_multimodal", return_value=False
+        ),
+    ):
         crew.kickoff()
 
         # Get the tools that were actually used in execution
@@ -3981,7 +3987,7 @@ def test_multimodal_flag_adds_multimodal_tools():
 
         # Check that the multimodal tool was added
         assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
-            "AddImageTool should be present when agent is multimodal"
+            "AddImageTool should be present when agent is multimodal and LLM doesn't support it natively"
         )
 
         # Verify we have exactly one tool (just the AddImageTool)
@@ -4033,7 +4039,11 @@ def test_multimodal_agent_image_tool_handling():
         messages=[],
     )
 
-    with patch.object(Task, "execute_sync") as mock_execute_sync:
+    # Mock supports_multimodal to return False so AddImageTool gets added
+    with (
+        patch.object(Task, "execute_sync") as mock_execute_sync,
+        patch.object(multimodal_agent.llm, "supports_multimodal", return_value=False),
+    ):
         # Set up the mock to return our task output
         mock_execute_sync.return_value = mock_task_output
 
@@ -4310,9 +4320,9 @@ def test_before_kickoff_callback():
     # Call kickoff
     test_crew.kickoff(inputs=inputs)
 
-    # Check that the before_kickoff function was called and modified inputs
+    # Check that the before_kickoff function was called
+    # Note: inputs is copied internally, so the original dict is not modified
     assert test_crew_instance.inputs_modified
-    assert inputs.get("modified")
 
 
 @pytest.mark.vcr()

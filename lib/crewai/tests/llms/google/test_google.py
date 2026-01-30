@@ -635,6 +635,54 @@ def test_gemini_token_usage_tracking():
     assert usage.total_tokens > 0
 
 
+@pytest.mark.vcr()
+def test_gemini_tool_returning_float():
+    """
+    Test that Gemini properly handles tools that return non-dict values like floats.
+
+    This is an end-to-end test that verifies the agent can use a tool that returns
+    a float (which gets wrapped in {"result": value} for Gemini's FunctionResponse).
+    """
+    from pydantic import BaseModel, Field
+    from typing import Type
+    from crewai.tools import BaseTool
+
+    class SumNumbersToolInput(BaseModel):
+        a: float = Field(..., description="The first number to add")
+        b: float = Field(..., description="The second number to add")
+
+    class SumNumbersTool(BaseTool):
+        name: str = "sum_numbers"
+        description: str = "Add two numbers together and return the result"
+        args_schema: Type[BaseModel] = SumNumbersToolInput
+
+        def _run(self, a: float, b: float) -> float:
+            return a + b
+
+    sum_tool = SumNumbersTool()
+
+    agent = Agent(
+        role="Calculator",
+        goal="Calculate numbers accurately",
+        backstory="You are a calculator that adds numbers.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[sum_tool],
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is 10000 + 20000? Use the sum_numbers tool to calculate this.",
+        expected_output="The sum of the two numbers",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    result = crew.kickoff()
+
+    # The result should contain 30000 (the sum)
+    assert "30000" in result.raw
+
+
 def test_gemini_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="google/gemini-2.0-flash-001")
@@ -751,3 +799,131 @@ def test_google_express_mode_works() -> None:
         assert result.token_usage.prompt_tokens > 0
         assert result.token_usage.completion_tokens > 0
         assert result.token_usage.successful_requests >= 1
+
+
+def test_gemini_2_0_model_detection():
+    """Test that Gemini 2.0 models are properly detected."""
+    # Test Gemini 2.0 models
+    llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    assert isinstance(llm_2_0, GeminiCompletion)
+    assert llm_2_0.is_gemini_2_0 is True
+
+    llm_2_5 = LLM(model="google/gemini-2.5-flash")
+    assert isinstance(llm_2_5, GeminiCompletion)
+    assert llm_2_5.is_gemini_2_0 is True
+
+    # Test non-2.0 models
+    llm_1_5 = LLM(model="google/gemini-1.5-pro")
+    assert isinstance(llm_1_5, GeminiCompletion)
+    assert llm_1_5.is_gemini_2_0 is False
+
+
+def test_add_property_ordering_to_schema():
+    """Test that _add_property_ordering correctly adds propertyOrdering to schemas."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    # Test simple object schema
+    simple_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"},
+            "email": {"type": "string"}
+        }
+    }
+
+    result = GeminiCompletion._add_property_ordering(simple_schema)
+
+    assert "propertyOrdering" in result
+    assert result["propertyOrdering"] == ["name", "age", "email"]
+
+    # Test nested object schema
+    nested_schema = {
+        "type": "object",
+        "properties": {
+            "user": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "contact": {
+                        "type": "object",
+                        "properties": {
+                            "email": {"type": "string"},
+                            "phone": {"type": "string"}
+                        }
+                    }
+                }
+            },
+            "id": {"type": "integer"}
+        }
+    }
+
+    result = GeminiCompletion._add_property_ordering(nested_schema)
+
+    assert "propertyOrdering" in result
+    assert result["propertyOrdering"] == ["user", "id"]
+    assert "propertyOrdering" in result["properties"]["user"]
+    assert result["properties"]["user"]["propertyOrdering"] == ["name", "contact"]
+    assert "propertyOrdering" in result["properties"]["user"]["properties"]["contact"]
+    assert result["properties"]["user"]["properties"]["contact"]["propertyOrdering"] == ["email", "phone"]
+
+
+def test_gemini_2_0_response_model_with_property_ordering():
+    """Test that Gemini 2.0 models include propertyOrdering in response schemas."""
+    from pydantic import BaseModel, Field
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+        name: str = Field(..., description="The name")
+        age: int = Field(..., description="The age")
+        email: str = Field(..., description="The email")
+
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    # Prepare generation config with response model
+    config = llm._prepare_generation_config(response_model=TestResponse)
+
+    # Verify that the config has response_json_schema
+    assert hasattr(config, 'response_json_schema') or 'response_json_schema' in config.__dict__
+
+    # Get the schema
+    if hasattr(config, 'response_json_schema'):
+        schema = config.response_json_schema
+    else:
+        schema = config.__dict__.get('response_json_schema', {})
+
+    # Verify propertyOrdering is present for Gemini 2.0
+    assert "propertyOrdering" in schema
+    assert "name" in schema["propertyOrdering"]
+    assert "age" in schema["propertyOrdering"]
+    assert "email" in schema["propertyOrdering"]
+
+
+def test_gemini_1_5_response_model_uses_response_schema():
+    """Test that Gemini 1.5 models use response_schema parameter (not response_json_schema)."""
+    from pydantic import BaseModel, Field
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+        name: str = Field(..., description="The name")
+        age: int = Field(..., description="The age")
+
+    llm = LLM(model="google/gemini-1.5-pro")
+
+    # Prepare generation config with response model
+    config = llm._prepare_generation_config(response_model=TestResponse)
+
+    # Verify that the config uses response_schema (not response_json_schema)
+    assert hasattr(config, 'response_schema') or 'response_schema' in config.__dict__
+    assert not (hasattr(config, 'response_json_schema') and config.response_json_schema is not None)
+
+    # Get the schema
+    if hasattr(config, 'response_schema'):
+        schema = config.response_schema
+    else:
+        schema = config.__dict__.get('response_schema')
+
+    # For Gemini 1.5, response_schema should be the Pydantic model itself
+    # The SDK handles conversion internally
+    assert schema is TestResponse or isinstance(schema, type)
