@@ -182,6 +182,7 @@ def convert_tools_to_openai_schema(
                 "name": sanitized_name,
                 "description": description,
                 "parameters": parameters,
+                "strict": True,
             },
         }
         openai_tools.append(schema)
@@ -327,7 +328,7 @@ def get_llm_response(
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None = None,
     verbose: bool = True,
-) -> str | Any:
+) -> str | BaseModel | Any:
     """Call the LLM and return the response, handling any invalid responses.
 
     Args:
@@ -341,10 +342,11 @@ def get_llm_response(
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
+        verbose: Whether to print output.
 
     Returns:
-        The response from the LLM as a string, or tool call results if
-        native function calling is used.
+        The response from the LLM as a string, Pydantic model (when response_model is provided),
+        or tool call results if native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -393,7 +395,7 @@ async def aget_llm_response(
     response_model: type[BaseModel] | None = None,
     executor_context: CrewAgentExecutor | AgentExecutor | None = None,
     verbose: bool = True,
-) -> str | Any:
+) -> str | BaseModel | Any:
     """Call the LLM asynchronously and return the response.
 
     Args:
@@ -409,8 +411,8 @@ async def aget_llm_response(
         executor_context: Optional executor context for hook invocation.
 
     Returns:
-        The response from the LLM as a string, or tool call results if
-        native function calling is used.
+        The response from the LLM as a string, Pydantic model (when response_model is provided),
+        or tool call results if native function calling is used.
 
     Raises:
         Exception: If an error occurs.
@@ -923,7 +925,7 @@ def extract_tool_call_info(
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 
@@ -986,32 +988,41 @@ def _setup_before_llm_call_hooks(
 
 def _setup_after_llm_call_hooks(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
-    answer: str,
+    answer: str | BaseModel,
     printer: Printer,
     verbose: bool = True,
-) -> str:
+) -> str | BaseModel:
     """Setup and invoke after_llm_call hooks for the executor context.
 
     Args:
         executor_context: The executor context to setup the hooks for.
-        answer: The LLM response string.
+        answer: The LLM response (string or Pydantic model).
         printer: Printer instance for error logging.
         verbose: Whether to print output.
 
     Returns:
-        The potentially modified response string.
+        The potentially modified response (string or Pydantic model).
     """
     if executor_context and executor_context.after_llm_call_hooks:
         from crewai.hooks.llm_hooks import LLMCallHookContext
 
         original_messages = executor_context.messages
 
-        hook_context = LLMCallHookContext(executor_context, response=answer)
+        # For Pydantic models, serialize to JSON for hooks
+        if isinstance(answer, BaseModel):
+            pydantic_answer = answer
+            hook_response: str = pydantic_answer.model_dump_json()
+            original_json: str = hook_response
+        else:
+            pydantic_answer = None
+            hook_response = str(answer)
+
+        hook_context = LLMCallHookContext(executor_context, response=hook_response)
         try:
             for hook in executor_context.after_llm_call_hooks:
                 modified_response = hook(hook_context)
                 if modified_response is not None and isinstance(modified_response, str):
-                    answer = modified_response
+                    hook_response = modified_response
 
         except Exception as e:
             if verbose:
@@ -1034,5 +1045,22 @@ def _setup_after_llm_call_hooks(
                 executor_context.messages = original_messages
             else:
                 executor_context.messages = []
+
+        # If hooks modified the response, update answer accordingly
+        if pydantic_answer is not None:
+            # For Pydantic models, reparse the JSON if it was modified
+            if hook_response != original_json:
+                try:
+                    model_class: type[BaseModel] = type(pydantic_answer)
+                    answer = model_class.model_validate_json(hook_response)
+                except Exception as e:
+                    if verbose:
+                        printer.print(
+                            content=f"Warning: Hook modified response but failed to reparse as {type(pydantic_answer).__name__}: {e}. Using original model.",
+                            color="yellow",
+                        )
+        else:
+            # For string responses, use the hook-modified response
+            answer = hook_response
 
     return answer

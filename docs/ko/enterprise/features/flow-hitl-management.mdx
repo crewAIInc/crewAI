@@ -1,0 +1,563 @@
+---
+title: "Flow HITL 관리"
+description: "이메일 우선 알림, 라우팅 규칙 및 자동 응답 기능을 갖춘 Flow용 엔터프라이즈급 인간 검토"
+icon: "users-gear"
+mode: "wide"
+---
+
+<Note>
+Flow HITL 관리 기능은 `@human_feedback` 데코레이터가 필요하며, **CrewAI 버전 1.8.0 이상**에서 사용할 수 있습니다. 이 기능은 Crew가 아닌 **Flow**에만 적용됩니다.
+</Note>
+
+CrewAI Enterprise는 AI 워크플로우를 협업적인 인간-AI 프로세스로 전환하는 Flow용 포괄적인 Human-in-the-Loop(HITL) 관리 시스템을 제공합니다. 플랫폼은 **이메일 우선 아키텍처**를 사용하여 이메일 주소가 있는 누구나 플랫폼 계정 없이도 검토 요청에 응답할 수 있습니다.
+
+## 개요
+
+<CardGroup cols={3}>
+  <Card title="이메일 우선 설계" icon="envelope">
+    응답자가 알림 이메일에 직접 회신하여 피드백 제공 가능
+  </Card>
+  <Card title="유연한 라우팅" icon="route">
+    메서드 패턴 또는 Flow 상태에 따라 특정 이메일로 요청 라우팅
+  </Card>
+  <Card title="자동 응답" icon="clock">
+    시간 내에 인간이 응답하지 않을 경우 자동 대체 응답 구성
+  </Card>
+</CardGroup>
+
+### 주요 이점
+
+- **간단한 멘탈 모델**: 이메일 주소는 보편적이며 플랫폼 사용자나 역할을 관리할 필요 없음
+- **외부 응답자**: 플랫폼 사용자가 아니어도 이메일이 있는 누구나 응답 가능
+- **동적 할당**: Flow 상태에서 직접 담당자 이메일 가져오기 (예: `sales_rep_email`)
+- **간소화된 구성**: 설정할 항목이 적어 더 빠르게 가치 실현
+- **이메일이 주요 채널**: 대부분의 사용자는 대시보드 로그인보다 이메일로 응답하는 것을 선호
+
+## Flow에서 인간 검토 포인트 설정
+
+`@human_feedback` 데코레이터를 사용하여 Flow 내에 인간 검토 체크포인트를 구성합니다. 실행이 검토 포인트에 도달하면 시스템이 일시 중지되고, 담당자에게 이메일로 알리며, 응답을 기다립니다.
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
+
+class ContentApprovalFlow(Flow):
+    @start()
+    def generate_content(self):
+        # AI가 콘텐츠 생성
+        return "Q1 캠페인용 마케팅 카피 생성..."
+
+    @listen(generate_content)
+    @human_feedback(
+        message="브랜드 준수를 위해 이 콘텐츠를 검토해 주세요:",
+        emit=["approved", "rejected", "needs_revision"],
+    )
+    def review_content(self, content):
+        return content
+
+    @listen("approved")
+    def publish_content(self, result: HumanFeedbackResult):
+        print(f"승인된 콘텐츠 게시 중. 검토자 노트: {result.feedback}")
+
+    @listen("rejected")
+    def archive_content(self, result: HumanFeedbackResult):
+        print(f"콘텐츠 거부됨. 사유: {result.feedback}")
+
+    @listen("needs_revision")
+    def revise_content(self, result: HumanFeedbackResult):
+        print(f"수정 요청: {result.feedback}")
+```
+
+완전한 구현 세부 사항은 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
+
+### 데코레이터 파라미터
+
+| 파라미터 | 유형 | 설명 |
+|---------|------|------|
+| `message` | `str` | 인간 검토자에게 표시되는 메시지 |
+| `emit` | `list[str]` | 유효한 응답 옵션 (UI에서 버튼으로 표시) |
+
+## 플랫폼 구성
+
+HITL 구성에 접근: **배포** → **설정** → **Human in the Loop 구성**
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-overview.png" alt="HITL 구성 설정" />
+</Frame>
+
+### 이메일 알림
+
+HITL 요청에 대한 이메일 알림을 활성화하거나 비활성화하는 토글입니다.
+
+| 설정 | 기본값 | 설명 |
+|-----|-------|------|
+| 이메일 알림 | 활성화됨 | 피드백 요청 시 이메일 전송 |
+
+<Note>
+비활성화되면 응답자는 대시보드 UI를 사용하거나 커스텀 알림 시스템을 위해 webhook을 구성해야 합니다.
+</Note>
+
+### SLA 목표
+
+추적 및 메트릭 목적으로 목표 응답 시간을 설정합니다.
+
+| 설정 | 설명 |
+|-----|------|
+| SLA 목표 (분) | 목표 응답 시간. 대시보드 메트릭 및 SLA 추적에 사용 |
+
+SLA 추적을 비활성화하려면 비워 두세요.
+
+## 이메일 알림 및 응답
+
+HITL 시스템은 응답자가 알림 이메일에 직접 회신할 수 있는 이메일 우선 아키텍처를 사용합니다.
+
+### 이메일 응답 작동 방식
+
+<Steps>
+  <Step title="알림 전송">
+    HITL 요청이 생성되면 검토 콘텐츠와 컨텍스트가 포함된 이메일이 할당된 응답자에게 전송됩니다.
+  </Step>
+  <Step title="Reply-To 주소">
+    이메일에는 인증을 위한 서명된 토큰이 포함된 특별한 reply-to 주소가 있습니다.
+  </Step>
+  <Step title="사용자 회신">
+    응답자는 이메일에 피드백으로 회신하면 됩니다—로그인 필요 없음.
+  </Step>
+  <Step title="토큰 검증">
+    플랫폼이 회신을 받고, 서명된 토큰을 확인하고, 발신자 이메일을 매칭합니다.
+  </Step>
+  <Step title="Flow 재개">
+    피드백이 기록되고 인간의 입력으로 Flow가 계속됩니다.
+  </Step>
+</Steps>
+
+### 응답 형식
+
+응답자는 다음과 같이 회신할 수 있습니다:
+
+- **Emit 옵션**: 회신이 `emit` 옵션과 일치하면 (예: "approved") 직접 사용됨
+- **자유 형식 텍스트**: 모든 텍스트 응답이 피드백으로 Flow에 전달됨
+- **일반 텍스트**: 회신 본문의 첫 번째 줄이 피드백으로 사용됨
+
+### 확인 이메일
+
+회신을 처리한 후 응답자는 피드백이 성공적으로 제출되었는지 또는 오류가 발생했는지 나타내는 확인 이메일을 받습니다.
+
+### 이메일 토큰 보안
+
+- 토큰은 보안을 위해 암호화 서명됨
+- 토큰은 7일 후 만료됨
+- 발신자 이메일은 토큰의 인증된 이메일과 일치해야 함
+- 처리 후 확인/오류 이메일 전송됨
+
+## 라우팅 규칙
+
+메서드 패턴에 따라 HITL 요청을 특정 이메일 주소로 라우팅합니다.
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-routing-rules.png" alt="HITL 라우팅 규칙 구성" />
+</Frame>
+
+### 규칙 구조
+
+```json
+{
+  "name": "재무팀으로 승인",
+  "match": {
+    "method_name": "approve_*"
+  },
+  "assign_to_email": "finance@company.com",
+  "assign_from_input": "manager_email"
+}
+```
+
+### 매칭 패턴
+
+| 패턴 | 설명 | 매칭 예시 |
+|-----|------|----------|
+| `approve_*` | 와일드카드 (모든 문자) | `approve_payment`, `approve_vendor` |
+| `review_?` | 단일 문자 | `review_a`, `review_1` |
+| `validate_payment` | 정확히 일치 | `validate_payment`만 |
+
+### 할당 우선순위
+
+1. **동적 할당** (`assign_from_input`): 구성된 경우 Flow 상태에서 이메일 가져옴
+2. **정적 이메일** (`assign_to_email`): 구성된 이메일로 대체
+3. **배포 생성자**: 규칙이 일치하지 않으면 배포 생성자의 이메일이 사용됨
+
+### 동적 할당 예제
+
+Flow 상태에 `{"sales_rep_email": "alice@company.com"}`이 포함된 경우:
+
+```json
+{
+  "name": "영업 담당자에게 라우팅",
+  "match": {
+    "method_name": "review_*"
+  },
+  "assign_from_input": "sales_rep_email"
+}
+```
+
+요청이 자동으로 `alice@company.com`에 할당됩니다.
+
+<Tip>
+**사용 사례**: CRM, 데이터베이스 또는 이전 Flow 단계에서 담당자를 가져와 적합한 사람에게 검토를 동적으로 라우팅하세요.
+</Tip>
+
+## 자동 응답
+
+시간 내에 인간이 응답하지 않으면 HITL 요청에 자동으로 응답합니다. 이를 통해 Flow가 무한정 중단되지 않도록 합니다.
+
+### 구성
+
+| 설정 | 설명 |
+|-----|------|
+| 활성화됨 | 자동 응답 활성화 토글 |
+| 타임아웃 (분) | 자동 응답 전 대기 시간 |
+| 기본 결과 | 응답 값 (`emit` 옵션과 일치해야 함) |
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-auto-respond.png" alt="HITL 자동 응답 구성" />
+</Frame>
+
+### 사용 사례
+
+- **SLA 준수**: Flow가 무한정 중단되지 않도록 보장
+- **기본 승인**: 타임아웃 후 저위험 요청 자동 승인
+- **우아한 저하**: 검토자가 없을 때 안전한 기본값으로 계속
+
+<Warning>
+자동 응답을 신중하게 사용하세요. 기본 응답이 허용되는 중요하지 않은 검토에만 활성화하세요.
+</Warning>
+
+## 검토 프로세스
+
+### 대시보드 인터페이스
+
+HITL 검토 인터페이스는 검토자에게 깔끔하고 집중된 경험을 제공합니다:
+
+- **마크다운 렌더링**: 구문 강조가 포함된 풍부한 형식의 검토 콘텐츠
+- **컨텍스트 패널**: Flow 상태, 실행 기록 및 관련 정보 보기
+- **피드백 입력**: 결정과 함께 상세한 피드백 및 코멘트 제공
+- **빠른 작업**: 선택적 코멘트가 있는 원클릭 emit 옵션 버튼
+
+<Frame>
+  <img src="/images/enterprise/hitl-list-pending-feedbacks.png" alt="HITL 대기 중인 요청 목록" />
+</Frame>
+
+### 응답 방법
+
+검토자는 세 가지 채널을 통해 응답할 수 있습니다:
+
+| 방법 | 설명 |
+|-----|------|
+| **이메일 회신** | 알림 이메일에 직접 회신 |
+| **대시보드** | Enterprise 대시보드 UI 사용 |
+| **API/Webhook** | API를 통한 프로그래밍 방식 응답 |
+
+### 기록 및 감사 추적
+
+모든 HITL 상호작용은 완전한 타임라인으로 추적됩니다:
+
+- 결정 기록 (승인/거부/수정)
+- 검토자 신원 및 타임스탬프
+- 제공된 피드백 및 코멘트
+- 응답 방법 (이메일/대시보드/API)
+- 응답 시간 메트릭
+
+## 분석 및 모니터링
+
+포괄적인 분석으로 HITL 성능을 추적합니다.
+
+### 성능 대시보드
+
+<Frame>
+  <img src="/images/enterprise/hitl-metrics.png" alt="HITL 메트릭 대시보드" />
+</Frame>
+
+<CardGroup cols={2}>
+  <Card title="응답 시간" icon="stopwatch">
+    검토자 또는 Flow별 평균 및 중앙값 응답 시간 모니터링.
+  </Card>
+  <Card title="볼륨 트렌드" icon="chart-bar">
+    팀 용량 최적화를 위한 검토 볼륨 패턴 분석.
+  </Card>
+  <Card title="결정 분포" icon="chart-pie">
+    다양한 검토 유형에 대한 승인/거부 비율 보기.
+  </Card>
+  <Card title="SLA 추적" icon="chart-line">
+    SLA 목표 내에 완료된 검토 비율 추적.
+  </Card>
+</CardGroup>
+
+### 감사 및 규정 준수
+
+규제 요구 사항을 위한 엔터프라이즈급 감사 기능:
+
+- 타임스탬프가 있는 완전한 결정 기록
+- 검토자 신원 확인
+- 불변 감사 로그
+- 규정 준수 보고를 위한 내보내기 기능
+
+## 일반적인 사용 사례
+
+<AccordionGroup>
+  <Accordion title="보안 검토" icon="shield-halved">
+    **사용 사례**: 인간 검증이 포함된 내부 보안 설문지 자동화
+
+    - AI가 보안 설문지에 대한 응답 생성
+    - 보안팀이 이메일로 정확성 검토 및 검증
+    - 승인된 응답이 최종 제출물로 편집
+    - 규정 준수를 위한 완전한 감사 추적
+  </Accordion>
+
+  <Accordion title="콘텐츠 승인" icon="file-lines">
+    **사용 사례**: 법무/브랜드 검토가 필요한 마케팅 콘텐츠
+
+    - AI가 마케팅 카피 또는 소셜 미디어 콘텐츠 생성
+    - 브랜드팀 이메일로 목소리/톤 검토를 위해 라우팅
+    - 승인 시 자동 게시
+  </Accordion>
+
+  <Accordion title="재무 승인" icon="money-bill">
+    **사용 사례**: 경비 보고서, 계약 조건, 예산 배분
+
+    - AI가 재무 요청을 사전 처리하고 분류
+    - 동적 할당을 사용하여 금액 임계값에 따라 라우팅
+    - 재무 규정 준수를 위한 완전한 감사 추적 유지
+  </Accordion>
+
+  <Accordion title="CRM에서 동적 할당" icon="database">
+    **사용 사례**: CRM에서 계정 담당자에게 검토 라우팅
+
+    - Flow가 CRM에서 계정 담당자 이메일 가져옴
+    - 이메일을 Flow 상태에 저장 (예: `account_owner_email`)
+    - `assign_from_input`을 사용하여 적합한 사람에게 자동 라우팅
+  </Accordion>
+
+  <Accordion title="품질 보증" icon="magnifying-glass">
+    **사용 사례**: 고객 전달 전 AI 출력 검증
+
+    - AI가 고객 대면 콘텐츠 또는 응답 생성
+    - QA팀이 이메일 알림을 통해 검토
+    - 피드백 루프가 시간이 지남에 따라 AI 성능 개선
+  </Accordion>
+</AccordionGroup>
+
+## Webhook API
+
+Flow가 인간 피드백을 위해 일시 중지되면, 요청 데이터를 자체 애플리케이션으로 보내도록 webhook을 구성할 수 있습니다. 이를 통해 다음이 가능합니다:
+
+- 커스텀 승인 UI 구축
+- 내부 도구와 통합 (Jira, ServiceNow, 커스텀 대시보드)
+- 타사 시스템으로 승인 라우팅
+- 모바일 앱 알림
+- 자동화된 결정 시스템
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-webhook.png" alt="HITL Webhook 구성" />
+</Frame>
+
+### Webhook 구성
+
+<Steps>
+  <Step title="설정으로 이동">
+    **배포** → **설정** → **Human in the Loop**으로 이동
+  </Step>
+  <Step title="Webhook 섹션 확장">
+    **Webhooks** 구성을 클릭하여 확장
+  </Step>
+  <Step title="Webhook URL 추가">
+    webhook URL 입력 (프로덕션에서는 HTTPS 필수)
+  </Step>
+  <Step title="구성 저장">
+    **구성 저장**을 클릭하여 활성화
+  </Step>
+</Steps>
+
+여러 webhook을 구성할 수 있습니다. 각 활성 webhook은 모든 HITL 이벤트를 수신합니다.
+
+### Webhook 이벤트
+
+엔드포인트는 다음 이벤트에 대해 HTTP POST 요청을 수신합니다:
+
+| 이벤트 유형 | 트리거 시점 |
+|------------|------------|
+| `new_request` | Flow가 일시 중지되고 인간 피드백을 요청할 때 |
+
+### Webhook 페이로드
+
+모든 webhook은 다음 구조의 JSON 페이로드를 수신합니다:
+
+```json
+{
+  "event": "new_request",
+  "request": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "flow_id": "flow_abc123",
+    "method_name": "review_article",
+    "message": "이 기사의 게시를 검토해 주세요.",
+    "emit_options": ["approved", "rejected", "request_changes"],
+    "state": {
+      "article_id": 12345,
+      "author": "john@example.com",
+      "category": "technology"
+    },
+    "metadata": {},
+    "created_at": "2026-01-14T12:00:00Z"
+  },
+  "deployment": {
+    "id": 456,
+    "name": "Content Review Flow",
+    "organization_id": 789
+  },
+  "callback_url": "https://api.crewai.com/...",
+  "assigned_to_email": "reviewer@company.com"
+}
+```
+
+### 요청에 응답하기
+
+피드백을 제출하려면 webhook 페이로드에 포함된 **`callback_url`로 POST**합니다.
+
+```http
+POST {callback_url}
+Content-Type: application/json
+
+{
+  "feedback": "승인됨. 훌륭한 기사입니다!",
+  "source": "my_custom_app"
+}
+```
+
+### 보안
+
+<Info>
+모든 webhook 요청은 HMAC-SHA256을 사용하여 암호화 서명되어 진위성을 보장하고 변조를 방지합니다.
+</Info>
+
+#### Webhook 보안
+
+- **HMAC-SHA256 서명**: 모든 webhook에 암호화 서명이 포함됨
+- **Webhook별 시크릿**: 각 webhook은 고유한 서명 시크릿을 가짐
+- **저장 시 암호화**: 서명 시크릿은 데이터베이스에서 암호화됨
+- **타임스탬프 검증**: 리플레이 공격 방지
+
+#### 서명 헤더
+
+각 webhook 요청에는 다음 헤더가 포함됩니다:
+
+| 헤더 | 설명 |
+|------|------|
+| `X-Signature` | HMAC-SHA256 서명: `sha256=<hex_digest>` |
+| `X-Timestamp` | 요청이 서명된 Unix 타임스탬프 |
+
+#### 검증
+
+다음과 같이 계산하여 검증합니다:
+
+```python
+import hmac
+import hashlib
+
+expected = hmac.new(
+    signing_secret.encode(),
+    f"{timestamp}.{payload}".encode(),
+    hashlib.sha256
+).hexdigest()
+
+if hmac.compare_digest(expected, signature):
+    # 유효한 서명
+```
+
+### 오류 처리
+
+webhook 엔드포인트는 수신 확인을 위해 2xx 상태 코드를 반환해야 합니다:
+
+| 응답 | 동작 |
+|------|------|
+| 2xx | Webhook 성공적으로 전달됨 |
+| 4xx/5xx | 실패로 기록됨, 재시도 없음 |
+| 타임아웃 (30초) | 실패로 기록됨, 재시도 없음 |
+
+## 보안 및 RBAC
+
+### 대시보드 접근
+
+HITL 접근은 배포 수준에서 제어됩니다:
+
+| 권한 | 기능 |
+|-----|------|
+| `manage_human_feedback` | HITL 설정 구성, 모든 요청 보기 |
+| `respond_to_human_feedback` | 요청에 응답, 할당된 요청 보기 |
+
+### 이메일 응답 인증
+
+이메일 회신의 경우:
+1. reply-to 토큰이 인증된 이메일을 인코딩
+2. 발신자 이메일이 토큰의 이메일과 일치해야 함
+3. 토큰이 만료되지 않아야 함 (기본 7일)
+4. 요청이 여전히 대기 중이어야 함
+
+### 감사 추적
+
+모든 HITL 작업이 기록됩니다:
+- 요청 생성
+- 할당 변경
+- 응답 제출 (소스: 대시보드/이메일/API)
+- Flow 재개 상태
+
+## 문제 해결
+
+### 이메일이 전송되지 않음
+
+1. 구성에서 "이메일 알림"이 활성화되어 있는지 확인
+2. 라우팅 규칙이 메서드 이름과 일치하는지 확인
+3. 담당자 이메일이 유효한지 확인
+4. 라우팅 규칙이 일치하지 않는 경우 배포 생성자 대체 확인
+
+### 이메일 회신이 처리되지 않음
+
+1. 토큰이 만료되지 않았는지 확인 (기본 7일)
+2. 발신자 이메일이 할당된 이메일과 일치하는지 확인
+3. 요청이 여전히 대기 중인지 확인 (아직 응답되지 않음)
+
+### Flow가 재개되지 않음
+
+1. 대시보드에서 요청 상태 확인
+2. 콜백 URL에 접근 가능한지 확인
+3. 배포가 여전히 실행 중인지 확인
+
+## 모범 사례
+
+<Tip>
+**간단하게 시작**: 배포 생성자에게 이메일 알림으로 시작한 다음, 워크플로우가 성숙해지면 라우팅 규칙을 추가하세요.
+</Tip>
+
+1. **동적 할당 사용**: 유연한 라우팅을 위해 Flow 상태에서 담당자 이메일을 가져오세요.
+
+2. **자동 응답 구성**: 중요하지 않은 검토에 대해 Flow가 중단되지 않도록 대체를 설정하세요.
+
+3. **응답 시간 모니터링**: 분석을 사용하여 병목 현상을 식별하고 검토 프로세스를 최적화하세요.
+
+4. **검토 메시지를 명확하게 유지**: `@human_feedback` 데코레이터에 명확하고 실행 가능한 메시지를 작성하세요.
+
+5. **이메일 흐름 테스트**: 프로덕션에 가기 전에 테스트 요청을 보내 이메일 전달을 확인하세요.
+
+## 관련 리소스
+
+<CardGroup cols={2}>
+  <Card title="Flow에서 인간 피드백" icon="code" href="/ko/learn/human-feedback-in-flows">
+    `@human_feedback` 데코레이터 구현 가이드
+  </Card>
+  <Card title="Flow HITL 워크플로우 가이드" icon="route" href="/ko/enterprise/guides/human-in-the-loop">
+    HITL 워크플로우 설정을 위한 단계별 가이드
+  </Card>
+  <Card title="RBAC 구성" icon="shield-check" href="/ko/enterprise/features/rbac">
+    조직을 위한 역할 기반 접근 제어 구성
+  </Card>
+  <Card title="Webhook 스트리밍" icon="bolt" href="/ko/enterprise/features/webhook-streaming">
+    실시간 이벤트 알림 설정
+  </Card>
+</CardGroup>

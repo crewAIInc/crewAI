@@ -848,7 +848,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -865,6 +864,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -979,7 +980,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -996,6 +996,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1131,8 +1133,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1148,6 +1148,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1259,8 +1261,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1276,6 +1276,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1530,6 +1532,7 @@ class OpenAICompletion(BaseLLM):
                 "function": {
                     "name": name,
                     "description": description,
+                    "strict": True,
                 },
             }
 
@@ -1570,15 +1573,14 @@ class OpenAICompletion(BaseLLM):
 
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
-                    structured_json = parsed_object.model_dump_json()
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return parsed_object
 
             response: ChatCompletion = self.client.chat.completions.create(**params)
 
@@ -1624,7 +1626,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1641,6 +1642,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1692,7 +1695,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Handle streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -1728,15 +1731,14 @@ class OpenAICompletion(BaseLLM):
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
                         if parsed_result:
-                            structured_json = parsed_result.model_dump_json()
                             self._emit_call_completed_event(
-                                response=structured_json,
+                                response=parsed_result.model_dump_json(),
                                 call_type=LLMCallType.LLM_CALL,
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=params["messages"],
                             )
-                            return structured_json
+                            return parsed_result
 
             logging.error("Failed to get parsed result from stream")
             return ""
@@ -1887,15 +1889,14 @@ class OpenAICompletion(BaseLLM):
 
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
-                    structured_json = parsed_object.model_dump_json()
                     self._emit_call_completed_event(
-                        response=structured_json,
+                        response=parsed_object.model_dump_json(),
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
                     )
-                    return structured_json
+                    return parsed_object
 
             response: ChatCompletion = await self.async_client.chat.completions.create(
                 **params
@@ -1943,7 +1944,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1960,6 +1960,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -2006,7 +2008,7 @@ class OpenAICompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Handle async streaming chat completion."""
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
@@ -2044,17 +2046,16 @@ class OpenAICompletion(BaseLLM):
 
             try:
                 parsed_object = response_model.model_validate_json(accumulated_content)
-                structured_json = parsed_object.model_dump_json()
 
                 self._emit_call_completed_event(
-                    response=structured_json,
+                    response=parsed_object.model_dump_json(),
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
                 )
 
-                return structured_json
+                return parsed_object
             except Exception as e:
                 logging.error(f"Failed to parse structured output from stream: {e}")
                 self._emit_call_completed_event(

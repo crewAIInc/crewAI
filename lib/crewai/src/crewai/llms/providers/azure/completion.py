@@ -557,7 +557,7 @@ class AzureCompletion(BaseLLM):
         params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -568,24 +568,23 @@ class AzureCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
@@ -622,16 +621,6 @@ class AzureCompletion(BaseLLM):
         # Extract and track token usage
         usage = self._extract_azure_token_usage(response)
         self._track_token_usage_internal(usage)
-
-        if response_model and self.is_openai_model:
-            content = message.content or ""
-            return self._validate_and_emit_structured_output(
-                content=content,
-                response_model=response_model,
-                params=params,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
 
         # If there are tool_calls but no available_functions, return the tool_calls
         # This allows the caller (e.g., executor) to handle tool execution
@@ -672,7 +661,15 @@ class AzureCompletion(BaseLLM):
         # Extract content
         content = message.content or ""
 
-        # Apply stop words
+        if response_model and self.is_openai_model:
+            return self._validate_and_emit_structured_output(
+                content=content,
+                response_model=response_model,
+                params=params,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
         content = self._apply_stop_words(content)
 
         # Emit completion event and return content

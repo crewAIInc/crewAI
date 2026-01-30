@@ -34,6 +34,9 @@ except ImportError:
     ) from None
 
 
+STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
 class GeminiCompletion(BaseLLM):
     """Google Gemini native completion implementation.
 
@@ -131,6 +134,9 @@ class GeminiCompletion(BaseLLM):
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
         self.supports_tools = bool(
             version_match and float(version_match.group(1)) >= 1.5
+        )
+        self.is_gemini_2_0 = bool(
+            version_match and float(version_match.group(1)) >= 2.0
         )
 
     @property
@@ -439,6 +445,14 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             GenerateContentConfig object for Gemini API
+
+        Note:
+            Structured output support varies by model version:
+            - Gemini 1.5 and earlier: Uses response_schema (Pydantic model)
+            - Gemini 2.0+: Uses response_json_schema (JSON Schema) with propertyOrdering
+
+            When both tools AND response_model are present, we add a structured_output
+            pseudo-tool since Gemini doesn't support tools + response_schema together.
         """
         self.tools = tools
         config_params: dict[str, Any] = {}
@@ -463,16 +477,41 @@ class GeminiCompletion(BaseLLM):
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
 
-        if response_model:
+        if tools and self.supports_tools:
+            gemini_tools = self._convert_tools_for_interference(tools)
+
+            if response_model:
+                schema_output = generate_model_description(response_model)
+                schema = schema_output.get("json_schema", {}).get("schema", {})
+                if self.is_gemini_2_0:
+                    schema = self._add_property_ordering(schema)
+
+                structured_output_tool = types.Tool(
+                    function_declarations=[
+                        types.FunctionDeclaration(
+                            name=STRUCTURED_OUTPUT_TOOL_NAME,
+                            description=(
+                                "Use this tool to provide your final structured response. "
+                                "Call this tool when you have gathered all necessary information "
+                                "and are ready to provide the final answer in the required format."
+                            ),
+                            parameters_json_schema=schema,
+                        )
+                    ]
+                )
+                gemini_tools.append(structured_output_tool)
+
+            config_params["tools"] = gemini_tools
+        elif response_model:
             config_params["response_mime_type"] = "application/json"
             schema_output = generate_model_description(response_model)
-            config_params["response_schema"] = schema_output.get("json_schema", {}).get(
-                "schema", {}
-            )
+            schema = schema_output.get("json_schema", {}).get("schema", {})
 
-        # Handle tools for supported models
-        if tools and self.supports_tools:
-            config_params["tools"] = self._convert_tools_for_interference(tools)
+            if self.is_gemini_2_0:
+                schema = self._add_property_ordering(schema)
+                config_params["response_json_schema"] = schema
+            else:
+                config_params["response_schema"] = response_model
 
         if self.safety_settings:
             config_params["safety_settings"] = self.safety_settings
@@ -632,7 +671,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -643,24 +682,23 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
@@ -673,7 +711,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
         Args:
@@ -684,7 +722,7 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Final response content after processing
+            Final response content after processing (str or Pydantic model if response_model provided)
         """
         messages_for_event = self._convert_contents_to_dict(contents)
 
@@ -709,6 +747,47 @@ class GeminiCompletion(BaseLLM):
         return self._invoke_after_llm_call_hooks(
             messages_for_event, content, from_agent
         )
+
+    def _handle_structured_output_tool_call(
+        self,
+        structured_data: dict[str, Any],
+        response_model: type[BaseModel],
+        contents: list[types.Content],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> BaseModel:
+        """Validate and emit event for structured_output tool call.
+
+        Args:
+            structured_data: The arguments passed to the structured_output tool
+            response_model: Pydantic model to validate against
+            contents: Original contents for event conversion
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Validated Pydantic model instance
+
+        Raises:
+            ValueError: If validation fails
+        """
+        try:
+            validated_data = response_model.model_validate(structured_data)
+            self._emit_call_completed_event(
+                response=validated_data.model_dump_json(),
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return validated_data
+        except Exception as e:
+            error_msg = (
+                f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
+                f"with model {response_model.__name__}: {e}"
+            )
+            logging.error(error_msg)
+            raise ValueError(error_msg) from e
 
     def _process_response_with_tools(
         self,
@@ -740,23 +819,56 @@ class GeminiCompletion(BaseLLM):
                     part for part in candidate.content.parts if part.function_call
                 ]
 
+                # Check for structured_output pseudo-tool call (used when tools + response_model)
+                if response_model and function_call_parts:
+                    for part in function_call_parts:
+                        if (
+                            part.function_call
+                            and part.function_call.name == STRUCTURED_OUTPUT_TOOL_NAME
+                        ):
+                            structured_data = (
+                                dict(part.function_call.args)
+                                if part.function_call.args
+                                else {}
+                            )
+                            return self._handle_structured_output_tool_call(
+                                structured_data=structured_data,
+                                response_model=response_model,
+                                contents=contents,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
+
+                # Filter out structured_output from function calls returned to executor
+                non_structured_output_parts = [
+                    part
+                    for part in function_call_parts
+                    if not (
+                        part.function_call
+                        and part.function_call.name == STRUCTURED_OUTPUT_TOOL_NAME
+                    )
+                ]
+
                 # If there are function calls but no available_functions,
                 # return them for the executor to handle (like OpenAI/Anthropic)
-                if function_call_parts and not available_functions:
+                if non_structured_output_parts and not available_functions:
                     self._emit_call_completed_event(
-                        response=function_call_parts,
+                        response=non_structured_output_parts,
                         call_type=LLMCallType.TOOL_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=self._convert_contents_to_dict(contents),
                     )
-                    return function_call_parts
+                    return non_structured_output_parts
 
                 # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
                         if function_name is None:
+                            continue
+                        # Skip structured_output - it's handled above
+                        if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
                             continue
                         function_args = (
                             dict(part.function_call.args)
@@ -776,12 +888,15 @@ class GeminiCompletion(BaseLLM):
                             return result
 
         content = self._extract_text_from_response(response)
-        content = self._apply_stop_words(content)
+
+        effective_response_model = None if self.tools else response_model
+        if not effective_response_model:
+            content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
             content=content,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -870,7 +985,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | list[dict[str, Any]]:
+    ) -> str | BaseModel | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -888,9 +1003,27 @@ class GeminiCompletion(BaseLLM):
         """
         self._track_token_usage_internal(usage_data)
 
+        if response_model and function_calls:
+            for call_data in function_calls.values():
+                if call_data.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
+                    structured_data = call_data.get("args", {})
+                    return self._handle_structured_output_tool_call(
+                        structured_data=structured_data,
+                        response_model=response_model,
+                        contents=contents,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+        non_structured_output_calls = {
+            idx: call_data
+            for idx, call_data in function_calls.items()
+            if call_data.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
+        }
+
         # If there are function calls but no available_functions,
         # return them for the executor to handle
-        if function_calls and not available_functions:
+        if non_structured_output_calls and not available_functions:
             formatted_function_calls = [
                 {
                     "id": call_data["id"],
@@ -900,7 +1033,7 @@ class GeminiCompletion(BaseLLM):
                     },
                     "type": "function",
                 }
-                for call_data in function_calls.values()
+                for call_data in non_structured_output_calls.values()
             ]
             self._emit_call_completed_event(
                 response=formatted_function_calls,
@@ -911,9 +1044,9 @@ class GeminiCompletion(BaseLLM):
             )
             return formatted_function_calls
 
-        # Handle completed function calls
-        if function_calls and available_functions:
-            for call_data in function_calls.values():
+        # Handle completed function calls (excluding structured_output)
+        if non_structured_output_calls and available_functions:
+            for call_data in non_structured_output_calls.values():
                 function_name = call_data["name"]
                 function_args = call_data["args"]
 
@@ -937,10 +1070,15 @@ class GeminiCompletion(BaseLLM):
                 if result is not None:
                     return result
 
+        # When tools are present, structured output should come via the structured_output
+        # pseudo-tool, not via direct text response. If we reach here with tools present,
+        # the LLM chose to return plain text instead of calling structured_output.
+        effective_response_model = None if self.tools else response_model
+
         return self._finalize_completion_response(
             content=full_response,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -990,7 +1128,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str | Any:
+    ) -> str | BaseModel | list[dict[str, Any]] | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -1189,6 +1327,36 @@ class GeminiCompletion(BaseLLM):
         ]
 
         return "".join(text_parts)
+
+    @staticmethod
+    def _add_property_ordering(schema: dict[str, Any]) -> dict[str, Any]:
+        """Add propertyOrdering to JSON schema for Gemini 2.0 compatibility.
+
+        Gemini 2.0 models require an explicit propertyOrdering list to define
+        the preferred structure of JSON objects. This recursively adds
+        propertyOrdering to all objects in the schema.
+
+        Args:
+            schema: JSON schema dictionary.
+
+        Returns:
+            Modified schema with propertyOrdering added to all objects.
+        """
+        if isinstance(schema, dict):
+            if schema.get("type") == "object" and "properties" in schema:
+                properties = schema["properties"]
+                if properties and "propertyOrdering" not in schema:
+                    schema["propertyOrdering"] = list(properties.keys())
+
+            for value in schema.values():
+                if isinstance(value, dict):
+                    GeminiCompletion._add_property_ordering(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            GeminiCompletion._add_property_ordering(item)
+
+        return schema
 
     @staticmethod
     def _convert_contents_to_dict(
