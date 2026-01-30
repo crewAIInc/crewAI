@@ -119,14 +119,11 @@ To enable tracing, do any one of these:
         self, content: Text, title: str, style: str = "blue", is_flow: bool = False
     ) -> None:
         """Print a panel with consistent formatting if verbose is enabled."""
+        if not self.verbose:
+            return
         panel = self.create_panel(content, title, style)
-        if is_flow:
-            self.print(panel)
-            self.print()
-        else:
-            if self.verbose:
-                self.print(panel)
-                self.print()
+        self.print(panel)
+        self.print()
 
     def handle_crew_status(
         self,

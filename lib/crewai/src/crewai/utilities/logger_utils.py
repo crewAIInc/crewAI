@@ -4,6 +4,7 @@ from collections.abc import Generator
 import contextlib
 import io
 import logging
+import os
 import warnings
 
 
@@ -56,3 +57,39 @@ def suppress_warnings() -> Generator[None, None, None]:
             "ignore", message="open_text is deprecated*", category=DeprecationWarning
         )
         yield
+
+
+def should_enable_verbose(*, override: bool | None = None) -> bool:
+    """Determine if verbose logging should be enabled.
+
+    This is the single source of truth for verbose logging enablement.
+    Priority order:
+    1. Explicit override (e.g., Crew.verbose=True/False or Flow.verbose=True/False)
+    2. Environment variable CREWAI_VERBOSE
+
+    Args:
+        override: Explicit override for verbose (True=always enable, False=always disable,
+                  None=check environment variable, defaults to True if not set)
+
+    Returns:
+        True if verbose logging should be enabled, False otherwise.
+
+    Example:
+        # Disable verbose logging globally via environment variable
+        export CREWAI_VERBOSE=false
+
+        # Or in code
+        flow = Flow(verbose=False)
+        crew = Crew(verbose=False)
+    """
+    if override is not None:
+        return override
+
+    env_value = os.getenv("CREWAI_VERBOSE", "").lower()
+    if env_value in ("false", "0"):
+        return False
+    if env_value in ("true", "1"):
+        return True
+
+    # Default to True if not set
+    return True

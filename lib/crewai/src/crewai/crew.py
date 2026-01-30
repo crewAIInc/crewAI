@@ -350,6 +350,8 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
+        from crewai.utilities.logger_utils import should_enable_verbose
+
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
@@ -357,12 +359,15 @@ class Crew(FlowTrackable, BaseModel):
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
+        # Determine verbose setting (respects CREWAI_VERBOSE env var)
+        effective_verbose = should_enable_verbose(override=self.verbose)
+
         # Always setup trace listener - actual execution control is via contextvar
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
-        event_listener.verbose = self.verbose
-        event_listener.formatter.verbose = self.verbose
-        self._logger = Logger(verbose=self.verbose)
+        event_listener.verbose = effective_verbose
+        event_listener.formatter.verbose = effective_verbose
+        self._logger = Logger(verbose=effective_verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)

@@ -559,6 +559,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
+    verbose: bool = True
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -572,6 +573,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
         suppress_flow_events: bool = False,
+        verbose: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -580,8 +582,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
             persistence: Optional persistence backend for storing flow states
             tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
             suppress_flow_events: Whether to suppress flow event emissions (internal use)
+            verbose: Whether to enable verbose logging output. True=always enable, False=always disable,
+                     None=check CREWAI_VERBOSE environment variable (defaults to True if not set).
             **kwargs: Additional state values to initialize or override
         """
+        from crewai.events.event_listener import EventListener
+
         # Initialize basic instance attributes
         self._methods: dict[FlowMethodName, FlowMethod[Any, Any]] = {}
         self._method_execution_counts: dict[FlowMethodName, int] = {}
@@ -604,6 +610,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
         self.suppress_flow_events: bool = suppress_flow_events
+
+        # Set verbose and configure event listener
+        from crewai.utilities.logger_utils import should_enable_verbose
+
+        self.verbose = should_enable_verbose(override=verbose)
+        event_listener = EventListener()
+        event_listener.verbose = self.verbose
+        event_listener.formatter.verbose = self.verbose
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
