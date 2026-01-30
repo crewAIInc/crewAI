@@ -1042,9 +1042,8 @@ def test_gemini_stop_words_not_applied_to_structured_output():
     # Without the fix, this would be truncated at "Observation:" breaking the JSON
     json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
 
-    # Test the _validate_and_emit_structured_output method indirectly
-    # by validating JSON with stop word patterns
-    result = ResearchResult.model_validate_json(json_response)
+    # Test the _validate_structured_output method which is used for structured output handling
+    result = llm._validate_structured_output(json_response, ResearchResult)
 
     # Should successfully parse the full JSON without truncation
     assert isinstance(result, ResearchResult)
@@ -1107,8 +1106,9 @@ def test_gemini_structured_output_preserves_json_with_stop_word_patterns():
         "final_answer": "Final Answer: The data shows positive growth"
     }'''
 
-    # This should NOT be truncated since it's structured output
-    result = AgentObservation.model_validate_json(json_with_stop_patterns)
+    # Test the _validate_structured_output method - this should NOT truncate
+    # since it's structured output
+    result = llm._validate_structured_output(json_with_stop_patterns, AgentObservation)
 
     assert isinstance(result, AgentObservation)
     assert "Action:" in result.action_taken
