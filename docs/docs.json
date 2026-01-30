@@ -131,6 +131,7 @@
                   "en/concepts/production-architecture",
                   "en/concepts/knowledge",
                   "en/concepts/llms",
+                  "en/concepts/files",
                   "en/concepts/processes",
                   "en/concepts/collaboration",
                   "en/concepts/training",
@@ -369,7 +370,8 @@
                 "pages": [
                   "en/enterprise/features/traces",
                   "en/enterprise/features/webhook-streaming",
-                  "en/enterprise/features/hallucination-guardrail"
+                  "en/enterprise/features/hallucination-guardrail",
+                  "en/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -597,6 +599,7 @@
                   "pt-BR/concepts/production-architecture",
                   "pt-BR/concepts/knowledge",
                   "pt-BR/concepts/llms",
+                  "pt-BR/concepts/files",
                   "pt-BR/concepts/processes",
                   "pt-BR/concepts/collaboration",
                   "pt-BR/concepts/training",
@@ -821,7 +824,8 @@
                 "pages": [
                   "pt-BR/enterprise/features/traces",
                   "pt-BR/enterprise/features/webhook-streaming",
-                  "pt-BR/enterprise/features/hallucination-guardrail"
+                  "pt-BR/enterprise/features/hallucination-guardrail",
+                  "pt-BR/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -1048,6 +1052,7 @@
                   "ko/concepts/production-architecture",
                   "ko/concepts/knowledge",
                   "ko/concepts/llms",
+                  "ko/concepts/files",
                   "ko/concepts/processes",
                   "ko/concepts/collaboration",
                   "ko/concepts/training",
@@ -1284,7 +1289,8 @@
                 "pages": [
                   "ko/enterprise/features/traces",
                   "ko/enterprise/features/webhook-streaming",
-                  "ko/enterprise/features/hallucination-guardrail"
+                  "ko/enterprise/features/hallucination-guardrail",
+                  "ko/enterprise/features/flow-hitl-management"
                 ]
               },
               {

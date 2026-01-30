@@ -31,6 +31,7 @@ from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 # MCP Connection timeout constants (in seconds)
@@ -418,7 +419,7 @@ class MCPClient:
 
         return [
             {
-                "name": tool.name,
+                "name": sanitize_tool_name(tool.name),
                 "description": getattr(tool, "description", ""),
                 "inputSchema": getattr(tool, "inputSchema", {}),
             }

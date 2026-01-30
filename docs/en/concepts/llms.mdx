@@ -207,6 +207,37 @@ In this section, you'll find detailed examples that help you select, configure, 
     | o3-mini             | 200,000 tokens   | Lightweight reasoning model                   |
     | o4-mini             | 200,000 tokens   | Next-gen efficient reasoning                  |
 
+    **Responses API:**
+
+    OpenAI offers two APIs: Chat Completions (default) and the newer Responses API. The Responses API was designed from the ground up with native multimodal support—text, images, audio, and function calls are all first-class citizens. It provides better performance with reasoning models and supports additional features like auto-chaining and built-in tools.
+
+    ```python Code
+    from crewai import LLM
+
+    # Use the Responses API instead of Chat Completions
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Enable Responses API
+        store=True,  # Store responses for multi-turn (optional)
+        auto_chain=True,  # Auto-chain for reasoning models (optional)
+    )
+    ```
+
+    **Responses API Parameters:**
+    - `api`: Set to `"responses"` to use the Responses API (default: `"completions"`)
+    - `instructions`: System-level instructions (Responses API only)
+    - `store`: Whether to store responses for multi-turn conversations
+    - `previous_response_id`: ID of previous response for multi-turn
+    - `include`: Additional data to include in response (e.g., `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: List of OpenAI built-in tools: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: Return structured `ResponsesAPIResult` with parsed built-in tool outputs
+    - `auto_chain`: Automatically track and use response IDs for multi-turn conversations
+    - `auto_chain_reasoning`: Track encrypted reasoning items for ZDR (Zero Data Retention) compliance
+
+    <Tip>
+      Use the Responses API for new projects, especially when working with reasoning models (o1, o3, o4) or when you need native multimodal support for [files](/en/concepts/files).
+    </Tip>
+
     **Note:** To use OpenAI, install the required dependencies:
     ```bash
     uv add "crewai[openai]"
@@ -375,10 +406,13 @@ In this section, you'll find detailed examples that help you select, configure, 
     GOOGLE_API_KEY=<your-api-key>
     GEMINI_API_KEY=<your-api-key>
 
-    # Optional - for Vertex AI
+    # For Vertex AI Express mode (API key authentication)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # For Vertex AI with service account
     GOOGLE_CLOUD_PROJECT=<your-project-id>
     GOOGLE_CLOUD_LOCATION=<location>  # Defaults to us-central1
-    GOOGLE_GENAI_USE_VERTEXAI=true  # Set to use Vertex AI
     ```
 
     **Basic Usage:**
@@ -412,7 +446,35 @@ In this section, you'll find detailed examples that help you select, configure, 
     )
     ```
 
-    **Vertex AI Configuration:**
+    **Vertex AI Express Mode (API Key Authentication):**
+
+    Vertex AI Express mode allows you to use Vertex AI with simple API key authentication instead of service account credentials. This is the quickest way to get started with Vertex AI.
+
+    To enable Express mode, set both environment variables in your `.env` file:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    Then use the LLM as usual:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      To get an Express mode API key:
+      - New Google Cloud users: Get an [express mode API key](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
+      - Existing Google Cloud users: Get a [Google Cloud API key bound to a service account](https://cloud.google.com/docs/authentication/api-keys)
+      
+      For more details, see the [Vertex AI Express mode documentation](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
+    </Info>
+
+    **Vertex AI Configuration (Service Account):**
     ```python Code
     from crewai import LLM
 
@@ -424,10 +486,10 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
 
     **Supported Environment Variables:**
-    - `GOOGLE_API_KEY` or `GEMINI_API_KEY`: Your Google API key (required for Gemini API)
-    - `GOOGLE_CLOUD_PROJECT`: Google Cloud project ID (for Vertex AI)
+    - `GOOGLE_API_KEY` or `GEMINI_API_KEY`: Your Google API key (required for Gemini API and Vertex AI Express mode)
+    - `GOOGLE_GENAI_USE_VERTEXAI`: Set to `true` to use Vertex AI (required for Express mode)
+    - `GOOGLE_CLOUD_PROJECT`: Google Cloud project ID (for Vertex AI with service account)
     - `GOOGLE_CLOUD_LOCATION`: GCP location (defaults to `us-central1`)
-    - `GOOGLE_GENAI_USE_VERTEXAI`: Set to `true` to use Vertex AI
 
     **Features:**
     - Native function calling support for Gemini 1.5+ and 2.x models
