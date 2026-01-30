@@ -193,7 +193,13 @@ class Crew(FlowTrackable, BaseModel):
     tasks: list[Task] = Field(default_factory=list)
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: bool = Field(default=False)
+    verbose: bool | None = Field(
+        default=None,
+        description=(
+            "Whether to enable verbose logging output. True=always enable, "
+            "False=always disable, None=check CREWAI_VERBOSE env var (defaults to True if not set)."
+        ),
+    )
     memory: bool = Field(
         default=False,
         description="If crew should use memory to store memories of it's execution",

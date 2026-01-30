@@ -1,10 +1,7 @@
 """Test verbose control for Flow and Crew."""
 
 import os
-from io import StringIO
 from unittest.mock import patch
-
-import pytest
 
 from crewai.events.event_listener import EventListener
 from crewai.flow.flow import Flow, start, listen
