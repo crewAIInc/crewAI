@@ -2,6 +2,11 @@ from textwrap import dedent
 from unittest.mock import MagicMock, patch
 
 from crewai_tools import MCPServerAdapter
+from crewai_tools.adapters.mcp_adapter import (
+    _resolve_all_refs,
+    _create_model_from_schema,
+    CrewAIAdapterWithSchemaFix,
+)
 from crewai_tools.adapters.tool_collection import ToolCollection
 from mcp import StdioServerParameters
 import pytest
@@ -237,3 +242,195 @@ def test_connect_timeout_passed_to_mcpadapt(mock_mcpadapt):
     MCPServerAdapter(serverparams, connect_timeout=5)
     mock_mcpadapt.assert_called_once()
     assert mock_mcpadapt.call_args[0][2] == 5
+
+
+class TestResolveAllRefs:
+    """Tests for the _resolve_all_refs function that handles complex JSON schemas."""
+
+    def test_resolve_simple_defs_ref(self):
+        """Test resolving $ref that points to $defs."""
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Point": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                }
+            },
+            "properties": {
+                "location": {"$ref": "#/$defs/Point"}
+            }
+        }
+        resolved = _resolve_all_refs(schema)
+        assert "$defs" not in resolved
+        assert resolved["properties"]["location"]["type"] == "array"
+        assert resolved["properties"]["location"]["items"]["type"] == "number"
+
+    def test_resolve_nested_anyof_refs(self):
+        """Test resolving $ref inside anyOf (like Mapbox geometry schema)."""
+        schema = {
+            "type": "object",
+            "$defs": {
+                "Coordinate": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 2,
+                }
+            },
+            "properties": {
+                "geometry": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {"$ref": "#/$defs/Coordinate"}
+                        },
+                        {"type": "null"}
+                    ]
+                }
+            }
+        }
+        resolved = _resolve_all_refs(schema)
+        assert "$defs" not in resolved
+        geometry_anyof = resolved["properties"]["geometry"]["anyOf"]
+        array_option = geometry_anyof[0]
+        assert array_option["type"] == "array"
+        assert array_option["items"]["type"] == "array"
+        assert array_option["items"]["items"]["type"] == "number"
+
+    def test_resolve_internal_property_refs(self):
+        """Test resolving $ref that points to internal properties."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "coordinates": {
+                    "type": "array",
+                    "items": {"type": "number"}
+                },
+                "geometry": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {"$ref": "#/properties/coordinates"}
+                        },
+                        {"type": "null"}
+                    ]
+                }
+            }
+        }
+        resolved = _resolve_all_refs(schema)
+        geometry_anyof = resolved["properties"]["geometry"]["anyOf"]
+        array_option = geometry_anyof[0]
+        assert array_option["items"]["type"] == "array"
+        assert array_option["items"]["items"]["type"] == "number"
+
+    def test_no_refs_returns_same_schema(self):
+        """Test that schema without refs is returned unchanged (except $defs removal)."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"}
+            }
+        }
+        resolved = _resolve_all_refs(schema)
+        assert resolved["properties"]["name"]["type"] == "string"
+        assert resolved["properties"]["age"]["type"] == "integer"
+
+
+class TestCreateModelFromSchema:
+    """Tests for the _create_model_from_schema function."""
+
+    def test_create_simple_model(self):
+        """Test creating a model from a simple schema."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "The name"},
+                "count": {"type": "integer"}
+            },
+            "required": ["name"]
+        }
+        model = _create_model_from_schema(schema)
+        assert model.__name__ == "DynamicModel"
+        instance = model(name="test")
+        assert instance.name == "test"
+        assert instance.count is None
+
+    def test_create_model_with_anyof_nullable(self):
+        """Test creating a model with anyOf that includes null."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "value": {
+                    "anyOf": [
+                        {"type": "string"},
+                        {"type": "null"}
+                    ]
+                }
+            }
+        }
+        model = _create_model_from_schema(schema)
+        instance = model(value="test")
+        assert instance.value == "test"
+        instance2 = model(value=None)
+        assert instance2.value is None
+
+    def test_create_model_with_array(self):
+        """Test creating a model with array type."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            }
+        }
+        model = _create_model_from_schema(schema)
+        instance = model(items=["a", "b", "c"])
+        assert instance.items == ["a", "b", "c"]
+
+    def test_model_json_schema_does_not_raise(self):
+        """Test that generated model's model_json_schema() doesn't raise KeyError.
+
+        This is the core issue from GitHub issue #4312 - complex schemas with
+        internal $ref references would cause KeyError when calling model_json_schema().
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "geometry": {
+                    "anyOf": [
+                        {
+                            "type": "array",
+                            "items": {"type": "number"}
+                        },
+                        {"type": "null"}
+                    ]
+                }
+            }
+        }
+        resolved = _resolve_all_refs(schema)
+        model = _create_model_from_schema(resolved)
+        json_schema = model.model_json_schema()
+        assert "properties" in json_schema
+        assert "geometry" in json_schema["properties"]
+
+
+class TestCrewAIAdapterWithSchemaFix:
+    """Tests for the CrewAIAdapterWithSchemaFix class."""
+
+    def test_adapter_is_tool_adapter(self):
+        """Test that the adapter is a valid ToolAdapter."""
+        from mcpadapt.core import ToolAdapter
+        adapter = CrewAIAdapterWithSchemaFix()
+        assert isinstance(adapter, ToolAdapter)
+
+    def test_async_adapt_raises_not_implemented(self):
+        """Test that async_adapt raises NotImplementedError."""
+        adapter = CrewAIAdapterWithSchemaFix()
+        with pytest.raises(NotImplementedError):
+            import asyncio
+            asyncio.get_event_loop().run_until_complete(
+                adapter.async_adapt(None, None)
+            )
