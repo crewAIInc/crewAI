@@ -848,7 +848,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -865,6 +864,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -979,7 +980,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -996,6 +996,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1131,8 +1133,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1148,6 +1148,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1259,8 +1261,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1276,6 +1276,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1624,7 +1626,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1641,6 +1642,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1941,7 +1944,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1958,6 +1960,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,

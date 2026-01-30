@@ -1298,3 +1298,109 @@ def test_azure_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+
+def test_azure_stop_words_not_applied_to_structured_output():
+    """
+    Test that stop words are NOT applied when response_model is provided.
+    This ensures JSON responses containing stop word patterns (like "Observation:")
+    are not truncated, which would cause JSON validation to fail.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class ResearchResult(BaseModel):
+        """Research result that may contain stop word patterns in string fields."""
+
+        finding: str = Field(description="The research finding")
+        observation: str = Field(description="Observation about the finding")
+
+    # Create AzureCompletion instance with stop words configured
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+        stop=["Observation:", "Final Answer:"],  # Common stop words
+    )
+
+    # JSON response that contains a stop word pattern in a string field
+    # Without the fix, this would be truncated at "Observation:" breaking the JSON
+    json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = json_response
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150
+        )
+
+        mock_complete.return_value = mock_response
+
+        # Call with response_model - stop words should NOT be applied
+        result = llm.call(
+            messages=[{"role": "user", "content": "Analyze the data"}],
+            response_model=ResearchResult,
+        )
+
+        # Should successfully parse the full JSON without truncation
+        assert isinstance(result, ResearchResult)
+        assert result.finding == "The data shows growth"
+        # The observation field should contain the full text including "Observation:"
+        assert "Observation:" in result.observation
+
+
+def test_azure_stop_words_still_applied_to_regular_responses():
+    """
+    Test that stop words ARE still applied for regular (non-structured) responses.
+    This ensures the fix didn't break normal stop word behavior.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Create AzureCompletion instance with stop words configured
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    # Response that contains a stop word - should be truncated
+    response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = response_with_stop_word
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150
+        )
+
+        mock_complete.return_value = mock_response
+
+        # Call WITHOUT response_model - stop words SHOULD be applied
+        result = llm.call(
+            messages=[{"role": "user", "content": "Search for something"}],
+        )
+
+        # Response should be truncated at the stop word
+        assert "Observation:" not in result
+        assert "Found results" not in result
+        assert "I need to search for more information" in result

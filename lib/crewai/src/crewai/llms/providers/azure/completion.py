@@ -661,9 +661,6 @@ class AzureCompletion(BaseLLM):
         # Extract content
         content = message.content or ""
 
-        # Apply stop words
-        content = self._apply_stop_words(content)
-
         if response_model and self.is_openai_model:
             return self._validate_and_emit_structured_output(
                 content=content,
@@ -672,6 +669,8 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
             )
+
+        content = self._apply_stop_words(content)
 
         # Emit completion event and return content
         self._emit_call_completed_event(

@@ -888,9 +888,10 @@ class GeminiCompletion(BaseLLM):
                             return result
 
         content = self._extract_text_from_response(response)
-        content = self._apply_stop_words(content)
 
         effective_response_model = None if self.tools else response_model
+        if not effective_response_model:
+            content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
             content=content,
