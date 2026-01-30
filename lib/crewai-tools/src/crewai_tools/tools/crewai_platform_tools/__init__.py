@@ -13,10 +13,16 @@ from crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder impor
 from crewai_tools.tools.crewai_platform_tools.crewai_platform_tools import (
     CrewaiPlatformTools,
 )
+from crewai_tools.tools.crewai_platform_tools.file_hook import (
+    process_file_markers,
+    register_file_processing_hook,
+)
 
 
 __all__ = [
     "CrewAIPlatformActionTool",
     "CrewaiPlatformToolBuilder",
     "CrewaiPlatformTools",
+    "process_file_markers",
+    "register_file_processing_hook",
 ]

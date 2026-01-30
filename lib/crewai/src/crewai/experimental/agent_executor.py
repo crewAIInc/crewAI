@@ -814,6 +814,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 "name": func_name,
                 "content": result,
             }
+
+            if after_hook_context.files:
+                tool_message["files"] = after_hook_context.files
+
             self.state.messages.append(tool_message)
 
             # Log the tool execution
