@@ -182,6 +182,7 @@ def convert_tools_to_openai_schema(
                 "name": sanitized_name,
                 "description": description,
                 "parameters": parameters,
+                "strict": True,
             },
         }
         openai_tools.append(schema)
@@ -924,7 +925,7 @@ def extract_tool_call_info(
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 

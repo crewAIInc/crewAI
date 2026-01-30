@@ -457,15 +457,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
                 return "native_tool_calls"
 
-            # Structured output (BaseModel) response
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
                     thought="",
                     output=answer,
-                    text=str(answer),
+                    text=answer.model_dump_json(),
                 )
                 self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(str(answer))
+                self._append_message_to_state(answer.model_dump_json())
                 return "native_finished"
 
             # Text response - this is the final answer

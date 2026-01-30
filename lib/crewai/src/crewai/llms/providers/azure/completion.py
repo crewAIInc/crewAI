@@ -622,16 +622,6 @@ class AzureCompletion(BaseLLM):
         usage = self._extract_azure_token_usage(response)
         self._track_token_usage_internal(usage)
 
-        if response_model and self.is_openai_model:
-            content = message.content or ""
-            return self._validate_and_emit_structured_output(
-                content=content,
-                response_model=response_model,
-                params=params,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-
         # If there are tool_calls but no available_functions, return the tool_calls
         # This allows the caller (e.g., executor) to handle tool execution
         if message.tool_calls and not available_functions:
@@ -671,7 +661,15 @@ class AzureCompletion(BaseLLM):
         # Extract content
         content = message.content or ""
 
-        # Apply stop words
+        if response_model and self.is_openai_model:
+            return self._validate_and_emit_structured_output(
+                content=content,
+                response_model=response_model,
+                params=params,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
         content = self._apply_stop_words(content)
 
         # Emit completion event and return content
