@@ -366,14 +366,16 @@ class Crew(FlowTrackable, BaseModel):
         set_tracing_enabled(tracing_enabled)
 
         # Determine verbose setting (respects CREWAI_VERBOSE env var)
-        effective_verbose = should_enable_verbose(override=self.verbose)
+        # Update self.verbose to the resolved boolean value so it can be used
+        # consistently throughout the class (e.g., in _create_manager_agent)
+        self.verbose = should_enable_verbose(override=self.verbose)
 
         # Always setup trace listener - actual execution control is via contextvar
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
-        event_listener.verbose = effective_verbose
-        event_listener.formatter.verbose = effective_verbose
-        self._logger = Logger(verbose=effective_verbose)
+        event_listener.verbose = self.verbose
+        event_listener.formatter.verbose = self.verbose
+        self._logger = Logger(verbose=self.verbose)
         if self.output_log_file:
             self._file_handler = FileHandler(self.output_log_file)
         self._rpm_controller = RPMController(max_rpm=self.max_rpm, logger=self._logger)
