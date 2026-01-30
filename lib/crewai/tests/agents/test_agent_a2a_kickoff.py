@@ -11,7 +11,7 @@ from crewai.a2a.config import A2AClientConfig
 
 
 A2A_TEST_ENDPOINT = os.getenv(
-    "A2A_TEST_ENDPOINT", "http://0.0.0.0:9999/.well-known/agent-card.json"
+    "A2A_TEST_ENDPOINT", "http://localhost:9999/.well-known/agent-card.json"
 )
 
 
