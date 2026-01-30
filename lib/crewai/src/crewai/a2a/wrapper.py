@@ -47,13 +47,13 @@ from crewai.events.types.a2a_events import (
     A2AMessageSentEvent,
 )
 from crewai.lite_agent_output import LiteAgentOutput
+from crewai.task import Task
 
 
 if TYPE_CHECKING:
     from a2a.types import AgentCard, Message
 
     from crewai.agent.core import Agent
-    from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
 
 
@@ -186,51 +186,15 @@ def wrap_agent_with_a2a_instance(
         if not a2a_agents:
             return original_kickoff(self, messages, response_format, input_files)
 
-        if isinstance(messages, str):
-            description = messages
-        else:
-            content = next(
-                (m["content"] for m in reversed(messages) if m["role"] == "user"),
-                None,
-            )
-            description = content if isinstance(content, str) else ""
-
-        if not description:
-            return original_kickoff(self, messages, response_format, input_files)
-
-        fake_task = Task(
-            description=description,
-            agent=self,
-            expected_output="Result from A2A delegation",
-            input_files=input_files or {},
-        )
-
-        def task_to_kickoff_adapter(
-            self_: Any, task: Task, context: str | None, tools: list[Any] | None
-        ) -> str:
-            """Adapt execute_task signature to kickoff for delegation."""
-            result: LiteAgentOutput = original_kickoff(
-                self_, messages, response_format, input_files
-            )
-            return result.raw
-
-        result_str = _execute_task_with_a2a(
+        return _kickoff_with_a2a(
             self=self,
             a2a_agents=a2a_agents,
-            original_fn=task_to_kickoff_adapter,
-            task=fake_task,
+            original_kickoff=original_kickoff,
+            messages=messages,
+            response_format=response_format,
+            input_files=input_files,
             agent_response_model=agent_response_model,
-            context=None,
-            tools=None,
             extension_registry=extension_registry,
-        )
-
-        return LiteAgentOutput(
-            raw=result_str,
-            pydantic=None,
-            agent_role=self.role,
-            usage_metrics=None,
-            messages=[],
         )
 
     @wraps(original_kickoff_async)
@@ -253,53 +217,15 @@ def wrap_agent_with_a2a_instance(
                 self, messages, response_format, input_files
             )
 
-        if isinstance(messages, str):
-            description = messages
-        else:
-            content = next(
-                (m["content"] for m in reversed(messages) if m["role"] == "user"),
-                None,
-            )
-            description = content if isinstance(content, str) else ""
-
-        if not description:
-            return await original_kickoff_async(
-                self, messages, response_format, input_files
-            )
-
-        fake_task = Task(
-            description=description,
-            agent=self,
-            expected_output="Result from A2A delegation",
-            input_files=input_files or {},
-        )
-
-        async def task_to_kickoff_adapter(
-            self_: Any, task: Task, context: str | None, tools: list[Any] | None
-        ) -> str:
-            """Adapt execute_task signature to kickoff_async for delegation."""
-            result: LiteAgentOutput = await original_kickoff_async(
-                self_, messages, response_format, input_files
-            )
-            return result.raw
-
-        result_str = await _aexecute_task_with_a2a(
+        return await _akickoff_with_a2a(
             self=self,
             a2a_agents=a2a_agents,
-            original_fn=task_to_kickoff_adapter,
-            task=fake_task,
+            original_kickoff_async=original_kickoff_async,
+            messages=messages,
+            response_format=response_format,
+            input_files=input_files,
             agent_response_model=agent_response_model,
-            context=None,
-            tools=None,
             extension_registry=extension_registry,
-        )
-
-        return LiteAgentOutput(
-            raw=result_str,
-            pydantic=None,
-            agent_role=self.role,
-            usage_metrics=None,
-            messages=[],
         )
 
     object.__setattr__(agent, "kickoff", MethodType(kickoff_with_a2a, agent))
@@ -451,13 +377,261 @@ def _execute_task_with_a2a(
                     original_task_description=original_description,
                     _extension_registry=extension_registry,
                 )
-            return str(agent_response.message)
+            task.output_pydantic = None
+            return agent_response.message
 
         return raw_result
     finally:
         task.description = original_description
-        task.output_pydantic = original_output_pydantic
+        if task.output_pydantic is not None:
+            task.output_pydantic = original_output_pydantic
         task.response_model = original_response_model
+
+
+def _kickoff_with_a2a(
+    self: Agent,
+    a2a_agents: list[A2AConfig | A2AClientConfig],
+    original_kickoff: Callable[..., LiteAgentOutput],
+    messages: str | list[Any],
+    response_format: type[Any] | None,
+    input_files: dict[str, Any] | None,
+    agent_response_model: type[BaseModel] | None,
+    extension_registry: ExtensionRegistry,
+) -> LiteAgentOutput:
+    """Execute kickoff with A2A delegation support (sync).
+
+    Args:
+        self: The agent instance.
+        a2a_agents: List of A2A agent configurations.
+        original_kickoff: The original kickoff method.
+        messages: Messages to send to the agent.
+        response_format: Optional response format.
+        input_files: Optional input files.
+        agent_response_model: Optional agent response model.
+        extension_registry: Registry of A2A extensions.
+
+    Returns:
+        LiteAgentOutput from kickoff or A2A delegation.
+    """
+    if isinstance(messages, str):
+        description = messages
+    else:
+        content = next(
+            (m["content"] for m in reversed(messages) if m["role"] == "user"),
+            None,
+        )
+        description = content if isinstance(content, str) else ""
+
+    if not description:
+        return original_kickoff(self, messages, response_format, input_files)
+
+    fake_task = Task(
+        description=description,
+        agent=self,
+        expected_output="Result from A2A delegation",
+        input_files=input_files or {},
+    )
+
+    agent_cards, failed_agents = _fetch_agent_cards_concurrently(a2a_agents)
+
+    if not agent_cards and a2a_agents and failed_agents:
+        return original_kickoff(self, messages, response_format, input_files)
+
+    fake_task.description, _, extension_states = _augment_prompt_with_a2a(
+        a2a_agents=a2a_agents,
+        task_description=description,
+        agent_cards=agent_cards,
+        failed_agents=failed_agents,
+        extension_registry=extension_registry,
+    )
+    fake_task.response_model = agent_response_model
+
+    try:
+        result: LiteAgentOutput = original_kickoff(
+            self, messages, agent_response_model or response_format, input_files
+        )
+        agent_response = _parse_agent_response(
+            raw_result=result.raw, agent_response_model=agent_response_model
+        )
+
+        if extension_registry and isinstance(agent_response, BaseModel):
+            agent_response = extension_registry.process_response_with_all(
+                agent_response, extension_states
+            )
+
+        if isinstance(agent_response, BaseModel) and isinstance(
+            agent_response, AgentResponseProtocol
+        ):
+            if agent_response.is_a2a:
+
+                def _kickoff_adapter(
+                    self_: Agent,
+                    _task: Task,
+                    _context: str | None,
+                    _tools: list[Any] | None,
+                ) -> str:
+                    fmt = (
+                        _task.response_model or agent_response_model or response_format
+                    )
+                    output: LiteAgentOutput = original_kickoff(
+                        self_, messages, fmt, input_files
+                    )
+                    return output.raw
+
+                result_str = _delegate_to_a2a(
+                    self,
+                    agent_response=agent_response,
+                    task=fake_task,
+                    original_fn=_kickoff_adapter,
+                    context=None,
+                    tools=None,
+                    agent_cards=agent_cards,
+                    original_task_description=description,
+                    _extension_registry=extension_registry,
+                )
+                return LiteAgentOutput(
+                    raw=result_str,
+                    pydantic=None,
+                    agent_role=self.role,
+                    usage_metrics=None,
+                    messages=[],
+                )
+            return LiteAgentOutput(
+                raw=agent_response.message,
+                pydantic=None,
+                agent_role=self.role,
+                usage_metrics=result.usage_metrics,
+                messages=result.messages,
+            )
+
+        return result
+    finally:
+        fake_task.description = description
+
+
+async def _akickoff_with_a2a(
+    self: Agent,
+    a2a_agents: list[A2AConfig | A2AClientConfig],
+    original_kickoff_async: Callable[..., Coroutine[Any, Any, LiteAgentOutput]],
+    messages: str | list[Any],
+    response_format: type[Any] | None,
+    input_files: dict[str, Any] | None,
+    agent_response_model: type[BaseModel] | None,
+    extension_registry: ExtensionRegistry,
+) -> LiteAgentOutput:
+    """Execute kickoff with A2A delegation support (async).
+
+    Args:
+        self: The agent instance.
+        a2a_agents: List of A2A agent configurations.
+        original_kickoff_async: The original kickoff_async method.
+        messages: Messages to send to the agent.
+        response_format: Optional response format.
+        input_files: Optional input files.
+        agent_response_model: Optional agent response model.
+        extension_registry: Registry of A2A extensions.
+
+    Returns:
+        LiteAgentOutput from kickoff or A2A delegation.
+    """
+    if isinstance(messages, str):
+        description = messages
+    else:
+        content = next(
+            (m["content"] for m in reversed(messages) if m["role"] == "user"),
+            None,
+        )
+        description = content if isinstance(content, str) else ""
+
+    if not description:
+        return await original_kickoff_async(
+            self, messages, response_format, input_files
+        )
+
+    fake_task = Task(
+        description=description,
+        agent=self,
+        expected_output="Result from A2A delegation",
+        input_files=input_files or {},
+    )
+
+    agent_cards, failed_agents = await _afetch_agent_cards_concurrently(a2a_agents)
+
+    if not agent_cards and a2a_agents and failed_agents:
+        return await original_kickoff_async(
+            self, messages, response_format, input_files
+        )
+
+    fake_task.description, _, extension_states = _augment_prompt_with_a2a(
+        a2a_agents=a2a_agents,
+        task_description=description,
+        agent_cards=agent_cards,
+        failed_agents=failed_agents,
+        extension_registry=extension_registry,
+    )
+    fake_task.response_model = agent_response_model
+
+    try:
+        result: LiteAgentOutput = await original_kickoff_async(
+            self, messages, agent_response_model or response_format, input_files
+        )
+        agent_response = _parse_agent_response(
+            raw_result=result.raw, agent_response_model=agent_response_model
+        )
+
+        if extension_registry and isinstance(agent_response, BaseModel):
+            agent_response = extension_registry.process_response_with_all(
+                agent_response, extension_states
+            )
+
+        if isinstance(agent_response, BaseModel) and isinstance(
+            agent_response, AgentResponseProtocol
+        ):
+            if agent_response.is_a2a:
+
+                async def _kickoff_adapter(
+                    self_: Agent,
+                    _task: Task,
+                    _context: str | None,
+                    _tools: list[Any] | None,
+                ) -> str:
+                    fmt = (
+                        _task.response_model or agent_response_model or response_format
+                    )
+                    output: LiteAgentOutput = await original_kickoff_async(
+                        self_, messages, fmt, input_files
+                    )
+                    return output.raw
+
+                result_str = await _adelegate_to_a2a(
+                    self,
+                    agent_response=agent_response,
+                    task=fake_task,
+                    original_fn=_kickoff_adapter,
+                    context=None,
+                    tools=None,
+                    agent_cards=agent_cards,
+                    original_task_description=description,
+                    _extension_registry=extension_registry,
+                )
+                return LiteAgentOutput(
+                    raw=result_str,
+                    pydantic=None,
+                    agent_role=self.role,
+                    usage_metrics=None,
+                    messages=[],
+                )
+            return LiteAgentOutput(
+                raw=agent_response.message,
+                pydantic=None,
+                agent_role=self.role,
+                usage_metrics=result.usage_metrics,
+                messages=result.messages,
+            )
+
+        return result
+    finally:
+        fake_task.description = description
 
 
 def _augment_prompt_with_a2a(
@@ -764,8 +938,8 @@ def _process_response_result(
                     agent_card=agent_card,
                 ),
             )
-            return str(llm_response.message), None
-        return None, str(llm_response.message)
+            return llm_response.message, None
+        return None, llm_response.message
 
     return str(raw_result), None
 
@@ -1342,12 +1516,14 @@ async def _aexecute_task_with_a2a(
                     original_task_description=original_description,
                     _extension_registry=extension_registry,
                 )
-            return str(agent_response.message)
+            task.output_pydantic = None
+            return agent_response.message
 
         return raw_result
     finally:
         task.description = original_description
-        task.output_pydantic = original_output_pydantic
+        if task.output_pydantic is not None:
+            task.output_pydantic = original_output_pydantic
         task.response_model = original_response_model
 
 

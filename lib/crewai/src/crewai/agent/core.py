@@ -94,6 +94,12 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
+try:
+    from crewai.a2a.types import AgentResponseProtocol
+except ImportError:
+    AgentResponseProtocol = None  # type: ignore[assignment, misc]
+
+
 if TYPE_CHECKING:
     from crewai_files import FileInput
     from crewai_tools import CodeInterpreterTool
@@ -490,9 +496,22 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
 
         result = process_tool_results(self, result)
+
+        output_for_event = result
+        if (
+            AgentResponseProtocol is not None
+            and isinstance(result, BaseModel)
+            and isinstance(result, AgentResponseProtocol)
+        ):
+            output_for_event = str(result.message)
+        elif not isinstance(result, str):
+            output_for_event = str(result)
+
         crewai_event_bus.emit(
             self,
-            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_for_event
+            ),
         )
 
         save_last_messages(self)
@@ -709,9 +728,22 @@ class Agent(BaseAgent):
             self._rpm_controller.stop_rpm_counter()
 
         result = process_tool_results(self, result)
+
+        output_for_event = result
+        if (
+            AgentResponseProtocol is not None
+            and isinstance(result, BaseModel)
+            and isinstance(result, AgentResponseProtocol)
+        ):
+            output_for_event = str(result.message)
+        elif not isinstance(result, str):
+            output_for_event = str(result)
+
         crewai_event_bus.emit(
             self,
-            event=AgentExecutionCompletedEvent(agent=self, task=task, output=result),
+            event=AgentExecutionCompletedEvent(
+                agent=self, task=task, output=output_for_event
+            ),
         )
 
         save_last_messages(self)
@@ -1863,25 +1895,30 @@ class Agent(BaseAgent):
         # Handle response format conversion
         formatted_result: BaseModel | None = None
         if response_format:
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
+            if isinstance(raw_output, BaseModel) and isinstance(
+                raw_output, response_format
+            ):
+                formatted_result = raw_output
+            elif isinstance(raw_output, str):
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = self.i18n.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
+                    converter = Converter(
+                        llm=self.llm,
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
 
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    pass  # Keep raw output if conversion fails
 
         # Get token usage metrics
         if isinstance(self.llm, BaseLLM):
@@ -1889,8 +1926,16 @@ class Agent(BaseAgent):
         else:
             usage_metrics = self._token_process.get_summary()
 
+        raw_str = (
+            raw_output
+            if isinstance(raw_output, str)
+            else raw_output.model_dump_json()
+            if isinstance(raw_output, BaseModel)
+            else str(raw_output)
+        )
+
         return LiteAgentOutput(
-            raw=raw_output,
+            raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
@@ -1925,25 +1970,30 @@ class Agent(BaseAgent):
         # Handle response format conversion
         formatted_result: BaseModel | None = None
         if response_format:
-            try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
+            if isinstance(raw_output, BaseModel) and isinstance(
+                raw_output, response_format
+            ):
+                formatted_result = raw_output
+            elif isinstance(raw_output, str):
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = self.i18n.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                converter = Converter(
-                    llm=self.llm,
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
+                    converter = Converter(
+                        llm=self.llm,
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
 
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass  # Keep raw output if conversion fails
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    pass  # Keep raw output if conversion fails
 
         # Get token usage metrics
         if isinstance(self.llm, BaseLLM):
@@ -1951,8 +2001,16 @@ class Agent(BaseAgent):
         else:
             usage_metrics = self._token_process.get_summary()
 
+        raw_str = (
+            raw_output
+            if isinstance(raw_output, str)
+            else raw_output.model_dump_json()
+            if isinstance(raw_output, BaseModel)
+            else str(raw_output)
+        )
+
         return LiteAgentOutput(
-            raw=raw_output,
+            raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
