@@ -12,7 +12,12 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_aws_credentials():
-    """Automatically mock AWS credentials and boto3 Session for all tests in this module."""
+    """Mock AWS credentials and boto3 Session for tests only if real credentials are not set."""
+    # If real AWS credentials exist, don't mock - allow real API calls
+    if "AWS_ACCESS_KEY_ID" in os.environ and "AWS_SECRET_ACCESS_KEY" in os.environ:
+        yield None, None
+        return
+
     with patch.dict(os.environ, {
         "AWS_ACCESS_KEY_ID": "test-access-key",
         "AWS_SECRET_ACCESS_KEY": "test-secret-key",
