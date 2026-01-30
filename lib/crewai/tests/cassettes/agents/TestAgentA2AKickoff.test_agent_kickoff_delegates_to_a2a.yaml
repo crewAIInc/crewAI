@@ -26,7 +26,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1383'
+      - '1385'
       content-type:
       - application/json
       host:
@@ -55,18 +55,18 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D3jFBtWc84q3Fih1RnSJ50RUpSFl9\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769781273,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D3qPKNZ1miu2xMURPYYcLXdKrlMIh\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808810,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time in New York?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        280,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 326,\n    \"prompt_tokens_details\":
+        274,\n    \"completion_tokens\": 40,\n    \"total_tokens\": 314,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -75,7 +75,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 13:54:34 GMT
+      - Fri, 30 Jan 2026 21:33:31 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -95,7 +95,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '923'
+      - '854'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -120,7 +120,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"id":"eddd6b1f-08fe-49b0-a0ac-475a0affb219","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"9c0ca44b-2d30-448a-8b38-58f8db1f444f","parts":[{"kind":"text","text":"What
+    body: '{"id":"869c0693-9e53-40ae-acd0-5823d73c7808","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"5c4fc5ee-97c4-42f9-96a0-f1e1205f0832","parts":[{"kind":"text","text":"What
       is the current time in New York?"}],"referenceTaskIds":[],"role":"user"}}}'
     headers:
       User-Agent:
@@ -143,11 +143,11 @@ interactions:
     uri: http://localhost:9999
   response:
     body:
-      string: "data: {\"id\":\"eddd6b1f-08fe-49b0-a0ac-475a0affb219\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"da60b9dc-45e0-4124-b6c7-591177a664a2\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"c77704e8-1c73-49b0-940e-1ca55c53bb3a\"}}\r\n\r\ndata:
-        {\"id\":\"eddd6b1f-08fe-49b0-a0ac-475a0affb219\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"da60b9dc-45e0-4124-b6c7-591177a664a2\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"c77704e8-1c73-49b0-940e-1ca55c53bb3a\"}}\r\n\r\ndata:
-        {\"id\":\"eddd6b1f-08fe-49b0-a0ac-475a0affb219\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"da60b9dc-45e0-4124-b6c7-591177a664a2\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"fbbb037b-d7fc-4e31-8bff-eccebf3c0053\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
-        get_time] 2026-01-30 08:54:35 EST (America/New_York)\\nThe current time in
-        New York is 08:54 AM on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"c77704e8-1c73-49b0-940e-1ca55c53bb3a\"}}\r\n\r\n"
+      string: "data: {\"id\":\"869c0693-9e53-40ae-acd0-5823d73c7808\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0aba73f6-87de-4e43-9a5a-7ebd22f590e3\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"0aca3052-dd0b-4f0e-bc0e-a646b0a86de2\"}}\r\n\r\ndata:
+        {\"id\":\"869c0693-9e53-40ae-acd0-5823d73c7808\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0aba73f6-87de-4e43-9a5a-7ebd22f590e3\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"0aca3052-dd0b-4f0e-bc0e-a646b0a86de2\"}}\r\n\r\ndata:
+        {\"id\":\"869c0693-9e53-40ae-acd0-5823d73c7808\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0aba73f6-87de-4e43-9a5a-7ebd22f590e3\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"f70e8fe1-26c9-47e1-9331-1be893e0c5b0\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 16:33:31 EST (America/New_York)\\nThe current time in
+        New York is 4:33 PM EST.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"0aca3052-dd0b-4f0e-bc0e-a646b0a86de2\"}}\r\n\r\n"
     headers:
       cache-control:
       - no-store
@@ -156,7 +156,7 @@ interactions:
       content-type:
       - text/event-stream; charset=utf-8
       date:
-      - Fri, 30 Jan 2026 13:54:33 GMT
+      - Fri, 30 Jan 2026 21:33:30 GMT
       server:
       - uvicorn
       transfer-encoding:
@@ -193,7 +193,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1383'
+      - '1385'
       content-type:
       - application/json
       cookie:
@@ -224,14 +224,14 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D3jFFtf0IQIJTlZw5YAHOgFjlzDdE\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769781277,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D3qPN7ipYzYuI3Htoj13LNHyic8RB\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808813,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time in New York?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        280,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 326,\n    \"prompt_tokens_details\":
+        274,\n    \"completion_tokens\": 40,\n    \"total_tokens\": 314,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -244,7 +244,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 13:54:39 GMT
+      - Fri, 30 Jan 2026 21:33:34 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -262,7 +262,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1509'
+      - '660'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -287,7 +287,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"id":"d5380fcb-ff90-4cf0-91bc-fbffa31da036","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"4d92d0a5-c872-4781-927d-a8679e676007","parts":[{"kind":"text","text":"What
+    body: '{"id":"7aac6192-3805-4a2f-b9b1-3e281f723f35","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"0a76a4cc-e497-491e-84e0-2a9d35e106b5","parts":[{"kind":"text","text":"What
       is the current time in New York?"}],"referenceTaskIds":[],"role":"user"}}}'
     headers:
       User-Agent:
@@ -310,11 +310,11 @@ interactions:
     uri: http://localhost:9999
   response:
     body:
-      string: "data: {\"id\":\"d5380fcb-ff90-4cf0-91bc-fbffa31da036\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fc104771-f241-4385-bc03-c4b880e97044\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"1b163710-6797-432d-ad93-322e90b6fe85\"}}\r\n\r\ndata:
-        {\"id\":\"d5380fcb-ff90-4cf0-91bc-fbffa31da036\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fc104771-f241-4385-bc03-c4b880e97044\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"1b163710-6797-432d-ad93-322e90b6fe85\"}}\r\n\r\ndata:
-        {\"id\":\"d5380fcb-ff90-4cf0-91bc-fbffa31da036\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fc104771-f241-4385-bc03-c4b880e97044\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"27ab0449-b0da-4250-a319-56554cbc26ad\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
-        get_time] 2026-01-30 08:54:40 EST (America/New_York)\\nThe current time in
-        New York is 08:54:40 AM EST on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"1b163710-6797-432d-ad93-322e90b6fe85\"}}\r\n\r\n"
+      string: "data: {\"id\":\"7aac6192-3805-4a2f-b9b1-3e281f723f35\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7a2ffd0b-8d57-4a06-8e61-614cb6132b76\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"a562b802-b554-4dce-93f1-d3b757ab1e93\"}}\r\n\r\ndata:
+        {\"id\":\"7aac6192-3805-4a2f-b9b1-3e281f723f35\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7a2ffd0b-8d57-4a06-8e61-614cb6132b76\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"a562b802-b554-4dce-93f1-d3b757ab1e93\"}}\r\n\r\ndata:
+        {\"id\":\"7aac6192-3805-4a2f-b9b1-3e281f723f35\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7a2ffd0b-8d57-4a06-8e61-614cb6132b76\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"9a5678a8-9fdc-47c5-b7fa-061da1bf98e1\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 16:33:34 EST (America/New_York)\\nThe current time in
+        New York is 4:33 PM EST.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"a562b802-b554-4dce-93f1-d3b757ab1e93\"}}\r\n\r\n"
     headers:
       cache-control:
       - no-store
@@ -323,7 +323,7 @@ interactions:
       content-type:
       - text/event-stream; charset=utf-8
       date:
-      - Fri, 30 Jan 2026 13:54:39 GMT
+      - Fri, 30 Jan 2026 21:33:33 GMT
       server:
       - uvicorn
       transfer-encoding:
@@ -360,7 +360,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1383'
+      - '1385'
       content-type:
       - application/json
       cookie:
@@ -391,14 +391,14 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D3jFK8UEJgrLunZZZfiCavu4DMQ5r\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769781282,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D3qPQoeD1yHZjR5bbWnq9fMdIPMFu\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808816,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current local time in New York?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        280,\n    \"completion_tokens\": 47,\n    \"total_tokens\": 327,\n    \"prompt_tokens_details\":
+        274,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 315,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -411,7 +411,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 13:54:42 GMT
+      - Fri, 30 Jan 2026 21:33:37 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -429,7 +429,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '806'
+      - '684'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -454,7 +454,7 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"id":"7c4e4330-88aa-4126-98ec-dbbf6dc58abc","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"780ddbd5-2125-4c8b-8076-4a82e097d6dd","parts":[{"kind":"text","text":"What
+    body: '{"id":"03e755a9-bf97-4c55-bd2f-fbc23e3385ef","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"4c7c5802-a8b0-40ac-bbf4-4ff1cb0b10f3","parts":[{"kind":"text","text":"What
       is the current local time in New York?"}],"referenceTaskIds":[],"role":"user"}}}'
     headers:
       User-Agent:
@@ -477,11 +477,11 @@ interactions:
     uri: http://localhost:9999
   response:
     body:
-      string: "data: {\"id\":\"7c4e4330-88aa-4126-98ec-dbbf6dc58abc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7c6ac7fd-9944-493b-b322-7b8130193030\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"44b7f1a5-7c43-491d-bdf5-55f97631bee9\"}}\r\n\r\ndata:
-        {\"id\":\"7c4e4330-88aa-4126-98ec-dbbf6dc58abc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7c6ac7fd-9944-493b-b322-7b8130193030\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"44b7f1a5-7c43-491d-bdf5-55f97631bee9\"}}\r\n\r\ndata:
-        {\"id\":\"7c4e4330-88aa-4126-98ec-dbbf6dc58abc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"7c6ac7fd-9944-493b-b322-7b8130193030\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"b3b9f054-2a9b-4b22-bb10-cfcd568e60b2\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
-        get_time] 2026-01-30 08:54:43 EST (America/New_York)\\nThe current local time
-        in New York is 08:54 AM EST on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"44b7f1a5-7c43-491d-bdf5-55f97631bee9\"}}\r\n\r\n"
+      string: "data: {\"id\":\"03e755a9-bf97-4c55-bd2f-fbc23e3385ef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fcef0a1d-ba1d-4703-88a7-0caddb7d8602\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"01abf50f-944a-4814-816c-170e460a542a\"}}\r\n\r\ndata:
+        {\"id\":\"03e755a9-bf97-4c55-bd2f-fbc23e3385ef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fcef0a1d-ba1d-4703-88a7-0caddb7d8602\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"01abf50f-944a-4814-816c-170e460a542a\"}}\r\n\r\ndata:
+        {\"id\":\"03e755a9-bf97-4c55-bd2f-fbc23e3385ef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"fcef0a1d-ba1d-4703-88a7-0caddb7d8602\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"cc32e320-d067-4006-85ad-c3eb988ee0cc\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 16:33:38 EST (America/New_York)\\nThe current local time
+        in New York is 4:33 PM EST on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"01abf50f-944a-4814-816c-170e460a542a\"}}\r\n\r\n"
     headers:
       cache-control:
       - no-store
@@ -490,7 +490,7 @@ interactions:
       content-type:
       - text/event-stream; charset=utf-8
       date:
-      - Fri, 30 Jan 2026 13:54:42 GMT
+      - Fri, 30 Jan 2026 21:33:37 GMT
       server:
       - uvicorn
       transfer-encoding:
@@ -527,7 +527,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1383'
+      - '1385'
       content-type:
       - application/json
       cookie:
@@ -558,14 +558,14 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D3jFNAH4ex0QrqP0sMQagCLguuncQ\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769781285,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D3qPUBwXUl9D9xr19IR5ayWaliTQc\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808820,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time in New York?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        280,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 326,\n    \"prompt_tokens_details\":
+        274,\n    \"completion_tokens\": 40,\n    \"total_tokens\": 314,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -578,7 +578,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 13:54:46 GMT
+      - Fri, 30 Jan 2026 21:33:41 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -596,7 +596,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '778'
+      - '844'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

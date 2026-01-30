@@ -42,8 +42,8 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D3jEYk4JMmw8yOeAGns6bKtAId8bH\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769781234,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D3qQLXvb3qeE7H25yFuZE7lYxOI0j\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808873,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Hello! How can I assist you today?\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
@@ -61,7 +61,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 13:53:54 GMT
+      - Fri, 30 Jan 2026 21:34:33 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '412'
+      - '358'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
