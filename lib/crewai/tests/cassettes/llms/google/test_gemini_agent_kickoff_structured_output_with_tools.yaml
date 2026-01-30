@@ -1,0 +1,167 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate 15 + 27 using
+      your add_numbers tool. Report the result."}], "role": "user"}], "systemInstruction":
+      {"parts": [{"text": "You are Calculator. You are a calculator assistant that
+      uses tools to compute results.\nYour personal goal is: Perform calculations
+      using available tools"}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Add two numbers together and return the sum.", "name": "add_numbers",
+      "parameters_json_schema": {"properties": {"a": {"title": "A", "type": "integer"},
+      "b": {"title": "B", "type": "integer"}}, "required": ["a", "b"], "type": "object",
+      "additionalProperties": false}}, {"description": "Use this tool to provide your
+      final structured response. Call this tool when you have gathered all necessary
+      information and are ready to provide the final answer in the required format.",
+      "name": "structured_output", "parameters_json_schema": {"description": "Structured
+      output for calculation results.", "properties": {"operation": {"description":
+      "The mathematical operation performed", "title": "Operation", "type": "string"},
+      "result": {"description": "The result of the calculation", "title": "Result",
+      "type": "integer"}, "explanation": {"description": "Brief explanation of the
+      calculation", "title": "Explanation", "type": "string"}}, "required": ["operation",
+      "result", "explanation"], "title": "CalculationResult", "type": "object", "additionalProperties":
+      false, "propertyOrdering": ["operation", "result", "explanation"]}}]}], "generationConfig":
+      {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1592'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"add_numbers\",\n
+        \             \"args\": {\n                \"b\": 27,\n                \"a\":
+        15\n              }\n            }\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -5.0267503995980534e-05\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        98,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 105,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 98\n
+        \     }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 7\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash-001\",\n  \"responseId\": \"0AV8acutBq6PjMcPkpfamQQ\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 30 Jan 2026 01:13:52 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=555
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Calculate 15 + 27 using
+      your add_numbers tool. Report the result."}], "role": "user"}, {"parts": [{"functionCall":
+      {"args": {"b": 27, "a": 15}, "name": "add_numbers"}}], "role": "model"}, {"parts":
+      [{"functionResponse": {"name": "add_numbers", "response": {"result": 42}}}],
+      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are Calculator.
+      You are a calculator assistant that uses tools to compute results.\nYour personal
+      goal is: Perform calculations using available tools"}], "role": "user"}, "tools":
+      [{"functionDeclarations": [{"description": "Add two numbers together and return
+      the sum.", "name": "add_numbers", "parameters_json_schema": {"properties": {"a":
+      {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}, {"description":
+      "Use this tool to provide your final structured response. Call this tool when
+      you have gathered all necessary information and are ready to provide the final
+      answer in the required format.", "name": "structured_output", "parameters_json_schema":
+      {"description": "Structured output for calculation results.", "properties":
+      {"operation": {"description": "The mathematical operation performed", "title":
+      "Operation", "type": "string"}, "result": {"description": "The result of the
+      calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
+      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
+      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
+      "type": "object", "additionalProperties": false, "propertyOrdering": ["operation",
+      "result", "explanation"]}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1797'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"structured_output\",\n
+        \             \"args\": {\n                \"result\": 42,\n                \"operation\":
+        \"Addition\",\n                \"explanation\": \"15 + 27 = 42\"\n              }\n
+        \           }\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.09667918417188856\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 110,\n    \"candidatesTokenCount\":
+        18,\n    \"totalTokenCount\": 128,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 110\n      }\n    ],\n
+        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 18\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n
+        \ \"responseId\": \"0AV8ac_4Kr_yjMcPg_a4gA0\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 30 Jan 2026 01:13:53 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=936
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
