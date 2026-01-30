@@ -1,0 +1,713 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      host:
+      - 0.0.0.0:9999
+    method: GET
+    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+  response:
+    body:
+      string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
+        AI assistant powered by OpenAI GPT with calculator and time tools. Ask questions,
+        perform calculations, or get the current time in any timezone.","name":"GPT
+        Assistant","preferredTransport":"JSONRPC","protocolVersion":"0.3.0","skills":[{"description":"Have
+        a general conversation with the AI assistant. Ask questions, get explanations,
+        or just chat.","examples":["Hello, how are you?","Explain quantum computing
+        in simple terms","What can you help me with?"],"id":"conversation","name":"General
+        Conversation","tags":["chat","conversation","general"]},{"description":"Perform
+        mathematical calculations including arithmetic, exponents, and more.","examples":["What
+        is 25 * 17?","Calculate 2^10","What''s (100 + 50) / 3?"],"id":"calculator","name":"Calculator","tags":["math","calculator","arithmetic"]},{"description":"Get
+        the current date and time in any timezone.","examples":["What time is it?","What''s
+        the current time in Tokyo?","What''s today''s date in New York?"],"id":"time","name":"Current
+        Time","tags":["time","date","timezone"]}],"url":"http://localhost:9999","version":"1.0.0"}'
+    headers:
+      content-length:
+      - '1272'
+      content-type:
+      - application/json
+      date:
+      - Fri, 30 Jan 2026 13:53:54 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the remote A2A agent to explain quantum computing in simple
+      terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1387'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jEZCk72BTnPd76lgJx3flraf53g\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781235,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        you please explain quantum computing in simple terms?\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        277,\n    \"completion_tokens\": 47,\n    \"total_tokens\": 324,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:53:56 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '983'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"8e89c366-f0bb-4530-9733-c340afcf44a1","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"09d169ad-1c41-486f-a1f6-db36f774a08e","parts":[{"kind":"text","text":"Can
+      you please explain quantum computing in simple terms?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '384'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"8e89c366-f0bb-4530-9733-c340afcf44a1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"aca5807e-55ea-4d81-9bb0-a621788e2f8b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"219a3bad-5c8e-4903-9a4a-6bb8f6067f0d\"}}\r\n\r\ndata:
+        {\"id\":\"8e89c366-f0bb-4530-9733-c340afcf44a1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"aca5807e-55ea-4d81-9bb0-a621788e2f8b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"219a3bad-5c8e-4903-9a4a-6bb8f6067f0d\"}}\r\n\r\ndata:
+        {\"id\":\"8e89c366-f0bb-4530-9733-c340afcf44a1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"aca5807e-55ea-4d81-9bb0-a621788e2f8b\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"4cf44be0-a3ce-4a86-a801-6224f81f6c6a\",\"parts\":[{\"kind\":\"text\",\"text\":\"Quantum
+        computing is a type of computing that uses the principles of quantum mechanics
+        to process information in a fundamentally different way than traditional computers.
+        \\n\\n1. **Bits vs. Qubits**: Traditional computers use bits as the smallest
+        unit of data, which can either be a 0 or a 1. Quantum computers use qubits,
+        which can be both 0 and 1 at the same time, thanks to a phenomenon called
+        superposition.\\n\\n2. **Superposition**: This ability to be in multiple states
+        simultaneously allows quantum computers to process a vast amount of possibilities
+        at once.\\n\\n3. **Entanglement**: Qubits can also be entangled, meaning the
+        state of one qubit can depend on the state of another, no matter how far apart
+        they are. This feature enables complex computations that are not possible
+        with classical computers.\\n\\n4. **Parallelism**: Because of superposition
+        and entanglement, quantum computers can perform many calculations at the same
+        time, making them potentially much faster for specific tasks compared to classical
+        computers.\\n\\nIn summary, quantum computing harnesses the strange and powerful
+        properties of quantum mechanics to process information in a way that could
+        solve complex problems much more efficiently than traditional computers.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"219a3bad-5c8e-4903-9a4a-6bb8f6067f0d\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:53:55 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the remote A2A agent to explain quantum computing in simple
+      terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1387'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jEjMZDxvGCpJTZptzz1lAV5Ruhh\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781245,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        explain quantum computing in simple terms that are easy for anyone to understand.\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        277,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 328,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:54:06 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '932'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"3e61c6cc-3654-46ce-a15c-433fef9e1ff1","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"fee95c54-616c-45f4-b0b7-080a8535a4e2","parts":[{"kind":"text","text":"Please
+      explain quantum computing in simple terms that are easy for anyone to understand."}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '415'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"3e61c6cc-3654-46ce-a15c-433fef9e1ff1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"774a88f1-2738-41e4-b99e-87e8733a4597\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"a7f3c465-f5b1-4b69-a697-d422adf1e766\"}}\r\n\r\ndata:
+        {\"id\":\"3e61c6cc-3654-46ce-a15c-433fef9e1ff1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"774a88f1-2738-41e4-b99e-87e8733a4597\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"a7f3c465-f5b1-4b69-a697-d422adf1e766\"}}\r\n\r\ndata:
+        {\"id\":\"3e61c6cc-3654-46ce-a15c-433fef9e1ff1\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"774a88f1-2738-41e4-b99e-87e8733a4597\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"89fa51b4-6e41-4590-ae1f-ffe19068ff75\",\"parts\":[{\"kind\":\"text\",\"text\":\"Quantum
+        computing is a type of computing that uses the principles of quantum mechanics,
+        a branch of physics that deals with very small particles like atoms and photons.
+        \\n\\nHere\u2019s a simple breakdown:\\n1. **Bits vs. Qubits**: Traditional
+        computers use bits as the smallest unit of data, which can be either a 0 or
+        a 1. Quantum computers use quantum bits, or qubits, which can be both 0 and
+        1 at the same time thanks to a property called superposition.\\n\\n2. **Superposition**:
+        Imagine spinning a coin. While it\u2019s spinning, it\u2019s not just heads
+        or tails; it\u2019s in some way both until you stop it. Qubits can exist in
+        multiple states at once, allowing quantum computers to process a lot of information
+        simultaneously.\\n\\n3. **Entanglement**: This is another unique property
+        of quantum mechanics. When qubits become entangled, the state of one qubit
+        becomes linked to the state of another, no matter how far apart they are.
+        This means changing one qubit can instantly affect the other, enabling powerful
+        computations.\\n\\n4. **Quantum Speedup**: Because of superposition and entanglement,
+        quantum computers can solve certain problems much faster than classical computers.
+        This includes problems in cryptography, optimization, and simulations of molecular
+        structures.\\n\\nIn summary, quantum computing leverages the strange rules
+        of quantum physics to manipulate data in a way that classical computers can't,
+        potentially making them much more powerful for certain tasks.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"a7f3c465-f5b1-4b69-a697-d422adf1e766\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:54:06 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the remote A2A agent to explain quantum computing in simple
+      terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1387'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jEwtEsNqmLAA86mD8iOEKiIxri4\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781258,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        explain quantum computing in simple terms suitable for someone with no technical
+        background.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 277,\n    \"completion_tokens\":
+        51,\n    \"total_tokens\": 328,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:54:20 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2125'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"b1067e98-e5fd-4948-ba91-3c88a101c632","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"bb50cbc5-0298-4550-8feb-b58e974a10ad","parts":[{"kind":"text","text":"Please
+      explain quantum computing in simple terms suitable for someone with no technical
+      background."}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '426'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"b1067e98-e5fd-4948-ba91-3c88a101c632\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5fc45f44-28ac-43eb-afb7-744d6b0f7efc\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"8a1920a4-9060-4443-8858-39d85c940298\"}}\r\n\r\ndata:
+        {\"id\":\"b1067e98-e5fd-4948-ba91-3c88a101c632\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5fc45f44-28ac-43eb-afb7-744d6b0f7efc\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"8a1920a4-9060-4443-8858-39d85c940298\"}}\r\n\r\ndata:
+        {\"id\":\"b1067e98-e5fd-4948-ba91-3c88a101c632\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5fc45f44-28ac-43eb-afb7-744d6b0f7efc\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"b35eb686-1bba-4f44-90ec-e17cbd04ac5b\",\"parts\":[{\"kind\":\"text\",\"text\":\"Quantum
+        computing is a new type of computing that uses the principles of quantum mechanics,
+        which is the science that explains how very small particles, like atoms and
+        photons, behave. \\n\\nIn classical computing, information is stored in bits,
+        which can either be a 0 or a 1. Think of it like a light switch that can either
+        be off (0) or on (1). In contrast, quantum computing uses quantum bits or
+        qubits. A qubit can be both 0 and 1 at the same time, thanks to a property
+        called superposition. \\n\\nMoreover, qubits can also be linked together through
+        a phenomenon known as entanglement, which allows them to work together in
+        ways that classical bits cannot. This means that quantum computers can process
+        a vast amount of information much more quickly than regular computers for
+        certain tasks. \\n\\nIn simple terms, while a regular computer is like a very
+        fast and precise librarian, a quantum computer is like a super librarian with
+        many hands, allowing it to explore numerous possibilities at once. This enables
+        quantum computers to solve complex problems much faster, such as factoring
+        large numbers, optimizing logistics, or simulating molecular structures in
+        drug discovery. However, they're still in the early stages of development
+        and are not yet widely used in everyday applications.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"8a1920a4-9060-4443-8858-39d85c940298\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:54:19 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the remote A2A agent to explain quantum computing in simple
+      terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1387'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jF9KeiOZVzcBBNIQnjKnpJzAQ4z\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781271,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
+        you please explain quantum computing in simple terms suitable for a beginner?\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        277,\n    \"completion_tokens\": 51,\n    \"total_tokens\": 328,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:54:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1570'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

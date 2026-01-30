@@ -1,0 +1,717 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      host:
+      - 0.0.0.0:9999
+    method: GET
+    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+  response:
+    body:
+      string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
+        AI assistant powered by OpenAI GPT with calculator and time tools. Ask questions,
+        perform calculations, or get the current time in any timezone.","name":"GPT
+        Assistant","preferredTransport":"JSONRPC","protocolVersion":"0.3.0","skills":[{"description":"Have
+        a general conversation with the AI assistant. Ask questions, get explanations,
+        or just chat.","examples":["Hello, how are you?","Explain quantum computing
+        in simple terms","What can you help me with?"],"id":"conversation","name":"General
+        Conversation","tags":["chat","conversation","general"]},{"description":"Perform
+        mathematical calculations including arithmetic, exponents, and more.","examples":["What
+        is 25 * 17?","Calculate 2^10","What''s (100 + 50) / 3?"],"id":"calculator","name":"Calculator","tags":["math","calculator","arithmetic"]},{"description":"Get
+        the current date and time in any timezone.","examples":["What time is it?","What''s
+        the current time in Tokyo?","What''s today''s date in New York?"],"id":"time","name":"Current
+        Time","tags":["time","date","timezone"]}],"url":"http://localhost:9999","version":"1.0.0"}'
+    headers:
+      content-length:
+      - '1272'
+      content-type:
+      - application/json
+      date:
+      - Fri, 30 Jan 2026 13:55:10 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Ask the remote A2A agent about recent developments in AI agent communication
+      protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1396'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jFn4QZwtfVYz3isJYJdfNrQPtlS\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781311,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
+        you please provide information on the most recent developments in AI agent
+        communication protocols? I am particularly interested in new standards, methods,
+        or technologies that enhance communication efficiency, security, and interoperability
+        among AI agents.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 277,\n    \"completion_tokens\":
+        77,\n    \"total_tokens\": 354,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:55:12 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1199'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"f4251ecb-77e9-4cbe-bb02-b861389184e9","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"f2405e0c-72c7-4e72-a774-f9fe88c2109a","parts":[{"kind":"text","text":"Could
+      you please provide information on the most recent developments in AI agent communication
+      protocols? I am particularly interested in new standards, methods, or technologies
+      that enhance communication efficiency, security, and interoperability among
+      AI agents."}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '591'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"f4251ecb-77e9-4cbe-bb02-b861389184e9\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"41564a5b-4206-431d-80b6-56cfed244b1b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"2f5afed5-949f-4d1d-897a-00d560699ec7\"}}\r\n\r\ndata:
+        {\"id\":\"f4251ecb-77e9-4cbe-bb02-b861389184e9\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"41564a5b-4206-431d-80b6-56cfed244b1b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"2f5afed5-949f-4d1d-897a-00d560699ec7\"}}\r\n\r\ndata:
+        {\"id\":\"f4251ecb-77e9-4cbe-bb02-b861389184e9\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"41564a5b-4206-431d-80b6-56cfed244b1b\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"d754f676-bcc1-449f-9d9d-444b0f74a4a4\",\"parts\":[{\"kind\":\"text\",\"text\":\"Recent
+        developments in AI agent communication protocols have focused on several key
+        areas: \\n\\n1. **Standardization Initiatives**: Organizations such as the
+        IEEE and ISO have been working on developing standards to ensure interoperability
+        between different AI systems and agents, such as the IEEE P7011 standard for
+        algorithmic bias considerations.\\n\\n2. **Protocols for Inter-Agent Communication**:
+        New protocols like the Agent Communication Language (ACL) and implementations
+        of the FIPA specifications have gained traction for enabling efficient communication
+        between agents while ensuring a shared understanding of intentions and semantics.\\n\\n3.
+        **Enhanced Security Measures**: The integration of blockchain technology has
+        emerged as a promising method to securely log communications between AI agents,
+        ensuring authenticity and non-repudiation of messages.\\n\\n4. **Semantic
+        Understanding Improvements**: Methods using natural language processing (NLP)
+        continue to evolve, enabling agents to interpret and generate more human-like
+        responses, facilitating smoother interactions through protocols like ASR (Automatic
+        Speech Recognition) and NLU (Natural Language Understanding).\\n\\n5. **Context-Aware
+        Communication**: Recent advancements allow agents to utilize contextual data
+        for more efficient communication, where they can automatically adjust their
+        responses based on situational awareness and user preferences.\\n\\n6. **Cooperative
+        Learning Models**: New techniques in federated learning allow agents to learn
+        from shared data without compromising user privacy, enhancing collaborative
+        efforts among AI agents in real-time communication.\\n\\nThese developments
+        aim to create a more robust framework for AI agents, enhancing their operational
+        efficiency and effectiveness in various applications, from customer service
+        to collaborative robotics.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"2f5afed5-949f-4d1d-897a-00d560699ec7\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:55:12 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Ask the remote A2A agent about recent developments in AI agent communication
+      protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1396'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jG1CL2z8aMHaZgM3KCwDXsNnTvD\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781325,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        you provide information about the latest developments in AI agent communication
+        protocols?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 277,\n    \"completion_tokens\":
+        51,\n    \"total_tokens\": 328,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:55:26 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '918'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"25e7eefc-150e-4ba1-b169-dbbe3d07430a","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"e7a06872-de5c-4bd6-9c76-e27a1ce5ec48","parts":[{"kind":"text","text":"Can
+      you provide information about the latest developments in AI agent communication
+      protocols?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '421'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"25e7eefc-150e-4ba1-b169-dbbe3d07430a\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"91946807-6102-44c5-bc63-1852d397972b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"57d00fbe-f3c3-4bae-8647-5de5e04a58f5\"}}\r\n\r\ndata:
+        {\"id\":\"25e7eefc-150e-4ba1-b169-dbbe3d07430a\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"91946807-6102-44c5-bc63-1852d397972b\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"57d00fbe-f3c3-4bae-8647-5de5e04a58f5\"}}\r\n\r\ndata:
+        {\"id\":\"25e7eefc-150e-4ba1-b169-dbbe3d07430a\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"91946807-6102-44c5-bc63-1852d397972b\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"f9b7bd1d-5721-4534-9111-41180c0eba24\",\"parts\":[{\"kind\":\"text\",\"text\":\"I
+        currently do not have access to real-time updates or current news. However,
+        I can provide a general overview of common AI agent communication protocols
+        such as the Object Management Group's Data Distribution Service (DDS), the
+        Robot Operating System (ROS) for robotic communication, and the use of WebSocket
+        for real-time web communication. For the latest developments, I recommend
+        checking recent academic papers or technology news sites.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"57d00fbe-f3c3-4bae-8647-5de5e04a58f5\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:55:26 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Ask the remote A2A agent about recent developments in AI agent communication
+      protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1396'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jG6HmivomyX7R9JcTtOLOo4NHrF\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781330,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        are the recent developments in AI agent communication protocols?\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        277,\n    \"completion_tokens\": 48,\n    \"total_tokens\": 325,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:55:31 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '817'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"eb2906ff-0370-4b05-90de-4b4cfe6a1400","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"7182ae50-0bb8-47b1-bf74-eb3519718ca7","parts":[{"kind":"text","text":"What
+      are the recent developments in AI agent communication protocols?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '396'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"eb2906ff-0370-4b05-90de-4b4cfe6a1400\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"b320db14-b2c7-498c-8e68-16709143ea4c\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"fc283837-7fa1-468c-87e8-f39fddb1a167\"}}\r\n\r\ndata:
+        {\"id\":\"eb2906ff-0370-4b05-90de-4b4cfe6a1400\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"b320db14-b2c7-498c-8e68-16709143ea4c\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"fc283837-7fa1-468c-87e8-f39fddb1a167\"}}\r\n\r\ndata:
+        {\"id\":\"eb2906ff-0370-4b05-90de-4b4cfe6a1400\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"b320db14-b2c7-498c-8e68-16709143ea4c\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"ff2dff60-b048-47a9-99a5-3af0e087a9ee\",\"parts\":[{\"kind\":\"text\",\"text\":\"Recent
+        developments in AI agent communication protocols focus on enhancing interoperability,
+        efficiency, and security between different AI systems. Key advancements include:\\n\\n1.
+        **Adoption of Standardized Protocols**: Standard protocols such as Robot Operating
+        System (ROS) and OpenAI's API are gaining traction, facilitating easier communication
+        between diverse AI technologies.\\n\\n2. **Multi-Agent Systems**: Research
+        into multi-agent systems has led to better methods for agents to coordinate
+        and communicate, emphasizing negotiation and collaboration techniques.\\n\\n3.
+        **Natural Language Understanding**: Improvements in NLP have enhanced how
+        agents interpret and respond to human language, allowing for more seamless
+        user interactions.\\n\\n4. **Decentralized Communication**: There's a shift
+        toward decentralized communication frameworks, improving privacy and reducing
+        single points of failure in data exchange.\\n\\n5. **Reinforcement Learning
+        in Communication**: Using reinforcement learning to improve communication
+        strategies among agents has shown promise in optimizing dialogue and cooperation.\\n\\n6.
+        **Security Protocols**: As AI becomes more integrated into critical systems,
+        security protocols are being developed to protect communication from adversarial
+        attacks.\\n\\nThese developments aim to create more robust, flexible, and
+        secure frameworks for AI agents to communicate effectively across various
+        domains.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"fc283837-7fa1-468c-87e8-f39fddb1a167\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 13:55:31 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Ask the remote A2A agent about recent developments in AI agent communication
+      protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1396'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3jGHBwSnZnxZ5D49brfxnLkpmXve\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769781341,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        you provide information on recent developments in AI agent communication protocols,
+        including any new standards, technologies, or significant research findings?\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        277,\n    \"completion_tokens\": 62,\n    \"total_tokens\": 339,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_38699cb0fe\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 13:55:42 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1069'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
