@@ -13,7 +13,7 @@ interactions:
       host:
       - 0.0.0.0:9999
     method: GET
-    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+    uri: http://localhost:9999/.well-known/agent-card.json
   response:
     body:
       string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
@@ -46,7 +46,7 @@ interactions:
       researcher with access to remote agents\nYour personal goal is: Find and analyze
       information"},{"role":"user","content":"\nCurrent Task: Ask the A2A agent to
       calculate 100 divided by 4.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -99,7 +99,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jE6wnR5kKEYmPD3DVfGlrZSNhR9\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781206,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
         100 divided by 4.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 272,\n    \"completion_tokens\":
@@ -174,7 +174,7 @@ interactions:
       host:
       - 0.0.0.0:9999
     method: GET
-    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+    uri: http://localhost:9999/.well-known/agent-card.json
   response:
     body:
       string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
@@ -253,7 +253,7 @@ interactions:
       researcher with access to remote agents\nYour personal goal is: Find and analyze
       information"},{"role":"user","content":"\nCurrent Task: Ask the A2A agent to
       calculate 100 divided by 4.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -308,7 +308,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jEBY3yIu050RsylIGHOW0FKUT5f\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781211,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
         calculate 100 divided by 4.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
@@ -418,7 +418,7 @@ interactions:
       researcher with access to remote agents\nYour personal goal is: Find and analyze
       information"},{"role":"user","content":"\nCurrent Task: Ask the A2A agent to
       calculate 100 divided by 4.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -473,7 +473,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jEGe4xGriXMhFwcKlE1yKn8hyn8\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781216,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
         100 divided by 4.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 272,\n    \"completion_tokens\":
@@ -583,7 +583,7 @@ interactions:
       researcher with access to remote agents\nYour personal goal is: Find and analyze
       information"},{"role":"user","content":"\nCurrent Task: Ask the A2A agent to
       calculate 100 divided by 4.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -638,7 +638,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jELCM5f5LgexzQ8gSreUb0jzxJP\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781221,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
         100 divided by 4.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 272,\n    \"completion_tokens\":

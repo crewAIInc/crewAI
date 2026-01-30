@@ -5,7 +5,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent to calculate 25 times 17.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -58,7 +58,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jGIOXOwe0YLDVF1ujzfsgGppMVm\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781342,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
         calculate 25 times 17.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\":
@@ -171,7 +171,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent to calculate 25 times 17.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -226,7 +226,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jGM6WIUihSLf4KEk8GTvkBYTyNi\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781346,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
         calculate 25 times 17.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\":
@@ -337,7 +337,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent to calculate 25 times 17.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -392,7 +392,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jGPQ7X1NUeVqaU3zlnCrv7h6onm\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781349,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
         25 times 17.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\":
@@ -503,7 +503,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent to calculate 25 times 17.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -558,7 +558,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jGTHg6KlCWi3Yoe2y0EspPpjxUP\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781353,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Calculate
         25 times 17.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 276,\n    \"completion_tokens\":

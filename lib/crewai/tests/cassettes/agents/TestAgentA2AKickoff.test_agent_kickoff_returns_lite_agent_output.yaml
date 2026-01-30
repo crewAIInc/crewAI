@@ -5,7 +5,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -58,7 +58,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jFa8FqrqBRD2BDlcIBJL6QvuXlH\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781298,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 275,\n    \"completion_tokens\":
@@ -172,7 +172,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -227,7 +227,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jFe4nAbTUPDOE0verjfIon6eo17\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781302,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 275,\n    \"completion_tokens\":
@@ -339,7 +339,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -394,7 +394,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jFhRE3kx4KNk5YNp1ZjUyp80kUS\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781305,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 275,\n    \"completion_tokens\":
@@ -506,7 +506,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
       response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -561,7 +561,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jFlnndBlZMpiwI6tmZFcsIcsKxQ\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781309,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
         \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 275,\n    \"completion_tokens\":

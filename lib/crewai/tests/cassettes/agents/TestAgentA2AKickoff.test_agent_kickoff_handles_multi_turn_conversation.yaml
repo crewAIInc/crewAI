@@ -13,7 +13,7 @@ interactions:
       host:
       - 0.0.0.0:9999
     method: GET
-    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+    uri: http://localhost:9999/.well-known/agent-card.json
   response:
     body:
       string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
@@ -47,7 +47,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent about recent developments in AI agent communication
       protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -100,7 +100,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jFn4QZwtfVYz3isJYJdfNrQPtlS\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781311,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
         you please provide information on the most recent developments in AI agent
         communication protocols? I am particularly interested in new standards, methods,
         or technologies that enhance communication efficiency, security, and interoperability
@@ -242,7 +242,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent about recent developments in AI agent communication
       protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -297,7 +297,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jG1CL2z8aMHaZgM3KCwDXsNnTvD\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781325,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
         you provide information about the latest developments in AI agent communication
         protocols?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
@@ -415,7 +415,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent about recent developments in AI agent communication
       protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -470,7 +470,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jG6HmivomyX7R9JcTtOLOo4NHrF\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781330,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
         are the recent developments in AI agent communication protocols?\\\",\\\"is_a2a\\\":true}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
@@ -599,7 +599,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Ask the remote A2A agent about recent developments in AI agent communication
       protocols.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -654,7 +654,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jGHBwSnZnxZ5D49brfxnLkpmXve\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781341,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
         you provide information on recent developments in AI agent communication protocols,
         including any new standards, technologies, or significant research findings?\\\",\\\"is_a2a\\\":true}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":

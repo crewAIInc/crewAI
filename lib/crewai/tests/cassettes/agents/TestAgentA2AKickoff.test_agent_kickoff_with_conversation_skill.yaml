@@ -13,7 +13,7 @@ interactions:
       host:
       - 0.0.0.0:9999
     method: GET
-    uri: http://0.0.0.0:9999/.well-known/agent-card.json
+    uri: http://localhost:9999/.well-known/agent-card.json
   response:
     body:
       string: '{"capabilities":{"pushNotifications":true,"streaming":true},"defaultInputModes":["text/plain","application/json"],"defaultOutputModes":["text/plain","application/json"],"description":"An
@@ -47,7 +47,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Delegate to the remote A2A agent to explain quantum computing in simple
       terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -100,7 +100,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jEZCk72BTnPd76lgJx3flraf53g\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781235,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Can
         you please explain quantum computing in simple terms?\\\",\\\"is_a2a\\\":true}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
@@ -228,7 +228,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Delegate to the remote A2A agent to explain quantum computing in simple
       terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -283,7 +283,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jEjMZDxvGCpJTZptzz1lAV5Ruhh\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781245,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
         explain quantum computing in simple terms that are easy for anyone to understand.\\\",\\\"is_a2a\\\":true}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
@@ -412,7 +412,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Delegate to the remote A2A agent to explain quantum computing in simple
       terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -467,7 +467,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jEwtEsNqmLAA86mD8iOEKiIxri4\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781258,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
         explain quantum computing in simple terms suitable for someone with no technical
         background.\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
@@ -596,7 +596,7 @@ interactions:
       Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
       Task: Delegate to the remote A2A agent to explain quantum computing in simple
       terms.\n\nProvide your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
-      agent IDs to delegate to.","items":{"const":"http://0.0.0.0:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
       Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
       this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
       the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
@@ -651,7 +651,7 @@ interactions:
       string: "{\n  \"id\": \"chatcmpl-D3jF9KeiOZVzcBBNIQnjKnpJzAQ4z\",\n  \"object\":
         \"chat.completion\",\n  \"created\": 1769781271,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://0.0.0.0:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Could
         you please explain quantum computing in simple terms suitable for a beginner?\\\",\\\"is_a2a\\\":true}\",\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
