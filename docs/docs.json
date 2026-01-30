@@ -370,7 +370,8 @@
                 "pages": [
                   "en/enterprise/features/traces",
                   "en/enterprise/features/webhook-streaming",
-                  "en/enterprise/features/hallucination-guardrail"
+                  "en/enterprise/features/hallucination-guardrail",
+                  "en/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -823,7 +824,8 @@
                 "pages": [
                   "pt-BR/enterprise/features/traces",
                   "pt-BR/enterprise/features/webhook-streaming",
-                  "pt-BR/enterprise/features/hallucination-guardrail"
+                  "pt-BR/enterprise/features/hallucination-guardrail",
+                  "pt-BR/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -1287,7 +1289,8 @@
                 "pages": [
                   "ko/enterprise/features/traces",
                   "ko/enterprise/features/webhook-streaming",
-                  "ko/enterprise/features/hallucination-guardrail"
+                  "ko/enterprise/features/hallucination-guardrail",
+                  "ko/enterprise/features/flow-hitl-management"
                 ]
               },
               {
