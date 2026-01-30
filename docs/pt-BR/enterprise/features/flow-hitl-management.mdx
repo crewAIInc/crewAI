@@ -1,0 +1,563 @@
+---
+title: "Gerenciamento HITL para Flows"
+description: "Revisão humana de nível empresarial para Flows com notificações por email, regras de roteamento e capacidades de resposta automática"
+icon: "users-gear"
+mode: "wide"
+---
+
+<Note>
+Os recursos de gerenciamento HITL para Flows requerem o decorador `@human_feedback`, disponível no **CrewAI versão 1.8.0 ou superior**. Estes recursos aplicam-se especificamente a **Flows**, não a Crews.
+</Note>
+
+O CrewAI Enterprise oferece um sistema abrangente de gerenciamento Human-in-the-Loop (HITL) para Flows que transforma fluxos de trabalho de IA em processos colaborativos humano-IA. A plataforma usa uma **arquitetura email-first** que permite que qualquer pessoa com um endereço de email responda a solicitações de revisão—sem necessidade de conta na plataforma.
+
+## Visão Geral
+
+<CardGroup cols={3}>
+  <Card title="Design Email-First" icon="envelope">
+    Respondentes podem responder diretamente aos emails de notificação para fornecer feedback
+  </Card>
+  <Card title="Roteamento Flexível" icon="route">
+    Direcione solicitações para emails específicos com base em padrões de método ou estado do flow
+  </Card>
+  <Card title="Resposta Automática" icon="clock">
+    Configure respostas automáticas de fallback quando nenhum humano responder a tempo
+  </Card>
+</CardGroup>
+
+### Principais Benefícios
+
+- **Modelo mental simples**: Endereços de email são universais; não é necessário gerenciar usuários ou funções da plataforma
+- **Respondentes externos**: Qualquer pessoa com email pode responder, mesmo não sendo usuário da plataforma
+- **Atribuição dinâmica**: Obtenha o email do responsável diretamente do estado do flow (ex: `sales_rep_email`)
+- **Configuração reduzida**: Menos configurações para definir, tempo mais rápido para gerar valor
+- **Email como canal principal**: A maioria dos usuários prefere responder via email do que fazer login em um dashboard
+
+## Configurando Pontos de Revisão Humana em Flows
+
+Configure checkpoints de revisão humana em seus Flows usando o decorador `@human_feedback`. Quando a execução atinge um ponto de revisão, o sistema pausa, notifica o responsável via email e aguarda uma resposta.
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
+
+class ContentApprovalFlow(Flow):
+    @start()
+    def generate_content(self):
+        # IA gera conteúdo
+        return "Texto de marketing gerado para campanha Q1..."
+
+    @listen(generate_content)
+    @human_feedback(
+        message="Por favor, revise este conteúdo para conformidade com a marca:",
+        emit=["approved", "rejected", "needs_revision"],
+    )
+    def review_content(self, content):
+        return content
+
+    @listen("approved")
+    def publish_content(self, result: HumanFeedbackResult):
+        print(f"Publicando conteúdo aprovado. Notas do revisor: {result.feedback}")
+
+    @listen("rejected")
+    def archive_content(self, result: HumanFeedbackResult):
+        print(f"Conteúdo rejeitado. Motivo: {result.feedback}")
+
+    @listen("needs_revision")
+    def revise_content(self, result: HumanFeedbackResult):
+        print(f"Revisão solicitada: {result.feedback}")
+```
+
+Para detalhes completos de implementação, consulte o guia [Feedback Humano em Flows](/pt-BR/learn/human-feedback-in-flows).
+
+### Parâmetros do Decorador
+
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `message` | `str` | A mensagem exibida para o revisor humano |
+| `emit` | `list[str]` | Opções de resposta válidas (exibidas como botões na UI) |
+
+## Configuração da Plataforma
+
+Acesse a configuração HITL em: **Deployment** → **Settings** → **Human in the Loop Configuration**
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-overview.png" alt="Configurações HITL" />
+</Frame>
+
+### Notificações por Email
+
+Toggle para ativar ou desativar notificações por email para solicitações HITL.
+
+| Configuração | Padrão | Descrição |
+|--------------|--------|-----------|
+| Notificações por Email | Ativado | Enviar emails quando feedback for solicitado |
+
+<Note>
+Quando desativado, os respondentes devem usar a UI do dashboard ou você deve configurar webhooks para sistemas de notificação personalizados.
+</Note>
+
+### Meta de SLA
+
+Defina um tempo de resposta alvo para fins de rastreamento e métricas.
+
+| Configuração | Descrição |
+|--------------|-----------|
+| Meta de SLA (minutos) | Tempo de resposta alvo. Usado para métricas do dashboard e rastreamento de SLA |
+
+Deixe vazio para desativar o rastreamento de SLA.
+
+## Notificações e Respostas por Email
+
+O sistema HITL usa uma arquitetura email-first onde os respondentes podem responder diretamente aos emails de notificação.
+
+### Como Funcionam as Respostas por Email
+
+<Steps>
+  <Step title="Notificação Enviada">
+    Quando uma solicitação HITL é criada, um email é enviado ao respondente atribuído com o conteúdo e contexto da revisão.
+  </Step>
+  <Step title="Endereço Reply-To">
+    O email inclui um endereço reply-to especial com um token assinado para autenticação.
+  </Step>
+  <Step title="Usuário Responde">
+    O respondente simplesmente responde ao email com seu feedback—nenhum login necessário.
+  </Step>
+  <Step title="Validação do Token">
+    A plataforma recebe a resposta, verifica o token assinado e corresponde o email do remetente.
+  </Step>
+  <Step title="Flow Continua">
+    O feedback é registrado e o flow continua com a entrada humana.
+  </Step>
+</Steps>
+
+### Formato de Resposta
+
+Respondentes podem responder com:
+
+- **Opção emit**: Se a resposta corresponder a uma opção `emit` (ex: "approved"), ela é usada diretamente
+- **Texto livre**: Qualquer resposta de texto é passada para o flow como feedback
+- **Texto simples**: A primeira linha do corpo da resposta é usada como feedback
+
+### Emails de Confirmação
+
+Após processar uma resposta, o respondente recebe um email de confirmação indicando se o feedback foi enviado com sucesso ou se ocorreu um erro.
+
+### Segurança do Token de Email
+
+- Tokens são assinados criptograficamente para segurança
+- Tokens expiram após 7 dias
+- Email do remetente deve corresponder ao email autorizado do token
+- Emails de confirmação/erro são enviados após o processamento
+
+## Regras de Roteamento
+
+Direcione solicitações HITL para endereços de email específicos com base em padrões de método.
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-routing-rules.png" alt="Configuração de Regras de Roteamento HITL" />
+</Frame>
+
+### Estrutura da Regra
+
+```json
+{
+  "name": "Aprovações para Financeiro",
+  "match": {
+    "method_name": "approve_*"
+  },
+  "assign_to_email": "financeiro@empresa.com",
+  "assign_from_input": "manager_email"
+}
+```
+
+### Padrões de Correspondência
+
+| Padrão | Descrição | Exemplo de Correspondência |
+|--------|-----------|---------------------------|
+| `approve_*` | Wildcard (qualquer caractere) | `approve_payment`, `approve_vendor` |
+| `review_?` | Caractere único | `review_a`, `review_1` |
+| `validate_payment` | Correspondência exata | apenas `validate_payment` |
+
+### Prioridade de Atribuição
+
+1. **Atribuição dinâmica** (`assign_from_input`): Se configurado, obtém email do estado do flow
+2. **Email estático** (`assign_to_email`): Fallback para email configurado
+3. **Criador do deployment**: Se nenhuma regra corresponder, o email do criador do deployment é usado
+
+### Exemplo de Atribuição Dinâmica
+
+Se seu estado do flow contém `{"sales_rep_email": "alice@empresa.com"}`, configure:
+
+```json
+{
+  "name": "Direcionar para Representante de Vendas",
+  "match": {
+    "method_name": "review_*"
+  },
+  "assign_from_input": "sales_rep_email"
+}
+```
+
+A solicitação será atribuída automaticamente para `alice@empresa.com`.
+
+<Tip>
+**Caso de Uso**: Obtenha o responsável do seu CRM, banco de dados ou etapa anterior do flow para direcionar revisões dinamicamente para a pessoa certa.
+</Tip>
+
+## Resposta Automática
+
+Responda automaticamente a solicitações HITL se nenhum humano responder dentro do timeout. Isso garante que os flows não fiquem travados indefinidamente.
+
+### Configuração
+
+| Configuração | Descrição |
+|--------------|-----------|
+| Ativado | Toggle para ativar resposta automática |
+| Timeout (minutos) | Tempo de espera antes de responder automaticamente |
+| Resultado Padrão | O valor da resposta (deve corresponder a uma opção `emit`) |
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-auto-respond.png" alt="Configuração de Resposta Automática HITL" />
+</Frame>
+
+### Casos de Uso
+
+- **Conformidade com SLA**: Garante que flows não fiquem travados indefinidamente
+- **Aprovação padrão**: Aprove automaticamente solicitações de baixo risco após timeout
+- **Degradação graciosa**: Continue com um padrão seguro quando revisores não estiverem disponíveis
+
+<Warning>
+Use resposta automática com cuidado. Ative apenas para revisões não críticas onde uma resposta padrão é aceitável.
+</Warning>
+
+## Processo de Revisão
+
+### Interface do Dashboard
+
+A interface de revisão HITL oferece uma experiência limpa e focada para revisores:
+
+- **Renderização Markdown**: Formatação rica para conteúdo de revisão com destaque de sintaxe
+- **Painel de Contexto**: Visualize estado do flow, histórico de execução e informações relacionadas
+- **Entrada de Feedback**: Forneça feedback detalhado e comentários com sua decisão
+- **Ações Rápidas**: Botões de opção emit com um clique com comentários opcionais
+
+<Frame>
+  <img src="/images/enterprise/hitl-list-pending-feedbacks.png" alt="Lista de Solicitações HITL Pendentes" />
+</Frame>
+
+### Métodos de Resposta
+
+Revisores podem responder por três canais:
+
+| Método | Descrição |
+|--------|-----------|
+| **Resposta por Email** | Responda diretamente ao email de notificação |
+| **Dashboard** | Use a UI do dashboard Enterprise |
+| **API/Webhook** | Resposta programática via API |
+
+### Histórico e Trilha de Auditoria
+
+Toda interação HITL é rastreada com uma linha do tempo completa:
+
+- Histórico de decisões (aprovar/rejeitar/revisar)
+- Identidade do revisor e timestamp
+- Feedback e comentários fornecidos
+- Método de resposta (email/dashboard/API)
+- Métricas de tempo de resposta
+
+## Análise e Monitoramento
+
+Acompanhe o desempenho HITL com análises abrangentes.
+
+### Dashboard de Desempenho
+
+<Frame>
+  <img src="/images/enterprise/hitl-metrics.png" alt="Dashboard de Métricas HITL" />
+</Frame>
+
+<CardGroup cols={2}>
+  <Card title="Tempos de Resposta" icon="stopwatch">
+    Monitore tempos de resposta médios e medianos por revisor ou flow.
+  </Card>
+  <Card title="Tendências de Volume" icon="chart-bar">
+    Analise padrões de volume de revisão para otimizar capacidade da equipe.
+  </Card>
+  <Card title="Distribuição de Decisões" icon="chart-pie">
+    Visualize taxas de aprovação/rejeição em diferentes tipos de revisão.
+  </Card>
+  <Card title="Rastreamento de SLA" icon="chart-line">
+    Acompanhe a porcentagem de revisões concluídas dentro das metas de SLA.
+  </Card>
+</CardGroup>
+
+### Auditoria e Conformidade
+
+Capacidades de auditoria prontas para empresas para requisitos regulatórios:
+
+- Histórico completo de decisões com timestamps
+- Verificação de identidade do revisor
+- Logs de auditoria imutáveis
+- Capacidades de exportação para relatórios de conformidade
+
+## Casos de Uso Comuns
+
+<AccordionGroup>
+  <Accordion title="Revisões de Segurança" icon="shield-halved">
+    **Caso de Uso**: Automação de questionários de segurança internos com validação humana
+
+    - IA gera respostas para questionários de segurança
+    - Equipe de segurança revisa e valida precisão via email
+    - Respostas aprovadas são compiladas na submissão final
+    - Trilha de auditoria completa para conformidade
+  </Accordion>
+
+  <Accordion title="Aprovação de Conteúdo" icon="file-lines">
+    **Caso de Uso**: Conteúdo de marketing que requer revisão legal/marca
+
+    - IA gera texto de marketing ou conteúdo de mídia social
+    - Roteie para email da equipe de marca para revisão de voz/tom
+    - Publicação automática após aprovação
+  </Accordion>
+
+  <Accordion title="Aprovações Financeiras" icon="money-bill">
+    **Caso de Uso**: Relatórios de despesas, termos de contrato, alocações de orçamento
+
+    - IA pré-processa e categoriza solicitações financeiras
+    - Roteie com base em limites de valor usando atribuição dinâmica
+    - Mantenha trilha de auditoria completa para conformidade financeira
+  </Accordion>
+
+  <Accordion title="Atribuição Dinâmica do CRM" icon="database">
+    **Caso de Uso**: Direcione revisões para proprietários de conta do seu CRM
+
+    - Flow obtém email do proprietário da conta do CRM
+    - Armazene email no estado do flow (ex: `account_owner_email`)
+    - Use `assign_from_input` para direcionar automaticamente para a pessoa certa
+  </Accordion>
+
+  <Accordion title="Garantia de Qualidade" icon="magnifying-glass">
+    **Caso de Uso**: Validação de saída de IA antes da entrega ao cliente
+
+    - IA gera conteúdo ou respostas voltadas ao cliente
+    - Equipe de QA revisa via notificação por email
+    - Loops de feedback melhoram desempenho da IA ao longo do tempo
+  </Accordion>
+</AccordionGroup>
+
+## API de Webhooks
+
+Quando seus Flows pausam para feedback humano, você pode configurar webhooks para enviar dados da solicitação para sua própria aplicação. Isso permite:
+
+- Construir UIs de aprovação personalizadas
+- Integrar com ferramentas internas (Jira, ServiceNow, dashboards personalizados)
+- Rotear aprovações para sistemas de terceiros
+- Notificações em apps mobile
+- Sistemas de decisão automatizados
+
+<Frame>
+  <img src="/images/enterprise/hitl-settings-webhook.png" alt="Configuração de Webhook HITL" />
+</Frame>
+
+### Configurando Webhooks
+
+<Steps>
+  <Step title="Navegue até Configurações">
+    Vá para **Deployment** → **Settings** → **Human in the Loop**
+  </Step>
+  <Step title="Expanda a Seção Webhooks">
+    Clique para expandir a configuração de **Webhooks**
+  </Step>
+  <Step title="Adicione sua URL de Webhook">
+    Digite sua URL de webhook (deve ser HTTPS em produção)
+  </Step>
+  <Step title="Salve a Configuração">
+    Clique em **Salvar Configuração** para ativar
+  </Step>
+</Steps>
+
+Você pode configurar múltiplos webhooks. Cada webhook ativo recebe todos os eventos HITL.
+
+### Eventos de Webhook
+
+Seu endpoint receberá requisições HTTP POST para estes eventos:
+
+| Tipo de Evento | Quando é Disparado |
+|----------------|-------------------|
+| `new_request` | Um flow pausa e solicita feedback humano |
+
+### Payload do Webhook
+
+Todos os webhooks recebem um payload JSON com esta estrutura:
+
+```json
+{
+  "event": "new_request",
+  "request": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "flow_id": "flow_abc123",
+    "method_name": "review_article",
+    "message": "Por favor, revise este artigo para publicação.",
+    "emit_options": ["approved", "rejected", "request_changes"],
+    "state": {
+      "article_id": 12345,
+      "author": "john@example.com",
+      "category": "technology"
+    },
+    "metadata": {},
+    "created_at": "2026-01-14T12:00:00Z"
+  },
+  "deployment": {
+    "id": 456,
+    "name": "Content Review Flow",
+    "organization_id": 789
+  },
+  "callback_url": "https://api.crewai.com/...",
+  "assigned_to_email": "reviewer@company.com"
+}
+```
+
+### Respondendo a Solicitações
+
+Para enviar feedback, **faça POST para a `callback_url`** incluída no payload do webhook.
+
+```http
+POST {callback_url}
+Content-Type: application/json
+
+{
+  "feedback": "Aprovado. Ótimo artigo!",
+  "source": "my_custom_app"
+}
+```
+
+### Segurança
+
+<Info>
+Todas as requisições de webhook são assinadas criptograficamente usando HMAC-SHA256 para garantir autenticidade e prevenir adulteração.
+</Info>
+
+#### Segurança do Webhook
+
+- **Assinaturas HMAC-SHA256**: Todo webhook inclui uma assinatura criptográfica
+- **Secrets por webhook**: Cada webhook tem seu próprio secret de assinatura único
+- **Criptografado em repouso**: Os secrets de assinatura são criptografados no nosso banco de dados
+- **Verificação de timestamp**: Previne ataques de replay
+
+#### Headers de Assinatura
+
+Cada requisição de webhook inclui estes headers:
+
+| Header | Descrição |
+|--------|-----------|
+| `X-Signature` | Assinatura HMAC-SHA256: `sha256=<hex_digest>` |
+| `X-Timestamp` | Timestamp Unix de quando a requisição foi assinada |
+
+#### Verificação
+
+Verifique computando:
+
+```python
+import hmac
+import hashlib
+
+expected = hmac.new(
+    signing_secret.encode(),
+    f"{timestamp}.{payload}".encode(),
+    hashlib.sha256
+).hexdigest()
+
+if hmac.compare_digest(expected, signature):
+    # Assinatura válida
+```
+
+### Tratamento de Erros
+
+Seu endpoint de webhook deve retornar um código de status 2xx para confirmar o recebimento:
+
+| Sua Resposta | Nosso Comportamento |
+|--------------|---------------------|
+| 2xx | Webhook entregue com sucesso |
+| 4xx/5xx | Registrado como falha, sem retry |
+| Timeout (30s) | Registrado como falha, sem retry |
+
+## Segurança e RBAC
+
+### Acesso ao Dashboard
+
+O acesso HITL é controlado no nível do deployment:
+
+| Permissão | Capacidade |
+|-----------|------------|
+| `manage_human_feedback` | Configurar settings HITL, ver todas as solicitações |
+| `respond_to_human_feedback` | Responder a solicitações, ver solicitações atribuídas |
+
+### Autorização de Resposta por Email
+
+Para respostas por email:
+1. O token reply-to codifica o email autorizado
+2. Email do remetente deve corresponder ao email do token
+3. Token não deve estar expirado (padrão 7 dias)
+4. Solicitação ainda deve estar pendente
+
+### Trilha de Auditoria
+
+Todas as ações HITL são registradas:
+- Criação de solicitação
+- Mudanças de atribuição
+- Submissão de resposta (com fonte: dashboard/email/API)
+- Status de retomada do flow
+
+## Solução de Problemas
+
+### Emails Não Enviando
+
+1. Verifique se "Notificações por Email" está ativado na configuração
+2. Verifique se as regras de roteamento correspondem ao nome do método
+3. Verifique se o email do responsável é válido
+4. Verifique o fallback do criador do deployment se nenhuma regra de roteamento corresponder
+
+### Respostas de Email Não Processando
+
+1. Verifique se o token não expirou (padrão 7 dias)
+2. Verifique se o email do remetente corresponde ao email atribuído
+3. Garanta que a solicitação ainda está pendente (não respondida ainda)
+
+### Flow Não Retomando
+
+1. Verifique o status da solicitação no dashboard
+2. Verifique se a URL de callback está acessível
+3. Garanta que o deployment ainda está rodando
+
+## Melhores Práticas
+
+<Tip>
+**Comece Simples**: Comece com notificações por email para o criador do deployment, depois adicione regras de roteamento conforme seus fluxos de trabalho amadurecem.
+</Tip>
+
+1. **Use Atribuição Dinâmica**: Obtenha emails de responsáveis do seu estado do flow para roteamento flexível.
+
+2. **Configure Resposta Automática**: Defina um fallback para revisões não críticas para evitar que flows fiquem travados.
+
+3. **Monitore Tempos de Resposta**: Use análises para identificar gargalos e otimizar seu processo de revisão.
+
+4. **Mantenha Mensagens de Revisão Claras**: Escreva mensagens claras e acionáveis no decorador `@human_feedback`.
+
+5. **Teste o Fluxo de Email**: Envie solicitações de teste para verificar a entrega de email antes de ir para produção.
+
+## Recursos Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Feedback Humano em Flows" icon="code" href="/pt-BR/learn/human-feedback-in-flows">
+    Guia de implementação para o decorador `@human_feedback`
+  </Card>
+  <Card title="Guia de Workflow HITL para Flows" icon="route" href="/pt-BR/enterprise/guides/human-in-the-loop">
+    Guia passo a passo para configurar workflows HITL
+  </Card>
+  <Card title="Configuração RBAC" icon="shield-check" href="/pt-BR/enterprise/features/rbac">
+    Configure controle de acesso baseado em função para sua organização
+  </Card>
+  <Card title="Streaming de Webhook" icon="bolt" href="/pt-BR/enterprise/features/webhook-streaming">
+    Configure notificações de eventos em tempo real
+  </Card>
+</CardGroup>
