@@ -1,0 +1,183 @@
+---
+title: SigNoz Integration
+description:  Observability and monitoring for Crew AI performance and usage with OpenTelemetry instrumentation to send traces, logs, and metrics to SigNoz
+icon: chart-line
+mode: "wide"
+---
+
+## Overview
+
+This guide walks you through setting up observability and monitoring for Crew AI using [OpenTelemetry](https://opentelemetry.io/) and exporting logs, traces, and metrics to SigNoz. With this integration, you can observe agent, model, tool performance, and track system-level metrics in SigNoz, giving you real-time visibility into latency, error rates, and usage trends for your Crew AI applications.
+
+Instrumenting Crew AI in your LLM applications with telemetry ensures full observability across your AI workflows, making it easier to debug issues, optimize performance, and understand user interactions. By leveraging SigNoz, you can analyze correlated traces, logs, and metrics in unified dashboards, configure alerts, and gain actionable insights to continuously improve reliability, responsiveness, and user experience.
+
+## Prerequisites
+
+- SigNoz setup (choose one):
+  - [SigNoz Cloud account](https://signoz.io/teams/) with an active ingestion key
+  - Self-hosted SigNoz instance
+- Internet access to send telemetry data to SigNoz Cloud
+- Crew AI integrated into your app
+- Basic understanding of AI Agents and tool calling workflow
+- For Python: `pip` installed for managing Python packages and _(optional but recommended)_ a Python virtual environment to isolate dependencies
+
+## Monitoring Crew AI
+
+No-code auto-instrumentation is recommended for quick setup with minimal code changes. It's ideal when you want to get observability up and running without modifying your application code and are leveraging standard instrumentor libraries.
+
+**Step 1:** Install the necessary packages in your Python environment.
+
+```bash
+pip install \
+  opentelemetry-distro \
+  opentelemetry-exporter-otlp \
+  opentelemetry-instrumentation-httpx \
+  opentelemetry-instrumentation-system-metrics \
+  openinference-instrumentation-crewai \
+  crewai \
+  crewai-tools
+```
+
+**Step 2:** Add Automatic Instrumentation
+
+```bash
+opentelemetry-bootstrap --action=install
+```
+
+**Step 3:** Configure logging level
+
+To ensure logs are properly captured and exported, configure the root logger to emit logs at the INFO level or higher:
+
+```python
+import logging
+logging.getLogger().setLevel(logging.INFO)
+```
+
+This sets the minimum log level for the root logger to INFO, which ensures that `logger.info()` calls and higher severity logs (WARNING, ERROR, CRITICAL) are captured by the OpenTelemetry logging auto-instrumentation and sent to SigNoz.
+
+**Step 4:** Run an example
+
+```python
+import os
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool
+
+search_tool = SerperDevTool()
+
+# Define your agents with roles and goals
+researcher = Agent(
+  role='Senior Research Analyst',
+  goal='Uncover cutting-edge developments in AI and data science',
+  backstory="""You work at a leading tech think tank.
+  Your expertise lies in identifying emerging trends.
+  You have a knack for dissecting complex data and presenting actionable insights.""",
+  verbose=True,
+  allow_delegation=False,
+  # You can pass an optional llm attribute specifying what model you wanna use.
+  # llm=ChatOpenAI(model_name="gpt-3.5", temperature=0.7),
+  tools=[search_tool]
+)
+writer = Agent(
+  role='Tech Content Strategist',
+  goal='Craft compelling content on tech advancements',
+  backstory="""You are a renowned Content Strategist, known for your insightful and engaging articles.
+  You transform complex concepts into compelling narratives.""",
+  verbose=True,
+  allow_delegation=True
+)
+
+# Create tasks for your agents
+task1 = Task(
+  description="""Conduct a comprehensive analysis of the latest advancements in AI in 2024.
+  Identify key trends, breakthrough technologies, and potential industry impacts.""",
+  expected_output="Full analysis report in bullet points",
+  agent=researcher
+)
+
+task2 = Task(
+  description="""Using the insights provided, develop an engaging blog
+  post that highlights the most significant AI advancements.
+  Your post should be informative yet accessible, catering to a tech-savvy audience.
+  Make it sound cool, avoid complex words so it doesn't sound like AI.""",
+  expected_output="Full blog post of at least 4 paragraphs",
+  agent=writer
+)
+
+# Instantiate your crew with a sequential process
+crew = Crew(
+  agents=[researcher, writer],
+  tasks=[task1, task2],
+  verbose=True,
+  process=Process.sequential
+)
+
+# Get your crew to work!
+result = crew.kickoff()
+
+print("######################")
+print(result)
+```
+
+> 📌 Note: Before running this code, ensure that the API key of the specific LLM you are choosing is set as an env variable. In this example, since OpenAI is being used, set `OPENAI_API_KEY` with your working API key. Additionally, for this specific example, you need to create a [Serper account](https://serper.dev/), generate an API key, and set it as the environment variable `SERPER_API_KEY`.
+
+**Step 5:** Run your application with auto-instrumentation
+
+```bash
+OTEL_RESOURCE_ATTRIBUTES="service.name=<service_name>" \
+OTEL_EXPORTER_OTLP_ENDPOINT="https://ingest.<region>.signoz.cloud:443" \
+OTEL_EXPORTER_OTLP_HEADERS="signoz-ingestion-key=<your_ingestion_key>" \
+OTEL_EXPORTER_OTLP_PROTOCOL=grpc \
+OTEL_TRACES_EXPORTER=otlp \
+OTEL_METRICS_EXPORTER=otlp \
+OTEL_LOGS_EXPORTER=otlp \
+OTEL_PYTHON_LOG_CORRELATION=true \
+OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true \
+opentelemetry-instrument <your_run_command>
+```
+
+- **`<service_name>`** is the name of your service
+- Set the `<region>` to match your SigNoz Cloud [region](https://signoz.io/docs/ingestion/signoz-cloud/overview/#endpoint)
+- Replace `<your_ingestion_key>` with your SigNoz [ingestion key](https://signoz.io/docs/ingestion/signoz-cloud/keys/)
+- Replace `<your_run_command>` with the actual command you would use to run your application. For example: `python main.py`
+
+> 📌 Note: Using self-hosted SigNoz? Most steps are identical. To adapt this guide, update the endpoint and remove the ingestion key header as shown in [Cloud → Self-Hosted](https://signoz.io/docs/ingestion/cloud-vs-self-hosted/#cloud-to-self-hosted).
+
+## View Traces, Logs, and Metrics in SigNoz
+
+Your Crew AI commands should now automatically emit traces, logs, and metrics.
+
+You should be able to view traces in Signoz Cloud under the traces tab:
+
+![CrewAI Trace View](https://signoz.io/img/docs/llm/crewai/crew-traces.webp)
+
+
+When you click on a trace in SigNoz, you'll see a detailed view of the trace, including all associated spans, along with their events and attributes.
+
+![Crew AI Detailed Trace View](https://signoz.io/img/docs/llm/crewai/crew-detailed-traces.webp)
+
+
+You should be able to view logs in Signoz Cloud under the logs tab. You can also view logs by clicking on the “Related Logs” button in the trace view to see correlated logs:
+
+![Crew AI Logs View](https://signoz.io/img/docs/llm/crewai/crew-logs.webp)
+
+
+When you click on any of these logs in SigNoz, you'll see a detailed view of the log, including attributes:
+
+![Crew AI Detailed Logs View](https://signoz.io/img/docs/llm/crewai/crew-detailed-logs.webp)
+
+
+You should be able to see Crew AI related metrics in Signoz Cloud under the metrics tab:
+
+![Crew AI Metrics View](https://signoz.io/img/docs/llm/deepseek/deepseek-metrics.webp)
+
+
+When you click on any of these metrics in SigNoz, you'll see a detailed view of the metric, including attributes:
+
+![Crew AI Detailed Metrics View](https://signoz.io/img/docs/llm/deepseek/deepseek-detailed-metrics.webp)
+
+
+## Dashboard
+
+You can also check out our custom Crew AI dashboard [here](https://signoz.io/docs/dashboards/dashboard-templates/crewai-dashboard/) which provides specialized visualizations for monitoring your Crew AI usage in applications. The dashboard includes pre-built charts specifically tailored for Crew AI usage, along with import instructions to get started quickly.
+
+![Crew AI Dashboard Template](https://signoz.io/img/docs/llm/crewai/crew-dashboard.webp)
