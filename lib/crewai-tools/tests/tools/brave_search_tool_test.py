@@ -2,7 +2,8 @@ from unittest.mock import patch
 
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
 import pytest
-
+import re
+from urllib.parse import urlparse
 
 @pytest.fixture
 def brave_tool():
@@ -32,7 +33,9 @@ def test_brave_tool_search(mock_get, brave_tool):
 
     result = brave_tool.run(search_query="test")
     assert "Test Title" in result
-    assert "http://test.com" in result
+    # Securely check that a URL with hostname 'test.com' exists in the result
+    urls = re.findall(r'https?://[^\s"]+', result)
+    assert any(urlparse(url).hostname == "test.com" for url in urls), "Expected URL with hostname test.com in result"
 
 
 def test_brave_tool():
