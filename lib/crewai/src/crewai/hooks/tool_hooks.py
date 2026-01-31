@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import AfterToolCallHookType, BeforeToolCallHookType
 from crewai.utilities.printer import Printer
+from crewai.utilities.types import FileInput
 
 
 if TYPE_CHECKING:
@@ -34,6 +35,9 @@ class ToolCallHookContext:
         crew: Crew instance (may be None)
         tool_result: Tool execution result (only set for after_tool_call hooks).
             Can be modified by returning a new string from after_tool_call hook.
+        files: Optional dictionary of files to attach to the tool message.
+            Can be set by after_tool_call hooks to inject files into the LLM context.
+            These files will be formatted according to the LLM provider's requirements.
     """
 
     def __init__(
@@ -64,6 +68,7 @@ class ToolCallHookContext:
         self.task = task
         self.crew = crew
         self.tool_result = tool_result
+        self.files: dict[str, FileInput] | None = None
 
     def request_human_input(
         self,
