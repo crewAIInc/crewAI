@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import TYPE_CHECKING, Any, TypedDict
 
 from pydantic import BaseModel
@@ -37,7 +38,10 @@ try:
     )
     from azure.core.credentials import (
         AzureKeyCredential,
+        TokenCredential,
+        AccessToken,
     )
+    from azure.identity import DefaultAzureCredential
     from azure.core.exceptions import (
         HttpResponseError,
     )
@@ -80,6 +84,8 @@ class AzureCompletion(BaseLLM):
         self,
         model: str,
         api_key: str | None = None,
+        credential: TokenCredential | None = None,
+        use_default_credential: bool = False,
         endpoint: str | None = None,
         api_version: str | None = None,
         timeout: float | None = None,
@@ -127,7 +133,10 @@ class AzureCompletion(BaseLLM):
             model=model, temperature=temperature, stop=stop or [], **kwargs
         )
 
-        self.api_key = api_key or os.getenv("AZURE_API_KEY")
+        explicit_api_key = api_key
+        env_api_key = os.getenv("AZURE_API_KEY")
+        # Preserve attribute for backwards compatibility, but keep distinction between explicit vs env API key
+        self.api_key = explicit_api_key or env_api_key
         self.endpoint = (
             endpoint
             or os.getenv("AZURE_ENDPOINT")
@@ -138,14 +147,34 @@ class AzureCompletion(BaseLLM):
         self.timeout = timeout
         self.max_retries = max_retries
 
-        if not self.api_key:
-            raise ValueError(
-                "Azure API key is required. Set AZURE_API_KEY environment variable or pass api_key parameter."
-            )
         if not self.endpoint:
             raise ValueError(
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment variable or pass endpoint parameter."
             )
+
+        # Resolve credential: explicit credential -> default -> explicit api_key -> AZURE_AD_TOKEN -> AZURE_API_KEY env
+        self._credential: TokenCredential | None = None
+        if credential is not None:
+            self._credential = credential
+        elif use_default_credential:
+            self._credential = DefaultAzureCredential()
+        elif explicit_api_key:
+            self._credential = AzureKeyCredential(explicit_api_key)
+        else:
+            az_ad_token = os.getenv("AZURE_AD_TOKEN")
+            if az_ad_token:
+                class _StaticToken(TokenCredential):
+                    def get_token(self, *scopes, **kwargs):
+                        return AccessToken(az_ad_token, int(time.time()) + 3600)
+
+                self._credential = _StaticToken()
+            else:
+                if env_api_key:
+                    self._credential = AzureKeyCredential(env_api_key)
+                else:
+                    raise ValueError(
+                        "Azure credentials required: provide `api_key`, `credential`, set `AZURE_AD_TOKEN`, or enable `use_default_credential`."
+                    )
 
         # Validate and potentially fix Azure OpenAI endpoint URL
         self.endpoint = self._validate_and_fix_endpoint(self.endpoint, model)
@@ -153,7 +182,7 @@ class AzureCompletion(BaseLLM):
         # Build client kwargs
         client_kwargs = {
             "endpoint": self.endpoint,
-            "credential": AzureKeyCredential(self.api_key),
+            "credential": self._credential,
         }
 
         # Add api_version if specified (primarily for Azure OpenAI endpoints)
