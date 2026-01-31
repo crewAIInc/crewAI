@@ -235,7 +235,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
         "provider": "voyageai",
         "config": {
             "api_key": "your-api-key",
-            "model": "voyage-3",
+            "model": "voyage-4",
             "input_type": "document",
             "truncation": True,
             "output_dtype": "float32",
@@ -248,7 +248,7 @@ The `embedding_model` parameter accepts a `crewai.rag.embeddings.types.ProviderS
 
     **Config Options:**
     - `api_key` (str): VoyageAI API key
-    - `model` (str): Model to use. Default: `voyage-2`. Options: `voyage-3`, `voyage-3-lite`, `voyage-code-3`, `voyage-large-2`
+    - `model` (str, required): Model to use. Recommended: `voyage-4`. Options: `voyage-4`, `voyage-4-lite`, `voyage-4-large`, `voyage-3.5`, `voyage-code-3`
     - `input_type` (str): Type of input. Options: `document` (for storage), `query` (for search)
     - `truncation` (bool): Whether to truncate inputs that exceed max length. Default: `True`
     - `output_dtype` (str): Output data type
