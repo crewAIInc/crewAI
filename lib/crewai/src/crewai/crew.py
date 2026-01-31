@@ -193,7 +193,13 @@ class Crew(FlowTrackable, BaseModel):
     tasks: list[Task] = Field(default_factory=list)
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
-    verbose: bool = Field(default=False)
+    verbose: bool | None = Field(
+        default=None,
+        description=(
+            "Whether to enable verbose logging output. True=always enable, "
+            "False=always disable, None=check CREWAI_VERBOSE env var (defaults to True if not set)."
+        ),
+    )
     memory: bool = Field(
         default=False,
         description="If crew should use memory to store memories of it's execution",
@@ -350,12 +356,19 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
+        from crewai.utilities.logger_utils import should_enable_verbose
+
         self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
         # Determine and set tracing state once for this execution
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
+
+        # Determine verbose setting (respects CREWAI_VERBOSE env var)
+        # Update self.verbose to the resolved boolean value so it can be used
+        # consistently throughout the class (e.g., in _create_manager_agent)
+        self.verbose = should_enable_verbose(override=self.verbose)
 
         # Always setup trace listener - actual execution control is via contextvar
         trace_listener = TraceCollectionListener()
