@@ -1,0 +1,364 @@
+---
+title: "Airweave Search Tool"
+description: "Search across your organization's data synced through Airweave"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+The `AirweaveSearchTool` enables CrewAI agents to search across your organization's data that has been synced through Airweave. Airweave makes any app searchable for your agent by syncing data from various sources with minimal configuration for agentic search.
+
+## Features
+
+- **Natural language queries** - Search using plain English
+- **AI-powered answers** - Get generated answers based on search results
+- **Query expansion** - Automatically generate query variations for better recall
+- **Reranking** - Reorder results for improved relevance
+- **Temporal relevance** - Weight recent content higher than older content
+- **Advanced filtering** - Filter by metadata and other criteria
+
+## Installation
+
+Install CrewAI with tools support:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+Or install the Airweave SDK directly:
+
+```shell
+pip install airweave-sdk
+```
+
+## Environment Variables
+
+Set your Airweave API key as an environment variable:
+
+```bash
+export AIRWEAVE_API_KEY="your-api-key-here"
+```
+
+You can also optionally set the collection ID as an environment variable:
+
+```bash
+export AIRWEAVE_COLLECTION_ID="your-collection-id"
+```
+
+## Example Usage
+
+### Basic Search
+
+Here's how to initialize and use the `AirweaveSearchTool` within a CrewAI agent:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AirweaveSearchTool
+
+# Initialize the tool
+airweave_search = AirweaveSearchTool()
+
+# Create a research agent
+researcher = Agent(
+    role='Research Analyst',
+    goal='Find relevant information from company data',
+    backstory='Expert at finding insights in organizational data',
+    tools=[airweave_search],
+    verbose=True
+)
+
+# Create a search task
+search_task = Task(
+    description="""
+    Search the 'sales-data-2024' collection for information.
+    Use these parameters:
+    - query: "What are the Q4 sales trends?"
+    - collection_id: "sales-data-2024"
+    - limit: 10
+
+    Provide a summary of key findings.
+    """,
+    agent=researcher,
+    expected_output='Summary of Q4 sales trends and key metrics'
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[researcher],
+    tasks=[search_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+### Search with Answer Generation
+
+Use AI-powered answer generation for summarized insights:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AirweaveSearchTool
+
+# Initialize with custom settings
+airweave_search = AirweaveSearchTool(
+    max_content_length_per_result=2000,  # Longer content per result
+    timeout=90  # Longer timeout for complex queries
+)
+
+# Create a specialized analyst
+data_analyst = Agent(
+    role='Senior Data Analyst',
+    goal='Extract actionable insights from company data',
+    backstory='Expert analyst with deep knowledge of business metrics and trends',
+    tools=[airweave_search],
+    verbose=True
+)
+
+# Advanced search task with answer generation
+analysis_task = Task(
+    description="""
+    Using the AirweaveSearchTool, research available data by:
+
+    1. Searching the 'finance-reports' collection
+    2. Using query: "What are the key revenue trends?"
+    3. Enabling these features:
+       - generate_answer: True (get AI-generated insights)
+       - expand_query: True (improve recall)
+       - rerank: True (better relevance)
+       - temporal_relevance: 0.3 (slightly favor recent data)
+       - limit: 15
+
+    Analyze the results and provide:
+    - Key findings
+    - Important patterns
+    - Strategic recommendations
+    """,
+    agent=data_analyst,
+    expected_output='Comprehensive analysis with AI-generated insights and recommendations'
+)
+
+crew = Crew(
+    agents=[data_analyst],
+    tasks=[analysis_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+### Search with Memory
+
+Combine with CrewAI's memory systems for enhanced context:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AirweaveSearchTool
+
+airweave_search = AirweaveSearchTool()
+
+# Agent with memory enabled
+knowledge_agent = Agent(
+    role='Knowledge Manager',
+    goal='Build and maintain comprehensive organizational knowledge',
+    backstory='Expert at connecting information across sources',
+    tools=[airweave_search],
+    memory=True,  # Enable CrewAI memory
+    verbose=True
+)
+
+# First task - initial research
+task1 = Task(
+    description="""
+    Search the 'company-docs' collection for general information.
+    Remember key details for future queries.
+    Query: "What are our main products and services?"
+    """,
+    agent=knowledge_agent,
+    expected_output='Summary of products and services'
+)
+
+# Second task - builds on first
+task2 = Task(
+    description="""
+    Now search the 'company-docs' collection again for more specific
+    details related to what we found in the first search. Connect the insights.
+    Query: "What are the latest updates to these products?"
+    """,
+    agent=knowledge_agent,
+    expected_output='Analysis connecting information from both searches'
+)
+
+crew = Crew(
+    agents=[knowledge_agent],
+    tasks=[task1, task2],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+### Comprehensive Research Example
+
+For thorough research across your data:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import AirweaveSearchTool
+
+airweave_search = AirweaveSearchTool()
+
+# Create researcher
+researcher = Agent(
+    role='Comprehensive Researcher',
+    goal='Gather and synthesize information from data sources',
+    backstory='Skilled at connecting insights across diverse datasets',
+    tools=[airweave_search],
+    verbose=True
+)
+
+# Research task
+research_task = Task(
+    description="""
+    Research the available data by searching the 'knowledge-base' collection:
+
+    Search for:
+       - Available information and data
+       - Key documents and content
+       - Recent updates and changes
+
+    Use these parameters:
+    - expand_query: True
+    - rerank: True
+    - generate_answer: True
+    - limit: 10
+
+    Provide a comprehensive report showing:
+    - What data is available
+    - Key insights found
+    - Summary of contents
+    - Recommendations based on findings
+    """,
+    agent=researcher,
+    expected_output='Comprehensive report of available data and insights'
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+### Tool Initialization Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `api_key` | str | `AIRWEAVE_API_KEY` env var | Airweave API key |
+| `base_url` | str | Production URL | Custom base URL for Airweave API |
+| `framework_name` | str | `"crewai"` | Framework identifier for tracking |
+| `framework_version` | str | None | Framework version for tracking |
+| `timeout` | int | `60` | Request timeout in seconds |
+| `max_content_length_per_result` | int | `1000` | Maximum content length per result |
+
+### Search Parameters
+
+When the agent uses the tool, it can specify these parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | str | **Required** | The search query text |
+| `collection_id` | str | **Required** | The unique collection identifier (e.g., 'finance-data-2024') |
+| `limit` | int | `10` | Maximum number of results to return |
+| `generate_answer` | bool | `False` | Generate an AI-powered answer |
+| `expand_query` | bool | `False` | Generate query variations for better recall |
+| `rerank` | bool | `True` | Reorder results for improved relevance |
+| `temporal_relevance` | float | None | Weight for recent content (0-1). 0 = no recency effect, 1 = only recent items |
+
+## Response Format
+
+The tool returns a JSON string with the following structure:
+
+```json
+{
+  "query": "original search query",
+  "results_count": 5,
+  "completion": "AI-generated answer (if generate_answer=True)",
+  "results": [
+    {
+      "content": "Document content...",
+      "metadata": {
+        "source": "source-name",
+        "updated_at": "2024-12-01T10:00:00Z"
+      },
+      "score": 0.95
+    }
+  ]
+}
+```
+
+## Best Practices
+
+### Collection Management
+
+- Use descriptive collection IDs (e.g., `finance-reports-2024` instead of `collection-1`)
+- Organize data into logical collections by source, department, or topic
+- Keep collection IDs consistent across your organization
+
+### Query Optimization
+
+- Use `expand_query=True` for exploratory searches to improve recall
+- Enable `generate_answer=True` when you need summarized insights
+- Use `rerank=True` (default) for most searches to improve relevance
+- Set `temporal_relevance` (0.2-0.5) when recent information is more important
+
+### Performance
+
+- Start with `limit=10` and adjust based on your needs
+- Use `max_content_length_per_result` to control context window usage
+- Monitor API timeouts and adjust the `timeout` parameter if needed
+
+## Error Handling
+
+The tool includes built-in error handling and will return error information in the response:
+
+```json
+{
+  "error": "Error message",
+  "query": "original query",
+  "collection_id": "collection-id"
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Key Error**: Ensure `AIRWEAVE_API_KEY` is set or passed to the tool
+2. **Collection Not Found**: Verify the collection ID exists in your Airweave account
+3. **Timeout Errors**: Increase the `timeout` parameter for complex queries
+4. **Import Error**: Install airweave-sdk with `pip install airweave-sdk`
+
+### Debug Mode
+
+Enable verbose logging to see what's happening:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)
+
+# Your code here
+```
+
+## Related Resources
+
+- [Airweave Documentation](https://docs.airweave.ai)
+- [Airweave Python SDK](https://github.com/airweave-ai/python-sdk)
+
