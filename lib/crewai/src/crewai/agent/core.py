@@ -900,6 +900,11 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
+        # Clear accumulated messages and reset iterations from previous tasks
+        # to prevent context pollution when agent is reused across sequential tasks
+        self.agent_executor.messages = []
+        self.agent_executor.iterations = 0
+
         if self.agent_executor.llm:
             existing_stop = getattr(self.agent_executor.llm, "stop", [])
             self.agent_executor.llm.stop = list(
