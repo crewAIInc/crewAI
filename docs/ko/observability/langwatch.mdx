@@ -1,0 +1,203 @@
+---
+title: LangWatch 통합
+description: OpenLLMetry를 사용하여 CrewAI Python SDK를 LangWatch와 함께 계측하는 방법을 알아보세요.
+keywords: crewai, python, sdk, instrumentation, opentelemetry, langwatch, tracing, openllmetry
+icon: magnifying-glass-chart
+---
+
+LangWatch는 CrewAI를 위한 내장 자동 추적 통합 기능이 없습니다. 하지만 OpenLLMetry를 사용하여 CrewAI를 LangWatch와 통합하여 포괄적인 관찰 가능성을 얻을 수 있습니다.
+
+## OpenLLMetry 통합
+
+**OpenLLMetry**는 CrewAI 계측을 위한 LangWatch와의 권장 선택입니다. 다음과 같은 기능을 제공합니다:
+
+- **포괄적인 커버리지**: CrewAI 에이전트, 작업 및 도구의 완전한 계측
+- **적극적인 개발**: 정기적인 업데이트로 잘 유지됨
+- **검증된 통합**: 여러 관찰 가능성 플랫폼에서 성공적으로 사용됨
+- **OpenTelemetry 네이티브**: 최대 호환성을 위한 OpenTelemetry 표준 기반
+
+## 설치
+
+OpenLLMetry CrewAI 계측기를 설치하세요:
+
+```bash
+pip install opentelemetry-instrumentation-crewai
+```
+
+## 통합 방법
+
+LangWatch와 OpenLLMetry를 통합하는 두 가지 주요 방법이 있습니다:
+
+### 1. `langwatch.setup()`을 통한 방법 (권장)
+
+이 방법은 LangWatch가 계측기의 생명주기를 관리하여 적절한 설정과 정리를 보장합니다.
+
+```python openllmetry_setup.py
+import langwatch
+from crewai import Agent, Task, Crew
+import os
+from opentelemetry_instrumentation_crewai import CrewAIInstrumentor
+
+# 환경에서 LANGWATCH_API_KEY가 설정되어 있는지 확인하거나, `setup`에서 설정
+langwatch.setup(
+    instrumentors=[CrewAIInstrumentor()]
+)
+
+# CrewAI 에이전트와 작업 정의
+researcher = Agent(
+    role='시니어 연구원',
+    goal='AI에 대한 새로운 인사이트 발견',
+    backstory='숨겨진 보석을 찾아내는 재능을 가진 경험 많은 연구원'
+)
+writer = Agent(
+    role='전문 작가',
+    goal='AI 발견에 대한 매력적인 콘텐츠 작성',
+    backstory='복잡한 AI 주제를 접근 가능하고 흥미롭게 만들 수 있는 문장의 달인'
+)
+
+task1 = Task(description='LLM 프롬프팅 기법의 최신 발전 동향 조사', agent=researcher)
+task2 = Task(description='발견 사항을 요약한 블로그 포스트 작성', agent=writer)
+
+# 크루 생성 및 실행
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[task1, task2],
+    verbose=2
+)
+
+@langwatch.trace(name="OpenLLMetry를 사용한 CrewAI 실행")
+def run_crewai_process_ollm():
+    result = crew.kickoff()
+    return result
+
+if __name__ == "__main__":
+    print("OpenLLMetry로 CrewAI 프로세스 실행 중...")
+    output = run_crewai_process_ollm()
+    print("\n\nCrewAI 프로세스 출력:")
+    print(output)
+```
+
+### 2. 직접 계측
+
+계측기 생명주기를 직접 관리하거나 기존 OpenTelemetry 설정이 있는 경우 직접 계측을 사용할 수 있습니다.
+
+```python openllmetry_direct.py
+import langwatch
+from crewai import Agent, Task, Crew
+from opentelemetry_instrumentation_crewai import CrewAIInstrumentor
+
+# LangWatch 초기화
+langwatch.setup()
+
+# OpenLLMetry를 사용하여 CrewAI 직접 계측
+CrewAIInstrumentor().instrument()
+
+# 에이전트와 작업 정의
+planner = Agent(
+    role='이벤트 기획자',
+    goal='흥미진진한 기술 컨퍼런스 기획',
+    backstory='기술 이벤트에 대한 열정을 가진 경험 많은 기획자'
+)
+task_planner = Task(description='3일간의 AI 컨퍼런스 일정 개요 작성', agent=planner)
+conference_crew = Crew(agents=[planner], tasks=[task_planner])
+
+@langwatch.trace(name="OpenLLMetry를 사용한 CrewAI 직접 계측")
+def plan_conference():
+    agenda = conference_crew.kickoff()
+    return agenda
+
+if __name__ == "__main__":
+    print("OpenLLMetry로 컨퍼런스 기획 중 (직접)...")
+    conference_agenda = plan_conference()
+    print("\n\n컨퍼런스 일정:")
+    print(conference_agenda)
+```
+
+이제 LangWatch에서 추적을 볼 수 있습니다.
+
+![OpenLLMetry 통합](/images/langwatch_crewai.png)
+
+## 주요 이점
+
+### 자동 계측
+
+- **에이전트 작업**: 모든 에이전트 상호작용 및 의사결정 프로세스
+- **작업 실행**: 생성부터 완료까지의 완전한 작업 생명주기
+- **도구 사용**: 외부 도구 및 API와의 통합
+- **LLM 호출**: 모델 상호작용 및 응답의 상세한 추적
+
+### 원활한 통합
+
+- **LangWatch 관리**: `langwatch.setup()` 사용 시 자동 생명주기 관리
+- **OpenTelemetry 호환**: 기존 OpenTelemetry 인프라와 작동
+- **전역 커버리지**: 한 번 계측되면 모든 CrewAI 작업을 자동으로 캡처
+
+## 모범 사례
+
+### 1. **올바른 방법 선택**
+
+- **새 프로젝트**나 LangWatch가 모든 것을 관리하기를 원할 때는 **`langwatch.setup()` 사용**
+- **기존 OpenTelemetry 설정**이 있거나 **사용자 정의 제어**가 필요할 때는 **직접 계측 사용**
+
+### 2. **환경 구성**
+
+```bash
+# LangWatch API 키 설정
+export LANGWATCH_API_KEY="your-api-key-here"
+
+# 선택사항: OpenTelemetry 엔드포인트 구성
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://api.langwatch.ai:4317"
+```
+
+### 3. **오류 처리**
+
+```python
+try:
+    # CrewAI 작업
+    result = crew.kickoff()
+except Exception as e:
+    # 오류는 추적에서 자동으로 캡처됨
+    print(f"오류: {e}")
+```
+
+### 4. **성능 모니터링**
+
+- 에이전트 및 작업의 실행 시간 모니터링
+- 토큰 사용량 및 API 비용 추적
+- 워크플로우의 병목 지점 식별
+
+## 문제 해결
+
+### 일반적인 문제
+
+1. **계측이 작동하지 않음**
+
+   - 계측기가 올바르게 가져와지고 초기화되었는지 확인
+   - LangWatch가 올바른 API 키로 구성되었는지 확인
+   - OpenTelemetry 엔드포인트에 접근 가능한지 확인
+
+2. **추적 누락**
+
+   - CrewAI 작업 전에 계측기가 호출되었는지 확인
+   - 데이터 수집을 위해 LangWatch 대시보드 확인
+   - LangWatch에 대한 네트워크 연결 확인
+
+3. **성능 영향**
+
+   - 계측은 최소한의 오버헤드만 추가
+   - 고용량 프로덕션 환경을 위한 샘플링 고려
+   - 개발 중 리소스 사용량 모니터링
+
+### 도움 받기
+
+- **OpenLLMetry**: [문서](https://opentelemetry.io/docs/)
+- **LangWatch**: [문서](https://docs.langwatch.ai)
+
+## 다음 단계
+
+1. **LangWatch 설정**: API 키 및 프로젝트 설정 구성
+2. **OpenLLMetry 설치**: 위의 설치 명령 실행
+3. **코드 계측**: 위의 통합 방법 중 하나 사용
+4. **모니터링 및 최적화**: 수집된 데이터를 사용하여 CrewAI 워크플로우 개선
+
+더 고급 구성 및 사용 사례는 [OpenLLMetry 문서](https://opentelemetry.io/docs/)와 [LangWatch 문서](https://docs.langwatch.ai)를 참조하세요.
