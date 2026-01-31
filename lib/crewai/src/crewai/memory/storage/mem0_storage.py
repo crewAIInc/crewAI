@@ -91,6 +91,20 @@ class Mem0Storage(Storage):
             elif agent_id:
                 filter["AND"].append({"agent_id": agent_id})
 
+        # Flatten filter for local Memory instances with vector stores that don't support AND/OR structure
+        # (e.g., Valkey, Redis). If there's only one condition, return it directly.
+        # Only apply flattening for local Memory, not cloud MemoryClient.
+        if isinstance(self.memory, Memory):
+            local_mem0_config = self.config.get("local_mem0_config")
+            vector_store_config = {}
+            if local_mem0_config and isinstance(local_mem0_config, dict):
+                vector_store_config = local_mem0_config.get("vector_store") or {}
+            provider = vector_store_config.get("provider", "") if isinstance(vector_store_config, dict) else ""
+
+            if provider in {"valkey", "redis"}:
+                if len(filter.get("AND", [])) == 1 and "OR" not in filter:
+                    return filter["AND"][0]
+
         return filter
 
     def save(self, value: Any, metadata: dict[str, Any]) -> None:
