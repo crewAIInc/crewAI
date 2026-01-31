@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -40,14 +40,14 @@ class CrewKickoffStartedEvent(CrewBaseEvent):
     """Event emitted when a crew starts execution"""
 
     inputs: dict[str, Any] | None
-    type: str = "crew_kickoff_started"
+    type: Literal["crew_kickoff_started"] = "crew_kickoff_started"
 
 
 class CrewKickoffCompletedEvent(CrewBaseEvent):
     """Event emitted when a crew completes execution"""
 
     output: Any
-    type: str = "crew_kickoff_completed"
+    type: Literal["crew_kickoff_completed"] = "crew_kickoff_completed"
     total_tokens: int = 0
 
 
@@ -55,7 +55,7 @@ class CrewKickoffFailedEvent(CrewBaseEvent):
     """Event emitted when a crew fails to complete execution"""
 
     error: str
-    type: str = "crew_kickoff_failed"
+    type: Literal["crew_kickoff_failed"] = "crew_kickoff_failed"
 
 
 class CrewTrainStartedEvent(CrewBaseEvent):
@@ -64,7 +64,7 @@ class CrewTrainStartedEvent(CrewBaseEvent):
     n_iterations: int
     filename: str
     inputs: dict[str, Any] | None
-    type: str = "crew_train_started"
+    type: Literal["crew_train_started"] = "crew_train_started"
 
 
 class CrewTrainCompletedEvent(CrewBaseEvent):
@@ -72,14 +72,14 @@ class CrewTrainCompletedEvent(CrewBaseEvent):
 
     n_iterations: int
     filename: str
-    type: str = "crew_train_completed"
+    type: Literal["crew_train_completed"] = "crew_train_completed"
 
 
 class CrewTrainFailedEvent(CrewBaseEvent):
     """Event emitted when a crew fails to complete training"""
 
     error: str
-    type: str = "crew_train_failed"
+    type: Literal["crew_train_failed"] = "crew_train_failed"
 
 
 class CrewTestStartedEvent(CrewBaseEvent):
@@ -88,20 +88,20 @@ class CrewTestStartedEvent(CrewBaseEvent):
     n_iterations: int
     eval_llm: str | Any | None
     inputs: dict[str, Any] | None
-    type: str = "crew_test_started"
+    type: Literal["crew_test_started"] = "crew_test_started"
 
 
 class CrewTestCompletedEvent(CrewBaseEvent):
     """Event emitted when a crew completes testing"""
 
-    type: str = "crew_test_completed"
+    type: Literal["crew_test_completed"] = "crew_test_completed"
 
 
 class CrewTestFailedEvent(CrewBaseEvent):
     """Event emitted when a crew fails to complete testing"""
 
     error: str
-    type: str = "crew_test_failed"
+    type: Literal["crew_test_failed"] = "crew_test_failed"
 
 
 class CrewTestResultEvent(CrewBaseEvent):
@@ -110,4 +110,4 @@ class CrewTestResultEvent(CrewBaseEvent):
     quality: float
     execution_duration: float
     model: str
-    type: str = "crew_test_result"
+    type: Literal["crew_test_result"] = "crew_test_result"

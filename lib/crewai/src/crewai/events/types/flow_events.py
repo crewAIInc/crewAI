@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -17,14 +17,14 @@ class FlowStartedEvent(FlowEvent):
 
     flow_name: str
     inputs: dict[str, Any] | None = None
-    type: str = "flow_started"
+    type: Literal["flow_started"] = "flow_started"
 
 
 class FlowCreatedEvent(FlowEvent):
     """Event emitted when a flow is created"""
 
     flow_name: str
-    type: str = "flow_created"
+    type: Literal["flow_created"] = "flow_created"
 
 
 class MethodExecutionStartedEvent(FlowEvent):
@@ -34,7 +34,7 @@ class MethodExecutionStartedEvent(FlowEvent):
     method_name: str
     state: dict[str, Any] | BaseModel
     params: dict[str, Any] | None = None
-    type: str = "method_execution_started"
+    type: Literal["method_execution_started"] = "method_execution_started"
 
 
 class MethodExecutionFinishedEvent(FlowEvent):
@@ -44,7 +44,7 @@ class MethodExecutionFinishedEvent(FlowEvent):
     method_name: str
     result: Any = None
     state: dict[str, Any] | BaseModel
-    type: str = "method_execution_finished"
+    type: Literal["method_execution_finished"] = "method_execution_finished"
 
 
 class MethodExecutionFailedEvent(FlowEvent):
@@ -53,7 +53,7 @@ class MethodExecutionFailedEvent(FlowEvent):
     flow_name: str
     method_name: str
     error: Exception
-    type: str = "method_execution_failed"
+    type: Literal["method_execution_failed"] = "method_execution_failed"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -78,7 +78,7 @@ class MethodExecutionPausedEvent(FlowEvent):
     flow_id: str
     message: str
     emit: list[str] | None = None
-    type: str = "method_execution_paused"
+    type: Literal["method_execution_paused"] = "method_execution_paused"
 
 
 class FlowFinishedEvent(FlowEvent):
@@ -86,7 +86,7 @@ class FlowFinishedEvent(FlowEvent):
 
     flow_name: str
     result: Any | None = None
-    type: str = "flow_finished"
+    type: Literal["flow_finished"] = "flow_finished"
     state: dict[str, Any] | BaseModel
 
 
@@ -110,14 +110,14 @@ class FlowPausedEvent(FlowEvent):
     state: dict[str, Any] | BaseModel
     message: str
     emit: list[str] | None = None
-    type: str = "flow_paused"
+    type: Literal["flow_paused"] = "flow_paused"
 
 
 class FlowPlotEvent(FlowEvent):
     """Event emitted when a flow plot is created"""
 
     flow_name: str
-    type: str = "flow_plot"
+    type: Literal["flow_plot"] = "flow_plot"
 
 
 class HumanFeedbackRequestedEvent(FlowEvent):
@@ -138,7 +138,7 @@ class HumanFeedbackRequestedEvent(FlowEvent):
     output: Any
     message: str
     emit: list[str] | None = None
-    type: str = "human_feedback_requested"
+    type: Literal["human_feedback_requested"] = "human_feedback_requested"
 
 
 class HumanFeedbackReceivedEvent(FlowEvent):
@@ -157,4 +157,4 @@ class HumanFeedbackReceivedEvent(FlowEvent):
     method_name: str
     feedback: str
     outcome: str | None = None
-    type: str = "human_feedback_received"
+    type: Literal["human_feedback_received"] = "human_feedback_received"

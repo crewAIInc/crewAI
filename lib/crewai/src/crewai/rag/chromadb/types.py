@@ -1,6 +1,5 @@
 """Type definitions specific to ChromaDB implementation."""
 
-from collections.abc import Mapping
 from typing import Any, NamedTuple
 
 from chromadb.api import AsyncClientAPI, ClientAPI
@@ -49,7 +48,7 @@ class PreparedDocuments(NamedTuple):
 
     ids: list[str]
     texts: list[str]
-    metadatas: list[Mapping[str, str | int | float | bool]]
+    metadatas: list[dict[str, str | int | float | bool]]
 
 
 class ExtractedSearchParams(NamedTuple):

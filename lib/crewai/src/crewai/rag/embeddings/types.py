@@ -1,6 +1,8 @@
 """Type definitions for the embeddings module."""
 
-from typing import Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias
+
+from pydantic import Field
 
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
@@ -29,7 +31,7 @@ from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
 
 
-ProviderSpec: TypeAlias = (
+ProviderSpec: TypeAlias = Annotated[
     AzureProviderSpec
     | BedrockProviderSpec
     | CohereProviderSpec
@@ -47,8 +49,9 @@ ProviderSpec: TypeAlias = (
     | Text2VecProviderSpec
     | VertexAIProviderSpec
     | VoyageAIProviderSpec
-    | WatsonXProviderSpec
-)
+    | WatsonXProviderSpec,
+    Field(discriminator="provider"),
+]
 
 AllowedEmbeddingProviders = Literal[
     "azure",

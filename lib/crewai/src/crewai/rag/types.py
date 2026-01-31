@@ -1,6 +1,6 @@
 """Type definitions for RAG (Retrieval-Augmented Generation) systems."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from typing import Any, TypeAlias
 
 from typing_extensions import Required, TypedDict
@@ -19,8 +19,8 @@ class BaseRecord(TypedDict, total=False):
     doc_id: str
     content: Required[str]
     metadata: (
-        Mapping[str, str | int | float | bool]
-        | list[Mapping[str, str | int | float | bool]]
+        dict[str, str | int | float | bool]
+        | list[dict[str, str | int | float | bool]]
     )
 
 
