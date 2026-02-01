@@ -668,3 +668,66 @@ def test_no_warning_for_properly_typed_router(caplog):
     warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
     assert not any("Could not determine return paths" in msg for msg in warning_messages)
     assert not any("Found listeners waiting for triggers" in msg for msg in warning_messages)
+
+
+def test_visualization_includes_dompurify_for_xss_protection():
+    """Test that visualization includes DOMPurify library for XSS protection."""
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    html_file = visualize_flow_structure(structure, "test_flow.html", show=False)
+
+    with open(html_file, "r", encoding="utf-8") as f:
+        html_content = f.read()
+
+    assert "dompurify" in html_content.lower()
+    assert "cdnjs.cloudflare.com/ajax/libs/dompurify" in html_content
+
+
+def test_visualization_js_includes_sanitization_functions():
+    """Test that generated JS includes escapeHtml and sanitizeHtml functions."""
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    html_file = visualize_flow_structure(structure, "test_flow.html", show=False)
+    html_path = Path(html_file)
+
+    js_file = html_path.parent / f"{html_path.stem}_script.js"
+
+    js_content = js_file.read_text(encoding="utf-8")
+
+    assert "function escapeHtml" in js_content
+    assert "function sanitizeHtml" in js_content
+    assert "DOMPurify.sanitize" in js_content
+
+
+def test_visualization_uses_sanitize_html_for_drawer_content():
+    """Test that drawer content rendering uses sanitizeHtml."""
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    html_file = visualize_flow_structure(structure, "test_flow.html", show=False)
+    html_path = Path(html_file)
+
+    js_file = html_path.parent / f"{html_path.stem}_script.js"
+
+    js_content = js_file.read_text(encoding="utf-8")
+
+    assert "innerHTML = sanitizeHtml(content)" in js_content
+
+
+def test_visualization_escapes_user_controlled_values():
+    """Test that user-controlled values are escaped in render methods."""
+    flow = SimpleFlow()
+    structure = build_flow_structure(flow)
+
+    html_file = visualize_flow_structure(structure, "test_flow.html", show=False)
+    html_path = Path(html_file)
+
+    js_file = html_path.parent / f"{html_path.stem}_script.js"
+
+    js_content = js_file.read_text(encoding="utf-8")
+
+    assert "escapeHtml(group.items[0])" in js_content
+    assert "escapeHtml(condition)" in js_content
+    assert "escapeHtml(metadata.type" in js_content
