@@ -266,6 +266,18 @@ wheels = [
 ]
 
 [[package]]
+name = "aiomysql"
+version = "0.3.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pymysql" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/e0/302aeffe8d90853556f47f3106b89c16cc2ec2a4d269bdfd82e3f4ae12cc/aiomysql-0.3.2.tar.gz", hash = "sha256:72d15ef5cfc34c03468eb41e1b90adb9fd9347b0b589114bd23ead569a02ac1a", size = 108311, upload-time = "2025-10-22T00:15:21.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4c/af/aae0153c3e28712adaf462328f6c7a3c196a1c1c27b491de4377dd3e6b52/aiomysql-0.3.2-py3-none-any.whl", hash = "sha256:c82c5ba04137d7afd5c693a258bea8ead2aad77101668044143a991e04632eb2", size = 71834, upload-time = "2025-10-22T00:15:15.905Z" },
+]
+
+[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1450,6 +1462,11 @@ patronus = [
 postgresql = [
     { name = "psycopg2-binary" },
 ]
+pyobvector = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pyobvector" },
+]
 qdrant-client = [
     { name = "qdrant-client" },
 ]
@@ -1526,6 +1543,7 @@ requires-dist = [
     { name = "multion", marker = "extra == 'multion'", specifier = ">=1.1.0" },
     { name = "nest-asyncio", marker = "extra == 'bedrock'", specifier = ">=1.6.0" },
     { name = "nest-asyncio", marker = "extra == 'contextual'", specifier = ">=1.6.0" },
+    { name = "numpy", marker = "extra == 'pyobvector'", specifier = ">=1.24.0" },
     { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = "==2.0.0" },
     { name = "patronus", marker = "extra == 'patronus'", specifier = ">=0.0.16" },
     { name = "playwright", marker = "extra == 'bedrock'", specifier = ">=1.52.0" },
@@ -1534,6 +1552,7 @@ requires-dist = [
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.13" },
     { name = "pymupdf", specifier = "~=1.26.6" },
     { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1.1" },
+    { name = "pyobvector", marker = "extra == 'pyobvector'", specifier = ">=0.2.16" },
     { name = "python-docx", specifier = "~=1.2.0" },
     { name = "python-docx", marker = "extra == 'rag'", specifier = ">=1.1.0" },
     { name = "pytube", specifier = "~=15.0.0" },
@@ -1556,7 +1575,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "pyobvector", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -6250,6 +6269,24 @@ wheels = [
 ]
 
 [[package]]
+name = "pyobvector"
+version = "0.2.23"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiomysql" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pydantic" },
+    { name = "pymysql" },
+    { name = "sqlalchemy" },
+    { name = "sqlglot" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7f/14/ea82e5f70c335d2a253ae0a5f182f99abc0319511d565ec887c1d576cfb4/pyobvector-0.2.23.tar.gz", hash = "sha256:c575c84d7aef078d19f7ceeccb7240ea7371940e4e240214ed013b757fbe2b97", size = 73663, upload-time = "2026-01-29T09:29:37.197Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/45/29100150b64ec6c2361f11da969bf0a25f33408bae1eba0054abe315922d/pyobvector-0.2.23-py3-none-any.whl", hash = "sha256:04973247f843cbfef548b9d07989190ffc64a56d49c88bf60b3220f0841b33d3", size = 60900, upload-time = "2026-01-29T09:29:35.727Z" },
+]
+
+[[package]]
 name = "pyopenssl"
 version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -7701,6 +7738,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3d/8d/bb40a5d10e7a5f2195f235c0b2f2c79b0bf6e8f00c0c223130a4fbd2db09/sqlalchemy-2.0.45-cp313-cp313t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:83d7009f40ce619d483d26ac1b757dfe3167b39921379a8bd1b596cf02dab4a6", size = 3521998, upload-time = "2025-12-09T22:13:28.622Z" },
     { url = "https://files.pythonhosted.org/packages/75/a5/346128b0464886f036c039ea287b7332a410aa2d3fb0bb5d404cb8861635/sqlalchemy-2.0.45-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:d8a2ca754e5415cde2b656c27900b19d50ba076aa05ce66e2207623d3fe41f5a", size = 3473434, upload-time = "2025-12-09T22:13:30.188Z" },
     { url = "https://files.pythonhosted.org/packages/bf/e1/3ccb13c643399d22289c6a9786c1a91e3dcbb68bce4beb44926ac2c557bf/sqlalchemy-2.0.45-py3-none-any.whl", hash = "sha256:5225a288e4c8cc2308dbdd874edad6e7d0fd38eac1e9e5f23503425c8eee20d0", size = 1936672, upload-time = "2025-12-09T21:54:52.608Z" },
+]
+
+[[package]]
+name = "sqlglot"
+version = "28.7.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/3d/aec874eb15ed31d73244aa13c8bbb395de90980bc281539f63f1a3537fd0/sqlglot-28.7.0.tar.gz", hash = "sha256:125f8d41721543e8a503bbe08dbaa9a7ce11bf6b96c052fcb819bea8ca5e3b7e", size = 5717197, upload-time = "2026-01-30T12:47:35.772Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/e9/6251e703f7314de9508c1bcf9e8cfa5d603bebd6d96428467ef6d81539ce/sqlglot-28.7.0-py3-none-any.whl", hash = "sha256:cb1c5cb85fa9b8b49738959859590ed22d095d4f65aa1f60c3a0d2b254984569", size = 595253, upload-time = "2026-01-30T12:47:34.018Z" },
 ]
 
 [[package]]

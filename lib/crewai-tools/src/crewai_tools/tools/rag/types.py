@@ -47,10 +47,13 @@ class AddDocumentParams(TypedDict, total=False):
 
 
 class VectorDbConfig(TypedDict):
-    """Configuration for vector database provider.
+    """Configuration for vector database provider used by RagTool.
+
+    RagTool only supports 'chromadb' and 'qdrant' as vectordb backends.
+    For OceanBase vector search, use OceanBaseVectorSearchTool instead.
 
     Attributes:
-        provider: RAG provider literal.
+        provider: RAG provider literal ('chromadb' or 'qdrant').
         config: RAG configuration options.
     """
 
