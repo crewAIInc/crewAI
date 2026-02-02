@@ -654,3 +654,165 @@ class A2AParallelDelegationCompletedEvent(A2AEventBase):
     success_count: int
     failure_count: int
     results: dict[str, str] | None = None
+
+
+class A2ATransportNegotiatedEvent(A2AEventBase):
+    """Event emitted when transport protocol is negotiated with an A2A agent.
+
+    This event is emitted after comparing client and server transport capabilities
+    to select the optimal transport protocol and endpoint URL.
+
+    Attributes:
+        endpoint: Original A2A agent endpoint URL.
+        a2a_agent_name: Name of the A2A agent from agent card.
+        negotiated_transport: The transport protocol selected (JSONRPC, GRPC, HTTP+JSON).
+        negotiated_url: The URL to use for the selected transport.
+        source: How the transport was selected ('client_preferred', 'server_preferred', 'fallback').
+        client_supported_transports: Transports the client can use.
+        server_supported_transports: Transports the server supports.
+        server_preferred_transport: The server's preferred transport from AgentCard.
+        client_preferred_transport: The client's preferred transport if set.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_transport_negotiated"
+    endpoint: str
+    a2a_agent_name: str | None = None
+    negotiated_transport: str
+    negotiated_url: str
+    source: str
+    client_supported_transports: list[str]
+    server_supported_transports: list[str]
+    server_preferred_transport: str
+    client_preferred_transport: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+class A2AContentTypeNegotiatedEvent(A2AEventBase):
+    """Event emitted when content types are negotiated with an A2A agent.
+
+    This event is emitted after comparing client and server input/output mode
+    capabilities to determine compatible MIME types for communication.
+
+    Attributes:
+        endpoint: A2A agent endpoint URL.
+        a2a_agent_name: Name of the A2A agent from agent card.
+        skill_name: Skill name if negotiation was skill-specific.
+        client_input_modes: MIME types the client can send.
+        client_output_modes: MIME types the client can accept.
+        server_input_modes: MIME types the server accepts.
+        server_output_modes: MIME types the server produces.
+        negotiated_input_modes: Compatible input MIME types selected.
+        negotiated_output_modes: Compatible output MIME types selected.
+        negotiation_success: Whether compatible types were found for both directions.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_content_type_negotiated"
+    endpoint: str
+    a2a_agent_name: str | None = None
+    skill_name: str | None = None
+    client_input_modes: list[str]
+    client_output_modes: list[str]
+    server_input_modes: list[str]
+    server_output_modes: list[str]
+    negotiated_input_modes: list[str]
+    negotiated_output_modes: list[str]
+    negotiation_success: bool = True
+    metadata: dict[str, Any] | None = None
+
+
+# -----------------------------------------------------------------------------
+# Context Lifecycle Events
+# -----------------------------------------------------------------------------
+
+
+class A2AContextCreatedEvent(A2AEventBase):
+    """Event emitted when an A2A context is created.
+
+    Contexts group related tasks in a conversation or workflow.
+
+    Attributes:
+        context_id: Unique identifier for the context.
+        created_at: Unix timestamp when context was created.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_context_created"
+    context_id: str
+    created_at: float
+    metadata: dict[str, Any] | None = None
+
+
+class A2AContextExpiredEvent(A2AEventBase):
+    """Event emitted when an A2A context expires due to TTL.
+
+    Attributes:
+        context_id: The expired context identifier.
+        created_at: Unix timestamp when context was created.
+        age_seconds: How long the context existed before expiring.
+        task_count: Number of tasks in the context when expired.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_context_expired"
+    context_id: str
+    created_at: float
+    age_seconds: float
+    task_count: int
+    metadata: dict[str, Any] | None = None
+
+
+class A2AContextIdleEvent(A2AEventBase):
+    """Event emitted when an A2A context becomes idle.
+
+    Idle contexts have had no activity for the configured threshold.
+
+    Attributes:
+        context_id: The idle context identifier.
+        idle_seconds: Seconds since last activity.
+        task_count: Number of tasks in the context.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_context_idle"
+    context_id: str
+    idle_seconds: float
+    task_count: int
+    metadata: dict[str, Any] | None = None
+
+
+class A2AContextCompletedEvent(A2AEventBase):
+    """Event emitted when all tasks in an A2A context complete.
+
+    Attributes:
+        context_id: The completed context identifier.
+        total_tasks: Total number of tasks that were in the context.
+        duration_seconds: Total context lifetime in seconds.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_context_completed"
+    context_id: str
+    total_tasks: int
+    duration_seconds: float
+    metadata: dict[str, Any] | None = None
+
+
+class A2AContextPrunedEvent(A2AEventBase):
+    """Event emitted when an A2A context is pruned (deleted).
+
+    Pruning removes the context metadata and optionally associated tasks.
+
+    Attributes:
+        context_id: The pruned context identifier.
+        task_count: Number of tasks that were in the context.
+        age_seconds: How long the context existed before pruning.
+        metadata: Custom A2A metadata key-value pairs.
+    """
+
+    type: str = "a2a_context_pruned"
+    context_id: str
+    task_count: int
+    age_seconds: float
+    metadata: dict[str, Any] | None = None

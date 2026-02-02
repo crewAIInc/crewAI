@@ -1,14 +1,20 @@
-"""Base extension interface for A2A wrapper integrations.
+"""Base extension interface for CrewAI A2A wrapper processing hooks.
 
-This module defines the protocol for extending A2A wrapper functionality
-with custom logic for conversation processing, prompt augmentation, and
-agent response handling.
+This module defines the protocol for extending CrewAI's A2A wrapper functionality
+with custom logic for tool injection, prompt augmentation, and response processing.
+
+Note: These are CrewAI-specific processing hooks, NOT A2A protocol extensions.
+A2A protocol extensions are capability declarations using AgentExtension objects
+in AgentCard.capabilities.extensions, activated via the A2A-Extensions HTTP header.
+See: https://a2a-protocol.org/latest/topics/extensions/
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol, runtime_checkable
+
+from pydantic import BeforeValidator
 
 
 if TYPE_CHECKING:
@@ -17,6 +23,20 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
 
 
+def _validate_a2a_extension(v: Any) -> Any:
+    """Validate that value implements A2AExtension protocol."""
+    if not isinstance(v, A2AExtension):
+        raise ValueError(
+            f"Value must implement A2AExtension protocol. "
+            f"Got {type(v).__name__} which is missing required methods."
+        )
+    return v
+
+
+ValidatedA2AExtension = Annotated[Any, BeforeValidator(_validate_a2a_extension)]
+
+
+@runtime_checkable
 class ConversationState(Protocol):
     """Protocol for extension-specific conversation state.
 
@@ -33,11 +53,36 @@ class ConversationState(Protocol):
         ...
 
 
+@runtime_checkable
 class A2AExtension(Protocol):
     """Protocol for A2A wrapper extensions.
 
     Extensions can implement this protocol to inject custom logic into
     the A2A conversation flow at various integration points.
+
+    Example:
+        class MyExtension:
+            def inject_tools(self, agent: Agent) -> None:
+                # Add custom tools to the agent
+                pass
+
+            def extract_state_from_history(
+                self, conversation_history: Sequence[Message]
+            ) -> ConversationState | None:
+                # Extract state from conversation
+                return None
+
+            def augment_prompt(
+                self, base_prompt: str, conversation_state: ConversationState | None
+            ) -> str:
+                # Add custom instructions
+                return base_prompt
+
+            def process_response(
+                self, agent_response: Any, conversation_state: ConversationState | None
+            ) -> Any:
+                # Modify response if needed
+                return agent_response
     """
 
     def inject_tools(self, agent: Agent) -> None:

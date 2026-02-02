@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+
 if TYPE_CHECKING:
     from crewai.flow.async_feedback.types import PendingFeedbackContext
 
@@ -103,4 +104,3 @@ class FlowPersistence(ABC):
         Args:
             flow_uuid: Unique identifier for the flow instance
         """
-        pass

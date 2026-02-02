@@ -299,14 +299,16 @@ class TestFlow(Flow):
         return agent.kickoff("Test query")
 
 
-def verify_agent_parent_flow(result, agent, flow):
-    """Verify that both the result and agent have the correct parent flow."""
-    assert result.parent_flow is flow
+def verify_agent_flow_context(result, agent, flow):
+    """Verify that both the result and agent have the correct flow context."""
+    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
     assert agent is not None
-    assert agent.parent_flow is flow
+    assert agent._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert agent._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
-def test_sets_parent_flow_when_inside_flow():
+def test_sets_flow_context_when_inside_flow():
     """Test that an Agent can be created and executed inside a Flow context."""
     captured_event = None
 

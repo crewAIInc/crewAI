@@ -4520,7 +4520,7 @@ def test_crew_copy_with_memory():
         pytest.fail(f"Copying crew raised an unexpected exception: {e}")
 
 
-def test_sets_parent_flow_when_using_crewbase_pattern_inside_flow():
+def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     @CrewBase
     class TestCrew:
         agents_config = None
@@ -4582,10 +4582,11 @@ def test_sets_parent_flow_when_using_crewbase_pattern_inside_flow():
     flow.kickoff()
 
     assert captured_crew is not None
-    assert captured_crew.parent_flow is flow
+    assert captured_crew._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert captured_crew._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
-def test_sets_parent_flow_when_outside_flow(researcher, writer):
+def test_sets_flow_context_when_outside_flow(researcher, writer):
     crew = Crew(
         agents=[researcher, writer],
         process=Process.sequential,
@@ -4594,11 +4595,12 @@ def test_sets_parent_flow_when_outside_flow(researcher, writer):
             Task(description="Task 2", expected_output="output", agent=writer),
         ],
     )
-    assert crew.parent_flow is None
+    assert not hasattr(crew, "_flow_id")
+    assert not hasattr(crew, "_request_id")
 
 
 @pytest.mark.vcr()
-def test_sets_parent_flow_when_inside_flow(researcher, writer):
+def test_sets_flow_context_when_inside_flow(researcher, writer):
     class MyFlow(Flow):
         @start()
         def start(self):
@@ -4615,7 +4617,8 @@ def test_sets_parent_flow_when_inside_flow(researcher, writer):
 
     flow = MyFlow()
     result = flow.kickoff()
-    assert result.parent_flow is flow
+    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
 def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
