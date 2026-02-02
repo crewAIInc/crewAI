@@ -878,8 +878,7 @@ class Agent(BaseAgent):
         stop_words: list[str],
         rpm_limit_fn: Callable | None,  # type: ignore[type-arg]
     ) -> None:
-        """
-        if self.agent_executor and hasattr(self.agent_executor, "messages"): self.agent_executor.messages.clear()Update executor parameters without recreating instance.
+        """Update executor parameters without recreating instance.
 
         Args:
             task: Task to execute.
