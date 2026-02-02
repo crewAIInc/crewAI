@@ -1,0 +1,622 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
+      response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1356'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qP8bKsdUDPFNPsCgA6XfTcDS5RQ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808798,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        time is it currently?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 269,\n    \"completion_tokens\":
+        37,\n    \"total_tokens\": 306,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:33:19 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '959'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"bf41cc3b-7d95-4456-af9b-4dc0c1f3837b","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"4ae6375a-3c1f-49fd-8618-6b235be6ea5f","parts":[{"kind":"text","text":"What
+      time is it currently?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '353'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"bf41cc3b-7d95-4456-af9b-4dc0c1f3837b\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5d428854-df47-4326-aa42-2ca126a4ff08\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"59cef95a-ba9d-486e-b9cb-3ce39dc95c08\"}}\r\n\r\ndata:
+        {\"id\":\"bf41cc3b-7d95-4456-af9b-4dc0c1f3837b\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5d428854-df47-4326-aa42-2ca126a4ff08\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"59cef95a-ba9d-486e-b9cb-3ce39dc95c08\"}}\r\n\r\ndata:
+        {\"id\":\"bf41cc3b-7d95-4456-af9b-4dc0c1f3837b\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"5d428854-df47-4326-aa42-2ca126a4ff08\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"9d3b99cd-8853-4f78-8a4b-4c82e640a6a8\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 21:33:20 UTC (UTC)\\nThe current time is 21:33:20 UTC
+        on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"59cef95a-ba9d-486e-b9cb-3ce39dc95c08\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:33:19 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
+      response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1356'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qPCXrfeCIRc2rGEuz7HncDWi0mt\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808802,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        time is it currently?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 269,\n    \"completion_tokens\":
+        37,\n    \"total_tokens\": 306,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:33:23 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '762'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"5145c746-1044-4724-9c51-cbcb3f338fbc","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"a4f9ea5b-9ccc-48f2-b5ad-517c0137af72","parts":[{"kind":"text","text":"What
+      time is it currently?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '353'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"5145c746-1044-4724-9c51-cbcb3f338fbc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"23a29826-dfe4-4c2b-bca2-8c3b69baef39\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"3ef1907c-b2b1-4b3b-a9ca-80678639aa6b\"}}\r\n\r\ndata:
+        {\"id\":\"5145c746-1044-4724-9c51-cbcb3f338fbc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"23a29826-dfe4-4c2b-bca2-8c3b69baef39\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"3ef1907c-b2b1-4b3b-a9ca-80678639aa6b\"}}\r\n\r\ndata:
+        {\"id\":\"5145c746-1044-4724-9c51-cbcb3f338fbc\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"23a29826-dfe4-4c2b-bca2-8c3b69baef39\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"4fd468de-7e34-4e88-9635-2b13c4acca32\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 21:33:24 UTC (UTC)\\nThe current time is 21:33:24 UTC.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"3ef1907c-b2b1-4b3b-a9ca-80678639aa6b\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:33:23 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
+      response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1356'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qPFhtpO4QMdnHFH73Fum0rpqCi5\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808805,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 269,\n    \"completion_tokens\":
+        37,\n    \"total_tokens\": 306,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:33:26 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '700'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"fa7576f7-dbfb-4605-ad70-a0ecadf0f1ac","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"ff083812-cb3a-42d3-b410-7941106f68ac","parts":[{"kind":"text","text":"What
+      is the current time?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '352'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"fa7576f7-dbfb-4605-ad70-a0ecadf0f1ac\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0eb501cf-ef11-4b46-b17d-639fb1a9aa3a\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"a8c1ccbf-6f13-4894-a4d2-d87d0c3b9ffb\"}}\r\n\r\ndata:
+        {\"id\":\"fa7576f7-dbfb-4605-ad70-a0ecadf0f1ac\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0eb501cf-ef11-4b46-b17d-639fb1a9aa3a\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"a8c1ccbf-6f13-4894-a4d2-d87d0c3b9ffb\"}}\r\n\r\ndata:
+        {\"id\":\"fa7576f7-dbfb-4605-ad70-a0ecadf0f1ac\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"0eb501cf-ef11-4b46-b17d-639fb1a9aa3a\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"2a5368d0-ac8d-4c7c-b272-a711b96bf277\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-30 21:33:27 UTC (UTC)\\nThe current time is 21:33:27 UTC
+        on January 30, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"a8c1ccbf-6f13-4894-a4d2-d87d0c3b9ffb\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:33:26 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Use the A2A agent to tell me what time it is.\n\nProvide your complete
+      response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1356'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qPJqK3Nr9ySPgvb0LGVLS3ZGxGi\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808809,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        is the current time?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 269,\n    \"completion_tokens\":
+        37,\n    \"total_tokens\": 306,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:33:30 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '877'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

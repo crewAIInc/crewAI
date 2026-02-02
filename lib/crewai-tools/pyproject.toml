@@ -12,7 +12,7 @@ dependencies = [
     "pytube~=15.0.0",
     "requests~=2.32.5",
     "docker~=7.1.0",
-    "crewai==1.9.2",
+    "crewai==1.9.3",
     "lancedb~=0.5.4",
     "tiktoken~=0.8.0",
     "beautifulsoup4~=4.13.4",

@@ -94,7 +94,7 @@ async def _poll_task_until_complete(
             A2APollingStatusEvent(
                 task_id=task_id,
                 context_id=effective_context_id,
-                state=str(task.status.state.value) if task.status.state else "unknown",
+                state=str(task.status.state.value),
                 elapsed_seconds=elapsed,
                 poll_count=poll_count,
                 endpoint=endpoint,
@@ -325,7 +325,7 @@ class PollingHandler:
             crewai_event_bus.emit(
                 agent_branch,
                 A2AConnectionErrorEvent(
-                    endpoint=endpoint or "",
+                    endpoint=endpoint,
                     error=str(e),
                     error_type="unexpected_error",
                     a2a_agent_name=a2a_agent_name,
