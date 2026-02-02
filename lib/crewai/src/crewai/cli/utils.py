@@ -1,4 +1,5 @@
 from collections.abc import Mapping
+from contextlib import contextmanager
 from functools import lru_cache, reduce
 import hashlib
 import importlib.util
@@ -448,42 +449,57 @@ def build_env_with_tool_repository_credentials(
     return env
 
 
+@contextmanager
+def _load_module_from_file(init_file: Path, module_name: str | None = None):
+    """
+    Context manager for loading a module from file with automatic cleanup.
+
+    Yields the loaded module or None if loading fails.
+    """
+    if module_name is None:
+        module_name = f"temp_module_{hashlib.sha256(str(init_file).encode()).hexdigest()[:8]}"
+
+    spec = importlib.util.spec_from_file_location(module_name, init_file)
+    if not spec or not spec.loader:
+        yield None
+        return
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+
+    try:
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        sys.modules.pop(module_name, None)
+
+
 def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
     """
     Load and validate tools from a given __init__.py file.
     """
-    spec = importlib.util.spec_from_file_location("temp_module", init_file)
-
-    if not spec or not spec.loader:
-        return []
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules["temp_module"] = module
-
     try:
-        spec.loader.exec_module(module)
+        with _load_module_from_file(init_file) as module:
+            if module is None:
+                return []
 
-        if not hasattr(module, "__all__"):
-            console.print(
-                f"Warning: No __all__ defined in {init_file}",
-                style="bold yellow",
-            )
-            raise SystemExit(1)
+            if not hasattr(module, "__all__"):
+                console.print(
+                    f"Warning: No __all__ defined in {init_file}",
+                    style="bold yellow",
+                )
+                raise SystemExit(1)
 
-        return [
-            {
-                "name": name,
-            }
-            for name in module.__all__
-            if hasattr(module, name) and is_valid_tool(getattr(module, name))
-        ]
-
+            return [
+                {"name": name}
+                for name in module.__all__
+                if hasattr(module, name) and is_valid_tool(getattr(module, name))
+            ]
+    except SystemExit:
+        raise
     except Exception as e:
         console.print(f"[red]Warning: Could not load {init_file}: {e!s}[/red]")
         raise SystemExit(1) from e
-
-    finally:
-        sys.modules.pop("temp_module", None)
 
 
 def _print_no_tools_warning() -> None:
@@ -543,40 +559,29 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
     """
     from crewai.tools.base_tool import BaseTool
 
-    module_name = f"temp_metadata_{hashlib.sha256(str(init_file).encode()).hexdigest()[:8]}"
-    spec = importlib.util.spec_from_file_location(module_name, init_file)
-
-    if not spec or not spec.loader:
-        return []
-
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-
     try:
-        spec.loader.exec_module(module)
+        with _load_module_from_file(init_file) as module:
+            if module is None:
+                return []
 
-        exported_names = getattr(module, "__all__", None)
-        if not exported_names:
-            return []
+            exported_names = getattr(module, "__all__", None)
+            if not exported_names:
+                return []
 
-        tools_metadata = []
-        for name in exported_names:
-            obj = getattr(module, name, None)
-            if obj is None or not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
-                continue
-            if tool_info := _extract_single_tool_metadata(obj):
-                tools_metadata.append(tool_info)
+            tools_metadata = []
+            for name in exported_names:
+                obj = getattr(module, name, None)
+                if obj is None or not (inspect.isclass(obj) and issubclass(obj, BaseTool)):
+                    continue
+                if tool_info := _extract_single_tool_metadata(obj):
+                    tools_metadata.append(tool_info)
 
-        return tools_metadata
-
+            return tools_metadata
     except Exception as e:
         console.print(
             f"[yellow]Warning: Could not extract metadata from {init_file}: {e}[/yellow]"
         )
         return []
-
-    finally:
-        sys.modules.pop(module_name, None)
 
 
 def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
