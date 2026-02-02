@@ -58,6 +58,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
+from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -1540,6 +1541,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
         flow_token = attach(ctx)
 
+        flow_id_token = None
+        request_id_token = None
+        if current_flow_id.get() is None:
+            flow_id_token = current_flow_id.set(self.flow_id)
+        if current_flow_request_id.get() is None:
+            request_id_token = current_flow_request_id.set(self.flow_id)
+
         try:
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = inputs and "id" in inputs and self._persistence is not None
@@ -1717,6 +1725,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return final_output
         finally:
+            if request_id_token is not None:
+                current_flow_request_id.reset(request_id_token)
+            if flow_id_token is not None:
+                current_flow_id.reset(flow_id_token)
             detach(flow_token)
 
     async def akickoff(
