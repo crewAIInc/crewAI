@@ -1,6 +1,7 @@
+import os
 from typing import Any
 from urllib.parse import urljoin
-import os
+
 import requests
 
 from crewai.cli.config import Settings

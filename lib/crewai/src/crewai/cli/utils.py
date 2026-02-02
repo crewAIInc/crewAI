@@ -543,7 +543,7 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
     """
     from crewai.tools.base_tool import BaseTool
 
-    module_name = f"temp_metadata_{hashlib.md5(str(init_file).encode()).hexdigest()[:8]}"
+    module_name = f"temp_metadata_{hashlib.sha256(str(init_file).encode()).hexdigest()[:8]}"
     spec = importlib.util.spec_from_file_location(module_name, init_file)
 
     if not spec or not spec.loader:
@@ -699,11 +699,16 @@ def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:
         json_schema = tool_class.model_json_schema(
             schema_generator=_get_schema_generator(), mode="serialization"
         )
-        json_schema["properties"] = {
+        filtered_properties = {
             key: value
             for key, value in json_schema.get("properties", {}).items()
             if key not in _IGNORED_INIT_PARAMS
         }
+        json_schema["properties"] = filtered_properties
+        if "required" in json_schema:
+            json_schema["required"] = [
+                key for key in json_schema["required"] if key in filtered_properties
+            ]
         return json_schema
     except Exception:
         return {}
