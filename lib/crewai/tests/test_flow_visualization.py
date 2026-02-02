@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.human_feedback import human_feedback
 from crewai.flow.visualization import (
     build_flow_structure,
     visualize_flow_structure,
@@ -668,3 +669,179 @@ def test_no_warning_for_properly_typed_router(caplog):
     warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
     assert not any("Could not determine return paths" in msg for msg in warning_messages)
     assert not any("Found listeners waiting for triggers" in msg for msg in warning_messages)
+
+
+def test_human_feedback_node_metadata():
+    """Test that human feedback nodes have correct metadata."""
+    from typing import Literal
+
+    class HITLFlow(Flow):
+        """Flow with human-in-the-loop feedback."""
+
+        @start()
+        @human_feedback(
+            message="Please review the output:",
+            emit=["approved", "rejected"],
+            llm="gpt-4o-mini",
+        )
+        def review_content(self) -> Literal["approved", "rejected"]:
+            return "approved"
+
+        @listen("approved")
+        def on_approved(self):
+            return "published"
+
+        @listen("rejected")
+        def on_rejected(self):
+            return "discarded"
+
+    flow = HITLFlow()
+    structure = build_flow_structure(flow)
+
+    review_node = structure["nodes"]["review_content"]
+    assert review_node["is_human_feedback"] is True
+    assert review_node["type"] == "human_feedback"
+    assert review_node["human_feedback_message"] == "Please review the output:"
+    assert review_node["human_feedback_emit"] == ["approved", "rejected"]
+    assert review_node["human_feedback_llm"] == "gpt-4o-mini"
+
+
+def test_human_feedback_visualization_includes_hitl_data():
+    """Test that visualization includes human feedback data in HTML."""
+    from typing import Literal
+
+    class HITLFlow(Flow):
+        """Flow with human-in-the-loop feedback."""
+
+        @start()
+        @human_feedback(
+            message="Please review the output:",
+            emit=["approved", "rejected"],
+            llm="gpt-4o-mini",
+        )
+        def review_content(self) -> Literal["approved", "rejected"]:
+            return "approved"
+
+        @listen("approved")
+        def on_approved(self):
+            return "published"
+
+    flow = HITLFlow()
+    structure = build_flow_structure(flow)
+
+    html_file = visualize_flow_structure(structure, "test_hitl.html", show=False)
+    html_path = Path(html_file)
+
+    js_file = html_path.parent / f"{html_path.stem}_script.js"
+    js_content = js_file.read_text(encoding="utf-8")
+
+    assert "HITL" in js_content
+    assert "Please review the output:" in js_content
+    assert "approved" in js_content
+    assert "rejected" in js_content
+    assert "#4A90E2" in js_content
+
+
+def test_human_feedback_without_emit_metadata():
+    """Test that human feedback without emit has correct metadata."""
+
+    class HITLSimpleFlow(Flow):
+        """Flow with simple human feedback (no routing)."""
+
+        @start()
+        @human_feedback(message="Please provide feedback:")
+        def review_step(self):
+            return "content"
+
+        @listen(review_step)
+        def next_step(self):
+            return "done"
+
+    flow = HITLSimpleFlow()
+    structure = build_flow_structure(flow)
+
+    review_node = structure["nodes"]["review_step"]
+    assert review_node["is_human_feedback"] is True
+    assert "is_router" not in review_node or review_node["is_router"] is False
+    assert review_node["type"] == "start"
+    assert review_node["human_feedback_message"] == "Please provide feedback:"
+
+
+def test_human_feedback_with_default_outcome():
+    """Test that human feedback with default outcome includes it in metadata."""
+    from typing import Literal
+
+    class HITLDefaultFlow(Flow):
+        """Flow with human feedback that has a default outcome."""
+
+        @start()
+        @human_feedback(
+            message="Review this:",
+            emit=["approved", "needs_work"],
+            llm="gpt-4o-mini",
+            default_outcome="needs_work",
+        )
+        def review(self) -> Literal["approved", "needs_work"]:
+            return "approved"
+
+        @listen("approved")
+        def on_approved(self):
+            return "published"
+
+        @listen("needs_work")
+        def on_needs_work(self):
+            return "revised"
+
+    flow = HITLDefaultFlow()
+    structure = build_flow_structure(flow)
+
+    review_node = structure["nodes"]["review"]
+    assert review_node["is_human_feedback"] is True
+    assert review_node["human_feedback_default_outcome"] == "needs_work"
+
+
+def test_mixed_router_and_human_feedback():
+    """Test flow with both regular routers and human feedback routers."""
+    from typing import Literal
+
+    class MixedFlow(Flow):
+        """Flow with both regular routers and HITL."""
+
+        @start()
+        def init(self):
+            return "initialized"
+
+        @router(init)
+        def auto_decision(self) -> Literal["path_a", "path_b"]:
+            return "path_a"
+
+        @listen("path_a")
+        @human_feedback(
+            message="Review this step:",
+            emit=["continue", "stop"],
+            llm="gpt-4o-mini",
+        )
+        def human_review(self) -> Literal["continue", "stop"]:
+            return "continue"
+
+        @listen("continue")
+        def proceed(self):
+            return "done"
+
+        @listen("stop")
+        def halt(self):
+            return "halted"
+
+    flow = MixedFlow()
+    structure = build_flow_structure(flow)
+
+    auto_node = structure["nodes"]["auto_decision"]
+    assert auto_node["type"] == "router"
+    assert auto_node["is_router"] is True
+    assert "is_human_feedback" not in auto_node or auto_node["is_human_feedback"] is False
+
+    human_node = structure["nodes"]["human_review"]
+    assert human_node["type"] == "human_feedback"
+    assert human_node["is_router"] is True
+    assert human_node["is_human_feedback"] is True
+    assert human_node["human_feedback_message"] == "Review this step:"
