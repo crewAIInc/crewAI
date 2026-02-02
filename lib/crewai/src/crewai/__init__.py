@@ -4,6 +4,7 @@ import urllib.request
 import warnings
 
 from crewai.agent.core import Agent
+from crewai.agent.planning_config import PlanningConfig
 from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.flow.flow import Flow
@@ -80,6 +81,7 @@ __all__ = [
     "Flow",
     "Knowledge",
     "LLMGuardrail",
+    "PlanningConfig",
     "Process",
     "Task",
     "TaskOutput",

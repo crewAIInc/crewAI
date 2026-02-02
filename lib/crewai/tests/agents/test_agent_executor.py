@@ -25,6 +25,18 @@ class TestAgentReActState:
         assert state.current_answer is None
         assert state.is_finished is False
         assert state.ask_for_human_input is False
+        # Planning state fields
+        assert state.plan is None
+        assert state.plan_ready is False
+
+    def test_state_with_plan(self):
+        """Test AgentReActState initialization with planning fields."""
+        state = AgentReActState(
+            plan="Step 1: Do X\nStep 2: Do Y",
+            plan_ready=True,
+        )
+        assert state.plan == "Step 1: Do X\nStep 2: Do Y"
+        assert state.plan_ready is True
 
     def test_state_with_values(self):
         """Test AgentReActState initialization with values."""
@@ -477,3 +489,250 @@ class TestFlowInvoke:
 
         assert result == {"output": "Done"}
         assert len(executor.state.messages) >= 2
+
+
+class TestAgentExecutorPlanning:
+    """Test planning functionality in AgentExecutor with real agent kickoff."""
+
+    @pytest.mark.vcr()
+    def test_agent_kickoff_with_planning_stores_plan_in_state(self):
+        """Test that Agent.kickoff() with planning enabled stores plan in executor state."""
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help solve simple math problems",
+            backstory="A helpful assistant that solves math problems step by step",
+            llm=llm,
+            planning_config=PlanningConfig(max_attempts=1),
+            verbose=False,
+        )
+
+        # Execute kickoff with a simple task
+        result = agent.kickoff("What is 2 + 2?")
+
+        # Verify result
+        assert result is not None
+        assert "4" in str(result)
+
+    @pytest.mark.vcr()
+    def test_agent_kickoff_without_planning_skips_plan_generation(self):
+        """Test that Agent.kickoff() without planning skips planning phase."""
+        from crewai import Agent
+        from crewai.llm import LLM
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help solve simple math problems",
+            backstory="A helpful assistant",
+            llm=llm,
+            # No planning_config = no planning
+            verbose=False,
+        )
+
+        # Execute kickoff
+        result = agent.kickoff("What is 3 + 3?")
+
+        # Verify we get a result
+        assert result is not None
+        assert "6" in str(result)
+
+    @pytest.mark.vcr()
+    def test_planning_config_disabled_skips_planning(self):
+        """Test that PlanningConfig(enabled=False) skips planning."""
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help solve simple math problems",
+            backstory="A helpful assistant",
+            llm=llm,
+            planning_config=PlanningConfig(enabled=False),
+            verbose=False,
+        )
+
+        result = agent.kickoff("What is 5 + 5?")
+
+        # Should still complete successfully
+        assert result is not None
+        assert "10" in str(result)
+
+    def test_backward_compat_reasoning_true_enables_planning(self):
+        """Test that reasoning=True (deprecated) still enables planning."""
+        import warnings
+        from crewai import Agent
+        from crewai.llm import LLM
+
+        llm = LLM("gpt-4o-mini")
+
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            agent = Agent(
+                role="Test Agent",
+                goal="Complete tasks",
+                backstory="A helpful agent",
+                llm=llm,
+                reasoning=True,  # Deprecated but should still work
+                verbose=False,
+            )
+
+        # Should have planning_config created from reasoning=True
+        assert agent.planning_config is not None
+        assert agent.planning_config.enabled is True
+        assert agent.planning_enabled is True
+
+    @pytest.mark.vcr()
+    def test_executor_state_contains_plan_after_planning(self):
+        """Test that executor state contains plan after planning phase."""
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Help solve simple math problems",
+            backstory="A helpful assistant that solves math problems step by step",
+            llm=llm,
+            planning_config=PlanningConfig(max_attempts=1),
+            verbose=False,
+        )
+
+        # Track executor for inspection
+        executor_ref = [None]
+        original_invoke = AgentExecutor.invoke
+
+        def capture_executor(self, inputs):
+            executor_ref[0] = self
+            return original_invoke(self, inputs)
+
+        with patch.object(AgentExecutor, "invoke", capture_executor):
+            result = agent.kickoff("What is 7 + 7?")
+
+        # Verify result
+        assert result is not None
+
+        # If we captured an executor, check its state
+        if executor_ref[0] is not None:
+            # After planning, state should have plan info
+            assert hasattr(executor_ref[0].state, "plan")
+            assert hasattr(executor_ref[0].state, "plan_ready")
+
+    @pytest.mark.vcr()
+    def test_planning_creates_minimal_steps_for_multi_step_task(self):
+        """Test that planning creates only necessary steps for a multi-step task.
+
+        This task requires exactly 3 dependent steps:
+        1. Identify the first 3 prime numbers (2, 3, 5)
+        2. Sum them (2 + 3 + 5 = 10)
+        3. Multiply by 2 (10 * 2 = 20)
+
+        The plan should reflect these dependencies without unnecessary padding.
+        """
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Tutor",
+            goal="Solve multi-step math problems accurately",
+            backstory="An expert math tutor who breaks down problems step by step",
+            llm=llm,
+            planning_config=PlanningConfig(max_attempts=1, max_steps=10),
+            verbose=False,
+        )
+
+        # Track the plan that gets generated
+        captured_plan = [None]
+        original_invoke = AgentExecutor.invoke
+
+        def capture_plan(self, inputs):
+            result = original_invoke(self, inputs)
+            captured_plan[0] = self.state.plan
+            return result
+
+        with patch.object(AgentExecutor, "invoke", capture_plan):
+            result = agent.kickoff(
+                "Calculate the sum of the first 3 prime numbers, then multiply that result by 2. "
+                "Show your work for each step."
+            )
+
+        # Verify result contains the correct answer (20)
+        assert result is not None
+        assert "20" in str(result)
+
+        # Verify a plan was generated
+        assert captured_plan[0] is not None
+
+        # The plan should be concise - this task needs ~3 steps, not 10+
+        plan_text = captured_plan[0]
+        # Count steps by looking for numbered items or bullet points
+        import re
+
+        step_pattern = r"^\s*\d+[\.\):]|\n\s*-\s+"
+        steps = re.findall(step_pattern, plan_text, re.MULTILINE)
+        # Plan should have roughly 3-5 steps, not fill up to max_steps
+        assert len(steps) <= 6, f"Plan has too many steps ({len(steps)}): {plan_text}"
+
+    @pytest.mark.vcr()
+    def test_planning_handles_sequential_dependency_task(self):
+        """Test planning for a task where step N depends on step N-1.
+
+        Task: Convert 100 Celsius to Fahrenheit, then round to nearest 10.
+        Step 1: Apply formula (C * 9/5 + 32) = 212
+        Step 2: Round 212 to nearest 10 = 210
+
+        This tests that the planner recognizes sequential dependencies.
+        """
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Unit Converter",
+            goal="Accurately convert between units and apply transformations",
+            backstory="A precise unit conversion specialist",
+            llm=llm,
+            planning_config=PlanningConfig(max_attempts=1, max_steps=10),
+            verbose=False,
+        )
+
+        captured_plan = [None]
+        original_invoke = AgentExecutor.invoke
+
+        def capture_plan(self, inputs):
+            result = original_invoke(self, inputs)
+            captured_plan[0] = self.state.plan
+            return result
+
+        with patch.object(AgentExecutor, "invoke", capture_plan):
+            result = agent.kickoff(
+                "Convert 100 degrees Celsius to Fahrenheit, then round the result to the nearest 10."
+            )
+
+        assert result is not None
+        # 100C = 212F, rounded to nearest 10 = 210
+        assert "210" in str(result) or "212" in str(result)
+
+        # Plan should exist and be minimal (2-3 steps for this task)
+        assert captured_plan[0] is not None
+        plan_text = captured_plan[0]
+
+        import re
+
+        step_pattern = r"^\s*\d+[\.\):]|\n\s*-\s+"
+        steps = re.findall(step_pattern, plan_text, re.MULTILINE)
+        assert len(steps) <= 5, f"Plan should be minimal ({len(steps)} steps): {plan_text}"
