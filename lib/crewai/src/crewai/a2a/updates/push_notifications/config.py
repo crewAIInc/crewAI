@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from a2a.types import PushNotificationAuthenticationInfo
-from pydantic import AnyHttpUrl, BaseModel, Field
+from pydantic import AnyHttpUrl, BaseModel, BeforeValidator, Field
 
 from crewai.a2a.updates.base import PushNotificationResultStore
+from crewai.a2a.updates.push_notifications.signature import WebhookSignatureConfig
+
+
+def _coerce_signature(
+    value: str | WebhookSignatureConfig | None,
+) -> WebhookSignatureConfig | None:
+    """Convert string secret to WebhookSignatureConfig."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return WebhookSignatureConfig.hmac_sha256(secret=value)
+    return value
+
+
+SignatureInput = Annotated[
+    WebhookSignatureConfig | None,
+    BeforeValidator(_coerce_signature),
+]
 
 
 class PushNotificationConfig(BaseModel):
@@ -19,6 +39,8 @@ class PushNotificationConfig(BaseModel):
         timeout: Max seconds to wait for task completion.
         interval: Seconds between result polling attempts.
         result_store: Store for receiving push notification results.
+        signature: HMAC signature config. Pass a string (secret) for defaults,
+            or WebhookSignatureConfig for custom settings.
     """
 
     url: AnyHttpUrl = Field(description="Callback URL for push notifications")
@@ -35,4 +57,9 @@ class PushNotificationConfig(BaseModel):
     )
     result_store: PushNotificationResultStore | None = Field(
         default=None, description="Result store for push notification handling"
+    )
+    signature: SignatureInput = Field(
+        default=None,
+        description="HMAC signature config. Pass a string (secret) for simple usage, "
+        "or WebhookSignatureConfig for custom headers/tolerance.",
     )

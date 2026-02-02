@@ -366,10 +366,19 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 printer=self._printer,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=None,
+                response_model=self.response_model,
                 executor_context=self,
                 verbose=self.agent.verbose,
             )
+
+            # If response is structured output (BaseModel), store it directly
+            if isinstance(answer, BaseModel):
+                self.state.current_answer = AgentFinish(
+                    thought="",
+                    output=answer,
+                    text=str(answer),
+                )
+                return "parsed"
 
             # Parse the LLM response
             formatted_answer = process_llm_response(answer, self.use_stop_words)
@@ -438,7 +447,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 available_functions=None,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=None,
+                response_model=self.response_model,
                 executor_context=self,
                 verbose=self.agent.verbose,
             )
@@ -449,6 +458,16 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self.state.pending_tool_calls = list(answer)
 
                 return "native_tool_calls"
+
+            if isinstance(answer, BaseModel):
+                self.state.current_answer = AgentFinish(
+                    thought="",
+                    output=answer,
+                    text=answer.model_dump_json(),
+                )
+                self._invoke_step_callback(self.state.current_answer)
+                self._append_message_to_state(answer.model_dump_json())
+                return "native_finished"
 
             # Text response - this is the final answer
             if isinstance(answer, str):
@@ -1304,7 +1323,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        human_feedback = self._ask_human_input(formatted_answer.output)
+        output_str = (
+            str(formatted_answer.output)
+            if isinstance(formatted_answer.output, BaseModel)
+            else formatted_answer.output
+        )
+        human_feedback = self._ask_human_input(output_str)
 
         if self._is_training_mode():
             return self._handle_training_feedback(formatted_answer, human_feedback)
@@ -1376,7 +1400,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 self.state.ask_for_human_input = False
             else:
                 answer = self._process_feedback_iteration(feedback)
-                feedback = self._ask_human_input(answer.output)
+                output_str = (
+                    str(answer.output)
+                    if isinstance(answer.output, BaseModel)
+                    else answer.output
+                )
+                feedback = self._ask_human_input(output_str)
 
         return answer
 

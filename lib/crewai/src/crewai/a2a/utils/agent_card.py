@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import MutableMapping
 from functools import lru_cache
+import ssl
 import time
 from types import MethodType
 from typing import TYPE_CHECKING
@@ -15,7 +16,7 @@ from aiocache import cached  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 import httpx
 
-from crewai.a2a.auth.schemas import APIKeyAuth, HTTPDigestAuth
+from crewai.a2a.auth.client_schemes import APIKeyAuth, HTTPDigestAuth
 from crewai.a2a.auth.utils import (
     _auth_store,
     configure_auth_client,
@@ -32,9 +33,49 @@ from crewai.events.types.a2a_events import (
 
 
 if TYPE_CHECKING:
-    from crewai.a2a.auth.schemas import AuthScheme
+    from crewai.a2a.auth.client_schemes import ClientAuthScheme
     from crewai.agent import Agent
     from crewai.task import Task
+
+
+def _get_tls_verify(auth: ClientAuthScheme | None) -> ssl.SSLContext | bool | str:
+    """Get TLS verify parameter from auth scheme.
+
+    Args:
+        auth: Optional authentication scheme with TLS config.
+
+    Returns:
+        SSL context, CA cert path, True for default verification,
+        or False if verification disabled.
+    """
+    if auth and auth.tls:
+        return auth.tls.get_httpx_ssl_context()
+    return True
+
+
+async def _prepare_auth_headers(
+    auth: ClientAuthScheme | None,
+    timeout: int,
+) -> tuple[MutableMapping[str, str], ssl.SSLContext | bool | str]:
+    """Prepare authentication headers and TLS verification settings.
+
+    Args:
+        auth: Optional authentication scheme.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        Tuple of (headers dict, TLS verify setting).
+    """
+    headers: MutableMapping[str, str] = {}
+    verify = _get_tls_verify(auth)
+    if auth:
+        async with httpx.AsyncClient(
+            timeout=timeout, verify=verify
+        ) as temp_auth_client:
+            if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
+                configure_auth_client(auth, temp_auth_client)
+            headers = await auth.apply_auth(temp_auth_client, {})
+    return headers, verify
 
 
 def _get_server_config(agent: Agent) -> A2AServerConfig | None:
@@ -59,7 +100,7 @@ def _get_server_config(agent: Agent) -> A2AServerConfig | None:
 
 def fetch_agent_card(
     endpoint: str,
-    auth: AuthScheme | None = None,
+    auth: ClientAuthScheme | None = None,
     timeout: int = 30,
     use_cache: bool = True,
     cache_ttl: int = 300,
@@ -68,7 +109,7 @@ def fetch_agent_card(
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL).
-        auth: Optional AuthScheme for authentication.
+        auth: Optional ClientAuthScheme for authentication.
         timeout: Request timeout in seconds.
         use_cache: Whether to use caching (default True).
         cache_ttl: Cache TTL in seconds (default 300 = 5 minutes).
@@ -90,10 +131,10 @@ def fetch_agent_card(
                     "_authorization_callback",
                 }
             )
-            auth_hash = hash((type(auth).__name__, auth_data))
+            auth_hash = _auth_store.compute_key(type(auth).__name__, auth_data)
         else:
-            auth_hash = 0
-        _auth_store[auth_hash] = auth
+            auth_hash = _auth_store.compute_key("none", "")
+        _auth_store.set(auth_hash, auth)
         ttl_hash = int(time.time() // cache_ttl)
         return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
 
@@ -109,7 +150,7 @@ def fetch_agent_card(
 
 async def afetch_agent_card(
     endpoint: str,
-    auth: AuthScheme | None = None,
+    auth: ClientAuthScheme | None = None,
     timeout: int = 30,
     use_cache: bool = True,
 ) -> AgentCard:
@@ -119,7 +160,7 @@ async def afetch_agent_card(
 
     Args:
         endpoint: A2A agent endpoint URL (AgentCard URL).
-        auth: Optional AuthScheme for authentication.
+        auth: Optional ClientAuthScheme for authentication.
         timeout: Request timeout in seconds.
         use_cache: Whether to use caching (default True).
 
@@ -140,10 +181,10 @@ async def afetch_agent_card(
                     "_authorization_callback",
                 }
             )
-            auth_hash = hash((type(auth).__name__, auth_data))
+            auth_hash = _auth_store.compute_key(type(auth).__name__, auth_data)
         else:
-            auth_hash = 0
-        _auth_store[auth_hash] = auth
+            auth_hash = _auth_store.compute_key("none", "")
+        _auth_store.set(auth_hash, auth)
         agent_card: AgentCard = await _afetch_agent_card_cached(
             endpoint, auth_hash, timeout
         )
@@ -155,7 +196,7 @@ async def afetch_agent_card(
 @lru_cache()
 def _fetch_agent_card_cached(
     endpoint: str,
-    auth_hash: int,
+    auth_hash: str,
     timeout: int,
     _ttl_hash: int,
 ) -> AgentCard:
@@ -175,7 +216,7 @@ def _fetch_agent_card_cached(
 @cached(ttl=300, serializer=PickleSerializer())  # type: ignore[untyped-decorator]
 async def _afetch_agent_card_cached(
     endpoint: str,
-    auth_hash: int,
+    auth_hash: str,
     timeout: int,
 ) -> AgentCard:
     """Cached async implementation of AgentCard fetching."""
@@ -185,7 +226,7 @@ async def _afetch_agent_card_cached(
 
 async def _afetch_agent_card_impl(
     endpoint: str,
-    auth: AuthScheme | None,
+    auth: ClientAuthScheme | None,
     timeout: int,
 ) -> AgentCard:
     """Internal async implementation of AgentCard fetching."""
@@ -197,16 +238,17 @@ async def _afetch_agent_card_impl(
     else:
         url_parts = endpoint.split("/", 3)
         base_url = f"{url_parts[0]}//{url_parts[2]}"
-        agent_card_path = f"/{url_parts[3]}" if len(url_parts) > 3 else "/"
+        agent_card_path = (
+            f"/{url_parts[3]}"
+            if len(url_parts) > 3 and url_parts[3]
+            else "/.well-known/agent-card.json"
+        )
 
-    headers: MutableMapping[str, str] = {}
-    if auth:
-        async with httpx.AsyncClient(timeout=timeout) as temp_auth_client:
-            if isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
-                configure_auth_client(auth, temp_auth_client)
-            headers = await auth.apply_auth(temp_auth_client, {})
+    headers, verify = await _prepare_auth_headers(auth, timeout)
 
-    async with httpx.AsyncClient(timeout=timeout, headers=headers) as temp_client:
+    async with httpx.AsyncClient(
+        timeout=timeout, headers=headers, verify=verify
+    ) as temp_client:
         if auth and isinstance(auth, (HTTPDigestAuth, APIKeyAuth)):
             configure_auth_client(auth, temp_client)
 
@@ -434,6 +476,7 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     """Generate an A2A AgentCard from an Agent instance.
 
     Uses A2AServerConfig values when available, falling back to agent properties.
+    If signing_config is provided, the card will be signed with JWS.
 
     Args:
         agent: The Agent instance to generate a card for.
@@ -442,6 +485,8 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
     Returns:
         AgentCard describing the agent's capabilities.
     """
+    from crewai.a2a.utils.agent_card_signing import sign_agent_card
+
     server_config = _get_server_config(agent) or A2AServerConfig()
 
     name = server_config.name or agent.role
@@ -472,15 +517,31 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
                 )
             )
 
-    return AgentCard(
+    capabilities = server_config.capabilities
+    if server_config.server_extensions:
+        from crewai.a2a.extensions.server import ServerExtensionRegistry
+
+        registry = ServerExtensionRegistry(server_config.server_extensions)
+        ext_list = registry.get_agent_extensions()
+
+        existing_exts = list(capabilities.extensions) if capabilities.extensions else []
+        existing_uris = {e.uri for e in existing_exts}
+        for ext in ext_list:
+            if ext.uri not in existing_uris:
+                existing_exts.append(ext)
+
+        capabilities = capabilities.model_copy(update={"extensions": existing_exts})
+
+    card = AgentCard(
         name=name,
         description=description,
         url=server_config.url or url,
         version=server_config.version,
-        capabilities=server_config.capabilities,
+        capabilities=capabilities,
         default_input_modes=server_config.default_input_modes,
         default_output_modes=server_config.default_output_modes,
         skills=skills,
+        preferred_transport=server_config.transport.preferred,
         protocol_version=server_config.protocol_version,
         provider=server_config.provider,
         documentation_url=server_config.documentation_url,
@@ -489,8 +550,20 @@ def _agent_to_agent_card(agent: Agent, url: str) -> AgentCard:
         security=server_config.security,
         security_schemes=server_config.security_schemes,
         supports_authenticated_extended_card=server_config.supports_authenticated_extended_card,
-        signatures=server_config.signatures,
     )
+
+    if server_config.signing_config:
+        signature = sign_agent_card(
+            card,
+            private_key=server_config.signing_config.get_private_key(),
+            key_id=server_config.signing_config.key_id,
+            algorithm=server_config.signing_config.algorithm,
+        )
+        card = card.model_copy(update={"signatures": [signature]})
+    elif server_config.signatures:
+        card = card.model_copy(update={"signatures": server_config.signatures})
+
+    return card
 
 
 def inject_a2a_server_methods(agent: Agent) -> None:
