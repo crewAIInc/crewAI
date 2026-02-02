@@ -378,6 +378,21 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
     """
     effective_root = root_schema or json_schema
 
+    json_schema = add_key_in_dict_recursively(
+        json_schema,
+        key="additionalProperties",
+        value=False,
+        criteria=lambda d: d.get("type") == "object"
+        and "additionalProperties" not in d,
+    )
+    effective_root = add_key_in_dict_recursively(
+        effective_root,
+        key="additionalProperties",
+        value=False,
+        criteria=lambda d: d.get("type") == "object"
+        and "additionalProperties" not in d,
+    )
+
     if "allOf" in json_schema:
         json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)
         if "title" not in json_schema and "title" in (root_schema or {}):
