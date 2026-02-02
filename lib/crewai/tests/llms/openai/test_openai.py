@@ -1397,3 +1397,184 @@ def test_openai_responses_api_both_auto_chains_work_together():
     assert params.get("previous_response_id") == "resp_123"
     assert "reasoning.encrypted_content" in params["include"]
     assert len(params["input"]) == 2  # Reasoning item + message
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_openai_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="gpt-4o-mini"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_openai_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="gpt-4o-mini"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+# =============================================================================
+# Stop Words with Structured Output Tests
+# =============================================================================
+
+
+def test_openai_stop_words_not_applied_to_structured_output():
+    """
+    Test that stop words are NOT applied when response_model is provided.
+    This ensures JSON responses containing stop word patterns (like "Observation:")
+    are not truncated, which would cause JSON validation to fail.
+    """
+    from pydantic import BaseModel, Field
+
+    class ResearchResult(BaseModel):
+        """Research result that may contain stop word patterns in string fields."""
+
+        finding: str = Field(description="The research finding")
+        observation: str = Field(description="Observation about the finding")
+
+    # Create OpenAI completion instance with stop words configured
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:"],  # Common stop words
+    )
+
+    # JSON response that contains a stop word pattern in a string field
+    # Without the fix, this would be truncated at "Observation:" breaking the JSON
+    json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
+
+    # Test the _validate_structured_output method directly with content containing stop words
+    # This simulates what happens when the API returns JSON with stop word patterns
+    result = llm._validate_structured_output(json_response, ResearchResult)
+
+    # Should successfully parse the full JSON without truncation
+    assert isinstance(result, ResearchResult)
+    assert result.finding == "The data shows growth"
+    # The observation field should contain the full text including "Observation:"
+    assert "Observation:" in result.observation
+
+
+def test_openai_stop_words_still_applied_to_regular_responses():
+    """
+    Test that stop words ARE still applied for regular (non-structured) responses.
+    This ensures the fix didn't break normal stop word behavior.
+    """
+    # Create OpenAI completion instance with stop words configured
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    # Response that contains a stop word - should be truncated
+    response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
+
+    # Test the _apply_stop_words method directly
+    result = llm._apply_stop_words(response_with_stop_word)
+
+    # Response should be truncated at the stop word
+    assert "Observation:" not in result
+    assert "Found results" not in result
+    assert "I need to search for more information" in result
+
+
+def test_openai_structured_output_preserves_json_with_stop_word_patterns():
+    """
+    Test that structured output validation preserves JSON content
+    even when string fields contain stop word patterns.
+    """
+    from pydantic import BaseModel, Field
+
+    class AgentObservation(BaseModel):
+        """Model with fields that might contain stop word-like text."""
+
+        action_taken: str = Field(description="What action was taken")
+        observation_result: str = Field(description="The observation result")
+        final_answer: str = Field(description="The final answer")
+
+    llm = OpenAICompletion(
+        model="gpt-4o",
+        stop=["Observation:", "Final Answer:", "Action:"],
+    )
+
+    # JSON that contains all the stop word patterns as part of the content
+    json_with_stop_patterns = '''{
+        "action_taken": "Action: Searched the database",
+        "observation_result": "Observation: Found 5 relevant results",
+        "final_answer": "Final Answer: The data shows positive growth"
+    }'''
+
+    # This should NOT be truncated since it's structured output
+    result = llm._validate_structured_output(json_with_stop_patterns, AgentObservation)
+
+    assert isinstance(result, AgentObservation)
+    assert "Action:" in result.action_taken
+    assert "Observation:" in result.observation_result
+    assert "Final Answer:" in result.final_answer
