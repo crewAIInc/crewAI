@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
     from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
-    from anthropic.types.beta import BetaMessage, BetaTextBlock
+    from anthropic.types.beta import BetaMessage, BetaTextBlock, BetaToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -691,7 +691,7 @@ class AnthropicCompletion(BaseLLM):
             else:
                 for block in response.content:
                     if (
-                        isinstance(block, ToolUseBlock)
+                        isinstance(block, (ToolUseBlock, BetaToolUseBlock))
                         and block.name == "structured_output"
                     ):
                         structured_data = response_model.model_validate(block.input)
@@ -707,7 +707,9 @@ class AnthropicCompletion(BaseLLM):
         # Check if Claude wants to use tools
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -926,7 +928,7 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -958,7 +960,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_tools_and_collect_results(
         self,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -966,7 +968,7 @@ class AnthropicCompletion(BaseLLM):
         """Execute tools and collect results in Anthropic format.
 
         Args:
-            tool_uses: List of tool use blocks from Claude's response
+            tool_uses: List of tool use blocks from Claude's response (regular or beta API)
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
@@ -1002,7 +1004,7 @@ class AnthropicCompletion(BaseLLM):
     def _handle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -1194,9 +1196,12 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
+        # Handle both ToolUseBlock (regular API) and BetaToolUseBlock (beta API features)
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1392,7 +1397,7 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1423,7 +1428,7 @@ class AnthropicCompletion(BaseLLM):
     async def _ahandle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,

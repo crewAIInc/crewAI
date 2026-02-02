@@ -1,0 +1,109 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
+      Calculate 15 + 27 using your add_numbers tool. Report the result."}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are Calculator. You are a calculator assistant that uses tools to compute results.\nYour
+      personal goal is: Perform calculations using available tools","tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Output
+      the structured response","input_schema":{"type":"object","description":"Structured
+      output for calculation results.","title":"CalculationResult","properties":{"operation":{"type":"string","description":"The
+      mathematical operation performed","title":"Operation"},"result":{"type":"integer","description":"The
+      result of the calculation","title":"Result"},"explanation":{"type":"string","description":"Brief
+      explanation of the calculation","title":"Explanation"}},"additionalProperties":false,"required":["operation","result","explanation"]}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '1050'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_0149zKBgM47utdBdrfJjM6YZ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_011jnBYLgtzXqdmSi7JDyQHj","name":"structured_output","input":{"operation":"Addition","result":42,"explanation":"Adding
+        15 and 27 together results in 42"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":573,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":79,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 18:56:15 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-01-30T18:56:14Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '1473'
+    status:
+      code: 200
+      message: OK
+version: 1
