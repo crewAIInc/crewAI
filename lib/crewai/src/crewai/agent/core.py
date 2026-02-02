@@ -878,7 +878,8 @@ class Agent(BaseAgent):
         stop_words: list[str],
         rpm_limit_fn: Callable | None,  # type: ignore[type-arg]
     ) -> None:
-        """Update executor parameters without recreating instance.
+        """
+        if self.agent_executor and hasattr(self.agent_executor, "messages"): self.agent_executor.messages.clear()Update executor parameters without recreating instance.
 
         Args:
             task: Task to execute.
@@ -888,6 +889,8 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
+        if self.agent_executor and hasattr(self.agent_executor, "messages"):
+            self.agent_executor.messages.clear()
         self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
