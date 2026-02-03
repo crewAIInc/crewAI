@@ -629,7 +629,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        if not isinstance(self.executor_class, AgentExecutor):
+        if self.executor_class is not AgentExecutor:
             handle_reasoning(
                 self, task
             )  # we need this till CrewAgentExecutor migrates to AgentExecutor
