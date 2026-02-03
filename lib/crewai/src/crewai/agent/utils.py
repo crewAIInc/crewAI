@@ -27,21 +27,15 @@ if TYPE_CHECKING:
     from crewai.utilities.i18n import I18N
 
 
-def handle_planning(agent: Agent, task: Task) -> None:
-    """Handle the planning process for an agent before task execution.
-
-    This function checks if planning is enabled for the agent and, if so,
-    creates a plan that gets appended to the task description.
+def handle_reasoning(agent: Agent, task: Task) -> None:
+    """Handle the reasoning process for an agent before task execution.
 
     Args:
         agent: The agent performing the task.
         task: The task to execute.
     """
-    # Check if planning is enabled using the new planning_enabled property
-    if not getattr(agent, "planning_enabled", False):
-        # Fallback for backward compatibility with reasoning=True
-        if not getattr(agent, "reasoning", False):
-            return
+    if not agent.reasoning:
+        return
 
     try:
         from crewai.utilities.reasoning_handler import (
@@ -49,25 +43,13 @@ def handle_planning(agent: Agent, task: Task) -> None:
             AgentReasoningOutput,
         )
 
-        planning_handler = AgentReasoning(task=task, agent=agent)
-        planning_output: AgentReasoningOutput = (
-            planning_handler.handle_agent_reasoning()
+        reasoning_handler = AgentReasoning(task=task, agent=agent)
+        reasoning_output: AgentReasoningOutput = (
+            reasoning_handler.handle_agent_reasoning()
         )
-        task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
+        task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
     except Exception as e:
-        agent._logger.log("error", f"Error during planning process: {e!s}")
-
-
-def handle_reasoning(agent: Agent, task: Task) -> None:
-    """Deprecated: Use handle_planning instead.
-
-    This function is kept for backward compatibility.
-
-    Args:
-        agent: The agent performing the task.
-        task: The task to execute.
-    """
-    handle_planning(agent, task)
+        agent._logger.log("error", f"Error during reasoning process: {e!s}")
 
 
 def build_task_prompt_with_schema(task: Task, task_prompt: str, i18n: I18N) -> str:
