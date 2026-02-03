@@ -1,6 +1,5 @@
 """Utility functions for ChromaDB client implementation."""
 
-from collections.abc import Mapping
 import hashlib
 import json
 from typing import Literal, TypeGuard, cast
@@ -66,7 +65,7 @@ def _prepare_documents_for_chromadb(
     """
     ids: list[str] = []
     texts: list[str] = []
-    metadatas: list[Mapping[str, str | int | float | bool]] = []
+    metadatas: list[dict[str, str | int | float | bool]] = []
     seen_ids: dict[str, int] = {}
 
     try:
@@ -111,7 +110,7 @@ def _prepare_documents_for_chromadb(
 
 def _create_batch_slice(
     prepared: PreparedDocuments, start_index: int, batch_size: int
-) -> tuple[list[str], list[str], list[Mapping[str, str | int | float | bool]] | None]:
+) -> tuple[list[str], list[str], list[dict[str, str | int | float | bool]] | None]:
     """Create a batch slice from prepared documents.
 
     Args:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -98,7 +98,7 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
     return tools_list
 
 
-def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
+def get_tool_names(tools: list[CrewStructuredTool | BaseTool]) -> str:
     """Get the sanitized names of the tools.
 
     Args:
@@ -111,7 +111,7 @@ def get_tool_names(tools: Sequence[CrewStructuredTool | BaseTool]) -> str:
 
 
 def render_text_description_and_args(
-    tools: Sequence[CrewStructuredTool | BaseTool],
+    tools: list[CrewStructuredTool | BaseTool],
 ) -> str:
     """Render the tool name, description, and args in plain text.
 
@@ -130,7 +130,7 @@ def render_text_description_and_args(
 
 
 def convert_tools_to_openai_schema(
-    tools: Sequence[BaseTool | CrewStructuredTool],
+    tools: list[BaseTool | CrewStructuredTool],
 ) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
     """Convert CrewAI tools to OpenAI function calling format.
 

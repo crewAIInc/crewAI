@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -42,7 +42,7 @@ class LLMCallStartedEvent(LLMEventBase):
             multimodal content (text, images, etc.)
     """
 
-    type: str = "llm_call_started"
+    type: Literal["llm_call_started"] = "llm_call_started"
     messages: str | list[dict[str, Any]] | None = None
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
@@ -52,7 +52,7 @@ class LLMCallStartedEvent(LLMEventBase):
 class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
 
-    type: str = "llm_call_completed"
+    type: Literal["llm_call_completed"] = "llm_call_completed"
     messages: str | list[dict[str, Any]] | None = None
     response: Any
     call_type: LLMCallType
@@ -62,7 +62,7 @@ class LLMCallFailedEvent(LLMEventBase):
     """Event emitted when a LLM call fails"""
 
     error: str
-    type: str = "llm_call_failed"
+    type: Literal["llm_call_failed"] = "llm_call_failed"
 
 
 class FunctionCall(BaseModel):
@@ -80,7 +80,7 @@ class ToolCall(BaseModel):
 class LLMStreamChunkEvent(LLMEventBase):
     """Event emitted when a streaming chunk is received"""
 
-    type: str = "llm_stream_chunk"
+    type: Literal["llm_stream_chunk"] = "llm_stream_chunk"
     chunk: str
     tool_call: ToolCall | None = None
     call_type: LLMCallType | None = None

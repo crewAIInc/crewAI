@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ConfigDict
 
@@ -55,7 +55,7 @@ class ToolUsageEvent(BaseEvent):
 class ToolUsageStartedEvent(ToolUsageEvent):
     """Event emitted when a tool execution is started"""
 
-    type: str = "tool_usage_started"
+    type: Literal["tool_usage_started"] = "tool_usage_started"
 
 
 class ToolUsageFinishedEvent(ToolUsageEvent):
@@ -65,35 +65,35 @@ class ToolUsageFinishedEvent(ToolUsageEvent):
     finished_at: datetime
     from_cache: bool = False
     output: Any
-    type: str = "tool_usage_finished"
+    type: Literal["tool_usage_finished"] = "tool_usage_finished"
 
 
 class ToolUsageErrorEvent(ToolUsageEvent):
     """Event emitted when a tool execution encounters an error"""
 
     error: Any
-    type: str = "tool_usage_error"
+    type: Literal["tool_usage_error"] = "tool_usage_error"
 
 
 class ToolValidateInputErrorEvent(ToolUsageEvent):
     """Event emitted when a tool input validation encounters an error"""
 
     error: Any
-    type: str = "tool_validate_input_error"
+    type: Literal["tool_validate_input_error"] = "tool_validate_input_error"
 
 
 class ToolSelectionErrorEvent(ToolUsageEvent):
     """Event emitted when a tool selection encounters an error"""
 
     error: Any
-    type: str = "tool_selection_error"
+    type: Literal["tool_selection_error"] = "tool_selection_error"
 
 
 class ToolExecutionErrorEvent(BaseEvent):
     """Event emitted when a tool execution encounters an error"""
 
     error: Any
-    type: str = "tool_execution_error"
+    type: Literal["tool_execution_error"] = "tool_execution_error"
     tool_name: str
     tool_args: dict[str, Any]
     tool_class: Callable

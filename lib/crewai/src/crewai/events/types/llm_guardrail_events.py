@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from inspect import getsource
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -27,7 +27,7 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
         retry_count: The number of times the guardrail has been retried
     """
 
-    type: str = "llm_guardrail_started"
+    type: Literal["llm_guardrail_started"] = "llm_guardrail_started"
     guardrail: str | Callable
     retry_count: int
 
@@ -53,7 +53,7 @@ class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
         retry_count: The number of times the guardrail has been retried
     """
 
-    type: str = "llm_guardrail_completed"
+    type: Literal["llm_guardrail_completed"] = "llm_guardrail_completed"
     success: bool
     result: Any
     error: str | None = None
@@ -68,6 +68,6 @@ class LLMGuardrailFailedEvent(LLMGuardrailBaseEvent):
         retry_count: The number of times the guardrail has been retried
     """
 
-    type: str = "llm_guardrail_failed"
+    type: Literal["llm_guardrail_failed"] = "llm_guardrail_failed"
     error: str
     retry_count: int

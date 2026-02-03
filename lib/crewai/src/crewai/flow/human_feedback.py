@@ -56,7 +56,7 @@ Example (asynchronous with custom provider):
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import wraps
@@ -131,7 +131,7 @@ class HumanFeedbackConfig:
     """
 
     message: str
-    emit: Sequence[str] | None = None
+    emit: list[str] | None = None
     llm: str | BaseLLM | None = None
     default_outcome: str | None = None
     metadata: dict[str, Any] | None = None
@@ -157,7 +157,7 @@ class HumanFeedbackMethod(FlowMethod[Any, Any]):
 
 def human_feedback(
     message: str,
-    emit: Sequence[str] | None = None,
+    emit: list[str] | None = None,
     llm: str | BaseLLM | None = None,
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,

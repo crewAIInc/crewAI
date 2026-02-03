@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -20,14 +20,14 @@ class KnowledgeEventBase(BaseEvent):
 class KnowledgeRetrievalStartedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge retrieval is started."""
 
-    type: str = "knowledge_search_query_started"
+    type: Literal["knowledge_search_query_started"] = "knowledge_search_query_started"
 
 
 class KnowledgeRetrievalCompletedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge retrieval is completed."""
 
     query: str
-    type: str = "knowledge_search_query_completed"
+    type: Literal["knowledge_search_query_completed"] = "knowledge_search_query_completed"
     retrieved_knowledge: str
 
 
@@ -35,13 +35,13 @@ class KnowledgeQueryStartedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query is started."""
 
     task_prompt: str
-    type: str = "knowledge_query_started"
+    type: Literal["knowledge_query_started"] = "knowledge_query_started"
 
 
 class KnowledgeQueryFailedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query fails."""
 
-    type: str = "knowledge_query_failed"
+    type: Literal["knowledge_query_failed"] = "knowledge_query_failed"
     error: str
 
 
@@ -49,12 +49,12 @@ class KnowledgeQueryCompletedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge query is completed."""
 
     query: str
-    type: str = "knowledge_query_completed"
+    type: Literal["knowledge_query_completed"] = "knowledge_query_completed"
 
 
 class KnowledgeSearchQueryFailedEvent(KnowledgeEventBase):
     """Event emitted when a knowledge search query fails."""
 
     query: str
-    type: str = "knowledge_search_query_failed"
+    type: Literal["knowledge_search_query_failed"] = "knowledge_search_query_failed"
     error: str

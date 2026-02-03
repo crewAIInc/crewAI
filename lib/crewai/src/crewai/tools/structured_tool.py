@@ -200,9 +200,12 @@ class CrewStructuredTool:
         """
         if isinstance(raw_args, str):
             try:
-                raw_args = json.loads(raw_args)
+                validated_args = self.args_schema.model_validate_json(raw_args)
+                return validated_args.model_dump()
             except json.JSONDecodeError as e:
                 raise ValueError(f"Failed to parse arguments as JSON: {e}") from e
+            except Exception as e:
+                raise ValueError(f"Arguments validation failed: {e}") from e
 
         try:
             validated_args = self.args_schema.model_validate(raw_args)
