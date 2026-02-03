@@ -22,6 +22,7 @@ import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Union
 import uuid
 
+import jsonref  # type: ignore[import-untyped]
 from pydantic import (
     UUID1,
     UUID3,
@@ -400,6 +401,8 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         >>> person.name
         'John'
     """
+    json_schema = dict(jsonref.replace_refs(json_schema, proxies=False))
+
     effective_root = root_schema or json_schema
 
     json_schema = force_additional_properties_false(json_schema)
