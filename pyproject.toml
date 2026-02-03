@@ -28,7 +28,7 @@ dev = [
     "boto3-stubs[bedrock-runtime]==1.40.54",
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
-    "types-aiofiles~=24.1.0",
+    "types-aiofiles~=25.1.0",
 ]
 
 
