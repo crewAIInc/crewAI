@@ -61,9 +61,11 @@ def reset_event_state() -> None:
         EventContextConfig,
         _event_context_config,
         _event_id_stack,
+        reset_last_event_id,
     )
 
     reset_emission_counter()
+    reset_last_event_id()  # Added missing call to reset last event ID
     _event_id_stack.set(())
     _event_context_config.set(EventContextConfig())
 
