@@ -45,11 +45,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01AxV713JCNMGdzKYEPx8bey","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_016T32GNjWnfc9kdizoZimG6","name":"create_reasoning_plan","input":{"plan":"A
-        simple plan to greet someone by saying hello","steps":[{"description":"Identify
-        the person to greet"},{"description":"Smile and make eye contact"},{"description":"Speak
-        clearly and say ''Hello''"},{"description":"Optionally, add a friendly follow-up
-        like ''How are you?''"}],"ready":true}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":513,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":146,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01HLuGgGRFseMdhTYAhkKtfz","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01GQAUFHffGzMd3ufA6YRMZF","name":"create_reasoning_plan","input":{"plan":"Say
+        hello in a friendly and straightforward manner","steps":[{"description":"Take
+        a deep breath","action":"Pause and relax"},{"description":"Smile","action":"Prepare
+        a warm facial expression"},{"description":"Greet the person","action":"Say
+        ''Hello!''"},{"description":"Wait for response","action":"Listen and be ready
+        to continue conversation"}],"ready":true}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":513,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":162,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -60,7 +61,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 23:19:54 GMT
+      - Tue, 03 Feb 2026 23:26:38 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -86,7 +87,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-03T23:19:51Z'
+      - '2026-02-03T23:26:35Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -100,7 +101,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '2499'
+      - '2994'
     status:
       code: 200
       message: OK

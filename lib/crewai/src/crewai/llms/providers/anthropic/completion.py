@@ -967,13 +967,6 @@ class AnthropicCompletion(BaseLLM):
                 )
 
                 if result is not None:
-                    self._emit_call_completed_event(
-                        response=str(result),
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                    )
                     return result
 
         full_response = self._apply_stop_words(full_response)
@@ -1263,13 +1256,6 @@ class AnthropicCompletion(BaseLLM):
                 )
 
                 if result is not None:
-                    self._emit_call_completed_event(
-                        response=str(result),
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                    )
                     return result
 
         content = ""
@@ -1465,13 +1451,6 @@ class AnthropicCompletion(BaseLLM):
                 )
 
                 if result is not None:
-                    self._emit_call_completed_event(
-                        response=str(result),
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                    )
                     return result
 
         full_response = self._apply_stop_words(full_response)

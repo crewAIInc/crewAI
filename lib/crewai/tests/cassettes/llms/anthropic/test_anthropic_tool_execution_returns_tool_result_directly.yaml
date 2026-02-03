@@ -44,7 +44,7 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01Rb6QXTJZwvEsqS5Wgw4g8t","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01YMXvNSiXieK7VUEau1XbZ3","name":"simple_calculator","input":{"operation":"add","a":5,"b":3}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":498,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":67,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01Q2F83aAeqqTCxsd8WpZjK7","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01BW4XkHnhRVM5JZsvoaQKw5","name":"simple_calculator","input":{"operation":"add","a":5,"b":3}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":498,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":67,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -55,7 +55,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 23:19:55 GMT
+      - Tue, 03 Feb 2026 23:26:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -81,7 +81,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-03T23:19:54Z'
+      - '2026-02-03T23:26:34Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -95,7 +95,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1259'
+      - '1228'
     status:
       code: 200
       message: OK
