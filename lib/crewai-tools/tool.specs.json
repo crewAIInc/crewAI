@@ -2,7 +2,14 @@
   "tools": [
     {
       "description": "A wrapper around [AI-Minds](https://mindsdb.com/minds). Useful for when you need answers to questions from your data, stored in data sources including PostgreSQL, MySQL, MariaDB, ClickHouse, Snowflake and Google BigQuery. Input should be a question in natural language.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for AI-Minds",
+          "name": "MINDS_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "AIMind Tool",
       "init_params_schema": {
         "$defs": {
@@ -80,7 +87,9 @@
         "type": "object"
       },
       "name": "AIMindTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "minds-sdk"
+      ],
       "run_params_schema": {
         "description": "Input for AIMind Tool.",
         "properties": {
@@ -161,7 +170,9 @@
         "type": "object"
       },
       "name": "ArxivPaperTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "pydantic"
+      ],
       "run_params_schema": {
         "properties": {
           "max_results": {
@@ -186,9 +197,16 @@
       }
     },
     {
-      "description": "A tool that performs web searches using the Brave Search API. Results are returned as structured JSON data.",
-      "env_vars": [],
-      "humanized_name": "Brave Search",
+      "description": "A tool that can be used to search the internet with a search_query.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Web Search the internet",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -227,8 +245,20 @@
             "type": "object"
           }
         },
-        "description": "A tool that performs web searches using the Brave Search API.",
+        "description": "BraveSearchTool - A tool for performing web searches using the Brave Search API.\n\nThis module provides functionality to search the internet using Brave's Search API,\nsupporting customizable result counts and country-specific searches.\n\nDependencies:\n    - requests\n    - pydantic\n    - python-dotenv (for API key management)",
         "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "title": "Country"
+          },
           "n_results": {
             "default": 10,
             "title": "N Results",
@@ -251,161 +281,16 @@
       "name": "BraveSearchTool",
       "package_dependencies": [],
       "run_params_schema": {
-        "description": "Input for BraveSearchTool",
+        "description": "Input for BraveSearchTool.",
         "properties": {
-          "count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "The maximum number of results to return. Actual number may be less.",
-            "title": "Count"
-          },
-          "country": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
-            "title": "Country"
-          },
-          "extra_snippets": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Include up to 5 text snippets for each page if possible.",
-            "title": "Extra Snippets"
-          },
-          "freshness": {
-            "anyOf": [
-              {
-                "enum": [
-                  "pd",
-                  "pw",
-                  "pm",
-                  "py"
-                ],
-                "type": "string"
-              },
-              {
-                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
-            "title": "Freshness"
-          },
-          "offset": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Skip the first N result sets/pages. Max is 9.",
-            "title": "Offset"
-          },
-          "operators": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Whether to apply search operators (e.g., site:example.com).",
-            "title": "Operators"
-          },
-          "query": {
-            "description": "Search query to perform",
-            "title": "Query",
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
             "type": "string"
-          },
-          "safesearch": {
-            "anyOf": [
-              {
-                "enum": [
-                  "off",
-                  "moderate",
-                  "strict"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Filter out explicit content. Options: off/moderate/strict",
-            "title": "Safesearch"
-          },
-          "search_language": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Language code for the search results (e.g., 'en', 'es').",
-            "title": "Search Language"
-          },
-          "spellcheck": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Attempt to correct spelling errors in the search query.",
-            "title": "Spellcheck"
-          },
-          "text_decorations": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "description": "Include markup to highlight search terms in the results.",
-            "title": "Text Decorations"
           }
         },
         "required": [
-          "query"
+          "search_query"
         ],
         "title": "BraveSearchToolSchema",
         "type": "object"
@@ -413,7 +298,14 @@
     },
     {
       "description": "Scrapes structured data using Bright Data Dataset API from a URL and optional input parameters",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Bright Data",
+          "name": "BRIGHT_DATA_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Bright Data Dataset Tool",
       "init_params_schema": {
         "$defs": {
@@ -579,7 +471,14 @@
     },
     {
       "description": "Tool to perform web search using Bright Data SERP API.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Bright Data",
+          "name": "BRIGHT_DATA_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Bright Data SERP Search",
       "init_params_schema": {
         "$defs": {
@@ -787,7 +686,14 @@
     },
     {
       "description": "Tool to perform web scraping using Bright Data Web Unlocker",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Bright Data",
+          "name": "BRIGHT_DATA_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Bright Data Web Unlocker Scraping",
       "init_params_schema": {
         "$defs": {
@@ -916,7 +822,20 @@
     },
     {
       "description": "Load webpages url in a headless browser using Browserbase and return the contents",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Browserbase services",
+          "name": "BROWSERBASE_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Project ID for Browserbase services",
+          "name": "BROWSERBASE_PROJECT_ID",
+          "required": false
+        }
+      ],
       "humanized_name": "Browserbase web load tool",
       "init_params_schema": {
         "$defs": {
@@ -1032,7 +951,9 @@
         "type": "object"
       },
       "name": "BrowserbaseLoadTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "browserbase"
+      ],
       "run_params_schema": {
         "properties": {
           "url": {
@@ -3273,7 +3194,14 @@
     },
     {
       "description": "",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Composio services",
+          "name": "COMPOSIO_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "ComposioTool",
       "init_params_schema": {
         "$defs": {
@@ -3390,7 +3318,9 @@
         "type": "object"
       },
       "name": "ContextualAICreateAgentTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "contextual-client"
+      ],
       "run_params_schema": {
         "description": "Schema for contextual create agent tool.",
         "properties": {
@@ -3484,7 +3414,9 @@
         "type": "object"
       },
       "name": "ContextualAIParseTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "contextual-client"
+      ],
       "run_params_schema": {
         "description": "Schema for contextual parse tool.",
         "properties": {
@@ -3603,7 +3535,9 @@
         "type": "object"
       },
       "name": "ContextualAIQueryTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "contextual-client"
+      ],
       "run_params_schema": {
         "description": "Schema for contextual query tool.",
         "properties": {
@@ -3695,7 +3629,9 @@
         "type": "object"
       },
       "name": "ContextualAIRerankTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "contextual-client"
+      ],
       "run_params_schema": {
         "description": "Schema for contextual rerank tool.",
         "properties": {
@@ -4944,7 +4880,14 @@
     },
     {
       "description": "Generates images using OpenAI's Dall-E model.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for OpenAI services",
+          "name": "OPENAI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Dall-E Tool",
       "init_params_schema": {
         "$defs": {
@@ -5144,7 +5087,9 @@
         "type": "object"
       },
       "name": "DatabricksQueryTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "databricks-sdk"
+      ],
       "run_params_schema": {
         "description": "Input schema for DatabricksQueryTool.",
         "properties": {
@@ -6343,7 +6288,20 @@
     },
     {
       "description": "Search the internet using Exa",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Exa services",
+          "name": "EXA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "API url for the Exa services",
+          "name": "EXA_BASE_URL",
+          "required": false
+        }
+      ],
       "humanized_name": "EXASearchTool",
       "init_params_schema": {
         "$defs": {
@@ -6461,7 +6419,9 @@
         "type": "object"
       },
       "name": "EXASearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "exa_py"
+      ],
       "run_params_schema": {
         "properties": {
           "end_published_date": {
@@ -6805,7 +6765,14 @@
     },
     {
       "description": "Crawl webpages using Firecrawl and return the contents",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Firecrawl services",
+          "name": "FIRECRAWL_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Firecrawl web crawl tool",
       "init_params_schema": {
         "$defs": {
@@ -6876,7 +6843,9 @@
         "type": "object"
       },
       "name": "FirecrawlCrawlWebsiteTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "firecrawl-py"
+      ],
       "run_params_schema": {
         "properties": {
           "url": {
@@ -6894,7 +6863,14 @@
     },
     {
       "description": "Scrape webpages using Firecrawl and return the contents",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Firecrawl services",
+          "name": "FIRECRAWL_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Firecrawl web scrape tool",
       "init_params_schema": {
         "$defs": {
@@ -6958,7 +6934,9 @@
         "type": "object"
       },
       "name": "FirecrawlScrapeWebsiteTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "firecrawl-py"
+      ],
       "run_params_schema": {
         "properties": {
           "url": {
@@ -6976,7 +6954,14 @@
     },
     {
       "description": "Search webpages using Firecrawl and return the results",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Firecrawl services",
+          "name": "FIRECRAWL_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Firecrawl web search tool",
       "init_params_schema": {
         "$defs": {
@@ -7047,7 +7032,9 @@
         "type": "object"
       },
       "name": "FirecrawlSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "firecrawl-py"
+      ],
       "run_params_schema": {
         "properties": {
           "query": {
@@ -7065,7 +7052,20 @@
     },
     {
       "description": "A tool that leverages CrewAI Studio's capabilities to automatically generate complete CrewAI automations based on natural language descriptions. It translates high-level requirements into functional CrewAI implementations.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Personal Access Token for CrewAI Enterprise API",
+          "name": "CREWAI_PERSONAL_ACCESS_TOKEN",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Base URL for CrewAI Enterprise API",
+          "name": "CREWAI_PLUS_URL",
+          "required": false
+        }
+      ],
       "humanized_name": "Generate CrewAI Automation",
       "init_params_schema": {
         "$defs": {
@@ -8234,7 +8234,14 @@
     },
     {
       "description": "Scrape or crawl a website using Hyperbrowser and return the contents in properly formatted markdown or html",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Hyperbrowser services",
+          "name": "HYPERBROWSER_API_KEY",
+          "required": false
+        }
+      ],
       "humanized_name": "Hyperbrowser web load tool",
       "init_params_schema": {
         "$defs": {
@@ -8303,7 +8310,9 @@
         "type": "object"
       },
       "name": "HyperbrowserLoadTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "hyperbrowser"
+      ],
       "run_params_schema": {
         "properties": {
           "operation": {
@@ -9573,7 +9582,14 @@
     },
     {
       "description": "Performs an API call to Linkup to retrieve contextual information.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Linkup",
+          "name": "LINKUP_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Linkup Search Tool",
       "init_params_schema": {
         "$defs": {
@@ -9618,7 +9634,9 @@
         "type": "object"
       },
       "name": "LinkupSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "linkup-sdk"
+      ],
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
@@ -10742,7 +10760,14 @@
     },
     {
       "description": "",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Production API key for Agent Handler services",
+          "name": "AGENT_HANDLER_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "MergeAgentHandlerTool",
       "init_params_schema": {
         "$defs": {
@@ -10839,7 +10864,20 @@
     },
     {
       "description": "A tool to perfrom a vector search on a MongoDB database for relevant information on internal documents.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Browserbase services",
+          "name": "BROWSERBASE_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Project ID for Browserbase services",
+          "name": "BROWSERBASE_PROJECT_ID",
+          "required": false
+        }
+      ],
       "humanized_name": "MongoDBVectorSearchTool",
       "init_params_schema": {
         "$defs": {
@@ -11011,7 +11049,9 @@
         "type": "object"
       },
       "name": "MongoDBVectorSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "mongdb"
+      ],
       "run_params_schema": {
         "description": "Input for MongoDBTool.",
         "properties": {
@@ -11030,7 +11070,14 @@
     },
     {
       "description": "Multion gives the ability for LLMs to control web browsers using natural language instructions.\n            If the status is 'CONTINUE', reissue the same instruction to continue execution",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Multion",
+          "name": "MULTION_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Multion Browse Tool",
       "init_params_schema": {
         "$defs": {
@@ -11109,7 +11156,9 @@
         "type": "object"
       },
       "name": "MultiOnTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "multion"
+      ],
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
@@ -12318,7 +12367,20 @@
     },
     {
       "description": "Scrape Amazon product pages with Oxylabs Amazon Product Scraper",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Username for Oxylabs",
+          "name": "OXYLABS_USERNAME",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Password for Oxylabs",
+          "name": "OXYLABS_PASSWORD",
+          "required": true
+        }
+      ],
       "humanized_name": "Oxylabs Amazon Product Scraper tool",
       "init_params_schema": {
         "$defs": {
@@ -12488,7 +12550,9 @@
         "type": "object"
       },
       "name": "OxylabsAmazonProductScraperTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "oxylabs"
+      ],
       "run_params_schema": {
         "properties": {
           "query": {
@@ -12506,7 +12570,20 @@
     },
     {
       "description": "Scrape Amazon search results with Oxylabs Amazon Search Scraper",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Username for Oxylabs",
+          "name": "OXYLABS_USERNAME",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Password for Oxylabs",
+          "name": "OXYLABS_PASSWORD",
+          "required": true
+        }
+      ],
       "humanized_name": "Oxylabs Amazon Search Scraper tool",
       "init_params_schema": {
         "$defs": {
@@ -12702,7 +12779,9 @@
         "type": "object"
       },
       "name": "OxylabsAmazonSearchScraperTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "oxylabs"
+      ],
       "run_params_schema": {
         "properties": {
           "query": {
@@ -12720,7 +12799,20 @@
     },
     {
       "description": "Scrape Google Search results with Oxylabs Google Search Scraper",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Username for Oxylabs",
+          "name": "OXYLABS_USERNAME",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Password for Oxylabs",
+          "name": "OXYLABS_PASSWORD",
+          "required": true
+        }
+      ],
       "humanized_name": "Oxylabs Google Search Scraper tool",
       "init_params_schema": {
         "$defs": {
@@ -12929,7 +13021,9 @@
         "type": "object"
       },
       "name": "OxylabsGoogleSearchScraperTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "oxylabs"
+      ],
       "run_params_schema": {
         "properties": {
           "query": {
@@ -12947,7 +13041,20 @@
     },
     {
       "description": "Scrape any url with Oxylabs Universal Scraper",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Username for Oxylabs",
+          "name": "OXYLABS_USERNAME",
+          "required": true
+        },
+        {
+          "default": null,
+          "description": "Password for Oxylabs",
+          "name": "OXYLABS_PASSWORD",
+          "required": true
+        }
+      ],
       "humanized_name": "Oxylabs Universal Scraper tool",
       "init_params_schema": {
         "$defs": {
@@ -13104,7 +13211,9 @@
         "type": "object"
       },
       "name": "OxylabsUniversalScraperTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "oxylabs"
+      ],
       "run_params_schema": {
         "properties": {
           "url": {
@@ -14185,7 +14294,14 @@
     },
     {
       "description": "Search the web using Parallel's Search API (v1beta). Returns ranked results with compressed excerpts optimized for LLMs.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Parallel",
+          "name": "PARALLEL_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Parallel Web Search Tool",
       "init_params_schema": {
         "$defs": {
@@ -14236,7 +14352,9 @@
         "type": "object"
       },
       "name": "ParallelSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "requests"
+      ],
       "run_params_schema": {
         "description": "Input schema for ParallelSearchTool using the Search API (v1beta).\n\nAt least one of objective or search_queries is required.",
         "properties": {
@@ -14316,7 +14434,14 @@
     },
     {
       "description": "",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Patronus evaluation services",
+          "name": "PATRONUS_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Patronus Evaluation Tool",
       "init_params_schema": {
         "$defs": {
@@ -14510,7 +14635,14 @@
     },
     {
       "description": "Search Qdrant vector DB for relevant documents.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for OpenAI",
+          "name": "OPENAI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "QdrantVectorSearchTool",
       "init_params_schema": {
         "$defs": {
@@ -14644,7 +14776,9 @@
         "type": "object"
       },
       "name": "QdrantVectorSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "qdrant-client"
+      ],
       "run_params_schema": {
         "properties": {
           "filter_by": {
@@ -15943,7 +16077,14 @@
     },
     {
       "description": "A tool that uses Scrapegraph AI to intelligently scrape website content.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Scrapegraph AI services",
+          "name": "SCRAPEGRAPH_API_KEY",
+          "required": false
+        }
+      ],
       "humanized_name": "Scrapegraph website scraper",
       "init_params_schema": {
         "$defs": {
@@ -16031,7 +16172,9 @@
         "type": "object"
       },
       "name": "ScrapegraphScrapeTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "scrapegraph-py"
+      ],
       "run_params_schema": {
         "description": "Input for ScrapegraphScrapeTool.",
         "properties": {
@@ -16056,7 +16199,14 @@
     },
     {
       "description": "Scrape a webpage url using Scrapfly and return its content as markdown or text",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Scrapfly",
+          "name": "SCRAPFLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Scrapfly web scraping API tool",
       "init_params_schema": {
         "$defs": {
@@ -16124,7 +16274,9 @@
         "type": "object"
       },
       "name": "ScrapflyScrapeWebsiteTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "scrapfly-sdk"
+      ],
       "run_params_schema": {
         "properties": {
           "ignore_scrape_failures": {
@@ -16304,7 +16456,10 @@
         "type": "object"
       },
       "name": "SeleniumScrapingTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "selenium",
+        "webdriver-manager"
+      ],
       "run_params_schema": {
         "description": "Input for SeleniumScrapingTool.",
         "properties": {
@@ -16329,7 +16484,14 @@
     },
     {
       "description": "A tool to perform to perform a Google search with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SerpApi searches",
+          "name": "SERPAPI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Google Search",
       "init_params_schema": {
         "$defs": {
@@ -16385,7 +16547,9 @@
         "type": "object"
       },
       "name": "SerpApiGoogleSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "serpapi"
+      ],
       "run_params_schema": {
         "description": "Input for Google Search.",
         "properties": {
@@ -16417,7 +16581,14 @@
     },
     {
       "description": "A tool to perform search on Google shopping with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SerpApi searches",
+          "name": "SERPAPI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Google Shopping",
       "init_params_schema": {
         "$defs": {
@@ -16473,7 +16644,9 @@
         "type": "object"
       },
       "name": "SerpApiGoogleShoppingTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "serpapi"
+      ],
       "run_params_schema": {
         "description": "Input for Google Shopping.",
         "properties": {
@@ -16505,7 +16678,14 @@
     },
     {
       "description": "A tool that can be used to search the internet with a search_query. Supports different search types: 'search' (default), 'news'",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serper",
+          "name": "SERPER_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Search the internet with Serper",
       "init_params_schema": {
         "$defs": {
@@ -16626,7 +16806,14 @@
     },
     {
       "description": "Scrapes website content using Serper's scraping API. This tool can extract clean, readable content from any website URL, optionally including markdown formatting for better structure.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serper",
+          "name": "SERPER_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "serper_scrape_website",
       "init_params_schema": {
         "$defs": {
@@ -16696,7 +16883,14 @@
     },
     {
       "description": "A tool to perform to perform a job search in the US with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serply services",
+          "name": "SERPLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Job Search",
       "init_params_schema": {
         "$defs": {
@@ -17770,7 +17964,14 @@
     },
     {
       "description": "A tool to perform News article search with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serply services",
+          "name": "SERPLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "News Search",
       "init_params_schema": {
         "$defs": {
@@ -17876,7 +18077,14 @@
     },
     {
       "description": "A tool to perform scholarly literature search with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serply services",
+          "name": "SERPLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Scholar Search",
       "init_params_schema": {
         "$defs": {
@@ -17982,7 +18190,14 @@
     },
     {
       "description": "A tool to perform Google search with a search_query.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serply services",
+          "name": "SERPLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Google Search",
       "init_params_schema": {
         "$defs": {
@@ -18124,7 +18339,14 @@
     },
     {
       "description": "A tool to perform convert a webpage to markdown to make it easier for LLMs to understand",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Serply services",
+          "name": "SERPLY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Webpage to Markdown",
       "init_params_schema": {
         "$defs": {
@@ -19199,7 +19421,68 @@
     },
     {
       "description": "A tool that can be used to semantic search a query from a database.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "A comprehensive URL string that can encapsulate host, port, username, password, and database information, often used in environments like SingleStore notebooks or specific frameworks. For example: 'me:p455w0rd@s2-host.com/my_db'",
+          "name": "SINGLESTOREDB_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Specifies the hostname, IP address, or URL of the SingleStoreDB workspace or cluster",
+          "name": "SINGLESTOREDB_HOST",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Defines the port number on which the SingleStoreDB server is listening",
+          "name": "SINGLESTOREDB_PORT",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Specifies the database user name",
+          "name": "SINGLESTOREDB_USER",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Specifies the database user password",
+          "name": "SINGLESTOREDB_PASSWORD",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Name of the database to connect to",
+          "name": "SINGLESTOREDB_DATABASE",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "File containing SSL key",
+          "name": "SINGLESTOREDB_SSL_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "File containing SSL certificate",
+          "name": "SINGLESTOREDB_SSL_CERT",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "File containing SSL certificate authority",
+          "name": "SINGLESTOREDB_SSL_CA",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "The timeout for connecting to the database in seconds",
+          "name": "SINGLESTOREDB_CONNECT_TIMEOUT",
+          "required": false
+        }
+      ],
       "humanized_name": "Search a database's table(s) content",
       "init_params_schema": {
         "$defs": {
@@ -19261,7 +19544,10 @@
         "type": "object"
       },
       "name": "SingleStoreSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "singlestoredb",
+        "SQLAlchemy"
+      ],
       "run_params_schema": {
         "description": "Input schema for SingleStoreSearchTool.\n\nThis schema defines the expected input format for the search tool,\nensuring that only valid SELECT and SHOW queries are accepted.",
         "properties": {
@@ -19473,7 +19759,11 @@
         "type": "object"
       },
       "name": "SnowflakeSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "snowflake-connector-python",
+        "snowflake-sqlalchemy",
+        "cryptography"
+      ],
       "run_params_schema": {
         "description": "Input schema for SnowflakeSearchTool.",
         "properties": {
@@ -19531,7 +19821,14 @@
     },
     {
       "description": "A tool to scrape or crawl a website and return LLM-ready content.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Spider.cloud",
+          "name": "SPIDER_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "SpiderTool",
       "init_params_schema": {
         "$defs": {
@@ -19660,7 +19957,9 @@
         "type": "object"
       },
       "name": "SpiderTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "spider-client"
+      ],
       "run_params_schema": {
         "description": "Input schema for SpiderTool.",
         "properties": {
@@ -19689,7 +19988,20 @@
     },
     {
       "description": "Use this tool to control a web browser and interact with websites using natural language.\n\n    Capabilities:\n    - Navigate to websites and follow links\n    - Click buttons, links, and other elements\n    - Fill in forms and input fields\n    - Search within websites\n    - Extract information from web pages\n    - Identify and analyze elements on a page\n\n    To use this tool, provide a natural language instruction describing what you want to do.\n    For reliability on complex pages, use specific, atomic instructions with location hints:\n    - Good: \"Click the search box in the header\"\n    - Good: \"Type 'Italy' in the focused field\"\n    - Bad: \"Search for Italy and click the first result\"\n\n    For different types of tasks, specify the command_type:\n    - 'act': For performing one atomic action (default)\n    - 'navigate': For navigating to a URL\n    - 'extract': For getting data from a specific page section\n    - 'observe': For finding elements in a specific area",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Browserbase services",
+          "name": "BROWSERBASE_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Project ID for Browserbase services",
+          "name": "BROWSERBASE_PROJECT_ID",
+          "required": false
+        }
+      ],
       "humanized_name": "Web Automation Tool",
       "init_params_schema": {
         "$defs": {
@@ -19819,7 +20131,9 @@
         "type": "object"
       },
       "name": "StagehandTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "stagehand<=0.5.9"
+      ],
       "run_params_schema": {
         "description": "Input for StagehandTool.",
         "properties": {
@@ -20932,7 +21246,14 @@
     },
     {
       "description": "Extracts content from one or more web pages using the Tavily API. Returns structured data.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily extraction service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "TavilyExtractorTool",
       "init_params_schema": {
         "$defs": {
@@ -21048,7 +21369,9 @@
         "type": "object"
       },
       "name": "TavilyExtractorTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "tavily-python"
+      ],
       "run_params_schema": {
         "description": "Input schema for TavilyExtractorTool.",
         "properties": {
@@ -21077,7 +21400,14 @@
     },
     {
       "description": "A tool that performs web searches using the Tavily Search API. It returns a JSON object containing the search results.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily search service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Tavily Search",
       "init_params_schema": {
         "$defs": {
@@ -21297,7 +21627,9 @@
         "type": "object"
       },
       "name": "TavilySearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "tavily-python"
+      ],
       "run_params_schema": {
         "description": "Input schema for TavilySearchTool.",
         "properties": {
@@ -21316,7 +21648,14 @@
     },
     {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for OpenAI services",
+          "name": "OPENAI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "Vision Tool",
       "init_params_schema": {
         "$defs": {
@@ -21378,7 +21717,14 @@
     },
     {
       "description": "A tool to search the Weaviate database for relevant information on internal documents.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "OpenAI API key for embedding generation and retrieval",
+          "name": "OPENAI_API_KEY",
+          "required": true
+        }
+      ],
       "humanized_name": "WeaviateVectorSearchTool",
       "init_params_schema": {
         "$defs": {
@@ -21493,7 +21839,9 @@
         "type": "object"
       },
       "name": "WeaviateVectorSearchTool",
-      "package_dependencies": [],
+      "package_dependencies": [
+        "weaviate-client"
+      ],
       "run_params_schema": {
         "description": "Input for WeaviateTool.",
         "properties": {
