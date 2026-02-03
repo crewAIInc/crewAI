@@ -11,6 +11,7 @@ Example (synchronous, default):
     ```python
     from crewai.flow import Flow, start, listen, human_feedback
 
+
     class ReviewFlow(Flow):
         @start()
         @human_feedback(
@@ -32,10 +33,12 @@ Example (asynchronous with custom provider):
     from crewai.flow import Flow, start, human_feedback
     from crewai.flow.async_feedback import HumanFeedbackProvider, HumanFeedbackPending
 
+
     class SlackProvider(HumanFeedbackProvider):
         def request_feedback(self, context, flow):
             self.send_notification(context)
             raise HumanFeedbackPending(context=context)
+
 
     class ReviewFlow(Flow):
         @start()
@@ -229,6 +232,7 @@ def human_feedback(
         def review_document(self):
             return document_content
 
+
         @listen("approved")
         def publish(self):
             print(f"Publishing: {self.last_human_feedback.output}")
@@ -265,7 +269,7 @@ def human_feedback(
     def decorator(func: F) -> F:
         """Inner decorator that wraps the function."""
 
-        def _request_feedback(flow_instance: Flow, method_output: Any) -> str:
+        def _request_feedback(flow_instance: Flow[Any], method_output: Any) -> str:
             """Request feedback using provider or default console."""
             from crewai.flow.async_feedback.types import PendingFeedbackContext
 
@@ -291,19 +295,16 @@ def human_feedback(
                 effective_provider = flow_config.hitl_provider
 
             if effective_provider is not None:
-                # Use provider (may raise HumanFeedbackPending for async providers)
                 return effective_provider.request_feedback(context, flow_instance)
-            else:
-                # Use default console input (local development)
-                return flow_instance._request_human_feedback(
-                    message=message,
-                    output=method_output,
-                    metadata=metadata,
-                    emit=emit,
-                )
+            return flow_instance._request_human_feedback(
+                message=message,
+                output=method_output,
+                metadata=metadata,
+                emit=emit,
+            )
 
         def _process_feedback(
-            flow_instance: Flow,
+            flow_instance: Flow[Any],
             method_output: Any,
             raw_feedback: str,
         ) -> HumanFeedbackResult | str:
@@ -319,12 +320,14 @@ def human_feedback(
                     # No default and no feedback - use first outcome
                     collapsed_outcome = emit[0]
             elif emit:
-                # Collapse feedback to outcome using LLM
-                collapsed_outcome = flow_instance._collapse_to_outcome(
-                    feedback=raw_feedback,
-                    outcomes=emit,
-                    llm=llm,
-                )
+                if llm is not None:
+                    collapsed_outcome = flow_instance._collapse_to_outcome(
+                        feedback=raw_feedback,
+                        outcomes=emit,
+                        llm=llm,
+                    )
+                else:
+                    collapsed_outcome = emit[0]
 
             # Create result
             result = HumanFeedbackResult(
@@ -349,7 +352,7 @@ def human_feedback(
         if asyncio.iscoroutinefunction(func):
             # Async wrapper
             @wraps(func)
-            async def async_wrapper(self: Flow, *args: Any, **kwargs: Any) -> Any:
+            async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 # Execute the original method
                 method_output = await func(self, *args, **kwargs)
 
@@ -363,7 +366,7 @@ def human_feedback(
         else:
             # Sync wrapper
             @wraps(func)
-            def sync_wrapper(self: Flow, *args: Any, **kwargs: Any) -> Any:
+            def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 # Execute the original method
                 method_output = func(self, *args, **kwargs)
 
@@ -397,11 +400,10 @@ def human_feedback(
         )
         wrapper.__is_flow_method__ = True
 
-        # Make it a router if emit specified
         if emit:
             wrapper.__is_router__ = True
             wrapper.__router_paths__ = list(emit)
 
-        return wrapper  # type: ignore[return-value]
+        return wrapper  # type: ignore[no-any-return]
 
     return decorator
