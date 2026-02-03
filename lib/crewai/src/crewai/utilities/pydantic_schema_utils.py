@@ -127,6 +127,36 @@ def add_key_in_dict_recursively(
     return d
 
 
+def force_additional_properties_false(d: Any) -> Any:
+    """Force additionalProperties=false on all object-type dicts recursively.
+
+    OpenAI strict mode requires all objects to have additionalProperties=false.
+    This function overwrites any existing value to ensure compliance.
+
+    Also ensures objects have properties and required arrays, even if empty,
+    as OpenAI strict mode requires these for all object types.
+
+    Args:
+        d: The dictionary/list to modify.
+
+    Returns:
+        The modified dictionary/list.
+    """
+    if isinstance(d, dict):
+        if d.get("type") == "object":
+            d["additionalProperties"] = False
+            if "properties" not in d:
+                d["properties"] = {}
+            if "required" not in d:
+                d["required"] = []
+        for v in d.values():
+            force_additional_properties_false(v)
+    elif isinstance(d, list):
+        for i in d:
+            force_additional_properties_false(i)
+    return d
+
+
 def fix_discriminator_mappings(schema: dict[str, Any]) -> dict[str, Any]:
     """Replace '#/$defs/...' references in discriminator.mapping with just the model name.
 
@@ -278,13 +308,7 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
     """
     json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
 
-    json_schema = add_key_in_dict_recursively(
-        json_schema,
-        key="additionalProperties",
-        value=False,
-        criteria=lambda d: d.get("type") == "object"
-        and "additionalProperties" not in d,
-    )
+    json_schema = force_additional_properties_false(json_schema)
 
     json_schema = resolve_refs(json_schema)
 
@@ -377,6 +401,9 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         'John'
     """
     effective_root = root_schema or json_schema
+
+    json_schema = force_additional_properties_false(json_schema)
+    effective_root = force_additional_properties_false(effective_root)
 
     if "allOf" in json_schema:
         json_schema = _merge_all_of_schemas(json_schema["allOf"], effective_root)

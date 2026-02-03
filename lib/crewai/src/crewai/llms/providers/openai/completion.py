@@ -1521,13 +1521,16 @@ class OpenAICompletion(BaseLLM):
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
+        from crewai.utilities.pydantic_schema_utils import (
+            force_additional_properties_false,
+        )
 
         openai_tools = []
 
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "OpenAI")
 
-            openai_tool = {
+            openai_tool: dict[str, Any] = {
                 "type": "function",
                 "function": {
                     "name": name,
@@ -1537,10 +1540,11 @@ class OpenAICompletion(BaseLLM):
             }
 
             if parameters:
-                if isinstance(parameters, dict):
-                    openai_tool["function"]["parameters"] = parameters  # type: ignore
-                else:
-                    openai_tool["function"]["parameters"] = dict(parameters)
+                params_dict = (
+                    parameters if isinstance(parameters, dict) else dict(parameters)
+                )
+                params_dict = force_additional_properties_false(params_dict)
+                openai_tool["function"]["parameters"] = params_dict
 
             openai_tools.append(openai_tool)
         return openai_tools
