@@ -528,24 +528,6 @@ class AgentReasoning:
 
         return plan, ready
 
-    # Deprecated methods for backward compatibility
-    def __handle_agent_reasoning(self) -> AgentReasoningOutput:
-        """Deprecated: Use _execute_planning instead."""
-        return self._execute_planning()
-
-    def _handle_agent_reasoning(self) -> AgentReasoningOutput:
-        """Deprecated method for backward compatibility.
-        Use handle_agent_reasoning() instead.
-
-        Returns:
-            AgentReasoningOutput: The output of the agent planning process.
-        """
-        self.logger.warning(
-            "The _handle_agent_reasoning method is deprecated. "
-            "Use handle_agent_reasoning instead."
-        )
-        return self.handle_agent_reasoning()
-
 
 # Alias for backward compatibility
 AgentPlanning = AgentReasoning
