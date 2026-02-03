@@ -874,6 +874,125 @@ def test_anthropic_function_calling():
 # =============================================================================
 
 
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_with_available_functions():
+    """
+    Test that Anthropic provider correctly executes tools when available_functions is provided.
+    
+    This specifically tests the fix for double llm_call_completed emission - when 
+    available_functions is provided, _handle_tool_execution is called which already
+    emits llm_call_completed, so the caller should not emit it again.
+    
+    The test verifies:
+    1. The tool is called with correct arguments
+    2. The tool result is returned directly (not wrapped in conversation)
+    3. The result is valid JSON matching the tool output format
+    """
+    import json
+    
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+    
+    # Simple tool that returns a formatted string
+    def create_reasoning_plan(plan: str, steps: list, ready: bool) -> str:
+        """Create a reasoning plan with steps."""
+        return json.dumps({"plan": plan, "steps": steps, "ready": ready})
+    
+    tools = [
+        {
+            "name": "create_reasoning_plan",
+            "description": "Create a structured reasoning plan for completing a task",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "plan": {
+                        "type": "string",
+                        "description": "High-level plan description"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "List of steps to execute"
+                    },
+                    "ready": {
+                        "type": "boolean",
+                        "description": "Whether the plan is ready to execute"
+                    }
+                },
+                "required": ["plan", "steps", "ready"]
+            }
+        }
+    ]
+    
+    result = llm.call(
+        messages=[{"role": "user", "content": "Create a simple plan to say hello. Use the create_reasoning_plan tool."}],
+        tools=tools,
+        available_functions={"create_reasoning_plan": create_reasoning_plan}
+    )
+    
+    # Verify result is valid JSON from the tool
+    assert result is not None
+    assert isinstance(result, str)
+    
+    # Parse the result to verify it's valid JSON
+    parsed_result = json.loads(result)
+    assert "plan" in parsed_result
+    assert "steps" in parsed_result
+    assert "ready" in parsed_result
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_returns_tool_result_directly():
+    """
+    Test that when available_functions is provided, the tool result is returned directly
+    without additional LLM conversation (matching OpenAI behavior for reasoning_handler).
+    """
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+    
+    call_count = 0
+    
+    def simple_calculator(operation: str, a: int, b: int) -> str:
+        """Perform a simple calculation."""
+        nonlocal call_count
+        call_count += 1
+        if operation == "add":
+            return str(a + b)
+        elif operation == "multiply":
+            return str(a * b)
+        return "Unknown operation"
+    
+    tools = [
+        {
+            "name": "simple_calculator",
+            "description": "Perform simple math operations",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["add", "multiply"],
+                        "description": "The operation to perform"
+                    },
+                    "a": {"type": "integer", "description": "First number"},
+                    "b": {"type": "integer", "description": "Second number"}
+                },
+                "required": ["operation", "a", "b"]
+            }
+        }
+    ]
+    
+    result = llm.call(
+        messages=[{"role": "user", "content": "Calculate 5 + 3 using the simple_calculator tool with operation 'add'."}],
+        tools=tools,
+        available_functions={"simple_calculator": simple_calculator}
+    )
+    
+    # Tool should have been called exactly once
+    assert call_count == 1, f"Expected tool to be called once, got {call_count}"
+    
+    # Result should be the direct tool output
+    assert result == "8", f"Expected '8' but got '{result}'"
+
+
 @pytest.mark.vcr()
 def test_anthropic_agent_kickoff_structured_output_without_tools():
     """

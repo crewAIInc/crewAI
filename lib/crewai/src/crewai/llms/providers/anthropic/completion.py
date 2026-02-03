@@ -290,7 +290,7 @@ class AnthropicCompletion(BaseLLM):
 
                 # Prepare completion parameters
                 completion_params = self._prepare_completion_params(
-                    formatted_messages, system_message, tools
+                    formatted_messages, system_message, tools, available_functions
                 )
 
                 effective_response_model = response_model or self.response_format
@@ -361,7 +361,7 @@ class AnthropicCompletion(BaseLLM):
                 )
 
                 completion_params = self._prepare_completion_params(
-                    formatted_messages, system_message, tools
+                    formatted_messages, system_message, tools, available_functions
                 )
 
                 effective_response_model = response_model or self.response_format
@@ -396,6 +396,7 @@ class AnthropicCompletion(BaseLLM):
         messages: list[LLMMessage],
         system_message: str | None = None,
         tools: list[dict[str, Any]] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Anthropic messages API.
 
@@ -403,6 +404,8 @@ class AnthropicCompletion(BaseLLM):
             messages: Formatted messages for Anthropic
             system_message: Extracted system message
             tools: Tool definitions
+            available_functions: Available functions for tool calling. When provided
+                with a single tool, tool_choice is automatically set to force tool use.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -428,7 +431,13 @@ class AnthropicCompletion(BaseLLM):
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
-            params["tools"] = self._convert_tools_for_interference(tools)
+            converted_tools = self._convert_tools_for_interference(tools)
+            params["tools"] = converted_tools
+
+            if available_functions and len(converted_tools) == 1:
+                tool_name = converted_tools[0].get("name")
+                if tool_name and tool_name in available_functions:
+                    params["tool_choice"] = {"type": "tool", "name": tool_name}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -730,15 +739,20 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                # Handle tool use conversation flow internally
-                return self._handle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                tool_use = tool_uses[0]
+                function_name = tool_use.name
+                function_args = cast(dict[str, Any], tool_use.input)
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
+
+                if result is not None:
+                    return result
 
         content = ""
         thinking_blocks: list[ThinkingBlock] = []
@@ -939,14 +953,28 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                return self._handle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                # Execute tools and return result directly (matching OpenAI behavior)
+                tool_use = tool_uses[0]
+                function_name = tool_use.name
+                function_args = cast(dict[str, Any], tool_use.input)
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
+
+                if result is not None:
+                    self._emit_call_completed_event(
+                        response=str(result),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return result
 
         full_response = self._apply_stop_words(full_response)
 
@@ -1005,6 +1033,7 @@ class AnthropicCompletion(BaseLLM):
 
         return tool_results
 
+    # TODO: we drop this
     def _handle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
@@ -1220,14 +1249,28 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                # Execute tools and return result directly (matching OpenAI behavior)
+                tool_use = tool_uses[0]
+                function_name = tool_use.name
+                function_args = cast(dict[str, Any], tool_use.input)
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
+
+                if result is not None:
+                    self._emit_call_completed_event(
+                        response=str(result),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return result
 
         content = ""
         if response.content:
@@ -1408,14 +1451,28 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                # Execute tools and return result directly (matching OpenAI behavior)
+                tool_use = tool_uses[0]
+                function_name = tool_use.name
+                function_args = cast(dict[str, Any], tool_use.input)
+
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
+
+                if result is not None:
+                    self._emit_call_completed_event(
+                        response=str(result),
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                    )
+                    return result
 
         full_response = self._apply_stop_words(full_response)
 
