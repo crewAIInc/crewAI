@@ -312,9 +312,7 @@ class Agent(BaseAgent):
     @property
     def planning_enabled(self) -> bool:
         """Check if planning is enabled for this agent."""
-        return (
-            self.planning_config is not None and self.planning_config.enabled
-        ) or self.planning
+        return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
         if not self.cache_handler:

@@ -49,10 +49,6 @@ class PlanningConfig(BaseModel):
         ```
     """
 
-    enabled: bool = Field(
-        default=True,
-        description="Whether planning is enabled.",
-    )
     max_attempts: int | None = Field(
         default=None,
         description=(
