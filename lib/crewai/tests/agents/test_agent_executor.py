@@ -543,9 +543,9 @@ class TestAgentExecutorPlanning:
         assert "6" in str(result)
 
     @pytest.mark.vcr()
-    def test_planning_config_disabled_skips_planning(self):
-        """Test that PlanningConfig(enabled=False) skips planning."""
-        from crewai import Agent, PlanningConfig
+    def test_planning_disabled_skips_planning(self):
+        """Test that planning=False skips planning."""
+        from crewai import Agent
         from crewai.llm import LLM
 
         llm = LLM("gpt-4o-mini")
@@ -555,7 +555,7 @@ class TestAgentExecutorPlanning:
             goal="Help solve simple math problems",
             backstory="A helpful assistant",
             llm=llm,
-            planning_config=PlanningConfig(enabled=False),
+            planning=False,  # Explicitly disable planning
             verbose=False,
         )
 
@@ -586,7 +586,6 @@ class TestAgentExecutorPlanning:
 
         # Should have planning_config created from reasoning=True
         assert agent.planning_config is not None
-        assert agent.planning_config.enabled is True
         assert agent.planning_enabled is True
 
     @pytest.mark.vcr()

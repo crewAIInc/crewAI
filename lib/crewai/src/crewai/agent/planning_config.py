@@ -11,8 +11,10 @@ class PlanningConfig(BaseModel):
     This allows users to customize the planning behavior including prompts,
     iteration limits, and the LLM used for planning.
 
+    Note: To disable planning, don't pass a planning_config or set planning=False
+    on the Agent. The presence of a PlanningConfig enables planning.
+
     Attributes:
-        enabled: Whether planning is enabled. Defaults to True.
         max_attempts: Maximum number of planning refinement attempts.
             If None, will continue until the agent indicates readiness.
         max_steps: Maximum number of steps in the generated plan.

@@ -32,6 +32,7 @@ from crewai.agent.utils import (
     format_task_with_context,
     get_knowledge_config,
     handle_knowledge_retrieval,
+    handle_reasoning,
     prepare_tools,
     process_tool_results,
     save_last_messages,
@@ -389,7 +390,11 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        # Note: Planning is now handled inside AgentExecutor.generate_plan()
+        # Only call handle_reasoning for legacy CrewAgentExecutor
+        # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -624,7 +629,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        # Note: Planning is now handled inside AgentExecutor.generate_plan()
+        if not isinstance(self.executor_class, AgentExecutor):
+            handle_reasoning(
+                self, task
+            )  # we need this till CrewAgentExecutor migrates to AgentExecutor
         self._inject_date_to_task(task)
 
         if self.tools_handler:

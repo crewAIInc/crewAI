@@ -1,75 +1,5 @@
 interactions:
 - request:
-    body: '{"trace_id": "ded15959-7701-4de0-87c2-ba10536a939f", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.9.3", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2026-02-02T23:50:09.124595+00:00"}}'
-    headers:
-      Accept:
-      - '*/*'
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '434'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - X-USER-AGENT-XXX
-      X-Crewai-Organization-Id:
-      - 3433f0ee-8a94-4aa4-822b-2ac71aa38b18
-      X-Crewai-Version:
-      - 1.9.3
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
-  response:
-    body:
-      string: '{"error":"bad_credentials","message":"Bad credentials"}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '55'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Mon, 02 Feb 2026 23:50:09 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - CSP-FILTERED
-      expires:
-      - '0'
-      permissions-policy:
-      - PERMISSIONS-POLICY-XXX
-      pragma:
-      - no-cache
-      referrer-policy:
-      - REFERRER-POLICY-XXX
-      strict-transport-security:
-      - STS-XXX
-      vary:
-      - Accept
-      x-content-type-options:
-      - X-CONTENT-TYPE-XXX
-      x-frame-options:
-      - X-FRAME-OPTIONS-XXX
-      x-permitted-cross-domain-policies:
-      - X-PERMITTED-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-      x-runtime:
-      - X-RUNTIME-XXX
-      x-xss-protection:
-      - X-XSS-PROTECTION-XXX
-    status:
-      code: 401
-      message: Unauthorized
-- request:
     body: '{"messages":[{"role":"system","content":"You are a strategic planning assistant.
       Create minimal, effective execution plans. Prefer fewer steps over more."},{"role":"user","content":"Create
       a focused execution plan for the following task:\n\n## Task\nConvert 100 degrees
@@ -126,16 +56,16 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D4xyDGlTupuHxuRHCJKabPp1Fnwlz\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770076209,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yTN8fHOefyzzhvdUOHjxdFDR2HW\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078141,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"1. Calculate the Fahrenheit equivalent
-        of 100 degrees Celsius using the formula: \\\\( F = (C \\\\times \\\\frac{9}{5})
-        + 32 \\\\).\\n2. Round the result to the nearest 10.\\n\\nREADY: I am ready
-        to execute the task.\",\n        \"refusal\": null,\n        \"annotations\":
+        \"assistant\",\n        \"content\": \"## Execution Plan\\n\\n1. Convert 100
+        degrees Celsius to Fahrenheit using the formula: \\\\( F = C \\\\times \\\\frac{9}{5}
+        + 32 \\\\).\\n2. Round the Fahrenheit result to the nearest 10.\\n\\nREADY:
+        I am ready to execute the task.\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 291,\n    \"completion_tokens\":
-        56,\n    \"total_tokens\": 347,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        58,\n    \"total_tokens\": 349,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -148,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 02 Feb 2026 23:50:10 GMT
+      - Tue, 03 Feb 2026 00:22:22 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -168,7 +98,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1058'
+      - '1089'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -239,18 +169,22 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D4xyEjrq01KMkBu8Quv6q61sR3vWb\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770076210,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yTPQewXDyPdYHI4dHPH7YGHcRge\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078143,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"To convert degrees Celsius to degrees
-        Fahrenheit, you can use the formula:\\n\\n\\\\[ F = \\\\frac{9}{5}C + 32 \\\\]\\n\\nFor
-        100 degrees Celsius, the conversion would be:\\n\\n\\\\[ F = \\\\frac{9}{5}
-        \\\\times 100 + 32 \\\\]\\n\\\\[ F = 180 + 32 \\\\]\\n\\\\[ F = 212 \\\\]\\n\\nNow,
-        rounding 212 to the nearest 10 gives us 210.\\n\\nTherefore, the final result
-        is **210 degrees Fahrenheit**.\",\n        \"refusal\": null,\n        \"annotations\":
+        \"assistant\",\n        \"content\": \"To convert degrees Celsius to Fahrenheit,
+        you can use the formula:\\n\\n\\\\[ F = \\\\left( C \\\\times \\\\frac{9}{5}
+        \\\\right) + 32 \\\\]\\n\\nPlugging in 100 degrees Celsius:\\n\\n\\\\[ F =
+        \\\\left( 100 \\\\times \\\\frac{9}{5} \\\\right) + 32 \\\\]\\n\\nCalculating
+        that step-by-step:\\n\\n1. Multiply 100 by 9: \\n   \\\\[ 100 \\\\times 9
+        = 900 \\\\]\\n\\n2. Divide by 5:\\n   \\\\[ 900 \\\\div 5 = 180 \\\\]\\n\\n3.
+        Add 32:\\n   \\\\[ 180 + 32 = 212 \\\\]\\n\\nSo, 100 degrees Celsius is equal
+        to 212 degrees Fahrenheit.\\n\\nNow, rounding 212 to the nearest 10:\\n\\nThe
+        nearest multiple of 10 to 212 is 210.\\n\\nTherefore, the final result is
+        **210 degrees Fahrenheit**.\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 63,\n    \"completion_tokens\":
-        104,\n    \"total_tokens\": 167,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        191,\n    \"total_tokens\": 254,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -263,7 +197,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 02 Feb 2026 23:50:13 GMT
+      - Tue, 03 Feb 2026 00:22:26 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -281,7 +215,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2517'
+      - '3736'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

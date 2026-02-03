@@ -1,8 +1,10 @@
 interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
-      assistant\nYour personal goal is: Help solve simple math problems"},{"role":"user","content":"\nCurrent
-      Task: What is 3 + 3?\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
+      assistant\nYour personal goal is: Help solve math problems"},{"role":"user","content":"\nCurrent
+      Task: What is 12 * 3?\n\nThis is the expected criteria for your final answer:
+      A number\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -15,7 +17,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '260'
+      - '400'
       content-type:
       - application/json
       host:
@@ -42,13 +44,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D4yTTFxQ75llVmJv0ee902FIjXE8p\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770078147,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yVCw0CGLFmcVvniplwCCt8avtRb\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078254,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"3 + 3 equals 6.\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"12 * 3 = 36\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        47,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 55,\n    \"prompt_tokens_details\":
+        75,\n    \"completion_tokens\": 7,\n    \"total_tokens\": 82,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -61,7 +63,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 00:22:27 GMT
+      - Tue, 03 Feb 2026 00:24:14 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -81,7 +83,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '401'
+      - '331'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
