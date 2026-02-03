@@ -249,6 +249,8 @@ def test_guardrail_emits_events(sample_agent):
 
     result = task.execute_sync(agent=sample_agent)
 
+    crewai_event_bus.flush(timeout=10.0)
+
     with condition:
         success = condition.wait_for(
             lambda: len(started_guardrail) >= 2 and len(completed_guardrail) >= 2,
@@ -266,6 +268,8 @@ def test_guardrail_emits_events(sample_agent):
     )
 
     task.execute_sync(agent=sample_agent)
+
+    crewai_event_bus.flush(timeout=10.0)
 
     with condition:
         success = condition.wait_for(
