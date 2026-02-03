@@ -1,11 +1,22 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
-      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: Use
-      the dummy tool to get a result for ''test query''\n\nThis is the expected criteria
-      for your final answer: The result from the dummy tool\nyou MUST return the actual
-      complete content as the final answer, not a summary."}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"dummy_tool","description":"Useful
-      for when you need to get a dummy result for a query.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
+    body: '{"messages":[{"role":"system","content":"You are a strategic planning assistant.
+      Create minimal, effective execution plans. Prefer fewer steps over more."},{"role":"user","content":"Create
+      a focused execution plan for the following task:\n\n## Task\nCalculate the area
+      of a circle with radius 5 (use pi = 3.14)\n\n## Expected Output\nThe area as
+      a number\n\n## Available Tools\nNo tools available\n\n## Instructions\nCreate
+      ONLY the essential steps needed to complete this task. Use the MINIMUM number
+      of steps required - do NOT pad your plan with unnecessary steps. Most tasks
+      need only 2-5 steps.\n\nFor each step:\n- State the specific action to take\n-
+      Specify which tool to use (if any)\n\nDo NOT include:\n- Setup or preparation
+      steps that are obvious\n- Verification steps unless critical\n- Documentation
+      or cleanup steps unless explicitly required\n- Generic steps like \"review results\"
+      or \"finalize output\"\n\nAfter your plan, state:\n- \"READY: I am ready to
+      execute the task.\" if the plan is complete\n- \"NOT READY: I need to refine
+      my plan because [reason].\" if you need more thinking"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_reasoning_plan","description":"Create
+      or refine a reasoning plan for a task","strict":true,"parameters":{"type":"object","properties":{"plan":{"type":"string","description":"The
+      detailed reasoning plan for the task."},"ready":{"type":"boolean","description":"Whether
+      the agent is ready to execute the task."}},"required":["plan","ready"],"additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -18,7 +29,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '712'
+      - '1577'
       content-type:
       - application/json
       host:
@@ -45,21 +56,20 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D5DTlUmKYee1DaS5AqnaUCZ6B14xV\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770135825,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yVCdA1csIzfoHSQvxkfrA4gDn4z\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078254,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_tBCgelchfQjXXJrrM15MxqGJ\",\n            \"type\":
-        \"function\",\n            \"function\": {\n              \"name\": \"dummy_tool\",\n
-        \             \"arguments\": \"{\\\"query\\\":\\\"test query\\\"}\"\n            }\n
-        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\":
-        16,\n    \"total_tokens\": 138,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \"assistant\",\n        \"content\": \"## Execution Plan\\n1. Multiply the
+        radius (5) by itself (5) to get the square of the radius.\\n2. Multiply the
+        squared radius by pi (3.14) to calculate the area.\\n\\nREADY: I am ready
+        to execute the task.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 293,\n    \"completion_tokens\":
+        54,\n    \"total_tokens\": 347,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": null\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -68,7 +78,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 16:23:46 GMT
+      - Tue, 03 Feb 2026 00:24:15 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -88,7 +98,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '694'
+      - '845'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -113,16 +123,14 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
-      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: Use
-      the dummy tool to get a result for ''test query''\n\nThis is the expected criteria
-      for your final answer: The result from the dummy tool\nyou MUST return the actual
-      complete content as the final answer, not a summary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_tBCgelchfQjXXJrrM15MxqGJ","type":"function","function":{"name":"dummy_tool","arguments":"{\"query\":\"test
-      query\"}"}}]},{"role":"tool","tool_call_id":"call_tBCgelchfQjXXJrrM15MxqGJ","name":"dummy_tool","content":"Dummy
-      result for: test query"},{"role":"user","content":"Analyze the tool result.
-      If requirements are met, provide the Final Answer. Otherwise, call the next
-      tool. Deliver only the answer without meta-commentary."}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"dummy_tool","description":"Useful
-      for when you need to get a dummy result for a query.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
+    body: '{"messages":[{"role":"system","content":"You are Math Tutor. An expert
+      tutor\nYour personal goal is: Solve complex math problems step by step"},{"role":"user","content":"\nCurrent
+      Task: Calculate the area of a circle with radius 5 (use pi = 3.14)\n\nPlanning:\n##
+      Execution Plan\n1. Multiply the radius (5) by itself (5) to get the square of
+      the radius.\n2. Multiply the squared radius by pi (3.14) to calculate the area.\n\nREADY:
+      I am ready to execute the task.\n\nThis is the expected criteria for your final
+      answer: The area as a number\nyou MUST return the actual complete content as
+      the final answer, not a summary.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -135,7 +143,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1202'
+      - '682'
       content-type:
       - application/json
       cookie:
@@ -164,17 +172,24 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D5DTmxZJI2Ee7fHNc9dYtQkD7sIY2\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770135826,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yVDh2U2xx3qeYHcDQvbetOmVCxb\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078255,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Dummy result for: test query\",\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        188,\n    \"completion_tokens\": 7,\n    \"total_tokens\": 195,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"To calculate the area of a circle with
+        a radius of 5, we will follow the steps outlined in the execution plan.\\n\\n1.
+        **Square the radius**:\\n   \\\\[\\n   5 \\\\times 5 = 25\\n   \\\\]\\n\\n2.
+        **Multiply the squared radius by pi (using \\\\(\\\\pi \\\\approx 3.14\\\\))**:\\n
+        \  \\\\[\\n   \\\\text{Area} = \\\\pi \\\\times (\\\\text{radius})^2 = 3.14
+        \\\\times 25\\n   \\\\]\\n\\n   Now, let's perform the multiplication:\\n
+        \  \\\\[\\n   3.14 \\\\times 25 = 78.5\\n   \\\\]\\n\\nThus, the area of the
+        circle is \\\\( \\\\boxed{78.5} \\\\).\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 147,\n    \"completion_tokens\":
+        155,\n    \"total_tokens\": 302,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": null\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -183,7 +198,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 16:23:47 GMT
+      - Tue, 03 Feb 2026 00:24:18 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -201,7 +216,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '416'
+      - '2228'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

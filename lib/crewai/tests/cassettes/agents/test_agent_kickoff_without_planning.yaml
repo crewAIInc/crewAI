@@ -1,12 +1,8 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
-      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: Summarize
-      the given context in one sentence\n\nThis is the expected criteria for your
-      final answer: A one-sentence summary\nyou MUST return the actual complete content
-      as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe
-      quick brown fox jumps over the lazy dog. This sentence contains every letter
-      of the alphabet.\n\nProvide your complete response:"}],"model":"gpt-3.5-turbo"}'
+    body: '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
+      assistant\nYour personal goal is: Help solve math problems"},{"role":"user","content":"\nCurrent
+      Task: What is 8 * 7?\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -19,7 +15,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '562'
+      - '253'
       content-type:
       - application/json
       host:
@@ -46,18 +42,17 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D5DTn6yIQ7HpIn5j5Bsbag1efzXPa\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770135827,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yTqLFhGtfq2CyS2aPPhiZL4GjtQ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078170,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"The quick brown fox jumps over the
-        lazy dog. This sentence contains every letter of the alphabet.\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"8 * 7 equals 56.\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        105,\n    \"completion_tokens\": 19,\n    \"total_tokens\": 124,\n    \"prompt_tokens_details\":
+        46,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 54,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": null\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -66,7 +61,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Tue, 03 Feb 2026 16:23:48 GMT
+      - Tue, 03 Feb 2026 00:22:50 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -86,7 +81,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '606'
+      - '443'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

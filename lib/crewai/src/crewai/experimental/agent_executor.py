@@ -94,6 +94,10 @@ class AgentReActState(BaseModel):
     ask_for_human_input: bool = Field(default=False)
     use_native_tools: bool = Field(default=False)
     pending_tool_calls: list[Any] = Field(default_factory=list)
+    plan: str | None = Field(default=None, description="Generated execution plan")
+    plan_ready: bool = Field(
+        default=False, description="Whether agent is ready to execute"
+    )
 
 
 class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
@@ -321,6 +325,45 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self._state.iterations = value
 
     @start()
+    def generate_plan(self) -> None:
+        """Generate execution plan if planning is enabled.
+
+        This is the entry point for the agent execution flow. If planning is
+        enabled on the agent, it generates a plan before execution begins.
+        The plan is stored in state but not executed on yet (Phase 2).
+        """
+        if not getattr(self.agent, "planning_enabled", False):
+            return
+
+        try:
+            from crewai.utilities.reasoning_handler import AgentReasoning
+
+            if self.task:
+                planning_handler = AgentReasoning(agent=self.agent, task=self.task)
+            else:
+                # For kickoff() path - use input text directly, no Task needed
+                input_text = getattr(self, "_kickoff_input", "")
+                planning_handler = AgentReasoning(
+                    agent=self.agent,
+                    description=input_text or "Complete the requested task",
+                    expected_output="Complete the task successfully",
+                )
+
+            output = planning_handler.handle_agent_reasoning()
+
+            self.state.plan = output.plan.plan
+            self.state.plan_ready = output.plan.ready
+
+            # Backward compatibility: append plan to task description
+            # This can be removed in Phase 2 when plan execution is implemented
+            if self.task and self.state.plan:
+                self.task.description += f"\n\nPlanning:\n{self.state.plan}"
+
+        except Exception as e:
+            if hasattr(self.agent, "_logger"):
+                self.agent._logger.log("error", f"Error during planning: {e!s}")
+
+    @listen(generate_plan)
     def initialize_reasoning(self) -> Literal["initialized"]:
         """Initialize the reasoning flow and emit agent start logs."""
         self._show_start_logs()
@@ -991,6 +1034,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.is_finished = False
             self.state.use_native_tools = False
             self.state.pending_tool_calls = []
+            self.state.plan = None
+            self.state.plan_ready = False
+
+            self._kickoff_input = inputs.get("input", "")
 
             if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
@@ -1075,6 +1122,10 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.is_finished = False
             self.state.use_native_tools = False
             self.state.pending_tool_calls = []
+            self.state.plan = None
+            self.state.plan_ready = False
+
+            self._kickoff_input = inputs.get("input", "")
 
             if "system" in self.prompt:
                 prompt = cast("SystemPromptResult", self.prompt)
