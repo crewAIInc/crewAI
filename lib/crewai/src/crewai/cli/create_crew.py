@@ -13,6 +13,9 @@ from crewai.cli.provider import (
 from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
+RESERVED_CREW_NAMES = frozenset({"run_crew", "train", "replay", "test", "run_with_trigger"})
+
+
 def create_folder_structure(name, parent_folder=None):
     import keyword
     import re
@@ -44,6 +47,11 @@ def create_folder_structure(name, parent_folder=None):
     if keyword.iskeyword(folder_name):
         raise ValueError(
             f"Project name '{name}' would generate folder name '{folder_name}' which is a reserved Python keyword"
+        )
+
+    if folder_name in RESERVED_CREW_NAMES:
+        raise ValueError(
+            f"Project name '{name}' would generate folder name '{folder_name}' which conflicts with a reserved script name in pyproject.toml. Please choose a different name."
         )
 
     if not folder_name.isidentifier():

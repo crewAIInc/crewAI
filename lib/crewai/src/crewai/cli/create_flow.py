@@ -1,14 +1,26 @@
 from pathlib import Path
+import re
 
 import click
 
 from crewai.telemetry import Telemetry
 
 
+RESERVED_FLOW_NAMES = frozenset({"kickoff", "run_crew", "plot", "run_with_trigger"})
+
+
 def create_flow(name):
     """Create a new flow."""
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
+    folder_name = re.sub(r"[^a-zA-Z0-9_]", "", folder_name)
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
+
+    if folder_name in RESERVED_FLOW_NAMES:
+        click.secho(
+            f"Error: Project name '{name}' would generate folder name '{folder_name}' which conflicts with a reserved script name in pyproject.toml. Please choose a different name.",
+            fg="red",
+        )
+        return
 
     click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
 

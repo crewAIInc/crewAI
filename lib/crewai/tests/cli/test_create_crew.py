@@ -6,7 +6,11 @@ from unittest import mock
 
 import pytest
 from click.testing import CliRunner
-from crewai.cli.create_crew import create_crew, create_folder_structure
+from crewai.cli.create_crew import (
+    RESERVED_CREW_NAMES,
+    create_crew,
+    create_folder_structure,
+)
 
 
 @pytest.fixture
@@ -280,7 +284,7 @@ def test_create_folder_structure_folder_name_validation():
         valid_cases = [
             ("hello-world/", "hello_world"),
             ("my.project/", "myproject"),
-            ("test@123/", "test123"),
+            ("check@123/", "check123"),
             ("valid_name/", "valid_name"),
         ]
 
@@ -328,3 +332,33 @@ def test_env_vars_are_uppercased_in_env_file(
     env_file_path = crew_path / ".env"
     content = env_file_path.read_text()
     assert "MODEL=" in content
+
+
+def test_create_folder_structure_rejects_reserved_crew_names():
+    """Test that reserved script names from pyproject.toml are rejected."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for reserved_name in RESERVED_CREW_NAMES:
+            with pytest.raises(
+                ValueError, match="conflicts with a reserved script name"
+            ):
+                create_folder_structure(reserved_name, parent_folder=temp_dir)
+
+            with pytest.raises(
+                ValueError, match="conflicts with a reserved script name"
+            ):
+                create_folder_structure(
+                    reserved_name.replace("_", "-"), parent_folder=temp_dir
+                )
+
+
+def test_create_folder_structure_rejects_test_name():
+    """Test that 'test' name is rejected as it conflicts with pyproject.toml scripts."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with pytest.raises(ValueError, match="conflicts with a reserved script name"):
+            create_folder_structure("test", parent_folder=temp_dir)
+
+        with pytest.raises(ValueError, match="conflicts with a reserved script name"):
+            create_folder_structure("Test", parent_folder=temp_dir)
+
+        with pytest.raises(ValueError, match="conflicts with a reserved script name"):
+            create_folder_structure("TEST", parent_folder=temp_dir)
