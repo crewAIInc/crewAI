@@ -65,7 +65,7 @@ def test_agent_with_planning_config(mock_llm_responses):
 
 def test_agent_with_planning_config_max_attempts(mock_llm_responses):
     """Test agent with PlanningConfig and max_attempts."""
-    llm = LLM("gpt-3.5-turbo")
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
         role="Test Agent",
@@ -156,12 +156,11 @@ def test_agent_with_planning_config_disabled():
         goal="To test disabled planning",
         backstory="I am a test agent.",
         llm=llm,
-        planning_config=PlanningConfig(enabled=False),
+        planning=False,
         verbose=True,
     )
 
     # Planning should be disabled
-    assert agent.planning_config.enabled is False
     assert agent.planning_enabled is False
 
 
@@ -169,7 +168,6 @@ def test_planning_config_default_values():
     """Test PlanningConfig default values."""
     config = PlanningConfig()
 
-    assert config.enabled is True
     assert config.max_attempts is None
     assert config.max_steps == 20
     assert config.system_prompt is None
@@ -181,7 +179,6 @@ def test_planning_config_default_values():
 def test_planning_config_custom_values():
     """Test PlanningConfig with custom values."""
     config = PlanningConfig(
-        enabled=True,
         max_attempts=5,
         max_steps=15,
         system_prompt="Custom system",
@@ -190,7 +187,6 @@ def test_planning_config_custom_values():
         llm="gpt-4",
     )
 
-    assert config.enabled is True
     assert config.max_attempts == 5
     assert config.max_steps == 15
     assert config.system_prompt == "Custom system"
@@ -209,7 +205,7 @@ def test_planning_enabled_property():
         goal="Test",
         backstory="Test",
         llm=llm,
-        planning_config=PlanningConfig(enabled=True),
+        planning=True,
     )
     assert agent_with_planning.planning_enabled is True
 
@@ -219,7 +215,7 @@ def test_planning_enabled_property():
         goal="Test",
         backstory="Test",
         llm=llm,
-        planning_config=PlanningConfig(enabled=False),
+        planning=False,
     )
     assert agent_disabled.planning_enabled is False
 
@@ -240,7 +236,7 @@ def test_planning_enabled_property():
 
 def test_agent_with_reasoning_backward_compat(mock_llm_responses):
     """Test agent with reasoning=True (backward compatibility)."""
-    llm = LLM("gpt-3.5-turbo")
+    llm = LLM("gpt-4o-mini")
 
     # This should emit a deprecation warning
     with warnings.catch_warnings(record=True) as w:
@@ -259,13 +255,12 @@ def test_agent_with_reasoning_backward_compat(mock_llm_responses):
 
     # Should have created a PlanningConfig internally
     assert agent.planning_config is not None
-    assert agent.planning_config.enabled is True
     assert agent.planning_enabled is True
 
 
 def test_agent_with_reasoning_and_max_attempts_backward_compat():
     """Test agent with reasoning=True and max_reasoning_attempts (backward compatibility)."""
-    llm = LLM("gpt-3.5-turbo")
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
         role="Test Agent",
@@ -279,7 +274,6 @@ def test_agent_with_reasoning_and_max_attempts_backward_compat():
 
     # Should have created a PlanningConfig with max_attempts
     assert agent.planning_config is not None
-    assert agent.planning_config.enabled is True
     assert agent.planning_config.max_attempts == 5
 
 
@@ -450,7 +444,7 @@ def test_agent_with_function_calling():
 @pytest.mark.skip(reason="Test requires updates for native tool calling changes")
 def test_agent_with_function_calling_fallback():
     """Test agent with planning using function calling that falls back to text parsing."""
-    llm = LLM("gpt-3.5-turbo")
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
         role="Test Agent",
@@ -481,16 +475,3 @@ def test_agent_with_function_calling_fallback():
     assert result == "4"
     assert "Planning:" in task.description
     assert "Invalid JSON that will trigger fallback" in task.description
-
-
-# =============================================================================
-# Tests for import/export
-# =============================================================================
-
-
-def test_planning_config_import():
-    """Test that PlanningConfig can be imported from crewai."""
-    from crewai import PlanningConfig
-
-    config = PlanningConfig()
-    assert config.enabled is True
