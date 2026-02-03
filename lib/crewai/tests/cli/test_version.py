@@ -137,6 +137,7 @@ class TestConsoleFormatterVersionCheck:
     """Test version check display in ConsoleFormatter."""
 
     @patch("crewai.events.utils.console_formatter.is_newer_version_available")
+    @patch.dict("os.environ", {"CI": ""})
     def test_version_message_shows_when_update_available_and_verbose(
         self, mock_check: MagicMock
     ) -> None:
