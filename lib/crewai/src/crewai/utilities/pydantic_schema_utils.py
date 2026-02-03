@@ -19,7 +19,7 @@ from collections.abc import Callable
 from copy import deepcopy
 import datetime
 import logging
-from typing import TYPE_CHECKING, Annotated, Any, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Any, Final, Literal, Union
 import uuid
 
 import jsonref  # type: ignore[import-untyped]
@@ -155,6 +155,72 @@ def force_additional_properties_false(d: Any) -> Any:
     elif isinstance(d, list):
         for i in d:
             force_additional_properties_false(i)
+    return d
+
+
+OPENAI_SUPPORTED_FORMATS: Final[
+    set[Literal["date-time", "date", "time", "duration"]]
+] = {
+    "date-time",
+    "date",
+    "time",
+    "duration",
+}
+
+
+def strip_unsupported_formats(d: Any) -> Any:
+    """Remove format annotations that OpenAI strict mode doesn't support.
+
+    OpenAI only supports: date-time, date, time, duration.
+    Other formats like uri, email, uuid etc. cause validation errors.
+
+    Args:
+        d: The dictionary/list to modify.
+
+    Returns:
+        The modified dictionary/list.
+    """
+    if isinstance(d, dict):
+        format_value = d.get("format")
+        if (
+            isinstance(format_value, str)
+            and format_value not in OPENAI_SUPPORTED_FORMATS
+        ):
+            del d["format"]
+        for v in d.values():
+            strip_unsupported_formats(v)
+    elif isinstance(d, list):
+        for i in d:
+            strip_unsupported_formats(i)
+    return d
+
+
+def ensure_type_in_schemas(d: Any) -> Any:
+    """Ensure all schema objects in anyOf/oneOf have a 'type' key.
+
+    OpenAI strict mode requires every schema to have a 'type' key.
+    Empty schemas {} in anyOf/oneOf are converted to {"type": "object"}.
+
+    Args:
+        d: The dictionary/list to modify.
+
+    Returns:
+        The modified dictionary/list.
+    """
+    if isinstance(d, dict):
+        for key in ("anyOf", "oneOf"):
+            if key in d:
+                schema_list = d[key]
+                for i, schema in enumerate(schema_list):
+                    if isinstance(schema, dict) and schema == {}:
+                        schema_list[i] = {"type": "object"}
+                    else:
+                        ensure_type_in_schemas(schema)
+        for v in d.values():
+            ensure_type_in_schemas(v)
+    elif isinstance(d, list):
+        for item in d:
+            ensure_type_in_schemas(item)
     return d
 
 
@@ -310,6 +376,8 @@ def generate_model_description(model: type[BaseModel]) -> dict[str, Any]:
     json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
 
     json_schema = force_additional_properties_false(json_schema)
+    json_schema = strip_unsupported_formats(json_schema)
+    json_schema = ensure_type_in_schemas(json_schema)
 
     json_schema = resolve_refs(json_schema)
 
@@ -413,7 +481,7 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         if "title" not in json_schema and "title" in (root_schema or {}):
             json_schema["title"] = (root_schema or {}).get("title")
 
-    model_name = json_schema.get("title", "DynamicModel")
+    model_name = json_schema.get("title") or "DynamicModel"
     field_definitions = {
         name: _json_schema_to_pydantic_field(
             name, prop, json_schema.get("required", []), effective_root
@@ -421,9 +489,11 @@ def create_model_from_schema(  # type: ignore[no-any-unimported]
         for name, prop in (json_schema.get("properties", {}) or {}).items()
     }
 
+    effective_config = __config__ or ConfigDict(extra="forbid")
+
     return create_model_base(
         model_name,
-        __config__=__config__,
+        __config__=effective_config,
         __base__=__base__,
         __module__=__module__,
         __validators__=__validators__,
@@ -602,8 +672,10 @@ def _json_schema_to_pydantic_type(
         any_of_schemas = json_schema.get("anyOf", []) + json_schema.get("oneOf", [])
     if any_of_schemas:
         any_of_types = [
-            _json_schema_to_pydantic_type(schema, root_schema)
-            for schema in any_of_schemas
+            _json_schema_to_pydantic_type(
+                schema, root_schema, name_=f"{name_ or 'Union'}Option{i}"
+            )
+            for i, schema in enumerate(any_of_schemas)
         ]
         return Union[tuple(any_of_types)]  # noqa: UP007
 
@@ -639,7 +711,7 @@ def _json_schema_to_pydantic_type(
         if properties:
             json_schema_ = json_schema.copy()
             if json_schema_.get("title") is None:
-                json_schema_["title"] = name_
+                json_schema_["title"] = name_ or "DynamicModel"
             return create_model_from_schema(json_schema_, root_schema=root_schema)
         return dict
     if type_ == "null":

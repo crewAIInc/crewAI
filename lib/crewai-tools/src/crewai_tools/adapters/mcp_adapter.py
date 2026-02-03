@@ -9,56 +9,111 @@ from typing import TYPE_CHECKING, Any
 from crewai.tools import BaseTool
 from crewai.utilities.pydantic_schema_utils import (
     create_model_from_schema,
-    generate_model_description,
 )
 from crewai.utilities.string_utils import sanitize_tool_name
+from pydantic import BaseModel
 
 from crewai_tools.adapters.tool_collection import ToolCollection
 
 
 if TYPE_CHECKING:
     from mcp import StdioServerParameters
-    from mcp.types import CallToolResult, Tool
-    from mcpadapt.core import MCPAdapt  # type: ignore[import-not-found]
-    from mcpadapt.crewai_adapter import CrewAIAdapter  # type: ignore[import-not-found]
-
-
-try:
-    from mcp import StdioServerParameters
-    from mcp.types import CallToolResult, Tool
-    from mcpadapt.core import MCPAdapt
-    from mcpadapt.crewai_adapter import CrewAIAdapter
-
-    MCP_AVAILABLE = True
-except ImportError:
-    MCP_AVAILABLE = False
+    from mcp.types import CallToolResult, TextContent, Tool
+    from mcpadapt.core import MCPAdapt, ToolAdapter
 
 
 logger = logging.getLogger(__name__)
 
 
-class CrewAIToolAdapter(CrewAIAdapter):  # type: ignore[misc,no-any-unimported]
-    """Adapter that normalizes JSON Schema before processing."""
+try:
+    from mcp import StdioServerParameters
+    from mcp.types import CallToolResult, TextContent, Tool
+    from mcpadapt.core import MCPAdapt, ToolAdapter
 
-    def adapt(
-        self,
-        func: Callable[[dict[str, Any] | None], CallToolResult],
-        mcp_tool: Tool,
-    ) -> BaseTool:
-        """Adapt a MCP tool to a CrewAI tool.
+    class CrewAIToolAdapter(ToolAdapter):
+        """Adapter that creates CrewAI tools with properly normalized JSON schemas.
 
-        Args:
-            func: The function to call when the tool is invoked.
-            mcp_tool: The MCP tool definition to adapt.
-
-        Returns:
-            A CrewAI BaseTool instance.
+        This adapter bypasses mcpadapt's model creation which adds invalid null values
+        to field schemas, instead using CrewAI's own schema utilities.
         """
-        mcp_tool.name = sanitize_tool_name(mcp_tool.name)
-        model = create_model_from_schema(mcp_tool.inputSchema)
-        normalized = generate_model_description(model)
-        mcp_tool.inputSchema = normalized["json_schema"]["schema"]
-        return super().adapt(func, mcp_tool)  # type: ignore[no-any-return]
+
+        def adapt(
+            self,
+            func: Callable[[dict[str, Any] | None], CallToolResult],
+            mcp_tool: Tool,
+        ) -> BaseTool:
+            """Adapt a MCP tool to a CrewAI tool.
+
+            Args:
+                func: The function to call when the tool is invoked.
+                mcp_tool: The MCP tool definition to adapt.
+
+            Returns:
+                A CrewAI BaseTool instance.
+            """
+            tool_name = sanitize_tool_name(mcp_tool.name)
+            tool_description = mcp_tool.description or ""
+            input_schema = mcp_tool.inputSchema
+
+            args_model = create_model_from_schema(input_schema)
+
+            class CrewAIMCPTool(BaseTool):
+                name: str = tool_name
+                description: str = tool_description
+                args_schema: type[BaseModel] = args_model
+
+                def _run(self, **kwargs: Any) -> Any:
+                    filtered_kwargs: dict[str, Any] = {}
+                    schema_properties = input_schema.get("properties", {})
+
+                    for key, value in kwargs.items():
+                        if value is None and key in schema_properties:
+                            prop_schema = schema_properties[key]
+                            if isinstance(prop_schema.get("type"), list):
+                                if "null" in prop_schema["type"]:
+                                    filtered_kwargs[key] = value
+                            elif "anyOf" in prop_schema:
+                                if any(
+                                    opt.get("type") == "null"
+                                    for opt in prop_schema["anyOf"]
+                                ):
+                                    filtered_kwargs[key] = value
+                        else:
+                            filtered_kwargs[key] = value
+
+                    result = func(filtered_kwargs)
+                    if len(result.content) == 1:
+                        first_content = result.content[0]
+                        if isinstance(first_content, TextContent):
+                            return first_content.text
+                        return str(first_content)
+                    return str(
+                        [
+                            content.text
+                            for content in result.content
+                            if isinstance(content, TextContent)
+                        ]
+                    )
+
+                def _generate_description(self) -> None:
+                    schema = self.args_schema.model_json_schema()
+                    schema.pop("$defs", None)
+                    self.description = (
+                        f"Tool Name: {self.name}\n"
+                        f"Tool Arguments: {schema}\n"
+                        f"Tool Description: {self.description}"
+                    )
+
+            return CrewAIMCPTool()
+
+        async def async_adapt(self, afunc: Any, mcp_tool: Tool) -> Any:
+            """Async adaptation is not supported by CrewAI."""
+            raise NotImplementedError("async is not supported by the CrewAI framework.")
+
+    MCP_AVAILABLE = True
+except ImportError as e:
+    logger.debug(f"MCP packages not available: {e}")
+    MCP_AVAILABLE = False
 
 
 class MCPServerAdapter:
@@ -132,7 +187,7 @@ class MCPServerAdapter:
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "mcp crewai-tools[mcp]"], check=True)  # noqa: S607
+                    subprocess.run(["uv", "add", "mcp crewai-tools'[mcp]'"], check=True)  # noqa: S607
 
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install mcp package") from e
