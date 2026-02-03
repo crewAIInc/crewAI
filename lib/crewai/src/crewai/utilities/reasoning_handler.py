@@ -292,9 +292,11 @@ class AgentReasoning:
         Returns:
             The refined plan, steps, and whether the agent is ready to execute.
         """
+
         attempt = 1
         max_attempts = self.config.max_attempts
         task_id = str(self.task.id) if self.task else "kickoff"
+        current_attempt = attempt + 1
 
         while not ready and (max_attempts is None or attempt < max_attempts):
             # Emit event for each refinement attempt
@@ -304,7 +306,7 @@ class AgentReasoning:
                     AgentReasoningStartedEvent(
                         agent_role=self.agent.role,
                         task_id=task_id,
-                        attempt=attempt + 1,
+                        attempt=current_attempt,
                         from_task=self.task,
                     ),
                 )
@@ -324,6 +326,23 @@ class AgentReasoning:
                 )
                 plan, ready = self._parse_planning_response(str(response))
                 steps = []  # No structured steps from text parsing
+
+            # Emit completed event for this refinement attempt
+            try:
+                crewai_event_bus.emit(
+                    self.agent,
+                    AgentReasoningCompletedEvent(
+                        agent_role=self.agent.role,
+                        task_id=task_id,
+                        plan=plan,
+                        ready=ready,
+                        attempt=current_attempt,
+                        from_task=self.task,
+                        from_agent=self.agent,
+                    ),
+                )
+            except Exception:  # noqa: S110
+                pass
 
             attempt += 1
 
@@ -372,7 +391,6 @@ class AgentReasoning:
                 from_task=self.task,
                 from_agent=self.agent,
             )
-
             try:
                 result = json.loads(response)
                 if "plan" in result and "ready" in result:
