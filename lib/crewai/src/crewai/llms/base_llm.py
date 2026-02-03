@@ -7,11 +7,15 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+from contextlib import contextmanager
+import contextvars
 from datetime import datetime
 import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import uuid
 
 from pydantic import BaseModel
 
@@ -49,6 +53,32 @@ if TYPE_CHECKING:
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+
+_current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_current_call_id", default=None
+)
+
+
+@contextmanager
+def llm_call_context() -> Generator[str, None, None]:
+    """Context manager that establishes an LLM call scope with a unique call_id."""
+    call_id = str(uuid.uuid4())
+    token = _current_call_id.set(call_id)
+    try:
+        yield call_id
+    finally:
+        _current_call_id.reset(token)
+
+
+def get_current_call_id() -> str:
+    """Get current call_id from context"""
+    call_id = _current_call_id.get()
+    if call_id is None:
+        logging.warning(
+            "LLM event emitted outside call context - generating fallback call_id"
+        )
+        return str(uuid.uuid4())
+    return call_id
 
 
 class BaseLLM(ABC):
@@ -351,6 +381,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -374,6 +405,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -394,6 +426,7 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -428,6 +461,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
                 call_type=call_type,
                 response_id=response_id,
+                call_id=get_current_call_id(),
             ),
         )
 
