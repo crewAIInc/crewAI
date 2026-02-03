@@ -7,9 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools import BaseTool
-from crewai.utilities.pydantic_schema_utils import (
-    create_model_from_schema,
-)
+from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 from crewai.utilities.string_utils import sanitize_tool_name
 from pydantic import BaseModel
 
@@ -53,9 +51,7 @@ try:
             """
             tool_name = sanitize_tool_name(mcp_tool.name)
             tool_description = mcp_tool.description or ""
-            input_schema = mcp_tool.inputSchema
-
-            args_model = create_model_from_schema(input_schema)
+            args_model = create_model_from_schema(mcp_tool.inputSchema)
 
             class CrewAIMCPTool(BaseTool):
                 name: str = tool_name
@@ -63,25 +59,7 @@ try:
                 args_schema: type[BaseModel] = args_model
 
                 def _run(self, **kwargs: Any) -> Any:
-                    filtered_kwargs: dict[str, Any] = {}
-                    schema_properties = input_schema.get("properties", {})
-
-                    for key, value in kwargs.items():
-                        if value is None and key in schema_properties:
-                            prop_schema = schema_properties[key]
-                            if isinstance(prop_schema.get("type"), list):
-                                if "null" in prop_schema["type"]:
-                                    filtered_kwargs[key] = value
-                            elif "anyOf" in prop_schema:
-                                if any(
-                                    opt.get("type") == "null"
-                                    for opt in prop_schema["anyOf"]
-                                ):
-                                    filtered_kwargs[key] = value
-                        else:
-                            filtered_kwargs[key] = value
-
-                    result = func(filtered_kwargs)
+                    result = func(kwargs)
                     if len(result.content) == 1:
                         first_content = result.content[0]
                         if isinstance(first_content, TextContent):
