@@ -61,6 +61,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.planning_types import PlanStep, TodoItem, TodoList
 from crewai.utilities.printer import Printer
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -97,6 +98,9 @@ class AgentReActState(BaseModel):
     plan: str | None = Field(default=None, description="Generated execution plan")
     plan_ready: bool = Field(
         default=False, description="Whether agent is ready to execute"
+    )
+    todos: TodoList = Field(
+        default_factory=TodoList, description="Todo list for tracking plan execution"
     )
 
 
@@ -330,7 +334,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         This is the entry point for the agent execution flow. If planning is
         enabled on the agent, it generates a plan before execution begins.
-        The plan is stored in state but not executed on yet (Phase 2).
+        The plan is stored in state and todos are created from the steps.
         """
         if not getattr(self.agent, "planning_enabled", False):
             return
@@ -354,6 +358,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             self.state.plan = output.plan.plan
             self.state.plan_ready = output.plan.ready
 
+            if self.state.plan_ready and output.plan.steps:
+                self._create_todos_from_plan(output.plan.steps)
+
             # Backward compatibility: append plan to task description
             # This can be removed in Phase 2 when plan execution is implemented
             if self.task and self.state.plan:
@@ -362,6 +369,25 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         except Exception as e:
             if hasattr(self.agent, "_logger"):
                 self.agent._logger.log("error", f"Error during planning: {e!s}")
+
+    def _create_todos_from_plan(self, steps: list[PlanStep]) -> None:
+        """Convert plan steps into trackable todo items.
+
+        Args:
+            steps: List of PlanStep objects from the reasoning handler.
+        """
+        todos: list[TodoItem] = []
+        for step in steps:
+            todo = TodoItem(
+                step_number=step.step_number,
+                description=step.description,
+                tool_to_use=step.tool_to_use,
+                depends_on=step.depends_on,
+                status="pending",
+            )
+            todos.append(todo)
+
+        self.state.todos = TodoList(items=todos)
 
     @listen(generate_plan)
     def initialize_reasoning(self) -> Literal["initialized"]:

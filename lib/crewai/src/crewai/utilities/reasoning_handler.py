@@ -16,6 +16,7 @@ from crewai.events.types.reasoning_events import (
 )
 from crewai.llm import LLM
 from crewai.utilities.llm_utils import create_llm
+from crewai.utilities.planning_types import PlanStep
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -29,6 +30,9 @@ class ReasoningPlan(BaseModel):
     """Model representing a reasoning plan for a task."""
 
     plan: str = Field(description="The detailed reasoning plan for the task.")
+    steps: list[PlanStep] = Field(
+        default_factory=list, description="Structured steps to execute"
+    )
     ready: bool = Field(description="Whether the agent is ready to execute the task.")
 
 
@@ -47,20 +51,53 @@ FUNCTION_SCHEMA: Final[dict[str, Any]] = {
     "type": "function",
     "function": {
         "name": "create_reasoning_plan",
-        "description": "Create or refine a reasoning plan for a task",
+        "description": "Create or refine a reasoning plan for a task with structured steps",
         "parameters": {
             "type": "object",
             "properties": {
                 "plan": {
                     "type": "string",
-                    "description": "The detailed reasoning plan for the task.",
+                    "description": "A brief summary of the overall plan.",
+                },
+                "steps": {
+                    "type": "array",
+                    "description": "List of discrete steps to execute the plan",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "step_number": {
+                                "type": "integer",
+                                "description": "Step number (1-based)",
+                            },
+                            "description": {
+                                "type": "string",
+                                "description": "What to do in this step",
+                            },
+                            "tool_to_use": {
+                                "type": ["string", "null"],
+                                "description": "Tool to use for this step, or null if no tool needed",
+                            },
+                            "depends_on": {
+                                "type": "array",
+                                "items": {"type": "integer"},
+                                "description": "Step numbers this step depends on (empty array if none)",
+                            },
+                        },
+                        "required": [
+                            "step_number",
+                            "description",
+                            "tool_to_use",
+                            "depends_on",
+                        ],
+                        "additionalProperties": False,
+                    },
                 },
                 "ready": {
                     "type": "boolean",
                     "description": "Whether the agent is ready to execute the task.",
                 },
             },
-            "required": ["plan", "ready"],
+            "required": ["plan", "steps", "ready"],
             "additionalProperties": False,
         },
     },
@@ -214,40 +251,46 @@ class AgentReasoning:
         Returns:
             The output of the agent planning process.
         """
-        plan, ready = self._create_initial_plan()
-        plan, ready = self._refine_plan_if_needed(plan, ready)
+        plan, steps, ready = self._create_initial_plan()
+        plan, steps, ready = self._refine_plan_if_needed(plan, steps, ready)
 
-        reasoning_plan = ReasoningPlan(plan=plan, ready=ready)
+        reasoning_plan = ReasoningPlan(plan=plan, steps=steps, ready=ready)
         return AgentReasoningOutput(plan=reasoning_plan)
 
-    def _create_initial_plan(self) -> tuple[str, bool]:
+    def _create_initial_plan(self) -> tuple[str, list[PlanStep], bool]:
         """Creates the initial plan for the task.
 
         Returns:
-            The initial plan and whether the agent is ready to execute the task.
+            A tuple of the plan summary, list of steps, and whether the agent is ready.
         """
         planning_prompt = self._create_planning_prompt()
 
         if self.llm.supports_function_calling():
-            plan, ready = self._call_with_function(planning_prompt, "create_plan")
-            return plan, ready
+            plan, steps, ready = self._call_with_function(
+                planning_prompt, "create_plan"
+            )
+            return plan, steps, ready
 
         response = self._call_llm_with_prompt(
             prompt=planning_prompt,
             plan_type="create_plan",
         )
 
-        return self._parse_planning_response(str(response))
+        plan, ready = self._parse_planning_response(str(response))
+        return plan, [], ready  # No structured steps from text parsing
 
-    def _refine_plan_if_needed(self, plan: str, ready: bool) -> tuple[str, bool]:
+    def _refine_plan_if_needed(
+        self, plan: str, steps: list[PlanStep], ready: bool
+    ) -> tuple[str, list[PlanStep], bool]:
         """Refines the plan if the agent is not ready to execute the task.
 
         Args:
             plan: The current plan.
+            steps: The current list of steps.
             ready: Whether the agent is ready to execute the task.
 
         Returns:
-            The refined plan and whether the agent is ready to execute the task.
+            The refined plan, steps, and whether the agent is ready to execute.
         """
         attempt = 1
         max_attempts = self.config.max_attempts
@@ -271,13 +314,16 @@ class AgentReasoning:
             refine_prompt = self._create_refine_prompt(plan)
 
             if self.llm.supports_function_calling():
-                plan, ready = self._call_with_function(refine_prompt, "refine_plan")
+                plan, steps, ready = self._call_with_function(
+                    refine_prompt, "refine_plan"
+                )
             else:
                 response = self._call_llm_with_prompt(
                     prompt=refine_prompt,
                     plan_type="refine_plan",
                 )
                 plan, ready = self._parse_planning_response(str(response))
+                steps = []  # No structured steps from text parsing
 
             attempt += 1
 
@@ -288,11 +334,11 @@ class AgentReasoning:
                 )
                 break
 
-        return plan, ready
+        return plan, steps, ready
 
     def _call_with_function(
         self, prompt: str, plan_type: Literal["create_plan", "refine_plan"]
-    ) -> tuple[str, bool]:
+    ) -> tuple[str, list[PlanStep], bool]:
         """Calls the LLM with function calling to get a plan.
 
         Args:
@@ -300,7 +346,7 @@ class AgentReasoning:
             plan_type: The type of plan being created.
 
         Returns:
-            A tuple containing the plan and whether the agent is ready.
+            A tuple containing the plan summary, list of steps, and whether the agent is ready.
         """
         self.logger.debug(f"Using function calling for {plan_type} planning")
 
@@ -308,9 +354,13 @@ class AgentReasoning:
             system_prompt = self._get_system_prompt()
 
             # Prepare a simple callable that just returns the tool arguments as JSON
-            def _create_reasoning_plan(plan: str, ready: bool = True) -> str:
+            def _create_reasoning_plan(
+                plan: str,
+                steps: list[dict[str, Any]] | None = None,
+                ready: bool = True,
+            ) -> str:
                 """Return the planning result in JSON string form."""
-                return json.dumps({"plan": plan, "ready": ready})
+                return json.dumps({"plan": plan, "steps": steps or [], "ready": ready})
 
             response = self.llm.call(
                 [
@@ -326,13 +376,30 @@ class AgentReasoning:
             try:
                 result = json.loads(response)
                 if "plan" in result and "ready" in result:
-                    return result["plan"], result["ready"]
+                    # Parse steps from the response
+                    steps: list[PlanStep] = []
+                    raw_steps = result.get("steps", [])
+                    for step_data in raw_steps:
+                        try:
+                            step = PlanStep(
+                                step_number=step_data.get("step_number", 0),
+                                description=step_data.get("description", ""),
+                                tool_to_use=step_data.get("tool_to_use"),
+                                depends_on=step_data.get("depends_on", []),
+                            )
+                            steps.append(step)
+                        except Exception as step_error:
+                            self.logger.warning(
+                                f"Failed to parse step: {step_data}, error: {step_error}"
+                            )
+                    return result["plan"], steps, result["ready"]
             except (json.JSONDecodeError, KeyError):
                 pass
 
             response_str = str(response)
             return (
                 response_str,
+                [],
                 "READY: I am ready to execute the task." in response_str,
             )
 
@@ -356,12 +423,14 @@ class AgentReasoning:
                 fallback_str = str(fallback_response)
                 return (
                     fallback_str,
+                    [],
                     "READY: I am ready to execute the task." in fallback_str,
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
                 return (
                     "Failed to generate a plan due to an error.",
+                    [],
                     True,
                 )  # Default to ready to avoid getting stuck
 
