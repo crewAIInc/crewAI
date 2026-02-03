@@ -698,6 +698,64 @@ class TestStreamingEdgeCases:
         assert len(chunks) >= 1
         assert streaming.is_completed
 
+    def test_streaming_chunks_contain_task_metadata_from_event(
+        self, researcher: Agent, simple_task: Task
+    ) -> None:
+        """Test that streaming chunks contain task_id and task_name from the event.
+
+        This test verifies the fix for issue #4347 where streaming chunks were
+        missing task metadata (task_id/task_name were empty).
+        """
+        crew = Crew(
+            agents=[researcher],
+            tasks=[simple_task],
+            verbose=False,
+            stream=True,
+        )
+
+        mock_output = MagicMock()
+        mock_output.raw = "Test output"
+
+        original_kickoff = Crew.kickoff
+        call_count = [0]
+        test_task_id = "test-task-uuid-123"
+        test_task_name = "Test Task Name"
+        test_agent_id = "test-agent-uuid-456"
+        test_agent_role = "Test Agent Role"
+
+        def mock_kickoff_fn(self: Any, inputs: Any = None, **kwargs: Any) -> Any:
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return original_kickoff(self, inputs, **kwargs)
+            else:
+                crewai_event_bus.emit(
+                    crew,
+                    LLMStreamChunkEvent(
+                        type="llm_stream_chunk",
+                        chunk="Hello from task",
+                        task_id=test_task_id,
+                        task_name=test_task_name,
+                        agent_id=test_agent_id,
+                        agent_role=test_agent_role,
+                    ),
+                )
+                return mock_output
+
+        with patch.object(Crew, "kickoff", mock_kickoff_fn):
+            streaming = crew.kickoff()
+            assert isinstance(streaming, CrewStreamingOutput)
+            chunks = list(streaming)
+
+        assert len(chunks) >= 1
+        chunk_with_metadata = next(
+            (c for c in chunks if c.content == "Hello from task"), None
+        )
+        assert chunk_with_metadata is not None
+        assert chunk_with_metadata.task_id == test_task_id
+        assert chunk_with_metadata.task_name == test_task_name
+        assert chunk_with_metadata.agent_id == test_agent_id
+        assert chunk_with_metadata.agent_role == test_agent_role
+
 
 class TestStreamingImports:
     """Tests for correct imports of streaming types."""
