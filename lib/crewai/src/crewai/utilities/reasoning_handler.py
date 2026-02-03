@@ -133,7 +133,6 @@ class AgentReasoning:
             return self.agent.planning_config
         # Fallback for backward compatibility
         return PlanningConfig(
-            enabled=True,
             max_attempts=getattr(self.agent, "max_reasoning_attempts", None),
         )
 

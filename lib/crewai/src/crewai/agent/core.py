@@ -304,7 +304,6 @@ class Agent(BaseAgent):
                 stacklevel=2,
             )
             self.planning_config = PlanningConfig(
-                enabled=True,
                 max_attempts=self.max_reasoning_attempts,
             )
 
