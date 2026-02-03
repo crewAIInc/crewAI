@@ -43,7 +43,7 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.llms.base_llm import BaseLLM, llm_call_context
 
 except ImportError:
     raise ImportError(
@@ -293,32 +293,44 @@ class AzureCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            # Emit call started event
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            effective_response_model = response_model or self.response_format
+        with llm_call_context():
+            try:
+                # Emit call started event
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            # Format messages for Azure
-            formatted_messages = self._format_messages_for_azure(messages)
+                effective_response_model = response_model or self.response_format
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                # Format messages for Azure
+                formatted_messages = self._format_messages_for_azure(messages)
 
-            # Prepare completion parameters
-            completion_params = self._prepare_completion_params(
-                formatted_messages, tools, effective_response_model
-            )
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            # Handle streaming vs non-streaming
-            if self.stream:
-                return self._handle_streaming_completion(
+                # Prepare completion parameters
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, tools, effective_response_model
+                )
+
+                # Handle streaming vs non-streaming
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -326,16 +338,8 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return self._handle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except Exception as e:
-            return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
+            except Exception as e:
+                return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
     async def acall(  # type: ignore[return]
         self,
@@ -361,25 +365,35 @@ class AzureCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            effective_response_model = response_model or self.response_format
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages = self._format_messages_for_azure(messages)
+                effective_response_model = response_model or self.response_format
 
-            completion_params = self._prepare_completion_params(
-                formatted_messages, tools, effective_response_model
-            )
+                formatted_messages = self._format_messages_for_azure(messages)
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, tools, effective_response_model
+                )
+
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -387,16 +401,8 @@ class AzureCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return await self._ahandle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except Exception as e:
-            self._handle_api_error(e, from_task, from_agent)
+            except Exception as e:
+                self._handle_api_error(e, from_task, from_agent)
 
     def _prepare_completion_params(
         self,
