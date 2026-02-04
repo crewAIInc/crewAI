@@ -21,7 +21,7 @@ jobs:
           private_key: ${{ secrets.OSS_SYNC_APP_PRIVATE_KEY }}
 
       - name: Notify Repo B
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
           repository: ${{ secrets.OSS_SYNC_DOWNSTREAM_REPO }}
