@@ -768,3 +768,152 @@ def test_per_guardrail_independent_retry_tracking():
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+
+
+def test_guardrail_receives_pydantic_output_on_first_attempt():
+    """Test that TaskOutput.pydantic is populated on the first guardrail invocation.
+
+    This is a regression test for issue #4369 where TaskOutput.pydantic was None
+    on the first guardrail call but correctly parsed on retry attempts.
+    """
+    import json
+
+    from pydantic import BaseModel, Field
+
+    class MyOutput(BaseModel):
+        message: str = Field(description="A message")
+        status: str = Field(description="A status")
+
+    pydantic_values_received: list[MyOutput | None] = []
+
+    def my_guardrail(task_output: TaskOutput) -> tuple[bool, TaskOutput]:
+        pydantic_values_received.append(task_output.pydantic)
+        return (True, task_output)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = json.dumps(
+        {"message": "Hello", "status": "success"}
+    )
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test pydantic parsing in guardrail",
+        expected_output="JSON with message and status",
+        output_pydantic=MyOutput,
+        guardrail=my_guardrail,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert len(pydantic_values_received) == 1
+    assert pydantic_values_received[0] is not None, (
+        "TaskOutput.pydantic should not be None on first guardrail invocation"
+    )
+    assert isinstance(pydantic_values_received[0], MyOutput)
+    assert pydantic_values_received[0].message == "Hello"
+    assert pydantic_values_received[0].status == "success"
+
+    assert result.pydantic is not None
+    assert isinstance(result.pydantic, MyOutput)
+
+
+def test_guardrail_receives_json_output_on_first_attempt():
+    """Test that TaskOutput.json_dict is populated on the first guardrail invocation.
+
+    This is a regression test for issue #4369 where TaskOutput.json_dict was None
+    on the first guardrail call but correctly parsed on retry attempts.
+    """
+    import json
+
+    from pydantic import BaseModel, Field
+
+    class MyOutput(BaseModel):
+        message: str = Field(description="A message")
+        status: str = Field(description="A status")
+
+    json_values_received: list[dict | None] = []
+
+    def my_guardrail(task_output: TaskOutput) -> tuple[bool, TaskOutput]:
+        json_values_received.append(task_output.json_dict)
+        return (True, task_output)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = json.dumps(
+        {"message": "Hello", "status": "success"}
+    )
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test json parsing in guardrail",
+        expected_output="JSON with message and status",
+        output_json=MyOutput,
+        guardrail=my_guardrail,
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert len(json_values_received) == 1
+    assert json_values_received[0] is not None, (
+        "TaskOutput.json_dict should not be None on first guardrail invocation"
+    )
+    assert json_values_received[0]["message"] == "Hello"
+    assert json_values_received[0]["status"] == "success"
+
+    assert result.json_dict is not None
+
+
+def test_guardrails_list_receives_pydantic_output_on_first_attempt():
+    """Test that TaskOutput.pydantic is populated on first invocation with guardrails list.
+
+    This is a regression test for issue #4369 ensuring the fix works for both
+    single guardrail and guardrails list configurations.
+    """
+    import json
+
+    from pydantic import BaseModel, Field
+
+    class MyOutput(BaseModel):
+        value: int = Field(description="A numeric value")
+
+    pydantic_values_received: list[MyOutput | None] = []
+
+    def first_guardrail(task_output: TaskOutput) -> tuple[bool, TaskOutput]:
+        pydantic_values_received.append(task_output.pydantic)
+        return (True, task_output)
+
+    def second_guardrail(task_output: TaskOutput) -> tuple[bool, TaskOutput]:
+        pydantic_values_received.append(task_output.pydantic)
+        return (True, task_output)
+
+    agent = Mock()
+    agent.role = "test_agent"
+    agent.execute_task.return_value = json.dumps({"value": 42})
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test pydantic parsing with guardrails list",
+        expected_output="JSON with value",
+        output_pydantic=MyOutput,
+        guardrails=[first_guardrail, second_guardrail],
+    )
+
+    result = task.execute_sync(agent=agent)
+
+    assert len(pydantic_values_received) == 2
+    assert pydantic_values_received[0] is not None, (
+        "TaskOutput.pydantic should not be None on first guardrail invocation"
+    )
+    assert isinstance(pydantic_values_received[0], MyOutput)
+    assert pydantic_values_received[0].value == 42
+
+    assert pydantic_values_received[1] is not None
+    assert isinstance(pydantic_values_received[1], MyOutput)
+
+    assert result.pydantic is not None
+    assert isinstance(result.pydantic, MyOutput)
+    assert result.pydantic.value == 42
