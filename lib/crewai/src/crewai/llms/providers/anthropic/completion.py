@@ -739,18 +739,9 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                tool_use = tool_uses[0]
-                function_name = tool_use.name
-                function_args = cast(dict[str, Any], tool_use.input)
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
-
                 if result is not None:
                     return result
 
@@ -953,19 +944,10 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                # Execute tools and return result directly (matching OpenAI behavior)
-                tool_use = tool_uses[0]
-                function_name = tool_use.name
-                function_args = cast(dict[str, Any], tool_use.input)
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
+                # Execute first tool and return result directly
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
-
                 if result is not None:
                     return result
 
@@ -1025,6 +1007,40 @@ class AnthropicCompletion(BaseLLM):
             tool_results.append(tool_result)
 
         return tool_results
+
+    def _execute_first_tool(
+        self,
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> Any | None:
+        """Execute the first tool from the tool_uses list and return its result.
+
+        This is used when available_functions is provided, to directly execute
+        the tool and return its result (matching OpenAI behavior for use cases
+        like reasoning_handler).
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            The result of the first tool execution, or None if execution failed
+        """
+        tool_use = tool_uses[0]
+        function_name = tool_use.name
+        function_args = cast(dict[str, Any], tool_use.input)
+
+        return self._handle_tool_execution(
+            function_name=function_name,
+            function_args=function_args,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
 
     # TODO: we drop this
     def _handle_tool_use_conversation(
@@ -1242,19 +1258,9 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                # Execute tools and return result directly (matching OpenAI behavior)
-                tool_use = tool_uses[0]
-                function_name = tool_use.name
-                function_args = cast(dict[str, Any], tool_use.input)
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
-
                 if result is not None:
                     return result
 
@@ -1437,19 +1443,9 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                # Execute tools and return result directly (matching OpenAI behavior)
-                tool_use = tool_uses[0]
-                function_name = tool_use.name
-                function_args = cast(dict[str, Any], tool_use.input)
-
-                result = self._handle_tool_execution(
-                    function_name=function_name,
-                    function_args=function_args,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
-
                 if result is not None:
                     return result
 
