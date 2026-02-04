@@ -195,6 +195,7 @@ __all__ = [
     "ToolUsageFinishedEvent",
     "ToolUsageStartedEvent",
     "ToolValidateInputErrorEvent",
+    "_extension_exports",
     "crewai_event_bus",
 ]
 

@@ -43,6 +43,7 @@ __all__ = [
     "HumanFeedbackPending",
     "HumanFeedbackProvider",
     "PendingFeedbackContext",
+    "_extension_exports",
 ]
 
 _extension_exports: dict[str, Any] = {}
