@@ -75,7 +75,7 @@ class ExampleFlow(Flow):
 
 
 
-flow = ExampleFlow()
+flow = ExampleFlow(verbose=True) #Verbose 플래그는 기본값이 True입니다. Verbose 플래그를 False로 설정하면 상세한(Verbose) 플로우 실행을 비활성화할 수 있습니다
 flow.plot()
 result = flow.kickoff()
 
