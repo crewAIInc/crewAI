@@ -49,6 +49,9 @@ class ConsoleFormatter:
         if os.getenv("CI", "").lower() in ("true", "1"):
             return
 
+        if os.getenv("CREWAI_DISABLE_VERSION_CHECK", "").lower() in ("true", "1"):
+            return
+
         try:
             is_newer, current, latest = is_newer_version_available()
             if is_newer and latest:

@@ -210,14 +210,29 @@ _AGENT_EVENT_MAPPING = {
     "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
 }
 
+_extension_exports: dict[str, Any] = {}
+
 
 def __getattr__(name: str) -> Any:
-    """Lazy import for agent events to avoid circular imports."""
+    """Lazy import for agent events and registered extensions."""
     if name in _AGENT_EVENT_MAPPING:
         import importlib
 
         module_path = _AGENT_EVENT_MAPPING[name]
         module = importlib.import_module(module_path)
         return getattr(module, name)
+
+    if name in _extension_exports:
+        import importlib
+
+        value = _extension_exports[name]
+        if isinstance(value, str):
+            module_path, _, attr_name = value.rpartition(".")
+            if module_path:
+                module = importlib.import_module(module_path)
+                return getattr(module, attr_name)
+            return importlib.import_module(value)
+        return value
+
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
