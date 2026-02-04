@@ -35,7 +35,7 @@ class TestFlowHumanInputIntegration:
             patch.object(formatter, "pause_live_updates") as mock_pause,
             patch.object(formatter, "resume_live_updates") as mock_resume,
         ):
-            result = provider._prompt_input("Test result", crew)
+            result = provider._prompt_input(crew)
 
             mock_pause.assert_called_once()
             mock_resume.assert_called_once()
@@ -66,10 +66,10 @@ class TestFlowHumanInputIntegration:
                 formatter, "resume_live_updates", side_effect=track_resume
             ),
         ):
-            result1 = provider._prompt_input("Test result 1", crew)
+            result1 = provider._prompt_input(crew)
             assert result1 == "feedback"
 
-            result2 = provider._prompt_input("Test result 2", crew)
+            result2 = provider._prompt_input(crew)
             assert result2 == ""
 
             assert len(pause_calls) == 2
@@ -108,7 +108,7 @@ class TestFlowHumanInputIntegration:
             ),
         ):
             with pytest.raises(KeyboardInterrupt):
-                provider._prompt_input("Test result", crew)
+                provider._prompt_input(crew)
 
             mock_pause.assert_called_once()
             mock_resume.assert_called_once()
@@ -127,7 +127,7 @@ class TestFlowHumanInputIntegration:
             patch.object(formatter.console, "print") as mock_console_print,
             patch("builtins.input", return_value="training feedback"),
         ):
-            result = provider._prompt_input("Test result", crew)
+            result = provider._prompt_input(crew)
 
             mock_pause.assert_called_once()
             mock_resume.assert_called_once()
