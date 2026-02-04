@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import os
-from pathlib import Path
 import re
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Literal
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from crewai.tools.base_tool import BaseTool
-
 
 MAX_OUTPUT_CHARS = 50_000
 MAX_FILES = 10_000
@@ -19,16 +17,18 @@ MAX_MATCHES_PER_FILE = 200
 MAX_LINE_LENGTH = 500
 BINARY_CHECK_SIZE = 8192
 
-SKIP_DIRS = frozenset({
-    ".git",
-    "__pycache__",
-    "node_modules",
-    ".venv",
-    "venv",
-    ".tox",
-    ".mypy_cache",
-    ".pytest_cache",
-})
+SKIP_DIRS = frozenset(
+    {
+        ".git",
+        "__pycache__",
+        "node_modules",
+        ".venv",
+        "venv",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+    }
+)
 
 
 @dataclass
@@ -52,7 +52,9 @@ class FileSearchResult:
 class GrepToolSchema(BaseModel):
     """Schema for grep tool arguments."""
 
-    pattern: str = Field(..., description="Regex pattern to search for in file contents")
+    pattern: str = Field(
+        ..., description="Regex pattern to search for in file contents"
+    )
     path: str | None = Field(
         default=None,
         description="File or directory to search in. Defaults to current working directory.",
@@ -84,13 +86,23 @@ class GrepTool(BaseTool):
 
     Recursively searches files in a directory for lines matching a regex pattern.
     Supports glob filtering, context lines, and multiple output modes.
+
+    Example:
+        >>> tool = GrepTool()
+        >>> result = tool.run(pattern="def.*main", path="/path/to/project")
+        >>> result = tool.run(
+        ...     pattern="TODO",
+        ...     path="/path/to/project",
+        ...     glob_pattern="*.py",
+        ...     context_lines=2,
+        ... )
     """
 
-    name: str = "grep"
+    name: str = "Search file contents"
     description: str = (
-        "Search file contents on disk using regex patterns. "
+        "A tool that searches file contents on disk using regex patterns. "
         "Recursively searches files in a directory for matching lines. "
-        "Returns matching content, file paths, or match counts."
+        "Returns matching content with line numbers, file paths only, or match counts."
     )
     args_schema: type[BaseModel] = GrepToolSchema
 
@@ -154,7 +166,10 @@ class GrepTool(BaseTool):
 
         # Truncate if needed
         if len(output) > MAX_OUTPUT_CHARS:
-            output = output[:MAX_OUTPUT_CHARS] + "\n\n... Output truncated. Try a narrower search pattern or glob filter."
+            output = (
+                output[:MAX_OUTPUT_CHARS]
+                + "\n\n... Output truncated. Try a narrower search pattern or glob filter."
+            )
 
         return output
 
@@ -255,11 +270,13 @@ class GrepTool(BaseTool):
                 text = lines[i].rstrip("\n\r")
                 if len(text) > MAX_LINE_LENGTH:
                     text = text[:MAX_LINE_LENGTH] + "..."
-                current_group.append(MatchLine(
-                    line_number=i + 1,  # 1-indexed
-                    text=text,
-                    is_match=(i in match_line_nums),
-                ))
+                current_group.append(
+                    MatchLine(
+                        line_number=i + 1,  # 1-indexed
+                        text=text,
+                        is_match=(i in match_line_nums),
+                    )
+                )
 
             prev_end = end
 

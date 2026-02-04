@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from crewai.tools.agent_tools.grep_tool import GrepTool
+from crewai_tools import GrepTool
 
 
 @pytest.fixture
@@ -69,7 +69,7 @@ class TestGrepTool:
 
     def test_tool_metadata(self) -> None:
         """Test tool has correct name and description."""
-        assert self.tool.name == "grep"
+        assert self.tool.name == "Search file contents"
         assert "search" in self.tool.description.lower() or "Search" in self.tool.description
 
     def test_args_schema(self) -> None:
