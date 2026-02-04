@@ -868,6 +868,125 @@ def test_bedrock_stop_sequences_sent_to_api():
 
 
 # =============================================================================
+# Request Metadata Tests
+# =============================================================================
+
+
+def test_bedrock_request_metadata_initialization():
+    """Test that request_metadata is properly initialized in BedrockCompletion."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    metadata = {"user_id": "test-user-123", "session_id": "session-456"}
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        request_metadata=metadata
+    )
+
+    assert isinstance(llm, BedrockCompletion)
+    assert llm.request_metadata == metadata
+    assert llm.request_metadata["user_id"] == "test-user-123"
+    assert llm.request_metadata["session_id"] == "session-456"
+
+
+def test_bedrock_request_metadata_none_by_default():
+    """Test that request_metadata is None by default."""
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    assert isinstance(llm, BedrockCompletion)
+    assert llm.request_metadata is None
+
+
+def test_bedrock_request_metadata_sent_to_api():
+    """Test that request_metadata is properly sent to the Bedrock Converse API."""
+    metadata = {"user_id": "test-user-123", "session_id": "session-456"}
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        request_metadata=metadata
+    )
+
+    with patch.object(llm.client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Hello'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Say hello")
+
+        call_kwargs = mock_converse.call_args[1]
+        assert "requestMetadata" in call_kwargs
+        assert call_kwargs["requestMetadata"] == metadata
+        assert call_kwargs["requestMetadata"]["user_id"] == "test-user-123"
+        assert call_kwargs["requestMetadata"]["session_id"] == "session-456"
+
+
+def test_bedrock_request_metadata_not_sent_when_none():
+    """Test that requestMetadata is not included in API call when not configured."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm.client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'Hello'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 10,
+                'outputTokens': 5,
+                'totalTokens': 15
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Say hello")
+
+        call_kwargs = mock_converse.call_args[1]
+        assert "requestMetadata" not in call_kwargs
+
+
+def test_bedrock_request_metadata_with_streaming():
+    """Test that request_metadata is properly sent when streaming is enabled."""
+    metadata = {"user_id": "stream-user", "request_type": "streaming"}
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        request_metadata=metadata,
+        stream=True
+    )
+
+    with patch.object(llm.client, 'converse_stream') as mock_converse_stream:
+        mock_response = {
+            'stream': iter([
+                {'messageStart': {'role': 'assistant'}},
+                {'contentBlockStart': {'start': {'text': ''}, 'contentBlockIndex': 0}},
+                {'contentBlockDelta': {'delta': {'text': 'Hello'}, 'contentBlockIndex': 0}},
+                {'contentBlockStop': {'contentBlockIndex': 0}},
+                {'messageStop': {'stopReason': 'end_turn'}},
+                {'metadata': {'usage': {'inputTokens': 10, 'outputTokens': 5}}}
+            ])
+        }
+        mock_converse_stream.return_value = mock_response
+
+        llm.call("Say hello")
+
+        call_kwargs = mock_converse_stream.call_args[1]
+        assert "requestMetadata" in call_kwargs
+        assert call_kwargs["requestMetadata"] == metadata
+
+
+# =============================================================================
 # Agent Kickoff Structured Output Tests
 # =============================================================================
 
