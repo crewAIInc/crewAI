@@ -19,7 +19,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
-from crewai.core.providers.human_input import get_provider
+from crewai.core.providers.human_input import ExecutorContext, get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
@@ -67,7 +67,6 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.tools_handler import ToolsHandler
-    from crewai.core.providers.human_input import ExecutorContext
     from crewai.crew import Crew
     from crewai.llms.base_llm import BaseLLM
     from crewai.task import Task
