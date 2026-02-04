@@ -30,7 +30,6 @@ if TYPE_CHECKING:
         SystemContentBlockTypeDef,
         TokenUsageTypeDef,
         ToolConfigurationTypeDef,
-        ToolTypeDef,
     )
 
     from crewai.llms.hooks.base import BaseInterceptor
@@ -47,6 +46,38 @@ except ImportError:
 
 
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
+
+
+class BedrockCitation(TypedDict, total=False):
+    """Type definition for a citation from Bedrock Web Grounding.
+
+    Citations are returned when using system tools like nova_grounding
+    that provide web-grounded responses with source attribution.
+    """
+
+    url: str
+    domain: str
+
+
+class BedrockGroundedResponse(TypedDict):
+    """Type definition for a grounded response with citations.
+
+    When system tools like nova_grounding are used, responses include
+    both the generated text and citations to source material.
+    """
+
+    text: str
+    citations: list[BedrockCitation]
+
+
+class SystemToolTypeDef(TypedDict):
+    """Type definition for a Bedrock system tool.
+
+    System tools are built-in tools provided by AWS Bedrock that the model
+    can use internally, such as nova_grounding for web search with citations.
+    """
+
+    name: str
 
 
 def _preprocess_structured_data(
@@ -246,6 +277,7 @@ class BedrockCompletion(BaseLLM):
         additional_model_response_field_paths: list[str] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         response_format: type[BaseModel] | None = None,
+        system_tools: list[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize AWS Bedrock completion client.
@@ -268,6 +300,10 @@ class BedrockCompletion(BaseLLM):
             interceptor: HTTP interceptor (not yet supported for Bedrock).
             response_format: Pydantic model for structured output. Used as default when
                            response_model is not passed to call()/acall() methods.
+            system_tools: List of Bedrock system tool names to enable (e.g., ["nova_grounding"]).
+                         System tools are built-in tools that the model can use internally.
+                         When nova_grounding is enabled, responses may include citations
+                         from web sources. See AWS documentation for available system tools.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -332,6 +368,7 @@ class BedrockCompletion(BaseLLM):
         self.additional_model_response_field_paths = (
             additional_model_response_field_paths
         )
+        self.system_tools = system_tools
 
         # Model-specific settings
         self.is_claude_model = "claude" in model.lower()
@@ -412,26 +449,29 @@ class BedrockCompletion(BaseLLM):
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
-                # Bedrock requires toolConfig when messages have toolUse/toolResult
+                # Build tool config with regular tools and system tools
+                tool_config_tools: list[Any] = []
+
                 if tools:
-                    tool_config: ToolConfigurationTypeDef = {
-                        "tools": cast(
-                            "Sequence[ToolTypeDef]",
-                            cast(object, self._format_tools_for_converse(tools)),
-                        )
-                    }
-                    body["toolConfig"] = tool_config
+                    tool_config_tools.extend(self._format_tools_for_converse(tools))
                 elif self._messages_contain_tool_content(formatted_messages):
-                    # Create minimal toolConfig from tool history in messages
                     tools_from_history = self._extract_tools_from_message_history(
                         formatted_messages
                     )
                     if tools_from_history:
-                        body["toolConfig"] = cast(
-                            "ToolConfigurationTypeDef",
-                            cast(object, {"tools": tools_from_history}),
-                        )
+                        tool_config_tools.extend(tools_from_history)
+
+                # Add system tools (e.g., nova_grounding) if configured
+                if self.system_tools:
+                    tool_config_tools.extend(
+                        {"systemTool": {"name": name}} for name in self.system_tools
+                    )
+
+                if tool_config_tools:
+                    body["toolConfig"] = cast(
+                        "ToolConfigurationTypeDef",
+                        cast(object, {"tools": tool_config_tools}),
+                    )
 
                 # Add optional advanced features if configured
                 if self.guardrail_config:
@@ -543,26 +583,31 @@ class BedrockCompletion(BaseLLM):
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
-                # Bedrock requires toolConfig when messages have toolUse/toolResult
+                # Build tool config with regular tools and system tools
+                async_tool_config_tools: list[Any] = []
+
                 if tools:
-                    tool_config: ToolConfigurationTypeDef = {
-                        "tools": cast(
-                            "Sequence[ToolTypeDef]",
-                            cast(object, self._format_tools_for_converse(tools)),
-                        )
-                    }
-                    body["toolConfig"] = tool_config
+                    async_tool_config_tools.extend(
+                        self._format_tools_for_converse(tools)
+                    )
                 elif self._messages_contain_tool_content(formatted_messages):
-                    # Create minimal toolConfig from tool history in messages
                     tools_from_history = self._extract_tools_from_message_history(
                         formatted_messages
                     )
                     if tools_from_history:
-                        body["toolConfig"] = cast(
-                            "ToolConfigurationTypeDef",
-                            cast(object, {"tools": tools_from_history}),
-                        )
+                        async_tool_config_tools.extend(tools_from_history)
+
+                # Add system tools (e.g., nova_grounding) if configured
+                if self.system_tools:
+                    async_tool_config_tools.extend(
+                        {"systemTool": {"name": name}} for name in self.system_tools
+                    )
+
+                if async_tool_config_tools:
+                    body["toolConfig"] = cast(
+                        "ToolConfigurationTypeDef",
+                        cast(object, {"tools": async_tool_config_tools}),
+                    )
 
                 if self.guardrail_config:
                     guardrail_config: GuardrailConfigurationTypeDef = cast(
@@ -766,11 +811,28 @@ class BedrockCompletion(BaseLLM):
 
             # Process content blocks and handle tool use correctly
             text_content = ""
+            all_citations: list[BedrockCitation] = []
 
             for content_block in content:
                 # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
+
+                    # Extract citations from citationsContent if present
+                    # (returned by system tools like nova_grounding)
+                    if "citationsContent" in content_block:
+                        citations_content = content_block["citationsContent"]
+                        citations_list = citations_content.get("citations", [])
+                        for citation in citations_list:
+                            location = citation.get("location", {})
+                            web_info = location.get("web", {})
+                            if web_info:
+                                all_citations.append(
+                                    BedrockCitation(
+                                        url=web_info.get("url", ""),
+                                        domain=web_info.get("domain", ""),
+                                    )
+                                )
 
                 # Handle tool use - corrected structure according to AWS API docs
                 elif "toolUse" in content_block and available_functions:
@@ -842,11 +904,22 @@ class BedrockCompletion(BaseLLM):
                 messages=messages,
             )
 
-            return self._invoke_after_llm_call_hooks(
+            # Apply after hooks to the text content
+            final_text = self._invoke_after_llm_call_hooks(
                 messages,
                 text_content,
                 from_agent,
             )
+
+            # If citations were extracted (from system tools like nova_grounding),
+            # return a BedrockGroundedResponse with both text and citations
+            if all_citations:
+                return BedrockGroundedResponse(
+                    text=final_text,
+                    citations=all_citations,
+                )
+
+            return final_text
 
         except ClientError as e:
             # Handle all AWS ClientError exceptions as per documentation
@@ -1352,10 +1425,27 @@ class BedrockCompletion(BaseLLM):
                 return non_structured_output_tool_uses
 
             text_content = ""
+            async_all_citations: list[BedrockCitation] = []
 
             for content_block in content:
                 if "text" in content_block:
                     text_content += content_block["text"]
+
+                    # Extract citations from citationsContent if present
+                    # (returned by system tools like nova_grounding)
+                    if "citationsContent" in content_block:
+                        citations_content = content_block["citationsContent"]
+                        citations_list = citations_content.get("citations", [])
+                        for citation in citations_list:
+                            location = citation.get("location", {})
+                            web_info = location.get("web", {})
+                            if web_info:
+                                async_all_citations.append(
+                                    BedrockCitation(
+                                        url=web_info.get("url", ""),
+                                        domain=web_info.get("domain", ""),
+                                    )
+                                )
 
                 elif "toolUse" in content_block and available_functions:
                     tool_use_block = content_block["toolUse"]
@@ -1423,6 +1513,14 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
             )
+
+            # If citations were extracted (from system tools like nova_grounding),
+            # return a BedrockGroundedResponse with both text and citations
+            if async_all_citations:
+                return BedrockGroundedResponse(
+                    text=text_content,
+                    citations=async_all_citations,
+                )
 
             return text_content
 
