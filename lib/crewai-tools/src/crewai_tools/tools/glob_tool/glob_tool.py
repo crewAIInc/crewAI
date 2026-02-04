@@ -7,9 +7,8 @@ import os
 from pathlib import Path
 from typing import Literal
 
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-
-from crewai.tools.base_tool import BaseTool
 
 
 MAX_FILES = 1000
@@ -87,6 +86,11 @@ class GlobTool(BaseTool):
     Recursively searches for files matching a glob pattern within a directory.
     Useful for discovering files by name, extension, or path pattern.
     Complements GrepTool which searches by file content.
+
+    Example:
+        >>> tool = GlobTool()
+        >>> result = tool.run(pattern="*.py", path="/path/to/project")
+        >>> result = tool.run(pattern="**/*.yaml", output_mode="detailed")
     """
 
     name: str = "glob"
