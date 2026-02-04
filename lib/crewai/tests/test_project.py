@@ -1,3 +1,5 @@
+import tempfile
+from pathlib import Path
 from typing import Any, ClassVar
 from unittest.mock import Mock, patch
 
@@ -382,3 +384,93 @@ def test_internal_crew_with_mcp():
     adapter_mock.assert_called_once_with(
         {"host": "localhost", "port": 8000}, connect_timeout=120
     )
+
+
+def test_get_skills_knowledge_sources_discovery():
+    """get_skills_knowledge_sources discovers .agents/<skill_name>/Skills.md and returns sources."""
+
+    @CrewBase
+    class SkillsCrew:
+        agents_config = "nonexistent/agents.yaml"
+        tasks_config = "nonexistent/tasks.yaml"
+        agents: list[BaseAgent]
+        tasks: list[Task]
+
+        @agent
+        def researcher(self):
+            return Agent(
+                role="Researcher",
+                goal="Research",
+                backstory="Expert researcher",
+            )
+
+        @task
+        def research_task(self):
+            return Task(
+                description="Research", expected_output="Report", agent=self.researcher()
+            )
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        (base / ".agents" / "skill_a").mkdir(parents=True)
+        (base / ".agents" / "skill_b").mkdir(parents=True)
+        (base / ".agents" / "skill_a" / "Skills.md").write_text("# Skill A")
+        (base / ".agents" / "skill_b" / "Skills.md").write_text("# Skill B")
+
+        crew_instance = SkillsCrew()
+        crew_instance.base_directory = base
+        sources = crew_instance.get_skills_knowledge_sources()
+
+    # With docling installed we get 2 sources; without it we get []
+    if len(sources) == 2:
+        paths = []
+        for s in sources:
+            paths.extend(getattr(s, "file_paths", []) or getattr(s, "safe_file_paths", []))
+        path_strs = {str(Path(p).resolve()) for p in paths}
+        expected_a = str((base / ".agents" / "skill_a" / "Skills.md").resolve())
+        expected_b = str((base / ".agents" / "skill_b" / "Skills.md").resolve())
+        assert expected_a in path_strs
+        assert expected_b in path_strs
+    else:
+        assert len(sources) == 0
+
+
+def test_get_skills_knowledge_sources_missing_dir_returns_empty():
+    """get_skills_knowledge_sources returns [] when .agents does not exist."""
+
+    @CrewBase
+    class NoSkillsCrew:
+        agents_config = "nonexistent/agents.yaml"
+        tasks_config = "nonexistent/tasks.yaml"
+        agents: list[BaseAgent]
+        tasks: list[Task]
+
+        @agent
+        def researcher(self):
+            return Agent(
+                role="Researcher",
+                goal="Research",
+                backstory="Expert researcher",
+            )
+
+        @task
+        def research_task(self):
+            return Task(
+                description="Research", expected_output="Report", agent=self.researcher()
+            )
+
+        @crew
+        def crew(self):
+            return Crew(agents=self.agents, tasks=self.tasks, verbose=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp)
+        crew_instance = NoSkillsCrew()
+        crew_instance.base_directory = base
+        sources = crew_instance.get_skills_knowledge_sources()
+
+    assert sources == []

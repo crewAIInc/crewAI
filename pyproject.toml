@@ -149,6 +149,7 @@ members = [
     "lib/crewai-tools",
     "lib/devtools",
     "lib/crewai-files",
+    "testing_agents",
 ]
 
 

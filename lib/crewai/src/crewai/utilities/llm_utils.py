@@ -148,7 +148,10 @@ def _llm_via_environment_or_fallback() -> LLM | None:
         "AWS_SECRET_ACCESS_KEY",
         "AWS_REGION_NAME",
     ]
-    set_provider = model_name.partition("/")[0] if "/" in model_name else "openai"
+    if "/" in model_name:
+        set_provider = model_name.partition("/")[0]
+    else:
+        set_provider = LLM._infer_provider_from_model(model_name)
 
     if set_provider in ENV_VARS:
         env_vars_for_provider = ENV_VARS[set_provider]

@@ -81,8 +81,10 @@ class CrewInstance(Protocol):
     tasks_config: dict[str, Any]
     mcp_server_params: Any
     mcp_connect_timeout: int
+    skills_directory: str
 
     def load_configurations(self) -> None: ...
+    def get_skills_knowledge_sources(self) -> list[Any]: ...
     def map_all_agent_variables(self) -> None: ...
     def map_all_task_variables(self) -> None: ...
     def close_mcp_server(self, instance: Self, outputs: CrewOutput) -> CrewOutput: ...
@@ -122,8 +124,10 @@ class CrewClass(Protocol):
     original_tasks_config_path: str
     mcp_server_params: Any
     mcp_connect_timeout: int
+    skills_directory: str
     close_mcp_server: Callable[..., Any]
     get_mcp_tools: Callable[..., list[BaseTool]]
+    get_skills_knowledge_sources: Callable[..., list[Any]]
     _load_config: Callable[..., dict[str, Any]]
     load_configurations: Callable[..., None]
     load_yaml: Callable[..., dict[str, Any]]

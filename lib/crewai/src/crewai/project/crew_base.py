@@ -178,6 +178,57 @@ def _set_mcp_params(cls: type[CrewClass]) -> None:
     cls.mcp_connect_timeout = getattr(cls, "mcp_connect_timeout", 30)
 
 
+def _set_skills_params(cls: type[CrewClass]) -> None:
+    """Set the skills directory path for the crew class.
+
+    Args:
+        cls: Crew class to configure.
+    """
+    cls.skills_directory = getattr(cls, "skills_directory", ".agents")
+
+
+def get_skills_knowledge_sources(self: CrewInstance) -> list[Any]:
+    """Discover Skills.md files under .agents/<skill_name>/ and return them as knowledge sources.
+
+    Looks for src/<project>/.agents/<skill_name>/Skills.md (relative to the crew class
+    base_directory). Each found file is wrapped in a CrewDoclingSource so the crew can
+    query it via RAG. Requires the docling package; if not installed, returns an empty list.
+
+    Returns:
+        List of knowledge sources (CrewDoclingSource instances), or empty list if
+        .agents is missing, has no Skills.md files, or docling is not installed.
+    """
+    skills_dir_name = getattr(self, "skills_directory", ".agents")
+    skills_dir = self.base_directory / skills_dir_name
+    if not skills_dir.exists() or not skills_dir.is_dir():
+        return []
+
+    try:
+        from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
+        from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+    except ImportError:
+        logging.warning(
+            "Skills.md support requires the docling package. "
+            "Install it with: uv add docling"
+        )
+        return []
+
+    sources: list[Any] = []
+    for subdir in sorted(skills_dir.iterdir()):
+        if not subdir.is_dir():
+            continue
+        skills_md = subdir / "Skills.md"
+        if skills_md.exists():
+            try:
+                source = CrewDoclingSource(file_paths=[skills_md])
+                sources.append(source)
+            except Exception as e:
+                logging.warning(
+                    f"Could not create knowledge source for {skills_md}: {e}"
+                )
+    return sources
+
+
 def _is_string_list(value: list[str] | list[BaseTool]) -> TypeGuard[list[str]]:
     """Type guard to check if list contains strings rather than BaseTool instances.
 
@@ -731,6 +782,7 @@ _CLASS_SETUP_FUNCTIONS: tuple[Callable[[type[CrewClass]], None], ...] = (
     _set_base_directory,
     _set_config_paths,
     _set_mcp_params,
+    _set_skills_params,
 )
 
 _METHODS_TO_INJECT = (
@@ -739,6 +791,7 @@ _METHODS_TO_INJECT = (
     _load_config,
     load_configurations,
     staticmethod(load_yaml),
+    get_skills_knowledge_sources,
     map_all_agent_variables,
     _map_agent_variables,
     map_all_task_variables,

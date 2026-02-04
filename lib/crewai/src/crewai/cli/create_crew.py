@@ -110,6 +110,9 @@ def create_folder_structure(name, parent_folder=None):
         (folder_path / "src" / folder_name).mkdir(parents=True)
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
         (folder_path / "src" / folder_name / "config").mkdir(parents=True)
+        (folder_path / "src" / folder_name / ".agents" / "research").mkdir(
+            parents=True
+        )
 
     return folder_path, folder_name, class_name
 
@@ -153,6 +156,13 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             src_file = templates_dir / file_name
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
+
+        # Copy Skills.md from .agents/research template
+        skills_src = templates_dir / ".agents" / "research" / "Skills.md"
+        skills_dst = src_folder / ".agents" / "research" / "Skills.md"
+        if skills_src.exists():
+            skills_dst.parent.mkdir(parents=True, exist_ok=True)
+            copy_template(skills_src, skills_dst, name, class_name, folder_path.name)
 
 
 def create_crew(name, provider=None, skip_provider=False, parent_folder=None):

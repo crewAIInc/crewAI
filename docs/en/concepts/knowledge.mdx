@@ -25,6 +25,35 @@ For file-based Knowledge Sources, make sure to place your files in a `knowledge`
 Also, use relative paths from the `knowledge` directory when creating the source.
 </Tip>
 
+### Skills.md for Crews (CrewBase)
+
+When using the `@CrewBase` decorator and project layout (e.g. from `crewai create crew`), you can add **Skills.md** files as crew-level knowledge sources. Place one markdown file per skill under:
+
+```
+src/<project>/.agents/<skill_name>/Skills.md
+```
+
+Each `Skills.md` is loaded as a knowledge source so the crew can query it via RAG at runtime. Use `get_skills_knowledge_sources()` when building your crew:
+
+```python
+from crewai.project import CrewBase, agent, crew, task
+
+@CrewBase
+class MyCrew():
+    # ...
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            knowledge_sources=self.get_skills_knowledge_sources(),
+        )
+```
+
+You can combine skills with other knowledge sources: `knowledge_sources=[*self.get_skills_knowledge_sources(), other_source]`. If the `.agents` directory is missing or has no `Skills.md` files, `get_skills_knowledge_sources()` returns an empty list. To use a different directory than `.agents`, set the class attribute `skills_directory = "my_skills"`. Skills.md support requires the `docling` package (`uv add docling`).
+
 ### Vector store (RAG) client configuration
 
 CrewAI exposes a provider-neutral RAG client abstraction for vector stores. The default provider is ChromaDB, and Qdrant is supported as well. You can switch providers using configuration utilities.
