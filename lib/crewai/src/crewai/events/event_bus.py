@@ -227,6 +227,39 @@ class CrewAIEventsBus:
 
         return decorator
 
+    def off(
+        self,
+        event_type: type[BaseEvent],
+        handler: Callable[..., Any],
+    ) -> None:
+        """Unregister an event handler for a specific event type.
+
+        Args:
+            event_type: The event class to stop listening for
+            handler: The handler function to unregister
+        """
+        with self._rwlock.w_locked():
+            if event_type in self._sync_handlers:
+                existing_sync = self._sync_handlers[event_type]
+                if handler in existing_sync:
+                    self._sync_handlers[event_type] = existing_sync - {handler}
+                    if not self._sync_handlers[event_type]:
+                        del self._sync_handlers[event_type]
+
+            if event_type in self._async_handlers:
+                existing_async = self._async_handlers[event_type]
+                if handler in existing_async:
+                    self._async_handlers[event_type] = existing_async - {handler}
+                    if not self._async_handlers[event_type]:
+                        del self._async_handlers[event_type]
+
+            if event_type in self._handler_dependencies:
+                self._handler_dependencies[event_type].pop(handler, None)
+                if not self._handler_dependencies[event_type]:
+                    del self._handler_dependencies[event_type]
+
+            self._execution_plan_cache.pop(event_type, None)
+
     def _call_handlers(
         self,
         source: Any,
