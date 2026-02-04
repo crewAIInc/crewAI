@@ -31,6 +31,7 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -862,6 +863,11 @@ Follow these guidelines:
             ) from e
         except ValueError as e:
             raise ValueError(f"Error interpolating description: {e!s}") from e
+
+        self.description = process_content(self.description, {"task": self})
+        self._original_expected_output = process_content(
+            self._original_expected_output, {"task": self}
+        )
 
         try:
             self.expected_output = interpolate_only(
