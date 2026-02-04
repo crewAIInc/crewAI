@@ -6,9 +6,10 @@ provider that collects feedback via console input.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from crewai.flow.async_feedback.types import PendingFeedbackContext
+
 
 if TYPE_CHECKING:
     from crewai.flow.flow import Flow
@@ -26,6 +27,7 @@ class ConsoleProvider:
     Example:
         ```python
         from crewai.flow.async_feedback import ConsoleProvider
+
 
         # Explicitly use console provider
         @human_feedback(
@@ -49,7 +51,7 @@ class ConsoleProvider:
     def request_feedback(
         self,
         context: PendingFeedbackContext,
-        flow: Flow,
+        flow: Flow[Any],
     ) -> str:
         """Request feedback via console input (blocking).
 

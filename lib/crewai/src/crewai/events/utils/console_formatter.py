@@ -1,10 +1,13 @@
+import os
 import threading
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
+
+from crewai.cli.version import is_newer_version_available
 
 
 class ConsoleFormatter:
@@ -34,6 +37,39 @@ class ConsoleFormatter:
             border_style=style,
             padding=(1, 2),
         )
+
+    def _show_version_update_message_if_needed(self) -> None:
+        """Show version update message if a newer version is available.
+
+        Only displays when verbose mode is enabled and not running in CI/CD.
+        """
+        if not self.verbose:
+            return
+
+        if os.getenv("CI", "").lower() in ("true", "1"):
+            return
+
+        try:
+            is_newer, current, latest = is_newer_version_available()
+            if is_newer and latest:
+                message = f"""A new version of CrewAI is available!
+
+Current version: {current}
+Latest version:  {latest}
+
+To update, run: uv sync --upgrade-package crewai"""
+
+                panel = Panel(
+                    message,
+                    title="✨ Update Available ✨",
+                    border_style="yellow",
+                    padding=(1, 2),
+                )
+                self.console.print(panel)
+                self.console.print()
+        except Exception:  # noqa: S110
+            # Silently ignore errors in version check - it's non-critical
+            pass
 
     def _show_tracing_disabled_message_if_needed(self) -> None:
         """Show tracing disabled message if tracing is not enabled."""
@@ -176,8 +212,9 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        # Reset the crew completion event for this new crew execution
         ConsoleFormatter.crew_completion_printed.clear()
+
+        self._show_version_update_message_if_needed()
 
         content = self.create_status_content(
             "Crew Execution Started",
@@ -240,6 +277,8 @@ To enable tracing, do any one of these:
 
     def handle_flow_started(self, flow_name: str, flow_id: str) -> None:
         """Show flow started panel."""
+        self._show_version_update_message_if_needed()
+
         if not self.verbose:
             return
 
@@ -894,7 +933,7 @@ To enable tracing, do any one of these:
 
             is_a2a_delegation = False
             try:
-                output_data = json.loads(formatted_answer.output)
+                output_data = json.loads(cast(str, formatted_answer.output))
                 if isinstance(output_data, dict):
                     if output_data.get("is_a2a") is True:
                         is_a2a_delegation = True

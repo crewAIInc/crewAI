@@ -235,8 +235,13 @@ class TestAsyncAgentExecutor:
         mock_crew: MagicMock, mock_tools_handler: MagicMock
     ) -> None:
         """Test that multiple ainvoke calls can run concurrently."""
+        max_concurrent = 0
+        current_concurrent = 0
+        lock = asyncio.Lock()
 
         async def create_and_run_executor(executor_id: int) -> dict[str, Any]:
+            nonlocal max_concurrent, current_concurrent
+
             executor = CrewAgentExecutor(
                 llm=mock_llm,
                 task=mock_task,
@@ -252,7 +257,13 @@ class TestAsyncAgentExecutor:
             )
 
             async def delayed_response(*args: Any, **kwargs: Any) -> str:
-                await asyncio.sleep(0.05)
+                nonlocal max_concurrent, current_concurrent
+                async with lock:
+                    current_concurrent += 1
+                    max_concurrent = max(max_concurrent, current_concurrent)
+                await asyncio.sleep(0.01)
+                async with lock:
+                    current_concurrent -= 1
                 return f"Thought: Done\nFinal Answer: Result from executor {executor_id}"
 
             with patch(
@@ -273,19 +284,15 @@ class TestAsyncAgentExecutor:
                                         }
                                     )
 
-        import time
-
-        start = time.time()
         results = await asyncio.gather(
             create_and_run_executor(1),
             create_and_run_executor(2),
             create_and_run_executor(3),
         )
-        elapsed = time.time() - start
 
         assert len(results) == 3
         assert all("output" in r for r in results)
-        assert elapsed < 0.15, f"Expected concurrent execution, took {elapsed}s"
+        assert max_concurrent > 1, f"Expected concurrent execution, max concurrent was {max_concurrent}"
 
 
 class TestAsyncLLMResponseHelper:

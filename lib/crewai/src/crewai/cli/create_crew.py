@@ -3,6 +3,7 @@ import shutil
 import sys
 
 import click
+import tomli
 
 from crewai.cli.constants import ENV_VARS, MODELS
 from crewai.cli.provider import (
@@ -13,7 +14,31 @@ from crewai.cli.provider import (
 from crewai.cli.utils import copy_template, load_env_vars, write_env_file
 
 
-def create_folder_structure(name, parent_folder=None):
+def get_reserved_script_names() -> set[str]:
+    """Get reserved script names from pyproject.toml template.
+
+    Returns:
+        Set of reserved script names that would conflict with crew folder names.
+    """
+    package_dir = Path(__file__).parent
+    template_path = package_dir / "templates" / "crew" / "pyproject.toml"
+
+    with open(template_path, "r") as f:
+        template_content = f.read()
+
+    template_content = template_content.replace("{{folder_name}}", "_placeholder_")
+    template_content = template_content.replace("{{name}}", "placeholder")
+    template_content = template_content.replace("{{crew_name}}", "Placeholder")
+
+    template_data = tomli.loads(template_content)
+    script_names = set(template_data.get("project", {}).get("scripts", {}).keys())
+    script_names.discard("_placeholder_")
+    return script_names
+
+
+def create_folder_structure(
+    name: str, parent_folder: str | None = None
+) -> tuple[Path, str, str]:
     import keyword
     import re
 
@@ -49,6 +74,14 @@ def create_folder_structure(name, parent_folder=None):
     if not folder_name.isidentifier():
         raise ValueError(
             f"Project name '{name}' would generate invalid Python module name '{folder_name}'"
+        )
+
+    reserved_names = get_reserved_script_names()
+    if folder_name in reserved_names:
+        raise ValueError(
+            f"Project name '{name}' would generate folder name '{folder_name}' which is reserved. "
+            f"Reserved names are: {', '.join(sorted(reserved_names))}. "
+            "Please choose a different name."
         )
 
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -114,7 +147,9 @@ def create_folder_structure(name, parent_folder=None):
     return folder_path, folder_name, class_name
 
 
-def copy_template_files(folder_path, name, class_name, parent_folder):
+def copy_template_files(
+    folder_path: Path, name: str, class_name: str, parent_folder: str | None
+) -> None:
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
 
@@ -155,7 +190,12 @@ def copy_template_files(folder_path, name, class_name, parent_folder):
             copy_template(src_file, dst_file, name, class_name, folder_path.name)
 
 
-def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
+def create_crew(
+    name: str,
+    provider: str | None = None,
+    skip_provider: bool = False,
+    parent_folder: str | None = None,
+) -> None:
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
     if not skip_provider:
@@ -189,7 +229,9 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
             if selected_provider is None:  # User typed 'q'
                 click.secho("Exiting...", fg="yellow")
                 sys.exit(0)
-            if selected_provider:  # Valid selection
+            if selected_provider and isinstance(
+                selected_provider, str
+            ):  # Valid selection
                 break
             click.secho(
                 "No provider selected. Please try again or press 'q' to exit.", fg="red"

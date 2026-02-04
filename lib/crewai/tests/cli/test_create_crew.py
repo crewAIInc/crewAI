@@ -296,6 +296,23 @@ def test_create_folder_structure_folder_name_validation():
                 shutil.rmtree(folder_path)
 
 
+def test_create_folder_structure_rejects_reserved_names():
+    """Test that reserved script names are rejected to prevent pyproject.toml conflicts."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        reserved_names = ["test", "train", "replay", "run_crew", "run_with_trigger"]
+
+        for reserved_name in reserved_names:
+            with pytest.raises(ValueError, match="which is reserved"):
+                create_folder_structure(reserved_name, parent_folder=temp_dir)
+
+            with pytest.raises(ValueError, match="which is reserved"):
+                create_folder_structure(f"{reserved_name}/", parent_folder=temp_dir)
+
+            capitalized = reserved_name.capitalize()
+            with pytest.raises(ValueError, match="which is reserved"):
+                create_folder_structure(capitalized, parent_folder=temp_dir)
+
+
 @mock.patch("crewai.cli.create_crew.create_folder_structure")
 @mock.patch("crewai.cli.create_crew.copy_template")
 @mock.patch("crewai.cli.create_crew.load_env_vars")

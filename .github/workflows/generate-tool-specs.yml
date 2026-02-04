@@ -1,0 +1,63 @@
+name: Generate Tool Specifications
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'lib/crewai-tools/src/crewai_tools/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-specs:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONUNBUFFERED: 1
+
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.CREWAI_TOOL_SPECS_APP_ID }}
+          private_key: ${{ secrets.CREWAI_TOOL_SPECS_PRIVATE_KEY }}
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.4"
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install the project
+        working-directory: lib/crewai-tools
+        run: uv sync --dev --all-extras
+
+      - name: Generate tool specifications
+        working-directory: lib/crewai-tools
+        run: uv run python src/crewai_tools/generate_tool_specs.py
+
+      - name: Check for changes and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add lib/crewai-tools/tool.specs.json
+
+          if git diff --quiet --staged; then
+            echo "No changes detected in tool.specs.json"
+          else
+            echo "Changes detected in tool.specs.json, committing..."
+            git commit -m "chore: update tool specifications"
+            git push
+          fi
