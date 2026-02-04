@@ -199,6 +199,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
 
+        provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
+
     def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Execute the agent with given inputs.
 

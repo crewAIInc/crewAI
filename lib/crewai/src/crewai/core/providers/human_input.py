@@ -70,6 +70,17 @@ class HumanInputProvider(Protocol):
         """
         ...
 
+    def post_setup_messages(self, context: ExecutorContext) -> None:
+        """Called after standard message setup.
+
+        Allows providers to modify messages after standard setup completes.
+        Only called when setup_messages returned False.
+
+        Args:
+            context: Executor context with messages list to modify.
+        """
+        ...
+
     def handle_feedback(
         self,
         formatted_answer: AgentFinish,
@@ -117,6 +128,13 @@ class SyncHumanInputProvider(HumanInputProvider):
             False to use standard setup.
         """
         return False
+
+    def post_setup_messages(self, context: ExecutorContext) -> None:
+        """No-op for sync provider.
+
+        Args:
+            context: Executor context (unused).
+        """
 
     def handle_feedback(
         self,
