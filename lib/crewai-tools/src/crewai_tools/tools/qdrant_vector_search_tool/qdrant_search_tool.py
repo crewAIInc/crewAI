@@ -7,7 +7,7 @@ import os
 from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 from pydantic.types import ImportString
 
 
@@ -19,7 +19,7 @@ class QdrantToolSchema(BaseModel):
         default=None,
         description="Parameter to filter the search by. When filtering, needs to be used in conjunction with filter_value.",
     )
-    filter_value: Any | None = Field(
+    filter_value: str | int | float | bool | None = Field(
         default=None,
         description="Value to filter the search by. When filtering, needs to be used in conjunction with filter_by.",
     )
@@ -40,8 +40,6 @@ class QdrantConfig(BaseModel):
 
 class QdrantVectorSearchTool(BaseTool):
     """Vector search tool for Qdrant."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # --- Metadata ---
     name: str = "QdrantVectorSearchTool"
@@ -83,7 +81,7 @@ class QdrantVectorSearchTool(BaseTool):
         self,
         query: str,
         filter_by: str | None = None,
-        filter_value: Any | None = None,
+        filter_value: str | int | float | bool | None = None,
     ) -> str:
         """Perform vector similarity search."""
 
