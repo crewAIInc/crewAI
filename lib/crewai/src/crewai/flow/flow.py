@@ -45,6 +45,7 @@ from crewai.events.listeners.tracing.utils import (
     has_user_declined_tracing,
     set_tracing_enabled,
     should_enable_tracing,
+    should_suppress_tracing_messages,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -2628,6 +2629,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 

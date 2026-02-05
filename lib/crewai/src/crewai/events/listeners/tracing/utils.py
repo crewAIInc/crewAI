@@ -31,6 +31,31 @@ _first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
     "_first_time_trace_hook", default=None
 )
 
+_suppress_tracing_messages: ContextVar[bool] = ContextVar(
+    "_suppress_tracing_messages", default=False
+)
+
+
+def set_suppress_tracing_messages(suppress: bool) -> object:
+    """Set whether to suppress tracing-related console messages.
+
+    Args:
+        suppress: True to suppress messages, False to show them.
+
+    Returns:
+        A token that can be used to restore the previous value.
+    """
+    return _suppress_tracing_messages.set(suppress)
+
+
+def should_suppress_tracing_messages() -> bool:
+    """Check if tracing messages should be suppressed.
+
+    Returns:
+        True if messages should be suppressed, False otherwise.
+    """
+    return _suppress_tracing_messages.get()
+
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
     """Determine if tracing should be enabled.
@@ -438,6 +463,9 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
     Returns True if user wants to see traces, False otherwise.
     """
     if _is_test_environment():
+        return False
+
+    if should_suppress_tracing_messages():
         return False
 
     try:
