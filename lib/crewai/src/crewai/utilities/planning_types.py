@@ -101,3 +101,46 @@ class TodoList(BaseModel):
             item.status = "completed"
             if result:
                 item.result = result
+
+    def _dependencies_satisfied(self, item: TodoItem) -> bool:
+        """Check if all dependencies for a todo item are completed.
+
+        Args:
+            item: The todo item to check dependencies for.
+
+        Returns:
+            True if all dependencies are completed, False otherwise.
+        """
+        for dep_num in item.depends_on:
+            dep = self.get_by_step_number(dep_num)
+            if dep is None or dep.status != "completed":
+                return False
+        return True
+
+    def get_ready_todos(self) -> list[TodoItem]:
+        """Get all todos that are ready to execute (pending with satisfied dependencies).
+
+        Returns:
+            List of TodoItem objects that can be executed now.
+        """
+        ready: list[TodoItem] = []
+        for item in self.items:
+            if item.status != "pending":
+                continue
+            if self._dependencies_satisfied(item):
+                ready.append(item)
+        return ready
+
+    @property
+    def can_parallelize(self) -> bool:
+        """Check if multiple todos can run in parallel.
+
+        Returns:
+            True if more than one todo is ready to execute.
+        """
+        return len(self.get_ready_todos()) > 1
+
+    @property
+    def running_count(self) -> int:
+        """Count of currently running todos."""
+        return sum(1 for item in self.items if item.status == "running")

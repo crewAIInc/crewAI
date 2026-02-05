@@ -1973,12 +1973,19 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        # Extract todo execution results from executor state
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=executor.messages,
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
 
     async def _execute_and_build_output_async(
@@ -2051,12 +2058,19 @@ class Agent(BaseAgent):
             else str(raw_output)
         )
 
+        # Extract todo execution results from executor state
+        todo_results = LiteAgentOutput.from_todo_items(executor.state.todos.items)
+
         return LiteAgentOutput(
             raw=raw_str,
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
             messages=executor.messages,
+            plan=executor.state.plan,
+            todos=todo_results,
+            replan_count=executor.state.replan_count,
+            last_replan_reason=executor.state.last_replan_reason,
         )
 
     def _process_kickoff_guardrail(
