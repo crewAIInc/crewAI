@@ -1,0 +1,431 @@
+# Copyright (c) Agent-OS Contributors. All rights reserved.
+# Licensed under the MIT License.
+"""Kernel-level governance for CrewAI agents and crews."""
+
+from __future__ import annotations
+
+import re
+import time
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from functools import wraps
+from typing import Any, Callable, Dict, List, Optional, Set
+
+try:
+    from crewai import Agent, Crew, Task
+except ImportError:
+    Agent = Any
+    Crew = Any
+    Task = Any
+
+
+class ViolationType(Enum):
+    """Types of policy violations."""
+
+    TOOL_BLOCKED = "tool_blocked"
+    TOOL_LIMIT_EXCEEDED = "tool_limit_exceeded"
+    MESSAGE_BLOCKED = "message_blocked"
+    MESSAGE_LIMIT_EXCEEDED = "message_limit_exceeded"
+    TIMEOUT = "timeout"
+    CONTENT_FILTERED = "content_filtered"
+
+
+@dataclass
+class PolicyViolation:
+    """Represents a policy violation event."""
+
+    violation_type: ViolationType
+    policy_name: str
+    description: str
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    agent_name: Optional[str] = None
+    task_name: Optional[str] = None
+    details: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class AuditEvent:
+    """Audit trail event."""
+
+    event_type: str
+    timestamp: datetime
+    agent_name: Optional[str]
+    task_name: Optional[str]
+    details: Dict[str, Any]
+
+
+@dataclass
+class GovernancePolicy:
+    """Policy configuration for crew governance.
+
+    Attributes:
+        max_tool_calls: Maximum tool invocations per task.
+        max_iterations: Maximum agent iterations per task.
+        max_execution_time: Maximum seconds per task.
+        blocked_patterns: Regex patterns to block in outputs.
+        blocked_tools: Tools that cannot be used.
+        allowed_tools: If set, only these tools can be used.
+        require_human_approval: Require approval for certain actions.
+        approval_tools: Tools requiring human approval.
+        log_all_actions: Log all agent actions.
+        max_output_length: Maximum output length in characters.
+    """
+
+    max_tool_calls: int = 50
+    max_iterations: int = 25
+    max_execution_time: int = 600
+    blocked_patterns: List[str] = field(default_factory=list)
+    blocked_tools: List[str] = field(default_factory=list)
+    allowed_tools: Optional[List[str]] = None
+    require_human_approval: bool = False
+    approval_tools: List[str] = field(default_factory=list)
+    log_all_actions: bool = True
+    max_output_length: int = 100_000
+
+    def __post_init__(self):
+        """Compile regex patterns."""
+        self._compiled_patterns = [
+            re.compile(p, re.IGNORECASE) for p in self.blocked_patterns
+        ]
+
+
+class GovernedAgent:
+    """Wraps a CrewAI Agent with governance policies.
+
+    Example:
+        ```python
+        from crewai import Agent
+        from crewai.governance import GovernedAgent, GovernancePolicy
+
+        policy = GovernancePolicy(
+            max_tool_calls=10,
+            blocked_tools=["shell_tool"],
+        )
+
+        researcher = Agent(
+            role="Researcher",
+            goal="Find information",
+            backstory="Expert researcher",
+        )
+
+        governed_researcher = GovernedAgent(researcher, policy)
+        ```
+    """
+
+    def __init__(
+        self,
+        agent: Agent,
+        policy: GovernancePolicy,
+        on_violation: Optional[Callable[[PolicyViolation], None]] = None,
+    ):
+        """Initialize governed agent.
+
+        Args:
+            agent: The CrewAI agent to govern.
+            policy: Governance policy to enforce.
+            on_violation: Callback when violations occur.
+        """
+        self.agent = agent
+        self.policy = policy
+        self.on_violation = on_violation
+        self._tool_calls = 0
+        self._iterations = 0
+        self._start_time: Optional[float] = None
+        self._violations: List[PolicyViolation] = []
+        self._audit_log: List[AuditEvent] = []
+
+        # Wrap agent's execute method
+        self._wrap_execution()
+
+    def _wrap_execution(self):
+        """Wrap the agent's execution to add governance."""
+        original_execute = getattr(self.agent, "execute_task", None)
+        if original_execute is None:
+            return
+
+        @wraps(original_execute)
+        def governed_execute(task: Any, context: Optional[str] = None, tools: Optional[List] = None):
+            self._start_time = time.time()
+            self._tool_calls = 0
+            self._iterations = 0
+
+            # Filter tools based on policy
+            if tools:
+                tools = self._filter_tools(tools)
+
+            # Execute with governance
+            try:
+                result = original_execute(task, context, tools)
+                # Check output for violations
+                result = self._check_output(result, task)
+                return result
+            finally:
+                self._log_event("task_completed", task=task)
+
+        self.agent.execute_task = governed_execute
+
+    def _filter_tools(self, tools: List[Any]) -> List[Any]:
+        """Filter tools based on policy."""
+        filtered = []
+        for tool in tools:
+            tool_name = getattr(tool, "name", str(tool))
+
+            # Check blocked list
+            if tool_name in self.policy.blocked_tools:
+                self._record_violation(
+                    ViolationType.TOOL_BLOCKED,
+                    f"Tool '{tool_name}' is blocked by policy",
+                    tool_name=tool_name,
+                )
+                continue
+
+            # Check allowed list
+            if (
+                self.policy.allowed_tools is not None
+                and tool_name not in self.policy.allowed_tools
+            ):
+                self._record_violation(
+                    ViolationType.TOOL_BLOCKED,
+                    f"Tool '{tool_name}' not in allowed list",
+                    tool_name=tool_name,
+                )
+                continue
+
+            filtered.append(tool)
+
+        return filtered
+
+    def _check_output(self, output: Any, task: Any) -> Any:
+        """Check output for policy violations."""
+        if output is None:
+            return output
+
+        output_str = str(output)
+
+        # Check length
+        if len(output_str) > self.policy.max_output_length:
+            self._record_violation(
+                ViolationType.CONTENT_FILTERED,
+                f"Output exceeds max length ({len(output_str)} > {self.policy.max_output_length})",
+            )
+            output_str = output_str[: self.policy.max_output_length]
+
+        # Check patterns
+        for pattern in self.policy._compiled_patterns:
+            if pattern.search(output_str):
+                self._record_violation(
+                    ViolationType.CONTENT_FILTERED,
+                    f"Output contains blocked pattern: {pattern.pattern}",
+                    pattern=pattern.pattern,
+                )
+                output_str = pattern.sub("[BLOCKED]", output_str)
+
+        return output_str if isinstance(output, str) else output
+
+    def _record_violation(
+        self,
+        violation_type: ViolationType,
+        description: str,
+        **details: Any,
+    ):
+        """Record a policy violation."""
+        violation = PolicyViolation(
+            violation_type=violation_type,
+            policy_name=violation_type.value,
+            description=description,
+            agent_name=getattr(self.agent, "role", "unknown"),
+            details=details,
+        )
+        self._violations.append(violation)
+
+        if self.on_violation:
+            self.on_violation(violation)
+
+        self._log_event(
+            "violation",
+            violation_type=violation_type.value,
+            description=description,
+        )
+
+    def _log_event(self, event_type: str, **details: Any):
+        """Log an audit event."""
+        if not self.policy.log_all_actions:
+            return
+
+        event = AuditEvent(
+            event_type=event_type,
+            timestamp=datetime.now(timezone.utc),
+            agent_name=getattr(self.agent, "role", "unknown"),
+            task_name=details.get("task_name"),
+            details=details,
+        )
+        self._audit_log.append(event)
+
+    @property
+    def violations(self) -> List[PolicyViolation]:
+        """Get all violations."""
+        return self._violations.copy()
+
+    @property
+    def audit_log(self) -> List[AuditEvent]:
+        """Get audit log."""
+        return self._audit_log.copy()
+
+
+class GovernedCrew:
+    """Wraps a CrewAI Crew with governance policies.
+
+    Example:
+        ```python
+        from crewai import Agent, Crew, Task
+        from crewai.governance import GovernedCrew, GovernancePolicy
+
+        policy = GovernancePolicy(
+            max_tool_calls=20,
+            max_iterations=15,
+            blocked_patterns=["DROP TABLE", "rm -rf"],
+        )
+
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[research_task, write_task],
+        )
+
+        governed_crew = GovernedCrew(crew, policy)
+        result = governed_crew.kickoff()
+        print(f"Violations: {len(governed_crew.violations)}")
+        ```
+    """
+
+    def __init__(
+        self,
+        crew: Crew,
+        policy: GovernancePolicy,
+        on_violation: Optional[Callable[[PolicyViolation], None]] = None,
+    ):
+        """Initialize governed crew.
+
+        Args:
+            crew: The CrewAI crew to govern.
+            policy: Governance policy to enforce.
+            on_violation: Callback when violations occur.
+        """
+        self.crew = crew
+        self.policy = policy
+        self.on_violation = on_violation
+        self._violations: List[PolicyViolation] = []
+        self._audit_log: List[AuditEvent] = []
+        self._governed_agents: List[GovernedAgent] = []
+
+        # Wrap all agents
+        self._wrap_agents()
+
+    def _wrap_agents(self):
+        """Wrap all crew agents with governance."""
+        for i, agent in enumerate(self.crew.agents):
+            governed = GovernedAgent(agent, self.policy, self._handle_violation)
+            self._governed_agents.append(governed)
+            # Note: agents are already wrapped in place
+
+    def _handle_violation(self, violation: PolicyViolation):
+        """Handle violations from governed agents."""
+        self._violations.append(violation)
+        if self.on_violation:
+            self.on_violation(violation)
+
+    def kickoff(self, inputs: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute the crew with governance.
+
+        Args:
+            inputs: Optional inputs for the crew.
+
+        Returns:
+            Crew execution result.
+        """
+        self._log_event("crew_started", inputs=inputs)
+        start_time = time.time()
+
+        try:
+            result = self.crew.kickoff(inputs=inputs)
+
+            # Check execution time
+            elapsed = time.time() - start_time
+            if elapsed > self.policy.max_execution_time:
+                self._record_violation(
+                    ViolationType.TIMEOUT,
+                    f"Execution time ({elapsed:.1f}s) exceeded limit ({self.policy.max_execution_time}s)",
+                )
+
+            return result
+        finally:
+            self._log_event(
+                "crew_completed",
+                duration=time.time() - start_time,
+                violations=len(self._violations),
+            )
+
+    def _record_violation(
+        self,
+        violation_type: ViolationType,
+        description: str,
+        **details: Any,
+    ):
+        """Record a crew-level violation."""
+        violation = PolicyViolation(
+            violation_type=violation_type,
+            policy_name=violation_type.value,
+            description=description,
+            details=details,
+        )
+        self._violations.append(violation)
+
+        if self.on_violation:
+            self.on_violation(violation)
+
+    def _log_event(self, event_type: str, **details: Any):
+        """Log audit event."""
+        if not self.policy.log_all_actions:
+            return
+
+        event = AuditEvent(
+            event_type=event_type,
+            timestamp=datetime.now(timezone.utc),
+            agent_name=None,
+            task_name=None,
+            details=details,
+        )
+        self._audit_log.append(event)
+
+    @property
+    def violations(self) -> List[PolicyViolation]:
+        """Get all violations from crew and agents."""
+        all_violations = self._violations.copy()
+        for agent in self._governed_agents:
+            all_violations.extend(agent.violations)
+        return all_violations
+
+    @property
+    def audit_log(self) -> List[AuditEvent]:
+        """Get full audit log."""
+        all_events = self._audit_log.copy()
+        for agent in self._governed_agents:
+            all_events.extend(agent.audit_log)
+        return sorted(all_events, key=lambda e: e.timestamp)
+
+    def get_audit_summary(self) -> Dict[str, Any]:
+        """Get summary of governance audit."""
+        return {
+            "total_violations": len(self.violations),
+            "violations_by_type": self._count_by_type(),
+            "total_events": len(self.audit_log),
+            "agents": [a.agent.role for a in self._governed_agents],
+        }
+
+    def _count_by_type(self) -> Dict[str, int]:
+        """Count violations by type."""
+        counts: Dict[str, int] = {}
+        for v in self.violations:
+            key = v.violation_type.value
+            counts[key] = counts.get(key, 0) + 1
+        return counts
