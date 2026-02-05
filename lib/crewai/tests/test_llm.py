@@ -415,6 +415,76 @@ def test_context_window_exceeded_error_handling():
         assert "8192 tokens" in str(excinfo.value)
 
 
+def test_anthropic_context_window_error_detected():
+    """Test that Anthropic's 'prompt is too long' error is recognized as a context limit error."""
+    from crewai.utilities.exceptions.context_window_exceeding_exception import (
+        LLMContextLengthExceededError,
+    )
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    anthropic_error = Exception(
+        "prompt is too long: 210094 tokens > 200000 maximum"
+    )
+    assert is_context_length_exceeded(anthropic_error) is True
+
+    error_obj = LLMContextLengthExceededError(str(anthropic_error))
+    assert "prompt is too long" in error_obj.original_error_message
+
+
+def test_anthropic_context_window_error_variations():
+    """Test various Anthropic context window error message formats are detected."""
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    error_messages = [
+        "prompt is too long: 210094 tokens > 200000 maximum",
+        "Prompt is too long: 150000 tokens > 100000 maximum",
+        "PROMPT IS TOO LONG: 300000 tokens > 200000 maximum",
+        "Error: prompt is too long",
+    ]
+
+    for msg in error_messages:
+        assert is_context_length_exceeded(Exception(msg)) is True, (
+            f"Failed to detect Anthropic error: {msg}"
+        )
+
+
+def test_context_limit_errors_cover_all_providers():
+    """Test that known context limit error patterns from all providers are detected."""
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    provider_errors = {
+        "OpenAI": "maximum context length is 8192 tokens",
+        "OpenAI (alt)": "context_length_exceeded",
+        "Anthropic": "prompt is too long: 210094 tokens > 200000 maximum",
+        "Generic": "too many tokens",
+        "Generic (alt)": "input is too long",
+        "Generic (alt2)": "exceeds token limit",
+    }
+
+    for provider, msg in provider_errors.items():
+        assert is_context_length_exceeded(Exception(msg)) is True, (
+            f"Failed to detect {provider} error: {msg}"
+        )
+
+
+def test_non_context_errors_not_detected():
+    """Test that unrelated errors are not falsely detected as context limit errors."""
+    from crewai.utilities.agent_utils import is_context_length_exceeded
+
+    non_context_errors = [
+        "rate limit exceeded",
+        "authentication failed",
+        "model not found",
+        "invalid request",
+        "server error",
+    ]
+
+    for msg in non_context_errors:
+        assert is_context_length_exceeded(Exception(msg)) is False, (
+            f"Falsely detected as context error: {msg}"
+        )
+
+
 @pytest.fixture
 def anthropic_llm():
     """Fixture providing an Anthropic LLM instance."""
