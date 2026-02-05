@@ -2074,12 +2074,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
                             racing_members,
                             other_listeners,
                             listener_result,
-                            triggering_event_id,
+                            current_triggering_event_id,
                         )
                     else:
                         tasks = [
                             self._execute_single_listener(
-                                listener_name, listener_result, triggering_event_id
+                                listener_name,
+                                listener_result,
+                                current_triggering_event_id,
                             )
                             for listener_name in listeners_triggered
                         ]

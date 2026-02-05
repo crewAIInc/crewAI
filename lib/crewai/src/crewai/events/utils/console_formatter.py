@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 import os
 import threading
 from typing import Any, ClassVar, cast
@@ -8,6 +9,11 @@ from rich.panel import Panel
 from rich.text import Text
 
 from crewai.cli.version import is_newer_version_available
+
+
+_disable_version_check: ContextVar[bool] = ContextVar(
+    "_disable_version_check", default=False
+)
 
 
 class ConsoleFormatter:
@@ -44,6 +50,9 @@ class ConsoleFormatter:
         Only displays when verbose mode is enabled and not running in CI/CD.
         """
         if not self.verbose:
+            return
+
+        if _disable_version_check.get():
             return
 
         if os.getenv("CI", "").lower() in ("true", "1"):

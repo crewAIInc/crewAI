@@ -27,7 +27,9 @@ logger = logging.getLogger(__name__)
 
 _tracing_enabled: ContextVar[bool | None] = ContextVar("_tracing_enabled", default=None)
 
-_first_time_trace_hook: Callable[[], bool] | None = None
+_first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
+    "_first_time_trace_hook", default=None
+)
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -413,8 +415,9 @@ def should_auto_collect_first_time_traces() -> bool:
     Returns:
         True if first-time user AND telemetry not disabled AND tracing not explicitly enabled, False otherwise.
     """
-    if _first_time_trace_hook is not None:
-        return _first_time_trace_hook()
+    hook = _first_time_trace_hook.get()
+    if hook is not None:
+        return hook()
 
     if _is_test_environment():
         return False
