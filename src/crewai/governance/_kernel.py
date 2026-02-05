@@ -25,6 +25,7 @@ class ViolationType(Enum):
 
     TOOL_BLOCKED = "tool_blocked"
     TOOL_LIMIT_EXCEEDED = "tool_limit_exceeded"
+    ITERATION_LIMIT_EXCEEDED = "iteration_limit_exceeded"
     MESSAGE_BLOCKED = "message_blocked"
     MESSAGE_LIMIT_EXCEEDED = "message_limit_exceeded"
     TIMEOUT = "timeout"
@@ -163,9 +164,27 @@ class GovernedAgent:
             if tools:
                 tools = self._filter_tools(tools)
 
+            # Check tool call limit before execution
+            if self.policy.max_tool_calls > 0 and self._tool_calls >= self.policy.max_tool_calls:
+                self._record_violation(
+                    ViolationType.TOOL_LIMIT_EXCEEDED,
+                    f"Tool calls ({self._tool_calls}) would exceed limit ({self.policy.max_tool_calls})",
+                )
+
             # Execute with governance
             try:
                 result = original_execute(task, context, tools)
+                
+                # Increment iteration counter
+                self._iterations += 1
+                
+                # Check iteration limit
+                if self.policy.max_iterations > 0 and self._iterations > self.policy.max_iterations:
+                    self._record_violation(
+                        ViolationType.ITERATION_LIMIT_EXCEEDED,
+                        f"Iterations ({self._iterations}) exceeded limit ({self.policy.max_iterations})",
+                    )
+                
                 # Check output for violations
                 result = self._check_output(result, task)
                 return result
@@ -202,6 +221,16 @@ class GovernedAgent:
                 continue
 
             filtered.append(tool)
+            
+            # Track tool call
+            self._tool_calls += 1
+            
+            # Check tool call limit
+            if self.policy.max_tool_calls > 0 and self._tool_calls > self.policy.max_tool_calls:
+                self._record_violation(
+                    ViolationType.TOOL_LIMIT_EXCEEDED,
+                    f"Tool calls ({self._tool_calls}) exceeded limit ({self.policy.max_tool_calls})",
+                )
 
         return filtered
 
@@ -276,11 +305,17 @@ class GovernedAgent:
         if not self.policy.log_all_actions:
             return
 
+        # Extract task_name from either 'task_name' key or 'task' object
+        task_name = details.get("task_name")
+        if task_name is None and "task" in details:
+            task_obj = details["task"]
+            task_name = getattr(task_obj, "description", None) or getattr(task_obj, "name", None)
+
         event = AuditEvent(
             event_type=event_type,
             timestamp=datetime.now(timezone.utc),
             agent_name=getattr(self.agent, "role", "unknown"),
-            task_name=details.get("task_name"),
+            task_name=task_name,
             details=details,
         )
         self._audit_log.append(event)
@@ -365,6 +400,12 @@ class GovernedCrew:
 
         Returns:
             Crew execution result.
+            
+        Note:
+            The max_execution_time check is performed after execution completes
+            and records a violation for audit purposes. For real-time timeout
+            enforcement, implement async execution with asyncio.timeout or
+            similar mechanisms at the application level.
         """
         self._log_event("crew_started", inputs=inputs)
         start_time = time.time()
@@ -372,7 +413,7 @@ class GovernedCrew:
         try:
             result = self.crew.kickoff(inputs=inputs)
 
-            # Check execution time
+            # Check execution time (audit-only - records violation post-execution)
             elapsed = time.time() - start_time
             if elapsed > self.policy.max_execution_time:
                 self._record_violation(
@@ -405,6 +446,14 @@ class GovernedCrew:
 
         if self.on_violation:
             self.on_violation(violation)
+
+        # Log crew-level violations to audit trail
+        self._log_event(
+            "violation",
+            violation_type=violation_type.value,
+            description=description,
+            **details,
+        )
 
     def _log_event(self, event_type: str, **details: Any):
         """Log audit event."""
