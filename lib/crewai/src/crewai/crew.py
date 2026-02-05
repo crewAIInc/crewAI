@@ -751,6 +751,8 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
@@ -763,6 +765,9 @@ class Crew(FlowTrackable, BaseModel):
         finally:
             clear_files(self.id)
             detach(token)
+
+    def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
+        return result
 
     def kickoff_for_each(
         self,
@@ -935,6 +940,8 @@ class Crew(FlowTrackable, BaseModel):
 
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
+
+            result = self._post_kickoff(result)
 
             self.usage_metrics = self.calculate_usage_metrics()
 
@@ -1181,6 +1188,9 @@ class Crew(FlowTrackable, BaseModel):
             self.manager_agent = manager
         manager.crew = self
 
+    def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        return None
+
     def _execute_tasks(
         self,
         tasks: list[Task],
@@ -1197,6 +1207,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
 
         task_outputs: list[TaskOutput] = []
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
@@ -1305,8 +1318,10 @@ class Crew(FlowTrackable, BaseModel):
         if files:
             supported_types: list[str] = []
             if agent and agent.llm and agent.llm.supports_multimodal():
-                provider = getattr(agent.llm, "provider", None) or getattr(
-                    agent.llm, "model", "openai"
+                provider = (
+                    getattr(agent.llm, "provider", None)
+                    or getattr(agent.llm, "model", None)
+                    or "openai"
                 )
                 api = getattr(agent.llm, "api", None)
                 supported_types = get_supported_content_types(provider, api)
@@ -2011,7 +2026,13 @@ class Crew(FlowTrackable, BaseModel):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
-        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            should_suppress_tracing_messages,
+        )
+
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 

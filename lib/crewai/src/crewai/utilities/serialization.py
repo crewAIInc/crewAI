@@ -19,6 +19,7 @@ def to_serializable(
     exclude: set[str] | None = None,
     max_depth: int = 5,
     _current_depth: int = 0,
+    _ancestors: set[int] | None = None,
 ) -> Serializable:
     """Converts a Python object into a JSON-compatible representation.
 
@@ -31,6 +32,7 @@ def to_serializable(
         exclude: Set of keys to exclude from the result.
         max_depth: Maximum recursion depth. Defaults to 5.
         _current_depth: Current recursion depth (for internal use).
+        _ancestors: Set of ancestor object ids for cycle detection (for internal use).
 
     Returns:
         Serializable: A JSON-compatible structure.
@@ -41,16 +43,29 @@ def to_serializable(
     if exclude is None:
         exclude = set()
 
+    if _ancestors is None:
+        _ancestors = set()
+
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
     if isinstance(obj, uuid.UUID):
         return str(obj)
     if isinstance(obj, (date, datetime)):
         return obj.isoformat()
+
+    object_id = id(obj)
+    if object_id in _ancestors:
+        return f"<circular_ref:{type(obj).__name__}>"
+    new_ancestors = _ancestors | {object_id}
+
     if isinstance(obj, (list, tuple, set)):
         return [
             to_serializable(
-                item, max_depth=max_depth, _current_depth=_current_depth + 1
+                item,
+                exclude=exclude,
+                max_depth=max_depth,
+                _current_depth=_current_depth + 1,
+                _ancestors=new_ancestors,
             )
             for item in obj
         ]
@@ -61,6 +76,7 @@ def to_serializable(
                 exclude=exclude,
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
+                _ancestors=new_ancestors,
             )
             for key, value in obj.items()
             if key not in exclude
@@ -71,12 +87,16 @@ def to_serializable(
                 obj=obj.model_dump(exclude=exclude),
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
+                _ancestors=new_ancestors,
             )
         except Exception:
             try:
                 return {
                     _to_serializable_key(k): to_serializable(
-                        v, max_depth=max_depth, _current_depth=_current_depth + 1
+                        v,
+                        max_depth=max_depth,
+                        _current_depth=_current_depth + 1,
+                        _ancestors=new_ancestors,
                     )
                     for k, v in obj.__dict__.items()
                     if k not in (exclude or set())
