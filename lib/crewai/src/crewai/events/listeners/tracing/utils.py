@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from contextvars import ContextVar, Token
 from datetime import datetime
 import getpass
@@ -25,6 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 _tracing_enabled: ContextVar[bool | None] = ContextVar("_tracing_enabled", default=None)
+
+_first_time_trace_hook: Callable[[], bool] | None = None
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
@@ -407,10 +410,12 @@ def truncate_messages(
 def should_auto_collect_first_time_traces() -> bool:
     """True if we should auto-collect traces for first-time user.
 
-
     Returns:
         True if first-time user AND telemetry not disabled AND tracing not explicitly enabled, False otherwise.
     """
+    if _first_time_trace_hook is not None:
+        return _first_time_trace_hook()
+
     if _is_test_environment():
         return False
 

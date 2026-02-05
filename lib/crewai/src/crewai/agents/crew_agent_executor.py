@@ -19,6 +19,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
+from crewai.core.providers.human_input import ExecutorContext, get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
@@ -175,15 +176,16 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         return self.llm.supports_stop_words() if self.llm else False
 
-    def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Execute the agent with given inputs.
+    def _setup_messages(self, inputs: dict[str, Any]) -> None:
+        """Set up messages for the agent execution.
 
         Args:
             inputs: Input dictionary containing prompt variables.
-
-        Returns:
-            Dictionary with agent output.
         """
+        provider = get_provider()
+        if provider.setup_messages(cast(ExecutorContext, cast(object, self))):
+            return
+
         if "system" in self.prompt:
             system_prompt = self._format_prompt(
                 cast(str, self.prompt.get("system", "")), inputs
@@ -196,6 +198,19 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         else:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
             self.messages.append(format_message_for_llm(user_prompt))
+
+        provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
+
+    def invoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Execute the agent with given inputs.
+
+        Args:
+            inputs: Input dictionary containing prompt variables.
+
+        Returns:
+            Dictionary with agent output.
+        """
+        self._setup_messages(inputs)
 
         self._inject_multimodal_files(inputs)
 
@@ -799,6 +814,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 agent_key=agent_key,
             ),
         )
+        error_event_emitted = False
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
@@ -881,6 +897,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
+                    error_event_emitted = True
         elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
@@ -908,20 +925,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
 
-        # Emit tool usage finished event
-        crewai_event_bus.emit(
-            self,
-            event=ToolUsageFinishedEvent(
-                output=result,
-                tool_name=func_name,
-                tool_args=args_dict,
-                from_agent=self.agent,
-                from_task=self.task,
-                agent_key=agent_key,
-                started_at=started_at,
-                finished_at=datetime.now(),
-            ),
-        )
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                ),
+            )
 
         # Append tool result message
         tool_message: LLMMessage = {
@@ -970,18 +987,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
-        if "system" in self.prompt:
-            system_prompt = self._format_prompt(
-                cast(str, self.prompt.get("system", "")), inputs
-            )
-            user_prompt = self._format_prompt(
-                cast(str, self.prompt.get("user", "")), inputs
-            )
-            self.messages.append(format_message_for_llm(system_prompt, role="system"))
-            self.messages.append(format_message_for_llm(user_prompt))
-        else:
-            user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(format_message_for_llm(user_prompt))
+        self._setup_messages(inputs)
 
         await self._ainject_multimodal_files(inputs)
 
@@ -1491,7 +1497,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         return prompt.replace("{tools}", inputs["tools"])
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
-        """Process human feedback.
+        """Process human feedback via the configured provider.
 
         Args:
             formatted_answer: Initial agent result.
@@ -1499,17 +1505,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        output_str = (
-            formatted_answer.output
-            if isinstance(formatted_answer.output, str)
-            else formatted_answer.output.model_dump_json()
-        )
-        human_feedback = self._ask_human_input(output_str)
-
-        if self._is_training_mode():
-            return self._handle_training_feedback(formatted_answer, human_feedback)
-
-        return self._handle_regular_feedback(formatted_answer, human_feedback)
+        provider = get_provider()
+        return provider.handle_feedback(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -1519,74 +1516,18 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         return bool(self.crew and self.crew._train)
 
-    def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
-    ) -> AgentFinish:
-        """Process training feedback.
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format feedback as a message for the LLM.
 
         Args:
-            initial_answer: Initial agent output.
-            feedback: Training feedback.
+            feedback: User feedback string.
 
         Returns:
-            Improved answer.
+            Formatted message dict.
         """
-        self._handle_crew_training_output(initial_answer, feedback)
-        self.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
+        return format_message_for_llm(
+            self._i18n.slice("feedback_instructions").format(feedback=feedback)
         )
-        improved_answer = self._invoke_loop()
-        self._handle_crew_training_output(improved_answer)
-        self.ask_for_human_input = False
-        return improved_answer
-
-    def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
-    ) -> AgentFinish:
-        """Process regular feedback iteratively.
-
-        Args:
-            current_answer: Current agent output.
-            initial_feedback: Initial user feedback.
-
-        Returns:
-            Final answer after iterations.
-        """
-        feedback = initial_feedback
-        answer = current_answer
-
-        while self.ask_for_human_input:
-            # If the user provides a blank response, assume they are happy with the result
-            if feedback.strip() == "":
-                self.ask_for_human_input = False
-            else:
-                answer = self._process_feedback_iteration(feedback)
-                output_str = (
-                    answer.output
-                    if isinstance(answer.output, str)
-                    else answer.output.model_dump_json()
-                )
-                feedback = self._ask_human_input(output_str)
-
-        return answer
-
-    def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process single feedback iteration.
-
-        Args:
-            feedback: User feedback.
-
-        Returns:
-            Updated agent response.
-        """
-        self.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-        return self._invoke_loop()
 
     @classmethod
     def __get_pydantic_core_schema__(
