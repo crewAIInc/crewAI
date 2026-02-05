@@ -66,10 +66,12 @@ class GovernancePolicy:
         blocked_patterns: Regex patterns to block in outputs.
         blocked_tools: Tools that cannot be used.
         allowed_tools: If set, only these tools can be used.
-        require_human_approval: Require approval for certain actions.
-        approval_tools: Tools requiring human approval.
         log_all_actions: Log all agent actions.
         max_output_length: Maximum output length in characters.
+        
+    Note:
+        max_tool_calls and max_iterations are tracked but enforcement
+        requires CrewAI callback integration (future enhancement).
     """
 
     max_tool_calls: int = 50
@@ -78,8 +80,6 @@ class GovernancePolicy:
     blocked_patterns: List[str] = field(default_factory=list)
     blocked_tools: List[str] = field(default_factory=list)
     allowed_tools: Optional[List[str]] = None
-    require_human_approval: bool = False
-    approval_tools: List[str] = field(default_factory=list)
     log_all_actions: bool = True
     max_output_length: int = 100_000
 
@@ -140,8 +140,17 @@ class GovernedAgent:
 
     def _wrap_execution(self):
         """Wrap the agent's execution to add governance."""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         original_execute = getattr(self.agent, "execute_task", None)
         if original_execute is None:
+            agent_name = getattr(self.agent, "role", "unknown")
+            logger.warning(
+                "GovernedAgent: Agent '%s' lacks 'execute_task' method. "
+                "Governance will NOT be applied to this agent.",
+                agent_name,
+            )
             return
 
         @wraps(original_execute)
@@ -197,11 +206,17 @@ class GovernedAgent:
         return filtered
 
     def _check_output(self, output: Any, task: Any) -> Any:
-        """Check output for policy violations."""
+        """Check output for policy violations.
+        
+        Note: For non-string outputs, violations are detected and logged,
+        but the original object is returned. To fully sanitize complex
+        objects, serialize them first.
+        """
         if output is None:
             return output
 
         output_str = str(output)
+        was_modified = False
 
         # Check length
         if len(output_str) > self.policy.max_output_length:
@@ -210,6 +225,7 @@ class GovernedAgent:
                 f"Output exceeds max length ({len(output_str)} > {self.policy.max_output_length})",
             )
             output_str = output_str[: self.policy.max_output_length]
+            was_modified = True
 
         # Check patterns
         for pattern in self.policy._compiled_patterns:
@@ -220,8 +236,15 @@ class GovernedAgent:
                     pattern=pattern.pattern,
                 )
                 output_str = pattern.sub("[BLOCKED]", output_str)
+                was_modified = True
 
-        return output_str if isinstance(output, str) else output
+        # Return sanitized string, or log warning for non-string outputs
+        if isinstance(output, str):
+            return output_str
+        elif was_modified:
+            # Non-string output with violations - return sanitized string representation
+            return output_str
+        return output
 
     def _record_violation(
         self,
@@ -399,11 +422,13 @@ class GovernedCrew:
 
     @property
     def violations(self) -> List[PolicyViolation]:
-        """Get all violations from crew and agents."""
-        all_violations = self._violations.copy()
-        for agent in self._governed_agents:
-            all_violations.extend(agent.violations)
-        return all_violations
+        """Get all violations from crew and agents.
+        
+        Note: Agent violations are already collected via the callback,
+        so we only return crew-level violations here. Agent violations
+        are forwarded to self._violations via _handle_violation.
+        """
+        return self._violations.copy()
 
     @property
     def audit_log(self) -> List[AuditEvent]:
@@ -419,7 +444,7 @@ class GovernedCrew:
             "total_violations": len(self.violations),
             "violations_by_type": self._count_by_type(),
             "total_events": len(self.audit_log),
-            "agents": [a.agent.role for a in self._governed_agents],
+            "agents": [getattr(a.agent, "role", "unknown") for a in self._governed_agents],
         }
 
     def _count_by_type(self) -> Dict[str, int]:

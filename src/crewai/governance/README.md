@@ -77,22 +77,18 @@ print(f"Audit events: {len(governed_crew.audit_log)}")
 
 ```python
 GovernancePolicy(
-    # Limits
+    # Limits (tracked, enforcement requires CrewAI callbacks)
     max_tool_calls=50,       # Max tool invocations per task
     max_iterations=25,       # Max agent iterations
     max_execution_time=600,  # Max seconds for entire crew
     
-    # Tool Control
+    # Tool Control (enforced via tool filtering)
     allowed_tools=["search", "calculator"],  # Whitelist
     blocked_tools=["shell_tool", "file_delete"],  # Blacklist
     
-    # Content Filtering
+    # Content Filtering (enforced on outputs)
     blocked_patterns=["DROP TABLE", "rm -rf"],
     max_output_length=100_000,
-    
-    # Approval
-    require_human_approval=False,
-    approval_tools=["database_write"],
     
     # Audit
     log_all_actions=True,
