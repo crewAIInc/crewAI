@@ -144,3 +144,86 @@ class TodoList(BaseModel):
     def running_count(self) -> int:
         """Count of currently running todos."""
         return sum(1 for item in self.items if item.status == "running")
+
+    def get_completed_todos(self) -> list[TodoItem]:
+        """Get all completed todos.
+
+        Returns:
+            List of completed TodoItem objects.
+        """
+        return [item for item in self.items if item.status == "completed"]
+
+    def get_pending_todos(self) -> list[TodoItem]:
+        """Get all pending todos.
+
+        Returns:
+            List of pending TodoItem objects.
+        """
+        return [item for item in self.items if item.status == "pending"]
+
+    def replace_pending_todos(self, new_items: list[TodoItem]) -> None:
+        """Replace all pending todos with new items.
+
+        Preserves completed and running todos, replaces only pending ones.
+        Used during replanning to swap in a new plan for remaining work.
+
+        Args:
+            new_items: The new todo items to replace pending ones.
+        """
+        non_pending = [item for item in self.items if item.status != "pending"]
+        self.items = non_pending + new_items
+
+
+class StepObservation(BaseModel):
+    """Planner's observation after a step execution completes.
+
+    Returned by the PlannerObserver after EVERY step — not just failures.
+    The Planner uses this to decide whether to continue, refine, or replan.
+
+    Based on PLAN-AND-ACT (Section 3.3): the Planner observes what the Executor
+    did and incorporates new information into the remaining plan.
+
+    Attributes:
+        step_completed_successfully: Whether the step achieved its objective.
+        key_information_learned: New information revealed by this step
+            (e.g., "Found 3 products: A, B, C"). Used to refine upcoming steps.
+        remaining_plan_still_valid: Whether pending todos still make sense
+            given the new information. True does NOT mean no refinement needed.
+        suggested_refinements: Minor tweaks to upcoming step descriptions.
+            These are lightweight in-place updates, not a full replan.
+            Example: ["Step 3 should select product B instead of 'best product'"]
+        needs_full_replan: The remaining plan is fundamentally wrong and must
+            be regenerated from scratch. Mutually exclusive with
+            remaining_plan_still_valid (if this is True, that should be False).
+        replan_reason: Explanation of why a full replan is needed (None if not).
+        goal_already_achieved: The overall task goal has been satisfied early.
+            No more steps needed — skip remaining todos and finalize.
+    """
+
+    step_completed_successfully: bool = Field(
+        description="Whether the step achieved what it was asked to do"
+    )
+    key_information_learned: str = Field(
+        default="",
+        description="What new information this step revealed",
+    )
+    remaining_plan_still_valid: bool = Field(
+        default=True,
+        description="Whether the remaining pending todos still make sense given new information",
+    )
+    suggested_refinements: list[str] | None = Field(
+        default=None,
+        description="Minor tweaks to descriptions of upcoming steps (lightweight, no full replan)",
+    )
+    needs_full_replan: bool = Field(
+        default=False,
+        description="The remaining plan is fundamentally wrong and must be regenerated",
+    )
+    replan_reason: str | None = Field(
+        default=None,
+        description="Explanation of why a full replan is needed",
+    )
+    goal_already_achieved: bool = Field(
+        default=False,
+        description="The overall task goal has been satisfied early; no more steps needed",
+    )

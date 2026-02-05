@@ -27,6 +27,11 @@ from crewai.events.types.logging_events import (
     AgentLogsExecutionEvent,
     AgentLogsStartedEvent,
 )
+from crewai.events.types.observation_events import (
+    GoalAchievedEarlyEvent,
+    PlanRefinementEvent,
+    PlanReplanTriggeredEvent,
+)
 from crewai.events.types.tool_usage_events import (
     ToolUsageErrorEvent,
     ToolUsageFinishedEvent,
@@ -62,8 +67,14 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.planning_types import PlanStep, TodoItem, TodoList
+from crewai.utilities.planning_types import (
+    PlanStep,
+    StepObservation,
+    TodoItem,
+    TodoList,
+)
 from crewai.utilities.printer import Printer
+from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.training_handler import CrewTrainingHandler
@@ -108,6 +119,14 @@ class AgentReActState(BaseModel):
     )
     last_replan_reason: str | None = Field(
         default=None, description="Reason for the last replan, if any"
+    )
+    observations: dict[int, StepObservation] = Field(
+        default_factory=dict,
+        description="Planner's observation per step (keyed by step_number)",
+    )
+    execution_log: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Audit trail for debugging (NOT used for LLM calls)",
     )
 
 
@@ -221,6 +240,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             )
         self._state = AgentReActState()
+
+        # Plan-and-Execute components (Phase 2)
+        # Lazy-imported to avoid circular imports during module load
+        self._step_executor: Any = None
+        self._planner_observer: Any = None
 
     def _ensure_flow_initialized(self) -> None:
         """Ensure Flow.__init__() has been called.
@@ -397,6 +421,331 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.todos = TodoList(items=todos)
 
     # -------------------------------------------------------------------------
+    # Plan-and-Execute: Component Initialization
+    # -------------------------------------------------------------------------
+
+    def _ensure_step_executor(self) -> Any:
+        """Lazily create the StepExecutor (avoids circular imports)."""
+        if self._step_executor is None:
+            from crewai.agents.step_executor import StepExecutor
+
+            self._step_executor = StepExecutor(
+                llm=self.llm,
+                tools=self.tools,
+                agent=self.agent,
+                original_tools=self.original_tools,
+                tools_handler=self.tools_handler,
+                task=self.task,
+                crew=self.crew,
+                function_calling_llm=self.function_calling_llm,
+                request_within_rpm_limit=self.request_within_rpm_limit,
+                callbacks=self.callbacks,
+                i18n=self._i18n,
+            )
+        return self._step_executor
+
+    def _ensure_planner_observer(self) -> Any:
+        """Lazily create the PlannerObserver (avoids circular imports)."""
+        if self._planner_observer is None:
+            from crewai.agents.planner_observer import PlannerObserver
+
+            self._planner_observer = PlannerObserver(
+                agent=self.agent,
+                task=self.task,
+            )
+        return self._planner_observer
+
+    def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
+        """Build an isolated execution context for a single todo.
+
+        Passes only final results from completed dependencies — never
+        execution traces, tool calls, or LLM message history.
+
+        Args:
+            todo: The todo item to build context for.
+
+        Returns:
+            Immutable StepExecutionContext with dependency results.
+        """
+        dependency_results: dict[int, str] = {}
+        for dep_num in todo.depends_on:
+            dep_todo = self.state.todos.get_by_step_number(dep_num)
+            if dep_todo and dep_todo.result:
+                dependency_results[dep_num] = dep_todo.result
+
+        task_description = ""
+        task_goal = ""
+        if self.task:
+            task_description = self.task.description or ""
+            task_goal = self.task.expected_output or ""
+        else:
+            task_description = getattr(self, "_kickoff_input", "")
+            task_goal = "Complete the task successfully"
+
+        return StepExecutionContext(
+            task_description=task_description,
+            task_goal=task_goal,
+            dependency_results=dependency_results,
+        )
+
+    # -------------------------------------------------------------------------
+    # Plan-and-Execute: New Observation-Driven Flow Methods
+    # -------------------------------------------------------------------------
+
+    @listen("step_executed")
+    def observe_step_result(self) -> Literal["step_observed"]:
+        """THE OBSERVATION STEP — runs after EVERY step execution.
+
+        This is the Planner's opportunity to incorporate new information
+        learned during execution. It is NOT an error handler — it runs on
+        every step, including successes.
+
+        Based on PLAN-AND-ACT Section 3.3.
+        """
+        current_todo = self.state.todos.current_todo
+        if not current_todo:
+            return "step_observed"
+
+        observer = self._ensure_planner_observer()
+        all_completed = self.state.todos.get_completed_todos()
+        remaining = self.state.todos.get_pending_todos()
+
+        observation = observer.observe(
+            completed_step=current_todo,
+            result=current_todo.result or "",
+            all_completed=all_completed,
+            remaining_todos=remaining,
+        )
+
+        self.state.observations[current_todo.step_number] = observation
+
+        # Log observation for debugging
+        self.state.execution_log.append(
+            {
+                "type": "observation",
+                "step_number": current_todo.step_number,
+                "step_completed_successfully": observation.step_completed_successfully,
+                "key_information_learned": observation.key_information_learned,
+                "remaining_plan_still_valid": observation.remaining_plan_still_valid,
+                "needs_full_replan": observation.needs_full_replan,
+                "goal_already_achieved": observation.goal_already_achieved,
+            }
+        )
+
+        if self.agent.verbose:
+            self._printer.print(
+                content=(
+                    f"[Observe] Step {current_todo.step_number}: "
+                    f"success={observation.step_completed_successfully}, "
+                    f"plan_valid={observation.remaining_plan_still_valid}, "
+                    f"learned={observation.key_information_learned[:80]}..."
+                ),
+                color="cyan",
+            )
+
+        return "step_observed"
+
+    @router("step_observed")
+    def decide_next_action(
+        self,
+    ) -> Literal[
+        "goal_achieved",
+        "replan_now",
+        "refine_and_continue",
+        "continue_plan",
+    ]:
+        """Route based on the Planner's observation.
+
+        This replaces the old reactive _should_replan() heuristics with
+        proactive, LLM-driven decisions.
+        """
+        current_todo = self.state.todos.current_todo
+        if not current_todo:
+            return "continue_plan"
+
+        observation = self.state.observations.get(current_todo.step_number)
+        if not observation:
+            # No observation available — default to continue
+            self.state.todos.mark_completed(current_todo.step_number)
+            return "continue_plan"
+
+        # Goal already achieved — early termination
+        if observation.goal_already_achieved:
+            self.state.todos.mark_completed(
+                current_todo.step_number, result=current_todo.result
+            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="[Decide] Goal achieved early — finalizing",
+                    color="green",
+                )
+            return "goal_achieved"
+
+        # Full replan needed
+        if observation.needs_full_replan:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"[Decide] Full replan needed: {observation.replan_reason}",
+                    color="yellow",
+                )
+            self.state.last_replan_reason = observation.replan_reason
+            return "replan_now"
+
+        # Step failed — also trigger replan
+        if not observation.step_completed_successfully:
+            if self.agent.verbose:
+                self._printer.print(
+                    content="[Decide] Step failed — triggering replan",
+                    color="yellow",
+                )
+            self.state.last_replan_reason = "Step did not complete successfully"
+            return "replan_now"
+
+        # Plan still valid but needs refinement
+        if observation.remaining_plan_still_valid and observation.suggested_refinements:
+            self.state.todos.mark_completed(
+                current_todo.step_number, result=current_todo.result
+            )
+            if self.agent.verbose:
+                self._printer.print(
+                    content="[Decide] Plan valid but refining upcoming steps",
+                    color="cyan",
+                )
+            return "refine_and_continue"
+
+        # Plan still valid, no refinements needed — just continue
+        self.state.todos.mark_completed(
+            current_todo.step_number, result=current_todo.result
+        )
+        if self.agent.verbose:
+            completed = self.state.todos.completed_count
+            total = len(self.state.todos.items)
+            self._printer.print(
+                content=f"[Decide] Continue plan ({completed}/{total} done)",
+                color="green",
+            )
+        return "continue_plan"
+
+    @listen("refine_and_continue")
+    def handle_refine_and_continue(self) -> Literal["has_todos"]:
+        """Lightweight plan refinement — update pending todo descriptions.
+
+        The Planner sharpens upcoming step descriptions based on what was
+        learned, without regenerating the entire plan.
+        """
+        # Find the most recent observation with refinements
+        recent_observation: StepObservation | None = None
+        last_step: int = 0
+        if self.state.observations:
+            last_step = max(self.state.observations.keys())
+            recent_observation = self.state.observations[last_step]
+
+        if recent_observation and recent_observation.suggested_refinements:
+            observer = self._ensure_planner_observer()
+            remaining = self.state.todos.get_pending_todos()
+
+            observer.refine_todos(recent_observation, remaining)
+
+            # Emit refinement event
+            crewai_event_bus.emit(
+                self.agent,
+                event=PlanRefinementEvent(
+                    agent_role=self.agent.role,
+                    step_number=last_step,
+                    step_description="",
+                    refined_step_count=len(remaining),
+                    refinements=recent_observation.suggested_refinements,
+                    from_task=self.task,
+                    from_agent=self.agent,
+                ),
+            )
+
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"[Refine] Updated {len(remaining)} pending step(s)",
+                    color="cyan",
+                )
+
+        return "has_todos"
+
+    @listen("continue_plan")
+    def handle_continue_plan(self) -> Literal["has_todos", "all_todos_complete"]:
+        """Continue to the next todo after a successful step."""
+        if self.state.todos.is_complete:
+            return "all_todos_complete"
+        return "has_todos"
+
+    @listen("goal_achieved")
+    def handle_goal_achieved(self) -> Literal["all_todos_complete"]:
+        """Handle early goal achievement — skip remaining todos."""
+        completed = self.state.todos.get_completed_todos()
+        remaining = self.state.todos.get_pending_todos()
+
+        # Emit goal achieved early event
+        crewai_event_bus.emit(
+            self.agent,
+            event=GoalAchievedEarlyEvent(
+                agent_role=self.agent.role,
+                step_number=completed[-1].step_number if completed else 0,
+                step_description="",
+                steps_completed=len(completed),
+                steps_remaining=len(remaining),
+                from_task=self.task,
+                from_agent=self.agent,
+            ),
+        )
+
+        if self.agent.verbose:
+            self._printer.print(
+                content="Goal achieved early — skipping remaining steps",
+                color="green",
+            )
+        return "all_todos_complete"
+
+    @listen("replan_now")
+    def handle_replan_now(
+        self,
+    ) -> Literal["has_todos", "all_todos_complete"]:
+        """Handle full replanning — regenerate the remaining plan.
+
+        Preserves completed todo results and replaces only pending steps.
+        """
+        max_replans = 3
+        self.state.replan_count += 1
+
+        if self.state.replan_count > max_replans:
+            if self.agent.verbose:
+                self._printer.print(
+                    content=f"Max replans ({max_replans}) reached — finalizing with current results",
+                    color="yellow",
+                )
+            return "all_todos_complete"
+
+        reason = self.state.last_replan_reason or "Dynamic replan triggered"
+        completed = self.state.todos.get_completed_todos()
+
+        # Emit replan triggered event
+        crewai_event_bus.emit(
+            self.agent,
+            event=PlanReplanTriggeredEvent(
+                agent_role=self.agent.role,
+                step_number=completed[-1].step_number if completed else 0,
+                step_description="",
+                replan_reason=reason,
+                replan_count=self.state.replan_count,
+                completed_steps_preserved=len(completed),
+                from_task=self.task,
+                from_agent=self.agent,
+            ),
+        )
+
+        self._trigger_replan(reason)
+
+        if self.state.todos.get_pending_todos():
+            return "has_todos"
+        return "all_todos_complete"
+
+    # -------------------------------------------------------------------------
     # Todo-Driven Execution Flow
     # -------------------------------------------------------------------------
 
@@ -460,28 +809,73 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         return "multiple_todos_ready"
 
     @router("single_todo_ready")
-    def execute_todo_sequential(self) -> Literal["todo_injected"]:
-        """Prepare to execute a single todo by injecting its context.
+    def execute_todo_sequential(
+        self,
+    ) -> Literal["step_executed", "todo_injected"]:
+        """Execute a single todo using StepExecutor (Plan-and-Execute mode)
+        or fall back to the old ReAct injection (legacy mode).
 
-        Adds a focused prompt for the current todo to the conversation,
-        guiding the agent to complete this specific step.
+        In Plan-and-Execute mode: executes the step in isolation via
+        StepExecutor, stores the result, and routes to the observation step.
+
+        In legacy mode: injects context into the shared message list and
+        routes to the ReAct loop.
         """
         current = self.state.todos.current_todo
+        if not current:
+            return "todo_injected"  # Fall through to legacy
 
-        # DEBUG: Trace starting todo execution
-        if self.agent.verbose:
-            self._printer.print(
-                content=f"[DEBUG] execute_todo_sequential: starting todo {current.step_number if current else None}",
-                color="cyan",
-            )
-            if current:
+        # Plan-and-Execute path: use StepExecutor for isolated execution
+        if getattr(self.agent, "planning_enabled", False):
+            if self.agent.verbose:
                 self._printer.print(
-                    content=f"[DEBUG]   Description: {current.description[:60]}...",
+                    content=(
+                        f"[Execute] Step {current.step_number}: "
+                        f"{current.description[:60]}..."
+                    ),
                     color="cyan",
                 )
 
-        if current:
-            self._inject_todo_context(current)
+            step_executor = self._ensure_step_executor()
+            context = self._build_context_for_todo(current)
+            result = step_executor.execute(current, context)
+
+            # Store result on the todo (do NOT mark completed — observation decides)
+            current.result = result.result
+
+            # Log to audit trail
+            self.state.execution_log.append(
+                {
+                    "type": "step_execution",
+                    "step_number": current.step_number,
+                    "success": result.success,
+                    "result_preview": result.result[:200] if result.result else "",
+                    "error": result.error,
+                    "tool_calls": result.tool_calls_made,
+                    "execution_time": result.execution_time,
+                }
+            )
+
+            if self.agent.verbose:
+                status = "success" if result.success else "failed"
+                self._printer.print(
+                    content=(
+                        f"[Execute] Step {current.step_number} {status} "
+                        f"({result.execution_time:.1f}s, "
+                        f"{len(result.tool_calls_made)} tool calls)"
+                    ),
+                    color="green" if result.success else "red",
+                )
+
+            return "step_executed"
+
+        # Legacy path: inject context into shared messages for ReAct loop
+        if self.agent.verbose:
+            self._printer.print(
+                content=f"[DEBUG] execute_todo_sequential (legacy): starting todo {current.step_number}",
+                color="cyan",
+            )
+        self._inject_todo_context(current)
         return "todo_injected"
 
     def _inject_todo_context(self, todo: TodoItem) -> None:
@@ -490,18 +884,23 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Args:
             todo: The todo item to inject context for.
         """
-        prompt = self._build_todo_prompt(todo)
+        # Build focused task prompt. Context from previous steps is already
+        # in self.state.messages as SYSTEM messages (added by _mark_todo_as_completed)
+        prompt = self._build_todo_prompt(todo, include_dependencies=False)
         todo_message: LLMMessage = {
             "role": "user",
             "content": prompt,
         }
         self.state.messages.append(todo_message)
 
-    def _build_todo_prompt(self, todo: TodoItem) -> str:
+    def _build_todo_prompt(
+        self, todo: TodoItem, include_dependencies: bool = True
+    ) -> str:
         """Build a focused prompt for executing a single todo.
 
         Args:
             todo: The todo item to build a prompt for.
+            include_dependencies: Whether to include dependency results in this prompt.
 
         Returns:
             A prompt string focused on this specific step.
@@ -513,19 +912,13 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if todo.tool_to_use:
             parts.append(f"Suggested tool: {todo.tool_to_use}")
 
-        # Include results from completed dependencies
-        if todo.depends_on:
+        # Include results from completed dependencies if requested (used for parallel execution)
+        if include_dependencies and todo.depends_on:
             dep_results = []
             for dep_num in todo.depends_on:
                 dep = self.state.todos.get_by_step_number(dep_num)
                 if dep and dep.result:
-                    # Truncate long results
-                    result_preview = (
-                        dep.result[:500] + "..."
-                        if len(dep.result) > 500
-                        else dep.result
-                    )
-                    dep_results.append(f"Step {dep_num} result: {result_preview}")
+                    dep_results.append(f"Step {dep_num} result: {dep.result}")
             if dep_results:
                 parts.append("\nContext from previous steps:")
                 parts.extend(dep_results)
@@ -561,12 +954,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                         color="red",
                     )
             else:
-                self.state.todos.mark_completed(todo.step_number, result=str(result))
-                if self.agent.verbose:
-                    self._printer.print(
-                        content=f"Todo {todo.step_number} completed",
-                        color="green",
-                    )
+                self._mark_todo_as_completed(todo.step_number, str(result))
 
         return "parallel_todos_complete"
 
@@ -580,11 +968,28 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             The result of executing the todo.
         """
         # Build messages for this specific todo
-        todo_prompt = self._build_todo_prompt(todo)
         messages: list[LLMMessage] = [
             {"role": "system", "content": self._get_todo_system_prompt()},
-            {"role": "user", "content": todo_prompt},
         ]
+
+        # Inject context into messages for parallel execution (since history is empty)
+        if todo.depends_on:
+            dep_results = []
+            for dep_num in todo.depends_on:
+                dep = self.state.todos.get_by_step_number(dep_num)
+                if dep and dep.result:
+                    dep_results.append(f"Step {dep_num} result: {dep.result}")
+            if dep_results:
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": "Context from previous steps:\n"
+                        + "\n".join(dep_results),
+                    }
+                )
+
+        todo_prompt = self._build_todo_prompt(todo, include_dependencies=False)
+        messages.append({"role": "user", "content": todo_prompt})
 
         # If the todo specifies a tool and we have native tool support
         if todo.tool_to_use and self.state.use_native_tools:
@@ -1415,22 +1820,49 @@ provide clear results that can be used by subsequent steps."""
                     or last_msg.get("role") == "assistant"
                 ):
                     result = str(last_msg.get("content", ""))
+        elif not self.state.current_answer and self.state.messages:
+            # For native tools, results are in the message history as 'tool' roles
+            # We take the content of the most recent tool results
+            tool_results = []
+            for msg in reversed(self.state.messages):
+                if msg.get("role") == "tool":
+                    tool_results.insert(0, str(msg.get("content", "")))
+                elif msg.get("role") == "assistant" and msg.get("tool_calls"):
+                    # Once we hit the assistant message that triggered the tools, we stop
+                    break
+            result = "\n".join(tool_results)
 
-        self.state.todos.mark_completed(current_todo.step_number, result=result)
+        self._mark_todo_as_completed(current_todo.step_number, result)
+
+        return "todo_marked"
+
+    def _mark_todo_as_completed(self, step_number: int, result: str) -> None:
+        """Helper to mark a todo as completed and update history.
+
+        Args:
+            step_number: The step number to mark.
+            result: The result of the todo.
+        """
+        self.state.todos.mark_completed(step_number, result=result)
 
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)
             self._printer.print(
-                content=f"✓ Todo {current_todo.step_number} completed ({completed}/{total})",
+                content=f"✓ Todo {step_number} completed ({completed}/{total})",
                 color="green",
             )
             self._printer.print(
-                content=f"[DEBUG] Marked todo {current_todo.step_number} as completed, result_len={len(result)}",
+                content=f"[DEBUG] Marked todo {step_number} as completed, result_len={len(result)}",
                 color="cyan",
             )
 
-        return "todo_marked"
+        # Add to history as a SYSTEM message for subsequent steps
+        if result:
+            self._append_message_to_state(
+                f"**Step {step_number} result:**\n\n{result}",
+                role="system",
+            )
 
     @router(mark_todo_complete)
     def check_more_todos(
@@ -1500,22 +1932,28 @@ provide clear results that can be used by subsequent steps."""
         """Finalize execution and emit completion logs.
 
         If todos were used, synthesizes a final answer from all todo results.
+        Handles both the legacy ReAct path (current_answer already set) and
+        the Plan-and-Execute path (synthesize from completed todos).
         """
-        # DEBUG: Trace finalize being called
         if self.agent.verbose:
             self._printer.print(
-                content=f"[DEBUG] finalize called! todos_count={len(self.state.todos.items)}, todos_complete={self.state.todos.is_complete}",
+                content=f"[Finalize] todos_count={len(self.state.todos.items)}, todos_with_results={sum(1 for t in self.state.todos.items if t.result)}",
                 color="magenta",
             )
-            if self.state.todos.items:
-                for todo in self.state.todos.items:
-                    self._printer.print(
-                        content=f"[DEBUG]   Todo {todo.step_number}: status={todo.status}, desc={todo.description[:40]}...",
-                        color="magenta",
-                    )
 
-        # If we have completed todos, synthesize the final answer
-        if self.state.todos.items and self.state.todos.is_complete:
+        # Plan-and-Execute path: synthesize from completed todos
+        # Check for todos with results (even if not all marked "completed" —
+        # the goal_achieved path may skip marking some as completed)
+        todos_with_results = [t for t in self.state.todos.items if t.result]
+        if todos_with_results and self.state.current_answer is None:
+            self._synthesize_final_answer_from_todos()
+
+        # Legacy path: synthesize if todos are all formally complete
+        if (
+            self.state.todos.items
+            and self.state.todos.is_complete
+            and self.state.current_answer is None
+        ):
             self._synthesize_final_answer_from_todos()
 
         if self.state.current_answer is None:
@@ -1552,7 +1990,7 @@ provide clear results that can be used by subsequent steps."""
         results: list[str] = []
         for todo in self.state.todos.items:
             if todo.result:
-                results.append(f"**Step {todo.step_number}**: {todo.description}")
+                results.append(f"**Step {todo.step_number} result:**")
                 results.append(todo.result)
                 results.append("")  # Empty line for spacing
 
@@ -1703,14 +2141,9 @@ provide clear results that can be used by subsequent steps."""
         if completed:
             context_parts.append("Successfully completed steps:")
             for todo in completed:
-                result_preview = (
-                    todo.result[:200] + "..."
-                    if todo.result and len(todo.result) > 200
-                    else todo.result
-                )
                 context_parts.append(f"  - Step {todo.step_number}: {todo.description}")
-                if result_preview:
-                    context_parts.append(f"    Result: {result_preview}")
+                if todo.result:
+                    context_parts.append(f"    Result: {todo.result}")
 
         # Summarize failed todos
         failed = [
@@ -1858,6 +2291,8 @@ Consider:
             self.state.todos = TodoList()
             self.state.replan_count = 0
             self.state.last_replan_reason = None
+            self.state.observations = {}
+            self.state.execution_log = []
 
             self._kickoff_input = inputs.get("input", "")
 
@@ -1949,6 +2384,8 @@ Consider:
             self.state.todos = TodoList()
             self.state.replan_count = 0
             self.state.last_replan_reason = None
+            self.state.observations = {}
+            self.state.execution_log = []
 
             self._kickoff_input = inputs.get("input", "")
 
