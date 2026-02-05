@@ -814,6 +814,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                 agent_key=agent_key,
             ),
         )
+        error_event_emitted = False
 
         track_delegation_if_needed(func_name, args_dict, self.task)
 
@@ -896,6 +897,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             error=e,
                         ),
                     )
+                    error_event_emitted = True
         elif max_usage_reached and original_tool:
             # Return error message when max usage limit is reached
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
@@ -923,20 +925,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     color="red",
                 )
 
-        # Emit tool usage finished event
-        crewai_event_bus.emit(
-            self,
-            event=ToolUsageFinishedEvent(
-                output=result,
-                tool_name=func_name,
-                tool_args=args_dict,
-                from_agent=self.agent,
-                from_task=self.task,
-                agent_key=agent_key,
-                started_at=started_at,
-                finished_at=datetime.now(),
-            ),
-        )
+        if not error_event_emitted:
+            crewai_event_bus.emit(
+                self,
+                event=ToolUsageFinishedEvent(
+                    output=result,
+                    tool_name=func_name,
+                    tool_args=args_dict,
+                    from_agent=self.agent,
+                    from_task=self.task,
+                    agent_key=agent_key,
+                    started_at=started_at,
+                    finished_at=datetime.now(),
+                ),
+            )
 
         # Append tool result message
         tool_message: LLMMessage = {
