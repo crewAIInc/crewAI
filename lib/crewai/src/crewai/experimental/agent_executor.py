@@ -32,7 +32,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -225,7 +226,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     @messages.setter
     def messages(self, value: list[LLMMessage]) -> None:
         """Delegate to state for ExecutorContext conformance."""
-        self._state.messages = value
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            with self._state_lock:
+                self._state.messages = value
+        else:
+            self._state.messages = value
 
     @property
     def ask_for_human_input(self) -> bool:
@@ -353,6 +358,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Flow initialization is deferred to prevent event emission during agent setup.
         Returns the temporary state until invoke() is called.
         """
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
         return self._state
 
     @property
@@ -461,15 +468,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise
 
     @listen("continue_reasoning_native")
-    def call_llm_native_tools(
-        self,
-    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+    def call_llm_native_tools(self) -> None:
         """Execute LLM call with native function calling.
 
         Always calls the LLM so it can read reflection prompts and decide
         whether to provide a final answer or request more tools.
 
-        Returns routing decision based on whether tool calls or final answer.
+        Note: This is a listener, not a router. The route_native_tool_result
+        router fires after this to determine the next step based on state.
         """
         try:
             # Clear pending tools - LLM will decide what to do next after reading
@@ -499,8 +505,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 # Store tool calls for sequential processing
                 self.state.pending_tool_calls = list(answer)
-
-                return "native_tool_calls"
+                return  # Router will check pending_tool_calls
 
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
@@ -510,7 +515,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer.model_dump_json())
-                return "native_finished"
+                return  # Router will check current_answer
 
             # Text response - this is the final answer
             if isinstance(answer, str):
@@ -521,8 +526,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer)
-
-                return "native_finished"
+                return  # Router will check current_answer
 
             # Unexpected response type, treat as final answer
             self.state.current_answer = AgentFinish(
@@ -532,13 +536,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
             self._invoke_step_callback(self.state.current_answer)
             self._append_message_to_state(str(answer))
-
-            return "native_finished"
+            # Router will check current_answer
 
         except Exception as e:
             if is_context_length_exceeded(e):
                 self._last_context_error = e
-                return "context_error"
+                return  # Router will check _last_context_error
             if e.__class__.__module__.startswith("litellm"):
                 raise e
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
@@ -550,6 +553,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if isinstance(self.state.current_answer, AgentAction):
             return "execute_tool"
         return "agent_finished"
+
+    @router(call_llm_native_tools)
+    def route_native_tool_result(
+        self,
+    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+        """Route based on LLM response for native tool calling.
+
+        Checks state set by call_llm_native_tools to determine next step.
+        This router is needed because only router return values trigger
+        downstream listeners.
+        """
+        if self._last_context_error is not None:
+            return "context_error"
+        if self.state.pending_tool_calls:
+            return "native_tool_calls"
+        return "native_finished"
 
     @listen("execute_tool")
     def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
@@ -908,9 +927,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.iterations += 1
         return "initialized"
 
-    @listen("initialized")
+    @listen(or_("initialized", "tool_completed", "native_tool_completed"))
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
+        if self._flow_initialized:
+            self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))

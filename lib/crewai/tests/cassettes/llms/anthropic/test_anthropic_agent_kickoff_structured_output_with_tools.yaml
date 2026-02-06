@@ -43,15 +43,15 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.5
       x-stainless-timeout:
       - NOT_GIVEN
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_0149zKBgM47utdBdrfJjM6YZ","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_011jnBYLgtzXqdmSi7JDyQHj","name":"structured_output","input":{"operation":"Addition","result":42,"explanation":"Adding
-        15 and 27 together results in 42"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":573,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":79,"service_tier":"standard"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01A41GpDoJbZLUhR8dQzUcUX","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01UNPdzpayoWyqDYVE7fR5oA","name":"structured_output","input":{"operation":"Addition","result":42,"explanation":"Added
+        15 and 27 together"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":573,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":75,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -62,7 +62,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 18:56:15 GMT
+      - Fri, 06 Feb 2026 18:41:25 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +88,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-01-30T18:56:14Z'
+      - '2026-02-06T18:41:24Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -102,7 +102,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1473'
+      - '1247'
     status:
       code: 200
       message: OK
