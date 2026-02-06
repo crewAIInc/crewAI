@@ -6,6 +6,7 @@ Supports Solana and 7 EVM chains with sub-400ms settlement.
 
 import os
 from typing import Any, List, Optional, Type
+from urllib.parse import quote
 
 import requests
 from crewai.tools import BaseTool, EnvVar
@@ -234,8 +235,9 @@ class NoryTransactionLookupTool(BaseTool):
             headers["Authorization"] = f"Bearer {api_key}"
 
         try:
+            encoded_tx_id = quote(transaction_id, safe="")
             response = requests.get(
-                f"{NORY_API_BASE}/api/x402/transactions/{transaction_id}",
+                f"{NORY_API_BASE}/api/x402/transactions/{encoded_tx_id}",
                 params={"network": network},
                 headers=headers,
                 timeout=30,
