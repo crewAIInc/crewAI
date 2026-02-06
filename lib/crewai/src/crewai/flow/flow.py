@@ -2489,45 +2489,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 listener_name, listener_result, finished_event_id
             )
 
-            # If this listener is also a router (e.g., has @human_feedback with emit),
-            # we need to trigger listeners for the router result as well
-            if listener_name in self._routers and listener_result is not None:
-                router_result_trigger = FlowMethodName(str(listener_result))
-                listeners_for_result = self._find_triggered_methods(
-                    router_result_trigger, router_only=False
-                )
-                if listeners_for_result:
-                    # Pass the HumanFeedbackResult if available
-                    feedback_result = (
-                        self.last_human_feedback
-                        if self.last_human_feedback is not None
-                        else listener_result
-                    )
-                    racing_group = self._get_racing_group_for_listeners(
-                        listeners_for_result
-                    )
-                    if racing_group:
-                        racing_members, _ = racing_group
-                        other_listeners = [
-                            name
-                            for name in listeners_for_result
-                            if name not in racing_members
-                        ]
-                        await self._execute_racing_listeners(
-                            racing_members,
-                            other_listeners,
-                            feedback_result,
-                            finished_event_id,
-                        )
-                    else:
-                        tasks = [
-                            self._execute_single_listener(
-                                name, feedback_result, finished_event_id
-                            )
-                            for name in listeners_for_result
-                        ]
-                        await asyncio.gather(*tasks)
-
             return (listener_result, finished_event_id)
 
         except Exception as e:

@@ -45,13 +45,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6JzzImfUNXOXfNEzCjQthEIS0RLb\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770399215,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6L3fqygkUIZ3bN4wvSpAhdaSk7MF\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403287,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_rYeX6OjYxPtdmI0uam3PllVf\",\n            \"type\":
+        \           \"id\": \"call_RuWuYzjzgRL3byVGhLlPi0rq\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
-        \             \"arguments\": \"{\\\"title\\\":\\\"Test Issue\\\",\\\"body\\\":\\\"This
+        \             \"arguments\": \"{\\\"title\\\":\\\"Test issue\\\",\\\"body\\\":\\\"This
         is a test issue created for testing purposes.\\\"}\"\n            }\n          }\n
         \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
         \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
@@ -69,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 17:33:36 GMT
+      - Fri, 06 Feb 2026 18:41:28 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -89,7 +89,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1042'
+      - '1406'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -116,7 +116,9 @@ interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
       personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Create
-      a GitHub issue"}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
+      a GitHub issue"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_RuWuYzjzgRL3byVGhLlPi0rq","type":"function","function":{"name":"create_issue","arguments":"{\"title\":\"Test
+      issue\",\"body\":\"This is a test issue created for testing purposes.\"}"}}]},{"role":"tool","tool_call_id":"call_RuWuYzjzgRL3byVGhLlPi0rq","name":"create_issue","content":"{\n  \"success\":
+      true,\n  \"issue_url\": \"https://github.com/test/repo/issues/1\"\n}"}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
       a GitHub issue","strict":true,"parameters":{"additionalProperties":false,"properties":{"title":{"description":"Issue
       title","title":"Title","type":"string"},"body":{"default":null,"description":"Issue
       body","title":"Body","type":"string"}},"required":["title","body"],"type":"object"}}}]}'
@@ -132,7 +134,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '596'
+      - '1028'
       content-type:
       - application/json
       cookie:
@@ -161,19 +163,15 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6K00aYJBAI3VM9AtFk1jOOmyQWQE\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770399216,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6L3hfuBxk36LIb3ekD1IVwFD5VVL\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403289,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_gitvRym4MhYgyn6G7Cfi5tfE\",\n            \"type\":
-        \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
-        \             \"arguments\": \"{\\\"title\\\":\\\"Test issue\\\",\\\"body\\\":\\\"This
-        is a test issue created for testing purposes.\\\"}\"\n            }\n          }\n
-        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\":
-        28,\n    \"total_tokens\": 121,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"I have successfully created a GitHub
+        issue for testing purposes. You can view the issue at this URL: [Test issue](https://github.com/test/repo/issues/1)\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        154,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 190,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
@@ -185,7 +183,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 17:33:37 GMT
+      - Fri, 06 Feb 2026 18:41:29 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -203,7 +201,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '782'
+      - '888'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
