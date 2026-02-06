@@ -832,8 +832,6 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
-        import asyncio
-
         response = asyncio.run(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
