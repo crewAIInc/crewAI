@@ -100,6 +100,13 @@ from crewai_tools.tools.mongodb_vector_search_tool.vector_search import (
 from crewai_tools.tools.multion_tool.multion_tool import MultiOnTool
 from crewai_tools.tools.mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
+from crewai_tools.tools.nory_x402_tool.nory_x402_tool import (
+    NoryHealthCheckTool,
+    NoryPaymentRequirementsTool,
+    NorySettlePaymentTool,
+    NoryTransactionLookupTool,
+    NoryVerifyPaymentTool,
+)
 from crewai_tools.tools.ocr_tool.ocr_tool import OCRTool
 from crewai_tools.tools.oxylabs_amazon_product_scraper_tool.oxylabs_amazon_product_scraper_tool import (
     OxylabsAmazonProductScraperTool,
@@ -244,6 +251,11 @@ __all__ = [
     "MultiOnTool",
     "MySQLSearchTool",
     "NL2SQLTool",
+    "NoryHealthCheckTool",
+    "NoryPaymentRequirementsTool",
+    "NorySettlePaymentTool",
+    "NoryTransactionLookupTool",
+    "NoryVerifyPaymentTool",
     "OCRTool",
     "OxylabsAmazonProductScraperTool",
     "OxylabsAmazonSearchScraperTool",
