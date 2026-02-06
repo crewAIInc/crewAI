@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 from pathlib import Path
 
 from crewai import LLM
@@ -101,8 +102,11 @@ class VisionTool(BaseTool):
                 image_data = image_path_url
             else:
                 try:
+                    mime_type, _ = mimetypes.guess_type(image_path_url)
+                    mime_type = mime_type or "image/jpeg"  # fallback to image/jpeg
+
                     base64_image = self._encode_image(image_path_url)
-                    image_data = f"data:image/jpeg;base64,{base64_image}"
+                    image_data = f"data:{mime_type};base64,{base64_image}"
                 except Exception as e:
                     return f"Error processing image: {e!s}"
 
