@@ -173,6 +173,13 @@ class Telemetry:
 
         self._original_handlers: dict[int, Any] = {}
 
+        # Signal handlers can only be registered from the main thread
+        if threading.current_thread() is not threading.main_thread():
+            logger.debug(
+                "Skipping signal handler registration (not running in main thread)"
+            )
+            return
+
         self._register_signal_handler(signal.SIGTERM, SigTermEvent, shutdown=True)
         self._register_signal_handler(signal.SIGINT, SigIntEvent, shutdown=True)
         if hasattr(signal, "SIGHUP"):
