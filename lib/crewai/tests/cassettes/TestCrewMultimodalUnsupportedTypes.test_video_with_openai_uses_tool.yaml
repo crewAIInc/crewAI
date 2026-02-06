@@ -1,0 +1,364 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are File Analyst. Expert analyst.\nYour
+      personal goal is: Analyze files"},{"role":"user","content":[{"type":"text","text":"\nCurrent
+      Task: What type of file is this? Just name the file type.\n\nAvailable input
+      files (use the name in quotes with read_file tool):\n  - \"video\" (sample_video.mp4,
+      video/mp4)\n\nThis is the expected criteria for your final answer: The file
+      type.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is VERY important to you, your job depends on it!"}]}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"read_file","description":"Read
+      content from an input file by name. Returns file content as text for text files,
+      or base64 for binary files.","parameters":{"properties":{"file_name":{"description":"The
+      name of the input file to read","title":"File Name","type":"string"}},"required":["file_name"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '974'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D1GoltcBqzgbLiBRywxyH0vsg4FRP\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769195347,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_sxJFCIQLJ3r4w6ELzBa0AZOA\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"read_file\",\n
+        \             \"arguments\": \"{\\\"file_name\\\":\\\"sample_video.mp4\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 182,\n    \"completion_tokens\":
+        18,\n    \"total_tokens\": 200,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 19:09:08 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '528'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '552'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are File Analyst. Expert analyst.\nYour
+      personal goal is: Analyze files"},{"role":"user","content":[{"type":"text","text":"\nCurrent
+      Task: What type of file is this? Just name the file type.\n\nAvailable input
+      files (use the name in quotes with read_file tool):\n  - \"video\" (sample_video.mp4,
+      video/mp4)\n\nThis is the expected criteria for your final answer: The file
+      type.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is VERY important to you, your job depends on it!"}]},{"role":"assistant","content":null,"tool_calls":[{"id":"call_sxJFCIQLJ3r4w6ELzBa0AZOA","type":"function","function":{"name":"read_file","arguments":"{\"file_name\":\"sample_video.mp4\"}"}}]},{"role":"tool","tool_call_id":"call_sxJFCIQLJ3r4w6ELzBa0AZOA","name":"read_file","content":"File
+      ''sample_video.mp4'' not found. Available files: video"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"read_file","description":"Read
+      content from an input file by name. Returns file content as text for text files,
+      or base64 for binary files.","parameters":{"properties":{"file_name":{"description":"The
+      name of the input file to read","title":"File Name","type":"string"}},"required":["file_name"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1501'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D1GomE9VQekAmWRTMGeK3cgeBXxbq\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769195348,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_9HD2XyQrGhuYBGbAA6qSwveT\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"read_file\",\n
+        \             \"arguments\": \"{\\\"file_name\\\":\\\"video\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 257,\n    \"completion_tokens\":
+        15,\n    \"total_tokens\": 272,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 19:09:08 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '456'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '476'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are File Analyst. Expert analyst.\nYour
+      personal goal is: Analyze files"},{"role":"user","content":[{"type":"text","text":"\nCurrent
+      Task: What type of file is this? Just name the file type.\n\nAvailable input
+      files (use the name in quotes with read_file tool):\n  - \"video\" (sample_video.mp4,
+      video/mp4)\n\nThis is the expected criteria for your final answer: The file
+      type.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is VERY important to you, your job depends on it!"}]},{"role":"assistant","content":null,"tool_calls":[{"id":"call_sxJFCIQLJ3r4w6ELzBa0AZOA","type":"function","function":{"name":"read_file","arguments":"{\"file_name\":\"sample_video.mp4\"}"}}]},{"role":"tool","tool_call_id":"call_sxJFCIQLJ3r4w6ELzBa0AZOA","name":"read_file","content":"File
+      ''sample_video.mp4'' not found. Available files: video"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_9HD2XyQrGhuYBGbAA6qSwveT","type":"function","function":{"name":"read_file","arguments":"{\"file_name\":\"video\"}"}}]},{"role":"tool","tool_call_id":"call_9HD2XyQrGhuYBGbAA6qSwveT","name":"read_file","content":"[Binary
+      file: sample_video.mp4 (video/mp4)]\nBase64: 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"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"read_file","description":"Read
+      content from an input file by name. Returns file content as text for text files,
+      or base64 for binary files.","parameters":{"properties":{"file_name":{"description":"The
+      name of the input file to read","title":"File Name","type":"string"}},"required":["file_name"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '15381'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D1GonR2ISk2ogXeqhgzVS6RnG7pXS\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769195349,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"video/mp4\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        8487,\n    \"completion_tokens\": 4,\n    \"total_tokens\": 8491,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 19:09:09 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '758'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '804'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

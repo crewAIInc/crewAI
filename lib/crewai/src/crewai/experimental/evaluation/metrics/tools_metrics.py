@@ -1,7 +1,8 @@
-import json
-from typing import Any
+from __future__ import annotations
 
-from crewai.agent import Agent
+import json
+from typing import TYPE_CHECKING, Any
+
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation.base_evaluator import (
     BaseEvaluator,
@@ -10,7 +11,12 @@ from crewai.experimental.evaluation.base_evaluator import (
 )
 from crewai.experimental.evaluation.json_parser import extract_json_from_llm_response
 from crewai.task import Task
+from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ToolSelectionEvaluator(BaseEvaluator):
@@ -47,7 +53,9 @@ class ToolSelectionEvaluator(BaseEvaluator):
         available_tools_info = ""
         if agent.tools:
             for tool in agent.tools:
-                available_tools_info += f"- {tool.name}: {tool.description}\n"
+                available_tools_info += (
+                    f"- {sanitize_tool_name(tool.name)}: {tool.description}\n"
+                )
         else:
             available_tools_info = "No tools available"
 

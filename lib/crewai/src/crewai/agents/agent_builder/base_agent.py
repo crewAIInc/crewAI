@@ -83,7 +83,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         knowledge_sources: Knowledge sources for the agent.
         knowledge_storage: Custom knowledge storage for the agent.
         security_config: Security configuration for the agent, including fingerprinting.
-        apps: List of enterprise applications that the agent can access through CrewAI AOP Tools.
+        apps: List of enterprise applications that the agent can access through CrewAI AMP Tools.
 
     Methods:
         execute_task(task: Any, context: str | None = None, tools: list[BaseTool] | None = None) -> str:
@@ -457,7 +457,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.cache:
             self.cache_handler = cache_handler
             self.tools_handler.cache = cache_handler
-        self.create_agent_executor()
 
     def set_rpm_controller(self, rpm_controller: RPMController) -> None:
         """Set the rpm controller for the agent.
@@ -467,7 +466,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         """
         if not self._rpm_controller:
             self._rpm_controller = rpm_controller
-            self.create_agent_executor()
 
     def set_knowledge(self, crew_embedder: EmbedderConfig | None = None) -> None:
         pass

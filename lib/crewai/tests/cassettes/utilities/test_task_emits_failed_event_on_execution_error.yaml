@@ -55,18 +55,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0ceNVvGO3iTja3ZJM0GHPp7fptc6\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488271,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 261,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 283,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0ceNVvGO3iTja3ZJM0GHPp7fptc6\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488271,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you\
+        \ should always think about what to do\\nAction: Say Hi\\nAction Input: {}\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 261,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 283,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -116,8 +118,9 @@ interactions:
       - 0s
       x-request-id:
       - req_67df2b150e90b637ec98ad5796dfe71d
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
       a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
@@ -188,18 +191,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0ceOtrUJ80V8Li7rmZaP56XCp37M\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488272,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 494,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 516,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0ceOtrUJ80V8Li7rmZaP56XCp37M\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488272,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you\
+        \ should always think about what to do\\nAction: Say Hi\\nAction Input: {}\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 494,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 516,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 91187f05197b9e74-SJC
@@ -243,8 +248,9 @@ interactions:
       - 0s
       x-request-id:
       - req_d7c1f2c3bae845e5083c5092852e051f
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
       a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
@@ -328,18 +334,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0cePLitBGIhHl5SUU1C8s7cmjIEX\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 727,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 749,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0cePLitBGIhHl5SUU1C8s7cmjIEX\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you\
+        \ should always think about what to do\\nAction: Say Hi\\nAction Input: {}\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 727,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 749,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 91187f098ead9e74-SJC
@@ -383,8 +391,9 @@ interactions:
       - 0s
       x-request-id:
       - req_6c82a00bbf8ab599a6a6cf521cb4bf52
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
       a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
@@ -481,18 +490,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0cePDnVjWCsyTlSfvSmP1uUWVqJV\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 960,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 982,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0cePDnVjWCsyTlSfvSmP1uUWVqJV\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488273,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you\
+        \ should always think about what to do\\nAction: Say Hi\\nAction Input: {}\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 960,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 982,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -536,8 +547,9 @@ interactions:
       - 0s
       x-request-id:
       - req_83956b8df7f7137fec9ae6450f3c9a7b
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CqIiCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkS+SEKEgoQY3Jld2FpLnRl
@@ -754,18 +766,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0ceQN5mVVSLXPfYhoXL7kYKYC7js\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488274,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: you should always think
-      about what to do\\nAction: Say Hi\\nAction Input: {}\",\n        \"refusal\":
-      null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-      \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1193,\n    \"completion_tokens\":
-      22,\n    \"total_tokens\": 1215,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0ceQN5mVVSLXPfYhoXL7kYKYC7js\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488274,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: you\
+        \ should always think about what to do\\nAction: Say Hi\\nAction Input: {}\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 1193,\n    \"completion_tokens\": 22,\n    \"total_tokens\": 1215,\n   \
+        \ \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
     headers:
       CF-RAY:
       - 91187f13fb279e74-SJC
@@ -809,8 +823,9 @@ interactions:
       - 0s
       x-request-id:
       - req_732a192814669f7e2fce3f349a4b1b8d
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "system", "content": "You are base_agent. You are
       a helpful assistant that just says hi\nYour personal goal is: Just say hi\nYou
@@ -933,17 +948,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-B0ceRVoFzoUPmiO0sOZVNpLbXD41f\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739488275,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal
-      Answer: hi\\n```\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      1426,\n    \"completion_tokens\": 17,\n    \"total_tokens\": 1443,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 1024,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_bd83329f63\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-B0ceRVoFzoUPmiO0sOZVNpLbXD41f\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739488275,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now\
+        \ know the final answer\\nFinal Answer: hi\\n```\",\n        \"refusal\":\
+        \ null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+        \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1426,\n    \"completion_tokens\"\
+        : 17,\n    \"total_tokens\": 1443,\n    \"prompt_tokens_details\": {\n   \
+        \   \"cached_tokens\": 1024,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_bd83329f63\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -987,6 +1005,7 @@ interactions:
       - 0s
       x-request-id:
       - req_b12d08242d920f524028f18e6eb2ef1a
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

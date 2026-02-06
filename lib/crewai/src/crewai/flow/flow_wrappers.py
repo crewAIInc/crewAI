@@ -70,6 +70,15 @@ class FlowMethod(Generic[P, R]):
 
                 self._is_coroutine = asyncio.coroutines._is_coroutine  # type: ignore[attr-defined]
 
+        # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback)
+        for attr in [
+            "__is_router__",
+            "__router_paths__",
+            "__human_feedback_config__",
+        ]:
+            if hasattr(meth, attr):
+                setattr(self, attr, getattr(meth, attr))
+
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Call the wrapped method.
 

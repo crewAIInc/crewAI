@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Callable, Coroutine, Iterable, Mapping
 from typing import TYPE_CHECKING, Any
+
+from opentelemetry import baggage
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.utilities.file_store import store_files
 from crewai.utilities.streaming import (
     StreamingState,
     TaskInfo,
@@ -17,7 +20,23 @@ from crewai.utilities.streaming import (
 )
 
 
+try:
+    from crewai_files import (
+        AudioFile,
+        ImageFile,
+        PDFFile,
+        TextFile,
+        VideoFile,
+    )
+
+    _FILE_TYPES: tuple[type, ...] = (AudioFile, ImageFile, PDFFile, TextFile, VideoFile)
+except ImportError:
+    _FILE_TYPES = ()
+
+
 if TYPE_CHECKING:
+    from crewai_files import FileInput
+
     from crewai.crew import Crew
 
 
@@ -176,7 +195,40 @@ def check_conditional_skip(
     return None
 
 
-def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any] | None:
+def _extract_files_from_inputs(inputs: dict[str, Any]) -> dict[str, Any]:
+    """Extract file objects from inputs dict.
+
+    Scans inputs for FileInput objects (ImageFile, TextFile, etc.) and
+    extracts them into a separate dict.
+
+    Args:
+        inputs: The inputs dictionary to scan.
+
+    Returns:
+        Dictionary of extracted file objects.
+    """
+    if not _FILE_TYPES:
+        return {}
+
+    files: dict[str, Any] = {}
+    keys_to_remove: list[str] = []
+
+    for key, value in inputs.items():
+        if isinstance(value, _FILE_TYPES):
+            files[key] = value
+            keys_to_remove.append(key)
+
+    for key in keys_to_remove:
+        del inputs[key]
+
+    return files
+
+
+def prepare_kickoff(
+    crew: Crew,
+    inputs: dict[str, Any] | None,
+    input_files: dict[str, FileInput] | None = None,
+) -> dict[str, Any] | None:
     """Prepare crew for kickoff execution.
 
     Handles before callbacks, event emission, task handler reset, input
@@ -185,21 +237,37 @@ def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any]
     Args:
         crew: The crew instance to prepare.
         inputs: Optional input dictionary to pass to the crew.
+        input_files: Optional dict of named file inputs for the crew.
 
     Returns:
         The potentially modified inputs dictionary after before callbacks.
     """
+    from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
+    if get_current_parent_id() is None:
+        reset_emission_counter()
+        reset_last_event_id()
+
+    # Normalize inputs to dict[str, Any] for internal processing
+    normalized: dict[str, Any] | None = None
+    if inputs is not None:
+        if not isinstance(inputs, Mapping):
+            raise TypeError(
+                f"inputs must be a dict or Mapping, got {type(inputs).__name__}"
+            )
+        normalized = dict(inputs)
+
     for before_callback in crew.before_kickoff_callbacks:
-        if inputs is None:
-            inputs = {}
-        inputs = before_callback(inputs)
+        if normalized is None:
+            normalized = {}
+        normalized = before_callback(normalized)
 
     future = crewai_event_bus.emit(
         crew,
-        CrewKickoffStartedEvent(crew_name=crew.name, inputs=inputs),
+        CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized),
     )
     if future is not None:
         try:
@@ -210,9 +278,26 @@ def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any]
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
 
-    if inputs is not None:
-        crew._inputs = inputs
-        crew._interpolate_inputs(inputs)
+    # Check for flow input files in baggage context (inherited from parent Flow)
+    _flow_files = baggage.get_baggage("flow_input_files")
+    flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
+
+    if normalized is not None:
+        # Extract file objects unpacked directly into inputs
+        unpacked_files = _extract_files_from_inputs(normalized)
+
+        # Merge files: flow_files < input_files < unpacked_files (later takes precedence)
+        all_files = {**flow_files, **(input_files or {}), **unpacked_files}
+        if all_files:
+            store_files(crew.id, all_files)
+
+        crew._inputs = normalized
+        crew._interpolate_inputs(normalized)
+    else:
+        # No inputs dict provided
+        all_files = {**flow_files, **(input_files or {})}
+        if all_files:
+            store_files(crew.id, all_files)
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
@@ -227,7 +312,7 @@ def prepare_kickoff(crew: Crew, inputs: dict[str, Any] | None) -> dict[str, Any]
     if crew.planning:
         crew._handle_crew_planning()
 
-    return inputs
+    return normalized
 
 
 class StreamingContext:

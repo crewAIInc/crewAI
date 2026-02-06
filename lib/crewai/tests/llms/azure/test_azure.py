@@ -515,6 +515,94 @@ def test_azure_supports_stop_words():
     assert llm.supports_stop_words() == True
 
 
+def test_azure_gpt5_models_do_not_support_stop_words():
+    """
+    Test that GPT-5 family models do not support stop words.
+    GPT-5 models use the Responses API which doesn't support stop sequences.
+    See: https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure
+    """
+    # GPT-5 base models
+    gpt5_models = [
+        "azure/gpt-5",
+        "azure/gpt-5-mini",
+        "azure/gpt-5-nano",
+        "azure/gpt-5-chat",
+        # GPT-5.1 series
+        "azure/gpt-5.1",
+        "azure/gpt-5.1-chat",
+        "azure/gpt-5.1-codex",
+        "azure/gpt-5.1-codex-mini",
+        # GPT-5.2 series
+        "azure/gpt-5.2",
+        "azure/gpt-5.2-chat",
+    ]
+
+    for model_name in gpt5_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_o_series_models_do_not_support_stop_words():
+    """
+    Test that o-series reasoning models do not support stop words.
+    """
+    o_series_models = [
+        "azure/o1",
+        "azure/o1-mini",
+        "azure/o3",
+        "azure/o3-mini",
+        "azure/o4",
+        "azure/o4-mini",
+    ]
+
+    for model_name in o_series_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_responses_api_models_do_not_support_stop_words():
+    """
+    Test that models using the Responses API do not support stop words.
+    """
+    responses_api_models = [
+        "azure/computer-use-preview",
+    ]
+
+    for model_name in responses_api_models:
+        llm = LLM(model=model_name)
+        assert llm.supports_stop_words() == False, f"Expected {model_name} to NOT support stop words"
+
+
+def test_azure_stop_words_not_included_for_unsupported_models():
+    """
+    Test that stop words are not included in completion params for models that don't support them.
+    """
+    with patch.dict(os.environ, {
+        "AZURE_API_KEY": "test-key",
+        "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
+    }):
+        # Test GPT-5 model - stop should NOT be included even if set
+        llm_gpt5 = LLM(
+            model="azure/gpt-5-nano",
+            stop=["STOP", "END"]
+        )
+        params = llm_gpt5._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+        assert "stop" not in params, "stop should not be included for GPT-5 models"
+
+        # Test regular model - stop SHOULD be included
+        llm_gpt4 = LLM(
+            model="azure/gpt-4",
+            stop=["STOP", "END"]
+        )
+        params = llm_gpt4._prepare_completion_params(
+            messages=[{"role": "user", "content": "test"}]
+        )
+        assert "stop" in params, "stop should be included for GPT-4 models"
+        assert params["stop"] == ["STOP", "END"]
+
+
 def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
@@ -1127,3 +1215,192 @@ def test_azure_streaming_returns_usage_metrics():
     assert result.token_usage.prompt_tokens > 0
     assert result.token_usage.completion_tokens > 0
     assert result.token_usage.successful_requests >= 1
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_azure_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for Azure OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="azure/gpt-4o-mini"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_azure_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for Azure OpenAI models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="azure/gpt-4o-mini"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+
+def test_azure_stop_words_not_applied_to_structured_output():
+    """
+    Test that stop words are NOT applied when response_model is provided.
+    This ensures JSON responses containing stop word patterns (like "Observation:")
+    are not truncated, which would cause JSON validation to fail.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    class ResearchResult(BaseModel):
+        """Research result that may contain stop word patterns in string fields."""
+
+        finding: str = Field(description="The research finding")
+        observation: str = Field(description="Observation about the finding")
+
+    # Create AzureCompletion instance with stop words configured
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+        stop=["Observation:", "Final Answer:"],  # Common stop words
+    )
+
+    # JSON response that contains a stop word pattern in a string field
+    # Without the fix, this would be truncated at "Observation:" breaking the JSON
+    json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = json_response
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150
+        )
+
+        mock_complete.return_value = mock_response
+
+        # Call with response_model - stop words should NOT be applied
+        result = llm.call(
+            messages=[{"role": "user", "content": "Analyze the data"}],
+            response_model=ResearchResult,
+        )
+
+        # Should successfully parse the full JSON without truncation
+        assert isinstance(result, ResearchResult)
+        assert result.finding == "The data shows growth"
+        # The observation field should contain the full text including "Observation:"
+        assert "Observation:" in result.observation
+
+
+def test_azure_stop_words_still_applied_to_regular_responses():
+    """
+    Test that stop words ARE still applied for regular (non-structured) responses.
+    This ensures the fix didn't break normal stop word behavior.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Create AzureCompletion instance with stop words configured
+    llm = AzureCompletion(
+        model="gpt-4",
+        api_key="test-key",
+        endpoint="https://test.openai.azure.com",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    # Response that contains a stop word - should be truncated
+    response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
+
+    with patch.object(llm.client, 'complete') as mock_complete:
+        mock_message = MagicMock()
+        mock_message.content = response_with_stop_word
+        mock_message.tool_calls = None
+
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_response.usage = MagicMock(
+            prompt_tokens=100,
+            completion_tokens=50,
+            total_tokens=150
+        )
+
+        mock_complete.return_value = mock_response
+
+        # Call WITHOUT response_model - stop words SHOULD be applied
+        result = llm.call(
+            messages=[{"role": "user", "content": "Search for something"}],
+        )
+
+        # Response should be truncated at the stop word
+        assert "Observation:" not in result
+        assert "Found results" not in result
+        assert "I need to search for more information" in result

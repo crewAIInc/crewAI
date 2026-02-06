@@ -47,17 +47,20 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AzpkZLpCyjKT5d6Udfx4zAme2sOMy\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1739300299,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      161,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 173,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-      \"default\",\n  \"system_fingerprint\": \"fp_72ed7ab54c\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AzpkZLpCyjKT5d6Udfx4zAme2sOMy\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1739300299,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: hi\",\n        \"refusal\": null\n      },\n  \
+        \    \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 12,\n\
+        \    \"total_tokens\": 173,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\":\
+        \ \"fp_72ed7ab54c\"\n}\n"
     headers:
       CF-RAY:
       - 910691d3ab90ebef-SJC
@@ -107,6 +110,7 @@ interactions:
       - 0s
       x-request-id:
       - req_2277503f851195e7d7a43b66eb044454
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1
