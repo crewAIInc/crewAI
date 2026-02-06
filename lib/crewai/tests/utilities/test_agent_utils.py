@@ -8,7 +8,14 @@ from unittest.mock import MagicMock, patch
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.agent_utils import convert_tools_to_openai_schema, summarize_messages
+from crewai.utilities.agent_utils import (
+    _estimate_token_count,
+    _extract_summary_tags,
+    _format_messages_for_summary,
+    _split_messages_into_chunks,
+    convert_tools_to_openai_schema,
+    summarize_messages,
+)
 
 
 class CalculatorInput(BaseModel):
@@ -214,6 +221,17 @@ class TestConvertToolsToOpenaiSchema:
         assert max_results_prop["default"] == 10
 
 
+def _make_mock_i18n() -> MagicMock:
+    """Create a mock i18n with the new structured prompt keys."""
+    mock_i18n = MagicMock()
+    mock_i18n.slice.side_effect = lambda key: {
+        "summarizer_system_message": "You are a precise assistant that creates structured summaries.",
+        "summarize_instruction": "Summarize the conversation:\n{conversation}",
+        "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
+    }.get(key, "")
+    return mock_i18n
+
+
 class TestSummarizeMessages:
     """Tests for summarize_messages function."""
 
@@ -229,26 +247,22 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "Summarized conversation about image analysis."
-
-        mock_i18n = MagicMock()
-        mock_i18n.slice.side_effect = lambda key: {
-            "summarizer_system_message": "Summarize the following.",
-            "summarize_instruction": "Summarize: {group}",
-            "summary": "Summary: {merged_summary}",
-        }.get(key, "")
+        mock_llm.call.return_value = "<summary>Summarized conversation about image analysis.</summary>"
 
         summarize_messages(
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=mock_i18n,
+            i18n=_make_mock_i18n(),
         )
 
-        assert len(messages) == 1
-        assert messages[0]["role"] == "user"
-        assert "files" in messages[0]
-        assert messages[0]["files"] == mock_files
+        # System message preserved + summary message = 2
+        assert len(messages) == 2
+        assert messages[0]["role"] == "system"
+        summary_msg = messages[1]
+        assert summary_msg["role"] == "user"
+        assert "files" in summary_msg
+        assert summary_msg["files"] == mock_files
 
     def test_merges_files_from_multiple_user_messages(self) -> None:
         """Test that files from multiple user messages are merged."""
@@ -264,20 +278,13 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "Summarized conversation."
-
-        mock_i18n = MagicMock()
-        mock_i18n.slice.side_effect = lambda key: {
-            "summarizer_system_message": "Summarize the following.",
-            "summarize_instruction": "Summarize: {group}",
-            "summary": "Summary: {merged_summary}",
-        }.get(key, "")
+        mock_llm.call.return_value = "<summary>Summarized conversation.</summary>"
 
         summarize_messages(
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=mock_i18n,
+            i18n=_make_mock_i18n(),
         )
 
         assert len(messages) == 1
@@ -297,20 +304,13 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "A greeting exchange."
-
-        mock_i18n = MagicMock()
-        mock_i18n.slice.side_effect = lambda key: {
-            "summarizer_system_message": "Summarize the following.",
-            "summarize_instruction": "Summarize: {group}",
-            "summary": "Summary: {merged_summary}",
-        }.get(key, "")
+        mock_llm.call.return_value = "<summary>A greeting exchange.</summary>"
 
         summarize_messages(
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=mock_i18n,
+            i18n=_make_mock_i18n(),
         )
 
         assert len(messages) == 1
@@ -327,21 +327,297 @@ class TestSummarizeMessages:
 
         mock_llm = MagicMock()
         mock_llm.get_context_window_size.return_value = 1000
-        mock_llm.call.return_value = "Summary"
-
-        mock_i18n = MagicMock()
-        mock_i18n.slice.side_effect = lambda key: {
-            "summarizer_system_message": "Summarize.",
-            "summarize_instruction": "Summarize: {group}",
-            "summary": "Summary: {merged_summary}",
-        }.get(key, "")
+        mock_llm.call.return_value = "<summary>Summary</summary>"
 
         summarize_messages(
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=mock_i18n,
+            i18n=_make_mock_i18n(),
         )
 
         assert id(messages) == original_list_id
         assert len(messages) == 1
+
+    def test_preserves_system_messages(self) -> None:
+        """Test that system messages are preserved and not summarized."""
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "You are a research assistant."},
+            {"role": "user", "content": "Find information about AI."},
+            {"role": "assistant", "content": "I found several resources on AI."},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 1000
+        mock_llm.call.return_value = "<summary>User asked about AI, assistant found resources.</summary>"
+
+        summarize_messages(
+            messages=messages,
+            llm=mock_llm,
+            callbacks=[],
+            i18n=_make_mock_i18n(),
+        )
+
+        assert len(messages) == 2
+        assert messages[0]["role"] == "system"
+        assert messages[0]["content"] == "You are a research assistant."
+        assert messages[1]["role"] == "user"
+
+    def test_formats_conversation_with_role_labels(self) -> None:
+        """Test that the LLM receives role-labeled conversation text."""
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt."},
+            {"role": "user", "content": "Hello there"},
+            {"role": "assistant", "content": "Hi! How can I help?"},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 1000
+        mock_llm.call.return_value = "<summary>Greeting exchange.</summary>"
+
+        summarize_messages(
+            messages=messages,
+            llm=mock_llm,
+            callbacks=[],
+            i18n=_make_mock_i18n(),
+        )
+
+        # Check what was passed to llm.call
+        call_args = mock_llm.call.call_args[0][0]
+        user_msg_content = call_args[1]["content"]
+        assert "[USER]:" in user_msg_content
+        assert "[ASSISTANT]:" in user_msg_content
+        # System content should NOT appear in summarization input
+        assert "System prompt." not in user_msg_content
+
+    def test_extracts_summary_from_tags(self) -> None:
+        """Test that <summary> tags are extracted from LLM response."""
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Do something."},
+            {"role": "assistant", "content": "Done."},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 1000
+        mock_llm.call.return_value = "Here is the summary:\n<summary>The extracted summary content.</summary>\nExtra text."
+
+        summarize_messages(
+            messages=messages,
+            llm=mock_llm,
+            callbacks=[],
+            i18n=_make_mock_i18n(),
+        )
+
+        assert "The extracted summary content." in messages[0]["content"]
+
+    def test_handles_tool_messages(self) -> None:
+        """Test that tool messages are properly formatted in summarization."""
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Search for Python."},
+            {"role": "assistant", "content": None, "tool_calls": [
+                {"function": {"name": "web_search", "arguments": '{"query": "Python"}'}}
+            ]},
+            {"role": "tool", "content": "Python is a programming language.", "name": "web_search"},
+            {"role": "assistant", "content": "Python is a programming language."},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 1000
+        mock_llm.call.return_value = "<summary>User searched for Python info.</summary>"
+
+        summarize_messages(
+            messages=messages,
+            llm=mock_llm,
+            callbacks=[],
+            i18n=_make_mock_i18n(),
+        )
+
+        # Verify the conversation text sent to LLM contains tool labels
+        call_args = mock_llm.call.call_args[0][0]
+        user_msg_content = call_args[1]["content"]
+        assert "[TOOL_RESULT (web_search)]:" in user_msg_content
+
+    def test_only_system_messages_no_op(self) -> None:
+        """Test that only system messages results in no-op (no summarization)."""
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "system", "content": "Additional system instructions."},
+        ]
+
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 1000
+
+        summarize_messages(
+            messages=messages,
+            llm=mock_llm,
+            callbacks=[],
+            i18n=_make_mock_i18n(),
+        )
+
+        # No LLM call should have been made
+        mock_llm.call.assert_not_called()
+        # System messages should remain untouched
+        assert len(messages) == 2
+        assert messages[0]["content"] == "You are a helpful assistant."
+        assert messages[1]["content"] == "Additional system instructions."
+
+
+class TestFormatMessagesForSummary:
+    """Tests for _format_messages_for_summary helper."""
+
+    def test_skips_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Hello"},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "System prompt" not in result
+        assert "[USER]: Hello" in result
+
+    def test_formats_user_and_assistant(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Question"},
+            {"role": "assistant", "content": "Answer"},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "[USER]: Question" in result
+        assert "[ASSISTANT]: Answer" in result
+
+    def test_formats_tool_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "tool", "content": "Result data", "name": "search_tool"},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "[TOOL_RESULT (search_tool)]:" in result
+        assert "Result data" in result
+
+    def test_handles_none_content_with_tool_calls(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "assistant", "content": None, "tool_calls": [
+                {"function": {"name": "calculator", "arguments": "{}"}}
+            ]},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "[Called tools: calculator]" in result
+
+    def test_handles_none_content_without_tool_calls(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "assistant", "content": None},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "[ASSISTANT]:" in result
+
+    def test_handles_multimodal_content(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": [
+                {"type": "text", "text": "Describe this image"},
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}}
+            ]},
+        ]
+        result = _format_messages_for_summary(messages)
+        assert "[USER]: Describe this image" in result
+
+    def test_empty_messages(self) -> None:
+        result = _format_messages_for_summary([])
+        assert result == ""
+
+
+class TestExtractSummaryTags:
+    """Tests for _extract_summary_tags helper."""
+
+    def test_extracts_content_from_tags(self) -> None:
+        text = "Preamble\n<summary>The actual summary.</summary>\nPostamble"
+        assert _extract_summary_tags(text) == "The actual summary."
+
+    def test_handles_multiline_content(self) -> None:
+        text = "<summary>\nLine 1\nLine 2\nLine 3\n</summary>"
+        result = _extract_summary_tags(text)
+        assert "Line 1" in result
+        assert "Line 2" in result
+        assert "Line 3" in result
+
+    def test_falls_back_when_no_tags(self) -> None:
+        text = "Just a plain summary without tags."
+        assert _extract_summary_tags(text) == text
+
+    def test_handles_empty_string(self) -> None:
+        assert _extract_summary_tags("") == ""
+
+    def test_extracts_first_match(self) -> None:
+        text = "<summary>First</summary> text <summary>Second</summary>"
+        assert _extract_summary_tags(text) == "First"
+
+
+class TestSplitMessagesIntoChunks:
+    """Tests for _split_messages_into_chunks helper."""
+
+    def test_single_chunk_when_under_limit(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi"},
+        ]
+        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 2
+
+    def test_splits_at_message_boundaries(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "user", "content": "A" * 100},  # ~25 tokens
+            {"role": "assistant", "content": "B" * 100},  # ~25 tokens
+            {"role": "user", "content": "C" * 100},  # ~25 tokens
+        ]
+        # max_tokens=30 should cause splits
+        chunks = _split_messages_into_chunks(messages, max_tokens=30)
+        assert len(chunks) == 3
+
+    def test_excludes_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+            {"role": "user", "content": "Hello"},
+        ]
+        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        assert len(chunks) == 1
+        # The system message should not be in any chunk
+        for chunk in chunks:
+            for msg in chunk:
+                assert msg.get("role") != "system"
+
+    def test_empty_messages(self) -> None:
+        chunks = _split_messages_into_chunks([], max_tokens=1000)
+        assert chunks == []
+
+    def test_only_system_messages(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "system", "content": "System prompt"},
+        ]
+        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        assert chunks == []
+
+    def test_handles_none_content(self) -> None:
+        messages: list[dict[str, Any]] = [
+            {"role": "assistant", "content": None},
+            {"role": "user", "content": "Follow up"},
+        ]
+        chunks = _split_messages_into_chunks(messages, max_tokens=1000)
+        assert len(chunks) == 1
+        assert len(chunks[0]) == 2
+
+
+class TestEstimateTokenCount:
+    """Tests for _estimate_token_count helper."""
+
+    def test_empty_string(self) -> None:
+        assert _estimate_token_count("") == 0
+
+    def test_short_string(self) -> None:
+        assert _estimate_token_count("hello") == 1  # 5 // 4 = 1
+
+    def test_longer_string(self) -> None:
+        assert _estimate_token_count("a" * 100) == 25  # 100 // 4 = 25
+
+    def test_approximation_is_conservative(self) -> None:
+        # For English text, actual token count is typically lower than char/4
+        text = "The quick brown fox jumps over the lazy dog."
+        estimated = _estimate_token_count(text)
+        assert estimated > 0
+        assert estimated == len(text) // 4
