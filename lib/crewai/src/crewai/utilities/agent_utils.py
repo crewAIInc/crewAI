@@ -832,7 +832,7 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
 
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
-        response = client.get_agent(from_repository)
+        response = asyncio.run(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
