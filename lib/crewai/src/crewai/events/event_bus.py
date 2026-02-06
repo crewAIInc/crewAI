@@ -407,7 +407,8 @@ class CrewAIEventsBus:
                 if popped is None:
                     handle_empty_pop(event_type_name)
                 else:
-                    _, popped_type = popped
+                    popped_event_id, popped_type = popped
+                    event.started_event_id = popped_event_id
                     expected_start = VALID_EVENT_PAIRS.get(event_type_name)
                     if expected_start and popped_type and popped_type != expected_start:
                         handle_mismatch(event_type_name, popped_type, expected_start)
