@@ -407,7 +407,8 @@ class CrewAIEventsBus:
                 if popped is None:
                     handle_empty_pop(event_type_name)
                 else:
-                    _, popped_type = popped
+                    popped_event_id, popped_type = popped
+                    event.started_event_id = popped_event_id
                     expected_start = VALID_EVENT_PAIRS.get(event_type_name)
                     if expected_start and popped_type and popped_type != expected_start:
                         handle_mismatch(event_type_name, popped_type, expected_start)
@@ -569,24 +570,52 @@ class CrewAIEventsBus:
             ...     # Do stuff...
             ... # Handlers are cleared after the context
         """
-        with self._rwlock.w_locked():
-            prev_sync = self._sync_handlers
-            prev_async = self._async_handlers
-            prev_deps = self._handler_dependencies
-            prev_cache = self._execution_plan_cache
-            self._sync_handlers = {}
-            self._async_handlers = {}
-            self._handler_dependencies = {}
-            self._execution_plan_cache = {}
+        with self._rwlock.r_locked():
+            saved_sync: dict[type[BaseEvent], frozenset[SyncHandler]] = dict(
+                self._sync_handlers
+            )
+            saved_async: dict[type[BaseEvent], frozenset[AsyncHandler]] = dict(
+                self._async_handlers
+            )
+            saved_deps: dict[type[BaseEvent], dict[Handler, list[Depends[Any]]]] = {
+                event_type: dict(handlers)
+                for event_type, handlers in self._handler_dependencies.items()
+            }
+
+        for event_type, sync_handlers in saved_sync.items():
+            for sync_handler in sync_handlers:
+                self.off(event_type, sync_handler)
+
+        for event_type, async_handlers in saved_async.items():
+            for async_handler in async_handlers:
+                self.off(event_type, async_handler)
 
         try:
             yield
         finally:
-            with self._rwlock.w_locked():
-                self._sync_handlers = prev_sync
-                self._async_handlers = prev_async
-                self._handler_dependencies = prev_deps
-                self._execution_plan_cache = prev_cache
+            with self._rwlock.r_locked():
+                current_sync = dict(self._sync_handlers)
+                current_async = dict(self._async_handlers)
+
+            for event_type, cur_sync in current_sync.items():
+                orig_sync = saved_sync.get(event_type, frozenset())
+                for new_handler in cur_sync - orig_sync:
+                    self.off(event_type, new_handler)
+
+            for event_type, cur_async in current_async.items():
+                orig_async = saved_async.get(event_type, frozenset())
+                for new_async_handler in cur_async - orig_async:
+                    self.off(event_type, new_async_handler)
+
+            for event_type, sync_handlers in saved_sync.items():
+                for sync_handler in sync_handlers:
+                    deps = saved_deps.get(event_type, {}).get(sync_handler)
+                    self._register_handler(event_type, sync_handler, deps)
+
+            for event_type, async_handlers in saved_async.items():
+                for async_handler in async_handlers:
+                    deps = saved_deps.get(event_type, {}).get(async_handler)
+                    self._register_handler(event_type, async_handler, deps)
 
     def shutdown(self, wait: bool = True) -> None:
         """Gracefully shutdown the event loop and wait for all tasks to finish.
