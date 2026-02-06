@@ -44,48 +44,43 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6HVKLlq7AM6aadjN9eEyY3GcXGL6\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770389626,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6KlehBgjx5pSRz4ISVlWQhIPYSZI\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402170,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Certainly! Here is a structured list
         of the top 10 best soccer players in the world as of 2024, based on recent
-        performances, awards, skills, and impact in major leagues and tournaments:\\n\\n###
-        Top 10 Best Soccer Players in the World (2024)\\n\\n| Rank | Player Name        |
-        Nationality     | Current Club        | Position        | Key Achievements
-        (Recent)                              |\\n|-------|--------------------|-----------------|---------------------|-----------------|--------------------------------------------------------|\\n|
-        1     | Kylian Mbapp\xE9      | French          | Paris Saint-Germain | Forward
-        \        | 2022 World Cup winner, multiple Ligue 1 titles, exceptional goal-scoring
-        record |\\n| 2     | Erling Haaland     | Norwegian       | Manchester City
-        \    | Striker         | Premier League top scorer, UEFA Champions League
-        top scorer 2022-23 season      |\\n| 3     | Lionel Messi       | Argentine
-        \      | Inter Miami         | Forward/Playmaker| 2022 World Cup winner, multiple
-        Ballon d\u2019Or awards, La Liga & MLS titles       |\\n| 4     | Kevin De
-        Bruyne    | Belgian         | Manchester City     | Midfielder      | Premier
-        League multiple titles, pivotal playmaker, consistent top assister    |\\n|
-        5     | Robert Lewandowski | Polish          | FC Barcelona        | Striker
-        \        | La Liga top scorer, multiple Bundesliga Golden Boots, consistent
-        goal scorer   |\\n| 6     | Neymar Jr          | Brazilian       | Al Hilal
-        \           | Forward         | World Cup quarterfinalist, Copa Libertadores
-        & Champions League winner         |\\n| 7     | Virgil van Dijk    | Dutch
-        \          | Liverpool           | Defender        | Premier League winner,
-        UEFA Champions League winner, defensive leader          |\\n| 8     | Mohamed
-        Salah      | Egyptian        | Liverpool           | Forward/Winger  | Multiple
-        Premier League Golden Boots, Champions League winner                  |\\n|
-        9     | Thibaut Courtois   | Belgian         | Real Madrid         | Goalkeeper
-        \    | Multiple UEFA Champions League titles, La Liga titles, known for crucial
-        saves |\\n| 10    | Jude Bellingham    | English         | Real Madrid         |
-        Midfielder      | Emerging star, key player in Bundesliga & La Liga, creative
-        and dynamic playmaker |\\n\\n### Notes:\\n- The ranking combines individual
-        skills, recent achievements (2022-2024 period), influence on matches and teams,
-        and global reputation.\\n- Players like Lionel Messi and Kylian Mbapp\xE9
-        continue to be prominent despite changing teams.\\n- Rising stars such as
-        Jude Bellingham show great promise and are quickly climbing the ranks.\\n-
-        Positions and roles are varied to reflect different contributions on the field.\\n\\nIf
-        you'd like, I can also provide a deeper analysis of each player or focus on
-        other criteria like defensive players or young talents.\",\n        \"refusal\":
+        performances, achievements, and overall skill level:\\n\\n### Top 10 Best
+        Soccer Players in the World (2024)\\n\\n1. **Kylian Mbapp\xE9**  \\n   - Nationality:
+        French  \\n   - Club: Paris Saint-Germain (PSG)  \\n   - Highlights: Exceptional
+        speed, dribbling, and goal-scoring ability; multiple Ligue 1 titles; 2018
+        World Cup winner.\\n\\n2. **Erling Haaland**  \\n   - Nationality: Norwegian
+        \ \\n   - Club: Manchester City  \\n   - Highlights: Prolific goal scorer;
+        Champions League winner; multiple Golden Boot awards.\\n\\n3. **Lionel Messi**
+        \ \\n   - Nationality: Argentine  \\n   - Club: Inter Miami / PSG  \\n   -
+        Highlights: 7 Ballon d\u2019Or titles; 2022 World Cup winner; exceptional
+        vision and playmaking.\\n\\n4. **Kevin De Bruyne**  \\n   - Nationality: Belgian
+        \ \\n   - Club: Manchester City  \\n   - Highlights: Elite midfielder known
+        for assists, passing accuracy, and game vision; multiple Premier League titles.\\n\\n5.
+        **Vin\xEDcius J\xFAnior**  \\n   - Nationality: Brazilian  \\n   - Club: Real
+        Madrid  \\n   - Highlights: Explosive winger with excellent dribbling; key
+        player in Real Madrid\u2019s La Liga and Champions League successes.\\n\\n6.
+        **Karim Benzema**  \\n   - Nationality: French  \\n   - Club: Al-Ittihad  \\n
+        \  - Highlights: Ballon d\u2019Or 2022 winner; prolific striker with a great
+        eye for goal; Real Madrid legend.\\n\\n7. **Mohamed Salah**  \\n   - Nationality:
+        Egyptian  \\n   - Club: Liverpool  \\n   - Highlights: Consistent Premier
+        League top scorer; known for pace, finishing, and work rate.\\n\\n8. **Robert
+        Lewandowski**  \\n   - Nationality: Polish  \\n   - Club: FC Barcelona  \\n
+        \  - Highlights: One of the best strikers of his generation; multiple Bundesliga
+        top scorer awards.\\n\\n9. **Neymar Jr.**  \\n   - Nationality: Brazilian
+        \ \\n   - Club: Al-Hilal  \\n   - Highlights: Exceptional dribbler and playmaker;
+        former PSG star; influential in Brazil\u2019s national team.\\n\\n10. **Thibaut
+        Courtois**  \\n    - Nationality: Belgian  \\n    - Club: Real Madrid  \\n
+        \   - Highlights: One of the best goalkeepers globally; key in Real Madrid\u2019s
+        major trophy wins including Champions League.\\n\\n---\\n\\nIf you need detailed
+        stats or specific rankings by position, let me know!\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        68,\n    \"completion_tokens\": 579,\n    \"total_tokens\": 647,\n    \"prompt_tokens_details\":
+        68,\n    \"completion_tokens\": 546,\n    \"total_tokens\": 614,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -98,7 +93,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 14:53:57 GMT
+      - Fri, 06 Feb 2026 18:22:58 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -118,7 +113,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '11341'
+      - '8052'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -189,51 +184,55 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6HVVtt46NRCvFl3RKIorS6YjF0N4\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770389637,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6KlmtUgqLSoxCnGjBxjaPlCPcFMv\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402178,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
-        10 best soccer players in the world as of 2024, based on recent performances,
-        skills, achievements, and overall impact on the game:\\n\\n### Top 10 Best
-        Soccer Players in the World (2024)\\n\\n1. **Kylian Mbapp\xE9** (France, Paris
-        Saint-Germain)\\n   - Position: Forward\\n   - Key Attributes: Speed, dribbling,
-        goal-scoring ability\\n   - Recent Highlights: Leading goal scorer in Ligue
-        1, key player for France national team\\n\\n2. **Erling Haaland** (Norway,
-        Manchester City)\\n   - Position: Striker\\n   - Key Attributes: Physicality,
-        finishing, positioning\\n   - Recent Highlights: Premier League top scorer,
-        instrumental in Manchester City's attacking line\\n\\n3. **Lionel Messi**
-        (Argentina, Inter Miami)\\n   - Position: Forward\\n   - Key Attributes: Vision,
-        passing, creativity\\n   - Recent Highlights: Continued performance excellence,
-        influential in both club and national team\\n\\n4. **Kevin De Bruyne** (Belgium,
-        Manchester City)\\n   - Position: Midfielder\\n   - Key Attributes: Passing
-        accuracy, vision, leadership\\n   - Recent Highlights: Playmaker behind Manchester
-        City's successes, consistent elite performance\\n\\n5. **Mohamed Salah** (Egypt,
-        Liverpool)\\n   - Position: Winger\\n   - Key Attributes: Pace, dribbling,
-        goal-scoring\\n   - Recent Highlights: Key attacker for Liverpool, strong
-        performances in the Premier League and UEFA competitions\\n\\n6. **Karim Benzema**
-        (France, Al-Ittihad)\\n   - Position: Striker\\n   - Key Attributes: Technical
-        skills, finishing, experience\\n   - Recent Highlights: Successful stint in
-        Saudi Pro League, former Ballon d'Or winner\\n\\n7. **Robert Lewandowski**
-        (Poland, Barcelona)\\n   - Position: Striker\\n   - Key Attributes: Finishing,
-        positioning, consistency\\n   - Recent Highlights: Reliable goal scorer for
-        Barcelona and Poland\\n\\n8. **Vin\xEDcius J\xFAnior** (Brazil, Real Madrid)\\n
-        \  - Position: Winger\\n   - Key Attributes: Dribbling, pace, creativity\\n
-        \  - Recent Highlights: Rising star, vital for Real Madrid in domestic and
-        European competitions\\n\\n9. **Jude Bellingham** (England, Real Madrid)\\n
-        \  - Position: Midfielder\\n   - Key Attributes: Box-to-box ability, tackling,
-        vision\\n   - Recent Highlights: Young talent with remarkable impact at club
-        and international level\\n\\n10. **Thibaut Courtois** (Belgium, Real Madrid)\\n
-        \   - Position: Goalkeeper\\n    - Key Attributes: Shot-stopping, command
-        of area, reflexes\\n    - Recent Highlights: Considered one of the best goalkeepers
-        globally, crucial for Real Madrid's defensive strength\\n\\n### Notes:\\n-
-        The ranking can vary based on different criteria such as individual awards,
-        statistics, and team success.\\n- Emerging talents and consistent veterans
-        are both considered.\\n- Positions span across forward, midfield, defense,
-        and goalkeeper to account for overall game impact.\\n\\nWould you like more
-        detailed profiles or statistics on any specific players?\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a structured list
+        of the top 10 best soccer players in the world as of 2024, based on recent
+        performances, skills, influence, and achievements:\\n\\n### Top 10 Best Soccer
+        Players in the World (2024)\\n\\n1. **Erling Haaland**\\n   - Position: Striker\\n
+        \  - Club: Manchester City\\n   - Nationality: Norwegian\\n   - Key Attributes:
+        Exceptional goal-scoring ability, physical strength, pace, and positioning.\\n
+        \  - Notable Achievements: Premier League Golden Boot, Champions League top
+        scorer.\\n\\n2. **Kylian Mbapp\xE9**\\n   - Position: Forward\\n   - Club:
+        Paris Saint-Germain\\n   - Nationality: French\\n   - Key Attributes: Speed,
+        dribbling, finishing, and creativity.\\n   - Notable Achievements: World Cup
+        winner (2018), multiple Ligue 1 titles.\\n\\n3. **Lionel Messi**\\n   - Position:
+        Forward\\n   - Club: Inter Miami (previously PSG)\\n   - Nationality: Argentine\\n
+        \  - Key Attributes: Dribbling, vision, passing, and free-kicks.\\n   - Notable
+        Achievements: Multiple Ballon d'Ors, Copa America winner, World Cup winner
+        (2022).\\n\\n4. **Kevin De Bruyne**\\n   - Position: Midfielder\\n   - Club:
+        Manchester City\\n   - Nationality: Belgian\\n   - Key Attributes: Playmaking,
+        passing range, vision, and work rate.\\n   - Notable Achievements: PFA Player
+        of the Year, multiple Premier League titles.\\n\\n5. **Karim Benzema**\\n
+        \  - Position: Striker\\n   - Club: Al-Ittihad (previously Real Madrid)\\n
+        \  - Nationality: French\\n   - Key Attributes: Technical skills, finishing,
+        link-up play.\\n   - Notable Achievements: Ballon d'Or 2022, multiple Champions
+        League titles.\\n\\n6. **Neymar Jr.**\\n   - Position: Forward\\n   - Club:
+        Al-Hilal\\n   - Nationality: Brazilian\\n   - Key Attributes: Dribbling, creativity,
+        flair.\\n   - Notable Achievements: Copa Libertadores winner, multiple domestic
+        titles.\\n\\n7. **Mohamed Salah**\\n   - Position: Forward\\n   - Club: Liverpool\\n
+        \  - Nationality: Egyptian\\n   - Key Attributes: Pace, finishing, work ethic.\\n
+        \  - Notable Achievements: Premier League Golden Boots, Champions League winner.\\n\\n8.
+        **Vin\xEDcius J\xFAnior**\\n   - Position: Winger\\n   - Club: Real Madrid\\n
+        \  - Nationality: Brazilian\\n   - Key Attributes: Dribbling, speed, goal
+        contribution.\\n   - Notable Achievements: Champions League winner, pivotal
+        player for Real Madrid.\\n\\n9. **Jude Bellingham**\\n   - Position: Midfielder\\n
+        \  - Club: Real Madrid\\n   - Nationality: English\\n   - Key Attributes:
+        Versatility, stamina, passing, tactical intelligence.\\n   - Notable Achievements:
+        World Cup standout, emerging as a top midfielder.\\n\\n10. **Thibaut Courtois**\\n
+        \   - Position: Goalkeeper\\n    - Club: Real Madrid\\n    - Nationality:
+        Belgian\\n    - Key Attributes: Shot-stopping, positioning, consistency.\\n
+        \   - Notable Achievements: World Cup Golden Glove (2022), multiple Champions
+        League titles.\\n\\n---\\n\\n### Summary:\\nThese players represent a blend
+        of established superstars and emerging talents who have significantly impacted
+        both club and international football recently. Their skills span attacking
+        prowess, midfield creativity, and defensive reliability, highlighting the
+        varied roles vital in modern soccer.\\n\\nIf you want detailed stats, recent
+        season performances, or historical comparisons, feel free to ask!\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        68,\n    \"completion_tokens\": 647,\n    \"total_tokens\": 715,\n    \"prompt_tokens_details\":
+        68,\n    \"completion_tokens\": 760,\n    \"total_tokens\": 828,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -246,7 +245,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 14:54:11 GMT
+      - Fri, 06 Feb 2026 18:23:11 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -264,7 +263,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '13664'
+      - '12766'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -335,51 +334,48 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6HVj7ehAepZw6ifhetJ366keiloR\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770389651,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6KlzL6DxYoxY77iP35wBK11ZpK0r\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402191,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Certainly! Here's a comprehensive list
-        of the top 10 best soccer players in the world as of 2024. The ranking is
-        based on recent performances, individual skills, achievements, influence on
-        the game, and consistency:\\n\\n### Top 10 Best Soccer Players in the World
-        (2024)\\n\\n1. **Kylian Mbapp\xE9**  \\n   - Nationality: French  \\n   -
-        Position: Forward  \\n   - Key Highlights: Multiple Ligue 1 Golden Boot winner,
-        World Cup champion, known for explosive speed and clinical finishing.\\n\\n2.
-        **Erling Haaland**  \\n   - Nationality: Norwegian  \\n   - Position: Striker
-        \ \\n   - Key Highlights: Premier League top scorer, prolific goal scorer
-        with physical presence, remarkable goal conversion rate.\\n\\n3. **Lionel
-        Messi**  \\n   - Nationality: Argentine  \\n   - Position: Forward/Playmaker
-        \ \\n   - Key Highlights: Multiple Ballon d'Or winner, 2022 World Cup winner,
-        incredible dribbling, vision, and playmaking abilities.\\n\\n4. **Kevin De
-        Bruyne**  \\n   - Nationality: Belgian  \\n   - Position: Midfielder  \\n
-        \  - Key Highlights: Premier League Playmaker of the Year, exceptional passing,
-        vision and leadership in midfield.\\n\\n5. **Karim Benzema**  \\n   - Nationality:
-        French  \\n   - Position: Striker  \\n   - Key Highlights: 2022 Ballon d'Or
-        winner, key player for Real Madrid with great technical and finishing skills.\\n\\n6.
-        **Robert Lewandowski**  \\n   - Nationality: Polish  \\n   - Position: Striker
-        \ \\n   - Key Highlights: Consistent goal scorer, excellent positioning and
-        finishing, key figure in Bayern Munich and Barcelona.\\n\\n7. **Vin\xEDcius
-        J\xFAnior**  \\n   - Nationality: Brazilian  \\n   - Position: Winger  \\n
-        \  - Key Highlights: Emerging star with great dribbling, pace, and creativity;
-        crucial in Real Madrid\u2019s offense.\\n\\n8. **Mohamed Salah**  \\n   -
-        Nationality: Egyptian  \\n   - Position: Winger/Forward  \\n   - Key Highlights:
-        Premier League top scorer multiple times, fast and skillful winger with an
-        eye for goals.\\n\\n9. **Jude Bellingham**  \\n   - Nationality: English  \\n
-        \  - Position: Midfielder  \\n   - Key Highlights: Young versatile midfielder,
-        exceptional work rate, passing, and leadership for Real Madrid.\\n\\n10. **Thibaut
-        Courtois**  \\n    - Nationality: Belgian  \\n    - Position: Goalkeeper  \\n
-        \   - Key Highlights: Among the best goalkeepers globally, known for shot-stopping
-        abilities and crucial saves, key in Real Madrid\u2019s defense.\\n\\n---\\n\\n###
-        Summary:\\n- The list balances goal scorers, playmakers, and key defensive
-        players.\\n- Includes a blend of proven veterans and emerging talents.\\n-
-        Reflects performances in major leagues, international tournaments, and club
-        competitions.\\n\\nIf you want, I can provide a detailed profile on any of
-        these players or a different selection based on specific criteria like position
-        or league.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
-        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-        \ \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\": 616,\n
-        \   \"total_tokens\": 684,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"Certainly! As of mid-2024, here is
+        a structured list of the top 10 best soccer players in the world, based on
+        recent performances, accolades, and overall impact on the sport:\\n\\n1. **Kylian
+        Mbapp\xE9**  \\n   - Nationality: French  \\n   - Club: Paris Saint-Germain
+        (PSG)  \\n   - Position: Forward  \\n   - Highlights: Known for his incredible
+        speed, dribbling, and goal-scoring ability. Key player for both PSG and the
+        French national team.\\n\\n2. **Erling Haaland**  \\n   - Nationality: Norwegian
+        \ \\n   - Club: Manchester City  \\n   - Position: Striker  \\n   - Highlights:
+        Outstanding goal-scoring record, physical presence, and finishing skills.
+        Dominant in both the Premier League and Champions League.\\n\\n3. **Lionel
+        Messi**  \\n   - Nationality: Argentine  \\n   - Club: Inter Miami (MLS)  \\n
+        \  - Position: Forward/Playmaker  \\n   - Highlights: Legendary career with
+        multiple Ballon d'Or awards, exceptional vision, dribbling, and creativity.\\n\\n4.
+        **Kevin De Bruyne**  \\n   - Nationality: Belgian  \\n   - Club: Manchester
+        City  \\n   - Position: Midfielder  \\n   - Highlights: Renowned for his passing
+        accuracy, vision, and ability to control the midfield.\\n\\n5. **Karim Benzema**
+        \ \\n   - Nationality: French  \\n   - Club: Al-Ittihad  \\n   - Position:
+        Striker  \\n   - Highlights: Proven goal scorer with excellent link-up play
+        and leadership qualities.\\n\\n6. **Mohamed Salah**  \\n   - Nationality:
+        Egyptian  \\n   - Club: Liverpool  \\n   - Position: Winger  \\n   - Highlights:
+        Consistently among the top scorers in the Premier League, known for pace and
+        finishing.\\n\\n7. **Vin\xEDcius J\xFAnior**  \\n   - Nationality: Brazilian
+        \ \\n   - Club: Real Madrid  \\n   - Position: Winger  \\n   - Highlights:
+        Rising star with impressive dribbling, creativity, and goal contributions.\\n\\n8.
+        **Jude Bellingham**  \\n   - Nationality: English  \\n   - Club: Real Madrid
+        \ \\n   - Position: Midfielder  \\n   - Highlights: Young but highly influential,
+        combines physicality with technical skill.\\n\\n9. **Neymar Jr.**  \\n   -
+        Nationality: Brazilian  \\n   - Club: Al-Hilal  \\n   - Position: Forward
+        \ \\n   - Highlights: Exceptional dribbler, playmaker, and goal contributor,
+        experienced at the highest level.\\n\\n10. **Thibaut Courtois**  \\n    -
+        Nationality: Belgian  \\n    - Club: Real Madrid  \\n    - Position: Goalkeeper
+        \ \\n    - Highlights: Considered one of the best goalkeepers currently, consistently
+        performs in crucial matches.\\n\\nThis list reflects a mix of attacking prowess,
+        creative midfielders, and a top goalkeeper to represent different roles essential
+        for a balanced evaluation of the best players globally.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 606,\n    \"total_tokens\": 674,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
@@ -391,7 +387,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 14:54:24 GMT
+      - Fri, 06 Feb 2026 18:23:19 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -409,7 +405,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '12694'
+      - '8265'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -480,47 +476,184 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6HVwwi5Ho4QGTHUG2QEEW677oVMn\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770389664,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6Km8T7VvmNRRyEap9W8rEBnemO70\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402200,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Sure! Here is a list of the top 10
+        best soccer players in the world as of 2024, based on their recent performances,
+        skills, impact on the game, and recognition:\\n\\n1. **Kylian Mbapp\xE9**
+        (Paris Saint-Germain / France)  \\n   - Known for lightning speed, dribbling
+        skills, and goal-scoring ability.  \\n   - Key player for both club and national
+        team.\\n\\n2. **Erling Haaland** (Manchester City / Norway)  \\n   - Prolific
+        goal scorer with incredible physicality and finishing.  \\n   - Has set records
+        for goals in multiple competitions.\\n\\n3. **Lionel Messi** (Inter Miami
+        / Argentina)  \\n   - Legendary playmaker with extraordinary vision, dribbling,
+        and scoring.  \\n   - Continues to influence games at club and international
+        level.\\n\\n4. **Kevin De Bruyne** (Manchester City / Belgium)  \\n   - One
+        of the best midfielders globally for passing, creativity, and leadership.
+        \ \\n   - Often dictates the tempo of matches.\\n\\n5. **Karim Benzema** (Al-Ittihad
+        / France)  \\n   - Highly skilled striker known for technical ability and
+        finishing.  \\n   - Won the Ballon d\u2019Or in 2022.\\n\\n6. **Robert Lewandowski**
+        (Barcelona / Poland)  \\n   - Consistent goal scorer with excellent positioning
+        and technique.  \\n   - Vital striker for club and country.\\n\\n7. **Vin\xEDcius
+        J\xFAnior** (Real Madrid / Brazil)  \\n   - Explosive winger with great dribbling
+        and pace.  \\n   - Key contributor to Real Madrid\u2019s recent successes.\\n\\n8.
+        **Jude Bellingham** (Real Madrid / England)  \\n   - Young dynamic midfielder
+        with superb skills on and off the ball.  \\n   - Quickly becoming one of the
+        best in his position.\\n\\n9. **Mohamed Salah** (Liverpool / Egypt)  \\n   -
+        Renowned for speed, finishing, and ability to perform in big games.  \\n   -
+        Vital player for Liverpool and Egypt.\\n\\n10. **Thibaut Courtois** (Real
+        Madrid / Belgium)  \\n    - Regarded as one of the best goalkeepers with crucial
+        saves and consistency.  \\n    - Key reason for Real Madrid\u2019s defensive
+        strength.\\n\\nThese rankings can shift frequently based on form, injuries,
+        and achievements, but this list reflects the current top performers in world
+        soccer as of mid-2024. Would you like details on their stats or recent highlights?\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 506,\n    \"total_tokens\": 574,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 18:23:27 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '7378'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6KmG5tKFDLCDjjq8XQ9fPKcg27Nk\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402208,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
         10 best soccer players in the world as of 2024, based on recent performances,
-        skills, influence, and overall impact on the game:\\n\\n1. **Kylian Mbapp\xE9**
-        \ \\n   - Nationality: French  \\n   - Position: Forward  \\n   - Key Attributes:
-        Exceptional speed, dribbling, finishing, and versatility. Leading PSG and
-        France to numerous victories.\\n\\n2. **Erling Haaland**  \\n   - Nationality:
-        Norwegian  \\n   - Position: Striker  \\n   - Key Attributes: Incredible goal-scoring
-        ability, physicality, and positioning. Dominant in the Premier League with
-        Manchester City.\\n\\n3. **Lionel Messi**  \\n   - Nationality: Argentine
-        \ \\n   - Position: Forward/Attacking Midfielder  \\n   - Key Attributes:
-        Unmatched dribbling, creativity, vision, and goal-scoring record. Continuing
-        to influence the game with Inter Miami and Argentina.\\n\\n4. **Kevin De Bruyne**
-        \ \\n   - Nationality: Belgian  \\n   - Position: Midfielder  \\n   - Key
-        Attributes: Playmaking, passing accuracy, set-pieces, and leadership for Manchester
-        City and Belgium.\\n\\n5. **Mohamed Salah**  \\n   - Nationality: Egyptian
-        \ \\n   - Position: Forward/Winger  \\n   - Key Attributes: Pace, dribbling,
-        goal-scoring consistency, and work rate at Liverpool and the Egyptian national
-        team.\\n\\n6. **Karim Benzema**  \\n   - Nationality: French  \\n   - Position:
-        Forward  \\n   - Key Attributes: Intelligent positioning, link-up play, and
-        clinical finishing, having continued strong performances with Al-Ittihad.\\n\\n7.
-        **Neymar Jr.**  \\n   - Nationality: Brazilian  \\n   - Position: Forward/Winger
-        \ \\n   - Key Attributes: Flair, dribbling skill, creativity, and experience,
-        contributing to Al-Hilal and Brazil\u2019s national team.\\n\\n8. **Robert
-        Lewandowski**  \\n   - Nationality: Polish  \\n   - Position: Striker  \\n
-        \  - Key Attributes: Finishing, positioning, and consistency, now shining
-        for Barcelona.\\n\\n9. **Vin\xEDcius Jr.**  \\n   - Nationality: Brazilian
-        \ \\n   - Position: Winger  \\n   - Key Attributes: Explosiveness, dribbling,
-        creativity, and goal-scoring with Real Madrid.\\n\\n10. **Jude Bellingham**
-        \ \\n    - Nationality: English  \\n    - Position: Midfielder  \\n    - Key
-        Attributes: Vision, stamina, maturity beyond years, and box-to-box midfield
-        capabilities at Real Madrid and England.\\n\\nThis list is subjective but
-        reflects consensus among experts, recent awards, and current form in top leagues
-        and international competitions. If you'd like, I can provide more detailed
-        statistics or historical context on any player.\",\n        \"refusal\": null,\n
-        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
-        571,\n    \"total_tokens\": 639,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        individual skills, achievements, and overall impact on the game:\\n\\n1. **Lionel
+        Messi**  \\n   - Nationality: Argentine  \\n   - Current Club: Inter Miami
+        \ \\n   - Highlights: Multiple Ballon d'Or awards, led Argentina to 2021 Copa
+        America and 2022 FIFA World Cup victories, exceptional playmaking and scoring.\\n\\n2.
+        **Kylian Mbapp\xE9**  \\n   - Nationality: French  \\n   - Current Club: Paris
+        Saint-Germain (PSG)  \\n   - Highlights: World Cup 2018 winner, known for
+        incredible speed, dribbling, and goal-scoring ability.\\n\\n3. **Erling Haaland**
+        \ \\n   - Nationality: Norwegian  \\n   - Current Club: Manchester City  \\n
+        \  - Highlights: Prolific goal scorer in the Premier League and UEFA Champions
+        League, physical dominance and clinical finishing.\\n\\n4. **Kevin De Bruyne**
+        \ \\n   - Nationality: Belgian  \\n   - Current Club: Manchester City  \\n
+        \  - Highlights: Elite playmaker with vision, creativity, and passing accuracy,
+        multiple Premier League titles.\\n\\n5. **Karim Benzema**  \\n   - Nationality:
+        French  \\n   - Current Club: Al-Ittihad  \\n   - Highlights: 2022 Ballon
+        d'Or winner, instrumental in Real Madrid's recent successes including multiple
+        Champions League titles.\\n\\n6. **Mohamed Salah**  \\n   - Nationality: Egyptian
+        \ \\n   - Current Club: Liverpool  \\n   - Highlights: Consistent top scorer
+        in the Premier League, exceptional speed and dribbling, crucial influence
+        for Liverpool.\\n\\n7. **Robert Lewandowski**  \\n   - Nationality: Polish
+        \ \\n   - Current Club: FC Barcelona  \\n   - Highlights: One of the best
+        strikers worldwide, numerous Bundesliga top scorer awards, great positioning
+        and finishing.\\n\\n8. **Vin\xEDcius Jr.**  \\n   - Nationality: Brazilian
+        \ \\n   - Current Club: Real Madrid  \\n   - Highlights: Outstanding winger
+        with great pace and dribbling, key player in Real Madrid\u2019s recent successes.\\n\\n9.
+        **Jude Bellingham**  \\n   - Nationality: English  \\n   - Current Club: Real
+        Madrid  \\n   - Highlights: Young midfielder with exceptional talent, work
+        rate, and leadership, rapidly becoming one of the best in his position.\\n\\n10.
+        **Luka Modri\u0107**  \\n    - Nationality: Croatian  \\n    - Current Club:
+        Real Madrid  \\n    - Highlights: Veteran playmaker, 2018 Ballon d'Or winner,
+        known for his vision, passing, and ability to control the midfield.\\n\\nThis
+        list represents a mix of established legends and rising stars, reflecting
+        their influence on both club and international stages. Let me know if you
+        would like detailed statistics or information on additional players!\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 585,\n    \"total_tokens\": 653,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
@@ -532,7 +665,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 14:54:34 GMT
+      - Fri, 06 Feb 2026 18:23:37 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -550,7 +683,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '10235'
+      - '8691'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -621,46 +754,51 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6HW6NpJUgdxmwrzrNCtC4OjMNSCU\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770389674,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6KmPP82iFaU3OaLkMu2rytLCxa5m\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770402217,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
-        10 best soccer players in the world as of 2024, based on their recent performances,
-        skill levels, and overall impact on the game:\\n\\n1. **Lionel Messi**  \\n
-        \  - Nationality: Argentina  \\n   - Position: Forward  \\n   - Club: Inter
-        Miami CF  \\n   - Highlights: Multiple Ballon d'Or awards; exceptional dribbling,
-        vision, and goal-scoring ability; recent success in MLS and Copa America.\\n\\n2.
-        **Kylian Mbapp\xE9**  \\n   - Nationality: France  \\n   - Position: Forward
-        \ \\n   - Club: Paris Saint-Germain  \\n   - Highlights: Speed, skill, and
-        finishing; key player for both PSG and the French national team; World Cup
-        winner.\\n\\n3. **Erling Haaland**  \\n   - Nationality: Norway  \\n   - Position:
-        Striker  \\n   - Club: Manchester City  \\n   - Highlights: Prolific goal
-        scorer with incredible physicality and pace; record-breaking goal tally in
-        Premier League.\\n\\n4. **Kevin De Bruyne**  \\n   - Nationality: Belgium
-        \ \\n   - Position: Midfielder  \\n   - Club: Manchester City  \\n   - Highlights:
-        Best midfielder in the world with outstanding passing, vision, and set-piece
-        delivery.\\n\\n5. **Karim Benzema**  \\n   - Nationality: France  \\n   -
-        Position: Forward  \\n   - Club: Al-Ittihad  \\n   - Highlights: Experienced
-        and versatile striker; Ballon d\u2019Or winner in 2022; exceptional goal-scoring
-        and playmaking.\\n\\n6. **Robert Lewandowski**  \\n   - Nationality: Poland
-        \ \\n   - Position: Striker  \\n   - Club: FC Barcelona  \\n   - Highlights:
-        Clinical finisher and leader; consistent top scorer in European leagues.\\n\\n7.
-        **Neymar Jr.**  \\n   - Nationality: Brazil  \\n   - Position: Forward/Winger
-        \ \\n   - Club: Al-Hilal  \\n   - Highlights: Flair, creativity, and dribbling
-        skills; significant influence in Brazil\u2019s national team.\\n\\n8. **Mohamed
-        Salah**  \\n   - Nationality: Egypt  \\n   - Position: Forward/Winger  \\n
-        \  - Club: Liverpool  \\n   - Highlights: Speed, finishing, and consistency;
-        crucial player for Liverpool and Egypt.\\n\\n9. **Luka Modri\u0107**  \\n
-        \  - Nationality: Croatia  \\n   - Position: Midfielder  \\n   - Club: Real
-        Madrid  \\n   - Highlights: Veteran playmaker with excellent control, passing,
-        and tactical awareness.\\n\\n10. **Vin\xEDcius J\xFAnior**  \\n    - Nationality:
-        Brazil  \\n    - Position: Winger  \\n    - Club: Real Madrid  \\n    - Highlights:
-        Explosive pace, dribbling, and growing goal-scoring threat.\\n\\nThese players
-        are currently regarded as some of the best globally, considering their individual
-        skills, impact in club and international competitions, and accolades.\",\n
-        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        68,\n    \"completion_tokens\": 595,\n    \"total_tokens\": 663,\n    \"prompt_tokens_details\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the current
+        top 10 best soccer players in the world as of 2024, considering recent performance,
+        skill level, achievements, and overall impact on the game:\\n\\n1. **Kylian
+        Mbapp\xE9** (France / Paris Saint-Germain)\\n   - Position: Forward\\n   -
+        Key strengths: Speed, finishing, dribbling, and versatility\\n   - Notable
+        achievements: World Cup winner (2018), multiple Ligue 1 titles, consistent
+        top scorer\\n\\n2. **Erling Haaland** (Norway / Manchester City)\\n   - Position:
+        Striker\\n   - Key strengths: Physicality, goal-scoring instinct, pace\\n
+        \  - Notable achievements: Premier League Golden Boot, record goal scorer
+        in several competitions\\n\\n3. **Lionel Messi** (Argentina / Inter Miami)\\n
+        \  - Position: Forward\\n   - Key strengths: Dribbling, vision, passing, free
+        kicks\\n   - Notable achievements: Ballon d'Or winner (7 times), Copa America
+        winner, multiple La Liga and Champions League titles\\n\\n4. **Kevin De Bruyne**
+        (Belgium / Manchester City)\\n   - Position: Midfielder\\n   - Key strengths:
+        Passing accuracy, vision, crossing, shooting\\n   - Notable achievements:
+        Multiple Premier League titles, several Player of the Season awards\\n\\n5.
+        **Karim Benzema** (France / Al-Ittihad)\\n   - Position: Striker\\n   - Key
+        strengths: Creativity, finishing, positioning\\n   - Notable achievements:
+        Ballon d'Or (2022), Champions League winner, top scorer in La Liga (2021)\\n\\n6.
+        **Neymar Jr.** (Brazil / Al-Hilal)\\n   - Position: Forward\\n   - Key strengths:
+        Dribbling, flair, creativity, passing\\n   - Notable achievements: Copa Libertadores
+        winner, multiple Ligue 1 titles, key Brazil national team player\\n\\n7. **Mohamed
+        Salah** (Egypt / Liverpool)\\n   - Position: Winger\\n   - Key strengths:
+        Pace, dribbling, finishing\\n   - Notable achievements: Premier League Golden
+        Boot, multiple domestic and international titles with Liverpool\\n\\n8. **Robert
+        Lewandowski** (Poland / Barcelona)\\n   - Position: Striker\\n   - Key strengths:
+        Finishing, positioning, consistency\\n   - Notable achievements: Multiple
+        Bundesliga top scorer awards, Champions League performer\\n\\n9. **Virgil
+        van Dijk** (Netherlands / Liverpool)\\n   - Position: Defender\\n   - Key
+        strengths: Strength, aerial ability, leadership\\n   - Notable achievements:
+        UEFA Men's Player of the Year, Premier League title winner\\n\\n10. **Jude
+        Bellingham** (England / Real Madrid)\\n    - Position: Midfielder\\n    -
+        Key strengths: Passing, work rate, versatility, leadership at a young age\\n
+        \   - Notable achievements: Emerging as one of the world's best midfielders
+        with standout performances in La Liga and Champions League\\n\\nThese players
+        are ranked based on a combination of their current form, influence on their
+        teams, individual skill set, and recent accolades. The list can vary slightly
+        based on personal opinions and specific criteria, but these players are widely
+        recognized as the top talents in world soccer today.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 664,\n    \"total_tokens\": 732,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -673,7 +811,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 14:54:46 GMT
+      - Fri, 06 Feb 2026 18:23:46 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -691,7 +829,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '12128'
+      - '9772'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
