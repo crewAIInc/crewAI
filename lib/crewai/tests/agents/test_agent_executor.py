@@ -721,3 +721,116 @@ class TestAgentExecutorPlanning:
 
         # Plan should exist
         assert captured_plan[0] is not None
+
+
+class TestResponseFormatWithKickoff:
+    """Test that Agent.kickoff(response_format=MyModel) returns structured output.
+
+    Real LLM calls via VCR cassettes. Tests both with and without planning,
+    using real tools for the planning case to exercise the full Plan-and-Execute
+    path including synthesis with response_model.
+    """
+
+    @pytest.mark.vcr()
+    def test_kickoff_response_format_without_planning(self):
+        """Test that kickoff(response_format) returns structured output without planning."""
+        from pydantic import BaseModel, Field
+        from crewai import Agent
+        from crewai.llm import LLM
+
+        class MathResult(BaseModel):
+            answer: int = Field(description="The numeric answer")
+            explanation: str = Field(description="Brief explanation of the solution")
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Solve math problems and return structured results",
+            backstory="A precise math assistant that always returns structured data",
+            llm=llm,
+            verbose=False,
+        )
+
+        result = agent.kickoff("What is 15 + 27?", response_format=MathResult)
+
+        assert result is not None
+        assert result.pydantic is not None
+        assert isinstance(result.pydantic, MathResult)
+        assert result.pydantic.answer == 42
+        assert len(result.pydantic.explanation) > 0
+
+    @pytest.mark.vcr()
+    def test_kickoff_response_format_with_planning_and_tools(self):
+        """Test response_format with planning + tools (multi-step research).
+
+        This is the key test for _synthesize_final_answer_from_todos:
+        1. Planning generates steps that use the EXA search tool
+        2. StepExecutor runs each step in isolation with tool calls
+        3. The synthesis step produces a structured BaseModel output
+
+        The response_format should be respected by the synthesis LLM call,
+        NOT by intermediate step executions.
+        """
+        from pydantic import BaseModel, Field
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai_tools import EXASearchTool
+
+        class ResearchSummary(BaseModel):
+            topic: str = Field(description="The research topic")
+            key_findings: list[str] = Field(description="List of 3-5 key findings")
+            conclusion: str = Field(description="A brief conclusion paragraph")
+
+        llm = LLM("gpt-4o-mini")
+        exa = EXASearchTool()
+
+        agent = Agent(
+            role="Research Analyst",
+            goal="Research topics using search tools and produce structured summaries",
+            backstory=(
+                "You are a research analyst who searches the web for information, "
+                "identifies key findings, and produces structured research summaries."
+            ),
+            llm=llm,
+            planning_config=PlanningConfig(max_attempts=1, max_steps=5),
+            tools=[exa],
+            verbose=False,
+        )
+
+        result = agent.kickoff(
+            "Research the current state of autonomous AI agents in 2025. "
+            "Search for recent developments, then summarize the key findings.",
+            response_format=ResearchSummary,
+        )
+
+        assert result is not None
+        # The synthesis step should have produced structured output
+        assert result.pydantic is not None
+        assert isinstance(result.pydantic, ResearchSummary)
+        # Verify the structured fields are populated
+        assert len(result.pydantic.topic) > 0
+        assert len(result.pydantic.key_findings) >= 1
+        assert len(result.pydantic.conclusion) > 0
+
+    @pytest.mark.vcr()
+    def test_kickoff_no_response_format_returns_raw_text(self):
+        """Test that kickoff without response_format returns plain text."""
+        from crewai import Agent
+        from crewai.llm import LLM
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Assistant",
+            goal="Solve math problems",
+            backstory="A helpful math assistant",
+            llm=llm,
+            verbose=False,
+        )
+
+        result = agent.kickoff("What is 10 + 10?")
+
+        assert result is not None
+        assert result.pydantic is None
+        assert "20" in str(result)
