@@ -2027,15 +2027,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 router_input = router_result_to_feedback.get(
                     str(current_trigger), current_result
                 )
-                current_triggering_event_id = await self._execute_single_listener(
+                (
+                    router_result,
+                    current_triggering_event_id,
+                ) = await self._execute_single_listener(
                     router_name, router_input, current_triggering_event_id
                 )
-                # After executing router, the router's result is the path
-                router_result = (
-                    self._method_outputs[-1] if self._method_outputs else None
-                )
                 if router_result:  # Only add non-None results
-                    router_results.append(router_result)
+                    router_results.append(FlowMethodName(str(router_result)))
                     # If this was a human_feedback router, map the outcome to the feedback
                     if self.last_human_feedback is not None:
                         router_result_to_feedback[str(router_result)] = (
@@ -2265,7 +2264,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         listener_name: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
-    ) -> str | None:
+    ) -> tuple[Any, str | None]:
         """Executes a single listener method with proper event handling.
 
         This internal method manages the execution of an individual listener,
@@ -2278,8 +2277,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 used for causal chain tracking.
 
         Returns:
-            The event_id of the MethodExecutionFinishedEvent emitted by this listener,
-            or None if events are suppressed.
+            A tuple of (listener_result, event_id) where listener_result is the return
+            value of the listener method and event_id is the MethodExecutionFinishedEvent
+            id, or (None, None) if skipped during resumption.
 
         Note:
             - Inspects method signature to determine if it accepts the trigger result
@@ -2305,7 +2305,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         ):
                             # This conditional start was executed, continue its chain
                             await self._execute_start_method(start_method_name)
-                return None
+                return (None, None)
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
             # Also clear from fired OR listeners for cyclic flows
@@ -2382,7 +2382,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         ]
                         await asyncio.gather(*tasks)
 
-            return finished_event_id
+            return (listener_result, finished_event_id)
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow
