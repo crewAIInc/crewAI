@@ -1982,25 +1982,82 @@ provide clear results that can be used by subsequent steps."""
         return "completed"
 
     def _synthesize_final_answer_from_todos(self) -> None:
-        """Combine all todo results into a final answer.
+        """Synthesize a coherent final answer from all todo results.
 
-        Creates an AgentFinish from the accumulated results of all
-        completed todos.
+        Makes one LLM call to produce a clean, unified response from
+        the accumulated step results, rather than dumping raw step outputs.
+        Falls back to concatenation if the synthesis LLM call fails.
         """
-        results: list[str] = []
-        for todo in self.state.todos.items:
-            if todo.result:
-                results.append(f"**Step {todo.step_number} result:**")
-                results.append(todo.result)
-                results.append("")  # Empty line for spacing
+        step_results: list[str] = [
+            f"Step {todo.step_number} ({todo.description}):\n{todo.result}"
+            for todo in self.state.todos.items
+            if todo.result
+        ]
 
-        if results:
-            combined = "\n".join(results)
-            self.state.current_answer = AgentFinish(
-                thought="All planned steps completed successfully",
-                output=combined,
-                text=combined,
+        if not step_results:
+            return
+
+        combined_steps = "\n\n".join(step_results)
+
+        # Get the original task description
+        task_description = ""
+        if self.task:
+            task_description = self.task.description or ""
+        else:
+            task_description = getattr(self, "_kickoff_input", "")
+
+        # Strip any appended planning text from the task description
+        if "\n\nPlanning:\n" in task_description:
+            task_description = task_description.split("\n\nPlanning:\n")[0]
+
+        # Build synthesis prompt
+        role = self.agent.role if self.agent else "Assistant"
+        system_prompt = (
+            f"You are {role}. You have completed a multi-step task. "
+            "Synthesize the results from all steps into a single, coherent "
+            "final response that directly addresses the original task. "
+            "Do NOT list step numbers or say 'Step 1 result'. "
+            "Produce a clean, polished answer as if you did it all at once."
+        )
+        user_prompt = (
+            f"## Original Task\n{task_description}\n\n"
+            f"## Results from each step\n{combined_steps}\n\n"
+            "Synthesize these results into a single, coherent final answer."
+        )
+
+        try:
+            synthesis = self.llm.call(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                from_task=self.task,
+                from_agent=self.agent,
             )
+
+            if synthesis:
+                final_text = str(synthesis)
+                self.state.current_answer = AgentFinish(
+                    thought="Synthesized final answer from all completed steps",
+                    output=final_text,
+                    text=final_text,
+                )
+                return
+
+        except Exception as e:
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content=f"Synthesis LLM call failed ({e}), falling back to concatenation",
+                    color="yellow",
+                )
+
+        # Fallback: concatenate step results if synthesis fails
+        fallback = "\n\n".join(step_results)
+        self.state.current_answer = AgentFinish(
+            thought="All planned steps completed (synthesis unavailable)",
+            output=fallback,
+            text=fallback,
+        )
 
     # -------------------------------------------------------------------------
     # Dynamic Replanning Methods
