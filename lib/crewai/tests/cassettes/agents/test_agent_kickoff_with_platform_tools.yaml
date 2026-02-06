@@ -1,98 +1,226 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: create_issue\nTool Arguments: {''title'': {''description'': ''Issue title'', ''type'': ''str''}, ''body'': {''description'': ''Issue body'', ''type'': ''Union[str, NoneType]''}}\nTool Description: Create a GitHub issue\nDetailed Parameter Structure:\nObject with properties:\n  - title: Issue title (required)\n  - body: Issue body (optional)\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [create_issue], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information
-      is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "Create a GitHub issue"}], "model": "gpt-3.5-turbo", "stream": false}'
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Create
+      a GitHub issue"}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
+      a GitHub issue","strict":true,"parameters":{"additionalProperties":false,"properties":{"title":{"description":"Issue
+      title","title":"Title","type":"string"},"body":{"default":null,"description":"Issue
+      body","title":"Body","type":"string"}},"required":["title","body"],"type":"object"}}}]}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '1233'
+      - '596'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.109.1
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.109.1
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CULxKTEIB85AVItcEQ09z4Xi0JCID\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761350274,\n  \"model\": \"gpt-3.5-turbo-0125\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I will need more specific information to create a GitHub issue. Could you please provide more details such as the title and body of the issue you would like to create?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 255,\n    \"completion_tokens\": 33,\n    \"total_tokens\": 288,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n   \
-        \ }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": null\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D6IJbXrD9FB7wORkucCiQt57xTK5F\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770392743,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_cTkVNC4rVV7Jn1aVXAp7O6HM\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
+        \             \"arguments\": \"{\\\"title\\\":\\\"Update Documentation for
+        Feature X\\\",\\\"body\\\":\\\"The documentation for Feature X is outdated
+        and needs to be updated to reflect recent changes and improvements.\\\\n\\\\nTest
+        goal: Test goal\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        93,\n    \"completion_tokens\": 47,\n    \"total_tokens\": 140,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
       CF-RAY:
-      - 993d6b4be9862379-SJC
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Fri, 24 Oct 2025 23:57:54 GMT
+      - Fri, 06 Feb 2026 15:45:43 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=WY9bgemMDI_hUYISAPlQ2a.DBGeZfM6AjVEa3SKNg1c-1761350274-1.0.1.1-K3Qm2cl6IlDAgmocoKZ8IMUTmue6Q81hH9stECprUq_SM8LF8rR9d1sHktvRCN3.jEM.twEuFFYDNpBnN8NBRJFZcea1yvpm8Uo0G_UhyDs; path=/; expires=Sat, 25-Oct-25 00:27:54 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=JklLS4i3hBGELpS9cz1KMpTbj72hCwP41LyXDSxWIv8-1761350274521-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
-      - max-age=31536000; includeSubDomains; preload
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '487'
+      - '2668'
       openai-project:
-      - proj_xitITlrFeen7zjNSzML82h9x
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '526'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
-      - '10000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '50000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '9999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '49999727'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 6ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_1708dc0928c64882aaa5bc2c168c140f
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Test Agent. Test backstory\nYour
+      personal goal is: Test goal"},{"role":"user","content":"\nCurrent Task: Create
+      a GitHub issue"}],"model":"gpt-3.5-turbo","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_issue","description":"Create
+      a GitHub issue","strict":true,"parameters":{"additionalProperties":false,"properties":{"title":{"description":"Issue
+      title","title":"Title","type":"string"},"body":{"default":null,"description":"Issue
+      body","title":"Body","type":"string"}},"required":["title","body"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '596'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6IJcT2YIUtUErJXw46pMZWwpfsRE\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770392744,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Understood! What should be the title
+        and body of the GitHub issue you want to create?\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        93,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 113,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 15:45:44 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '805'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK

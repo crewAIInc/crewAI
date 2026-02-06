@@ -908,7 +908,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.iterations += 1
         return "initialized"
 
-    @listen("initialized")
+    @listen(or_("initialized", "tool_completed", "native_tool_completed"))
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
         return "check_iteration"
