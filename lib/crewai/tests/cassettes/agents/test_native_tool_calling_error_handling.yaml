@@ -226,4 +226,987 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '842'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5UyfOvOaQm57DIdmTllgWkTKxB\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399556,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        104,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 140,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:17 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '826'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1234'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5VluoHbHd63gPzPelwvdkuXFDJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399557,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        182,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 218,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:18 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '807'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1626'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5WHyQKBRK6vWmna2XtA0z830Hu\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399558,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        260,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 296,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:19 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '914'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2018'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5XTHUnUPeAOA7iWMOWVV2qeipM\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399559,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        338,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 374,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:20 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1021'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1626'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5qCfXTLlXzgadt12TzvVW0qVKs\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399578,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        260,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 296,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:39 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '885'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2018'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K5rOH2IQ2zXjArqMl34AafyJfZP\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399579,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        338,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 374,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:39:40 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '830'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2018'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K7K5ivzGwNbzu1mLLD7EYYQHmg4\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399670,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        338,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 374,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:41:11 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '712'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
+      things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"},{"role":"assistant","content":"Error:
+      This tool always fails."},{"role":"assistant","content":"It seems that I''m
+      unable to use the failing tool because it always results in an error. If you
+      have another task or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"},{"role":"assistant","content":"It
+      seems that I''m unable to use the failing tool because it always results in
+      an error. If you have another task or calculation in mind, feel free to let
+      me know!"},{"role":"assistant","content":"It seems that I''m unable to use the
+      failing tool because it always results in an error. If you have another task
+      or calculation in mind, feel free to let me know!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2214'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.5
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D6K8a3FFLW2WM6nkRaOpCQUpzhQXg\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399748,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"It seems that I'm unable to use the
+        failing tool because it always results in an error. If you have another task
+        or calculation in mind, feel free to let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        377,\n    \"completion_tokens\": 36,\n    \"total_tokens\": 413,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 06 Feb 2026 17:42:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '861'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1

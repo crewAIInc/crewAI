@@ -45,20 +45,19 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6IJbXrD9FB7wORkucCiQt57xTK5F\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770392743,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6JzzImfUNXOXfNEzCjQthEIS0RLb\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399215,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_cTkVNC4rVV7Jn1aVXAp7O6HM\",\n            \"type\":
+        \           \"id\": \"call_rYeX6OjYxPtdmI0uam3PllVf\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
-        \             \"arguments\": \"{\\\"title\\\":\\\"Update Documentation for
-        Feature X\\\",\\\"body\\\":\\\"The documentation for Feature X is outdated
-        and needs to be updated to reflect recent changes and improvements.\\\\n\\\\nTest
-        goal: Test goal\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        93,\n    \"completion_tokens\": 47,\n    \"total_tokens\": 140,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \             \"arguments\": \"{\\\"title\\\":\\\"Test Issue\\\",\\\"body\\\":\\\"This
+        is a test issue created for testing purposes.\\\"}\"\n            }\n          }\n
+        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\":
+        28,\n    \"total_tokens\": 121,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
@@ -70,7 +69,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 15:45:43 GMT
+      - Fri, 06 Feb 2026 17:33:36 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -90,7 +89,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2668'
+      - '1042'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -162,15 +161,19 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6IJcT2YIUtUErJXw46pMZWwpfsRE\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770392744,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6K00aYJBAI3VM9AtFk1jOOmyQWQE\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770399216,\n  \"model\": \"gpt-3.5-turbo-0125\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Understood! What should be the title
-        and body of the GitHub issue you want to create?\",\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        93,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 113,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_gitvRym4MhYgyn6G7Cfi5tfE\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"create_issue\",\n
+        \             \"arguments\": \"{\\\"title\\\":\\\"Test issue\\\",\\\"body\\\":\\\"This
+        is a test issue created for testing purposes.\\\"}\"\n            }\n          }\n
+        \       ],\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\":
+        28,\n    \"total_tokens\": 121,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
@@ -182,7 +185,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 15:45:44 GMT
+      - Fri, 06 Feb 2026 17:33:37 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -200,7 +203,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '805'
+      - '782'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

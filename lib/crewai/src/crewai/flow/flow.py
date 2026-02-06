@@ -7,7 +7,14 @@ for building event-driven workflows with conditional execution and routing.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import (
+    Callable,
+    ItemsView,
+    Iterator,
+    KeysView,
+    Sequence,
+    ValuesView,
+)
 from concurrent.futures import Future
 import copy
 import inspect
@@ -409,6 +416,132 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
+class LockedListProxy(Generic[T]):
+    """Thread-safe proxy for list operations.
+
+    Wraps a list and uses a lock for all mutating operations.
+    """
+
+    def __init__(self, lst: list[T], lock: threading.Lock) -> None:
+        self._list = lst
+        self._lock = lock
+
+    def append(self, item: T) -> None:
+        with self._lock:
+            self._list.append(item)
+
+    def extend(self, items: list[T]) -> None:
+        with self._lock:
+            self._list.extend(items)
+
+    def insert(self, index: int, item: T) -> None:
+        with self._lock:
+            self._list.insert(index, item)
+
+    def remove(self, item: T) -> None:
+        with self._lock:
+            self._list.remove(item)
+
+    def pop(self, index: int = -1) -> T:
+        with self._lock:
+            return self._list.pop(index)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._list.clear()
+
+    def __setitem__(self, index: int, value: T) -> None:
+        with self._lock:
+            self._list[index] = value
+
+    def __delitem__(self, index: int) -> None:
+        with self._lock:
+            del self._list[index]
+
+    def __getitem__(self, index: int) -> T:
+        return self._list[index]
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._list)
+
+    def __contains__(self, item: object) -> bool:
+        return item in self._list
+
+    def __repr__(self) -> str:
+        return repr(self._list)
+
+    def __bool__(self) -> bool:
+        return bool(self._list)
+
+
+class LockedDictProxy(Generic[T]):
+    """Thread-safe proxy for dict operations.
+
+    Wraps a dict and uses a lock for all mutating operations.
+    """
+
+    def __init__(self, d: dict[str, T], lock: threading.Lock) -> None:
+        self._dict = d
+        self._lock = lock
+
+    def __setitem__(self, key: str, value: T) -> None:
+        with self._lock:
+            self._dict[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        with self._lock:
+            del self._dict[key]
+
+    def pop(self, key: str, *default: T) -> T:
+        with self._lock:
+            return self._dict.pop(key, *default)
+
+    def update(self, other: dict[str, T]) -> None:
+        with self._lock:
+            self._dict.update(other)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._dict.clear()
+
+    def setdefault(self, key: str, default: T) -> T:
+        with self._lock:
+            return self._dict.setdefault(key, default)
+
+    def __getitem__(self, key: str) -> T:
+        return self._dict[key]
+
+    def __len__(self) -> int:
+        return len(self._dict)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._dict)
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._dict
+
+    def keys(self) -> KeysView[str]:
+        return self._dict.keys()
+
+    def values(self) -> ValuesView[T]:
+        return self._dict.values()
+
+    def items(self) -> ItemsView[str, T]:
+        return self._dict.items()
+
+    def get(self, key: str, default: T | None = None) -> T | None:
+        return self._dict.get(key, default)
+
+    def __repr__(self) -> str:
+        return repr(self._dict)
+
+    def __bool__(self) -> bool:
+        return bool(self._dict)
+
+
 class StateProxy(Generic[T]):
     """Proxy that provides thread-safe access to flow state.
 
@@ -423,7 +556,13 @@ class StateProxy(Generic[T]):
         object.__setattr__(self, "_proxy_lock", lock)
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(object.__getattribute__(self, "_proxy_state"), name)
+        value = getattr(object.__getattribute__(self, "_proxy_state"), name)
+        lock = object.__getattribute__(self, "_proxy_lock")
+        if isinstance(value, list):
+            return LockedListProxy(value, lock)
+        if isinstance(value, dict):
+            return LockedDictProxy(value, lock)
+        return value
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in ("_proxy_state", "_proxy_lock"):
