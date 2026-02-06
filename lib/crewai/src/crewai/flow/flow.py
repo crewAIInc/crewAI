@@ -1593,7 +1593,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 reset_emission_counter()
                 reset_last_event_id()
 
-            # Emit FlowStartedEvent and log the start of the flow.
             if not self.suppress_flow_events:
                 future = crewai_event_bus.emit(
                     self,
@@ -1604,7 +1603,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     ),
                 )
                 if future:
-                    self._event_futures.append(future)
+                    try:
+                        await asyncio.wrap_future(future)
+                    except Exception:
+                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
@@ -1696,6 +1698,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
+            if self._event_futures:
+                await asyncio.gather(
+                    *[asyncio.wrap_future(f) for f in self._event_futures]
+                )
+                self._event_futures.clear()
+
             if not self.suppress_flow_events:
                 future = crewai_event_bus.emit(
                     self,
@@ -1707,13 +1715,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     ),
                 )
                 if future:
-                    self._event_futures.append(future)
-
-            if self._event_futures:
-                await asyncio.gather(
-                    *[asyncio.wrap_future(f) for f in self._event_futures]
-                )
-                self._event_futures.clear()
+                    try:
+                        await asyncio.wrap_future(future)
+                    except Exception:
+                        logger.warning(
+                            "FlowFinishedEvent handler failed", exc_info=True
+                        )
 
             if not self.suppress_flow_events:
                 trace_listener = TraceCollectionListener()
