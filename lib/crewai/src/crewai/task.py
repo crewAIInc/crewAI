@@ -31,6 +31,7 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
@@ -561,6 +562,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -648,6 +650,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
 
     def _execute_core(
         self,
@@ -656,6 +659,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -744,6 +748,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
 
     def _post_agent_execution(self, agent: BaseAgent) -> None:
         pass

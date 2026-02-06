@@ -157,6 +157,176 @@ class TestMultiStepFlows:
 
         assert execution_order == ["generate", "review", "finalize"]
 
+    def test_chained_router_feedback_steps(self):
+        """Test that a router outcome can trigger another router method.
+
+        Regression test: @listen("outcome") combined with @human_feedback(emit=...)
+        creates a method that is both a listener and a router. The flow must find
+        and execute it when the upstream router emits the matching outcome.
+        """
+        execution_order: list[str] = []
+
+        class ChainedRouterFlow(Flow):
+            @start()
+            @human_feedback(
+                message="First review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def draft(self):
+                execution_order.append("draft")
+                return "draft content"
+
+            @listen("approved")
+            @human_feedback(
+                message="Final review:",
+                emit=["publish", "revise"],
+                llm="gpt-4o-mini",
+            )
+            def final_review(self, prev: HumanFeedbackResult):
+                execution_order.append("final_review")
+                return "final content"
+
+            @listen("rejected")
+            def on_rejected(self, prev: HumanFeedbackResult):
+                execution_order.append("on_rejected")
+                return "rejected"
+
+            @listen("publish")
+            def on_publish(self, prev: HumanFeedbackResult):
+                execution_order.append("on_publish")
+                return "published"
+
+            @listen("revise")
+            def on_revise(self, prev: HumanFeedbackResult):
+                execution_order.append("on_revise")
+                return "revised"
+
+        flow = ChainedRouterFlow()
+
+        with (
+            patch.object(
+                flow,
+                "_request_human_feedback",
+                side_effect=["looks good", "ship it"],
+            ),
+            patch.object(
+                flow,
+                "_collapse_to_outcome",
+                side_effect=["approved", "publish"],
+            ),
+        ):
+            result = flow.kickoff()
+
+        assert execution_order == ["draft", "final_review", "on_publish"]
+        assert result == "published"
+        assert len(flow.human_feedback_history) == 2
+        assert flow.human_feedback_history[0].outcome == "approved"
+        assert flow.human_feedback_history[1].outcome == "publish"
+
+    def test_chained_router_rejected_path(self):
+        """Test that a start-router outcome routes to a non-router listener."""
+        execution_order: list[str] = []
+
+        class ChainedRouterFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def draft(self):
+                execution_order.append("draft")
+                return "draft"
+
+            @listen("approved")
+            @human_feedback(
+                message="Final:",
+                emit=["publish", "revise"],
+                llm="gpt-4o-mini",
+            )
+            def final_review(self, prev: HumanFeedbackResult):
+                execution_order.append("final_review")
+                return "final"
+
+            @listen("rejected")
+            def on_rejected(self, prev: HumanFeedbackResult):
+                execution_order.append("on_rejected")
+                return "rejected"
+
+        flow = ChainedRouterFlow()
+
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="bad"
+            ),
+            patch.object(
+                flow, "_collapse_to_outcome", return_value="rejected"
+            ),
+        ):
+            result = flow.kickoff()
+
+        assert execution_order == ["draft", "on_rejected"]
+        assert result == "rejected"
+        assert len(flow.human_feedback_history) == 1
+        assert flow.human_feedback_history[0].outcome == "rejected"
+
+    def test_router_and_non_router_listeners_for_same_outcome(self):
+        """Test that both router and non-router listeners fire for the same outcome."""
+        execution_order: list[str] = []
+
+        class MixedListenerFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def draft(self):
+                execution_order.append("draft")
+                return "draft"
+
+            @listen("approved")
+            @human_feedback(
+                message="Final:",
+                emit=["publish", "revise"],
+                llm="gpt-4o-mini",
+            )
+            def router_listener(self, prev: HumanFeedbackResult):
+                execution_order.append("router_listener")
+                return "final"
+
+            @listen("approved")
+            def plain_listener(self, prev: HumanFeedbackResult):
+                execution_order.append("plain_listener")
+                return "logged"
+
+            @listen("publish")
+            def on_publish(self, prev: HumanFeedbackResult):
+                execution_order.append("on_publish")
+                return "published"
+
+        flow = MixedListenerFlow()
+
+        with (
+            patch.object(
+                flow,
+                "_request_human_feedback",
+                side_effect=["approve it", "publish it"],
+            ),
+            patch.object(
+                flow,
+                "_collapse_to_outcome",
+                side_effect=["approved", "publish"],
+            ),
+        ):
+            flow.kickoff()
+
+        assert "draft" in execution_order
+        assert "router_listener" in execution_order
+        assert "plain_listener" in execution_order
+        assert "on_publish" in execution_order
+
 
 class TestStateManagement:
     """Tests for state management with human feedback."""
