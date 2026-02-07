@@ -213,6 +213,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset execution state so that a reused executor starts clean.
+        # Without this, messages and iterations from a previous task leak
+        # into the next task's LLM context (see issue #4389).
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         self._inject_multimodal_files(inputs)
@@ -1114,6 +1120,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         Returns:
             Dictionary with agent output.
         """
+        # Reset execution state so that a reused executor starts clean.
+        # Without this, messages and iterations from a previous task leak
+        # into the next task's LLM context (see issue #4389).
+        self.messages = []
+        self.iterations = 0
+
         self._setup_messages(inputs)
 
         await self._ainject_multimodal_files(inputs)
