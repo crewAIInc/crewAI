@@ -238,8 +238,9 @@ class GovernedAgent:
         """Check output for policy violations.
         
         Note: For non-string outputs, violations are detected and logged,
-        but the original object is returned. To fully sanitize complex
-        objects, serialize them first.
+        but the original object is returned to preserve type compatibility.
+        Violations can be retrieved via get_violations(). For string outputs,
+        blocked content is replaced with [BLOCKED] and length is truncated.
         """
         if output is None:
             return output
@@ -271,8 +272,17 @@ class GovernedAgent:
         if isinstance(output, str):
             return output_str
         elif was_modified:
-            # Non-string output with violations - return sanitized string representation
-            return output_str
+            # Non-string output with violations - log warning but return original object
+            # to avoid breaking downstream consumers that expect specific types.
+            # The violation has already been recorded; callers can check get_violations()
+            # if they need to know about content issues.
+            logger.warning(
+                "Content violation detected in non-string output (type: %s). "
+                "Returning original object to preserve type. Violations: %d",
+                type(output).__name__,
+                len(self._violations)
+            )
+            return output
         return output
 
     def _record_violation(
