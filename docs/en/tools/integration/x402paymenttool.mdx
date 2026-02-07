@@ -1,0 +1,201 @@
+---
+title: x402 Payment Tool
+description: Enables CrewAI agents to pay for APIs with USDC using the x402 payment protocol
+icon: credit-card
+mode: "wide"
+---
+
+# `X402PaymentTool`
+
+The `X402PaymentTool` enables CrewAI agents to access any x402-enabled API by automatically handling payments. Instead of API keys and subscriptions, your agents pay per request in USDC with cryptographic proof.
+
+## Installation
+
+```bash
+pip install crewai-x402
+```
+
+## Requirements
+
+- A wallet private key (for signing USDC payments)
+- USDC balance on a supported network (Base, Ethereum, or testnets)
+
+## Usage
+
+Here's how to use the tool with a CrewAI agent:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_x402 import X402Wallet, X402PaymentTool
+
+# Initialize wallet with spending budget
+wallet = X402Wallet(
+    private_key="your-private-key-hex",
+    network="base-mainnet",
+    budget_usd=10.00  # Agent can't spend more than $10
+)
+
+# Create the payment tool
+payment_tool = X402PaymentTool(wallet=wallet)
+
+# Create a CrewAI agent that uses the tool
+researcher = Agent(
+    role='Research Analyst',
+    goal='Gather data from paid APIs to complete research tasks',
+    backstory='I am an analyst with access to premium data sources.',
+    tools=[payment_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description="Get sentiment analysis for the latest tech earnings reports from the paid API.",
+    agent=researcher,
+    expected_output="A summary of sentiment across major tech companies."
+)
+
+# Create a crew with the agent
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=True
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+## Tool Arguments
+
+| Argument | Type | Required | Default | Description |
+|:---------|:-----|:---------|:--------|:------------|
+| **wallet** | `X402Wallet` | Yes | None | Wallet instance for signing payments |
+| **auto_pay** | `bool` | No | True | Automatically pay when within budget |
+| **timeout** | `float` | No | 30.0 | HTTP timeout in seconds |
+
+## Wallet Arguments
+
+| Argument | Type | Required | Default | Description |
+|:---------|:-----|:---------|:--------|:------------|
+| **private_key** | `str` | Yes | None | Hex-encoded wallet private key |
+| **network** | `str` | Yes | None | Network name (e.g., "base-mainnet") |
+| **budget_usd** | `float` | Yes | None | Maximum USD the agent can spend |
+
+## Supported Networks
+
+| Network | Chain ID | Environment |
+|:--------|:---------|:------------|
+| `base-mainnet` | 8453 | Production |
+| `base-sepolia` | 84532 | Testnet |
+| `ethereum-mainnet` | 1 | Production |
+| `arc-testnet` | 5042002 | Testnet |
+
+## Environment Variables
+
+```bash
+WALLET_PRIVATE_KEY=your-private-key-hex  # Alternative to passing private_key
+```
+
+## How It Works
+
+1. Agent requests a resource using the tool
+2. If the server returns `402 Payment Required`, the tool reads the payment requirements
+3. Tool signs a USDC payment authorization (EIP-3009)
+4. Tool retries the request with the signed payment
+5. Server settles on-chain and returns the data
+
+All of this happens automatically in a single tool invocation.
+
+## Advanced Usage
+
+### Budget Controls and Monitoring
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_x402 import X402Wallet, X402PaymentTool
+
+# Initialize wallet with strict budget
+wallet = X402Wallet(
+    private_key="your-private-key-hex",
+    network="base-mainnet",
+    budget_usd=5.00
+)
+
+payment_tool = X402PaymentTool(wallet=wallet)
+
+# After running tasks, check spending
+print(f"Remaining budget: ${wallet.remaining_usd}")
+
+# Get detailed spending summary
+summary = wallet.get_payment_summary()
+print(f"Total spent: ${summary['spent_usd']}")
+print(f"Payments made: {summary['payment_count']}")
+```
+
+### Per-Request Price Limits
+
+```python
+# Limit how much the agent pays for a single request
+result = payment_tool.run(
+    url="https://api.example.com/expensive-endpoint",
+    max_price_usd=0.05  # Won't pay more than $0.05
+)
+```
+
+### Multi-Agent Crew with Shared Wallet
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_x402 import X402Wallet, X402PaymentTool
+
+# Single wallet shared across agents
+wallet = X402Wallet(
+    private_key="your-private-key-hex",
+    network="base-mainnet",
+    budget_usd=20.00
+)
+
+# Each agent gets its own tool instance but shares the wallet budget
+researcher_tool = X402PaymentTool(wallet=wallet)
+analyst_tool = X402PaymentTool(wallet=wallet)
+
+researcher = Agent(
+    role='Data Researcher',
+    goal='Gather raw data from paid sources',
+    backstory='Expert at finding and retrieving data.',
+    tools=[researcher_tool]
+)
+
+analyst = Agent(
+    role='Data Analyst',
+    goal='Analyze and synthesize research findings',
+    backstory='Expert at interpreting complex data.',
+    tools=[analyst_tool]
+)
+
+crew = Crew(
+    agents=[researcher, analyst],
+    tasks=[...],
+    process=Process.sequential
+)
+
+result = crew.kickoff()
+
+# Check total spending across all agents
+print(f"Total crew spending: ${wallet.spent_usd}")
+```
+
+## Use Cases
+
+- **Hybrid collaborations** - Combine CrewAI agents with paid third-party APIs without managing credentials
+- **Research automation** - Access premium data sources programmatically
+- **Cost control** - Set budgets to prevent runaway spending
+- **Micropayments** - Pay only for what you use, per request
+
+## Resources
+
+- [PyPI Package](https://pypi.org/project/crewai-x402/)
+- [GitHub Repository](https://github.com/kmatthewsio/crewai-x402)
+- [x402 Protocol Specification](https://x402.org)
+- [Try the Sandbox](https://sandbox.agentrails.io/swagger)
