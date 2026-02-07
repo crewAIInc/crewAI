@@ -23,7 +23,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Restore global uv cache
         id: cache-restore
@@ -38,7 +38,7 @@ jobs:
             uv-main-py${{ matrix.python-version }}-
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}

@@ -11,7 +11,7 @@ jobs:
     env:
       TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -31,7 +31,7 @@ jobs:
             uv-main-py3.11-
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           version: "0.8.4"
           python-version: "3.11"
