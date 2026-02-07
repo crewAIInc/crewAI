@@ -258,6 +258,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise RuntimeError("Agent loop did not produce a final answer")
         return answer
 
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop asynchronously and return the result.
+
+        Required by AsyncExecutorContext protocol.
+        """
+        self._state.iterations = 0
+        self._state.is_finished = False
+        self._state.current_answer = None
+
+        await self.akickoff()
+
+        answer = self._state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent loop did not produce a final answer")
+        return answer
+
     def _format_feedback_message(self, feedback: str) -> LLMMessage:
         """Format feedback as a message for the LLM.
 
@@ -1173,7 +1189,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
 
             if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
+                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
             self._create_short_term_memory(formatted_answer)
             self._create_long_term_memory(formatted_answer)
@@ -1389,6 +1405,20 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         """
         provider = get_provider()
         return provider.handle_feedback(formatted_answer, self)
+
+    async def _ahandle_human_feedback(
+        self, formatted_answer: AgentFinish
+    ) -> AgentFinish:
+        """Process human feedback asynchronously and refine answer.
+
+        Args:
+            formatted_answer: Initial agent result.
+
+        Returns:
+            Final answer after feedback.
+        """
+        provider = get_provider()
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.

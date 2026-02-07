@@ -1009,7 +1009,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             raise
 
         if self.ask_for_human_input:
-            formatted_answer = self._handle_human_feedback(formatted_answer)
+            formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
         self._create_short_term_memory(formatted_answer)
         self._create_long_term_memory(formatted_answer)
@@ -1507,6 +1507,20 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         provider = get_provider()
         return provider.handle_feedback(formatted_answer, self)
+
+    async def _ahandle_human_feedback(
+        self, formatted_answer: AgentFinish
+    ) -> AgentFinish:
+        """Process human feedback asynchronously via the configured provider.
+
+        Args:
+            formatted_answer: Initial agent result.
+
+        Returns:
+            Final answer after feedback.
+        """
+        provider = get_provider()
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
