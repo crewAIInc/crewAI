@@ -81,6 +81,7 @@ class JSExtension(Extension):
 
 
 CREWAI_ORANGE = "#FF5A50"
+HITL_BLUE = "#4A90E2"
 DARK_GRAY = "#333333"
 WHITE = "#FFFFFF"
 GRAY = "#666666"
@@ -225,6 +226,7 @@ def render_interactive(
     nodes_list: list[dict[str, Any]] = []
     for name, metadata in dag["nodes"].items():
         node_type: str = metadata.get("type", "listen")
+        is_human_feedback: bool = metadata.get("is_human_feedback", False)
 
         color_config: dict[str, Any]
         font_color: str
@@ -237,6 +239,17 @@ def render_interactive(
                 "highlight": {
                     "background": "var(--node-bg-start)",
                     "border": "var(--node-border-start)",
+                },
+            }
+            font_color = "var(--node-text-color)"
+            border_width = 3
+        elif node_type == "human_feedback":
+            color_config = {
+                "background": "var(--node-bg-router)",
+                "border": HITL_BLUE,
+                "highlight": {
+                    "background": "var(--node-bg-router)",
+                    "border": HITL_BLUE,
                 },
             }
             font_color = "var(--node-text-color)"
@@ -266,15 +279,56 @@ def render_interactive(
 
         title_parts: list[str] = []
 
-        type_badge_bg: str = (
-            CREWAI_ORANGE if node_type in ["start", "router"] else DARK_GRAY
-        )
+        display_type = node_type
+        type_badge_bg: str
+        if node_type == "human_feedback":
+            type_badge_bg = HITL_BLUE
+            display_type = "HITL"
+        elif node_type in ["start", "router"]:
+            type_badge_bg = CREWAI_ORANGE
+        else:
+            type_badge_bg = DARK_GRAY
+
         title_parts.append(f"""
             <div style="border-bottom: 1px solid rgba(102,102,102,0.15); padding-bottom: 8px; margin-bottom: 10px;">
                 <div style="font-size: 13px; font-weight: 700; color: {DARK_GRAY}; margin-bottom: 6px;">{name}</div>
-                <span style="display: inline-block; background: {type_badge_bg}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{node_type}</span>
+                <span style="display: inline-block; background: {type_badge_bg}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">{display_type}</span>
             </div>
         """)
+
+        if is_human_feedback:
+            feedback_msg = metadata.get("human_feedback_message", "")
+            if feedback_msg:
+                title_parts.append(f"""
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: {GRAY}; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">👤 Human Feedback</div>
+                        <div style="background: rgba(74,144,226,0.08); padding: 6px 8px; border-radius: 4px; font-size: 11px; color: {DARK_GRAY}; border: 1px solid rgba(74,144,226,0.2); line-height: 1.4;">{feedback_msg}</div>
+                    </div>
+                """)
+
+            if metadata.get("human_feedback_emit"):
+                emit_options = metadata["human_feedback_emit"]
+                emit_items = "".join(
+                    [
+                        f'<li style="margin: 3px 0;"><code style="background: rgba(74,144,226,0.08); padding: 2px 6px; border-radius: 3px; font-size: 10px; color: {HITL_BLUE}; border: 1px solid rgba(74,144,226,0.2); font-weight: 600;">{opt}</code></li>'
+                        for opt in emit_options
+                    ]
+                )
+                title_parts.append(f"""
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: {GRAY}; letter-spacing: 0.5px; margin-bottom: 4px; font-weight: 600;">Outcomes</div>
+                        <ul style="list-style: none; padding: 0; margin: 0;">{emit_items}</ul>
+                    </div>
+                """)
+
+            if metadata.get("human_feedback_llm"):
+                llm_model = metadata["human_feedback_llm"]
+                title_parts.append(f"""
+                    <div style="margin-bottom: 8px;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: {GRAY}; letter-spacing: 0.5px; margin-bottom: 3px; font-weight: 600;">LLM</div>
+                        <span style="display: inline-block; background: rgba(102,102,102,0.08); padding: 3px 8px; border-radius: 4px; font-size: 10px; color: {DARK_GRAY}; border: 1px solid rgba(102,102,102,0.12);">{llm_model}</span>
+                    </div>
+                """)
 
         if metadata.get("condition_type"):
             condition = metadata["condition_type"]
@@ -309,7 +363,7 @@ def render_interactive(
                 </div>
             """)
 
-        if metadata.get("router_paths"):
+        if metadata.get("router_paths") and not is_human_feedback:
             paths = metadata["router_paths"]
             paths_items = "".join(
                 [
@@ -365,7 +419,11 @@ def render_interactive(
         edge_dashes: bool | list[int] = False
 
         if edge["is_router_path"]:
-            edge_color = CREWAI_ORANGE
+            source_node = dag["nodes"].get(edge["source"], {})
+            if source_node.get("is_human_feedback", False):
+                edge_color = HITL_BLUE
+            else:
+                edge_color = CREWAI_ORANGE
             edge_dashes = [15, 10]
             if "router_path_label" in edge:
                 edge_label = edge["router_path_label"]
@@ -417,6 +475,7 @@ def render_interactive(
     css_content = css_content.replace("'{{ DARK_GRAY }}'", DARK_GRAY)
     css_content = css_content.replace("'{{ GRAY }}'", GRAY)
     css_content = css_content.replace("'{{ CREWAI_ORANGE }}'", CREWAI_ORANGE)
+    css_content = css_content.replace("'{{ HITL_BLUE }}'", HITL_BLUE)
 
     css_output_path.write_text(css_content, encoding="utf-8")
 
@@ -430,6 +489,7 @@ def render_interactive(
     js_content = js_content.replace("{{ DARK_GRAY }}", DARK_GRAY)
     js_content = js_content.replace("{{ GRAY }}", GRAY)
     js_content = js_content.replace("{{ CREWAI_ORANGE }}", CREWAI_ORANGE)
+    js_content = js_content.replace("{{ HITL_BLUE }}", HITL_BLUE)
     js_content = js_content.replace("'{{ nodeData }}'", dag_nodes_json)
     js_content = js_content.replace("'{{ dagData }}'", dag_full_json)
     js_content = js_content.replace("'{{ nodes_list_json }}'", json.dumps(nodes_list))
@@ -441,6 +501,7 @@ def render_interactive(
 
     html_content = template.render(
         CREWAI_ORANGE=CREWAI_ORANGE,
+        HITL_BLUE=HITL_BLUE,
         DARK_GRAY=DARK_GRAY,
         WHITE=WHITE,
         GRAY=GRAY,
