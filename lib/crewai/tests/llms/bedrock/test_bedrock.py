@@ -948,3 +948,282 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+# =============================================================================
+# System Tools (nova_grounding) Tests
+# =============================================================================
+
+
+def test_bedrock_system_tools_initialization():
+    """
+    Test that BedrockCompletion can be initialized with system_tools parameter.
+    """
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+    assert llm.system_tools == ["nova_grounding"]
+
+
+def test_bedrock_system_tools_in_tool_config(bedrock_mocks):
+    """
+    Test that system tools are properly included in the toolConfig when calling the API.
+    """
+    _, mock_client = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    # Call the LLM
+    llm.call("What is the latest news about AI?")
+
+    # Verify the API was called with system tools in toolConfig
+    mock_client.converse.assert_called_once()
+    call_kwargs = mock_client.converse.call_args[1]
+
+    assert "toolConfig" in call_kwargs
+    tool_config = call_kwargs["toolConfig"]
+    assert "tools" in tool_config
+
+    # Check that system tool is included
+    tools = tool_config["tools"]
+    system_tool_found = False
+    for tool in tools:
+        if "systemTool" in tool:
+            assert tool["systemTool"]["name"] == "nova_grounding"
+            system_tool_found = True
+            break
+
+    assert system_tool_found, "System tool nova_grounding not found in toolConfig"
+
+
+def test_bedrock_citation_extraction(bedrock_mocks):
+    """
+    Test that citations are properly extracted from Bedrock responses with citationsContent.
+    """
+    _, mock_client = bedrock_mocks
+
+    # Mock response with citations (as returned by nova_grounding)
+    mock_response_with_citations = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [
+                    {
+                        'text': 'According to recent reports, AI has made significant advances.',
+                        'citationsContent': {
+                            'citations': [
+                                {
+                                    'location': {
+                                        'web': {
+                                            'url': 'https://example.com/ai-news',
+                                            'domain': 'example.com'
+                                        }
+                                    }
+                                },
+                                {
+                                    'location': {
+                                        'web': {
+                                            'url': 'https://techsite.com/article',
+                                            'domain': 'techsite.com'
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        'usage': {
+            'inputTokens': 10,
+            'outputTokens': 20,
+            'totalTokens': 30
+        }
+    }
+    mock_client.converse.return_value = mock_response_with_citations
+
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    result = llm.call("What is the latest news about AI?")
+
+    # Result should be a BedrockGroundedResponse with citations
+    from crewai.llms.providers.bedrock.completion import BedrockGroundedResponse
+    assert isinstance(result, dict), f"Expected dict (BedrockGroundedResponse), got {type(result)}"
+    assert "text" in result
+    assert "citations" in result
+    assert result["text"] == "According to recent reports, AI has made significant advances."
+    assert len(result["citations"]) == 2
+    assert result["citations"][0]["url"] == "https://example.com/ai-news"
+    assert result["citations"][0]["domain"] == "example.com"
+    assert result["citations"][1]["url"] == "https://techsite.com/article"
+    assert result["citations"][1]["domain"] == "techsite.com"
+
+
+def test_bedrock_no_citations_returns_string(bedrock_mocks):
+    """
+    Test that responses without citations return a plain string (backward compatibility).
+    """
+    _, mock_client = bedrock_mocks
+
+    # Standard response without citations
+    mock_response_no_citations = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [
+                    {'text': 'This is a regular response without citations.'}
+                ]
+            }
+        },
+        'usage': {
+            'inputTokens': 10,
+            'outputTokens': 5,
+            'totalTokens': 15
+        }
+    }
+    mock_client.converse.return_value = mock_response_no_citations
+
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    result = llm.call("Hello, how are you?")
+
+    # Result should be a plain string when no citations are present
+    assert isinstance(result, str), f"Expected str, got {type(result)}"
+    assert result == "This is a regular response without citations."
+
+
+def test_bedrock_system_tools_combined_with_regular_tools(bedrock_mocks):
+    """
+    Test that system tools can be combined with regular tools in the same request.
+    """
+    _, mock_client = bedrock_mocks
+
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    # Define a regular tool
+    regular_tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "get_weather",
+                "description": "Get the current weather",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "string", "description": "The city name"}
+                    },
+                    "required": ["location"]
+                }
+            }
+        }
+    ]
+
+    llm.call("What's the weather in New York?", tools=regular_tools)
+
+    # Verify both regular tools and system tools are in toolConfig
+    mock_client.converse.assert_called_once()
+    call_kwargs = mock_client.converse.call_args[1]
+
+    assert "toolConfig" in call_kwargs
+    tools = call_kwargs["toolConfig"]["tools"]
+
+    # Should have both regular tool and system tool
+    has_regular_tool = any("toolSpec" in t for t in tools)
+    has_system_tool = any("systemTool" in t for t in tools)
+
+    assert has_regular_tool, "Regular tool not found in toolConfig"
+    assert has_system_tool, "System tool not found in toolConfig"
+
+
+def test_bedrock_grounded_response_types_exported():
+    """
+    Test that BedrockCitation and BedrockGroundedResponse types are properly exported.
+    """
+    from crewai.llms.providers.bedrock import (
+        BedrockCitation,
+        BedrockCompletion,
+        BedrockGroundedResponse,
+    )
+
+    # Verify the types are accessible
+    assert BedrockCitation is not None
+    assert BedrockGroundedResponse is not None
+    assert BedrockCompletion is not None
+
+    # Verify they are TypedDicts with expected keys
+    assert "url" in BedrockCitation.__annotations__
+    assert "domain" in BedrockCitation.__annotations__
+    assert "text" in BedrockGroundedResponse.__annotations__
+    assert "citations" in BedrockGroundedResponse.__annotations__
+
+
+def test_bedrock_empty_citations_list(bedrock_mocks):
+    """
+    Test that responses with empty citations list return plain string.
+    """
+    _, mock_client = bedrock_mocks
+
+    # Response with empty citations
+    mock_response_empty_citations = {
+        'output': {
+            'message': {
+                'role': 'assistant',
+                'content': [
+                    {
+                        'text': 'Response with empty citations.',
+                        'citationsContent': {
+                            'citations': []
+                        }
+                    }
+                ]
+            }
+        },
+        'usage': {
+            'inputTokens': 10,
+            'outputTokens': 5,
+            'totalTokens': 15
+        }
+    }
+    mock_client.converse.return_value = mock_response_empty_citations
+
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding"],
+    )
+
+    result = llm.call("Test query")
+
+    # Empty citations should return plain string
+    assert isinstance(result, str), f"Expected str for empty citations, got {type(result)}"
+    assert result == "Response with empty citations."
+
+
+def test_bedrock_multiple_system_tools():
+    """
+    Test that multiple system tools can be configured.
+    """
+    llm = LLM(
+        model="bedrock/amazon.nova-pro-v1:0",
+        system_tools=["nova_grounding", "another_tool"],
+    )
+
+    from crewai.llms.providers.bedrock.completion import BedrockCompletion
+    assert isinstance(llm, BedrockCompletion)
+    assert llm.system_tools == ["nova_grounding", "another_tool"]
+    assert len(llm.system_tools) == 2
