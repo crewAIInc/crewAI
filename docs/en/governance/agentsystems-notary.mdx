@@ -1,0 +1,169 @@
+---
+title: AgentSystems Notary
+description: Tamper-evident audit logging for CrewAI applications.
+icon: stamp
+mode: "wide"
+---
+
+## Overview
+
+AgentSystems Notary creates cryptographically verifiable audit trails for AI systems.
+
+## Why
+
+When AI behavior is questioned by customers, auditors, regulators, insurers, etc., you need to prove what actually happened. Traditional logs don't work: you control them, so third parties have to trust you didn't modify them.
+
+Tamper-evident logging removes that trust requirement.
+
+## How it works
+
+Raw LLM interactions stay in your storage. No third party sees them during normal operation. But cryptographic hashes of each interaction are written to independent, tamper-evident storage (Arweave or the AgentSystems custodied service) at the same time.
+
+If there's ever an audit or dispute, you provide the raw logs. The auditor re-hashes them and compares against the stored hashes. A match indicates the logs are unaltered. A mismatch indicates tampering or corruption.
+
+You control your data, but can't alter it without detection.
+
+**What gets logged:**
+- To your storage: input prompt, response text, agent metadata, session IDs, timestamps
+- To ledger: SHA-256 hash + metadata (e.g. namespace, session ID, timestamps)
+
+## Hash storage options
+
+Hashes (not raw data) can be written to either storage option:
+
+| Storage | Best For | Features |
+|---------|----------|----------|
+| [Decentralized (Arweave)](https://docs.agentsystems.ai/notary/configuration/hash-storage?utm_source=crewai-docs&utm_medium=docs) | No vendor lock-in | Public append-only ledger, open-source verification, no account needed |
+| [Custodied](https://agentsystems.ai/notary?utm_source=crewai-docs&utm_medium=docs) | Managed compliance | Write-once storage, verification UI, signed attestations for audits |
+
+<Note>
+[Custodied plans](https://agentsystems.ai/notary?utm_source=crewai-docs&utm_medium=docs) offer WORM-compliant hash storage, managed signing, and signed attestations.
+</Note>
+
+## Prerequisites
+
+```shell
+pip install agentsystems-notary "crewai[anthropic]" python-dotenv
+```
+
+## Example (decentralized)
+
+<Steps>
+  <Step title="Generate signing key">
+    ```shell
+    openssl genrsa -out arweave-key.pem 4096
+    ```
+    For production, use [AWS KMS or another cloud key management service](https://docs.agentsystems.ai/notary/configuration/signing?utm_source=crewai-docs&utm_medium=docs).
+  </Step>
+  <Step title="Create .env file">
+    Create a `.env` file in your project root:
+    ```
+    # AWS S3 for raw payload storage
+    ORG_AWS_S3_BUCKET_NAME=your-bucket
+    ORG_AWS_S3_ACCESS_KEY_ID=AKIA...
+    ORG_AWS_S3_SECRET_ACCESS_KEY=...
+    ORG_AWS_S3_REGION=us-east-1
+
+    # Path to signing key
+    ARWEAVE_PRIVATE_KEY_PATH=./arweave-key.pem
+
+    # Anthropic
+    ANTHROPIC_API_KEY=sk-ant-...
+    ```
+  </Step>
+  <Step title="Run the crew">
+    ```python
+    import os
+
+    from agentsystems_notary import (
+        CrewAINotary,
+        ArweaveHashStorage,
+        AwsS3StorageConfig,
+        LocalKeySignerConfig,
+        RawPayloadStorage,
+    )
+    from crewai import Agent, Crew, LLM, Task
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
+    # Your S3 bucket for raw LLM payloads
+    s3_config = AwsS3StorageConfig(
+        bucket_name=os.environ["ORG_AWS_S3_BUCKET_NAME"],
+        aws_access_key_id=os.environ["ORG_AWS_S3_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["ORG_AWS_S3_SECRET_ACCESS_KEY"],
+        aws_region=os.environ["ORG_AWS_S3_REGION"],
+    )
+    raw_payload_storage = RawPayloadStorage(storage=s3_config)
+
+    # Local RSA key for signing
+    signer = LocalKeySignerConfig(
+        private_key_path=os.environ["ARWEAVE_PRIVATE_KEY_PATH"],
+    )
+
+    # Arweave for decentralized hash storage
+    arweave_storage = ArweaveHashStorage(
+        namespace="tenant_a1b2c3d4",  # Use an anonymous ID, not a company name
+        signer=signer,
+    )
+
+    # Initialize notary — hooks auto-register with CrewAI
+    notary = CrewAINotary(
+        raw_payload_storage=raw_payload_storage,
+        hash_storage=[arweave_storage],
+        debug=True,
+    )
+
+    # Create crew — all LLM calls are logged automatically
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5-20250929",
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+    )
+
+    agent = Agent(
+        role="Research Analyst",
+        goal="Answer questions accurately",
+        backstory="You are an expert analyst.",
+        llm=llm,
+    )
+
+    task = Task(
+        description="What is the capital of France?",
+        expected_output="The answer to the geography question",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+    print(result)
+    ```
+
+    <Warning>
+    The `namespace` is written to the public ledger. Use an anonymous tenant identifier, not a company name.
+    </Warning>
+  </Step>
+</Steps>
+
+## Verification
+
+**Decentralized (Arweave)**: Download raw payloads from your storage bucket, then verify with the open-source CLI:
+
+```shell
+npm install -g agentsystems-verify
+agentsystems-verify --logs logs.zip
+```
+
+The CLI re-hashes each payload and compares against the hashes stored on Arweave.
+
+Alternatively, the [Verify UI](https://verify.agentsystems.ai?utm_source=crewai-docs&utm_medium=docs) supports both decentralized and custodied verification.
+
+## Configuration
+
+- [Raw payload storage options](https://docs.agentsystems.ai/notary/configuration/raw-payload-storage?utm_source=crewai-docs&utm_medium=docs) (AWS S3, GCS, etc.)
+- [Signers for Arweave](https://docs.agentsystems.ai/notary/configuration/signing?utm_source=crewai-docs&utm_medium=docs) (local key, AWS KMS)
+- [Hash storage options](https://docs.agentsystems.ai/notary/configuration/hash-storage?utm_source=crewai-docs&utm_medium=docs) (Arweave, Custodied)
+
+## Resources
+
+- [Documentation](https://docs.agentsystems.ai/notary/?utm_source=crewai-docs&utm_medium=docs)
+- [GitHub](https://github.com/agentsystems/agentsystems-notary?utm_source=crewai-docs&utm_medium=docs)
