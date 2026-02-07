@@ -189,6 +189,7 @@ class BedrockConverseRequestBody(TypedDict, total=False):
     guardrailConfig: GuardrailConfigurationTypeDef
     additionalModelRequestFields: dict[str, Any]
     additionalModelResponseFieldPaths: list[str]
+    requestMetadata: dict[str, str]
 
 
 class BedrockConverseStreamRequestBody(TypedDict, total=False):
@@ -203,6 +204,7 @@ class BedrockConverseStreamRequestBody(TypedDict, total=False):
     guardrailConfig: GuardrailStreamConfigurationTypeDef
     additionalModelRequestFields: dict[str, Any]
     additionalModelResponseFieldPaths: list[str]
+    requestMetadata: dict[str, str]
 
 
 class BedrockCompletion(BaseLLM):
@@ -244,6 +246,7 @@ class BedrockCompletion(BaseLLM):
         guardrail_config: dict[str, Any] | None = None,
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
+        request_metadata: dict[str, str] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         response_format: type[BaseModel] | None = None,
         **kwargs: Any,
@@ -265,6 +268,8 @@ class BedrockCompletion(BaseLLM):
             guardrail_config: Guardrail configuration for content filtering
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
+            request_metadata: Metadata to include in the request for Bedrock Model
+                            Invocation Logs. Keys and values must be strings.
             interceptor: HTTP interceptor (not yet supported for Bedrock).
             response_format: Pydantic model for structured output. Used as default when
                            response_model is not passed to call()/acall() methods.
@@ -332,6 +337,7 @@ class BedrockCompletion(BaseLLM):
         self.additional_model_response_field_paths = (
             additional_model_response_field_paths
         )
+        self.request_metadata = request_metadata
 
         # Model-specific settings
         self.is_claude_model = "claude" in model.lower()
@@ -450,6 +456,9 @@ class BedrockCompletion(BaseLLM):
                     body["additionalModelResponseFieldPaths"] = (
                         self.additional_model_response_field_paths
                     )
+
+                if self.request_metadata:
+                    body["requestMetadata"] = self.request_metadata
 
                 if self.stream:
                     return self._handle_streaming_converse(
@@ -580,6 +589,9 @@ class BedrockCompletion(BaseLLM):
                     body["additionalModelResponseFieldPaths"] = (
                         self.additional_model_response_field_paths
                     )
+
+                if self.request_metadata:
+                    body["requestMetadata"] = self.request_metadata
 
                 if self.stream:
                     return await self._ahandle_streaming_converse(
