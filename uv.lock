@@ -56,7 +56,7 @@ dev = [
     { name = "types-psycopg2", specifier = "==2.9.21.20251012" },
     { name = "types-pymysql", specifier = "==1.1.0.20250916" },
     { name = "types-pyyaml", specifier = "==6.0.*" },
-    { name = "types-regex", specifier = "==2024.11.6.*" },
+    { name = "types-regex", specifier = "==2026.1.15.*" },
     { name = "types-requests", specifier = "~=2.31.0.6" },
     { name = "vcrpy", specifier = "==7.0.0" },
 ]
@@ -8336,11 +8336,11 @@ wheels = [
 
 [[package]]
 name = "types-regex"
-version = "2024.11.6.20250403"
+version = "2026.1.15.20260116"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/c7/75/012b90c8557d3abb3b58a9073a94d211c8f75c9b2e26bf0d8af7ecf7bc78/types_regex-2024.11.6.20250403.tar.gz", hash = "sha256:3fdf2a70bbf830de4b3a28e9649a52d43dabb57cdb18fbfe2252eefb53666665", size = 12394, upload-time = "2025-04-03T02:54:35.379Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/1a/fefad12cbe6214303d30027933a3e521188d9f283e383a183d9fda5c62fb/types_regex-2026.1.15.20260116.tar.gz", hash = "sha256:7151a9bcc5bbf9ecfccf8335c451aca8204f5a0992e0622aafaf482876cee4f7", size = 12877, upload-time = "2026-01-16T03:21:49.461Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/49/67200c4708f557be6aa4ecdb1fa212d67a10558c5240251efdc799cca22f/types_regex-2024.11.6.20250403-py3-none-any.whl", hash = "sha256:e22c0f67d73f4b4af6086a340f387b6f7d03bed8a0bb306224b75c51a29b0001", size = 10396, upload-time = "2025-04-03T02:54:34.555Z" },
+    { url = "https://files.pythonhosted.org/packages/7c/d4/0d47227ea84365bea532dca287fe73cba985d6e1d3a31a71849a8aa91370/types_regex-2026.1.15.20260116-py3-none-any.whl", hash = "sha256:b20786eacbde2f2a261cbe7f5096f483da995488d196f81e585ffd2dffc555e0", size = 11099, upload-time = "2026-01-16T03:21:48.647Z" },
 ]
 
 [[package]]
