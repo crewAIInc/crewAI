@@ -310,6 +310,9 @@ To enable tracing, do any one of these:
 
     def handle_flow_created(self, flow_name: str, flow_id: str) -> None:
         """Show flow started panel."""
+        if not self.verbose:
+            return
+
         content = self.create_status_content(
             "Starting Flow Execution", flow_name, "blue", ID=flow_id
         )
@@ -318,6 +321,9 @@ To enable tracing, do any one of these:
     def handle_flow_started(self, flow_name: str, flow_id: str) -> None:
         """Show flow started panel."""
         self._show_version_update_message_if_needed()
+
+        if not self.verbose:
+            return
 
         content = Text()
         content.append("Flow Started\n", style="blue bold")
@@ -335,6 +341,9 @@ To enable tracing, do any one of these:
         status: str = "completed",
     ) -> None:
         """Show flow status panel."""
+        if not self.verbose:
+            return
+
         if status == "completed":
             style = "green"
             content_text = "Flow Execution Completed"
