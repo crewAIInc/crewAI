@@ -81,6 +81,7 @@ class LTMSQLiteStorage:
     def load(self, task_description: str, latest_n: int) -> list[dict[str, Any]] | None:
         """Queries the LTM table by task description with error handling."""
         try:
+            latest_n = int(latest_n)
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -172,6 +173,7 @@ class LTMSQLiteStorage:
             List of matching memory entries or None if error occurs.
         """
         try:
+            latest_n = int(latest_n)
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.execute(
                     f"""
