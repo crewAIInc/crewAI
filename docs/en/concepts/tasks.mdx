@@ -46,7 +46,7 @@ crew = Crew(
 ## Task Attributes
 
 | Attribute                              | Parameters              | Type                        | Description                                                                                                     |
-| :------------------------------------- | :---------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| :------------------------------------- | :---------------------- | :-------------------------- | :-------------------------------------------------------------------------------------------------------------- |
 | **Description**                        | `description`           | `str`                       | A clear, concise statement of what the task entails.                                                            |
 | **Expected Output**                    | `expected_output`       | `str`                       | A detailed description of what the task's completion looks like.                                                |
 | **Name** _(optional)_                  | `name`                  | `Optional[str]`             | A name identifier for the task.                                                                                 |
@@ -63,7 +63,7 @@ crew = Crew(
 | **Output Pydantic** _(optional)_       | `output_pydantic`       | `Optional[Type[BaseModel]]` | A Pydantic model for task output.                                                                               |
 | **Callback** _(optional)_              | `callback`              | `Optional[Any]`             | Function/object to be executed after task completion.                                                           |
 | **Guardrail** _(optional)_             | `guardrail`             | `Optional[Callable]`        | Function to validate task output before proceeding to next task.                                                |
-| **Guardrails** _(optional)_            | `guardrails`            | `Optional[List[Callable]    | List[str]]`                                                                                                     | List of guardrails to validate task output before proceeding to next task. |
+| **Guardrails** _(optional)_            | `guardrails`            | `Optional[List[Callable] \| List[str]]` | List of guardrails to validate task output before proceeding to next task.                                       |
 | **Guardrail Max Retries** _(optional)_ | `guardrail_max_retries` | `Optional[int]`             | Maximum number of retries when guardrail validation fails. Defaults to 3.                                       |
 
 <Note type="warning" title="Deprecated: max_retries">
