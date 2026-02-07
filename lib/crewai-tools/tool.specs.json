@@ -8361,6 +8361,126 @@
       }
     },
     {
+      "description": "A tool that searches file contents on disk using regex patterns. Recursively searches files in a directory for matching lines. Returns matching content with line numbers, file paths only, or match counts.",
+      "env_vars": [],
+      "humanized_name": "Search file contents",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool for searching file contents on disk using regex patterns.\n\nRecursively searches files in a directory for lines matching a regex pattern.\nSupports glob filtering, context lines, and multiple output modes.\n\nExample:\n    >>> tool = GrepTool()\n    >>> result = tool.run(pattern=\"def.*main\", path=\"/path/to/project\")\n    >>> result = tool.run(\n    ...     pattern=\"TODO\",\n    ...     path=\"/path/to/project\",\n    ...     glob_pattern=\"*.py\",\n    ...     context_lines=2,\n    ... )",
+        "properties": {},
+        "title": "GrepTool",
+        "type": "object"
+      },
+      "name": "GrepTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Schema for grep tool arguments.",
+        "properties": {
+          "case_insensitive": {
+            "default": false,
+            "description": "Whether to perform case-insensitive matching",
+            "title": "Case Insensitive",
+            "type": "boolean"
+          },
+          "context_lines": {
+            "default": 0,
+            "description": "Number of lines to show before and after each match",
+            "title": "Context Lines",
+            "type": "integer"
+          },
+          "glob_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Glob pattern to filter files (e.g. '*.py', '*.{ts,tsx}')",
+            "title": "Glob Pattern"
+          },
+          "include_line_numbers": {
+            "default": true,
+            "description": "Whether to prefix matching lines with line numbers",
+            "title": "Include Line Numbers",
+            "type": "boolean"
+          },
+          "output_mode": {
+            "default": "content",
+            "description": "Output mode: 'content' shows matching lines, 'files_with_matches' shows only file paths, 'count' shows match counts per file",
+            "enum": [
+              "content",
+              "files_with_matches",
+              "count"
+            ],
+            "title": "Output Mode",
+            "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "File or directory to search in. Defaults to current working directory.",
+            "title": "Path"
+          },
+          "pattern": {
+            "description": "Regex pattern to search for in file contents",
+            "title": "Pattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "title": "GrepToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "Scrape or crawl a website using Hyperbrowser and return the contents in properly formatted markdown or html",
       "env_vars": [
         {
