@@ -1,0 +1,174 @@
+---
+title: "Valyu Extractor Tool"
+description: "Extract clean, structured content from web pages using the Valyu API"
+icon: square-poll-horizontal
+mode: "wide"
+---
+
+The `ValyuExtractorTool` allows CrewAI agents to extract clean, structured content from web pages using the Valyu API. It can process single URLs or lists of URLs (up to 10) and provides options for controlling content length, extraction quality, screenshots, and AI-powered summarization.
+
+## Installation
+
+To use the `ValyuExtractorTool`, you need to install the `valyu` library:
+
+```shell
+pip install 'crewai[tools]' valyu
+```
+
+You also need to set your Valyu API key as an environment variable:
+
+```bash
+export VALYU_API_KEY='your-valyu-api-key'
+```
+
+Get an API key at https://platform.valyu.ai/ (sign up, then create a key from the dashboard).
+
+## Example Usage
+
+Here's how to initialize and use the `ValyuExtractorTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import ValyuExtractorTool
+
+# Ensure VALYU_API_KEY is set in your environment
+# os.environ["VALYU_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+valyu_extractor = ValyuExtractorTool()
+
+# Create an agent that uses the tool
+extractor_agent = Agent(
+    role='Web Content Extractor',
+    goal='Extract key information from specified web pages',
+    backstory='You are an expert at extracting relevant content from websites using the Valyu API.',
+    tools=[valyu_extractor],
+    verbose=True
+)
+
+# Define a task for the agent
+extract_task = Task(
+    description='Extract the main content from the URL https://example.com.',
+    expected_output='A JSON string containing the extracted content from the URL.',
+    agent=extractor_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[extractor_agent],
+    tasks=[extract_task],
+    verbose=True
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `ValyuExtractorTool` accepts the following arguments:
+
+- `urls` (Union[List[str], str]): **Required**. A single URL string or a list of URL strings to extract data from. Maximum 10 URLs per request.
+- `response_length` (Literal["short", "medium", "large", "max"], optional): Content length per result. `"short"` (25K chars), `"medium"` (50K), `"large"` (100K), or `"max"` (unlimited). Defaults to `"short"`.
+- `extract_effort` (Literal["normal", "high", "auto"], optional): Processing quality level. Use `"normal"` for fastest extraction, `"high"` for better quality, or `"auto"` for automatic selection. Defaults to `"normal"`.
+- `screenshot` (bool, optional): Whether to request page screenshots as pre-signed URLs. Defaults to `False`.
+- `summary` (Union[bool, str], optional): Enable AI-powered summarization. Pass `True` for default summary, or a string with custom instructions. Defaults to `False`.
+
+## Advanced Usage
+
+### Multiple URLs with High-Quality Extraction
+
+```python
+# Example with multiple URLs and high extraction effort
+multi_extract_task = Task(
+    description='Extract content from https://example.com and https://anotherexample.org.',
+    expected_output='A JSON string containing the extracted content from both URLs.',
+    agent=extractor_agent
+)
+
+# Configure the tool with custom parameters
+custom_extractor = ValyuExtractorTool(
+    extract_effort='high',
+    response_length='medium',
+    screenshot=True
+)
+
+agent_with_custom_tool = Agent(
+    role="Advanced Content Extractor",
+    goal="Extract comprehensive content with screenshots",
+    tools=[custom_extractor]
+)
+```
+
+### AI-Powered Summarization
+
+```python
+# Initialize with AI summarization
+summarizing_extractor = ValyuExtractorTool(
+    summary=True,  # Enable default summarization
+    response_length='large'
+)
+
+# Or with custom summarization instructions
+custom_summary_extractor = ValyuExtractorTool(
+    summary="Extract key points and main arguments from the article",
+    response_length='medium'
+)
+
+summarizer_agent = Agent(
+    role="Content Summarizer",
+    goal="Extract and summarize web content",
+    tools=[custom_summary_extractor]
+)
+```
+
+### Tool Parameters
+
+You can customize the tool's behavior by setting parameters during initialization:
+
+```python
+# Initialize with custom configuration
+extractor_tool = ValyuExtractorTool(
+    extract_effort='high',      # Better quality extraction
+    response_length='medium',   # 50K character limit
+    screenshot=True,            # Include page screenshots
+    summary=True                # Enable AI summarization
+)
+```
+
+## Features
+
+- **Single or Multiple URLs**: Extract content from one URL or process up to 10 URLs in a single request
+- **Configurable Quality**: Choose between normal (fast) and high (comprehensive) extraction modes
+- **Flexible Content Length**: Control response size from 25K to unlimited characters
+- **Screenshot Support**: Optionally capture page screenshots as pre-signed URLs
+- **AI Summarization**: Get AI-powered summaries with default or custom instructions
+- **Clean Markdown Output**: Returns well-formatted markdown content
+- **Structured Output**: Returns well-formatted JSON containing the extracted content
+- **Error Handling**: Robust handling of network timeouts and extraction errors
+
+## Response Format
+
+The tool returns a JSON string representing the structured data extracted from the provided URL(s).
+
+Common response elements include:
+- **title**: The page title
+- **url**: The processed URL
+- **content**: Main text content in markdown format (or structured JSON if using schema)
+- **description**: Page meta description
+- **source**: Source identifier
+- **price**: Cost for this extraction
+- **length**: Character count of extracted content
+- **screenshot_url**: Pre-signed screenshot URL (when `screenshot=True`)
+
+## Use Cases
+
+- **Content Analysis**: Extract and analyze content from competitor websites
+- **Research**: Gather structured data from multiple sources for analysis
+- **Content Migration**: Extract content from existing websites for migration
+- **Monitoring**: Regular extraction of content for change detection
+- **Data Collection**: Systematic extraction of information from web sources
+- **Summarization**: Get AI-powered summaries of lengthy articles
+
+Refer to the [Valyu API documentation](https://docs.valyu.ai/api-reference/endpoint/contents) for detailed information about the response structure and available options.
