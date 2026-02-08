@@ -143,11 +143,6 @@ python_classes = "Test*"
 python_functions = "test_*"
 
 [tool.uv]
-dev-dependencies = [
-    "pytest-asyncio>=1.3.0",
-    "pytest>=9.0.2",
-    "vcrpy==7.0.0",
-]
 
 # composio-core pins rich<14 but textual requires rich>=14.
 # Override to allow resolution until composio-core relaxes their pin.
