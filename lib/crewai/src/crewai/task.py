@@ -586,10 +586,9 @@ class Task(BaseModel):
 
             self._post_agent_execution(agent)
 
-            if not self._guardrails and not self._guardrail:
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                pydantic_output, json_output = None, None
+            # Always export output to ensure consistent TaskOutput structure
+            # for guardrails, regardless of whether it's the first attempt or a retry
+            pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -687,10 +686,9 @@ class Task(BaseModel):
 
             self._post_agent_execution(agent)
 
-            if not self._guardrails and not self._guardrail:
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                pydantic_output, json_output = None, None
+            # Always export output to ensure consistent TaskOutput structure
+            # for guardrails, regardless of whether it's the first attempt or a retry
+            pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
