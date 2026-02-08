@@ -73,7 +73,6 @@ class ScrapeWebsiteTool(BaseTool):
         website_url: str | None = kwargs.get("website_url", self.website_url)
         if website_url is None:
             raise ValueError("Website URL must be provided.")
-        # html_content = ""
         if self.render_js:
             try:
                 from playwright.sync_api import sync_playwright # noqa: E402
