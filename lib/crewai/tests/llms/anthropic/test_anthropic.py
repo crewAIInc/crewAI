@@ -990,3 +990,117 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+def test_anthropic_strips_trailing_whitespace_from_final_assistant_message():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello. Say world"},
+        {"role": "assistant", "content": "Say: "},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    assert last_msg["role"] == "assistant"
+    assert last_msg["content"] == "Say:"
+    assert not last_msg["content"].endswith(" ")
+
+
+def test_anthropic_strips_trailing_whitespace_tabs_and_newlines():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Response \t\n "},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    assert last_msg["role"] == "assistant"
+    assert last_msg["content"] == "Response"
+
+
+def test_anthropic_does_not_strip_whitespace_from_non_final_assistant_message():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi "},
+        {"role": "user", "content": "How are you?"},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    assert formatted_messages[-1]["role"] == "user"
+    assistant_msg = formatted_messages[1]
+    assert assistant_msg["role"] == "assistant"
+    assert assistant_msg["content"] == "Hi "
+
+
+def test_anthropic_strips_trailing_whitespace_from_list_content_text_block():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": [
+            {"type": "text", "text": "Some response "},
+        ]},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    assert last_msg["role"] == "assistant"
+    last_block = last_msg["content"][-1]
+    assert last_block["text"] == "Some response"
+
+
+def test_anthropic_strips_trailing_whitespace_only_from_last_text_block():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": [
+            {"type": "text", "text": "First block "},
+            {"type": "text", "text": "Last block "},
+        ]},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    blocks = last_msg["content"]
+    assert blocks[0]["text"] == "First block "
+    assert blocks[1]["text"] == "Last block"
+
+
+def test_anthropic_no_strip_when_final_message_is_user():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello "},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    assert last_msg["role"] == "user"
+    assert last_msg["content"] == "Hello "
+
+
+def test_anthropic_empty_assistant_content_not_affected():
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": ""},
+    ]
+
+    formatted_messages, _ = llm._format_messages_for_anthropic(messages)
+
+    last_msg = formatted_messages[-1]
+    assert last_msg["role"] == "assistant"
+    assert last_msg["content"] == ""
