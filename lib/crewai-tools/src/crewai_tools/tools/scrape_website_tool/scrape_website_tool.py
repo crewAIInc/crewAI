@@ -42,6 +42,7 @@ class ScrapeWebsiteTool(BaseTool):
             "Upgrade-Insecure-Requests": "1",
         }
     )
+    render_js: bool = False
 
     def __init__(
         self,
@@ -72,16 +73,38 @@ class ScrapeWebsiteTool(BaseTool):
         website_url: str | None = kwargs.get("website_url", self.website_url)
         if website_url is None:
             raise ValueError("Website URL must be provided.")
+        html_content = ""
+        if self.render_js:
+            try:
+                from playwright.sync_api import sync_playwright
+            except ImportError:
+                raise ImportError(
+                    "Playwright is required for JS rendering. "
+                    "Please install it with: pip install 'crewai-tools[playwright]'"
+                )
 
-        page = requests.get(
-            website_url,
-            timeout=15,
-            headers=self.headers,
-            cookies=self.cookies if self.cookies else {},
-        )
+            with sync_playwright() as p:
+                browser = p.chromium.launch(headless=True)
+                context = browser.new_context()
+                page = context.new_page()
+                try:
+                    page.goto(website_url, wait_until="networkidle")
+                    content = page.content()
+                    return self._process_html(content)
+                finally:
+                    browser.close()
+        else:
+            page = requests.get(
+                website_url,
+                timeout=15,
+                headers=self.headers,
+                cookies=self.cookies if self.cookies else {},
+            )
 
-        page.encoding = page.apparent_encoding
-        parsed = BeautifulSoup(page.text, "html.parser")
+            page.encoding = page.apparent_encoding
+            html_content = page.text
+
+        parsed = BeautifulSoup(html_content, "html.parser")
 
         text = "The following text is scraped website content:\n\n"
         text += parsed.get_text(" ")
