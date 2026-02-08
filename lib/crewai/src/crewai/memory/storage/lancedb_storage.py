@@ -190,6 +190,15 @@ class LanceDBStorage:
             q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
         return q.limit(limit).to_list()
 
+    def list_records(
+        self, scope_prefix: str | None = None, limit: int = 200
+    ) -> list[MemoryRecord]:
+        """List records in a scope, newest first. LanceDB-only (TUI use)."""
+        rows = self._scan_rows(scope_prefix, limit=limit)
+        records = [self._row_to_record(r) for r in rows]
+        records.sort(key=lambda r: r.created_at, reverse=True)
+        return records[:limit]
+
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
         prefix = scope if scope != "/" else ""

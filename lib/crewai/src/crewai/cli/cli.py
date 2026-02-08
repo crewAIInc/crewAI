@@ -246,6 +246,26 @@ def reset_memories(
 
 @crewai.command()
 @click.option(
+    "--storage-path",
+    type=str,
+    default=None,
+    help="Path to LanceDB memory directory. If omitted, uses ./.crewai/memory.",
+)
+def memory(storage_path: str | None) -> None:
+    """Open the Memory TUI to browse scopes and recall memories."""
+    try:
+        from crewai.cli.memory_tui import MemoryTUI
+    except ImportError:
+        click.echo(
+            'Textual is required for the memory TUI. Install with: pip install "crewai[tui]"'
+        )
+        raise SystemExit(1)
+    app = MemoryTUI(storage_path=storage_path)
+    app.run()
+
+
+@crewai.command()
+@click.option(
     "-n",
     "--n_iterations",
     type=int,

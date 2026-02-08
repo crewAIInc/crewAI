@@ -368,6 +368,12 @@ class Memory:
         """List immediate child scopes under path."""
         return self._storage.list_scopes(path)
 
+    def list_records(
+        self, scope: str | None = None, limit: int = 200
+    ) -> list[MemoryRecord]:
+        """List records in a scope, newest first."""
+        return self._storage.list_records(scope_prefix=scope, limit=limit)
+
     def info(self, path: str = "/") -> ScopeInfo:
         """Return scope info for path."""
         return self._storage.get_scope_info(path)
