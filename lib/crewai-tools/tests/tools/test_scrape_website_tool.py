@@ -1,7 +1,14 @@
 import pytest
+try:
+    import playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+
 from unittest.mock import patch, MagicMock
 from crewai_tools.tools.scrape_website_tool.scrape_website_tool import ScrapeWebsiteTool
 
+@pytest.mark.skipif(not PLAYWRIGHT_AVAILABLE, reason="playwright not installed")
 def test_scrape_website_tool_render_js_logic():
     """JavaScript rendering performance validation test with playwright"""
     tool = ScrapeWebsiteTool(website_url="https://example.com", render_js=True)
