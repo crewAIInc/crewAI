@@ -8,21 +8,29 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Input, Static, Tree
 
+# -- CrewAI brand palette --
+_PRIMARY = "#eb6658"  # coral
+_SECONDARY = "#1F7982"  # teal
+_TERTIARY = "#ffffff"  # white
+
 
 def _format_scope_info(info: Any) -> str:
-    """Format ScopeInfo as plain text."""
+    """Format ScopeInfo with Rich markup."""
     return (
-        f"Scope: {info.path}\n"
-        f"Records: {info.record_count}\n"
-        f"Categories: {', '.join(info.categories) or 'none'}\n"
-        f"Oldest: {info.oldest_record or '-'}\n"
-        f"Newest: {info.newest_record or '-'}\n"
-        f"Child scopes: {', '.join(info.child_scopes) or 'none'}"
+        f"[bold {_PRIMARY}]{info.path}[/]\n\n"
+        f"[dim]Records:[/]     [bold]{info.record_count}[/]\n"
+        f"[dim]Categories:[/]  {', '.join(info.categories) or 'none'}\n"
+        f"[dim]Oldest:[/]      {info.oldest_record or '-'}\n"
+        f"[dim]Newest:[/]      {info.newest_record or '-'}\n"
+        f"[dim]Children:[/]    {', '.join(info.child_scopes) or 'none'}"
     )
 
 
 class MemoryTUI(App[None]):
     """TUI to browse memory scopes and run recall queries."""
+
+    TITLE = "CrewAI Memory"
+    SUB_TITLE = "Browse scopes and recall memories"
 
     PAGE_SIZE = 20
 
@@ -31,11 +39,56 @@ class MemoryTUI(App[None]):
         ("p", "prev_page", "Prev page"),
     ]
 
-    CSS = """
-    Horizontal { height: 1fr; }
-    #scope-tree { width: 30%; }
-    #info-panel { width: 70%; overflow-y: auto; }
-    Input { dock: bottom; }
+    CSS = f"""
+    Header {{
+        background: {_PRIMARY};
+        color: {_TERTIARY};
+    }}
+    Footer {{
+        background: {_SECONDARY};
+        color: {_TERTIARY};
+    }}
+    Footer > .footer-key--key {{
+        background: {_PRIMARY};
+        color: {_TERTIARY};
+    }}
+    Horizontal {{
+        height: 1fr;
+    }}
+    #scope-tree {{
+        width: 30%;
+        padding: 1 2;
+        background: {_SECONDARY} 8%;
+        border-right: solid {_SECONDARY};
+    }}
+    #scope-tree:focus > .tree--cursor {{
+        background: {_SECONDARY};
+        color: {_TERTIARY};
+    }}
+    #scope-tree > .tree--guides {{
+        color: {_SECONDARY} 50%;
+    }}
+    #scope-tree > .tree--guides-hover {{
+        color: {_PRIMARY};
+    }}
+    #scope-tree > .tree--guides-selected {{
+        color: {_SECONDARY};
+    }}
+    #info-panel {{
+        width: 70%;
+        padding: 1 2;
+        overflow-y: auto;
+    }}
+    #info-panel LoadingIndicator {{
+        color: {_PRIMARY};
+    }}
+    #recall-input {{
+        margin: 0 1 1 1;
+        border: tall {_SECONDARY};
+    }}
+    #recall-input:focus {{
+        border: tall {_PRIMARY};
+    }}
     """
 
     def __init__(self, storage_path: str | None = None) -> None:
@@ -122,19 +175,26 @@ class MemoryTUI(App[None]):
         lines: list[str] = [_format_scope_info(self._last_scope_info)]
         total = len(self._entries)
         if total == 0:
-            lines.append("\n--- No entries ---")
+            lines.append(f"\n[dim]No entries in this scope.[/]")
         else:
             total_pages = (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE
             page_num = self._page + 1
-            lines.append(f"\n--- Entries (page {page_num} of {total_pages}) ---")
+            lines.append(
+                f"\n[bold {_PRIMARY}]{'─' * 44}[/]\n"
+                f"[bold]Entries[/] [dim](page {page_num} of {total_pages})[/]\n"
+            )
             start = self._page * self.PAGE_SIZE
             end = min(start + self.PAGE_SIZE, total)
             for record in self._entries[start:end]:
                 date_str = record.created_at.strftime("%Y-%m-%d")
                 preview = (record.content[:100] + "…") if len(record.content) > 100 else record.content
-                lines.append(f"{date_str} | importance={record.importance:.1f} | {preview}")
+                lines.append(
+                    f"[{_SECONDARY}]{date_str}[/]  "
+                    f"[bold]{record.importance:.1f}[/]  "
+                    f"[dim]{preview}[/]"
+                )
             if total_pages > 1:
-                lines.append(f"\n[n] next  [p] prev")
+                lines.append(f"\n[dim]\\[n] next  \\[p] prev[/]")
         panel.update("\n".join(lines))
 
     def action_next_page(self) -> None:
@@ -164,7 +224,7 @@ class MemoryTUI(App[None]):
 
     async def _do_recall(self, query: str) -> None:
         panel = self.query_one("#info-panel", Static)
-        panel.update(f"Recalling: {query} ...")
+        panel.loading = True
         try:
             scope = (
                 self._selected_scope
@@ -178,17 +238,20 @@ class MemoryTUI(App[None]):
                 depth="shallow",
             )
             if not matches:
-                panel.update("No memories found.")
+                panel.update(f"[dim]No memories found.[/]")
                 return
             lines: list[str] = []
             for m in matches:
                 content = m.record.content
-                lines.append(f"[{m.score:.2f}] {content[:120]}")
+                score_color = _PRIMARY if m.score >= 0.5 else "dim"
+                lines.append(f"[{score_color}]\\[{m.score:.2f}][/] {content[:120]}")
                 lines.append(
-                    f"       scope={m.record.scope}  "
-                    f"importance={m.record.importance:.1f}"
+                    f"       [dim]scope={m.record.scope}  "
+                    f"importance={m.record.importance:.1f}[/]"
                 )
                 lines.append("")
             panel.update("\n".join(lines))
         except Exception as e:
-            panel.update(f"Error: {e}")
+            panel.update(f"[bold red]Error:[/] {e}")
+        finally:
+            panel.loading = False
