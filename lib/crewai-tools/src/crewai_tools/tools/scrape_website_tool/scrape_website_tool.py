@@ -73,15 +73,15 @@ class ScrapeWebsiteTool(BaseTool):
         website_url: str | None = kwargs.get("website_url", self.website_url)
         if website_url is None:
             raise ValueError("Website URL must be provided.")
-        html_content = ""
+        # html_content = ""
         if self.render_js:
             try:
-                from playwright.sync_api import sync_playwright
+                from playwright.sync_api import sync_playwright # noqa: E402
             except ImportError:
                 raise ImportError(
                     "Playwright is required for JS rendering. "
                     "Please install it with: pip install 'crewai-tools[playwright]'"
-                )
+                ) from None
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
@@ -94,19 +94,19 @@ class ScrapeWebsiteTool(BaseTool):
                 finally:
                     browser.close()
         else:
-            page = requests.get(
+            response = requests.get(
                 website_url,
                 timeout=15,
                 headers=self.headers,
                 cookies=self.cookies if self.cookies else {},
             )
-
-            page.encoding = page.apparent_encoding
-            html_content = page.text
-
+            response.encoding = response.apparent_encoding
+            return self._process_html(response.text)
+    
+    def _process_html(self, html_content: str) -> str:
+        """Processes HTML content and returns a clean text representation."""
         parsed = BeautifulSoup(html_content, "html.parser")
-
         text = "The following text is scraped website content:\n\n"
         text += parsed.get_text(" ")
-        text = re.sub("[ \t]+", " ", text)
-        return re.sub("\\s+\n\\s+", "\n", text)
+        text = re.sub(r"[ \t]+", " ", text)
+        return re.sub(r"\s+\n\s+", "\n", text)
