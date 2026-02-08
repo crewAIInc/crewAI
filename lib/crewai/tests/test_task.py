@@ -1748,3 +1748,50 @@ def test_async_execution_fails():
       with pytest.raises(RuntimeError, match="boom!"):
         execution = task.execute_async(agent=researcher)
         execution.result()
+
+
+def test_task_with_invalid_agent_string_raises_validation_error():
+    with pytest.raises(ValidationError) as exc_info:
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            agent="not_an_agent",
+        )
+    assert "BaseAgent expected a mapping/dictionary, got str" in str(exc_info.value)
+
+
+def test_task_with_invalid_agent_int_raises_validation_error():
+    with pytest.raises(ValidationError) as exc_info:
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=123,
+        )
+    assert "BaseAgent expected a mapping/dictionary, got int" in str(exc_info.value)
+
+
+def test_task_with_invalid_agent_list_raises_validation_error():
+    with pytest.raises(ValidationError) as exc_info:
+        Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=[1, 2, 3],
+        )
+    assert "BaseAgent expected a mapping/dictionary, got list" in str(exc_info.value)
+
+
+def test_task_with_none_agent_is_valid():
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+        agent=None,
+    )
+    assert task.agent is None
+
+
+def test_task_without_agent_is_valid():
+    task = Task(
+        description="Test task",
+        expected_output="Test output",
+    )
+    assert task.agent is None

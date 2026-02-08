@@ -14,7 +14,16 @@ def process_config(
 
     Returns:
         The updated values dictionary.
+
+    Raises:
+        ValueError: If values is not a dictionary (e.g. when an invalid type
+            is passed for a field that expects a Pydantic model).
     """
+    if not isinstance(values, dict):
+        raise ValueError(
+            f"{model_class.__name__} expected a mapping/dictionary, "
+            f"got {type(values).__name__}"
+        )
     config = values.get("config", {})
     if not config:
         return values
