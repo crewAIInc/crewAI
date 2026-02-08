@@ -1,0 +1,316 @@
+"""LanceDB storage backend for the unified memory system."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import lancedb
+
+from crewai.memory.types import MemoryRecord, ScopeInfo
+
+# Default vector size (OpenAI text-embedding-3-small). Caller can pass different dim.
+DEFAULT_VECTOR_DIM = 1536
+
+
+class LanceDBStorage:
+    """LanceDB-backed storage for the unified memory system."""
+
+    def __init__(
+        self,
+        path: str | Path = "./.crewai/memory",
+        table_name: str = "memories",
+        vector_dim: int = DEFAULT_VECTOR_DIM,
+    ) -> None:
+        """Initialize LanceDB storage.
+
+        Args:
+            path: Directory path for the LanceDB database.
+            table_name: Name of the table for memory records.
+            vector_dim: Dimensionality of the embedding vector.
+        """
+        self._path = Path(path)
+        self._path.mkdir(parents=True, exist_ok=True)
+        self._table_name = table_name
+        self._vector_dim = vector_dim
+        self._db = lancedb.connect(str(self._path))
+        self._table = self._get_or_create_table()
+
+    def _get_or_create_table(self) -> lancedb.table.Table:
+        try:
+            return self._db.open_table(self._table_name)
+        except Exception:
+            # Create empty table with schema from first record or placeholder
+            placeholder = [
+                {
+                    "id": "__schema_placeholder__",
+                    "content": "",
+                    "scope": "/",
+                    "categories_str": "[]",
+                    "metadata_str": "{}",
+                    "importance": 0.5,
+                    "created_at": datetime.utcnow().isoformat(),
+                    "last_accessed": datetime.utcnow().isoformat(),
+                    "vector": [0.0] * self._vector_dim,
+                }
+            ]
+            table = self._db.create_table(self._table_name, placeholder)
+            # Remove placeholder row
+            table.delete("id = '__schema_placeholder__'")
+            return table
+
+    def _record_to_row(self, record: MemoryRecord) -> dict[str, Any]:
+        return {
+            "id": record.id,
+            "content": record.content,
+            "scope": record.scope,
+            "categories_str": json.dumps(record.categories),
+            "metadata_str": json.dumps(record.metadata),
+            "importance": record.importance,
+            "created_at": record.created_at.isoformat(),
+            "last_accessed": record.last_accessed.isoformat(),
+            "vector": record.embedding if record.embedding else [0.0] * self._vector_dim,
+        }
+
+    def _row_to_record(self, row: dict[str, Any]) -> MemoryRecord:
+        def _parse_dt(val: Any) -> datetime:
+            if val is None:
+                return datetime.utcnow()
+            if isinstance(val, datetime):
+                return val
+            s = str(val)
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+        return MemoryRecord(
+            id=str(row["id"]),
+            content=str(row["content"]),
+            scope=str(row["scope"]),
+            categories=json.loads(row["categories_str"]) if row.get("categories_str") else [],
+            metadata=json.loads(row["metadata_str"]) if row.get("metadata_str") else {},
+            importance=float(row.get("importance", 0.5)),
+            created_at=_parse_dt(row.get("created_at")),
+            last_accessed=_parse_dt(row.get("last_accessed")),
+            embedding=row.get("vector"),
+        )
+
+    def save(self, records: list[MemoryRecord]) -> None:
+        if not records:
+            return
+        rows = [self._record_to_row(r) for r in records]
+        for r in rows:
+            if r["vector"] is None or len(r["vector"]) != self._vector_dim:
+                r["vector"] = [0.0] * self._vector_dim
+        self._table.add(rows)
+
+    def search(
+        self,
+        query_embedding: list[float],
+        scope_prefix: str | None = None,
+        categories: list[str] | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        limit: int = 10,
+        min_score: float = 0.0,
+    ) -> list[tuple[MemoryRecord, float]]:
+        query = self._table.search(query_embedding)
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            like_val = prefix + "%"
+            query = query.where(f"scope LIKE '{like_val}'")
+        results = query.limit(limit * 3 if (categories or metadata_filter) else limit).to_list()
+        out: list[tuple[MemoryRecord, float]] = []
+        for row in results:
+            record = self._row_to_record(row)
+            if categories and not any(c in record.categories for c in categories):
+                continue
+            if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
+                continue
+            distance = row.get("_distance", 0.0)
+            score = 1.0 / (1.0 + float(distance)) if distance is not None else 1.0
+            if score >= min_score:
+                out.append((record, score))
+            if len(out) >= limit:
+                break
+        return out[:limit]
+
+    def delete(
+        self,
+        scope_prefix: str | None = None,
+        categories: list[str] | None = None,
+        record_ids: list[str] | None = None,
+        older_than: datetime | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> int:
+        if record_ids and not (categories or metadata_filter):
+            before = self._table.count_rows()
+            ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
+            self._table.delete(f"id IN ({ids_expr})")
+            return before - self._table.count_rows()
+        if categories or metadata_filter:
+            rows = self._scan_rows(scope_prefix)
+            to_delete: list[str] = []
+            for row in rows:
+                record = self._row_to_record(row)
+                if categories and not any(c in record.categories for c in categories):
+                    continue
+                if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
+                    continue
+                if older_than and record.created_at >= older_than:
+                    continue
+                to_delete.append(record.id)
+            if not to_delete:
+                return 0
+            before = self._table.count_rows()
+            ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
+            self._table.delete(f"id IN ({ids_expr})")
+            return before - self._table.count_rows()
+        conditions = []
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
+        if older_than is not None:
+            conditions.append(f"created_at < '{older_than.isoformat()}'")
+        if not conditions:
+            # Delete all rows (scope_prefix is "/" or None and no older_than)
+            before = self._table.count_rows()
+            self._table.delete("id != ''")
+            return before - self._table.count_rows()
+        where_expr = " AND ".join(conditions)
+        before = self._table.count_rows()
+        self._table.delete(where_expr)
+        return before - self._table.count_rows()
+
+    def _scan_rows(self, scope_prefix: str | None = None, limit: int = 50_000) -> list[dict[str, Any]]:
+        """Scan rows optionally filtered by scope prefix."""
+        q = self._table.search([0.0] * self._vector_dim)
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+        return q.limit(limit).to_list()
+
+    def get_scope_info(self, scope: str) -> ScopeInfo:
+        scope = scope.rstrip("/") or "/"
+        prefix = scope if scope != "/" else ""
+        if prefix and not prefix.startswith("/"):
+            prefix = "/" + prefix
+        rows = self._scan_rows(prefix or None)
+        if not rows:
+            return ScopeInfo(
+                path=scope or "/",
+                record_count=0,
+                categories=[],
+                oldest_record=None,
+                newest_record=None,
+                child_scopes=[],
+            )
+        categories_set: set[str] = set()
+        oldest: datetime | None = None
+        newest: datetime | None = None
+        child_prefix = (prefix + "/") if prefix else "/"
+        children: set[str] = set()
+        for row in rows:
+            sc = str(row.get("scope", ""))
+            if child_prefix and sc.startswith(child_prefix):
+                rest = sc[len(child_prefix):]
+                if "/" not in rest and rest:
+                    children.add(sc)
+            try:
+                cat_str = row.get("categories_str") or "[]"
+                categories_set.update(json.loads(cat_str))
+            except Exception:
+                pass
+            created = row.get("created_at")
+            if created:
+                dt = datetime.fromisoformat(str(created).replace("Z", "+00:00")) if isinstance(created, str) else created
+                if isinstance(dt, datetime):
+                    if oldest is None or dt < oldest:
+                        oldest = dt
+                    if newest is None or dt > newest:
+                        newest = dt
+        return ScopeInfo(
+            path=scope or "/",
+            record_count=len(rows),
+            categories=sorted(categories_set),
+            oldest_record=oldest,
+            newest_record=newest,
+            child_scopes=sorted(children),
+        )
+
+    def list_scopes(self, parent: str = "/") -> list[str]:
+        parent = parent.rstrip("/") or ""
+        prefix = (parent + "/") if parent else "/"
+        rows = self._scan_rows(prefix if prefix != "/" else None)
+        children: set[str] = set()
+        for row in rows:
+            sc = str(row.get("scope", ""))
+            if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
+                rest = sc[len(prefix):]
+                if "/" not in rest and rest:
+                    children.add(prefix + rest)
+        return sorted(children)
+
+    def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
+        rows = self._scan_rows(scope_prefix)
+        counts: dict[str, int] = {}
+        for row in rows:
+            try:
+                cat_str = row.get("categories_str") or "[]"
+                for c in json.loads(cat_str):
+                    counts[c] = counts.get(c, 0) + 1
+            except Exception:
+                pass
+        return counts
+
+    def count(self, scope_prefix: str | None = None) -> int:
+        if scope_prefix is None or scope_prefix.strip("/") == "":
+            return self._table.count_rows()
+        info = self.get_scope_info(scope_prefix)
+        return info.record_count
+
+    def reset(self, scope_prefix: str | None = None) -> None:
+        if scope_prefix is None or scope_prefix.strip("/") == "":
+            self._db.drop_table(self._table_name)
+            self._table = self._get_or_create_table()
+            return
+        prefix = scope_prefix.rstrip("/")
+        if prefix:
+            self._table.delete(f"scope >= '{prefix}' AND scope < '{prefix}/\uFFFF'")
+
+    async def asave(self, records: list[MemoryRecord]) -> None:
+        self.save(records)
+
+    async def asearch(
+        self,
+        query_embedding: list[float],
+        scope_prefix: str | None = None,
+        categories: list[str] | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+        limit: int = 10,
+        min_score: float = 0.0,
+    ) -> list[tuple[MemoryRecord, float]]:
+        return self.search(
+            query_embedding,
+            scope_prefix=scope_prefix,
+            categories=categories,
+            metadata_filter=metadata_filter,
+            limit=limit,
+            min_score=min_score,
+        )
+
+    async def adelete(
+        self,
+        scope_prefix: str | None = None,
+        categories: list[str] | None = None,
+        record_ids: list[str] | None = None,
+        older_than: datetime | None = None,
+        metadata_filter: dict[str, Any] | None = None,
+    ) -> int:
+        return self.delete(
+            scope_prefix=scope_prefix,
+            categories=categories,
+            record_ids=record_ids,
+            older_than=older_than,
+            metadata_filter=metadata_filter,
+        )

@@ -142,6 +142,13 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+[tool.uv]
+dev-dependencies = [
+    "pytest-asyncio>=1.3.0",
+    "pytest>=9.0.2",
+    "vcrpy>=8.1.1",
+]
+
 
 [tool.uv.workspace]
 members = [

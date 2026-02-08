@@ -1,967 +1,320 @@
 ---
 title: Memória
-description: Aproveitando sistemas de memória no framework CrewAI para aprimorar as capacidades dos agentes.
+description: Aproveitando o sistema de memória unificado no CrewAI para aprimorar as capacidades dos agentes.
 icon: database
 mode: "wide"
 ---
 
 ## Visão Geral
 
-O framework CrewAI oferece um sistema de memória sofisticado projetado para aprimorar significativamente as capacidades dos agentes de IA. O CrewAI disponibiliza **três abordagens distintas de memória** que atendem a diferentes casos de uso:
+O CrewAI oferece um **sistema de memória unificado** que substitui memória de curto prazo, longo prazo, entidades e externa por uma única API inteligente. A memória usa um LLM para analisar o conteúdo ao salvar (inferindo escopo, categorias e importância) e suporta recall com profundidade adaptativa. Você pode usá-la de forma independente, com crews, com agentes ou dentro de Flows.
 
-1. **Sistema Básico de Memória** - Memória de curto prazo, longo prazo e de entidades integradas
-2. **Memória Externa** - Provedores de memória externos autônomos
+## Início Rápido
 
-## Componentes do Sistema de Memória
-
-| Componente             | Descrição                                                                                                                                             |
-| :--------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Memória de Curto Prazo** | Armazena temporariamente interações e resultados recentes usando `RAG`, permitindo que os agentes recordem e utilizem informações relevantes ao contexto atual durante as execuções. |
-| **Memória de Longo Prazo** | Preserva informações valiosas e aprendizados de execuções passadas, permitindo que os agentes construam e refinem seu conhecimento ao longo do tempo. |
-| **Memória de Entidades**    | Captura e organiza informações sobre entidades (pessoas, lugares, conceitos) encontradas durante tarefas, facilitando um entendimento mais profundo e o mapeamento de relacionamentos. Utiliza `RAG` para armazenar informações de entidades. |
-| **Memória Contextual**  | Mantém o contexto das interações combinando `ShortTermMemory`, `LongTermMemory` , `ExternalMemory` e `EntityMemory`, auxiliando na coerência e relevância das respostas dos agentes ao longo de uma sequência de tarefas ou conversas. |
-
-## 1. Sistema Básico de Memória (Recomendado)
-
-A abordagem mais simples e comum de uso. Ative a memória para sua crew com um único parâmetro:
-
-### Início Rápido
 ```python
-from crewai import Crew, Agent, Task, Process
+from crewai import Memory
 
-# Habilitar o sistema básico de memória
+memory = Memory()
+
+# Armazenar — o LLM infere escopo e importância quando não fornecidos
+memory.remember("Decidimos usar PostgreSQL para o banco de dados do usuário.")
+
+# Recuperar
+matches = memory.recall("Qual banco de dados escolhemos?")
+for m in matches:
+    print(m.record.content, m.score)
+
+# Esquecer
+memory.forget(scope="/project/old")
+
+# Explorar
+print(memory.tree())
+print(memory.info("/"))
+```
+
+## Uso com Crews
+
+Ative a memória para uma crew com um único flag ou passe uma instância customizada:
+
+```python
+from crewai import Crew, Agent, Task, Process, Memory
+
+# Opção 1: Memória padrão (cria Memory() com LLM e LanceDB padrão)
 crew = Crew(
     agents=[...],
     tasks=[...],
     process=Process.sequential,
-    memory=True,  # Ativa memória de curto prazo, longo prazo e de entidades
-    verbose=True
+    memory=True,
+    verbose=True,
 )
-```
 
-### Como Funciona
-- **Memória de Curto Prazo**: Usa ChromaDB com RAG para o contexto atual
-- **Memória de Longo Prazo**: Usa SQLite3 para armazenar resultados de tarefas entre sessões
-- **Memória de Entidades**: Usa RAG para rastrear entidades (pessoas, lugares, conceitos)
-- **Local de Armazenamento**: Localidade específica da plataforma via pacote `appdirs`
-- **Diretório de Armazenamento Personalizado**: Defina a variável de ambiente `CREWAI_STORAGE_DIR`
-
-## Transparência no Local de Armazenamento
-
-<Info>
-**Compreendendo os Locais de Armazenamento**: CrewAI utiliza diretórios específicos da plataforma para guardar arquivos de memória e conhecimento seguindo as convenções do sistema operacional. Conhecer esses locais ajuda na implantação em produção, backups e depuração.
-</Info>
-
-### Onde o CrewAI Armazena os Arquivos
-
-Por padrão, o CrewAI usa a biblioteca `appdirs` para determinar os locais de armazenamento conforme a convenção da plataforma. Veja exatamente onde seus arquivos são armazenados:
-
-#### Locais de Armazenamento Padrão por Plataforma
-
-**macOS:**
-```
-~/Library/Application Support/CrewAI/{project_name}/
-├── knowledge/           # Arquivos base de conhecimento ChromaDB
-├── short_term_memory/   # Arquivos de memória de curto prazo ChromaDB  
-├── long_term_memory/    # Arquivos de memória de longo prazo ChromaDB
-├── entities/            # Arquivos de memória de entidades ChromaDB
-└── long_term_memory_storage.db  # Banco de dados SQLite
-```
-
-**Linux:**
-```
-~/.local/share/CrewAI/{project_name}/
-├── knowledge/
-├── short_term_memory/
-├── long_term_memory/
-├── entities/
-└── long_term_memory_storage.db
-```
-
-**Windows:**
-```
-C:\Users\{username}\AppData\Local\CrewAI\{project_name}\
-├── knowledge\
-├── short_term_memory\
-├── long_term_memory\
-├── entities\
-└── long_term_memory_storage.db
-```
-
-### Encontrando Seu Local de Armazenamento
-
-Para ver exatamente onde o CrewAI está armazenando arquivos em seu sistema:
-
-```python
-from crewai.utilities.paths import db_storage_path
-import os
-
-# Obter o caminho base de armazenamento
-storage_path = db_storage_path()
-print(f"CrewAI storage location: {storage_path}")
-
-# Listar todos os diretórios e arquivos do CrewAI
-if os.path.exists(storage_path):
-    print("\nStored files and directories:")
-    for item in os.listdir(storage_path):
-        item_path = os.path.join(storage_path, item)
-        if os.path.isdir(item_path):
-            print(f"📁 {item}/")
-            # Exibir coleções ChromaDB
-            if os.path.exists(item_path):
-                for subitem in os.listdir(item_path):
-                    print(f"   └── {subitem}")
-        else:
-            print(f"📄 {item}")
-else:
-    print("No CrewAI storage directory found yet.")
-```
-
-### Controlando Locais de Armazenamento
-
-#### Opção 1: Variável de Ambiente (Recomendado)
-```python
-import os
-from crewai import Crew
-
-# Definir local de armazenamento personalizado
-os.environ["CREWAI_STORAGE_DIR"] = "./my_project_storage"
-
-# Toda a memória e conhecimento serão salvos em ./my_project_storage/
+# Opção 2: Instância de memória customizada (ex.: caminho de armazenamento ou LLM)
+memory = Memory(storage="./my_memory_db", llm="gpt-4o-mini")
 crew = Crew(
     agents=[...],
     tasks=[...],
-    memory=True
+    process=Process.sequential,
+    memory_instance=memory,
+    verbose=True,
 )
 ```
 
-#### Opção 2: Caminho de Armazenamento Personalizado
+A configuração `embedder` da crew é repassada quando `memory=True` cria o `Memory()` padrão, para você combinar com seu provedor de LLM ou usar embeddings locais.
+
+## Uso com Agentes
+
+Agentes podem usar a memória compartilhada da crew ou uma visão com escopo:
+
 ```python
-import os
-from crewai import Crew
-from crewai.memory import LongTermMemory
-from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
+from crewai import Agent, Memory
 
-# Configurar local de armazenamento personalizado
-custom_storage_path = "./storage"
-os.makedirs(custom_storage_path, exist_ok=True)
+memory = Memory()
+crew_memory = memory.scope("/crew/project-alpha")
 
-crew = Crew(
-    memory=True,
-    long_term_memory=LongTermMemory(
-        storage=LTMSQLiteStorage(
-            db_path=f"{custom_storage_path}/memory.db"
-        )
-    )
+# Agente com memória própria (vê apenas /agent/researcher e abaixo)
+researcher = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    memory=memory.scope("/agent/researcher"),
+)
+
+# Agente usando memória da crew (compartilhada)
+writer = Agent(
+    role="Writer",
+    goal="Write content",
+    backstory="Expert writer",
+    # memory não definido — usa crew._memory quando crew tem memory=True
 )
 ```
 
-#### Opção 3: Armazenamento Específico de Projeto
+## Uso com Flows
+
+Todo Flow tem um atributo `memory` (criado automaticamente se não definido). Use-o nos métodos do flow:
+
 ```python
-import os
-from pathlib import Path
+from crewai.flow import Flow
 
-# Armazenar no diretório do projeto
-project_root = Path(__file__).parent
-storage_dir = project_root / "crewai_storage"
+class ResearchFlow(Flow):
+    @start()
+    def research(self):
+        results = self.do_research()
+        self.remember(f"Pesquisa encontrou: {results}", scope="/research")
+        return results
 
-os.environ["CREWAI_STORAGE_DIR"] = str(storage_dir)
-
-# Todo o armazenamento ficará agora na pasta do projeto
+    @listen(research)
+    def analyze(self, research_results):
+        past = self.recall("resultados de pesquisas anteriores")
+        # Use memórias passadas para contextualizar
+        return self.synthesize(research_results, past)
 ```
 
-### Padrão do Provedor de Embedding
+## Escopos Hierárquicos
 
-<Info>
-**Provedor de Embedding Padrão**: O CrewAI utiliza embeddings do OpenAI por padrão para garantir consistência e confiabilidade. Você pode facilmente customizar para combinar com seu provedor LLM ou utilizar embeddings locais.
-</Info>
+As memórias são organizadas em uma árvore de escopos (ex.: `/`, `/project`, `/project/alpha`). Quando você não passa um escopo para `remember()`, o LLM sugere um com base no conteúdo e nos escopos existentes.
 
-#### Compreendendo o Comportamento Padrão
 ```python
-# Ao utilizar Claude como seu LLM...
-from crewai import Agent, LLM
+memory = Memory()
 
-agent = Agent(
-    role="Analyst",
-    goal="Analyze data",
-    backstory="Expert analyst",
-    llm=LLM(provider="anthropic", model="claude-3-sonnet")  # Usando Claude
+# Restringir todas as operações a uma subárvore
+agent_memory = memory.scope("/agent/researcher")
+agent_memory.remember("Encontrada fonte X.")  # Armazenado em /agent/researcher
+agent_memory.recall("sources")                 # Busca apenas nesse caminho
+
+# Subescopo mais restrito
+project_memory = agent_memory.subscope("project-alpha")
+```
+
+## Fatias de Memória (Memory Slices)
+
+Uma fatia é uma visão sobre múltiplos escopos. Útil para acesso somente leitura a vários ramos (ex.: escopo do agente + conhecimento da empresa):
+
+```python
+# Somente leitura: recall em /agent/researcher e /company/knowledge; remember() levanta erro
+view = memory.slice(
+    scopes=["/agent/researcher", "/company/knowledge"],
+    read_only=True,
 )
+matches = view.recall("política da empresa sobre X", limit=10)
 
-# O CrewAI usará embeddings OpenAI por padrão para garantir consistência
-# Você pode customizar facilmente para combinar com seu provedor preferido
+# Leitura e escrita: é preciso passar escopo explícito para remember()
+view_rw = memory.slice(scopes=["/a", "/b"], read_only=False)
+view_rw.remember("Novo fato", scope="/a", categories=[], importance=0.5)
 ```
 
-#### Personalizando Provedores de Embedding
-```python
-from crewai import Crew
+## Camada de Análise LLM
 
-# Opção 1: Combinar com seu provedor de LLM
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    memory=True,
-    embedder={
-        "provider": "anthropic",  # Combine com seu provedor de LLM
-        "config": {
-            "api_key": "your-anthropic-key",
-            "model": "text-embedding-3-small"
-        }
-    }
+A memória usa o LLM de três formas:
+
+1. **Ao salvar** — Quando você omite escopo, categorias ou importância, o LLM analisa o conteúdo e sugere escopo, categorias, importância e metadados (entidades, datas, tópicos).
+2. **Ao recall** — Para recall profundo/automático, o LLM analisa a consulta (palavras-chave, dicas de tempo, escopos sugeridos, complexidade) para guiar a recuperação.
+3. **Extrair memórias** — `extract_memories(content)` quebra texto bruto (ex.: tarefa + resultado) em afirmações de memória discretas. Os agentes usam isso antes de chamar `remember()` em cada afirmação para que fatos atômicos sejam armazenados em vez de um único bloco grande.
+
+## RecallFlow (Recall Profundo)
+
+`recall()` suporta três profundidades:
+
+- **`depth="shallow"`** — Busca vetorial direta com pontuação composta (semântica + recência + importância). Rápido; usado por padrão quando agentes carregam contexto para uma tarefa.
+- **`depth="deep"`** ou **`depth="auto"`** — Executa um RecallFlow em múltiplas etapas: análise da consulta, seleção de escopo, busca vetorial, roteamento baseado em confiança e exploração recursiva opcional quando a confiança é baixa.
+
+```python
+# Caminho rápido (padrão para contexto de tarefa do agente)
+matches = memory.recall("O que decidimos?", limit=10, depth="shallow")
+
+# Caminho inteligente para perguntas complexas
+matches = memory.recall("Resuma todas as decisões de arquitetura", limit=10, depth="auto")
+```
+
+## Pontuação Composta
+
+A relevância é uma combinação ponderada de similaridade semântica, recência e importância. Configure os pesos via `MemoryConfig`:
+
+```python
+from crewai.memory import Memory, MemoryConfig
+
+config = MemoryConfig(
+    recency_weight=0.3,
+    semantic_weight=0.5,
+    importance_weight=0.2,
+    recency_half_life_days=30,
 )
-
-# Opção 2: Use embeddings locais (sem chamadas para API externa)
-crew = Crew(
-    agents=[agent],
-    tasks=[task],
-    memory=True,
-    embedder={
-        "provider": "ollama",
-        "config": {"model": "mxbai-embed-large"}
-    }
-)
+memory = Memory(config=config)
 ```
 
-### Depuração de Problemas de Armazenamento
+## Descoberta
 
-#### Verifique Permissões do Armazenamento
+Inspecione a hierarquia de escopos e categorias:
+
 ```python
-import os
-from crewai.utilities.paths import db_storage_path
-
-storage_path = db_storage_path()
-print(f"Storage path: {storage_path}")
-print(f"Path exists: {os.path.exists(storage_path)}")
-print(f"Is writable: {os.access(storage_path, os.W_OK) if os.path.exists(storage_path) else 'Path does not exist'}")
-
-# Crie com permissões apropriadas
-if not os.path.exists(storage_path):
-    os.makedirs(storage_path, mode=0o755, exist_ok=True)
-    print(f"Created storage directory: {storage_path}")
+memory.tree()                    # Árvore formatada de escopos e contagem de registros
+memory.tree("/project", max_depth=2)
+memory.info("/project")         # ScopeInfo: record_count, categories, oldest/newest
+memory.list_scopes("/")          # Escopos filhos imediatos
+memory.list_categories()         # Nomes e contagens de categorias (global ou por escopo)
 ```
 
-#### Inspecione Coleções do ChromaDB
-```python
-import chromadb
-from crewai.utilities.paths import db_storage_path
+## Configuração de Embedder Customizado
 
-# Conecte-se ao ChromaDB do CrewAI
-storage_path = db_storage_path()
-chroma_path = os.path.join(storage_path, "knowledge")
-
-if os.path.exists(chroma_path):
-    client = chromadb.PersistentClient(path=chroma_path)
-    collections = client.list_collections()
-    
-    print("ChromaDB Collections:")
-    for collection in collections:
-        print(f"  - {collection.name}: {collection.count()} documentos")
-else:
-    print("No ChromaDB storage found")
-```
-
-#### Resetar Armazenamento (Depuração)
-```python
-from crewai import Crew
-
-# Limpar todo o armazenamento de memória
-crew = Crew(agents=[...], tasks=[...], memory=True)
-
-# Limpar tipos específicos de memória
-crew.reset_memories(command_type='short')     # Memória de curto prazo
-crew.reset_memories(command_type='long')      # Memória de longo prazo  
-crew.reset_memories(command_type='entity')    # Memória de entidades
-crew.reset_memories(command_type='knowledge') # Armazenamento de conhecimento
-```
-
-### Melhores Práticas para Produção
-
-1. **Defina o `CREWAI_STORAGE_DIR`** para um local conhecido em produção para maior controle
-2. **Escolha explicitamente provedores de embeddings** para coincidir com seu setup de LLM
-3. **Monitore o tamanho do diretório de armazenamento** em casos de grande escala
-4. **Inclua diretórios de armazenamento** em sua política de backup
-5. **Defina permissões apropriadas de arquivo** (0o755 para diretórios, 0o644 para arquivos)
-6. **Use caminhos relativos ao projeto** para implantações containerizadas
-
-### Problemas Comuns de Armazenamento
-
-**Erros "ChromaDB permission denied":**
-```bash
-# Corrija permissões
-chmod -R 755 ~/.local/share/CrewAI/
-```
-
-**Erros "Database is locked":**
-```python
-# Certifique-se que apenas uma instância CrewAI acesse o armazenamento
-import fcntl
-import os
-
-storage_path = db_storage_path()
-lock_file = os.path.join(storage_path, ".crewai.lock")
-
-with open(lock_file, 'w') as f:
-    fcntl.flock(f.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-    # Seu código CrewAI aqui
-```
-
-**Armazenamento não persiste entre execuções:**
-```python
-# Verifique se o local do armazenamento é consistente
-import os
-print("CREWAI_STORAGE_DIR:", os.getenv("CREWAI_STORAGE_DIR"))
-print("Current working directory:", os.getcwd())
-print("Computed storage path:", db_storage_path())
-```
-
-## Configuração Personalizada de Embedders
-
-O CrewAI suporta múltiplos provedores de embeddings para oferecer flexibilidade na escolha da melhor opção para seu caso de uso. Aqui está um guia completo para configuração de diferentes provedores de embeddings para seu sistema de memória.
-
-### Por que Escolher Diferentes Provedores de Embeddings?
-
-- **Otimização de Custos**: Embeddings locais (Ollama) são gratuitos após configuração inicial
-- **Privacidade**: Mantenha seus dados locais com Ollama ou use seu provedor preferido na nuvem
-- **Desempenho**: Alguns modelos têm melhor desempenho para domínios ou idiomas específicos
-- **Consistência**: Combine seu provedor de embedding com o de LLM
-- **Conformidade**: Atenda a requisitos regulatórios ou organizacionais
-
-### OpenAI Embeddings (Padrão)
-
-A OpenAI oferece embeddings confiáveis e de alta qualidade para a maioria dos cenários.
+Crews aceitam uma config `embedder` que é repassada ao Memory padrão quando `memory=True`:
 
 ```python
 from crewai import Crew
 
-# Configuração básica OpenAI (usa a variável de ambiente OPENAI_API_KEY)
+# OpenAI (padrão)
 crew = Crew(
     agents=[...],
     tasks=[...],
     memory=True,
     embedder={
         "provider": "openai",
-        "config": {
-            "model": "text-embedding-3-small"  # ou "text-embedding-3-large"
-        }
-    }
-)
-
-# Configuração avançada OpenAI
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {
-            "api_key": "your-openai-api-key",  # Opcional: sobrescreve variável de ambiente
-            "model": "text-embedding-3-large",
-            "dimensions": 1536,  # Opcional: reduz as dimensões para armazenamento menor
-            "organization_id": "your-org-id"  # Opcional: para contas organizacionais
-        }
-    }
-)
-```
-
-### Azure OpenAI Embeddings
-
-Para empresas que utilizam deploys Azure OpenAI.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",  # Use openai como provider para Azure
-        "config": {
-            "api_key": "your-azure-api-key",
-            "api_base": "https://your-resource.openai.azure.com/",
-            "api_type": "azure",
-            "api_version": "2023-05-15",
-            "model": "text-embedding-3-small",
-            "deployment_id": "your-deployment-name"  # Nome do deploy Azure
-        }
-    }
-)
-```
-
-### Google AI Embeddings
-
-Use modelos de embeddings de texto do Google para integração com serviços do Google Cloud.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "google",
-        "config": {
-            "api_key": "your-google-api-key",
-            "model": "text-embedding-004"  # ou "text-embedding-preview-0409"
-        }
-    }
-)
-```
-
-### Vertex AI Embeddings
-
-Para usuários do Google Cloud com acesso ao Vertex AI.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "vertexai",
-        "config": {
-            "project_id": "your-gcp-project-id",
-            "region": "us-central1",  # ou sua região preferencial
-            "api_key": "your-service-account-key",
-            "model_name": "textembedding-gecko"
-        }
-    }
-)
-```
-
-### Ollama Embeddings (Local)
-
-Execute embeddings localmente para privacidade e economia.
-
-```python
-# Primeiro, instale e rode Ollama localmente, depois baixe um modelo de embedding:
-# ollama pull mxbai-embed-large
-
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "ollama",
-        "config": {
-            "model": "mxbai-embed-large",  # ou "nomic-embed-text"
-            "url": "http://localhost:11434/api/embeddings"  # URL padrão do Ollama
-        }
-    }
-)
-
-# Para instalações personalizadas do Ollama
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "ollama",
-        "config": {
-            "model": "mxbai-embed-large",
-            "url": "http://your-ollama-server:11434/api/embeddings"
-        }
-    }
-)
-```
-
-### Cohere Embeddings
-
-Utilize os modelos de embedding da Cohere para suporte multilíngue.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "cohere",
-        "config": {
-            "api_key": "your-cohere-api-key",
-            "model": "embed-english-v3.0"  # ou "embed-multilingual-v3.0"
-        }
-    }
-)
-```
-
-### VoyageAI Embeddings
-
-Embeddings de alto desempenho otimizados para tarefas de recuperação.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "voyageai",
-        "config": {
-            "api_key": "your-voyage-api-key",
-            "model": "voyage-large-2",  # ou "voyage-code-2" para código
-            "input_type": "document"  # ou "query"
-        }
-    }
-)
-```
-
-### AWS Bedrock Embeddings
-
-Para usuários AWS com acesso ao Bedrock.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "bedrock",
-        "config": {
-            "aws_access_key_id": "your-access-key",
-            "aws_secret_access_key": "your-secret-key",
-            "region_name": "us-east-1",
-            "model": "amazon.titan-embed-text-v1"
-        }
-    }
-)
-```
-
-### Hugging Face Embeddings
-
-Utilize modelos open-source do Hugging Face.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "huggingface",
-        "config": {
-            "api_key": "your-hf-token",  # Opcional para modelos públicos
-            "model": "sentence-transformers/all-MiniLM-L6-v2"
-        }
-    }
-)
-```
-
-### IBM Watson Embeddings
-
-Para usuários do IBM Cloud.
-
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "watson",
-        "config": {
-            "api_key": "your-watson-api-key",
-            "url": "your-watson-instance-url",
-            "model": "ibm/slate-125m-english-rtrvr"
-        }
-    }
-)
-```
-
-### Como Escolher o Provedor de Embedding Certo
-
-| Provedor | Melhor Para | Prós | Contras |
-|:---------|:----------|:------|:------|
-| **OpenAI** | Uso geral, confiabilidade | Alta qualidade, bem testado | Custo, requer chave de API |
-| **Ollama** | Privacidade, economia | Gratuito, local, privado | Requer configuração local |
-| **Google AI** | Ecossistema Google | Bom desempenho | Requer conta Google |
-| **Azure OpenAI** | Empresas, conformidade | Recursos corporativos | Configuração mais complexa |
-| **Cohere** | Conteúdo multilíngue | Excelente suporte a idiomas | Uso especializado |
-| **VoyageAI** | Tarefas de busca e recuperação | Otimizado para pesquisa | Provedor mais novo |
-
-### Configuração via Variável de Ambiente
-
-Para segurança, armazene chaves de API em variáveis de ambiente:
-
-```python
-import os
-
-# Configurar variáveis de ambiente
-os.environ["OPENAI_API_KEY"] = "your-openai-key"
-os.environ["GOOGLE_API_KEY"] = "your-google-key"
-os.environ["COHERE_API_KEY"] = "your-cohere-key"
-
-# Use sem expor as chaves no código
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {
-            "model": "text-embedding-3-small"
-            # A chave de API será carregada automaticamente da variável de ambiente
-        }
-    }
-)
-```
-
-### Testando Diferentes Provedores de Embedding
-
-Compare provedores de embedding para o seu caso de uso específico:
-
-```python
-from crewai import Crew
-from crewai.utilities.paths import db_storage_path
-
-# Testar diferentes provedores com os mesmos dados
-providers_to_test = [
-    {
-        "name": "OpenAI",
-        "config": {
-            "provider": "openai",
-            "config": {"model": "text-embedding-3-small"}
-        }
+        "config": {"model": "text-embedding-3-small"},
     },
-    {
-        "name": "Ollama",
-        "config": {
-            "provider": "ollama", 
-            "config": {"model": "mxbai-embed-large"}
-        }
-    }
-]
-
-for provider in providers_to_test:
-    print(f"\nTesting {provider['name']} embeddings...")
-    
-    # Criar crew com embedder específico
-    crew = Crew(
-        agents=[...],
-        tasks=[...],
-        memory=True,
-        embedder=provider['config']
-    )
-    
-    # Execute o teste e meça o desempenho
-    result = crew.kickoff()
-    print(f"{provider['name']} completed successfully")
-```
-
-### Solução de Problemas de Embeddings
-
-**Erros de modelo não encontrado:**
-```python
-# Verifique disponibilidade do modelo
-from crewai.rag.embeddings.configurator import EmbeddingConfigurator
-
-configurator = EmbeddingConfigurator()
-try:
-    embedder = configurator.configure_embedder({
-        "provider": "ollama",
-        "config": {"model": "mxbai-embed-large"}
-    })
-    print("Embedder configured successfully")
-except Exception as e:
-    print(f"Configuration error: {e}")
-```
-
-**Problemas com chave de API:**
-```python
-import os
-
-# Verifique se as chaves de API estão configuradas
-required_keys = ["OPENAI_API_KEY", "GOOGLE_API_KEY", "COHERE_API_KEY"]
-for key in required_keys:
-    if os.getenv(key):
-        print(f"✅ {key} is set")
-    else:
-        print(f"❌ {key} is not set")
-```
-
-**Comparação de desempenho:**
-```python
-import time
-
-def test_embedding_performance(embedder_config, test_text="This is a test document"):
-    start_time = time.time()
-    
-    crew = Crew(
-        agents=[...],
-        tasks=[...],
-        memory=True,
-        embedder=embedder_config
-    )
-    
-    # Simula operação de memória
-    crew.kickoff()
-    
-    end_time = time.time()
-    return end_time - start_time
-
-# Comparar desempenho
-openai_time = test_embedding_performance({
-    "provider": "openai",
-    "config": {"model": "text-embedding-3-small"}
-})
-
-ollama_time = test_embedding_performance({
-    "provider": "ollama", 
-    "config": {"model": "mxbai-embed-large"}
-})
-
-print(f"OpenAI: {openai_time:.2f}s")
-print(f"Ollama: {ollama_time:.2f}s")
-```
-
-## 2. Memória Externa
-
-A Memória Externa fornece um sistema de memória autônomo que opera independentemente da memória interna da crew. Isso é ideal para provedores de memória especializados ou compartilhamento de memória entre aplicações.
-
-### Memória Externa Básica com Mem0
-```python
-import os
-from crewai import Agent, Crew, Process, Task
-from crewai.memory.external.external_memory import ExternalMemory
-
-# Create external memory instance with local Mem0 Configuration
-external_memory = ExternalMemory(
-    embedder_config={
-        "provider": "mem0",
-        "config": {
-            "user_id": "john",
-            "local_mem0_config": {
-                "vector_store": {
-                    "provider": "qdrant",
-                    "config": {"host": "localhost", "port": 6333}
-                },
-                "llm": {
-                    "provider": "openai",
-                    "config": {"api_key": "your-api-key", "model": "gpt-4"}
-                },
-                "embedder": {
-                    "provider": "openai",
-                    "config": {"api_key": "your-api-key", "model": "text-embedding-3-small"}
-                }
-            },
-            "infer": True # Optional defaults to True
-        },
-    }
 )
 
+# Ollama (local, privado)
 crew = Crew(
     agents=[...],
     tasks=[...],
-    external_memory=external_memory,  # Separate from basic memory
-    process=Process.sequential,
-    verbose=True
-)
-```
-
-### Memória Externa Avançada com o Cliente Mem0
-Ao usar o Cliente Mem0, você pode personalizar ainda mais a configuração de memória usando parâmetros como "includes", "excludes", "custom_categories", "infer" e "run_id" (apenas para memória de curto prazo).
-Você pode encontrar mais detalhes na [documentação do Mem0](https://docs.mem0.ai/).
-
-```python
-import os
-from crewai import Agent, Crew, Process, Task
-from crewai.memory.external.external_memory import ExternalMemory
-
-new_categories = [
-    {"lifestyle_management_concerns": "Tracks daily routines, habits, hobbies and interests including cooking, time management and work-life balance"},
-    {"seeking_structure": "Documents goals around creating routines, schedules, and organized systems in various life areas"},
-    {"personal_information": "Basic information about the user including name, preferences, and personality traits"}
-]
-
-os.environ["MEM0_API_KEY"] = "your-api-key"
-
-# Create external memory instance with Mem0 Client
-external_memory = ExternalMemory(
-    embedder_config={
-        "provider": "mem0",
-        "config": {
-            "user_id": "john",
-            "org_id": "my_org_id",        # Optional
-            "project_id": "my_project_id", # Optional
-            "api_key": "custom-api-key"    # Optional - overrides env var
-            "run_id": "my_run_id",        # Optional - for short-term memory
-            "includes": "include1",       # Optional 
-            "excludes": "exclude1",       # Optional
-            "infer": True                 # Optional defaults to True
-            "custom_categories": new_categories  # Optional - custom categories for user memory
-        },
-    }
-)
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    external_memory=external_memory,  # Separate from basic memory
-    process=Process.sequential,
-    verbose=True
-)
-```
-
-### Implementação Personalizada de Armazenamento
-```python
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.storage.interface import Storage
-
-class CustomStorage(Storage):
-    def __init__(self):
-        self.memories = []
-
-    def save(self, value, metadata=None, agent=None):
-        self.memories.append({
-            "value": value, 
-            "metadata": metadata, 
-            "agent": agent
-        })
-
-    def search(self, query, limit=10, score_threshold=0.5):
-        # Implemente sua lógica de busca aqui
-        return [m for m in self.memories if query.lower() in str(m["value"]).lower()]
-
-    def reset(self):
-        self.memories = []
-
-# Usando armazenamento customizado
-external_memory = ExternalMemory(storage=CustomStorage())
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    external_memory=external_memory
-)
-```
-
-## 🧠 Comparação dos Sistemas de Memória
-
-| **Categoria**         | **Recurso**                    | **Memória Básica**            | **Memória Externa**              |
-|------------------------|-------------------------------|-------------------------------|----------------------------------|
-| **Facilidade de Uso**  | Complexidade de Setup         | Simples                       | Média                            |
-|                        | Integração                    | Contextual integrada          | Autônoma                         |
-| **Persistência**       | Armazenamento                 | Arquivos locais               | Customizada / Mem0               |
-|                        | Multi-sessão                  | ✅                             | ✅                               |
-| **Personalização**     | Especificidade do Usuário     | ❌                             | ✅                               |
-|                        | Provedores Customizados       | Limitado                      | Qualquer provedor                |
-| **Aplicação Recomendada** | Recomendado para           | Maioria dos casos             | Necessidades especializadas      |
-
-
-## Provedores de Embedding Suportados
-
-### OpenAI (Padrão)
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {"model": "text-embedding-3-small"}
-    }
-)
-```
-
-### Ollama
-```python
-crew = Crew(
     memory=True,
     embedder={
         "provider": "ollama",
-        "config": {"model": "mxbai-embed-large"}
-    }
+        "config": {"model": "mxbai-embed-large"},
+    },
 )
 ```
 
-### Google AI
+Memory standalone pode receber uma instância de embedder:
+
 ```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "google",
-        "config": {
-            "api_key": "your-api-key",
-            "model": "text-embedding-004"
-        }
-    }
-)
+from crewai.rag.embeddings.factory import build_embedder
+from crewai import Memory
+
+embedder = build_embedder({"provider": "openai", "config": {}})
+memory = Memory(embedder=embedder)
 ```
 
-### Azure OpenAI
+| Provider       | Best For                       | Notes                    |
+| -------------- | ------------------------------ | ------------------------- |
+| **OpenAI**     | General use                    | Default, high quality     |
+| **Ollama**     | Privacy, cost savings          | Local, no API key         |
+| **Google AI**  | Google ecosystem               | gemini-embedding-001      |
+| **Azure OpenAI** | Enterprise                   | Same config shape as OpenAI |
+| **Cohere**     | Multilingual                   | embed-english-v3.0        |
+| **VoyageAI**   | Retrieval tasks                | voyage-3                  |
+| **Bedrock**    | AWS                            | amazon.titan-embed-text   |
+| **Hugging Face** | Open-source models           | sentence-transformers     |
+
+## Backend de Armazenamento
+
+- **Padrão**: LanceDB, armazenado em `./.crewai/memory` (ou o caminho que você passar como `storage="path/to/dir"`).
+- **Backend customizado**: Implemente o protocolo `StorageBackend` (veja `crewai.memory.storage.backend`) e passe uma instância para `Memory(storage=your_backend)`.
+
+## Comportamento em Caso de Falha
+
+Se o LLM falhar durante a análise (erro de rede, limite de taxa, resposta inválida), a memória degrada de forma graciosa:
+
+- **Análise de save** — Um aviso é registrado e a memória ainda é armazenada com escopo padrão `/`, categorias vazias e importância `0.5`.
+- **Extrair memórias** — O conteúdo completo é armazenado como uma única memória para que nada seja descartado.
+- **Análise de consulta** — O recall usa fallback para seleção simples de escopo e busca vetorial, então você ainda obtém resultados.
+
+Nenhuma exceção é levantada para essas falhas de análise; apenas falhas de armazenamento ou do embedder irão levantar.
+
+## Nota sobre Privacidade
+
+O conteúdo da memória é enviado ao LLM configurado para análise (escopo/categorias/importância no save, análise de consulta e recall profundo opcional). Para dados sensíveis, use um LLM local (ex.: Ollama) ou garanta que seu provedor atenda aos requisitos de conformidade.
+
+## Eventos de Memória
+
+Todas as operações de memória emitem eventos com `source_type="unified_memory"`. Você pode escutar para tempo, erros e conteúdo.
+
+| Event | Description | Key Properties |
+| :---- | :---------- | :------------- |
+| **MemoryQueryStartedEvent** | Query begins | `query`, `limit` |
+| **MemoryQueryCompletedEvent** | Query succeeds | `query`, `results`, `query_time_ms` |
+| **MemoryQueryFailedEvent** | Query fails | `query`, `error` |
+| **MemorySaveStartedEvent** | Save begins | `value`, `metadata` |
+| **MemorySaveCompletedEvent** | Save succeeds | `value`, `save_time_ms` |
+| **MemorySaveFailedEvent** | Save fails | `value`, `error` |
+| **MemoryRetrievalStartedEvent** | Agent retrieval starts | `task_id` |
+| **MemoryRetrievalCompletedEvent** | Agent retrieval done | `task_id`, `memory_content`, `retrieval_time_ms` |
+
+Exemplo: monitorar tempo de consulta:
+
 ```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {
-            "api_key": "your-api-key",
-            "api_base": "https://your-resource.openai.azure.com/",
-            "api_version": "2023-05-15",
-            "model_name": "text-embedding-3-small"
-        }
-    }
-)
-```
+from crewai.events import BaseEventListener, MemoryQueryCompletedEvent
 
-### Vertex AI
-```python
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "vertexai",
-        "config": {
-            "project_id": "your-project-id",
-            "region": "your-region",
-            "api_key": "your-api-key",
-            "model_name": "textembedding-gecko"
-        }
-    }
-)
-```
-
-## Melhores Práticas de Segurança
-
-### Variáveis de Ambiente
-```python
-import os
-from crewai import Crew
-
-# Armazene dados sensíveis em variáveis de ambiente
-crew = Crew(
-    memory=True,
-    embedder={
-        "provider": "openai",
-        "config": {
-            "api_key": os.getenv("OPENAI_API_KEY"),
-            "model": "text-embedding-3-small"
-        }
-    }
-)
-```
-
-### Segurança no Armazenamento
-```python
-import os
-from crewai import Crew
-from crewai.memory import LongTermMemory
-from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
-
-# Use caminhos seguros para armazenamento
-storage_path = os.getenv("CREWAI_STORAGE_DIR", "./storage")
-os.makedirs(storage_path, mode=0o700, exist_ok=True)  # Permissões restritas
-
-crew = Crew(
-    memory=True,
-    long_term_memory=LongTermMemory(
-        storage=LTMSQLiteStorage(
-            db_path=f"{storage_path}/memory.db"
-        )
-    )
-)
+class MemoryMonitor(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_done(source, event):
+            if getattr(event, "source_type", None) == "unified_memory":
+                print(f"Query '{event.query}' completed in {event.query_time_ms:.0f}ms")
 ```
 
 ## Solução de Problemas
 
-### Problemas Comuns
+**Memória não persiste?**
+- Garanta que o caminho de armazenamento seja gravável (padrão `./.crewai/memory`). Passe `storage="./your_path"` para usar outro diretório.
+- Ao usar uma crew, confirme que `memory=True` ou `memory_instance=...` está definido.
 
-**A memória não está persistindo entre sessões?**
-- Verifique a variável de ambiente `CREWAI_STORAGE_DIR`
-- Garanta permissões de escrita no diretório de armazenamento
-- Certifique-se que a memória está ativada com `memory=True`
+**Recall lento?**
+- Use `depth="shallow"` para contexto rotineiro do agente. Reserve `depth="auto"` ou `"deep"` para consultas complexas.
 
-**Erros de autenticação no Mem0?**
-- Verifique se a variável de ambiente `MEM0_API_KEY` está definida
-- Confira permissões da chave de API no painel do Mem0
-- Certifique-se de que o pacote `mem0ai` está instalado
+**Erros de análise LLM nos logs?**
+- A memória ainda salva/recupera com padrões seguros. Verifique chaves de API, limites de taxa e disponibilidade do modelo se quiser análise LLM completa.
 
-**Alto uso de memória com grandes volumes de dados?**
-- Considere usar Memória Externa com armazenamento personalizado
-- Implemente paginação nos métodos de busca do armazenamento customizado
-- Utilize modelos de embedding menores para menor consumo de memória
+**Resetar memória (ex.: para testes):**
+```python
+crew.reset_memories(command_type="memory")  # Reseta memória unificada
+# Ou em uma instância Memory:
+memory.reset()           # Todos os escopos
+memory.reset(scope="/project/old")  # Apenas essa subárvore
+```
 
-### Dicas de Desempenho
+## Benefícios
 
-- Use `memory=True` para a maioria dos casos (mais simples e rápido)
-- Só utilize Memória de Usuário se precisar de persistência específica por usuário
-- Considere Memória Externa para necessidades de grande escala ou especializadas
-- Prefira modelos de embedding menores para maior rapidez
-- Defina limites apropriados de busca para controlar o tamanho da recuperação
-
-## Benefícios do Sistema de Memória do CrewAI
-
-- 🦾 **Aprendizado Adaptativo:** As crews tornam-se mais eficientes ao longo do tempo, adaptando-se a novas informações e refinando sua abordagem para tarefas.
-- 🫡 **Personalização Avançada:** A memória permite que agentes lembrem preferências do usuário e interações passadas, proporcionando experiências personalizadas.
-- 🧠 **Melhoria na Resolução de Problemas:** O acesso a um rico acervo de memória auxilia os agentes a tomar decisões mais informadas, recorrendo a aprendizados prévios e contextuais.
-
-## Conclusão
-
-Integrar o sistema de memória do CrewAI em seus projetos é simples. Ao aproveitar os componentes e configurações oferecidos, 
-você rapidamente capacita seus agentes a lembrar, raciocinar e aprender com suas interações, desbloqueando novos níveis de inteligência e capacidade.
+- **API única** — Uma classe `Memory` para todos os casos de uso; sem tipos separados short/long/entity/external.
+- **Organizada por LLM** — Escopo e categorias inferidos do conteúdo; extração atômica opcional para recall mais limpo.
+- **Recall adaptativo** — Caminho shallow para velocidade, caminho deep para perguntas complexas com roteamento baseado em confiança.
+- **Visões composáveis** — Escopos e fatias para acesso por agente ou multi-escopo sem fragmentar o armazenamento.
+- **Observável** — Eventos para cada save e query para monitorar e depurar.

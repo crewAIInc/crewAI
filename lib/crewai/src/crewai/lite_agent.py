@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import time
 from functools import wraps
 import inspect
 import json
@@ -47,6 +48,11 @@ from crewai.events.types.agent_events import (
     LiteAgentExecutionCompletedEvent,
     LiteAgentExecutionErrorEvent,
     LiteAgentExecutionStartedEvent,
+)
+from crewai.events.types.memory_events import (
+    MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
+    MemoryRetrievalStartedEvent,
 )
 from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.flow.flow_trackable import FlowTrackable
@@ -244,6 +250,10 @@ class LiteAgent(FlowTrackable, BaseModel):
         description="A2A (Agent-to-Agent) configuration for delegating tasks to remote agents. "
         "Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of configurations.",
     )
+    memory: bool | Any | None = Field(
+        default=None,
+        description="If True, use default Memory(). If Memory/MemoryScope/MemorySlice, use it for recall and remember.",
+    )
     tools_results: list[dict[str, Any]] = Field(
         default_factory=list, description="Results of the tools used by the agent."
     )
@@ -266,6 +276,7 @@ class LiteAgent(FlowTrackable, BaseModel):
     _after_llm_call_hooks: list[AfterLLMCallHookType] = PrivateAttr(
         default_factory=get_after_llm_call_hooks
     )
+    _memory: Any = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def emit_deprecation_warning(self) -> Self:
@@ -361,6 +372,19 @@ class LiteAgent(FlowTrackable, BaseModel):
                 cast(object, LLMGuardrail(description=self.guardrail, llm=self.llm)),
             )
 
+        return self
+
+    @model_validator(mode="after")
+    def resolve_memory(self) -> Self:
+        """Resolve memory field to _memory: default Memory() when True, else user instance or None."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
+
+            object.__setattr__(self, "_memory", Memory())
+        elif self.memory is not None and self.memory is not False:
+            object.__setattr__(self, "_memory", self.memory)
+        else:
+            object.__setattr__(self, "_memory", None)
         return self
 
     @field_validator("guardrail", mode="before")
@@ -474,6 +498,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             self._messages = self._format_messages(
                 messages, response_format=response_format, input_files=input_files
             )
+            self._inject_memory_context()
 
             return self._execute_core(
                 agent_info=agent_info, response_format=response_format
@@ -496,6 +521,80 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
             raise e
 
+    def _get_last_user_content(self) -> str:
+        """Get the last user message content from _messages for recall/input."""
+        for msg in reversed(self._messages):
+            if msg.get("role") == "user":
+                content = msg.get("content")
+                return content if isinstance(content, str) else ""
+        return ""
+
+    def _inject_memory_context(self) -> None:
+        """Recall relevant memories and append to the system message. No-op if _memory is None."""
+        if self._memory is None:
+            return
+        query = self._get_last_user_content()
+        crewai_event_bus.emit(
+            self,
+            event=MemoryRetrievalStartedEvent(
+                task_id=None,
+                source_type="lite_agent",
+            ),
+        )
+        start_time = time.time()
+        memory_block = ""
+        try:
+            matches = self._memory.recall(query, limit=10, depth="shallow")
+            if matches:
+                memory_block = "Relevant memories:\n" + "\n".join(
+                    f"- {m.record.content}" for m in matches
+                )
+            if memory_block:
+                formatted = self.i18n.slice("memory").format(memory=memory_block)
+                if self._messages and self._messages[0].get("role") == "system":
+                    self._messages[0]["content"] = (
+                        self._messages[0].get("content", "") + "\n\n" + formatted
+                    )
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalCompletedEvent(
+                    task_id=None,
+                    memory_content=memory_block,
+                    retrieval_time_ms=(time.time() - start_time) * 1000,
+                    source_type="lite_agent",
+                ),
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                event=MemoryRetrievalFailedEvent(
+                    task_id=None,
+                    source_type="lite_agent",
+                    error=str(e),
+                ),
+            )
+
+    def _save_to_memory(self, output_text: str) -> None:
+        """Extract discrete memories from the run and remember each. No-op if _memory is None."""
+        if self._memory is None:
+            return
+        input_str = self._get_last_user_content() or "User request"
+        try:
+            raw = (
+                f"Input: {input_str}\n"
+                f"Agent: {self.role}\n"
+                f"Result: {output_text}"
+            )
+            extracted = self._memory.extract_memories(raw)
+            for mem in extracted:
+                self._memory.remember(mem)
+        except Exception as e:
+            if self.verbose:
+                self._printer.print(
+                    content=f"Failed to save to memory: {e}",
+                    color="yellow",
+                )
+
     def _execute_core(
         self, agent_info: dict[str, Any], response_format: type[BaseModel] | None = None
     ) -> LiteAgentOutput:
@@ -511,6 +610,8 @@ class LiteAgent(FlowTrackable, BaseModel):
 
         # Execute the agent using invoke loop
         agent_finish = self._invoke_loop()
+        if self._memory is not None:
+            self._save_to_memory(agent_finish.output)
         formatted_result: BaseModel | None = None
 
         active_response_format = response_format or self.response_format

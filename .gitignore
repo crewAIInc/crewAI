@@ -27,3 +27,5 @@ conceptual_plan.md
 build_image
 chromadb-*.lock
 .claude
+.crewai/memory
+blogs/*

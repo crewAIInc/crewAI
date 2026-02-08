@@ -199,6 +199,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and 'crewai-amp:mcp-name' for AMP marketplace. Use '#tool_name' suffix for specific tools.",
     )
+    memory: Any = Field(
+        default=None,
+        description="Memory instance for this agent (Memory, MemoryScope, or MemorySlice). If not set, falls back to crew memory.",
+    )
 
     @model_validator(mode="before")
     @classmethod

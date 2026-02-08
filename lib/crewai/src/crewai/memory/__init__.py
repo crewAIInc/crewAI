@@ -1,13 +1,22 @@
-from crewai.memory.entity.entity_memory import EntityMemory
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.long_term.long_term_memory import LongTermMemory
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
+"""Memory module: unified Memory with LLM analysis and pluggable storage."""
 
-
+from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.unified_memory import Memory
+from crewai.memory.types import (
+    MemoryConfig,
+    MemoryMatch,
+    MemoryRecord,
+    ScopeInfo,
+    compute_composite_score,
+)
 
 __all__ = [
-    "EntityMemory",
-    "ExternalMemory",
-    "LongTermMemory",
-    "ShortTermMemory",
+    "Memory",
+    "MemoryConfig",
+    "MemoryMatch",
+    "MemoryRecord",
+    "MemoryScope",
+    "MemorySlice",
+    "ScopeInfo",
+    "compute_composite_score",
 ]

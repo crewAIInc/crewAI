@@ -16,6 +16,7 @@ import pytest
 from crewai import LLM, Agent
 from crewai.flow import Flow, start
 from crewai.tools import BaseTool
+from crewai.types.usage_metrics import UsageMetrics
 
 
 # A simple test tool
@@ -1064,3 +1065,97 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
     agent2.kickoff("Say hello")
 
     mock_printer.print.assert_not_called()
+
+
+# --- LiteAgent memory integration ---
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_none_default():
+    """With memory=None (default), _memory is None and no memory is used."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=None,
+        verbose=False,
+    )
+    assert agent._memory is None
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_true_resolves_to_default_memory():
+    """With memory=True, _memory is a Memory instance."""
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Ok"
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=True,
+        verbose=False,
+    )
+    assert agent._memory is not None
+    assert isinstance(agent._memory, Memory)
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_memory_instance_recall_and_save_called():
+    """With a custom memory instance, kickoff calls recall and then extract_memories/remember."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: The answer is 42."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    mock_memory = Mock()
+    mock_memory.recall.return_value = []
+    mock_memory.extract_memories.return_value = ["Fact one.", "Fact two."]
+
+    agent = LiteAgent(
+        role="Test",
+        goal="Test goal",
+        backstory="Test backstory",
+        llm=mock_llm,
+        memory=mock_memory,
+        verbose=False,
+    )
+    assert agent._memory is mock_memory
+
+    agent.kickoff("What is the answer?")
+
+    mock_memory.recall.assert_called_once()
+    call_kw = mock_memory.recall.call_args[1]
+    assert call_kw.get("limit") == 10
+    assert call_kw.get("depth") == "shallow"
+    mock_memory.extract_memories.assert_called_once()
+    assert mock_memory.remember.call_count == 2
+    mock_memory.remember.assert_any_call("Fact one.")
+    mock_memory.remember.assert_any_call("Fact two.")

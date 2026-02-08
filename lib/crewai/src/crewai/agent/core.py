@@ -71,7 +71,6 @@ from crewai.mcp import (
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
-from crewai.memory.contextual.contextual_memory import ContextualMemory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.tools.agent_tools.agent_tools import AgentTools
@@ -311,19 +310,12 @@ class Agent(BaseAgent):
             raise ValueError(f"Invalid Knowledge Configuration: {e!s}") from e
 
     def _is_any_available_memory(self) -> bool:
-        """Check if any memory is available."""
-        if not self.crew:
-            return False
-
-        memory_attributes = [
-            "memory",
-            "_short_term_memory",
-            "_long_term_memory",
-            "_entity_memory",
-            "_external_memory",
-        ]
-
-        return any(getattr(self.crew, attr) for attr in memory_attributes)
+        """Check if unified memory is available (agent or crew)."""
+        if getattr(self, "memory", None):
+            return True
+        if self.crew and getattr(self.crew, "_memory", None):
+            return True
+        return False
 
     def _supports_native_tool_calling(self, tools: list[BaseTool]) -> bool:
         """Check if the LLM supports native function calling with the given tools.
@@ -387,15 +379,16 @@ class Agent(BaseAgent):
             memory = ""
 
             try:
-                contextual_memory = ContextualMemory(
-                    self.crew._short_term_memory,
-                    self.crew._long_term_memory,
-                    self.crew._entity_memory,
-                    self.crew._external_memory,
-                    agent=self,
-                    task=task,
+                unified_memory = getattr(self, "memory", None) or (
+                    getattr(self.crew, "_memory", None) if self.crew else None
                 )
-                memory = contextual_memory.build_context_for_task(task, context or "")
+                if unified_memory is not None:
+                    query = task.description
+                    matches = unified_memory.recall(query, limit=10, depth="shallow")
+                    if matches:
+                        memory = "Relevant memories:\n" + "\n".join(
+                            f"- {m.record.content}" for m in matches
+                        )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
 
@@ -624,17 +617,16 @@ class Agent(BaseAgent):
             memory = ""
 
             try:
-                contextual_memory = ContextualMemory(
-                    self.crew._short_term_memory,
-                    self.crew._long_term_memory,
-                    self.crew._entity_memory,
-                    self.crew._external_memory,
-                    agent=self,
-                    task=task,
+                unified_memory = getattr(self, "memory", None) or (
+                    getattr(self.crew, "_memory", None) if self.crew else None
                 )
-                memory = await contextual_memory.abuild_context_for_task(
-                    task, context or ""
-                )
+                if unified_memory is not None:
+                    query = task.description
+                    matches = unified_memory.recall(query, limit=10, depth="shallow")
+                    if matches:
+                        memory = "Relevant memories:\n" + "\n".join(
+                            f"- {m.record.content}" for m in matches
+                        )
                 if memory.strip() != "":
                     task_prompt += self.i18n.slice("memory").format(memory=memory)
 

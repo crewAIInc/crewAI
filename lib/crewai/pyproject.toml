@@ -39,6 +39,7 @@ dependencies = [
     "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
+    "lancedb>=0.4.0",
 ]
 
 [project.urls]

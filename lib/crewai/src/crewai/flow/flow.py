@@ -700,6 +700,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
+    memory: Any = None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -767,6 +768,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 ),
             )
 
+        # Auto-create memory if not provided at class or instance level
+        if self.memory is None:
+            from crewai.memory.unified_memory import Memory
+
+            self.memory = Memory()
+
         # Register all flow-related methods
         for method_name in dir(self):
             if not method_name.startswith("_"):
@@ -776,6 +783,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
+
+    def recall(self, query: str, **kwargs: Any) -> Any:
+        """Recall relevant memories. Delegates to this flow's memory.
+
+        Args:
+            query: Natural language query.
+            **kwargs: Passed to memory.recall (e.g. scope, categories, limit, depth).
+
+        Returns:
+            Result of memory.recall(query, **kwargs).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.recall(query, **kwargs)
+
+    def remember(self, content: str, **kwargs: Any) -> Any:
+        """Store content in memory. Delegates to this flow's memory.
+
+        Args:
+            content: Text to remember.
+            **kwargs: Passed to memory.remember (e.g. scope, categories, metadata).
+
+        Returns:
+            Result of memory.remember(content, **kwargs).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.remember(content, **kwargs)
+
+    def extract_memories(self, content: str) -> list[str]:
+        """Extract discrete memories from content. Delegates to this flow's memory.
+
+        Args:
+            content: Raw text (e.g. task + result dump).
+
+        Returns:
+            List of short, self-contained memory statements.
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.extract_memories(content)
 
     def _mark_or_listener_fired(self, listener_name: FlowMethodName) -> bool:
         """Mark an OR listener as fired atomically.

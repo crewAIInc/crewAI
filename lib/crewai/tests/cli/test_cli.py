@@ -85,39 +85,41 @@ def test_reset_all_memories(mock_get_crews, runner):
     assert call_count == 1, "reset_memories should have been called once"
 
 
-def test_reset_short_term_memories(mock_get_crews, runner):
-    result = runner.invoke(reset_memories, ["-s"])
+def test_reset_memory(mock_get_crews, runner):
+    result = runner.invoke(reset_memories, ["-m"])
     call_count = 0
     for crew in mock_get_crews.return_value:
-        crew.reset_memories.assert_called_once_with(command_type="short")
+        crew.reset_memories.assert_called_once_with(command_type="memory")
         assert (
-            f"[Crew ({crew.name})] Short term memory has been reset." in result.output
+            f"[Crew ({crew.name})] Memory has been reset." in result.output
         )
         call_count += 1
 
     assert call_count == 1, "reset_memories should have been called once"
 
 
-def test_reset_entity_memories(mock_get_crews, runner):
+def test_reset_short_flag_deprecated_maps_to_memory(mock_get_crews, runner):
+    result = runner.invoke(reset_memories, ["-s"])
+    assert "deprecated" in result.output.lower()
+    for crew in mock_get_crews.return_value:
+        crew.reset_memories.assert_called_once_with(command_type="memory")
+        assert f"[Crew ({crew.name})] Memory has been reset." in result.output
+
+
+def test_reset_entity_flag_deprecated_maps_to_memory(mock_get_crews, runner):
     result = runner.invoke(reset_memories, ["-e"])
-    call_count = 0
+    assert "deprecated" in result.output.lower()
     for crew in mock_get_crews.return_value:
-        crew.reset_memories.assert_called_once_with(command_type="entity")
-        assert f"[Crew ({crew.name})] Entity memory has been reset." in result.output
-        call_count += 1
-
-    assert call_count == 1, "reset_memories should have been called once"
+        crew.reset_memories.assert_called_once_with(command_type="memory")
+        assert f"[Crew ({crew.name})] Memory has been reset." in result.output
 
 
-def test_reset_long_term_memories(mock_get_crews, runner):
+def test_reset_long_flag_deprecated_maps_to_memory(mock_get_crews, runner):
     result = runner.invoke(reset_memories, ["-l"])
-    call_count = 0
+    assert "deprecated" in result.output.lower()
     for crew in mock_get_crews.return_value:
-        crew.reset_memories.assert_called_once_with(command_type="long")
-        assert f"[Crew ({crew.name})] Long term memory has been reset." in result.output
-        call_count += 1
-
-    assert call_count == 1, "reset_memories should have been called once"
+        crew.reset_memories.assert_called_once_with(command_type="memory")
+        assert f"[Crew ({crew.name})] Memory has been reset." in result.output
 
 
 def test_reset_kickoff_outputs(mock_get_crews, runner):
@@ -134,17 +136,14 @@ def test_reset_kickoff_outputs(mock_get_crews, runner):
     assert call_count == 1, "reset_memories should have been called once"
 
 
-def test_reset_multiple_memory_flags(mock_get_crews, runner):
+def test_reset_multiple_legacy_flags_collapsed_to_single_memory_reset(mock_get_crews, runner):
     result = runner.invoke(reset_memories, ["-s", "-l"])
+    # Both legacy flags collapse to a single --memory reset
+    assert "deprecated" in result.output.lower()
     call_count = 0
     for crew in mock_get_crews.return_value:
-        crew.reset_memories.assert_has_calls(
-            [mock.call(command_type="long"), mock.call(command_type="short")]
-        )
-        assert (
-            f"[Crew ({crew.name})] Long term memory has been reset.\n"
-            f"[Crew ({crew.name})] Short term memory has been reset.\n" in result.output
-        )
+        crew.reset_memories.assert_called_once_with(command_type="memory")
+        assert f"[Crew ({crew.name})] Memory has been reset." in result.output
         call_count += 1
 
     assert call_count == 1, "reset_memories should have been called once"

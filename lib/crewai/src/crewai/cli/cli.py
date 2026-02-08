@@ -179,9 +179,19 @@ def log_tasks_outputs() -> None:
 
 
 @crewai.command()
-@click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
-@click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
-@click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option("-m", "--memory", is_flag=True, help="Reset MEMORY")
+@click.option(
+    "-l", "--long", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
+@click.option(
+    "-s", "--short", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
+@click.option(
+    "-e", "--entities", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
 @click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
     "-akn", "--agent-knowledge", is_flag=True, help="Reset AGENT KNOWLEDGE storage"
@@ -191,6 +201,7 @@ def log_tasks_outputs() -> None:
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
 def reset_memories(
+    memory: bool,
     long: bool,
     short: bool,
     entities: bool,
@@ -200,13 +211,22 @@ def reset_memories(
     all: bool,
 ) -> None:
     """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
+    Reset the crew memories (memory, knowledge, agent_knowledge, kickoff_outputs). This will delete all the data saved.
     """
     try:
+        # Treat legacy flags as --memory with a deprecation warning
+        if long or short or entities:
+            legacy_used = [
+                f for f, v in [("--long", long), ("--short", short), ("--entities", entities)] if v
+            ]
+            click.echo(
+                f"Warning: {', '.join(legacy_used)} {'is' if len(legacy_used) == 1 else 'are'} "
+                "deprecated. Use --memory (-m) instead. All memory is now unified."
+            )
+            memory = True
+
         memory_types = [
-            long,
-            short,
-            entities,
+            memory,
             knowledge,
             agent_knowledge,
             kickoff_outputs,
@@ -218,7 +238,7 @@ def reset_memories(
             )
             return
         reset_memories_command(
-            long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all
+            memory, knowledge, agent_knowledge, kickoff_outputs, all
         )
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
