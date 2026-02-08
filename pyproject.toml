@@ -149,6 +149,11 @@ dev-dependencies = [
     "vcrpy>=8.1.1",
 ]
 
+# composio-core pins rich<14 but textual requires rich>=14.
+# Override to allow resolution until composio-core relaxes their pin.
+override-dependencies = [
+    "rich>=13.7.1",
+]
 
 [tool.uv.workspace]
 members = [

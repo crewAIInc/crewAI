@@ -257,7 +257,8 @@ def memory(storage_path: str | None) -> None:
         from crewai.cli.memory_tui import MemoryTUI
     except ImportError:
         click.echo(
-            'Textual is required for the memory TUI. Install with: pip install "crewai[tui]"'
+            "Textual is required for the memory TUI but could not be imported. "
+            "Try reinstalling crewai or: pip install textual"
         )
         raise SystemExit(1)
     app = MemoryTUI(storage_path=storage_path)

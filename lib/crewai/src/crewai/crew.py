@@ -35,8 +35,6 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
-    from crewai.memory.memory_scope import MemoryScope, MemorySlice
-    from crewai.memory.unified_memory import Memory
 
 try:
     from crewai_files import get_supported_content_types
@@ -190,7 +188,7 @@ class Crew(FlowTrackable, BaseModel):
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Memory | MemoryScope | MemorySlice = Field(
+    memory: bool | Any = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
