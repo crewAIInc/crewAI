@@ -416,13 +416,18 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
-class LockedListProxy(Generic[T]):
+class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     """Thread-safe proxy for list operations.
 
-    Wraps a list and uses a lock for all mutating operations.
+    Subclasses ``list`` so that ``isinstance(proxy, list)`` returns True,
+    which is required by libraries like LanceDB and Pydantic that do strict
+    type checks. All mutations go through the lock; reads delegate to the
+    underlying list.
     """
 
     def __init__(self, lst: list[T], lock: threading.Lock) -> None:
+        # Do NOT call super().__init__() -- we don't want to copy data into
+        # the builtin list storage. All access goes through self._list.
         self._list = lst
         self._lock = lock
 
@@ -477,13 +482,17 @@ class LockedListProxy(Generic[T]):
         return bool(self._list)
 
 
-class LockedDictProxy(Generic[T]):
+class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     """Thread-safe proxy for dict operations.
 
-    Wraps a dict and uses a lock for all mutating operations.
+    Subclasses ``dict`` so that ``isinstance(proxy, dict)`` returns True,
+    which is required by libraries like Pydantic that do strict type checks.
+    All mutations go through the lock; reads delegate to the underlying dict.
     """
 
     def __init__(self, d: dict[str, T], lock: threading.Lock) -> None:
+        # Do NOT call super().__init__() -- we don't want to copy data into
+        # the builtin dict storage. All access goes through self._dict.
         self._dict = d
         self._lock = lock
 
