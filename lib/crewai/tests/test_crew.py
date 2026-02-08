@@ -4452,7 +4452,7 @@ def test_crew_copy_with_memory():
         assert hasattr(crew_copy, "_memory"), "Copied crew should have _memory"
         assert crew_copy._memory is not None, "Copied _memory should not be None"
         assert crew_copy._memory is crew._memory, (
-            "Copy passes memory_instance=self._memory so clone shares the same memory"
+            "Copy passes memory=self._memory so clone shares the same memory"
         )
 
     except pydantic_core.ValidationError as e:

@@ -58,7 +58,39 @@ class Memory:
         llm: BaseLLM | str = "gpt-4o-mini",
         storage: StorageBackend | str = "lancedb",
         embedder: Any = None,
-        config: MemoryConfig | None = None,
+        # -- Scoring weights --
+        # These three weights control how recall results are ranked.
+        # The composite score is: semantic_weight * similarity + recency_weight * decay + importance_weight * importance.
+        # They should sum to ~1.0 for intuitive scoring.
+        recency_weight: float = 0.3,
+        semantic_weight: float = 0.5,
+        importance_weight: float = 0.2,
+        # How quickly old memories lose relevance. The recency score halves every
+        # N days (exponential decay). Lower = faster forgetting; higher = longer relevance.
+        recency_half_life_days: int = 30,
+        # -- Consolidation --
+        # When remembering new content, if an existing record has similarity >= this
+        # threshold, the LLM is asked to merge/update/delete. Set to 1.0 to disable.
+        consolidation_threshold: float = 0.85,
+        # Max existing records to compare against when checking for consolidation.
+        consolidation_limit: int = 5,
+        # -- Save defaults --
+        # Importance assigned to new memories when no explicit value is given and
+        # the LLM analysis path is skipped (all fields provided by the caller).
+        default_importance: float = 0.5,
+        # -- Recall depth control --
+        # These thresholds govern the RecallFlow router that decides between
+        # returning results immediately ("synthesize") vs. doing an extra
+        # LLM-driven exploration round ("explore_deeper").
+        #   confidence >= confidence_threshold_high  => always synthesize
+        #   confidence <  confidence_threshold_low   => explore deeper (if budget > 0)
+        #   complex query + confidence < complex_query_threshold => explore deeper
+        confidence_threshold_high: float = 0.8,
+        confidence_threshold_low: float = 0.5,
+        complex_query_threshold: float = 0.7,
+        # How many LLM-driven exploration rounds the RecallFlow is allowed to run.
+        # 0 = always shallow (vector search only); higher = more thorough but slower.
+        exploration_budget: int = 1,
     ) -> None:
         """Initialize Memory.
 
@@ -66,11 +98,33 @@ class Memory:
             llm: LLM for analysis (model name or BaseLLM instance).
             storage: Backend: "lancedb" or a StorageBackend instance.
             embedder: Embedding function; None => default OpenAI.
-            config: Optional retrieval config; None => defaults.
+            recency_weight: Weight for recency in the composite relevance score.
+            semantic_weight: Weight for semantic similarity in the composite relevance score.
+            importance_weight: Weight for importance in the composite relevance score.
+            recency_half_life_days: Recency score halves every N days (exponential decay).
+            consolidation_threshold: Similarity above which consolidation is triggered on save.
+            consolidation_limit: Max existing records to compare during consolidation.
+            default_importance: Default importance when not provided or inferred.
+            confidence_threshold_high: Recall confidence above which results are returned directly.
+            confidence_threshold_low: Recall confidence below which deeper exploration is triggered.
+            complex_query_threshold: For complex queries, explore deeper below this confidence.
+            exploration_budget: Number of LLM-driven exploration rounds during deep recall.
         """
         from crewai.llm import LLM
 
-        self._config = config or MemoryConfig()
+        self._config = MemoryConfig(
+            recency_weight=recency_weight,
+            semantic_weight=semantic_weight,
+            importance_weight=importance_weight,
+            recency_half_life_days=recency_half_life_days,
+            consolidation_threshold=consolidation_threshold,
+            consolidation_limit=consolidation_limit,
+            default_importance=default_importance,
+            confidence_threshold_high=confidence_threshold_high,
+            confidence_threshold_low=confidence_threshold_low,
+            complex_query_threshold=complex_query_threshold,
+            exploration_budget=exploration_budget,
+        )
         self._llm = LLM(model=llm) if isinstance(llm, str) else llm
         if storage == "lancedb":
             self._storage = LanceDBStorage()
@@ -153,7 +207,7 @@ class Memory:
                 scope = scope or "/"
                 categories = categories or []
                 metadata = metadata or {}
-                importance = importance if importance is not None else 0.5
+                importance = importance if importance is not None else self._config.default_importance
 
             embedding = embed_text(self._embedder, content)
             from crewai.memory.consolidation_flow import ConsolidationFlow

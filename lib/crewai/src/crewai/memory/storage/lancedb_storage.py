@@ -11,8 +11,15 @@ import lancedb
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
-# Default vector size (OpenAI text-embedding-3-small). Caller can pass different dim.
+# Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
+# Used when creating new tables and for zero-vector placeholder scans.
+# Callers can override via the ``vector_dim`` constructor parameter.
 DEFAULT_VECTOR_DIM = 1536
+
+# Safety cap on the number of rows returned by a single scan query.
+# Prevents unbounded memory use when scanning large tables for scope info,
+# listing, or deletion. Internal only -- not user-configurable.
+_SCAN_ROWS_LIMIT = 50_000
 
 
 class LanceDBStorage:
@@ -200,7 +207,7 @@ class LanceDBStorage:
         self._table.delete(where_expr)
         return before - self._table.count_rows()
 
-    def _scan_rows(self, scope_prefix: str | None = None, limit: int = 50_000) -> list[dict[str, Any]]:
+    def _scan_rows(self, scope_prefix: str | None = None, limit: int = _SCAN_ROWS_LIMIT) -> list[dict[str, Any]]:
         """Scan rows optionally filtered by scope prefix."""
         q = self._table.search([0.0] * self._vector_dim)
         if scope_prefix is not None and scope_prefix.strip("/"):

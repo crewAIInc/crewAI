@@ -4,7 +4,6 @@ from crewai.memory.consolidation_flow import ConsolidationFlow
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
 from crewai.memory.types import (
-    MemoryConfig,
     MemoryMatch,
     MemoryRecord,
     ScopeInfo,
@@ -15,7 +14,6 @@ from crewai.memory.types import (
 __all__ = [
     "ConsolidationFlow",
     "Memory",
-    "MemoryConfig",
     "MemoryMatch",
     "MemoryRecord",
     "MemoryScope",

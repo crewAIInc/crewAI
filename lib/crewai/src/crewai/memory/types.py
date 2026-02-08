@@ -8,6 +8,13 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+# When searching the vector store, we ask for more results than the caller
+# requested so that post-search steps (composite scoring, deduplication,
+# category filtering) have enough candidates to fill the final result set.
+# For example, if the caller asks for 10 results and this is 2, we fetch 20
+# from the vector store and then trim down after scoring.
+_RECALL_OVERSAMPLE_FACTOR = 2
+
 
 class MemoryRecord(BaseModel):
     """A single memory entry stored in the memory system."""
@@ -89,41 +96,130 @@ class ScopeInfo(BaseModel):
 
 
 class MemoryConfig(BaseModel):
-    """Configuration for memory retrieval scoring and behavior."""
+    """Internal configuration for memory scoring, consolidation, and recall behavior.
+
+    Users configure these values via ``Memory(...)`` keyword arguments.
+    This model is not part of the public API -- it exists so that the config
+    can be passed as a single object to RecallFlow, ConsolidationFlow, and
+    compute_composite_score.
+    """
+
+    # -- Composite score weights --
+    # The recall composite score is:
+    #   semantic_weight * similarity + recency_weight * decay + importance_weight * importance
+    # These should sum to ~1.0 for intuitive 0-1 scoring.
 
     recency_weight: float = Field(
         default=0.3,
         ge=0.0,
         le=1.0,
-        description="Weight for recency in the combined relevance score.",
+        description=(
+            "Weight for recency in the composite relevance score. "
+            "Higher values favor recently created memories over older ones."
+        ),
     )
     semantic_weight: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Weight for semantic similarity in the combined relevance score.",
+        description=(
+            "Weight for semantic similarity in the composite relevance score. "
+            "Higher values make recall rely more on vector-search closeness."
+        ),
     )
     importance_weight: float = Field(
         default=0.2,
         ge=0.0,
         le=1.0,
-        description="Weight for explicit importance in the combined relevance score.",
+        description=(
+            "Weight for explicit importance in the composite relevance score. "
+            "Higher values make high-importance memories surface more often."
+        ),
     )
     recency_half_life_days: int = Field(
         default=30,
         ge=1,
-        description="For exponential decay: score halves every N days.",
+        description=(
+            "Number of days for the recency score to halve (exponential decay). "
+            "Lower values make memories lose relevance faster; higher values "
+            "keep old memories relevant longer."
+        ),
     )
+
+    # -- Consolidation (on save) --
+
     consolidation_threshold: float = Field(
         default=0.85,
         ge=0.0,
         le=1.0,
-        description="Semantic similarity above which consolidation is triggered. Set to 1.0 to disable.",
+        description=(
+            "Semantic similarity above which the consolidation flow is triggered "
+            "when saving new content. The LLM then decides whether to merge, "
+            "update, or delete overlapping records. Set to 1.0 to disable."
+        ),
     )
     consolidation_limit: int = Field(
         default=5,
         ge=1,
-        description="Max existing records to compare against during consolidation.",
+        description=(
+            "Maximum number of existing records to compare against when checking "
+            "for consolidation during a save."
+        ),
+    )
+
+    # -- Save defaults --
+
+    default_importance: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Importance assigned to new memories when no explicit value is given "
+            "and the LLM analysis path is skipped (i.e. all fields provided by "
+            "the caller)."
+        ),
+    )
+
+    # -- Recall depth control --
+    # The RecallFlow router uses these thresholds to decide between returning
+    # results immediately ("synthesize") and doing an extra LLM-driven
+    # exploration round ("explore_deeper").
+
+    confidence_threshold_high: float = Field(
+        default=0.8,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "When recall confidence is at or above this value, results are "
+            "returned directly without deeper exploration."
+        ),
+    )
+    confidence_threshold_low: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "When recall confidence is below this value and exploration budget "
+            "remains, a deeper LLM-driven exploration round is triggered."
+        ),
+    )
+    complex_query_threshold: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "For queries classified as 'complex' by the LLM, deeper exploration "
+            "is triggered when confidence is below this value."
+        ),
+    )
+    exploration_budget: int = Field(
+        default=1,
+        ge=0,
+        description=(
+            "Number of LLM-driven exploration rounds allowed during deep recall. "
+            "0 means recall always uses direct vector search only; higher values "
+            "allow more thorough but slower retrieval."
+        ),
     )
 
 

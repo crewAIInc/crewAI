@@ -35,6 +35,8 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
+    from crewai.memory.memory_scope import MemoryScope, MemorySlice
+    from crewai.memory.unified_memory import Memory
 
 try:
     from crewai_files import get_supported_content_types
@@ -188,13 +190,12 @@ class Crew(FlowTrackable, BaseModel):
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool = Field(
+    memory: bool | Memory | MemoryScope | MemorySlice = Field(
         default=False,
-        description="If crew should use memory to store memories of it's execution (deprecated: prefer memory_instance).",
-    )
-    memory_instance: Any = Field(
-        default=None,
-        description="Unified Memory or MemoryScope instance. If set, used for crew memory; else if memory=True a default Memory() is created.",
+        description=(
+            "Enable crew memory. Pass True for default Memory(), "
+            "or a Memory/MemoryScope/MemorySlice instance for custom configuration."
+        ),
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -356,9 +357,7 @@ class Crew(FlowTrackable, BaseModel):
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
         """Initialize unified memory, respecting crew embedder config."""
-        if self.memory_instance is not None:
-            self._memory = self.memory_instance
-        elif self.memory:
+        if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
             embedder = None
@@ -367,6 +366,9 @@ class Crew(FlowTrackable, BaseModel):
 
                 embedder = build_embedder(self.embedder)
             self._memory = Memory(embedder=embedder)
+        elif self.memory:
+            # User passed a Memory / MemoryScope / MemorySlice instance
+            self._memory = self.memory
         else:
             self._memory = None
 
@@ -1681,7 +1683,7 @@ class Crew(FlowTrackable, BaseModel):
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
         if getattr(self, "_memory", None):
-            copied_data["memory_instance"] = self._memory
+            copied_data["memory"] = self._memory
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)

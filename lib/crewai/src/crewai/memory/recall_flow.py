@@ -13,6 +13,7 @@ from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
+    _RECALL_OVERSAMPLE_FACTOR,
     compute_composite_score,
 )
 
@@ -53,6 +54,7 @@ class RecallFlow(Flow[RecallState]):
 
     @start()
     def analyze_query_step(self) -> QueryAnalysis:
+        self.state.exploration_budget = self._config.exploration_budget
         available = self._storage.list_scopes(self.state.scope or "/")
         if not available:
             available = ["/"]
@@ -91,7 +93,7 @@ class RecallFlow(Flow[RecallState]):
                 self.state.query_embedding,
                 scope_prefix=scope,
                 categories=self.state.categories,
-                limit=self.state.limit * 2,
+                limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
                 min_score=0.0,
             )
             if results:
@@ -115,12 +117,19 @@ class RecallFlow(Flow[RecallState]):
     @router(search_chunks)
     def decide_depth(self) -> str:
         analysis = self.state.query_analysis
-        if analysis and analysis.complexity == "complex" and self.state.confidence < 0.7:
+        if (
+            analysis
+            and analysis.complexity == "complex"
+            and self.state.confidence < self._config.complex_query_threshold
+        ):
             if self.state.exploration_budget > 0:
                 return "explore_deeper"
-        if self.state.confidence >= 0.8:
+        if self.state.confidence >= self._config.confidence_threshold_high:
             return "synthesize"
-        if self.state.exploration_budget > 0 and self.state.confidence < 0.5:
+        if (
+            self.state.exploration_budget > 0
+            and self.state.confidence < self._config.confidence_threshold_low
+        ):
             return "explore_deeper"
         return "synthesize"
 

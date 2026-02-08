@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from crewai.memory.unified_memory import Memory
 
-from crewai.memory.types import MemoryMatch, MemoryRecord, ScopeInfo
+from crewai.memory.types import MemoryMatch, MemoryRecord, ScopeInfo, _RECALL_OVERSAMPLE_FACTOR
 
 
 class MemoryScope:
@@ -188,7 +188,7 @@ class MemorySlice:
                 query,
                 scope=sc,
                 categories=cats,
-                limit=limit * 2,
+                limit=limit * _RECALL_OVERSAMPLE_FACTOR,
                 depth=depth,
             )
             all_matches.extend(matches)
