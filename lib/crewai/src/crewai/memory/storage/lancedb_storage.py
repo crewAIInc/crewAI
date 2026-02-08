@@ -104,6 +104,23 @@ class LanceDBStorage:
                 r["vector"] = [0.0] * self._vector_dim
         self._table.add(rows)
 
+    def update(self, record: MemoryRecord) -> None:
+        """Update a record by ID. Preserves created_at, updates last_accessed."""
+        safe_id = str(record.id).replace("'", "''")
+        self._table.delete(f"id = '{safe_id}'")
+        row = self._record_to_row(record)
+        if row["vector"] is None or len(row["vector"]) != self._vector_dim:
+            row["vector"] = [0.0] * self._vector_dim
+        self._table.add([row])
+
+    def get_record(self, record_id: str) -> MemoryRecord | None:
+        """Return a record by ID, or None if not found. LanceDB-only."""
+        safe_id = str(record_id).replace("'", "''")
+        rows = self._table.search([0.0] * self._vector_dim).where(f"id = '{safe_id}'").limit(1).to_list()
+        if not rows:
+            return None
+        return self._row_to_record(rows[0])
+
     def search(
         self,
         query_embedding: list[float],

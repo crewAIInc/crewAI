@@ -34,6 +34,7 @@ from crewai.memory.types import (
     MemoryRecord,
     ScopeInfo,
     compute_composite_score,
+    embed_text,
 )
 
 
@@ -42,23 +43,6 @@ def _default_embedder() -> Any:
     from crewai.rag.embeddings.factory import build_embedder
 
     return build_embedder({"provider": "openai", "config": {}})
-
-
-def _embed_text(embedder: Any, text: str) -> list[float]:
-    """Embed a single text and return list of floats."""
-    if not text.strip():
-        return []
-    result = embedder([text])
-    if not result:
-        return []
-    import numpy as np
-
-    first = result[0]
-    if hasattr(first, "tolist"):
-        return first.tolist()
-    if isinstance(first, list):
-        return [float(x) for x in first]
-    return list(first)
 
 
 class Memory:
@@ -171,22 +155,42 @@ class Memory:
                 metadata = metadata or {}
                 importance = importance if importance is not None else 0.5
 
-            embedding = _embed_text(self._embedder, content)
-            record = MemoryRecord(
-                content=content,
-                scope=scope,
-                categories=categories,
-                metadata=metadata,
-                importance=importance,
-                embedding=embedding if embedding else None,
+            embedding = embed_text(self._embedder, content)
+            from crewai.memory.consolidation_flow import ConsolidationFlow
+
+            flow = ConsolidationFlow(
+                storage=self._storage,
+                llm=self._llm,
+                embedder=self._embedder,
+                config=self._config,
             )
-            self._storage.save([record])
+            flow.kickoff(
+                inputs={
+                    "new_content": content,
+                    "new_embedding": embedding,
+                    "scope": scope,
+                    "categories": categories,
+                    "metadata": metadata or {},
+                    "importance": importance,
+                },
+            )
+            record = flow.state.result_record
+            if record is None:
+                record = MemoryRecord(
+                    content=content,
+                    scope=scope,
+                    categories=categories,
+                    metadata=metadata or {},
+                    importance=importance,
+                    embedding=embedding if embedding else None,
+                )
+                self._storage.save([record])
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
                 self,
                 MemorySaveCompletedEvent(
                     value=content,
-                    metadata=metadata,
+                    metadata=metadata or {},
                     agent_role=None,
                     save_time_ms=elapsed_ms,
                     source_type=_source,
@@ -253,7 +257,7 @@ class Memory:
             start = time.perf_counter()
 
             if depth == "shallow":
-                embedding = _embed_text(self._embedder, query)
+                embedding = embed_text(self._embedder, query)
                 if not embedding:
                     results: list[MemoryMatch] = []
                 else:
@@ -283,7 +287,7 @@ class Memory:
                     llm=self._llm,
                     config=self._config,
                 )
-                embedding = _embed_text(self._embedder, query)
+                embedding = embed_text(self._embedder, query)
                 flow.kickoff(
                     inputs={
                         "query": query,
@@ -341,6 +345,55 @@ class Memory:
             older_than=older_than,
             metadata_filter=metadata_filter,
         )
+
+    def update(
+        self,
+        record_id: str,
+        content: str | None = None,
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        importance: float | None = None,
+    ) -> MemoryRecord:
+        """Update an existing memory record by ID.
+
+        Args:
+            record_id: ID of the record to update.
+            content: New content; re-embedded if provided.
+            scope: New scope path.
+            categories: New categories.
+            metadata: New metadata.
+            importance: New importance score.
+
+        Returns:
+            The updated MemoryRecord.
+
+        Raises:
+            ValueError: If the storage does not support get_record or the record is not found.
+        """
+        get_record = getattr(self._storage, "get_record", None)
+        if get_record is None:
+            raise ValueError("This storage backend does not support update by ID")
+        existing = get_record(record_id)
+        if existing is None:
+            raise ValueError(f"Record not found: {record_id}")
+        now = datetime.utcnow()
+        updates: dict[str, Any] = {"last_accessed": now}
+        if content is not None:
+            updates["content"] = content
+            embedding = embed_text(self._embedder, content)
+            updates["embedding"] = embedding if embedding else existing.embedding
+        if scope is not None:
+            updates["scope"] = scope
+        if categories is not None:
+            updates["categories"] = categories
+        if metadata is not None:
+            updates["metadata"] = metadata
+        if importance is not None:
+            updates["importance"] = importance
+        updated = existing.model_copy(update=updates)
+        self._storage.update(updated)
+        return updated
 
     def scope(self, path: str) -> Any:
         """Return a scoped view of this memory."""

@@ -114,6 +114,40 @@ class MemoryConfig(BaseModel):
         ge=1,
         description="For exponential decay: score halves every N days.",
     )
+    consolidation_threshold: float = Field(
+        default=0.85,
+        ge=0.0,
+        le=1.0,
+        description="Semantic similarity above which consolidation is triggered. Set to 1.0 to disable.",
+    )
+    consolidation_limit: int = Field(
+        default=5,
+        ge=1,
+        description="Max existing records to compare against during consolidation.",
+    )
+
+
+def embed_text(embedder: Any, text: str) -> list[float]:
+    """Embed a single text string and return a list of floats.
+
+    Args:
+        embedder: Callable that accepts a list of strings and returns embeddings.
+        text: The text to embed.
+
+    Returns:
+        List of floats representing the embedding, or empty list on failure.
+    """
+    if not text or not text.strip():
+        return []
+    result = embedder([text])
+    if not result:
+        return []
+    first = result[0]
+    if hasattr(first, "tolist"):
+        return first.tolist()
+    if isinstance(first, list):
+        return [float(x) for x in first]
+    return list(first)
 
 
 def compute_composite_score(

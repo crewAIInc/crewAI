@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from crewai.memory.types import ScopeInfo
+from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.i18n import get_i18n
 
 _logger = logging.getLogger(__name__)
@@ -85,6 +85,46 @@ class ExtractedMemories(BaseModel):
     )
 
 
+class ConsolidationAction(BaseModel):
+    """A single action in a consolidation plan."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: str = Field(
+        description="One of 'keep', 'update', or 'delete'.",
+    )
+    record_id: str = Field(
+        description="ID of the existing record this action applies to.",
+    )
+    new_content: str | None = Field(
+        default=None,
+        description="Updated content text. Required when action is 'update'.",
+    )
+    reason: str = Field(
+        default="",
+        description="Brief reason for this action.",
+    )
+
+
+class ConsolidationPlan(BaseModel):
+    """LLM output for consolidating new content with existing memories."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    actions: list[ConsolidationAction] = Field(
+        default_factory=list,
+        description="Actions to take on existing records (keep/update/delete).",
+    )
+    insert_new: bool = Field(
+        default=True,
+        description="Whether to also insert the new content as a separate record.",
+    )
+    insert_reason: str = Field(
+        default="",
+        description="Why the new content should or should not be inserted.",
+    )
+
+
 def _get_prompt(key: str) -> str:
     """Retrieve a memory prompt from the i18n translations.
 
@@ -115,7 +155,7 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
     """
     if not (content or "").strip():
         return []
-    user = f"Content:\n{content}\n\nExtract memory statements as described. Return structured output."
+    user = _get_prompt("extract_memories_user").format(content=content)
     messages = [
         {"role": "system", "content": _get_prompt("extract_memories_system")},
         {"role": "user", "content": user},
@@ -166,11 +206,10 @@ def analyze_for_save(
     Returns:
         MemoryAnalysis with suggested_scope, categories, importance, extracted_metadata.
     """
-    user = (
-        f"Content to store:\n{content}\n\n"
-        f"Existing scopes: {existing_scopes or ['/']}\n"
-        f"Existing categories: {existing_categories or []}\n\n"
-        "Return the analysis as structured output."
+    user = _get_prompt("save_user").format(
+        content=content,
+        existing_scopes=existing_scopes or ["/"],
+        existing_categories=existing_categories or [],
     )
     messages = [
         {"role": "system", "content": _get_prompt("save_system")},
@@ -236,11 +275,10 @@ def analyze_query(
     scope_desc = ""
     if scope_info:
         scope_desc = f"Current scope has {scope_info.record_count} records, categories: {scope_info.categories}"
-    user = (
-        f"Query: {query}\n\n"
-        f"Available scopes: {available_scopes or ['/']}\n"
-        f"{scope_desc}\n\n"
-        "Return the analysis as structured output."
+    user = _get_prompt("query_user").format(
+        query=query,
+        available_scopes=available_scopes or ["/"],
+        scope_desc=scope_desc,
     )
     messages = [
         {"role": "system", "content": _get_prompt("query_system")},
@@ -272,6 +310,62 @@ def analyze_query(
             suggested_scopes=scopes,
             complexity="simple",
         )
+
+
+def analyze_for_consolidation(
+    new_content: str,
+    existing_records: list[MemoryRecord],
+    llm: Any,
+) -> ConsolidationPlan:
+    """Use the LLM to decide how to consolidate new content with existing memories.
+
+    On LLM failure, returns a safe default (insert_new=True, no actions) so save
+    is never blocked.
+
+    Args:
+        new_content: The new content to store.
+        existing_records: Existing records that are semantically similar.
+        llm: The LLM instance to use.
+
+    Returns:
+        ConsolidationPlan with actions per record and whether to insert the new content.
+    """
+    if not existing_records:
+        return ConsolidationPlan(actions=[], insert_new=True)
+    records_lines = []
+    for r in existing_records:
+        created = r.created_at.isoformat() if r.created_at else ""
+        records_lines.append(
+            f"- id={r.id} | scope={r.scope} | importance={r.importance:.2f} | created={created}\n  content: {r.content[:200]}{'...' if len(r.content) > 200 else ''}"
+        )
+    user = _get_prompt("consolidation_user").format(
+        new_content=new_content,
+        records_summary="\n\n".join(records_lines),
+    )
+    messages = [
+        {"role": "system", "content": _get_prompt("consolidation_system")},
+        {"role": "user", "content": user},
+    ]
+    try:
+        if getattr(llm, "supports_function_calling", lambda: False)():
+            response = llm.call(messages, response_model=ConsolidationPlan)
+            if isinstance(response, ConsolidationPlan):
+                return response
+            return ConsolidationPlan.model_validate(response)
+        response = llm.call(messages)
+        if isinstance(response, ConsolidationPlan):
+            return response
+        if isinstance(response, str):
+            data = json.loads(response)
+            return ConsolidationPlan.model_validate(data)
+        return ConsolidationPlan.model_validate(response)
+    except Exception as e:
+        _logger.warning(
+            "Consolidation analysis failed, defaulting to insert only: %s",
+            e,
+            exc_info=False,
+        )
+        return ConsolidationPlan(actions=[], insert_new=True)
 
 
 async def aanalyze_query(

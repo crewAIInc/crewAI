@@ -66,6 +66,10 @@ class StorageBackend(Protocol):
         """
         ...
 
+    def update(self, record: MemoryRecord) -> None:
+        """Update an existing record. Replaces the record with the same ID."""
+        ...
+
     def get_scope_info(self, scope: str) -> ScopeInfo:
         """Get information about a scope.
 
