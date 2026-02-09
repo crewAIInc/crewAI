@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import time
 from datetime import datetime
+import time
 from typing import Any, Literal
 
 from crewai.events.event_bus import crewai_event_bus
@@ -11,9 +11,6 @@ from crewai.events.types.memory_events import (
     MemoryQueryCompletedEvent,
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
-    MemoryRetrievalCompletedEvent,
-    MemoryRetrievalFailedEvent,
-    MemoryRetrievalStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
@@ -22,7 +19,6 @@ from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import (
     MemoryAnalysis,
     analyze_for_save,
-    analyze_query,
     extract_memories_from_content,
 )
 from crewai.memory.recall_flow import RecallFlow

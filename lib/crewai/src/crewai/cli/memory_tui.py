@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
 from textual.widgets import Footer, Header, Input, Static, Tree
+
 
 # -- CrewAI brand palette --
 _PRIMARY = "#eb6658"  # coral
@@ -32,9 +33,9 @@ class MemoryTUI(App[None]):
     TITLE = "CrewAI Memory"
     SUB_TITLE = "Browse scopes and recall memories"
 
-    PAGE_SIZE = 20
+    PAGE_SIZE: ClassVar[int] = 20
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
         ("n", "next_page", "Next page"),
         ("p", "prev_page", "Prev page"),
     ]
@@ -175,7 +176,7 @@ class MemoryTUI(App[None]):
         lines: list[str] = [_format_scope_info(self._last_scope_info)]
         total = len(self._entries)
         if total == 0:
-            lines.append(f"\n[dim]No entries in this scope.[/]")
+            lines.append("\n[dim]No entries in this scope.[/]")
         else:
             total_pages = (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE
             page_num = self._page + 1
@@ -194,7 +195,7 @@ class MemoryTUI(App[None]):
                     f"[dim]{preview}[/]"
                 )
             if total_pages > 1:
-                lines.append(f"\n[dim]\\[n] next  \\[p] prev[/]")
+                lines.append("\n[dim]\\[n] next  \\[p] prev[/]")
         panel.update("\n".join(lines))
 
     def action_next_page(self) -> None:
@@ -238,7 +239,7 @@ class MemoryTUI(App[None]):
                 depth="shallow",
             )
             if not matches:
-                panel.update(f"[dim]No memories found.[/]")
+                panel.update("[dim]No memories found.[/]")
                 return
             lines: list[str] = []
             for m in matches:

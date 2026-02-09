@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+
 # When searching the vector store, we ask for more results than the caller
 # requested so that post-search steps (composite scoring, deduplication,
 # category filtering) have enough candidates to fill the final result set.

@@ -10,10 +10,10 @@ from pydantic import BaseModel, Field
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.memory.analyze import QueryAnalysis, analyze_query
 from crewai.memory.types import (
+    _RECALL_OVERSAMPLE_FACTOR,
     MemoryConfig,
     MemoryMatch,
     MemoryRecord,
-    _RECALL_OVERSAMPLE_FACTOR,
     compute_composite_score,
 )
 

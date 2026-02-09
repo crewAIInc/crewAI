@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
+import json
 from pathlib import Path
 from typing import Any
 
 import lancedb
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
+
 
 # Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
 # Used when creating new tables and for zero-vector placeholder scans.
@@ -252,7 +253,7 @@ class LanceDBStorage:
             try:
                 cat_str = row.get("categories_str") or "[]"
                 categories_set.update(json.loads(cat_str))
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
             created = row.get("created_at")
             if created:
@@ -288,12 +289,13 @@ class LanceDBStorage:
         rows = self._scan_rows(scope_prefix)
         counts: dict[str, int] = {}
         for row in rows:
+            cat_str = row.get("categories_str") or "[]"
             try:
-                cat_str = row.get("categories_str") or "[]"
-                for c in json.loads(cat_str):
-                    counts[c] = counts.get(c, 0) + 1
-            except Exception:
-                pass
+                parsed = json.loads(cat_str)
+            except Exception:  # noqa: S112
+                continue
+            for c in parsed:
+                counts[c] = counts.get(c, 0) + 1
         return counts
 
     def count(self, scope_prefix: str | None = None) -> int:

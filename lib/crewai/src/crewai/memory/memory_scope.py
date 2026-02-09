@@ -5,16 +5,22 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
     from crewai.memory.unified_memory import Memory
 
-from crewai.memory.types import MemoryMatch, MemoryRecord, ScopeInfo, _RECALL_OVERSAMPLE_FACTOR
+from crewai.memory.types import (
+    _RECALL_OVERSAMPLE_FACTOR,
+    MemoryMatch,
+    MemoryRecord,
+    ScopeInfo,
+)
 
 
 class MemoryScope:
     """View of Memory restricted to a root path. All operations are scoped under that path."""
 
-    def __init__(self, memory: "Memory", root_path: str) -> None:
+    def __init__(self, memory: Memory, root_path: str) -> None:
         """Initialize scope.
 
         Args:
@@ -35,7 +41,7 @@ class MemoryScope:
         if not self._root:
             return s
         base = self._root.rstrip("/")
-        return f"{base}{s}" if s == "/" else f"{base}{s}"
+        return f"{base}{s}"
 
     def remember(
         self,
@@ -135,7 +141,7 @@ class MemorySlice:
 
     def __init__(
         self,
-        memory: "Memory",
+        memory: Memory,
         scopes: list[str],
         categories: list[str] | None = None,
         read_only: bool = True,

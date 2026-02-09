@@ -255,12 +255,12 @@ def memory(storage_path: str | None) -> None:
     """Open the Memory TUI to browse scopes and recall memories."""
     try:
         from crewai.cli.memory_tui import MemoryTUI
-    except ImportError:
+    except ImportError as exc:
         click.echo(
             "Textual is required for the memory TUI but could not be imported. "
             "Try reinstalling crewai or: pip install textual"
         )
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
     app = MemoryTUI(storage_path=storage_path)
     app.run()
 
