@@ -22,7 +22,7 @@ def setup_vertex_ai_env():
     """
     env_updates = {"GOOGLE_GENAI_USE_VERTEXAI": "true"}
 
-    # Add a mock API key if none exists
+    # Add a mock API key
     if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" not in os.environ:
         env_updates["GOOGLE_API_KEY"] = "test-key"
 
