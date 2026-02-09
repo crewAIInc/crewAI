@@ -652,6 +652,20 @@ class AnthropicCompletion(BaseLLM):
 
         formatted_messages = validated_messages
 
+        # Ensure role alternation is maintained after filtering
+        # If filtering created consecutive same-role messages, insert placeholders
+        fixed_messages: list[LLMMessage] = []
+        for i, message in enumerate(formatted_messages):
+            if i > 0 and fixed_messages:
+                prev_role = fixed_messages[-1].get("role")
+                curr_role = message.get("role")
+                if prev_role == curr_role:
+                    # Insert a placeholder message to maintain alternation
+                    placeholder_role = "assistant" if curr_role == "user" else "user"
+                    fixed_messages.append({"role": placeholder_role, "content": "..."})
+            fixed_messages.append(message)
+        formatted_messages = fixed_messages
+
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
             # If no messages, add a default user message
