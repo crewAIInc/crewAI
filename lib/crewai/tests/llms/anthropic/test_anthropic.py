@@ -990,3 +990,104 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+def test_anthropic_empty_user_message_content_is_sanitized():
+    """Test that empty string user message content is replaced with a space placeholder."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [{"role": "user", "content": ""}]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == " "
+
+
+def test_anthropic_whitespace_only_user_message_is_sanitized():
+    """Test that whitespace-only user message content is replaced with a space placeholder."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [{"role": "user", "content": "   "}]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == " "
+
+
+def test_anthropic_none_user_message_content_is_sanitized():
+    """Test that None user message content is replaced with a space placeholder."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [{"role": "user", "content": None}]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == " "
+
+
+def test_anthropic_non_empty_user_message_is_unchanged():
+    """Test that non-empty user message content is not modified."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [{"role": "user", "content": "Hello"}]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assert len(formatted) == 1
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Hello"
+
+
+def test_anthropic_empty_content_in_multi_message_conversation():
+    """Test that empty content is sanitized in a multi-message conversation."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": "Hi!"},
+        {"role": "user", "content": ""},
+    ]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assert formatted[0]["role"] == "user"
+    assert formatted[0]["content"] == "Hello"
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == "Hi!"
+    assert formatted[2]["role"] == "user"
+    assert formatted[2]["content"] == " "
+
+
+def test_anthropic_empty_assistant_message_is_allowed():
+    """Test that empty assistant message content is NOT sanitized (Anthropic allows it)."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    messages = [
+        {"role": "user", "content": "Hello"},
+        {"role": "assistant", "content": ""},
+        {"role": "user", "content": "Continue"},
+    ]
+    formatted, _ = llm._format_messages_for_anthropic(messages)
+
+    assistant_msgs = [m for m in formatted if m["role"] == "assistant"]
+    assert len(assistant_msgs) == 1
+    assert assistant_msgs[0]["content"] == ""
+
+
+def test_anthropic_empty_content_does_not_crash_call():
+    """Test that calling with empty user message content does not raise before API call."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    with patch.object(llm, '_handle_completion', return_value="response") as mock_handle:
+        with patch.object(llm, '_emit_call_started_event'):
+            with patch.object(llm, '_invoke_before_llm_call_hooks', return_value=True):
+                result = llm.call([{"role": "user", "content": ""}])
+
+        assert result == "response"
+        call_args = mock_handle.call_args
+        params = call_args[0][0]
+        messages = params["messages"]
+        assert all(
+            m["content"] != "" for m in messages if m["role"] != "assistant"
+        )

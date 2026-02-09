@@ -615,6 +615,8 @@ class AnthropicCompletion(BaseLLM):
                     formatted_messages.append({"role": role_str, "content": content})
                 else:
                     content_str = content if content is not None else ""
+                    if not content_str or not content_str.strip():
+                        content_str = " "
                     formatted_messages.append(
                         LLMMessage(role=role_str, content=content_str)
                     )
