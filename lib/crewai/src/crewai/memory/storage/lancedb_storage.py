@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -28,17 +29,22 @@ class LanceDBStorage:
 
     def __init__(
         self,
-        path: str | Path = "./.crewai/memory",
+        path: str | Path | None = None,
         table_name: str = "memories",
         vector_dim: int = DEFAULT_VECTOR_DIM,
     ) -> None:
         """Initialize LanceDB storage.
 
         Args:
-            path: Directory path for the LanceDB database.
+            path: Directory path for the LanceDB database. Defaults to
+                  ``$CREWAI_STORAGE_DIR/memory`` if the env var is set,
+                  otherwise ``./.crewai/memory``.
             table_name: Name of the table for memory records.
             vector_dim: Dimensionality of the embedding vector.
         """
+        if path is None:
+            storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
+            path = Path(storage_dir) / "memory" if storage_dir else Path("./.crewai/memory")
         self._path = Path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self._table_name = table_name

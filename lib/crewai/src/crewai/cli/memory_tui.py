@@ -100,12 +100,11 @@ class MemoryTUI(App[None]):
         self._entries: list[Any] = []
         self._page: int = 0
         self._last_scope_info: Any = None
-        path = storage_path or "./.crewai/memory"
         try:
             from crewai.memory.storage.lancedb_storage import LanceDBStorage
             from crewai.memory.unified_memory import Memory
 
-            storage = LanceDBStorage(path=path)
+            storage = LanceDBStorage(path=storage_path) if storage_path else LanceDBStorage()
             self._memory = Memory(storage=storage)
         except Exception as e:
             self._init_error = str(e)
