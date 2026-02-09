@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Sequence
+import concurrent.futures
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -678,17 +679,22 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
                 tool_names = []
                 for tc in tool_calls:
                     func = tc.get("function", {})
-                    name = func.get("name", "unknown") if isinstance(func, dict) else "unknown"
+                    name = (
+                        func.get("name", "unknown")
+                        if isinstance(func, dict)
+                        else "unknown"
+                    )
                     tool_names.append(name)
                 content = f"[Called tools: {', '.join(tool_names)}]"
             else:
                 content = ""
         elif isinstance(content, list):
             # Multimodal content blocks — extract text parts
-            text_parts = []
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    text_parts.append(block.get("text", ""))
+            text_parts = [
+                block.get("text", "")
+                for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
             content = " ".join(text_parts) if text_parts else "[multimodal content]"
 
         if role == "assistant":
@@ -771,6 +777,44 @@ def _extract_summary_tags(text: str) -> str:
     return text.strip()
 
 
+async def _asummarize_chunks(
+    chunks: list[list[LLMMessage]],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    i18n: I18N,
+) -> list[SummaryContent]:
+    """Summarize multiple message chunks concurrently using asyncio.
+
+    Args:
+        chunks: List of message chunks to summarize.
+        llm: LLM instance (must support ``acall``).
+        callbacks: List of callbacks for the LLM.
+        i18n: I18N instance for prompt templates.
+
+    Returns:
+        Ordered list of summary contents, one per chunk.
+    """
+
+    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
+        conversation_text = _format_messages_for_summary(chunk)
+        summarization_messages = [
+            format_message_for_llm(
+                i18n.slice("summarizer_system_message"), role="system"
+            ),
+            format_message_for_llm(
+                i18n.slice("summarize_instruction").format(
+                    conversation=conversation_text
+                ),
+            ),
+        ]
+        summary = await llm.acall(summarization_messages, callbacks=callbacks)
+        extracted = _extract_summary_tags(str(summary))
+        return {"content": extracted}
+
+    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
+    return list(results)
+
+
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -813,42 +857,52 @@ def summarize_messages(
     chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
 
     # 4. Summarize each chunk with role-labeled formatting
-    summarized_contents: list[SummaryContent] = []
     total_chunks = len(chunks)
 
-    for idx, chunk in enumerate(chunks, 1):
+    if total_chunks <= 1:
+        # Single chunk — no benefit from async overhead
+        summarized_contents: list[SummaryContent] = []
+        for idx, chunk in enumerate(chunks, 1):
+            if verbose:
+                Printer().print(
+                    content=f"Summarizing {idx}/{total_chunks}...",
+                    color="yellow",
+                )
+            conversation_text = _format_messages_for_summary(chunk)
+            summarization_messages = [
+                format_message_for_llm(
+                    i18n.slice("summarizer_system_message"), role="system"
+                ),
+                format_message_for_llm(
+                    i18n.slice("summarize_instruction").format(
+                        conversation=conversation_text
+                    ),
+                ),
+            ]
+            summary = llm.call(summarization_messages, callbacks=callbacks)
+            extracted = _extract_summary_tags(str(summary))
+            summarized_contents.append({"content": extracted})
+    else:
+        # Multiple chunks — summarize in parallel via asyncio
         if verbose:
             Printer().print(
-                content=f"Summarizing {idx}/{total_chunks}...",
+                content=f"Summarizing {total_chunks} chunks in parallel...",
                 color="yellow",
             )
-
-        conversation_text = _format_messages_for_summary(chunk)
-
-        summarization_messages = [
-            format_message_for_llm(
-                i18n.slice("summarizer_system_message"), role="system"
-            ),
-            format_message_for_llm(
-                i18n.slice("summarize_instruction").format(
-                    conversation=conversation_text
-                ),
-            ),
-        ]
-        summary = llm.call(
-            summarization_messages,
-            callbacks=callbacks,
+        coro = _asummarize_chunks(
+            chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
         )
-        # Extract content from <summary> tags with graceful fallback
-        extracted = _extract_summary_tags(str(summary))
-        summarized_contents.append({"content": extracted})
+        if is_inside_event_loop():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                summarized_contents = pool.submit(asyncio.run, coro).result()
+        else:
+            summarized_contents = asyncio.run(coro)
 
     merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
 
     # 6. Reconstruct messages: [system messages...] + [summary user message]
     messages.clear()
-    for sys_msg in system_messages:
-        messages.append(sys_msg)
+    messages.extend(system_messages)
 
     summary_message = format_message_for_llm(
         i18n.slice("summary").format(merged_summary=merged_summary)
