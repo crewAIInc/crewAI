@@ -623,6 +623,35 @@ class AnthropicCompletion(BaseLLM):
         if pending_tool_results:
             formatted_messages.append({"role": "user", "content": pending_tool_results})
 
+        # Validate and normalize empty message content (Anthropic requirement)
+        # Anthropic API requires all messages to have non-empty content except
+        # for the optional final assistant message
+        validated_messages: list[LLMMessage] = []
+        for i, message in enumerate(formatted_messages):
+            content = message.get("content")
+            role = message.get("role")
+            is_last_message = i == len(formatted_messages) - 1
+
+            # Check if content is empty
+            is_empty = (
+                content == ""
+                or content is None
+                or (isinstance(content, str) and not content.strip())
+            )
+
+            if is_empty:
+                # Allow empty content only for the final assistant message
+                if role == "assistant" and is_last_message:
+                    validated_messages.append(message)
+                # For non-assistant messages or non-final assistant messages,
+                # skip the message entirely to avoid API errors
+                # (empty user messages provide no value and cause errors)
+                continue
+            else:
+                validated_messages.append(message)
+
+        formatted_messages = validated_messages
+
         # Ensure first message is from user (Anthropic requirement)
         if not formatted_messages:
             # If no messages, add a default user message
