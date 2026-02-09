@@ -395,6 +395,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
+                    # Fire step_callback BEFORE tool execution with rich state
+                    if self.step_callback:
+                        self._invoke_pre_tool_step_callback(
+                            tool_name=formatted_answer.tool,
+                            tool_input=formatted_answer.tool_input,
+                        )
+
                     # Extract agent fingerprint if available
                     fingerprint_context = {}
                     if (
@@ -769,6 +776,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
 
+        # Fire step_callback BEFORE tool execution with rich state
+        if self.step_callback:
+            self._invoke_pre_tool_step_callback(
+                tool_name=func_name,
+                tool_input=args_dict,
+            )
+
         # Find original tool by matching sanitized name (needed for cache_function and result_as_answer)
 
         original_tool = None
@@ -1108,6 +1122,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
+                    # Fire step_callback BEFORE tool execution with rich state
+                    if self.step_callback:
+                        self._invoke_pre_tool_step_callback(
+                            tool_name=formatted_answer.tool,
+                            tool_input=formatted_answer.tool_input,
+                        )
+
                     fingerprint_context = {}
                     if (
                         self.agent
@@ -1376,6 +1397,39 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         """
         if self.step_callback:
             self.step_callback(formatted_answer)
+
+    def _invoke_pre_tool_step_callback(
+        self,
+        tool_name: str,
+        tool_input: dict[str, Any] | str,
+    ) -> None:
+        """Invoke step callback BEFORE tool execution with rich state.
+
+        This fires before the tool runs, enabling external listeners to
+        detect patterns like infinite retry loops by inspecting the tool
+        name and arguments before execution occurs.
+
+        Args:
+            tool_name: Name of the tool about to be executed.
+            tool_input: Arguments that will be passed to the tool.
+        """
+        import json as _json
+
+        if self.step_callback:
+            input_str = (
+                _json.dumps(tool_input)
+                if isinstance(tool_input, dict)
+                else str(tool_input)
+            )
+            self.step_callback(
+                AgentAction(
+                    tool=tool_name,
+                    tool_input=input_str,
+                    text=f"About to execute: {tool_name}",
+                    thought=f"Pre-execution hook for {tool_name}",
+                    result=None,
+                )
+            )
 
     def _append_message(
         self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
