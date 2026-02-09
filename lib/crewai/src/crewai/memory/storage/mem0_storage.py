@@ -1,5 +1,6 @@
 from collections import defaultdict
 from collections.abc import Iterable
+import json
 import os
 import re
 from typing import Any
@@ -24,10 +25,32 @@ class Mem0Storage(Storage):
         self._validate_type(type)
         self.memory_type = type
         self.crew = crew
-        self.config = config or {}
+        self.config = self._parse_config(config)
 
         self._extract_config_values()
         self._initialize_memory()
+
+    @staticmethod
+    def _parse_config(config: Any) -> dict[str, Any]:
+        if config is None:
+            return {}
+        if isinstance(config, dict):
+            return config
+        if isinstance(config, str):
+            try:
+                parsed = json.loads(config)
+            except json.JSONDecodeError as e:
+                raise TypeError(
+                    f"config string is not valid JSON: {e}"
+                ) from e
+            if not isinstance(parsed, dict):
+                raise TypeError(
+                    f"config must be a dict, got {type(parsed).__name__} after parsing JSON string"
+                )
+            return parsed
+        raise TypeError(
+            f"config must be a dict or a JSON string, got {type(config).__name__}"
+        )
 
     def _validate_type(self, type):
         supported_types = {"short_term", "long_term", "entities", "external"}

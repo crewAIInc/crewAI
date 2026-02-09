@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -502,3 +503,51 @@ def test_search_method_with_agent_id_and_user_id():
 
         assert len(results) == 2
         assert results[0]["content"] == "Result 1"
+
+
+def test_mem0_storage_config_as_json_string():
+    config_dict = {"agent_id": "agent-123", "user_id": "user-123"}
+    config_str = json.dumps(config_dict)
+
+    mock_memory = MagicMock(spec=Memory)
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        storage = Mem0Storage(type="external", config=config_str)
+
+    assert storage.config == config_dict
+
+
+def test_mem0_storage_config_as_json_string_with_all_fields():
+    config_dict = {
+        "agent_id": "agent-123",
+        "user_id": "user-123",
+        "run_id": "run-456",
+        "includes": "inc1",
+        "excludes": "exc1",
+        "infer": False,
+    }
+    config_str = json.dumps(config_dict)
+
+    mock_memory = MagicMock(spec=Memory)
+    with patch.object(Memory, "__new__", return_value=mock_memory):
+        storage = Mem0Storage(type="external", config=config_str)
+
+    assert storage.config == config_dict
+    assert storage.mem0_run_id == "run-456"
+    assert storage.includes == "inc1"
+    assert storage.excludes == "exc1"
+    assert storage.infer is False
+
+
+def test_mem0_storage_config_invalid_json_string_raises_type_error():
+    with pytest.raises(TypeError, match="config string is not valid JSON"):
+        Mem0Storage(type="external", config="not-valid-json{")
+
+
+def test_mem0_storage_config_json_string_non_dict_raises_type_error():
+    with pytest.raises(TypeError, match="config must be a dict"):
+        Mem0Storage(type="external", config='["a", "b"]')
+
+
+def test_mem0_storage_config_invalid_type_raises_type_error():
+    with pytest.raises(TypeError, match="config must be a dict or a JSON string"):
+        Mem0Storage(type="external", config=12345)
