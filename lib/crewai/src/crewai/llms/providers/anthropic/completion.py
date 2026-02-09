@@ -660,6 +660,15 @@ class AnthropicCompletion(BaseLLM):
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
+        # Strip trailing whitespace from final assistant message content
+        # Anthropic API rejects requests where the final assistant message ends with
+        # trailing whitespace (error: "final assistant content cannot end with
+        # trailing whitespace"). See: https://github.com/crewAIInc/crewAI/issues/4413
+        if formatted_messages and formatted_messages[-1].get("role") == "assistant":
+            content = formatted_messages[-1].get("content")
+            if isinstance(content, str):
+                formatted_messages[-1]["content"] = content.rstrip()
+
         return formatted_messages, system_message
 
     def _handle_completion(
