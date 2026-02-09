@@ -93,7 +93,7 @@ class Memory:
         Args:
             llm: LLM for analysis (model name or BaseLLM instance).
             storage: Backend: "lancedb" or a StorageBackend instance.
-            embedder: Embedding function; None => default OpenAI.
+            embedder: Embedding callable, provider config dict, or None (default OpenAI).
             recency_weight: Weight for recency in the composite relevance score.
             semantic_weight: Weight for semantic similarity in the composite relevance score.
             importance_weight: Weight for importance in the composite relevance score.
@@ -128,7 +128,13 @@ class Memory:
             self._storage = LanceDBStorage(path=storage)
         else:
             self._storage = storage
-        self._embedder = embedder if embedder is not None else _default_embedder()
+        if embedder is None:
+            self._embedder = _default_embedder()
+        elif isinstance(embedder, dict):
+            from crewai.rag.embeddings.factory import build_embedder
+            self._embedder = build_embedder(embedder)
+        else:
+            self._embedder = embedder
 
     def remember(
         self,

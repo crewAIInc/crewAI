@@ -31,7 +31,7 @@ class LanceDBStorage:
         self,
         path: str | Path | None = None,
         table_name: str = "memories",
-        vector_dim: int = DEFAULT_VECTOR_DIM,
+        vector_dim: int | None = None,
     ) -> None:
         """Initialize LanceDB storage.
 
@@ -40,7 +40,9 @@ class LanceDBStorage:
                   ``$CREWAI_STORAGE_DIR/memory`` if the env var is set,
                   otherwise ``./.crewai/memory``.
             table_name: Name of the table for memory records.
-            vector_dim: Dimensionality of the embedding vector.
+            vector_dim: Dimensionality of the embedding vector. When ``None``
+                  (default), the dimension is auto-detected from the existing
+                  table schema or from the first saved embedding.
         """
         if path is None:
             storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
@@ -48,32 +50,67 @@ class LanceDBStorage:
         self._path = Path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self._table_name = table_name
-        self._vector_dim = vector_dim
         self._db = lancedb.connect(str(self._path))
-        self._table = self._get_or_create_table()
 
-    def _get_or_create_table(self) -> lancedb.table.Table:
+        # Try to open an existing table and infer dimension from its schema.
+        # If no table exists yet, defer creation until the first save so the
+        # dimension can be auto-detected from the embedder's actual output.
         try:
-            return self._db.open_table(self._table_name)
+            self._table: lancedb.table.Table | None = self._db.open_table(self._table_name)
+            self._vector_dim: int = self._infer_dim_from_table(self._table)
         except Exception:
-            # Create empty table with schema from first record or placeholder
-            placeholder = [
-                {
-                    "id": "__schema_placeholder__",
-                    "content": "",
-                    "scope": "/",
-                    "categories_str": "[]",
-                    "metadata_str": "{}",
-                    "importance": 0.5,
-                    "created_at": datetime.utcnow().isoformat(),
-                    "last_accessed": datetime.utcnow().isoformat(),
-                    "vector": [0.0] * self._vector_dim,
-                }
-            ]
-            table = self._db.create_table(self._table_name, placeholder)
-            # Remove placeholder row
-            table.delete("id = '__schema_placeholder__'")
-            return table
+            self._table = None
+            self._vector_dim = vector_dim or 0  # 0 = not yet known
+
+        # Explicit dim provided: create the table immediately if it doesn't exist.
+        if self._table is None and vector_dim is not None:
+            self._vector_dim = vector_dim
+            self._table = self._create_table(vector_dim)
+
+    @staticmethod
+    def _infer_dim_from_table(table: lancedb.table.Table) -> int:
+        """Read vector dimension from an existing table's schema."""
+        schema = table.schema
+        for field in schema:
+            if field.name == "vector":
+                try:
+                    return field.type.list_size
+                except Exception:
+                    break
+        return DEFAULT_VECTOR_DIM
+
+    def _create_table(self, vector_dim: int) -> lancedb.table.Table:
+        """Create a new table with the given vector dimension."""
+        placeholder = [
+            {
+                "id": "__schema_placeholder__",
+                "content": "",
+                "scope": "/",
+                "categories_str": "[]",
+                "metadata_str": "{}",
+                "importance": 0.5,
+                "created_at": datetime.utcnow().isoformat(),
+                "last_accessed": datetime.utcnow().isoformat(),
+                "vector": [0.0] * vector_dim,
+            }
+        ]
+        table = self._db.create_table(self._table_name, placeholder)
+        table.delete("id = '__schema_placeholder__'")
+        return table
+
+    def _ensure_table(self, vector_dim: int | None = None) -> lancedb.table.Table:
+        """Return the table, creating it lazily if needed.
+
+        Args:
+            vector_dim: Dimension hint (e.g. from the first embedding).
+                  Falls back to the stored ``_vector_dim`` or ``DEFAULT_VECTOR_DIM``.
+        """
+        if self._table is not None:
+            return self._table
+        dim = vector_dim or self._vector_dim or DEFAULT_VECTOR_DIM
+        self._vector_dim = dim
+        self._table = self._create_table(dim)
+        return self._table
 
     def _record_to_row(self, record: MemoryRecord) -> dict[str, Any]:
         return {
@@ -112,6 +149,13 @@ class LanceDBStorage:
     def save(self, records: list[MemoryRecord]) -> None:
         if not records:
             return
+        # Auto-detect dimension from the first real embedding.
+        dim = None
+        for r in records:
+            if r.embedding and len(r.embedding) > 0:
+                dim = len(r.embedding)
+                break
+        self._ensure_table(vector_dim=dim)
         rows = [self._record_to_row(r) for r in records]
         for r in rows:
             if r["vector"] is None or len(r["vector"]) != self._vector_dim:
@@ -120,15 +164,18 @@ class LanceDBStorage:
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by ID. Preserves created_at, updates last_accessed."""
+        table = self._ensure_table()
         safe_id = str(record.id).replace("'", "''")
-        self._table.delete(f"id = '{safe_id}'")
+        table.delete(f"id = '{safe_id}'")
         row = self._record_to_row(record)
         if row["vector"] is None or len(row["vector"]) != self._vector_dim:
             row["vector"] = [0.0] * self._vector_dim
-        self._table.add([row])
+        table.add([row])
 
     def get_record(self, record_id: str) -> MemoryRecord | None:
         """Return a record by ID, or None if not found. LanceDB-only."""
+        if self._table is None:
+            return None
         safe_id = str(record_id).replace("'", "''")
         rows = self._table.search([0.0] * self._vector_dim).where(f"id = '{safe_id}'").limit(1).to_list()
         if not rows:
@@ -144,6 +191,8 @@ class LanceDBStorage:
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
+        if self._table is None:
+            return []
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
             prefix = scope_prefix.rstrip("/")
@@ -173,6 +222,8 @@ class LanceDBStorage:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
+        if self._table is None:
+            return 0
         if record_ids and not (categories or metadata_filter):
             before = self._table.count_rows()
             ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
@@ -216,6 +267,8 @@ class LanceDBStorage:
 
     def _scan_rows(self, scope_prefix: str | None = None, limit: int = _SCAN_ROWS_LIMIT) -> list[dict[str, Any]]:
         """Scan rows optionally filtered by scope prefix."""
+        if self._table is None:
+            return []
         q = self._table.search([0.0] * self._vector_dim)
         if scope_prefix is not None and scope_prefix.strip("/"):
             q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
@@ -305,6 +358,8 @@ class LanceDBStorage:
         return counts
 
     def count(self, scope_prefix: str | None = None) -> int:
+        if self._table is None:
+            return 0
         if scope_prefix is None or scope_prefix.strip("/") == "":
             return self._table.count_rows()
         info = self.get_scope_info(scope_prefix)
@@ -312,8 +367,12 @@ class LanceDBStorage:
 
     def reset(self, scope_prefix: str | None = None) -> None:
         if scope_prefix is None or scope_prefix.strip("/") == "":
-            self._db.drop_table(self._table_name)
-            self._table = self._get_or_create_table()
+            if self._table is not None:
+                self._db.drop_table(self._table_name)
+            self._table = None
+            # Dimension is preserved; table will be recreated on next save.
+            return
+        if self._table is None:
             return
         prefix = scope_prefix.rstrip("/")
         if prefix:

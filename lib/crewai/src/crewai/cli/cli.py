@@ -1,6 +1,7 @@
 from importlib.metadata import version as get_version
 import os
 import subprocess
+from typing import Any
 
 import click
 
@@ -251,7 +252,30 @@ def reset_memories(
     default=None,
     help="Path to LanceDB memory directory. If omitted, uses ./.crewai/memory.",
 )
-def memory(storage_path: str | None) -> None:
+@click.option(
+    "--embedder-provider",
+    type=str,
+    default=None,
+    help="Embedder provider for recall queries (e.g. openai, google-vertex, cohere, ollama).",
+)
+@click.option(
+    "--embedder-model",
+    type=str,
+    default=None,
+    help="Embedder model name (e.g. text-embedding-3-small, gemini-embedding-001).",
+)
+@click.option(
+    "--embedder-config",
+    type=str,
+    default=None,
+    help='Full embedder config as JSON (e.g. \'{"provider": "cohere", "config": {"model_name": "embed-v4.0"}}\').',
+)
+def memory(
+    storage_path: str | None,
+    embedder_provider: str | None,
+    embedder_model: str | None,
+    embedder_config: str | None,
+) -> None:
     """Open the Memory TUI to browse scopes and recall memories."""
     try:
         from crewai.cli.memory_tui import MemoryTUI
@@ -261,7 +285,24 @@ def memory(storage_path: str | None) -> None:
             "Try reinstalling crewai or: pip install textual"
         )
         raise SystemExit(1) from exc
-    app = MemoryTUI(storage_path=storage_path)
+
+    # Build embedder spec from CLI flags.
+    embedder_spec: dict[str, Any] | None = None
+    if embedder_config:
+        import json as _json
+
+        try:
+            embedder_spec = _json.loads(embedder_config)
+        except _json.JSONDecodeError as exc:
+            click.echo(f"Invalid --embedder-config JSON: {exc}")
+            raise SystemExit(1) from exc
+    elif embedder_provider:
+        cfg: dict[str, str] = {}
+        if embedder_model:
+            cfg["model_name"] = embedder_model
+        embedder_spec = {"provider": embedder_provider, "config": cfg}
+
+    app = MemoryTUI(storage_path=storage_path, embedder_config=embedder_spec)
     app.run()
 
 

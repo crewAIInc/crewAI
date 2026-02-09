@@ -92,7 +92,11 @@ class MemoryTUI(App[None]):
     }}
     """
 
-    def __init__(self, storage_path: str | None = None) -> None:
+    def __init__(
+        self,
+        storage_path: str | None = None,
+        embedder_config: dict[str, Any] | None = None,
+    ) -> None:
         super().__init__()
         self._memory: Any = None
         self._init_error: str | None = None
@@ -100,12 +104,18 @@ class MemoryTUI(App[None]):
         self._entries: list[Any] = []
         self._page: int = 0
         self._last_scope_info: Any = None
+        self._custom_embedder = embedder_config is not None
         try:
             from crewai.memory.storage.lancedb_storage import LanceDBStorage
             from crewai.memory.unified_memory import Memory
 
             storage = LanceDBStorage(path=storage_path) if storage_path else LanceDBStorage()
-            self._memory = Memory(storage=storage)
+            embedder = None
+            if embedder_config is not None:
+                from crewai.rag.embeddings.factory import build_embedder
+
+                embedder = build_embedder(embedder_config)
+            self._memory = Memory(storage=storage, embedder=embedder) if embedder else Memory(storage=storage)
         except Exception as e:
             self._init_error = str(e)
 
@@ -241,6 +251,12 @@ class MemoryTUI(App[None]):
                 panel.update("[dim]No memories found.[/]")
                 return
             lines: list[str] = []
+            if not self._custom_embedder:
+                lines.append(
+                    "[dim italic]Note: Using default OpenAI embedder. "
+                    "If memories were created with a different embedder, "
+                    "pass --embedder-provider to match.[/]\n"
+                )
             for m in matches:
                 content = m.record.content
                 score_color = _PRIMARY if m.score >= 0.5 else "dim"
