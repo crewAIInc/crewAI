@@ -703,6 +703,8 @@ def test_agent_definition_based_on_dict():
 # test for human input
 @pytest.mark.vcr()
 def test_agent_human_input():
+    from crewai.core.providers.human_input import SyncHumanInputProvider
+
     # Agent configuration
     config = {
         "role": "test role",
@@ -720,7 +722,7 @@ def test_agent_human_input():
         human_input=True,
     )
 
-    # Side effect function for _ask_human_input to simulate multiple feedback iterations
+    # Side effect function for _prompt_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
             "Don't say hi, say Hello instead!",  # First feedback: instruct change
@@ -728,16 +730,16 @@ def test_agent_human_input():
         ]
     )
 
-    def ask_human_input_side_effect(*args, **kwargs):
+    def prompt_input_side_effect(*args, **kwargs):
         return next(feedback_responses)
 
-    # Patch both _ask_human_input and _invoke_loop to avoid real API/network calls.
+    # Patch both _prompt_input on provider and _invoke_loop to avoid real API/network calls.
     with (
         patch.object(
-            CrewAgentExecutor,
-            "_ask_human_input",
-            side_effect=ask_human_input_side_effect,
-        ) as mock_human_input,
+            SyncHumanInputProvider,
+            "_prompt_input",
+            side_effect=prompt_input_side_effect,
+        ) as mock_prompt_input,
         patch.object(
             CrewAgentExecutor,
             "_invoke_loop",
@@ -749,7 +751,7 @@ def test_agent_human_input():
 
         # Assertions to ensure the agent behaves correctly.
         # It should have requested feedback twice.
-        assert mock_human_input.call_count == 2
+        assert mock_prompt_input.call_count == 2
         # The final result should be processed to "Hello"
         assert output.strip().lower() == "hello"
 

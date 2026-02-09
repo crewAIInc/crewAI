@@ -903,7 +903,7 @@ class Telemetry:
                         {
                             "id": str(task.id),
                             "description": task.description,
-                            "output": task.output.raw_output,
+                            "output": task.output.raw if task.output else "",
                         }
                         for task in crew.tasks
                     ]
@@ -922,6 +922,9 @@ class Telemetry:
             key: The attribute key.
             value: The attribute value.
         """
+
+        if span is None:
+            return
 
         def _operation() -> None:
             return span.set_attribute(key, value)
