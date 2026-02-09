@@ -1986,6 +1986,12 @@ provide clear results that can be used by subsequent steps."""
 
         Makes one LLM call to produce a clean, unified response from
         the accumulated step results, rather than dumping raw step outputs.
+
+        If a response_model is set (from task.response_model or kickoff(response_format)),
+        the synthesis call uses it to produce structured output matching the
+        expected schema. This is the ONLY place response_model is applied in
+        the Plan-and-Execute path — intermediate steps produce free-text results.
+
         Falls back to concatenation if the synthesis LLM call fails.
         """
         step_results: list[str] = [
@@ -2012,6 +2018,7 @@ provide clear results that can be used by subsequent steps."""
 
         # Build synthesis prompt
         role = self.agent.role if self.agent else "Assistant"
+
         system_prompt = (
             f"You are {role}. You have completed a multi-step task. "
             "Synthesize the results from all steps into a single, coherent "
@@ -2031,17 +2038,26 @@ provide clear results that can be used by subsequent steps."""
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
+                response_model=self.response_model,
                 from_task=self.task,
                 from_agent=self.agent,
             )
 
             if synthesis:
-                final_text = str(synthesis)
-                self.state.current_answer = AgentFinish(
-                    thought="Synthesized final answer from all completed steps",
-                    output=final_text,
-                    text=final_text,
-                )
+                # If response_model produced a BaseModel, store it directly
+                if isinstance(synthesis, BaseModel):
+                    self.state.current_answer = AgentFinish(
+                        thought="Synthesized structured final answer from all completed steps",
+                        output=synthesis,
+                        text=synthesis.model_dump_json(),
+                    )
+                else:
+                    final_text = str(synthesis)
+                    self.state.current_answer = AgentFinish(
+                        thought="Synthesized final answer from all completed steps",
+                        output=final_text,
+                        text=final_text,
+                    )
                 return
 
         except Exception as e:
