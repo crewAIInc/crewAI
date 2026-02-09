@@ -1171,10 +1171,8 @@ def test_anthropic_empty_string_message_filtered():
 
 def test_anthropic_mixed_empty_and_valid_messages():
     """
-    Test that valid messages are preserved when mixed with empty messages.
-    
-    Note: After filtering, consecutive same-role messages may have a placeholder
-    assistant message inserted to maintain role alternation per Anthropic API requirements.
+    Test that valid messages are preserved when mixed with empty messages,
+    and role alternation is maintained with placeholder messages.
     """
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
 
@@ -1188,11 +1186,14 @@ def test_anthropic_mixed_empty_and_valid_messages():
     ]
     formatted, system = llm._format_messages_for_anthropic(messages)
 
-    # After filtering empty messages, we have two consecutive user messages.
-    # The role alternation fix inserts a placeholder assistant message between them.
+    # After filtering, we have two consecutive user messages.
+    # Role alternation fix inserts a placeholder assistant message between them.
     assert len(formatted) == 3
+    assert formatted[0]["role"] == "user"
     assert formatted[0]["content"] == "First message"
-    assert formatted[1]["role"] == "assistant"  # Placeholder for alternation
+    assert formatted[1]["role"] == "assistant"
+    assert formatted[1]["content"] == "..."  # Placeholder for role alternation
+    assert formatted[2]["role"] == "user"
     assert formatted[2]["content"] == "Second message"
 
 
