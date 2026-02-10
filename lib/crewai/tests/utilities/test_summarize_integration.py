@@ -114,10 +114,12 @@ class TestSummarizeDirectOpenAI:
         assert messages[0]["role"] == "system"
         assert messages[0]["content"] == original_system_content
 
-        # Summary should be a user message
+        # Summary should be a user message with <summary> block
         summary_msg = messages[-1]
         assert summary_msg["role"] == "user"
         assert len(summary_msg["content"]) > 0
+        assert "<summary>" in summary_msg["content"]
+        assert "</summary>" in summary_msg["content"]
 
 
 class TestSummarizeDirectAnthropic:
@@ -142,6 +144,8 @@ class TestSummarizeDirectAnthropic:
         summary_msg = messages[-1]
         assert summary_msg["role"] == "user"
         assert len(summary_msg["content"]) > 0
+        assert "<summary>" in summary_msg["content"]
+        assert "</summary>" in summary_msg["content"]
 
 
 class TestSummarizeDirectGemini:
@@ -166,6 +170,8 @@ class TestSummarizeDirectGemini:
         summary_msg = messages[-1]
         assert summary_msg["role"] == "user"
         assert len(summary_msg["content"]) > 0
+        assert "<summary>" in summary_msg["content"]
+        assert "</summary>" in summary_msg["content"]
 
 
 class TestCrewKickoffCompaction:
@@ -251,7 +257,9 @@ class TestSummarizePreservesFiles:
         # System message preserved
         assert messages[0]["role"] == "system"
 
-        # Files should be on the summary message
+        # Files should be on the summary message with <summary> block
         summary_msg = messages[-1]
+        assert "<summary>" in summary_msg["content"]
+        assert "</summary>" in summary_msg["content"]
         assert "files" in summary_msg
         assert "reference.pdf" in summary_msg["files"]
