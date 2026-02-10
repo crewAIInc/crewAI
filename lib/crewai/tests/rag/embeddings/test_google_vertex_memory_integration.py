@@ -76,6 +76,10 @@ def test_crew_memory_with_google_vertex_embedder(
     embedder = build_embedder(google_vertex_embedder_config)
     memory = Memory(embedder=embedder)
 
+    print(f"\n[DEBUG] Memory storage type: {type(memory._storage).__name__}")
+    print(f"[DEBUG] Memory storage path: {getattr(memory._storage, '_path', 'N/A')}")
+    print(f"[DEBUG] CREWAI_STORAGE_DIR={os.environ.get('CREWAI_STORAGE_DIR', 'not set')}")
+
     crew = Crew(
         agents=[simple_agent],
         tasks=[simple_task],
@@ -83,6 +87,8 @@ def test_crew_memory_with_google_vertex_embedder(
         verbose=True,
     )
 
+    print(f"[DEBUG] crew._memory is memory: {crew._memory is memory}")
+    print(f"[DEBUG] crew._memory type: {type(crew._memory).__name__}")
     assert crew._memory is memory
 
     result = crew.kickoff()
@@ -90,9 +96,33 @@ def test_crew_memory_with_google_vertex_embedder(
     assert result is not None
     assert result.raw is not None
     assert len(result.raw) > 0
+    print(f"[DEBUG] Result raw length: {len(result.raw)}")
 
     # Verify memories were actually written to storage
     info = crew._memory.info("/")
+    print(f"[DEBUG] Memory info after kickoff: record_count={info.record_count}, "
+          f"categories={info.categories}, child_scopes={info.child_scopes}")
+
+    # Debug: try extract_memories + remember manually to see if it works
+    if info.record_count == 0:
+        print("[DEBUG] No records found -- attempting manual extract_memories + remember")
+        try:
+            extracted = memory.extract_memories(f"Task result: {result.raw}")
+            print(f"[DEBUG] extract_memories returned {len(extracted)} items: {extracted[:3]}")
+        except Exception as e:
+            print(f"[DEBUG] extract_memories FAILED: {type(e).__name__}: {e}")
+            extracted = []
+
+        for i, mem in enumerate(extracted):
+            try:
+                record = memory.remember(mem)
+                print(f"[DEBUG] remember({i}) succeeded: id={record.id}, scope={record.scope}")
+            except Exception as e:
+                print(f"[DEBUG] remember({i}) FAILED: {type(e).__name__}: {e}")
+
+        info_after = memory.info("/")
+        print(f"[DEBUG] Memory info after manual save: record_count={info_after.record_count}")
+
     assert info.record_count > 0, (
         f"Expected memories to be saved after crew kickoff, "
         f"but found {info.record_count} records"
