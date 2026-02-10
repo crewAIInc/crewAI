@@ -1094,11 +1094,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1222,11 +1218,7 @@ class OpenAICompletion(BaseLLM):
                     if reasoning_items:
                         self._last_reasoning_items = reasoning_items
                 if event.response and event.response.usage:
-                    usage = {
-                        "prompt_tokens": event.response.usage.input_tokens,
-                        "completion_tokens": event.response.usage.output_tokens,
-                        "total_tokens": event.response.usage.total_tokens,
-                    }
+                    usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
         # If parse_tool_outputs is enabled, return structured result
@@ -1310,11 +1302,18 @@ class OpenAICompletion(BaseLLM):
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
         """Extract token usage from Responses API response."""
         if response.usage:
-            return {
+            result = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
+            # Extract cached prompt tokens from input_tokens_details
+            input_details = getattr(response.usage, "input_tokens_details", None)
+            if input_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(input_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _extract_builtin_tool_outputs(self, response: Response) -> ResponsesAPIResult:
@@ -2240,11 +2239,18 @@ class OpenAICompletion(BaseLLM):
         """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            return {
+            result = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
+            # Extract cached prompt tokens from prompt_tokens_details
+            prompt_details = getattr(usage, "prompt_tokens_details", None)
+            if prompt_details:
+                result["cached_prompt_tokens"] = (
+                    getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            return result
         return {"total_tokens": 0}
 
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:

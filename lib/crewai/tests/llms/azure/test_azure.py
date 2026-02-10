@@ -103,6 +103,114 @@ def test_azure_tool_use_conversation_flow():
         assert mock_complete.called
 
 
+@pytest.mark.vcr()
+def test_azure_cached_prompt_tokens():
+    """
+    Test that Azure correctly extracts and tracks cached_prompt_tokens
+    from prompt_tokens_details.cached_tokens.
+    Sends the same large prompt twice so the second call hits the cache.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Build a large static document to trigger prompt caching (>1024 tokens)
+    document = (
+        "CrewAI Prompt Caching Test Document:\n"
+        + ("This is a static document used for Azure prompt caching tests. " * 140)
+    )
+
+    llm = AzureCompletion(
+        model="gpt-4.1",
+        prompt_cache_key="crewai-azure-cache-test",
+    )
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "user", "content": document},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "user", "content": document},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_azure_cached_prompt_tokens_with_tools():
+    """
+    Test that Azure correctly tracks cached_prompt_tokens when tools are used.
+    The large system prompt should be cached across tool-calling requests.
+    """
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    # Build a large static document to trigger prompt caching (>1024 tokens)
+    document = (
+        "CrewAI Prompt Caching Test Document:\n"
+        + ("This is a static document used for Azure prompt caching tests. " * 140)
+    )
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+                "additionalProperties": False,
+            },
+        }
+    ]
+
+    llm = AzureCompletion(
+        model="gpt-4.1",
+        prompt_cache_key="crewai-azure-cache-test-tools",
+    )
+
+    # First call with tool: creates the cache
+    llm.call(
+        [
+            {"role": "user", "content": document},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools: should hit the cache
+    llm.call(
+        [
+            {"role": "user", "content": document},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
 @pytest.mark.usefixtures("mock_azure_credentials")
 def test_azure_completion_module_is_imported():
     """

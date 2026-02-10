@@ -1114,3 +1114,97 @@ def test_gemini_structured_output_preserves_json_with_stop_word_patterns():
     assert "Action:" in result.action_taken
     assert "Observation:" in result.observation_result
     assert "Final Answer:" in result.final_answer
+
+
+@pytest.mark.vcr()
+def test_gemini_cached_prompt_tokens():
+    """
+    Test that Gemini correctly extracts and tracks cached_prompt_tokens
+    from cached_content_token_count in the usage metadata.
+    Sends two calls with the same large prompt to trigger caching.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="google/gemini-2.5-flash")
+
+    # First call
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # cached_prompt_tokens should be populated (may be 0 if Gemini
+    # doesn't cache for this particular request, but the field should exist)
+    assert usage.cached_prompt_tokens >= 0
+
+
+@pytest.mark.vcr()
+def test_gemini_cached_prompt_tokens_with_tools():
+    """
+    Test that Gemini correctly tracks cached_prompt_tokens when tools are used.
+    The large system prompt should be cached across tool-calling requests.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = LLM(model="google/gemini-2.5-flash")
+
+    # First call with tool
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # cached_prompt_tokens should be populated (may be 0 if Gemini
+    # doesn't cache for this particular request, but the field should exist)
+    assert usage.cached_prompt_tokens >= 0

@@ -1578,3 +1578,217 @@ def test_openai_structured_output_preserves_json_with_stop_word_patterns():
     assert "Action:" in result.action_taken
     assert "Observation:" in result.observation_result
     assert "Final Answer:" in result.final_answer
+
+
+
+@pytest.mark.vcr()
+def test_openai_completions_cached_prompt_tokens():
+    """
+    Test that the Chat Completions API correctly extracts and tracks
+    cached_prompt_tokens from prompt_tokens_details.cached_tokens.
+    Sends the same large prompt twice so the second call hits the cache.
+    """
+    # Build a large system prompt to trigger prompt caching (>1024 tokens)
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1")
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_cached_prompt_tokens():
+    """
+    Test that the Responses API correctly extracts and tracks
+    cached_prompt_tokens from input_tokens_details.cached_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1", api="responses")
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_streaming_cached_prompt_tokens():
+    """
+    Test that streaming Chat Completions API correctly extracts and tracks
+    cached_prompt_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = OpenAICompletion(model="gpt-4.1", stream=True)
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say hello in one word."},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "Say goodbye in one word."},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_completions_cached_prompt_tokens_with_tools():
+    """
+    Test that the Chat Completions API correctly tracks cached_prompt_tokens
+    when tools are used. The large system prompt should be cached across calls.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+                "additionalProperties": False,
+            },
+        }
+    ]
+
+    llm = OpenAICompletion(model="gpt-4.1")
+
+    # First call with tool: creates the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools: should hit the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_openai_responses_api_cached_prompt_tokens_with_tools():
+    """
+    Test that the Responses API correctly tracks cached_prompt_tokens
+    when function tools are used.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = OpenAICompletion(model="gpt-4.1", api='response')
+
+    # First call with tool
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Tokyo?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call: same system prompt + tools should hit cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": "What is the weather in Paris?"},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    assert usage.cached_prompt_tokens > 0
