@@ -364,19 +364,7 @@ class Agent(BaseAgent):
         task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
         task_prompt = format_task_with_context(task_prompt, context, self.i18n)
 
-        import logging as _logging
-        _mem_dbg = _logging.getLogger("crewai.memory.debug")
-        _has_mem = self._is_any_available_memory()
-        _mem_dbg.warning(
-            "[Agent.execute_task] _is_any_available_memory=%s, "
-            "agent.memory=%s, crew=%s, crew._memory=%s",
-            _has_mem,
-            type(getattr(self, "memory", None)).__name__,
-            type(self.crew).__name__ if self.crew else None,
-            type(getattr(self.crew, "_memory", None)).__name__ if self.crew else "no-crew",
-        )
-
-        if _has_mem:
+        if self._is_any_available_memory():
             crewai_event_bus.emit(
                 self,
                 event=MemoryRetrievalStartedEvent(

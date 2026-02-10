@@ -1106,14 +1106,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if self.state.ask_for_human_input:
                 formatted_answer = self._handle_human_feedback(formatted_answer)
 
-            import logging as _logging
-            _logging.getLogger("crewai.memory.debug").warning(
-                "[ExperimentalAgentExecutor.invoke] About to call _save_to_memory. "
-                "agent=%s, crew=%s, crew._memory=%s",
-                getattr(self.agent, "role", "?"),
-                type(self.crew).__name__ if self.crew else None,
-                type(getattr(self.crew, "_memory", None)).__name__ if self.crew else "no-crew",
-            )
             self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
