@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -109,6 +108,7 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
         MemoryRecord(content="b", scope="/team", embedding=[0.0] * 4),
     ])
     scopes = storage.list_scopes("/")
+    assert "/" in scopes
     info = storage.get_scope_info("/")
     assert info.record_count >= 1
     assert info.path == "/"
@@ -128,8 +128,6 @@ def mock_embedder() -> MagicMock:
 def memory_with_storage(tmp_path: Path, mock_embedder: MagicMock) -> None:
     import os
     os.environ.pop("OPENAI_API_KEY", None)
-    # Avoid default embedder that needs API
-    pass
 
 
 def test_memory_remember_recall_shallow(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -183,6 +181,7 @@ def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) 
     m = Memory(storage=str(tmp_path / "db4"), llm=MagicMock(), embedder=mock_embedder)
     m.remember("Root", scope="/", categories=[], importance=0.5, metadata={})
     scopes = m.list_scopes("/")
+    assert "/" in scopes
     info = m.info("/")
     assert info.record_count >= 1
     tree = m.tree("/", max_depth=2)

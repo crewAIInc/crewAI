@@ -36,7 +36,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-from crewai.memory.unified_memory import Memory
+
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task

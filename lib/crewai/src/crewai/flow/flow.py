@@ -481,6 +481,20 @@ class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     def __bool__(self) -> bool:
         return bool(self._list)
 
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        """Compare based on the underlying list contents."""
+        if isinstance(other, LockedListProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._list == second._list
+        with self._lock:
+            return self._list == other
+
+    def __ne__(self, other: object) -> bool:  # type: ignore[override]
+        return not self.__eq__(other)
+
 
 class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     """Thread-safe proxy for dict operations.
@@ -549,6 +563,20 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
 
     def __bool__(self) -> bool:
         return bool(self._dict)
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        """Compare based on the underlying dict contents."""
+        if isinstance(other, LockedDictProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._dict == second._dict
+        with self._lock:
+            return self._dict == other
+
+    def __ne__(self, other: object) -> bool:  # type: ignore[override]
+        return not self.__eq__(other)
 
 
 class StateProxy(Generic[T]):
