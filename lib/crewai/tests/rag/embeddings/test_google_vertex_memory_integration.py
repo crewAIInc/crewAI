@@ -38,6 +38,7 @@ def google_vertex_embedder_config():
         "config": {
             # "api_key": os.getenv("GOOGLE_API_KEY", "test-key"),
             "project_id": os.getenv("GOOGLE_CLOUD_PROJECT", "gen-lang-client-0393486657"),
+            "location": "us-central1",
             "model_name": "gemini-embedding-001",
         },
     }
