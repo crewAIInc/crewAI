@@ -1116,6 +1116,16 @@ class OpenAICompletion(BaseLLM):
 
             return parsed_result
 
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+            )
+            return function_calls
+
         if function_calls and available_functions:
             for call in function_calls:
                 function_name = call.get("name", "")
@@ -1243,6 +1253,16 @@ class OpenAICompletion(BaseLLM):
             )
 
             return parsed_result
+
+        if function_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params.get("input", []),
+            )
+            return function_calls
 
         if function_calls and available_functions:
             for call in function_calls:
@@ -1822,6 +1842,27 @@ class OpenAICompletion(BaseLLM):
 
         self._track_token_usage_internal(usage_data)
 
+        if tool_calls and not available_functions:
+            formatted_tool_calls = [
+                {
+                    "id": call_data.get("id", f"call_{idx}"),
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for idx, call_data in tool_calls.items()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
+
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
                 function_name = call_data["name"]
@@ -2143,6 +2184,27 @@ class OpenAICompletion(BaseLLM):
                     )
 
         self._track_token_usage_internal(usage_data)
+
+        if tool_calls and not available_functions:
+            formatted_tool_calls = [
+                {
+                    "id": call_data.get("id", f"call_{idx}"),
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for idx, call_data in tool_calls.items()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
 
         if tool_calls and available_functions:
             for call_data in tool_calls.values():
