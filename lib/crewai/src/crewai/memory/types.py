@@ -222,6 +222,16 @@ class MemoryConfig(BaseModel):
             "allow more thorough but slower retrieval."
         ),
     )
+    recall_oversample_factor: int = Field(
+        default=_RECALL_OVERSAMPLE_FACTOR,
+        ge=1,
+        description=(
+            "When searching the vector store, fetch this many times more results "
+            "than the caller requested so that post-search steps (composite "
+            "scoring, deduplication, category filtering) have enough candidates "
+            "to fill the final result set."
+        ),
+    )
 
 
 def embed_text(embedder: Any, text: str) -> list[float]:
