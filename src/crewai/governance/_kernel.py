@@ -165,8 +165,10 @@ class GovernedAgent:
             if tools:
                 tools = self._filter_tools(tools)
 
-            # Track tool invocations by wrapping each tool
+            # Track tool invocations by wrapping each tool (only if not already wrapped)
             for tool in (tools or []):
+                if getattr(tool, "_agentos_wrapped", False):
+                    continue
                 original_run = getattr(tool, "_run", None) or getattr(tool, "run", None)
                 if original_run is not None:
                     tool_name = getattr(tool, "name", str(tool))
@@ -185,6 +187,7 @@ class GovernedAgent:
                         tool._run = _tracked_run
                     else:
                         tool.run = _tracked_run
+                    tool._agentos_wrapped = True
 
             # Execute with governance
             try:
@@ -430,7 +433,7 @@ class GovernedCrew:
 
             # Check execution time (audit-only - records violation post-execution)
             elapsed = time.time() - start_time
-            if elapsed > self.policy.max_execution_time:
+            if self.policy.max_execution_time > 0 and elapsed > self.policy.max_execution_time:
                 self._record_violation(
                     ViolationType.TIMEOUT,
                     f"Execution time ({elapsed:.1f}s) exceeded limit ({self.policy.max_execution_time}s)",
