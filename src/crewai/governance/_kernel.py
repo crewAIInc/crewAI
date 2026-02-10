@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -164,12 +165,26 @@ class GovernedAgent:
             if tools:
                 tools = self._filter_tools(tools)
 
-            # Check tool call limit before execution
-            if self.policy.max_tool_calls > 0 and self._tool_calls >= self.policy.max_tool_calls:
-                self._record_violation(
-                    ViolationType.TOOL_LIMIT_EXCEEDED,
-                    f"Tool calls ({self._tool_calls}) would exceed limit ({self.policy.max_tool_calls})",
-                )
+            # Track tool invocations by wrapping each tool
+            for tool in (tools or []):
+                original_run = getattr(tool, "_run", None) or getattr(tool, "run", None)
+                if original_run is not None:
+                    tool_name = getattr(tool, "name", str(tool))
+
+                    @wraps(original_run)
+                    def _tracked_run(*args, _orig=original_run, _name=tool_name, **kw):
+                        self._tool_calls += 1
+                        if self.policy.max_tool_calls > 0 and self._tool_calls > self.policy.max_tool_calls:
+                            self._record_violation(
+                                ViolationType.TOOL_LIMIT_EXCEEDED,
+                                f"Tool calls ({self._tool_calls}) exceeded limit ({self.policy.max_tool_calls})",
+                            )
+                        return _orig(*args, **kw)
+
+                    if hasattr(tool, "_run"):
+                        tool._run = _tracked_run
+                    else:
+                        tool.run = _tracked_run
 
             # Execute with governance
             try:
@@ -221,16 +236,6 @@ class GovernedAgent:
                 continue
 
             filtered.append(tool)
-            
-            # Track tool call
-            self._tool_calls += 1
-            
-            # Check tool call limit
-            if self.policy.max_tool_calls > 0 and self._tool_calls > self.policy.max_tool_calls:
-                self._record_violation(
-                    ViolationType.TOOL_LIMIT_EXCEEDED,
-                    f"Tool calls ({self._tool_calls}) exceeded limit ({self.policy.max_tool_calls})",
-                )
 
         return filtered
 
@@ -276,7 +281,7 @@ class GovernedAgent:
             # to avoid breaking downstream consumers that expect specific types.
             # The violation has already been recorded; callers can check get_violations()
             # if they need to know about content issues.
-            logger.warning(
+            logging.getLogger(__name__).warning(
                 "Content violation detected in non-string output (type: %s). "
                 "Returning original object to preserve type. Violations: %d",
                 type(output).__name__,
