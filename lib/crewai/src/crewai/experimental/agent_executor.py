@@ -18,6 +18,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
+from crewai.core.providers.human_input import get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
@@ -31,7 +32,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -41,7 +43,12 @@ from crewai.hooks.tool_hooks import (
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
 )
-from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
 from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
@@ -191,8 +198,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         self._instance_id = str(uuid4())[:8]
 
-        self.before_llm_call_hooks: list[BeforeLLMCallHookType] = []
-        self.after_llm_call_hooks: list[AfterLLMCallHookType] = []
+        self.before_llm_call_hooks: list[
+            BeforeLLMCallHookType | BeforeLLMCallHookCallable
+        ] = []
+        self.after_llm_call_hooks: list[
+            AfterLLMCallHookType | AfterLLMCallHookCallable
+        ] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
@@ -206,6 +217,71 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
             )
         self._state = AgentReActState()
+
+    @property
+    def messages(self) -> list[LLMMessage]:
+        """Delegate to state for ExecutorContext conformance."""
+        return self._state.messages
+
+    @messages.setter
+    def messages(self, value: list[LLMMessage]) -> None:
+        """Delegate to state for ExecutorContext conformance."""
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            with self._state_lock:
+                self._state.messages = value
+        else:
+            self._state.messages = value
+
+    @property
+    def ask_for_human_input(self) -> bool:
+        """Delegate to state for ExecutorContext conformance."""
+        return self._state.ask_for_human_input
+
+    @ask_for_human_input.setter
+    def ask_for_human_input(self, value: bool) -> None:
+        """Delegate to state for ExecutorContext conformance."""
+        self._state.ask_for_human_input = value
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop and return the result.
+
+        Required by ExecutorContext protocol.
+        """
+        self._state.iterations = 0
+        self._state.is_finished = False
+        self._state.current_answer = None
+
+        self.kickoff()
+
+        answer = self._state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent loop did not produce a final answer")
+        return answer
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop asynchronously and return the result.
+
+        Required by AsyncExecutorContext protocol.
+        """
+        self._state.iterations = 0
+        self._state.is_finished = False
+        self._state.current_answer = None
+
+        await self.akickoff()
+
+        answer = self._state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent loop did not produce a final answer")
+        return answer
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format feedback as a message for the LLM.
+
+        Required by ExecutorContext protocol.
+        """
+        return format_message_for_llm(
+            self._i18n.slice("feedback_instructions").format(feedback=feedback)
+        )
 
     def _ensure_flow_initialized(self) -> None:
         """Ensure Flow.__init__() has been called.
@@ -298,17 +374,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Flow initialization is deferred to prevent event emission during agent setup.
         Returns the temporary state until invoke() is called.
         """
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
         return self._state
-
-    @property
-    def messages(self) -> list[LLMMessage]:
-        """Compatibility property for mixin - returns state messages."""
-        return self._state.messages
-
-    @messages.setter
-    def messages(self, value: list[LLMMessage]) -> None:
-        """Set state messages."""
-        self._state.messages = value
 
     @property
     def iterations(self) -> int:
@@ -416,15 +484,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             raise
 
     @listen("continue_reasoning_native")
-    def call_llm_native_tools(
-        self,
-    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+    def call_llm_native_tools(self) -> None:
         """Execute LLM call with native function calling.
 
         Always calls the LLM so it can read reflection prompts and decide
         whether to provide a final answer or request more tools.
 
-        Returns routing decision based on whether tool calls or final answer.
+        Note: This is a listener, not a router. The route_native_tool_result
+        router fires after this to determine the next step based on state.
         """
         try:
             # Clear pending tools - LLM will decide what to do next after reading
@@ -454,8 +521,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 # Store tool calls for sequential processing
                 self.state.pending_tool_calls = list(answer)
-
-                return "native_tool_calls"
+                return  # Router will check pending_tool_calls
 
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
@@ -465,7 +531,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer.model_dump_json())
-                return "native_finished"
+                return  # Router will check current_answer
 
             # Text response - this is the final answer
             if isinstance(answer, str):
@@ -476,8 +542,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
                 self._invoke_step_callback(self.state.current_answer)
                 self._append_message_to_state(answer)
-
-                return "native_finished"
+                return  # Router will check current_answer
 
             # Unexpected response type, treat as final answer
             self.state.current_answer = AgentFinish(
@@ -487,13 +552,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
             self._invoke_step_callback(self.state.current_answer)
             self._append_message_to_state(str(answer))
-
-            return "native_finished"
+            # Router will check current_answer
 
         except Exception as e:
             if is_context_length_exceeded(e):
                 self._last_context_error = e
-                return "context_error"
+                return  # Router will check _last_context_error
             if e.__class__.__module__.startswith("litellm"):
                 raise e
             handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
@@ -505,6 +569,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         if isinstance(self.state.current_answer, AgentAction):
             return "execute_tool"
         return "agent_finished"
+
+    @router(call_llm_native_tools)
+    def route_native_tool_result(
+        self,
+    ) -> Literal["native_tool_calls", "native_finished", "context_error"]:
+        """Route based on LLM response for native tool calling.
+
+        Checks state set by call_llm_native_tools to determine next step.
+        This router is needed because only router return values trigger
+        downstream listeners.
+        """
+        if self._last_context_error is not None:
+            return "context_error"
+        if self.state.pending_tool_calls:
+            return "native_tool_calls"
+        return "native_finished"
 
     @listen("execute_tool")
     def execute_tool_action(self) -> Literal["tool_completed", "tool_result_is_final"]:
@@ -689,6 +769,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     agent_key=agent_key,
                 ),
             )
+            error_event_emitted = False
 
             track_delegation_if_needed(func_name, args_dict, self.task)
 
@@ -764,6 +845,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                                 error=e,
                             ),
                         )
+                        error_event_emitted = True
             elif max_usage_reached and original_tool:
                 # Return error message when max usage limit is reached
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
@@ -792,20 +874,20 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                         color="red",
                     )
 
-            # Emit tool usage finished event
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageFinishedEvent(
-                    output=result,
-                    tool_name=func_name,
-                    tool_args=args_dict,
-                    from_agent=self.agent,
-                    from_task=self.task,
-                    agent_key=agent_key,
-                    started_at=started_at,
-                    finished_at=datetime.now(),
-                ),
-            )
+            if not error_event_emitted:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageFinishedEvent(
+                        output=result,
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        started_at=started_at,
+                        finished_at=datetime.now(),
+                    ),
+                )
 
             # Append tool result message
             tool_message: LLMMessage = {
@@ -861,9 +943,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         self.state.iterations += 1
         return "initialized"
 
-    @listen("initialized")
+    @listen(or_("initialized", "tool_completed", "native_tool_completed"))
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
+        if self._flow_initialized:
+            self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))
@@ -1105,7 +1189,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 )
 
             if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
+                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
             self._create_short_term_memory(formatted_answer)
             self._create_long_term_memory(formatted_answer)
@@ -1319,17 +1403,22 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Returns:
             Final answer after feedback.
         """
-        output_str = (
-            str(formatted_answer.output)
-            if isinstance(formatted_answer.output, BaseModel)
-            else formatted_answer.output
-        )
-        human_feedback = self._ask_human_input(output_str)
+        provider = get_provider()
+        return provider.handle_feedback(formatted_answer, self)
 
-        if self._is_training_mode():
-            return self._handle_training_feedback(formatted_answer, human_feedback)
+    async def _ahandle_human_feedback(
+        self, formatted_answer: AgentFinish
+    ) -> AgentFinish:
+        """Process human feedback asynchronously and refine answer.
 
-        return self._handle_regular_feedback(formatted_answer, human_feedback)
+        Args:
+            formatted_answer: Initial agent result.
+
+        Returns:
+            Final answer after feedback.
+        """
+        provider = get_provider()
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -1338,101 +1427,6 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
-
-    def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
-    ) -> AgentFinish:
-        """Process training feedback and generate improved answer.
-
-        Args:
-            initial_answer: Initial agent output.
-            feedback: Training feedback.
-
-        Returns:
-            Improved answer.
-        """
-        self._handle_crew_training_output(initial_answer, feedback)
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow for improved answer
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get improved answer from state
-        improved_answer = self.state.current_answer
-        if not isinstance(improved_answer, AgentFinish):
-            raise RuntimeError(
-                "Training feedback iteration did not produce final answer"
-            )
-
-        self._handle_crew_training_output(improved_answer)
-        self.state.ask_for_human_input = False
-        return improved_answer
-
-    def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
-    ) -> AgentFinish:
-        """Process regular feedback iteratively until user is satisfied.
-
-        Args:
-            current_answer: Current agent output.
-            initial_feedback: Initial user feedback.
-
-        Returns:
-            Final answer after iterations.
-        """
-        feedback = initial_feedback
-        answer = current_answer
-
-        while self.state.ask_for_human_input:
-            if feedback.strip() == "":
-                self.state.ask_for_human_input = False
-            else:
-                answer = self._process_feedback_iteration(feedback)
-                output_str = (
-                    str(answer.output)
-                    if isinstance(answer.output, BaseModel)
-                    else answer.output
-                )
-                feedback = self._ask_human_input(output_str)
-
-        return answer
-
-    def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process a single feedback iteration and generate updated response.
-
-        Args:
-            feedback: User feedback.
-
-        Returns:
-            Updated agent response.
-        """
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get answer from state
-        answer = self.state.current_answer
-        if not isinstance(answer, AgentFinish):
-            raise RuntimeError("Feedback iteration did not produce final answer")
-
-        return answer
 
     @classmethod
     def __get_pydantic_core_schema__(

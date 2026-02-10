@@ -1,17 +1,11 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
-      Calculate 15 + 27 using your add_numbers tool. Report the result."}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:"],"stream":false,"system":"You
-      are Calculator. You are a calculator assistant that uses tools to compute results.\nYour
-      personal goal is: Perform calculations using available tools","tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Output
-      the structured response","input_schema":{"type":"object","description":"Structured
-      output for calculation results.","title":"CalculationResult","properties":{"operation":{"type":"string","description":"The
-      mathematical operation performed","title":"Operation"},"result":{"type":"integer","description":"The
-      result of the calculation","title":"Result"},"explanation":{"type":"string","description":"Brief
-      explanation of the calculation","title":"Explanation"}},"additionalProperties":false,"required":["operation","result","explanation"]}}]}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Calculate 5 +
+      3 using the simple_calculator tool with operation ''add''."}],"model":"claude-3-5-haiku-20241022","stream":false,"tool_choice":{"type":"tool","name":"simple_calculator"},"tools":[{"name":"simple_calculator","description":"Perform
+      simple math operations","input_schema":{"type":"object","properties":{"operation":{"type":"string","enum":["add","multiply"],"description":"The
+      operation to perform"},"a":{"type":"integer","description":"First number"},"b":{"type":"integer","description":"Second
+      number"}},"required":["operation","a","b"]}}]}'
     headers:
-      User-Agent:
-      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
@@ -21,13 +15,13 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1050'
+      - '608'
       content-type:
       - application/json
       host:
       - api.anthropic.com
-      x-api-key:
-      - X-API-KEY-XXX
+      user-agent:
+      - X-USER-AGENT-XXX
       x-stainless-arch:
       - X-STAINLESS-ARCH-XXX
       x-stainless-async:
@@ -43,15 +37,14 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.5
+      - 3.13.3
       x-stainless-timeout:
       - NOT_GIVEN
     method: POST
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01A41GpDoJbZLUhR8dQzUcUX","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01UNPdzpayoWyqDYVE7fR5oA","name":"structured_output","input":{"operation":"Addition","result":42,"explanation":"Added
-        15 and 27 together"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":573,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":75,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01Q2F83aAeqqTCxsd8WpZjK7","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01BW4XkHnhRVM5JZsvoaQKw5","name":"simple_calculator","input":{"operation":"add","a":5,"b":3}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":498,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":67,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -62,7 +55,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 18:41:25 GMT
+      - Tue, 03 Feb 2026 23:26:35 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +81,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-06T18:41:24Z'
+      - '2026-02-03T23:26:34Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -102,7 +95,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1247'
+      - '1228'
     status:
       code: 200
       message: OK
