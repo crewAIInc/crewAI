@@ -1,6 +1,8 @@
 interactions:
 - request:
-    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in French"}],"model":"claude-sonnet-4-0","stream":false,"tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Returns structured data according to the schema","input_schema":{"description":"Response model for greeting test.","properties":{"greeting":{"title":"Greeting","type":"string"},"language":{"title":"Language","type":"string"}},"required":["greeting","language"],"title":"GreetingResponse","type":"object"}}]}'
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Say hello in French"}],"model":"claude-sonnet-4-0","stream":false,"tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Output
+      the structured response","input_schema":{"type":"object","description":"Response
+      model for greeting test.","title":"GreetingResponse","properties":{"greeting":{"type":"string","title":"Greeting"},"language":{"type":"string","title":"Language"}},"additionalProperties":false,"required":["greeting","language"]}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -13,7 +15,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '539'
+      - '551'
       content-type:
       - application/json
       host:
@@ -29,7 +31,7 @@ interactions:
       x-stainless-os:
       - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 0.75.0
+      - 0.76.0
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -42,7 +44,7 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01XjvX2nCho1knuucbwwgCpw","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_019rfPRSDmBb7CyCTdGMv5rK","name":"structured_output","input":{"greeting":"Bonjour","language":"French"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":432,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard"}}'
+      string: '{"model":"claude-sonnet-4-20250514","id":"msg_01CKTyVmak15L5oQ36mv4sL9","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_0174BYmn6xiSnUwVhFD8S7EW","name":"structured_output","input":{"greeting":"Bonjour","language":"French"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":436,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -51,7 +53,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Mon, 01 Dec 2025 11:19:38 GMT
+      - Mon, 26 Jan 2026 14:59:34 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -82,12 +84,10 @@ interactions:
       - DYNAMIC
       request-id:
       - REQUEST-ID-XXX
-      retry-after:
-      - '24'
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '2101'
+      - '968'
     status:
       code: 200
       message: OK

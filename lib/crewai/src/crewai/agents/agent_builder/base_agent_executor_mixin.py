@@ -4,12 +4,12 @@ import time
 from typing import TYPE_CHECKING
 
 from crewai.agents.parser import AgentFinish
-from crewai.events.event_listener import event_listener
 from crewai.memory.entity.entity_memory_item import EntityMemoryItem
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.utilities.converter import ConverterError
 from crewai.utilities.evaluators.task_evaluator import TaskEvaluator
 from crewai.utilities.printer import Printer
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 if TYPE_CHECKING:
@@ -21,9 +21,9 @@ if TYPE_CHECKING:
 
 
 class CrewAgentExecutorMixin:
-    crew: Crew
+    crew: Crew | None
     agent: Agent
-    task: Task
+    task: Task | None
     iterations: int
     max_iter: int
     messages: list[LLMMessage]
@@ -36,7 +36,8 @@ class CrewAgentExecutorMixin:
             self.crew
             and self.agent
             and self.task
-            and "Action: Delegate work to coworker" not in output.text
+            and f"Action: {sanitize_tool_name('Delegate work to coworker')}"
+            not in output.text
         ):
             try:
                 if (
@@ -131,56 +132,8 @@ class CrewAgentExecutorMixin:
             and self.crew._long_term_memory
             and self.crew._entity_memory is None
         ):
-            self._printer.print(
-                content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
-                color="bold_yellow",
-            )
-
-    def _ask_human_input(self, final_answer: str) -> str:
-        """Prompt human input with mode-appropriate messaging.
-
-        Note: The final answer is already displayed via the AgentLogsExecutionEvent
-        panel, so we only show the feedback prompt here.
-        """
-        from rich.panel import Panel
-        from rich.text import Text
-
-        formatter = event_listener.formatter
-        formatter.pause_live_updates()
-
-        try:
-            # Training mode prompt (single iteration)
-            if self.crew and getattr(self.crew, "_train", False):
-                prompt_text = (
-                    "TRAINING MODE: Provide feedback to improve the agent's performance.\n\n"
-                    "This will be used to train better versions of the agent.\n"
-                    "Please provide detailed feedback about the result quality and reasoning process."
+            if self.agent and self.agent.verbose:
+                self._printer.print(
+                    content="Long term memory is enabled, but entity memory is not enabled. Please configure entity memory or set memory=True to automatically enable it.",
+                    color="bold_yellow",
                 )
-                title = "🎓 Training Feedback Required"
-            # Regular human-in-the-loop prompt (multiple iterations)
-            else:
-                prompt_text = (
-                    "Provide feedback on the Final Result above.\n\n"
-                    "• If you are happy with the result, simply hit Enter without typing anything.\n"
-                    "• Otherwise, provide specific improvement requests.\n"
-                    "• You can provide multiple rounds of feedback until satisfied."
-                )
-                title = "💬 Human Feedback Required"
-
-            content = Text()
-            content.append(prompt_text, style="yellow")
-
-            prompt_panel = Panel(
-                content,
-                title=title,
-                border_style="yellow",
-                padding=(1, 2),
-            )
-            formatter.console.print(prompt_panel)
-
-            response = input()
-            if response.strip() != "":
-                formatter.console.print("\n[cyan]Processing your feedback...[/cyan]")
-            return response
-        finally:
-            formatter.resume_live_updates()

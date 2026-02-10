@@ -16,8 +16,22 @@ from typing import Any, Final, ParamSpec, TypeVar
 
 from typing_extensions import Self
 
-from crewai.events.base_events import BaseEvent
+from crewai.events.base_events import BaseEvent, get_next_emission_sequence
 from crewai.events.depends import Depends
+from crewai.events.event_context import (
+    SCOPE_ENDING_EVENTS,
+    SCOPE_STARTING_EVENTS,
+    VALID_EVENT_PAIRS,
+    get_current_parent_id,
+    get_enclosing_parent_id,
+    get_last_event_id,
+    get_triggering_event_id,
+    handle_empty_pop,
+    handle_mismatch,
+    pop_event_scope,
+    push_event_scope,
+    set_last_event_id,
+)
 from crewai.events.handler_graph import build_execution_plan
 from crewai.events.types.event_bus_types import (
     AsyncHandler,
@@ -69,6 +83,8 @@ class CrewAIEventsBus:
     _execution_plan_cache: dict[type[BaseEvent], ExecutionPlan]
     _console: ConsoleFormatter
     _shutting_down: bool
+    _pending_futures: set[Future[Any]]
+    _futures_lock: threading.Lock
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -91,6 +107,8 @@ class CrewAIEventsBus:
         """
         self._shutting_down = False
         self._rwlock = RWLock()
+        self._pending_futures: set[Future[Any]] = set()
+        self._futures_lock = threading.Lock()
         self._sync_handlers: dict[type[BaseEvent], SyncHandlerSet] = {}
         self._async_handlers: dict[type[BaseEvent], AsyncHandlerSet] = {}
         self._handler_dependencies: dict[
@@ -110,6 +128,25 @@ class CrewAIEventsBus:
             daemon=True,
         )
         self._loop_thread.start()
+
+    def _track_future(self, future: Future[Any]) -> Future[Any]:
+        """Track a future and set up automatic cleanup when it completes.
+
+        Args:
+            future: The future to track
+
+        Returns:
+            The same future for chaining
+        """
+        with self._futures_lock:
+            self._pending_futures.add(future)
+
+        def _cleanup(f: Future[Any]) -> None:
+            with self._futures_lock:
+                self._pending_futures.discard(f)
+
+        future.add_done_callback(_cleanup)
+        return future
 
     def _run_loop(self) -> None:
         """Run the background async event loop."""
@@ -189,6 +226,39 @@ class CrewAIEventsBus:
             return handler
 
         return decorator
+
+    def off(
+        self,
+        event_type: type[BaseEvent],
+        handler: Callable[..., Any],
+    ) -> None:
+        """Unregister an event handler for a specific event type.
+
+        Args:
+            event_type: The event class to stop listening for
+            handler: The handler function to unregister
+        """
+        with self._rwlock.w_locked():
+            if event_type in self._sync_handlers:
+                existing_sync = self._sync_handlers[event_type]
+                if handler in existing_sync:
+                    self._sync_handlers[event_type] = existing_sync - {handler}
+                    if not self._sync_handlers[event_type]:
+                        del self._sync_handlers[event_type]
+
+            if event_type in self._async_handlers:
+                existing_async = self._async_handlers[event_type]
+                if handler in existing_async:
+                    self._async_handlers[event_type] = existing_async - {handler}
+                    if not self._async_handlers[event_type]:
+                        del self._async_handlers[event_type]
+
+            if event_type in self._handler_dependencies:
+                self._handler_dependencies[event_type].pop(handler, None)
+                if not self._handler_dependencies[event_type]:
+                    del self._handler_dependencies[event_type]
+
+            self._execution_plan_cache.pop(event_type, None)
 
     def _call_handlers(
         self,
@@ -326,6 +396,29 @@ class CrewAIEventsBus:
             ...     await asyncio.wrap_future(future)  # In async test
             ...     # or future.result(timeout=5.0) in sync code
         """
+        event.previous_event_id = get_last_event_id()
+        event.triggered_by_event_id = get_triggering_event_id()
+        event.emission_sequence = get_next_emission_sequence()
+        if event.parent_event_id is None:
+            event_type_name = event.type
+            if event_type_name in SCOPE_ENDING_EVENTS:
+                event.parent_event_id = get_enclosing_parent_id()
+                popped = pop_event_scope()
+                if popped is None:
+                    handle_empty_pop(event_type_name)
+                else:
+                    popped_event_id, popped_type = popped
+                    event.started_event_id = popped_event_id
+                    expected_start = VALID_EVENT_PAIRS.get(event_type_name)
+                    if expected_start and popped_type and popped_type != expected_start:
+                        handle_mismatch(event_type_name, popped_type, expected_start)
+            elif event_type_name in SCOPE_STARTING_EVENTS:
+                event.parent_event_id = get_current_parent_id()
+                push_event_scope(event.event_id, event_type_name)
+            else:
+                event.parent_event_id = get_current_parent_id()
+
+        set_last_event_id(event.event_id)
         event_type = type(event)
 
         with self._rwlock.r_locked():
@@ -339,9 +432,11 @@ class CrewAIEventsBus:
             async_handlers = self._async_handlers.get(event_type, frozenset())
 
         if has_dependencies:
-            return asyncio.run_coroutine_threadsafe(
-                self._emit_with_dependencies(source, event),
-                self._loop,
+            return self._track_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._emit_with_dependencies(source, event),
+                    self._loop,
+                )
             )
 
         if sync_handlers:
@@ -353,15 +448,52 @@ class CrewAIEventsBus:
                     ctx.run, self._call_handlers, source, event, sync_handlers
                 )
                 if not async_handlers:
-                    return sync_future
+                    return self._track_future(sync_future)
 
         if async_handlers:
-            return asyncio.run_coroutine_threadsafe(
-                self._acall_handlers(source, event, async_handlers),
-                self._loop,
+            return self._track_future(
+                asyncio.run_coroutine_threadsafe(
+                    self._acall_handlers(source, event, async_handlers),
+                    self._loop,
+                )
             )
 
         return None
+
+    def flush(self, timeout: float | None = 30.0) -> bool:
+        """Block until all pending event handlers complete.
+
+        This method waits for all futures from previously emitted events to
+        finish executing. Useful at the end of operations (like kickoff) to
+        ensure all event handlers have completed before returning.
+
+        Args:
+            timeout: Maximum time in seconds to wait for handlers to complete.
+                    Defaults to 30 seconds. Pass None to wait indefinitely.
+
+        Returns:
+            True if all handlers completed, False if timeout occurred.
+        """
+        with self._futures_lock:
+            futures_to_wait = list(self._pending_futures)
+
+        if not futures_to_wait:
+            return True
+
+        from concurrent.futures import wait as wait_futures
+
+        done, not_done = wait_futures(futures_to_wait, timeout=timeout)
+
+        # Check for exceptions in completed futures
+        errors = [
+            future.exception() for future in done if future.exception() is not None
+        ]
+        for error in errors:
+            self._console.print(
+                f"[CrewAIEventsBus] Handler exception during flush: {error}"
+            )
+
+        return len(not_done) == 0
 
     async def aemit(self, source: Any, event: BaseEvent) -> None:
         """Asynchronously emit an event to registered async handlers.
@@ -438,24 +570,52 @@ class CrewAIEventsBus:
             ...     # Do stuff...
             ... # Handlers are cleared after the context
         """
-        with self._rwlock.w_locked():
-            prev_sync = self._sync_handlers
-            prev_async = self._async_handlers
-            prev_deps = self._handler_dependencies
-            prev_cache = self._execution_plan_cache
-            self._sync_handlers = {}
-            self._async_handlers = {}
-            self._handler_dependencies = {}
-            self._execution_plan_cache = {}
+        with self._rwlock.r_locked():
+            saved_sync: dict[type[BaseEvent], frozenset[SyncHandler]] = dict(
+                self._sync_handlers
+            )
+            saved_async: dict[type[BaseEvent], frozenset[AsyncHandler]] = dict(
+                self._async_handlers
+            )
+            saved_deps: dict[type[BaseEvent], dict[Handler, list[Depends[Any]]]] = {
+                event_type: dict(handlers)
+                for event_type, handlers in self._handler_dependencies.items()
+            }
+
+        for event_type, sync_handlers in saved_sync.items():
+            for sync_handler in sync_handlers:
+                self.off(event_type, sync_handler)
+
+        for event_type, async_handlers in saved_async.items():
+            for async_handler in async_handlers:
+                self.off(event_type, async_handler)
 
         try:
             yield
         finally:
-            with self._rwlock.w_locked():
-                self._sync_handlers = prev_sync
-                self._async_handlers = prev_async
-                self._handler_dependencies = prev_deps
-                self._execution_plan_cache = prev_cache
+            with self._rwlock.r_locked():
+                current_sync = dict(self._sync_handlers)
+                current_async = dict(self._async_handlers)
+
+            for event_type, cur_sync in current_sync.items():
+                orig_sync = saved_sync.get(event_type, frozenset())
+                for new_handler in cur_sync - orig_sync:
+                    self.off(event_type, new_handler)
+
+            for event_type, cur_async in current_async.items():
+                orig_async = saved_async.get(event_type, frozenset())
+                for new_async_handler in cur_async - orig_async:
+                    self.off(event_type, new_async_handler)
+
+            for event_type, sync_handlers in saved_sync.items():
+                for sync_handler in sync_handlers:
+                    deps = saved_deps.get(event_type, {}).get(sync_handler)
+                    self._register_handler(event_type, sync_handler, deps)
+
+            for event_type, async_handlers in saved_async.items():
+                for async_handler in async_handlers:
+                    deps = saved_deps.get(event_type, {}).get(async_handler)
+                    self._register_handler(event_type, async_handler, deps)
 
     def shutdown(self, wait: bool = True) -> None:
         """Gracefully shutdown the event loop and wait for all tasks to finish.
@@ -464,6 +624,9 @@ class CrewAIEventsBus:
             wait: If True, wait for all pending tasks to complete before stopping.
                   If False, cancel all pending tasks immediately.
         """
+        if wait:
+            self.flush()
+
         with self._rwlock.w_locked():
             self._shutting_down = True
             loop = getattr(self, "_loop", None)

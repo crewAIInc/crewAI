@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import os
@@ -9,11 +10,12 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
@@ -30,6 +32,9 @@ except ImportError:
     raise ImportError(
         'Google Gen AI native provider not available, to install: uv add "crewai[google-genai]"'
     ) from None
+
+
+STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 
 class GeminiCompletion(BaseLLM):
@@ -54,15 +59,22 @@ class GeminiCompletion(BaseLLM):
         safety_settings: dict[str, Any] | None = None,
         client_params: dict[str, Any] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        use_vertexai: bool | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Google Gemini chat completion client.
 
         Args:
             model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
-            api_key: Google API key (defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var)
-            project: Google Cloud project ID (for Vertex AI)
-            location: Google Cloud location (for Vertex AI, defaults to 'us-central1')
+            api_key: Google API key for Gemini API authentication.
+                    Defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var.
+                    NOTE: Cannot be used with Vertex AI (project parameter). Use Gemini API instead.
+            project: Google Cloud project ID for Vertex AI with ADC authentication.
+                    Requires Application Default Credentials (gcloud auth application-default login).
+                    NOTE: Vertex AI does NOT support API keys, only OAuth2/ADC.
+                    If both api_key and project are set, api_key takes precedence.
+            location: Google Cloud location (for Vertex AI with ADC, defaults to 'us-central1')
             temperature: Sampling temperature (0-2)
             top_p: Nucleus sampling parameter
             top_k: Top-k sampling parameter
@@ -73,6 +85,14 @@ class GeminiCompletion(BaseLLM):
             client_params: Additional parameters to pass to the Google Gen AI Client constructor.
                           Supports parameters like http_options, credentials, debug_config, etc.
             interceptor: HTTP interceptor (not yet supported for Gemini).
+            use_vertexai: Whether to use Vertex AI instead of Gemini API.
+                         - True: Use Vertex AI (with ADC or Express mode with API key)
+                         - False: Use Gemini API (explicitly override env var)
+                         - None (default): Check GOOGLE_GENAI_USE_VERTEXAI env var
+                         When using Vertex AI with API key (Express mode), http_options with
+                         api_version="v1" is automatically configured.
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -95,7 +115,8 @@ class GeminiCompletion(BaseLLM):
         self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
         self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
 
-        use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+        if use_vertexai is None:
+            use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
 
         self.client = self._initialize_client(use_vertexai)
 
@@ -107,11 +128,15 @@ class GeminiCompletion(BaseLLM):
         self.safety_settings = safety_settings or {}
         self.stop_sequences = stop_sequences or []
         self.tools: list[dict[str, Any]] | None = None
+        self.response_format = response_format
 
         # Model-specific settings
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
         self.supports_tools = bool(
             version_match and float(version_match.group(1)) >= 1.5
+        )
+        self.is_gemini_2_0 = bool(
+            version_match and float(version_match.group(1)) >= 2.0
         )
 
     @property
@@ -146,13 +171,34 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             Initialized Google Gen AI Client
+
+        Note:
+            Google Gen AI SDK has two distinct endpoints with different auth requirements:
+            - Gemini API (generativelanguage.googleapis.com): Supports API key authentication
+            - Vertex AI (aiplatform.googleapis.com): Only supports OAuth2/ADC, NO API keys
+
+            When vertexai=True is set, it routes to aiplatform.googleapis.com which rejects
+            API keys. Use Gemini API endpoint for API key authentication instead.
         """
         client_params = {}
 
         if self.client_params:
             client_params.update(self.client_params)
 
-        if use_vertexai or self.project:
+        # Determine authentication mode based on available credentials
+        has_api_key = bool(self.api_key)
+        has_project = bool(self.project)
+
+        if has_api_key and has_project:
+            logging.warning(
+                "Both API key and project provided. Using API key authentication. "
+                "Project/location parameters are ignored when using API keys. "
+                "To use Vertex AI with ADC, remove the api_key parameter."
+            )
+            has_project = False
+
+        # Vertex AI with ADC (project without API key)
+        if (use_vertexai or has_project) and not has_api_key:
             client_params.update(
                 {
                     "vertexai": True,
@@ -161,12 +207,20 @@ class GeminiCompletion(BaseLLM):
                 }
             )
 
-            client_params.pop("api_key", None)
-
-        elif self.api_key:
+        # API key authentication (works with both Gemini API and Vertex AI Express)
+        elif has_api_key:
             client_params["api_key"] = self.api_key
 
-            client_params.pop("vertexai", None)
+            # Vertex AI Express mode: API key + vertexai=True + http_options with api_version="v1"
+            # See: https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey
+            if use_vertexai:
+                client_params["vertexai"] = True
+                client_params["http_options"] = types.HttpOptions(api_version="v1")
+            else:
+                # This ensures we use the Gemini API (generativelanguage.googleapis.com)
+                client_params["vertexai"] = False
+
+            # Clean up project/location (not allowed with API key)
             client_params.pop("project", None)
             client_params.pop("location", None)
 
@@ -175,10 +229,13 @@ class GeminiCompletion(BaseLLM):
                 return genai.Client(**client_params)
             except Exception as e:
                 raise ValueError(
-                    "Either GOOGLE_API_KEY/GEMINI_API_KEY (for Gemini API) or "
-                    "GOOGLE_CLOUD_PROJECT (for Vertex AI) must be set"
+                    "Authentication required. Provide one of:\n"
+                    "  1. API key via GOOGLE_API_KEY or GEMINI_API_KEY environment variable\n"
+                    "     (use_vertexai=True is optional for Vertex AI with API key)\n"
+                    "  2. For Vertex AI with ADC: Set GOOGLE_CLOUD_PROJECT and run:\n"
+                    "     gcloud auth application-default login\n"
+                    "  3. Pass api_key parameter directly to LLM constructor\n"
                 ) from e
-
         return genai.Client(**client_params)
 
     def _get_client_params(self) -> dict[str, Any]:
@@ -202,6 +259,8 @@ class GeminiCompletion(BaseLLM):
                     "location": self.location,
                 }
             )
+            if self.api_key:
+                params["api_key"] = self.api_key
         elif self.api_key:
             params["api_key"] = self.api_key
 
@@ -234,63 +293,67 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            self.tools = tools
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+                self.tools = tools
+                effective_response_model = response_model or self.response_format
 
-            formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages
-            )
+                formatted_content, system_instruction = (
+                    self._format_messages_for_gemini(messages)
+                )
 
-            messages_for_hooks = self._convert_contents_to_dict(formatted_content)
+                messages_for_hooks = self._convert_contents_to_dict(formatted_content)
 
-            if not self._invoke_before_llm_call_hooks(messages_for_hooks, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    messages_for_hooks, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            config = self._prepare_generation_config(
-                system_instruction, tools, response_model
-            )
+                config = self._prepare_generation_config(
+                    system_instruction, tools, effective_response_model
+                )
 
-            if self.stream:
-                return self._handle_streaming_completion(
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        formatted_content,
+                        config,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     formatted_content,
                     config,
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
-            return self._handle_completion(
-                formatted_content,
-                config,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except APIError as e:
-            error_msg = f"Google Gemini API error: {e.code} - {e.message}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
-        except Exception as e:
-            error_msg = f"Google Gemini API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except APIError as e:
+                error_msg = f"Google Gemini API error: {e.code} - {e.message}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
+            except Exception as e:
+                error_msg = f"Google Gemini API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def acall(
         self,
@@ -316,58 +379,60 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
-            self.tools = tools
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+                self.tools = tools
+                effective_response_model = response_model or self.response_format
 
-            formatted_content, system_instruction = self._format_messages_for_gemini(
-                messages
-            )
+                formatted_content, system_instruction = (
+                    self._format_messages_for_gemini(messages)
+                )
 
-            config = self._prepare_generation_config(
-                system_instruction, tools, response_model
-            )
+                config = self._prepare_generation_config(
+                    system_instruction, tools, effective_response_model
+                )
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        formatted_content,
+                        config,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
                     formatted_content,
                     config,
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
-            return await self._ahandle_completion(
-                formatted_content,
-                config,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
-
-        except APIError as e:
-            error_msg = f"Google Gemini API error: {e.code} - {e.message}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
-        except Exception as e:
-            error_msg = f"Google Gemini API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except APIError as e:
+                error_msg = f"Google Gemini API error: {e.code} - {e.message}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
+            except Exception as e:
+                error_msg = f"Google Gemini API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _prepare_generation_config(
         self,
@@ -384,6 +449,14 @@ class GeminiCompletion(BaseLLM):
 
         Returns:
             GenerateContentConfig object for Gemini API
+
+        Note:
+            Structured output support varies by model version:
+            - Gemini 1.5 and earlier: Uses response_schema (Pydantic model)
+            - Gemini 2.0+: Uses response_json_schema (JSON Schema) with propertyOrdering
+
+            When both tools AND response_model are present, we add a structured_output
+            pseudo-tool since Gemini doesn't support tools + response_schema together.
         """
         self.tools = tools
         config_params: dict[str, Any] = {}
@@ -408,13 +481,41 @@ class GeminiCompletion(BaseLLM):
         if self.stop_sequences:
             config_params["stop_sequences"] = self.stop_sequences
 
-        if response_model:
-            config_params["response_mime_type"] = "application/json"
-            config_params["response_schema"] = response_model.model_json_schema()
-
-        # Handle tools for supported models
         if tools and self.supports_tools:
-            config_params["tools"] = self._convert_tools_for_interference(tools)
+            gemini_tools = self._convert_tools_for_interference(tools)
+
+            if response_model:
+                schema_output = generate_model_description(response_model)
+                schema = schema_output.get("json_schema", {}).get("schema", {})
+                if self.is_gemini_2_0:
+                    schema = self._add_property_ordering(schema)
+
+                structured_output_tool = types.Tool(
+                    function_declarations=[
+                        types.FunctionDeclaration(
+                            name=STRUCTURED_OUTPUT_TOOL_NAME,
+                            description=(
+                                "Use this tool to provide your final structured response. "
+                                "Call this tool when you have gathered all necessary information "
+                                "and are ready to provide the final answer in the required format."
+                            ),
+                            parameters_json_schema=schema,
+                        )
+                    ]
+                )
+                gemini_tools.append(structured_output_tool)
+
+            config_params["tools"] = gemini_tools
+        elif response_model:
+            config_params["response_mime_type"] = "application/json"
+            schema_output = generate_model_description(response_model)
+            schema = schema_output.get("json_schema", {}).get("schema", {})
+
+            if self.is_gemini_2_0:
+                schema = self._add_property_ordering(schema)
+                config_params["response_json_schema"] = schema
+            else:
+                config_params["response_schema"] = response_model
 
         if self.safety_settings:
             config_params["safety_settings"] = self.safety_settings
@@ -435,7 +536,7 @@ class GeminiCompletion(BaseLLM):
             function_declaration = types.FunctionDeclaration(
                 name=name,
                 description=description,
-                parameters=parameters if parameters else None,
+                parameters_json_schema=parameters if parameters else None,
             )
 
             gemini_tool = types.Tool(function_declarations=[function_declaration])
@@ -469,14 +570,27 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Convert content to string if it's a list
+            # Build parts list from content
+            parts: list[types.Part] = []
             if isinstance(content, list):
-                text_content = " ".join(
-                    str(item.get("text", "")) if isinstance(item, dict) else str(item)
-                    for item in content
-                )
+                for item in content:
+                    if isinstance(item, dict):
+                        if "text" in item:
+                            parts.append(types.Part.from_text(text=str(item["text"])))
+                        elif "inlineData" in item:
+                            inline = item["inlineData"]
+                            parts.append(
+                                types.Part.from_bytes(
+                                    data=base64.b64decode(inline["data"]),
+                                    mime_type=inline["mimeType"],
+                                )
+                            )
+                    else:
+                        parts.append(types.Part.from_text(text=str(item)))
             else:
-                text_content = str(content) if content else ""
+                parts.append(types.Part.from_text(text=str(content) if content else ""))
+
+            text_content: str = " ".join(p.text for p in parts if p.text is not None)
 
             if role == "system":
                 # Extract system instruction - Gemini handles it separately
@@ -484,14 +598,72 @@ class GeminiCompletion(BaseLLM):
                     system_instruction += f"\n\n{text_content}"
                 else:
                     system_instruction = text_content
+            elif role == "tool":
+                tool_call_id = message.get("tool_call_id")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+
+                tool_name = message.get("name", "")
+
+                response_data: dict[str, Any]
+                try:
+                    parsed = json.loads(text_content) if text_content else {}
+                    if isinstance(parsed, dict):
+                        response_data = parsed
+                    else:
+                        response_data = {"result": parsed}
+                except (json.JSONDecodeError, TypeError):
+                    response_data = {"result": text_content}
+
+                function_response_part = types.Part.from_function_response(
+                    name=tool_name, response=response_data
+                )
+                contents.append(
+                    types.Content(role="user", parts=[function_response_part])
+                )
+            elif role == "assistant" and message.get("tool_calls"):
+                raw_parts: list[Any] | None = message.get("raw_tool_call_parts")
+                if raw_parts and all(isinstance(p, types.Part) for p in raw_parts):
+                    tool_parts: list[types.Part] = list(raw_parts)
+                    if text_content:
+                        tool_parts.insert(0, types.Part.from_text(text=text_content))
+                else:
+                    tool_parts = []
+                    if text_content:
+                        tool_parts.append(types.Part.from_text(text=text_content))
+
+                    tool_calls: list[dict[str, Any]] = message.get("tool_calls") or []
+                    for tool_call in tool_calls:
+                        func: dict[str, Any] = tool_call.get("function") or {}
+                        func_name: str = str(func.get("name") or "")
+                        func_args_raw: str | dict[str, Any] = (
+                            func.get("arguments") or {}
+                        )
+
+                        func_args: dict[str, Any]
+                        if isinstance(func_args_raw, str):
+                            try:
+                                func_args = (
+                                    json.loads(func_args_raw) if func_args_raw else {}
+                                )
+                            except (json.JSONDecodeError, TypeError):
+                                func_args = {}
+                        else:
+                            func_args = func_args_raw
+
+                        tool_parts.append(
+                            types.Part.from_function_call(
+                                name=func_name, args=func_args
+                            )
+                        )
+
+                contents.append(types.Content(role="model", parts=tool_parts))
             else:
                 # Convert role for Gemini (assistant -> model)
                 gemini_role = "model" if role == "assistant" else "user"
 
                 # Create Content object
-                gemini_content = types.Content(
-                    role=gemini_role, parts=[types.Part.from_text(text=text_content)]
-                )
+                gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
         return contents, system_instruction
@@ -503,7 +675,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
         Args:
@@ -514,24 +686,23 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Validated and serialized JSON string
+            Validated Pydantic model instance
 
         Raises:
             ValueError: If validation fails
         """
         try:
             structured_data = response_model.model_validate_json(content)
-            structured_json = structured_data.model_dump_json()
 
             self._emit_call_completed_event(
-                response=structured_json,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
             )
 
-            return structured_json
+            return structured_data
         except Exception as e:
             error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
@@ -544,7 +715,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
         Args:
@@ -555,7 +726,7 @@ class GeminiCompletion(BaseLLM):
             from_agent: Agent that initiated the call
 
         Returns:
-            Final response content after processing
+            Final response content after processing (str or Pydantic model if response_model provided)
         """
         messages_for_event = self._convert_contents_to_dict(contents)
 
@@ -580,6 +751,47 @@ class GeminiCompletion(BaseLLM):
         return self._invoke_after_llm_call_hooks(
             messages_for_event, content, from_agent
         )
+
+    def _handle_structured_output_tool_call(
+        self,
+        structured_data: dict[str, Any],
+        response_model: type[BaseModel],
+        contents: list[types.Content],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> BaseModel:
+        """Validate and emit event for structured_output tool call.
+
+        Args:
+            structured_data: The arguments passed to the structured_output tool
+            response_model: Pydantic model to validate against
+            contents: Original contents for event conversion
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Validated Pydantic model instance
+
+        Raises:
+            ValueError: If validation fails
+        """
+        try:
+            validated_data = response_model.model_validate(structured_data)
+            self._emit_call_completed_event(
+                response=validated_data.model_dump_json(),
+                call_type=LLMCallType.LLM_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return validated_data
+        except Exception as e:
+            error_msg = (
+                f"Failed to validate {STRUCTURED_OUTPUT_TOOL_NAME} tool response "
+                f"with model {response_model.__name__}: {e}"
+            )
+            logging.error(error_msg)
+            raise ValueError(error_msg) from e
 
     def _process_response_with_tools(
         self,
@@ -606,10 +818,61 @@ class GeminiCompletion(BaseLLM):
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
+                # Collect function call parts
+                function_call_parts = [
+                    part for part in candidate.content.parts if part.function_call
+                ]
+
+                # Check for structured_output pseudo-tool call (used when tools + response_model)
+                if response_model and function_call_parts:
+                    for part in function_call_parts:
+                        if (
+                            part.function_call
+                            and part.function_call.name == STRUCTURED_OUTPUT_TOOL_NAME
+                        ):
+                            structured_data = (
+                                dict(part.function_call.args)
+                                if part.function_call.args
+                                else {}
+                            )
+                            return self._handle_structured_output_tool_call(
+                                structured_data=structured_data,
+                                response_model=response_model,
+                                contents=contents,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                            )
+
+                # Filter out structured_output from function calls returned to executor
+                non_structured_output_parts = [
+                    part
+                    for part in function_call_parts
+                    if not (
+                        part.function_call
+                        and part.function_call.name == STRUCTURED_OUTPUT_TOOL_NAME
+                    )
+                ]
+
+                # If there are function calls but no available_functions,
+                # return them for the executor to handle (like OpenAI/Anthropic)
+                if non_structured_output_parts and not available_functions:
+                    self._emit_call_completed_event(
+                        response=non_structured_output_parts,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=self._convert_contents_to_dict(contents),
+                    )
+                    return non_structured_output_parts
+
+                # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
                         if function_name is None:
+                            continue
+                        # Skip structured_output - it's handled above
+                        if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
                             continue
                         function_args = (
                             dict(part.function_call.args)
@@ -628,13 +891,16 @@ class GeminiCompletion(BaseLLM):
                         if result is not None:
                             return result
 
-        content = response.text or ""
-        content = self._apply_stop_words(content)
+        content = self._extract_text_from_response(response)
+
+        effective_response_model = None if self.tools else response_model
+        if not effective_response_model:
+            content = self._apply_stop_words(content)
 
         return self._finalize_completion_response(
             content=content,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -661,6 +927,7 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Tuple of (updated full_response, updated function_calls, updated usage_data)
         """
+        response_id = chunk.response_id if hasattr(chunk, "response_id") else None
         if chunk.usage_metadata:
             usage_data = self._extract_token_usage(chunk)
 
@@ -670,6 +937,7 @@ class GeminiCompletion(BaseLLM):
                 chunk=chunk.text,
                 from_task=from_task,
                 from_agent=from_agent,
+                response_id=response_id,
             )
 
         if chunk.candidates:
@@ -706,6 +974,7 @@ class GeminiCompletion(BaseLLM):
                                 "index": call_index,
                             },
                             call_type=LLMCallType.TOOL_CALL,
+                            response_id=response_id,
                         )
 
         return full_response, function_calls, usage_data
@@ -720,7 +989,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel | list[dict[str, Any]]:
         """Finalize streaming response with usage tracking, function execution, and events.
 
         Args:
@@ -738,9 +1007,50 @@ class GeminiCompletion(BaseLLM):
         """
         self._track_token_usage_internal(usage_data)
 
-        # Handle completed function calls
-        if function_calls and available_functions:
+        if response_model and function_calls:
             for call_data in function_calls.values():
+                if call_data.get("name") == STRUCTURED_OUTPUT_TOOL_NAME:
+                    structured_data = call_data.get("args", {})
+                    return self._handle_structured_output_tool_call(
+                        structured_data=structured_data,
+                        response_model=response_model,
+                        contents=contents,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                    )
+
+        non_structured_output_calls = {
+            idx: call_data
+            for idx, call_data in function_calls.items()
+            if call_data.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
+        }
+
+        # If there are function calls but no available_functions,
+        # return them for the executor to handle
+        if non_structured_output_calls and not available_functions:
+            formatted_function_calls = [
+                {
+                    "id": call_data["id"],
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": json.dumps(call_data["args"]),
+                    },
+                    "type": "function",
+                }
+                for call_data in non_structured_output_calls.values()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_function_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=self._convert_contents_to_dict(contents),
+            )
+            return formatted_function_calls
+
+        # Handle completed function calls (excluding structured_output)
+        if non_structured_output_calls and available_functions:
+            for call_data in non_structured_output_calls.values():
                 function_name = call_data["name"]
                 function_args = call_data["args"]
 
@@ -764,10 +1074,15 @@ class GeminiCompletion(BaseLLM):
                 if result is not None:
                     return result
 
+        # When tools are present, structured output should come via the structured_output
+        # pseudo-tool, not via direct text response. If we reach here with tools present,
+        # the LLM chose to return plain text instead of calling structured_output.
+        effective_response_model = None if self.tools else response_model
+
         return self._finalize_completion_response(
             content=full_response,
             contents=contents,
-            response_model=response_model,
+            response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
         )
@@ -817,7 +1132,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | BaseModel | list[dict[str, Any]] | Any:
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -895,7 +1210,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> str:
+    ) -> str | Any:
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
@@ -989,6 +1304,65 @@ class GeminiCompletion(BaseLLM):
         return {"total_tokens": 0}
 
     @staticmethod
+    def _extract_text_from_response(response: GenerateContentResponse) -> str:
+        """Extract text content from Gemini response without triggering warnings.
+
+        This method directly accesses the response parts to extract text content,
+        avoiding the warning that occurs when using response.text on responses
+        containing non-text parts (e.g., 'thought_signature' from thinking models).
+
+        Args:
+            response: The Gemini API response
+
+        Returns:
+            Concatenated text content from all text parts
+        """
+        if not response.candidates:
+            return ""
+
+        candidate = response.candidates[0]
+        if not candidate.content or not candidate.content.parts:
+            return ""
+
+        text_parts = [
+            part.text
+            for part in candidate.content.parts
+            if hasattr(part, "text") and part.text
+        ]
+
+        return "".join(text_parts)
+
+    @staticmethod
+    def _add_property_ordering(schema: dict[str, Any]) -> dict[str, Any]:
+        """Add propertyOrdering to JSON schema for Gemini 2.0 compatibility.
+
+        Gemini 2.0 models require an explicit propertyOrdering list to define
+        the preferred structure of JSON objects. This recursively adds
+        propertyOrdering to all objects in the schema.
+
+        Args:
+            schema: JSON schema dictionary.
+
+        Returns:
+            Modified schema with propertyOrdering added to all objects.
+        """
+        if isinstance(schema, dict):
+            if schema.get("type") == "object" and "properties" in schema:
+                properties = schema["properties"]
+                if properties and "propertyOrdering" not in schema:
+                    schema["propertyOrdering"] = list(properties.keys())
+
+            for value in schema.values():
+                if isinstance(value, dict):
+                    GeminiCompletion._add_property_ordering(value)
+                elif isinstance(value, list):
+                    for item in value:
+                        if isinstance(item, dict):
+                            GeminiCompletion._add_property_ordering(item)
+
+        return schema
+
+    @staticmethod
     def _convert_contents_to_dict(
         contents: list[types.Content],
     ) -> list[LLMMessage]:
@@ -1013,3 +1387,39 @@ class GeminiCompletion(BaseLLM):
                 )
             )
         return result
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Gemini models support images, audio, video, and PDFs.
+
+        Returns:
+            True if the model supports multimodal inputs.
+        """
+        return True
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a Gemini content block.
+
+        Gemini uses {"text": "..."} format instead of {"type": "text", "text": "..."}.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in Gemini's expected format.
+        """
+        return {"text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a Gemini file uploader using this LLM's client.
+
+        Returns:
+            GeminiFileUploader instance with pre-configured client.
+        """
+        try:
+            from crewai_files.uploaders.gemini import GeminiFileUploader
+
+            return GeminiFileUploader(client=self.client)
+        except ImportError:
+            return None

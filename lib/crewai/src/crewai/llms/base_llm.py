@@ -7,11 +7,15 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Generator
+from contextlib import contextmanager
+import contextvars
 from datetime import datetime
 import json
 import logging
 import re
 from typing import TYPE_CHECKING, Any, Final
+import uuid
 
 from pydantic import BaseModel
 
@@ -31,6 +35,14 @@ from crewai.events.types.tool_usage_events import (
 from crewai.types.usage_metrics import UsageMetrics
 
 
+try:
+    from crewai_files import format_multimodal_content
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    HAS_CREWAI_FILES = False
+
+
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
@@ -41,6 +53,32 @@ if TYPE_CHECKING:
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+
+_current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_current_call_id", default=None
+)
+
+
+@contextmanager
+def llm_call_context() -> Generator[str, None, None]:
+    """Context manager that establishes an LLM call scope with a unique call_id."""
+    call_id = str(uuid.uuid4())
+    token = _current_call_id.set(call_id)
+    try:
+        yield call_id
+    finally:
+        _current_call_id.reset(token)
+
+
+def get_current_call_id() -> str:
+    """Get current call_id from context"""
+    call_id = _current_call_id.get()
+    if call_id is None:
+        logging.warning(
+            "LLM event emitted outside call context - generating fallback call_id"
+        )
+        return str(uuid.uuid4())
+    return call_id
 
 
 class BaseLLM(ABC):
@@ -71,6 +109,7 @@ class BaseLLM(ABC):
         api_key: str | None = None,
         base_url: str | None = None,
         provider: str | None = None,
+        prefer_upload: bool = False,
         **kwargs: Any,
     ) -> None:
         """Initialize the BaseLLM with default attributes.
@@ -79,6 +118,7 @@ class BaseLLM(ABC):
             model: The model identifier/name.
             temperature: Optional temperature setting for response generation.
             stop: Optional list of stop sequences for generation.
+            prefer_upload: Whether to prefer file upload over inline base64.
             **kwargs: Additional provider-specific parameters.
         """
         if not model:
@@ -88,6 +128,7 @@ class BaseLLM(ABC):
         self.temperature = temperature
         self.api_key = api_key
         self.base_url = base_url
+        self.prefer_upload = prefer_upload
         # Store additional parameters for provider-specific use
         self.additional_params = kwargs
         self._provider = provider or "openai"
@@ -280,6 +321,39 @@ class BaseLLM(ABC):
         # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
+    def supports_multimodal(self) -> bool:
+        """Check if the LLM supports multimodal inputs.
+
+        Returns:
+            True if the LLM supports images, PDFs, audio, or video.
+        """
+        return False
+
+    def format_text_content(self, text: str) -> dict[str, Any]:
+        """Format text as a content block for the LLM.
+
+        Default implementation uses OpenAI/Anthropic format.
+        Subclasses should override for provider-specific formatting.
+
+        Args:
+            text: The text content to format.
+
+        Returns:
+            A content block in the provider's expected format.
+        """
+        return {"type": "text", "text": text}
+
+    def get_file_uploader(self) -> Any:
+        """Get a file uploader configured with this LLM's client.
+
+        Returns an uploader instance that reuses this LLM's authenticated client,
+        avoiding the need to create a new connection for file uploads.
+
+        Returns:
+            A FileUploader instance, or None if not supported by this provider.
+        """
+        return None
+
     # Common helper methods for native SDK implementations
 
     def _emit_call_started_event(
@@ -292,19 +366,22 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
     ) -> None:
         """Emit LLM call started event."""
+        from crewai.utilities.serialization import to_serializable
+
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
 
         crewai_event_bus.emit(
             self,
             event=LLMCallStartedEvent(
-                messages=messages,
-                tools=tools,
+                messages=to_serializable(messages),
+                tools=to_serializable(tools),
                 callbacks=callbacks,
                 available_functions=available_functions,
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -317,15 +394,18 @@ class BaseLLM(ABC):
         messages: str | list[LLMMessage] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
+        from crewai.utilities.serialization import to_serializable
+
         crewai_event_bus.emit(
             self,
             event=LLMCallCompletedEvent(
-                messages=messages,
-                response=response,
+                messages=to_serializable(messages),
+                response=to_serializable(response),
                 call_type=call_type,
                 from_task=from_task,
                 from_agent=from_agent,
                 model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -345,6 +425,8 @@ class BaseLLM(ABC):
                 error=error,
                 from_task=from_task,
                 from_agent=from_agent,
+                model=self.model,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -355,6 +437,7 @@ class BaseLLM(ABC):
         from_agent: Agent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Emit stream chunk event.
 
@@ -364,6 +447,7 @@ class BaseLLM(ABC):
             from_agent: The agent that initiated the call.
             tool_call: Tool call information if this is a tool call chunk.
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
+            response_id: Unique ID for a particular LLM response, chunks have same response_id.
         """
         if not hasattr(crewai_event_bus, "emit"):
             raise ValueError("crewai_event_bus does not have an emit method") from None
@@ -376,6 +460,8 @@ class BaseLLM(ABC):
                 from_task=from_task,
                 from_agent=from_agent,
                 call_type=call_type,
+                response_id=response_id,
+                call_id=get_current_call_id(),
             ),
         )
 
@@ -445,7 +531,7 @@ class BaseLLM(ABC):
                 from_agent=from_agent,
             )
 
-            return str(result)
+            return str(result) if not isinstance(result, str) else result
 
         except Exception as e:
             error_msg = f"Error executing function '{function_name}': {e!s}"
@@ -500,6 +586,48 @@ class BaseLLM(ABC):
                 raise ValueError(
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
+
+        return self._process_message_files(messages)
+
+    def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
+        """Process files attached to messages and format for the provider.
+
+        For each message with a `files` field, formats the files into
+        provider-specific content blocks and updates the message content.
+
+        Args:
+            messages: List of messages that may contain file attachments.
+
+        Returns:
+            Messages with files formatted into content blocks.
+        """
+        if not HAS_CREWAI_FILES or not self.supports_multimodal():
+            return messages
+
+        provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
+        api = getattr(self, "api", None)
+
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            existing_content = msg.get("content", "")
+            text = existing_content if isinstance(existing_content, str) else None
+
+            content_blocks = format_multimodal_content(
+                files, provider, api=api, prefer_upload=self.prefer_upload, text=text
+            )
+            if not content_blocks:
+                msg.pop("files", None)
+                continue
+
+            if isinstance(existing_content, list):
+                msg["content"] = [*existing_content, *content_blocks]
+            else:
+                msg["content"] = content_blocks
+
+            msg.pop("files", None)
 
         return messages
 
@@ -643,22 +771,25 @@ class BaseLLM(ABC):
             task=None,
             crew=None,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
-                    printer.print(
-                        content="LLM call blocked by before_llm_call hook",
-                        color="yellow",
-                    )
+                    if verbose:
+                        printer.print(
+                            content="LLM call blocked by before_llm_call hook",
+                            color="yellow",
+                        )
                     return False
         except Exception as e:
-            printer.print(
-                content=f"Error in before_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in before_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return True
 
@@ -711,6 +842,7 @@ class BaseLLM(ABC):
             crew=None,
             response=response,
         )
+        verbose = getattr(from_agent, "verbose", True) if from_agent else True
         printer = Printer()
         modified_response = response
 
@@ -721,9 +853,10 @@ class BaseLLM(ABC):
                     modified_response = result
                     hook_context.response = modified_response
         except Exception as e:
-            printer.print(
-                content=f"Error in after_llm_call hook: {e}",
-                color="yellow",
-            )
+            if verbose:
+                printer.print(
+                    content=f"Error in after_llm_call hook: {e}",
+                    color="yellow",
+                )
 
         return modified_response

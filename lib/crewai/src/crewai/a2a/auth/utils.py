@@ -6,8 +6,10 @@ OAuth2, API keys, and HTTP authentication methods.
 
 import asyncio
 from collections.abc import Awaitable, Callable, MutableMapping
+import hashlib
 import re
-from typing import Final
+import threading
+from typing import Final, Literal, cast
 
 from a2a.client.errors import A2AClientHTTPError
 from a2a.types import (
@@ -18,10 +20,10 @@ from a2a.types import (
 )
 from httpx import AsyncClient, Response
 
-from crewai.a2a.auth.schemas import (
+from crewai.a2a.auth.client_schemes import (
     APIKeyAuth,
-    AuthScheme,
     BearerTokenAuth,
+    ClientAuthScheme,
     HTTPBasicAuth,
     HTTPDigestAuth,
     OAuth2AuthorizationCode,
@@ -29,12 +31,44 @@ from crewai.a2a.auth.schemas import (
 )
 
 
-_auth_store: dict[int, AuthScheme | None] = {}
+class _AuthStore:
+    """Store for authentication schemes with safe concurrent access."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, ClientAuthScheme | None] = {}
+        self._lock = threading.RLock()
+
+    @staticmethod
+    def compute_key(auth_type: str, auth_data: str) -> str:
+        """Compute a collision-resistant key using SHA-256."""
+        content = f"{auth_type}:{auth_data}"
+        return hashlib.sha256(content.encode()).hexdigest()
+
+    def set(self, key: str, auth: ClientAuthScheme | None) -> None:
+        """Store an auth scheme."""
+        with self._lock:
+            self._store[key] = auth
+
+    def get(self, key: str) -> ClientAuthScheme | None:
+        """Retrieve an auth scheme by key."""
+        with self._lock:
+            return self._store.get(key)
+
+    def __setitem__(self, key: str, value: ClientAuthScheme | None) -> None:
+        with self._lock:
+            self._store[key] = value
+
+    def __getitem__(self, key: str) -> ClientAuthScheme | None:
+        with self._lock:
+            return self._store[key]
+
+
+_auth_store = _AuthStore()
 
 _SCHEME_PATTERN: Final[re.Pattern[str]] = re.compile(r"(\w+)\s+(.+?)(?=,\s*\w+\s+|$)")
 _PARAM_PATTERN: Final[re.Pattern[str]] = re.compile(r'(\w+)=(?:"([^"]*)"|([^\s,]+))')
 
-_SCHEME_AUTH_MAPPING: Final[dict[type, tuple[type[AuthScheme], ...]]] = {
+_SCHEME_AUTH_MAPPING: Final[dict[type, tuple[type[ClientAuthScheme], ...]]] = {
     OAuth2SecurityScheme: (
         OAuth2ClientCredentials,
         OAuth2AuthorizationCode,
@@ -43,7 +77,9 @@ _SCHEME_AUTH_MAPPING: Final[dict[type, tuple[type[AuthScheme], ...]]] = {
     APIKeySecurityScheme: (APIKeyAuth,),
 }
 
-_HTTP_SCHEME_MAPPING: Final[dict[str, type[AuthScheme]]] = {
+_HTTPSchemeType = Literal["basic", "digest", "bearer"]
+
+_HTTP_SCHEME_MAPPING: Final[dict[_HTTPSchemeType, type[ClientAuthScheme]]] = {
     "basic": HTTPBasicAuth,
     "digest": HTTPDigestAuth,
     "bearer": BearerTokenAuth,
@@ -51,8 +87,8 @@ _HTTP_SCHEME_MAPPING: Final[dict[str, type[AuthScheme]]] = {
 
 
 def _raise_auth_mismatch(
-    expected_classes: type[AuthScheme] | tuple[type[AuthScheme], ...],
-    provided_auth: AuthScheme,
+    expected_classes: type[ClientAuthScheme] | tuple[type[ClientAuthScheme], ...],
+    provided_auth: ClientAuthScheme,
 ) -> None:
     """Raise authentication mismatch error.
 
@@ -111,7 +147,7 @@ def parse_www_authenticate(header_value: str) -> dict[str, dict[str, str]]:
 
 
 def validate_auth_against_agent_card(
-    agent_card: AgentCard, auth: AuthScheme | None
+    agent_card: AgentCard, auth: ClientAuthScheme | None
 ) -> None:
     """Validate that provided auth matches AgentCard security requirements.
 
@@ -145,7 +181,8 @@ def validate_auth_against_agent_card(
             return
 
         if isinstance(scheme, HTTPAuthSecurityScheme):
-            if required_class := _HTTP_SCHEME_MAPPING.get(scheme.scheme.lower()):
+            scheme_key = cast(_HTTPSchemeType, scheme.scheme.lower())
+            if required_class := _HTTP_SCHEME_MAPPING.get(scheme_key):
                 if not isinstance(auth, required_class):
                     _raise_auth_mismatch(required_class, auth)
             return
@@ -156,7 +193,7 @@ def validate_auth_against_agent_card(
 
 async def retry_on_401(
     request_func: Callable[[], Awaitable[Response]],
-    auth_scheme: AuthScheme | None,
+    auth_scheme: ClientAuthScheme | None,
     client: AsyncClient,
     headers: MutableMapping[str, str],
     max_retries: int = 3,

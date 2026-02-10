@@ -52,6 +52,7 @@ from crewai.telemetry.utils import (
     close_span,
 )
 from crewai.utilities.logger_utils import suppress_warnings
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 logger = logging.getLogger(__name__)
@@ -323,7 +324,8 @@ class Telemetry:
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                                 # Add agent fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -372,7 +374,8 @@ class Telemetry:
                                     else None
                                 ),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                                 # Add task fingerprint data if sharing crew details
                                 "fingerprint": (
@@ -425,7 +428,8 @@ class Telemetry:
                                 ),
                                 "max_retry_limit": getattr(agent, "max_retry_limit", 3),
                                 "tools_names": [
-                                    tool.name.casefold() for tool in agent.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in agent.tools or []
                                 ],
                             }
                             for agent in crew.agents
@@ -447,7 +451,8 @@ class Telemetry:
                                 ),
                                 "agent_key": task.agent.key if task.agent else None,
                                 "tools_names": [
-                                    tool.name.casefold() for tool in task.tools or []
+                                    sanitize_tool_name(tool.name)
+                                    for tool in task.tools or []
                                 ],
                             }
                             for task in crew.tasks
@@ -832,7 +837,8 @@ class Telemetry:
                             "llm": agent.llm.model,
                             "delegation_enabled?": agent.allow_delegation,
                             "tools_names": [
-                                tool.name.casefold() for tool in agent.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in agent.tools or []
                             ],
                         }
                         for agent in crew.agents
@@ -858,7 +864,8 @@ class Telemetry:
                                 else None
                             ),
                             "tools_names": [
-                                tool.name.casefold() for tool in task.tools or []
+                                sanitize_tool_name(tool.name)
+                                for tool in task.tools or []
                             ],
                         }
                         for task in crew.tasks
@@ -896,7 +903,7 @@ class Telemetry:
                         {
                             "id": str(task.id),
                             "description": task.description,
-                            "output": task.output.raw_output,
+                            "output": task.output.raw if task.output else "",
                         }
                         for task in crew.tasks
                     ]
@@ -915,6 +922,9 @@ class Telemetry:
             key: The attribute key.
             value: The attribute value.
         """
+
+        if span is None:
+            return
 
         def _operation() -> None:
             return span.set_attribute(key, value)

@@ -7,7 +7,6 @@ to OpenAI Assistant-compatible format using the agents library.
 from collections.abc import Awaitable
 import inspect
 import json
-import re
 from typing import Any, cast
 
 from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
@@ -17,6 +16,8 @@ from crewai.agents.agent_adapters.openai_agents.protocols import (
 )
 from crewai.tools import BaseTool
 from crewai.utilities.import_utils import require
+from crewai.utilities.pydantic_schema_utils import force_additional_properties_false
+from crewai.utilities.string_utils import sanitize_tool_name
 
 
 agents_module = cast(
@@ -78,18 +79,6 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
         if not tools:
             return []
 
-        def sanitize_tool_name(name: str) -> str:
-            """Convert tool name to match OpenAI's required pattern.
-
-            Args:
-                name: Original tool name.
-
-            Returns:
-                Sanitized tool name matching OpenAI requirements.
-            """
-
-            return re.sub(r"[^a-zA-Z0-9_-]", "_", name).lower()
-
         def create_tool_wrapper(tool: BaseTool) -> Any:
             """Create a wrapper function that handles the OpenAI function tool interface.
 
@@ -147,7 +136,9 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
         for tool in tools:
             schema: dict[str, Any] = tool.args_schema.model_json_schema()
 
-            schema.update({"additionalProperties": False, "type": "object"})
+            schema = force_additional_properties_false(schema)
+
+            schema.update({"type": "object"})
 
             openai_tool: OpenAIFunctionTool = cast(
                 OpenAIFunctionTool,

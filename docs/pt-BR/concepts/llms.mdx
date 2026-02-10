@@ -79,7 +79,7 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
 
     # Configuração avançada com parâmetros detalhados
     llm = LLM(
-        model="openai/gpt-4", 
+        model="openai/gpt-4",
         temperature=0.8,
         max_tokens=150,
         top_p=0.9,
@@ -150,6 +150,37 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     | o1-mini              | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
     | o1-preview           | 128.000 tokens      | Raciocínio rápido, tarefas complexas     |
     | o1                   | 200.000 tokens      | Raciocínio rápido, tarefas complexas     |
+
+    **Responses API:**
+
+    A OpenAI oferece duas APIs: Chat Completions (padrão) e a nova Responses API. A Responses API foi projetada desde o início com suporte multimodal nativo—texto, imagens, áudio e chamadas de função são todos cidadãos de primeira classe. Ela oferece melhor performance com modelos de raciocínio e suporta recursos adicionais como auto-encadeamento e ferramentas integradas.
+
+    ```python Code
+    from crewai import LLM
+
+    # Usar Responses API em vez de Chat Completions
+    llm = LLM(
+        model="openai/gpt-4o",
+        api="responses",  # Habilitar Responses API
+        store=True,  # Armazenar respostas para multi-turno (opcional)
+        auto_chain=True,  # Auto-encadeamento para modelos de raciocínio (opcional)
+    )
+    ```
+
+    **Parâmetros da Responses API:**
+    - `api`: Defina como `"responses"` para usar a Responses API (padrão: `"completions"`)
+    - `instructions`: Instruções de nível de sistema (apenas Responses API)
+    - `store`: Se deve armazenar respostas para conversas multi-turno
+    - `previous_response_id`: ID da resposta anterior para multi-turno
+    - `include`: Dados adicionais para incluir na resposta (ex: `["reasoning.encrypted_content"]`)
+    - `builtin_tools`: Lista de ferramentas integradas da OpenAI: `"web_search"`, `"file_search"`, `"code_interpreter"`, `"computer_use"`
+    - `parse_tool_outputs`: Retornar `ResponsesAPIResult` estruturado com saídas de ferramentas integradas parseadas
+    - `auto_chain`: Rastrear e usar automaticamente IDs de resposta para conversas multi-turno
+    - `auto_chain_reasoning`: Rastrear itens de raciocínio criptografados para conformidade ZDR (Zero Data Retention)
+
+    <Tip>
+      Use a Responses API para novos projetos, especialmente ao trabalhar com modelos de raciocínio (o1, o3, o4) ou quando precisar de suporte multimodal nativo para [arquivos](/pt-BR/concepts/files).
+    </Tip>
   </Accordion>
 
   <Accordion title="Meta-Llama">
@@ -207,11 +238,20 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     Defina sua chave de API no seu arquivo `.env`. Se precisar de uma chave, ou encontrar uma existente, verifique o [AI Studio](https://aistudio.google.com/apikey).
 
     ```toml .env
-    # https://ai.google.dev/gemini-api/docs/api-key
+    # Para API Gemini (uma das seguintes)
+    GOOGLE_API_KEY=<your-api-key>
     GEMINI_API_KEY=<your-api-key>
+
+    # Para Vertex AI Express mode (autenticação por chave de API)
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+
+    # Para Vertex AI com conta de serviço
+    GOOGLE_CLOUD_PROJECT=<your-project-id>
+    GOOGLE_CLOUD_LOCATION=<location>  # Padrão: us-central1
     ```
 
-    Exemplo de uso em seu projeto CrewAI:
+    **Uso Básico:**
     ```python Code
     from crewai import LLM
 
@@ -220,6 +260,34 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
         temperature=0.7,
     )
     ```
+
+    **Vertex AI Express Mode (Autenticação por Chave de API):**
+
+    O Vertex AI Express mode permite usar o Vertex AI com autenticação simples por chave de API, em vez de credenciais de conta de serviço. Esta é a maneira mais rápida de começar com o Vertex AI.
+
+    Para habilitar o Express mode, defina ambas as variáveis de ambiente no seu arquivo `.env`:
+    ```toml .env
+    GOOGLE_GENAI_USE_VERTEXAI=true
+    GOOGLE_API_KEY=<your-api-key>
+    ```
+
+    Em seguida, use o LLM normalmente:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="gemini/gemini-2.0-flash",
+        temperature=0.7
+    )
+    ```
+
+    <Info>
+      Para obter uma chave de API do Express mode:
+      - Novos usuários do Google Cloud: Obtenha uma [chave de API do Express mode](https://cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey)
+      - Usuários existentes do Google Cloud: Obtenha uma [chave de API do Google Cloud vinculada a uma conta de serviço](https://cloud.google.com/docs/authentication/api-keys)
+
+      Para mais detalhes, consulte a [documentação do Vertex AI Express mode](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/start/quickstart?usertype=apikey).
+    </Info>
 
     ### Modelos Gemini
 
@@ -823,7 +891,7 @@ Saiba como obter o máximo da configuração do seu LLM:
       Lembre-se de monitorar regularmente o uso de tokens e ajustar suas configurações para otimizar custos e desempenho.
     </Info>
   </Accordion>
-  
+
   <Accordion title="Descartar Parâmetros Adicionais">
     O CrewAI usa Litellm internamente para chamadas LLM, permitindo descartar parâmetros adicionais desnecessários para seu caso de uso. Isso pode simplificar seu código e reduzir a complexidade da configuração do LLM.
     Por exemplo, se não precisar enviar o parâmetro <code>stop</code>, basta omiti-lo na chamada do LLM:

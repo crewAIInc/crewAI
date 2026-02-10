@@ -31,6 +31,8 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.context import reset_current_task_id, set_current_task_id
+from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -44,6 +46,25 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
 from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.file_store import (
+    clear_task_files,
+    get_all_files,
+    store_task_files,
+)
+
+
+try:
+    from crewai_files import FileInput, FilePath, get_supported_content_types
+
+    HAS_CREWAI_FILES = True
+except ImportError:
+    FileInput = Any  # type: ignore[misc,assignment]
+    HAS_CREWAI_FILES = False
+
+    def get_supported_content_types(provider: str, api: str | None = None) -> list[str]:
+        return []
+
+
 from crewai.utilities.guardrail import (
     process_guardrail,
 )
@@ -141,6 +162,10 @@ class Task(BaseModel):
     tools: list[BaseTool] | None = Field(
         default_factory=list,
         description="Tools the agent is limited to use for this task.",
+    )
+    input_files: dict[str, FileInput] = Field(
+        default_factory=dict,
+        description="Named input files for this task. Keys are reference names, values are paths or File objects.",
     )
     security_config: SecurityConfig = Field(
         default_factory=SecurityConfig,
@@ -357,6 +382,24 @@ class Task(BaseModel):
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
 
+    @field_validator("input_files", mode="before")
+    @classmethod
+    def _normalize_input_files(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Convert string paths to FilePath objects."""
+        if not v:
+            return v
+
+        if not HAS_CREWAI_FILES:
+            return v
+
+        result = {}
+        for key, value in v.items():
+            if isinstance(value, str):
+                result[key] = FilePath(path=Path(value))
+            else:
+                result[key] = value
+        return result
+
     @field_validator("output_file")
     @classmethod
     def output_file_validation(cls, value: str | None) -> str | None:
@@ -455,6 +498,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
+        self.start_time = datetime.datetime.now()
         return self._execute_core(agent, context, tools)
 
     @property
@@ -495,10 +539,11 @@ class Task(BaseModel):
     ) -> None:
         """Execute the task asynchronously with context handling."""
         try:
-          result = self._execute_core(agent, context, tools)
-          future.set_result(result)
+            self.start_time = datetime.datetime.now()
+            result = self._execute_core(agent, context, tools)
+            future.set_result(result)
         except Exception as e:
-          future.set_exception(e)
+            future.set_exception(e)
 
     async def aexecute_sync(
         self,
@@ -507,6 +552,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task asynchronously using native async/await."""
+        self.start_time = datetime.datetime.now()
         return await self._aexecute_core(agent, context, tools)
 
     async def _aexecute_core(
@@ -516,6 +562,8 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        task_id_token = set_current_task_id(str(self.id))
+        self._store_input_files()
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -523,8 +571,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -536,6 +582,8 @@ class Task(BaseModel):
                 context=context,
                 tools=tools,
             )
+
+            self._post_agent_execution(agent)
 
             if not self._guardrails and not self._guardrail:
                 pydantic_output, json_output = self._export_output(result)
@@ -600,6 +648,9 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
             raise e  # Re-raise the exception after emitting the event
+        finally:
+            clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
 
     def _execute_core(
         self,
@@ -608,6 +659,8 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        task_id_token = set_current_task_id(str(self.id))
+        self._store_input_files()
         try:
             agent = agent or self.agent
             self.agent = agent
@@ -615,8 +668,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -628,6 +679,8 @@ class Task(BaseModel):
                 context=context,
                 tools=tools,
             )
+
+            self._post_agent_execution(agent)
 
             if not self._guardrails and not self._guardrail:
                 pydantic_output, json_output = self._export_output(result)
@@ -693,6 +746,12 @@ class Task(BaseModel):
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
             raise e  # Re-raise the exception after emitting the event
+        finally:
+            clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
+
+    def _post_agent_execution(self, agent: BaseAgent) -> None:
+        pass
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
@@ -714,6 +773,54 @@ class Task(BaseModel):
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
+
+        if self.agent and self.agent.crew:
+            files = get_all_files(self.agent.crew.id, self.id)
+            if files:
+                supported_types: list[str] = []
+                if self.agent.llm and self.agent.llm.supports_multimodal():
+                    provider: str = str(
+                        getattr(self.agent.llm, "provider", None)
+                        or getattr(self.agent.llm, "model", "openai")
+                    )
+                    api: str | None = getattr(self.agent.llm, "api", None)
+                    supported_types = get_supported_content_types(provider, api)
+
+                def is_auto_injected(content_type: str) -> bool:
+                    return any(content_type.startswith(t) for t in supported_types)
+
+                auto_injected_files = {
+                    name: f_input
+                    for name, f_input in files.items()
+                    if is_auto_injected(f_input.content_type)
+                }
+                tool_files = {
+                    name: f_input
+                    for name, f_input in files.items()
+                    if not is_auto_injected(f_input.content_type)
+                }
+
+                file_lines: list[str] = []
+
+                if auto_injected_files:
+                    file_lines.append(
+                        "Input files (content already loaded in conversation):"
+                    )
+                    for name, file_input in auto_injected_files.items():
+                        filename = file_input.filename or name
+                        file_lines.append(f'  - "{name}" ({filename})')
+
+                if tool_files:
+                    file_lines.append(
+                        "Available input files (use the name in quotes with read_file tool):"
+                    )
+                    for name, file_input in tool_files.items():
+                        filename = file_input.filename or name
+                        content_type = file_input.content_type
+                        file_lines.append(f'  - "{name}" ({filename}, {content_type})')
+
+                if file_lines:
+                    description += "\n\n" + "\n".join(file_lines)
 
         tasks_slices = [description]
 
@@ -768,6 +875,11 @@ Follow these guidelines:
         except ValueError as e:
             raise ValueError(f"Error interpolating description: {e!s}") from e
 
+        self.description = process_content(self.description, {"task": self})
+        self._original_expected_output = process_content(
+            self._original_expected_output, {"task": self}
+        )
+
         try:
             self.expected_output = interpolate_only(
                 input_string=self._original_expected_output, inputs=inputs
@@ -793,10 +905,11 @@ Follow these guidelines:
             try:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
-                _printer.print(
-                    f"An error occurred while parsing crew chat messages: {e}",
-                    color="red",
-                )
+                if self.agent and self.agent.verbose:
+                    _printer.print(
+                        f"An error occurred while parsing crew chat messages: {e}",
+                        color="red",
+                    )
                 raise
 
             conversation_history = "\n".join(
@@ -948,6 +1061,13 @@ Follow these guidelines:
             ) from e
         return
 
+    def _store_input_files(self) -> None:
+        """Store task input files in the file store."""
+        if not HAS_CREWAI_FILES or not self.input_files:
+            return
+
+        store_task_files(self.id, self.input_files)
+
     def __repr__(self) -> str:
         return f"Task(description={self.description}, expected_output={self.expected_output})"
 
@@ -1031,11 +1151,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             # Regenerate output from agent
             result = agent.execute_task(
@@ -1128,11 +1249,12 @@ Follow these guidelines:
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
-            printer = Printer()
-            printer.print(
-                content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
-                color="yellow",
-            )
+            if agent and agent.verbose:
+                printer = Printer()
+                printer.print(
+                    content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
+                    color="yellow",
+                )
 
             result = await agent.aexecute_task(
                 task=self,

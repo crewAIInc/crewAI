@@ -1,10 +1,44 @@
+from contextvars import ContextVar
+import os
 import threading
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
+
+from crewai.cli.version import is_newer_version_available
+
+
+_disable_version_check: ContextVar[bool] = ContextVar(
+    "_disable_version_check", default=False
+)
+
+_suppress_console_output: ContextVar[bool] = ContextVar(
+    "_suppress_console_output", default=False
+)
+
+
+def set_suppress_console_output(suppress: bool) -> object:
+    """Set whether to suppress all console output.
+
+    Args:
+        suppress: True to suppress output, False to show it.
+
+    Returns:
+        A token that can be used to restore the previous value.
+    """
+    return _suppress_console_output.set(suppress)
+
+
+def should_suppress_console_output() -> bool:
+    """Check if console output should be suppressed.
+
+    Returns:
+        True if output should be suppressed, False otherwise.
+    """
+    return _suppress_console_output.get()
 
 
 class ConsoleFormatter:
@@ -35,12 +69,55 @@ class ConsoleFormatter:
             padding=(1, 2),
         )
 
+    def _show_version_update_message_if_needed(self) -> None:
+        """Show version update message if a newer version is available.
+
+        Only displays when verbose mode is enabled and not running in CI/CD.
+        """
+        if not self.verbose:
+            return
+
+        if _disable_version_check.get():
+            return
+
+        if os.getenv("CI", "").lower() in ("true", "1"):
+            return
+
+        if os.getenv("CREWAI_DISABLE_VERSION_CHECK", "").lower() in ("true", "1"):
+            return
+
+        try:
+            is_newer, current, latest = is_newer_version_available()
+            if is_newer and latest:
+                message = f"""A new version of CrewAI is available!
+
+Current version: {current}
+Latest version:  {latest}
+
+To update, run: uv sync --upgrade-package crewai"""
+
+                panel = Panel(
+                    message,
+                    title="✨ Update Available ✨",
+                    border_style="yellow",
+                    padding=(1, 2),
+                )
+                self.console.print(panel)
+                self.console.print()
+        except Exception:  # noqa: S110
+            # Silently ignore errors in version check - it's non-critical
+            pass
+
     def _show_tracing_disabled_message_if_needed(self) -> None:
         """Show tracing disabled message if tracing is not enabled."""
         from crewai.events.listeners.tracing.utils import (
             has_user_declined_tracing,
             is_tracing_enabled_in_context,
+            should_suppress_tracing_messages,
         )
+
+        if should_suppress_tracing_messages():
+            return
 
         if not is_tracing_enabled_in_context():
             if has_user_declined_tracing():
@@ -93,6 +170,8 @@ To enable tracing, do any one of these:
 
     def print(self, *args: Any, **kwargs: Any) -> None:
         """Print to console. Simplified to only handle panel-based output."""
+        if should_suppress_console_output():
+            return
         # Skip blank lines during streaming
         if len(args) == 0 and self._is_streaming:
             return
@@ -176,8 +255,9 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        # Reset the crew completion event for this new crew execution
         ConsoleFormatter.crew_completion_printed.clear()
+
+        self._show_version_update_message_if_needed()
 
         content = self.create_status_content(
             "Crew Execution Started",
@@ -237,6 +317,8 @@ To enable tracing, do any one of these:
 
     def handle_flow_started(self, flow_name: str, flow_id: str) -> None:
         """Show flow started panel."""
+        self._show_version_update_message_if_needed()
+
         content = Text()
         content.append("Flow Started\n", style="blue bold")
         content.append("Name: ", style="white")
@@ -366,6 +448,32 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, f"🔧 Tool Execution Started (#{iteration})", "yellow")
 
+    def handle_tool_usage_finished(
+        self,
+        tool_name: str,
+        output: str,
+        run_attempts: int | None = None,
+    ) -> None:
+        """Handle tool usage finished event with panel display."""
+        if not self.verbose:
+            return
+
+        iteration = self.tool_usage_counts.get(tool_name, 1)
+
+        content = Text()
+        content.append("Tool Completed\n", style="green bold")
+        content.append("Tool: ", style="white")
+        content.append(f"{tool_name}\n", style="green bold")
+
+        if output:
+            content.append("Output: ", style="white")
+
+            content.append(f"{output}\n", style="green")
+
+        self.print_panel(
+            content, f"✅ Tool Execution Completed (#{iteration})", "green"
+        )
+
     def handle_tool_usage_error(
         self,
         tool_name: str,
@@ -418,6 +526,9 @@ To enable tracing, do any one of these:
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
         """
         if not self.verbose:
+            return
+
+        if should_suppress_console_output():
             return
 
         self._is_streaming = True
@@ -859,7 +970,7 @@ To enable tracing, do any one of these:
 
             is_a2a_delegation = False
             try:
-                output_data = json.loads(formatted_answer.output)
+                output_data = json.loads(cast(str, formatted_answer.output))
                 if isinstance(output_data, dict):
                     if output_data.get("is_a2a") is True:
                         is_a2a_delegation = True

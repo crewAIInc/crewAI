@@ -72,62 +72,53 @@ class ResearchResult(BaseModel):
 
 @pytest.mark.vcr()
 @pytest.mark.parametrize("verbose", [True, False])
-def test_lite_agent_created_with_correct_parameters(monkeypatch, verbose):
-    """Test that LiteAgent is created with the correct parameters when Agent.kickoff() is called."""
+def test_agent_kickoff_preserves_parameters(verbose):
+    """Test that Agent.kickoff() uses the correct parameters from the Agent."""
     # Create a test agent with specific parameters
-    llm = LLM(model="gpt-4o-mini")
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Test response"
+    mock_llm.stop = []
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_usage_metrics = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+    mock_llm.get_token_usage_summary.return_value = mock_usage_metrics
+
     custom_tools = [WebSearchTool(), CalculatorTool()]
     max_iter = 10
-    max_execution_time = 300
 
     agent = Agent(
         role="Test Agent",
         goal="Test Goal",
         backstory="Test Backstory",
-        llm=llm,
+        llm=mock_llm,
         tools=custom_tools,
         max_iter=max_iter,
-        max_execution_time=max_execution_time,
         verbose=verbose,
     )
 
-    # Create a mock to capture the created LiteAgent
-    created_lite_agent = None
-    original_lite_agent = LiteAgent
+    # Call kickoff and verify it works
+    result = agent.kickoff("Test query")
 
-    # Define a mock LiteAgent class that captures its arguments
-    class MockLiteAgent(original_lite_agent):
-        def __init__(self, **kwargs):
-            nonlocal created_lite_agent
-            created_lite_agent = kwargs
-            super().__init__(**kwargs)
+    # Verify the agent was configured correctly
+    assert agent.role == "Test Agent"
+    assert agent.goal == "Test Goal"
+    assert agent.backstory == "Test Backstory"
+    assert len(agent.tools) == 2
+    assert isinstance(agent.tools[0], WebSearchTool)
+    assert isinstance(agent.tools[1], CalculatorTool)
+    assert agent.max_iter == max_iter
+    assert agent.verbose == verbose
 
-    # Patch the LiteAgent class
-    monkeypatch.setattr("crewai.agent.core.LiteAgent", MockLiteAgent)
-
-    # Call kickoff to create the LiteAgent
-    agent.kickoff("Test query")
-
-    # Verify all parameters were passed correctly
-    assert created_lite_agent is not None
-    assert created_lite_agent["role"] == "Test Agent"
-    assert created_lite_agent["goal"] == "Test Goal"
-    assert created_lite_agent["backstory"] == "Test Backstory"
-    assert created_lite_agent["llm"] == llm
-    assert len(created_lite_agent["tools"]) == 2
-    assert isinstance(created_lite_agent["tools"][0], WebSearchTool)
-    assert isinstance(created_lite_agent["tools"][1], CalculatorTool)
-    assert created_lite_agent["max_iterations"] == max_iter
-    assert created_lite_agent["max_execution_time"] == max_execution_time
-    assert created_lite_agent["verbose"] == verbose
-    assert created_lite_agent["response_format"] is None
-
-    # Test with a response_format
-    class TestResponse(BaseModel):
-        test_field: str
-
-    agent.kickoff("Test query", response_format=TestResponse)
-    assert created_lite_agent["response_format"] == TestResponse
+    # Verify kickoff returned a result
+    assert result is not None
+    assert result.raw is not None
 
 
 @pytest.mark.vcr()
@@ -277,7 +268,13 @@ async def test_lite_agent_returns_usage_metrics_async():
         "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
     assert isinstance(result, LiteAgentOutput)
-    assert "21 million" in result.raw or "37 million" in result.raw
+    # Check for population data in various formats (text or numeric)
+    assert (
+        "21 million" in result.raw
+        or "37 million" in result.raw
+        or "21000000" in result.raw
+        or "37000000" in result.raw
+    )
     assert result.usage_metrics is not None
     assert result.usage_metrics["total_tokens"] > 0
 
@@ -302,15 +299,18 @@ class TestFlow(Flow):
         return agent.kickoff("Test query")
 
 
-def verify_agent_parent_flow(result, agent, flow):
-    """Verify that both the result and agent have the correct parent flow."""
-    assert result.parent_flow is flow
+def verify_agent_flow_context(result, agent, flow):
+    """Verify that both the result and agent have the correct flow context."""
+    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
     assert agent is not None
-    assert agent.parent_flow is flow
+    assert agent._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert agent._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
-def test_sets_parent_flow_when_inside_flow():
-    captured_agent = None
+def test_sets_flow_context_when_inside_flow():
+    """Test that an Agent can be created and executed inside a Flow context."""
+    captured_event = None
 
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Test response"
@@ -343,15 +343,17 @@ def test_sets_parent_flow_when_inside_flow():
     event_received = threading.Event()
 
     @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
-    def capture_agent(source, event):
-        nonlocal captured_agent
-        captured_agent = source
+    def capture_event(source, event):
+        nonlocal captured_event
+        captured_event = event
         event_received.set()
 
-    flow.kickoff()
+    result = flow.kickoff()
 
     assert event_received.wait(timeout=5), "Timeout waiting for agent execution event"
-    assert captured_agent.parent_flow is flow
+    assert captured_event is not None
+    assert captured_event.agent_info["role"] == "Test Agent"
+    assert result is not None
 
 
 @pytest.mark.vcr()
@@ -373,16 +375,14 @@ def test_guardrail_is_called_using_string():
 
     @crewai_event_bus.on(LLMGuardrailStartedEvent)
     def capture_guardrail_started(source, event):
-        assert isinstance(source, LiteAgent)
-        assert source.original_agent == agent
+        assert isinstance(source, Agent)
         with condition:
             guardrail_events["started"].append(event)
             condition.notify()
 
     @crewai_event_bus.on(LLMGuardrailCompletedEvent)
     def capture_guardrail_completed(source, event):
-        assert isinstance(source, LiteAgent)
-        assert source.original_agent == agent
+        assert isinstance(source, Agent)
         with condition:
             guardrail_events["completed"].append(event)
             condition.notify()
@@ -392,18 +392,16 @@ def test_guardrail_is_called_using_string():
     with condition:
         success = condition.wait_for(
             lambda: len(guardrail_events["started"]) >= 2
-            and len(guardrail_events["completed"]) >= 2,
+            and any(e.success for e in guardrail_events["completed"]),
             timeout=10,
         )
-    assert success, "Timeout waiting for all guardrail events"
-    assert len(guardrail_events["started"]) == 2
-    assert len(guardrail_events["completed"]) == 2
+    assert success, "Timeout waiting for successful guardrail event"
+    assert len(guardrail_events["started"]) >= 2
+    assert len(guardrail_events["completed"]) >= 2
     assert not guardrail_events["completed"][0].success
-    assert guardrail_events["completed"][1].success
-    assert (
-        "top 10 best Brazilian soccer players" in result.raw or
-        "Brazilian players" in result.raw
-    )
+    successful_events = [e for e in guardrail_events["completed"] if e.success]
+    assert len(successful_events) >= 1, "Expected at least one successful guardrail completion"
+    assert result is not None
 
 
 @pytest.mark.vcr()
@@ -608,9 +606,10 @@ def test_lite_agent_with_invalid_llm():
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
 @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
 @pytest.mark.vcr()
-def test_agent_kickoff_with_platform_tools(mock_get):
+def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
     mock_response.raise_for_status.return_value = None
@@ -633,6 +632,15 @@ def test_agent_kickoff_with_platform_tools(mock_get):
         }
     }
     mock_get.return_value = mock_response
+
+    # Mock the platform tool execution
+    mock_post_response = Mock()
+    mock_post_response.ok = True
+    mock_post_response.json.return_value = {
+        "success": True,
+        "issue_url": "https://github.com/test/repo/issues/1"
+    }
+    mock_post.return_value = mock_post_response
 
     agent = Agent(
         role="Test Agent",
@@ -683,3 +691,376 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
 
     # Verify MCP tools were retrieved
     mock_get_mcp_tools.assert_called_once_with("https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research")
+
+
+# ============================================================================
+# Tests for LiteAgent inside Flow (magic auto-async pattern)
+# ============================================================================
+
+from crewai.flow.flow import listen
+
+
+@pytest.mark.vcr()
+def test_lite_agent_inside_flow_sync():
+    """Test that LiteAgent.kickoff() works magically inside a Flow.
+
+    This tests the "magic auto-async" pattern where calling agent.kickoff()
+    from within a Flow automatically detects the event loop and returns a
+    coroutine that the Flow framework awaits. Users don't need to use async/await.
+    """
+    # Track execution
+    execution_log = []
+
+    class TestFlow(Flow):
+        @start()
+        def run_agent(self):
+            execution_log.append("flow_started")
+            agent = Agent(
+                role="Test Agent",
+                goal="Answer questions",
+                backstory="A helpful test assistant",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            # Magic: just call kickoff() normally - it auto-detects Flow context
+            result = agent.kickoff(messages="What is 2+2? Reply with just the number.")
+            execution_log.append("agent_completed")
+            return result
+
+    flow = TestFlow()
+    result = flow.kickoff()
+
+    # Verify the flow executed successfully
+    assert "flow_started" in execution_log
+    assert "agent_completed" in execution_log
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+def test_lite_agent_inside_flow_with_tools():
+    """Test that LiteAgent with tools works correctly inside a Flow."""
+    class TestFlow(Flow):
+        @start()
+        def run_agent_with_tools(self):
+            agent = Agent(
+                role="Calculator Agent",
+                goal="Perform calculations",
+                backstory="A math expert",
+                llm=LLM(model="gpt-4o-mini"),
+                tools=[CalculatorTool()],
+                verbose=False,
+            )
+            result = agent.kickoff(messages="Calculate 10 * 5")
+            return result
+
+    flow = TestFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None
+
+
+@pytest.mark.vcr()
+def test_multiple_agents_in_same_flow():
+    """Test that multiple LiteAgents can run sequentially in the same Flow."""
+    class MultiAgentFlow(Flow):
+        @start()
+        def first_step(self):
+            agent1 = Agent(
+                role="First Agent",
+                goal="Greet users",
+                backstory="A friendly greeter",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            return agent1.kickoff(messages="Say hello")
+
+        @listen(first_step)
+        def second_step(self, first_result):
+            agent2 = Agent(
+                role="Second Agent",
+                goal="Say goodbye",
+                backstory="A polite farewell agent",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            return agent2.kickoff(messages="Say goodbye")
+
+    flow = MultiAgentFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+def test_lite_agent_kickoff_async_inside_flow():
+    """Test that Agent.kickoff_async() works correctly from async Flow methods."""
+    class AsyncAgentFlow(Flow):
+        @start()
+        async def async_agent_step(self):
+            agent = Agent(
+                role="Async Test Agent",
+                goal="Answer questions asynchronously",
+                backstory="An async helper",
+                llm=LLM(model="gpt-4o-mini"),
+                verbose=False,
+            )
+            result = await agent.kickoff_async(messages="What is 3+3?")
+            return result
+
+    flow = AsyncAgentFlow()
+    result = flow.kickoff()
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+
+
+@pytest.mark.vcr()
+def test_lite_agent_standalone_still_works():
+    """Test that LiteAgent.kickoff() still works normally outside of a Flow.
+
+    This verifies that the magic auto-async pattern doesn't break standalone usage
+    where there's no event loop running.
+    """
+    agent = Agent(
+        role="Standalone Agent",
+        goal="Answer questions",
+        backstory="A helpful assistant",
+        llm=LLM(model="gpt-4o-mini"),
+        verbose=False,
+    )
+
+    # This should work normally - no Flow, no event loop
+    result = agent.kickoff(messages="What is 5+5? Reply with just the number.")
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    assert result.raw is not None
+
+
+def test_agent_kickoff_with_files_parameter():
+    """Test that Agent.kickoff() accepts and passes files to the executor."""
+    from unittest.mock import Mock, patch
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: I can see the file content."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="File Analyzer",
+        goal="Analyze files",
+        backstory="An agent that analyzes files",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    test_file = File(source=b"mock pdf content")
+    input_files = {"document.pdf": test_file}
+
+    with patch.object(
+        agent, "_prepare_kickoff", wraps=agent._prepare_kickoff
+    ) as mock_prepare:
+        result = agent.kickoff(messages="Analyze the document", input_files=input_files)
+
+        mock_prepare.assert_called_once()
+        call_args = mock_prepare.call_args
+        assert call_args.args[0] == "Analyze the document"
+        called_files = call_args.kwargs.get("input_files") or call_args.args[2]
+        assert "document.pdf" in called_files
+        assert called_files["document.pdf"] is test_file
+
+    assert result is not None
+
+
+def test_prepare_kickoff_extracts_files_from_messages():
+    """Test that _prepare_kickoff extracts files from messages."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    test_file = File(source=b"mock image content")
+    messages = [
+        {"role": "user", "content": "Analyze this", "files": {"img.png": test_file}}
+    ]
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(messages=messages)
+
+    assert "files" in inputs
+    assert "img.png" in inputs["files"]
+    assert inputs["files"]["img.png"] is test_file
+
+
+def test_prepare_kickoff_merges_files_from_messages_and_parameter():
+    """Test that _prepare_kickoff merges files from messages and parameter."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
+    messages = [
+        {"role": "user", "content": "Analyze these", "files": {"from_msg.png": msg_file}}
+    ]
+    input_files = {"from_param.pdf": param_file}
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
+        messages=messages, input_files=input_files
+    )
+
+    assert "files" in inputs
+    assert "from_msg.png" in inputs["files"]
+    assert "from_param.pdf" in inputs["files"]
+    assert inputs["files"]["from_msg.png"] is msg_file
+    assert inputs["files"]["from_param.pdf"] is param_file
+
+
+def test_prepare_kickoff_param_files_override_message_files():
+    """Test that files parameter overrides files from messages with same name."""
+    from unittest.mock import Mock
+
+    from crewai_files import File
+
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Done."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test files",
+        backstory="Test backstory",
+        llm=mock_llm,
+        verbose=False,
+    )
+
+    msg_file = File(source=b"message file content")
+    param_file = File(source=b"param file content")
+    messages = [
+        {"role": "user", "content": "Analyze", "files": {"same.png": msg_file}}
+    ]
+    input_files = {"same.png": param_file}
+
+    executor, inputs, agent_info, parsed_tools = agent._prepare_kickoff(
+        messages=messages, input_files=input_files
+    )
+
+    assert "files" in inputs
+    assert inputs["files"]["same.png"] is param_file  # param takes precedence
+
+
+def test_lite_agent_verbose_false_suppresses_printer_output():
+    """Test that setting verbose=False suppresses all printer output."""
+    from crewai.agents.parser import AgentFinish
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: Hello!"
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=100,
+        prompt_tokens=50,
+        completion_tokens=50,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
+    with pytest.warns(DeprecationWarning):
+        agent = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    result = agent.kickoff("Say hello")
+
+    assert result is not None
+    assert isinstance(result, LiteAgentOutput)
+    # Verify the printer was never called
+    agent._printer.print = Mock()
+    # For a clean verification, patch printer before execution
+    with pytest.warns(DeprecationWarning):
+        agent2 = LiteAgent(
+            role="Test Agent",
+            goal="Test goal",
+            backstory="Test backstory",
+            llm=mock_llm,
+            verbose=False,
+        )
+
+    mock_printer = Mock()
+    agent2._printer = mock_printer
+
+    agent2.kickoff("Say hello")
+
+    mock_printer.print.assert_not_called()

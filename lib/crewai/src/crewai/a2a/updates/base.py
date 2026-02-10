@@ -2,10 +2,26 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict
+from typing import TYPE_CHECKING, Any, NamedTuple, Protocol, TypedDict
 
 from pydantic import GetCoreSchemaHandler
 from pydantic_core import CoreSchema, core_schema
+
+
+class CommonParams(NamedTuple):
+    """Common parameters shared across all update handlers.
+
+    Groups the frequently-passed parameters to reduce duplication.
+    """
+
+    turn_number: int
+    is_multiturn: bool
+    agent_role: str | None
+    endpoint: str
+    a2a_agent_name: str | None
+    context_id: str | None
+    from_task: Any
+    from_agent: Any
 
 
 if TYPE_CHECKING:
@@ -22,6 +38,13 @@ class BaseHandlerKwargs(TypedDict, total=False):
     turn_number: int
     is_multiturn: bool
     agent_role: str | None
+    context_id: str | None
+    task_id: str | None
+    endpoint: str | None
+    agent_branch: Any
+    a2a_agent_name: str | None
+    from_task: Any
+    from_agent: Any
 
 
 class PollingHandlerKwargs(BaseHandlerKwargs, total=False):
@@ -29,17 +52,12 @@ class PollingHandlerKwargs(BaseHandlerKwargs, total=False):
 
     polling_interval: float
     polling_timeout: float
-    endpoint: str
-    agent_branch: Any
     history_length: int
     max_polls: int | None
 
 
 class StreamingHandlerKwargs(BaseHandlerKwargs, total=False):
     """Kwargs for streaming handler."""
-
-    context_id: str | None
-    task_id: str | None
 
 
 class PushNotificationHandlerKwargs(BaseHandlerKwargs, total=False):
@@ -49,7 +67,6 @@ class PushNotificationHandlerKwargs(BaseHandlerKwargs, total=False):
     result_store: PushNotificationResultStore
     polling_timeout: float
     polling_interval: float
-    agent_branch: Any
 
 
 class PushNotificationResultStore(Protocol):
@@ -62,8 +79,8 @@ class PushNotificationResultStore(Protocol):
     @classmethod
     def __get_pydantic_core_schema__(
         cls,
-        source_type: Any,
-        handler: GetCoreSchemaHandler,
+        _source_type: Any,
+        _handler: GetCoreSchemaHandler,
     ) -> CoreSchema:
         return core_schema.any_schema()
 
@@ -129,3 +146,31 @@ class UpdateHandler(Protocol):
             Result dictionary with status, result/error, and history.
         """
         ...
+
+
+def extract_common_params(kwargs: BaseHandlerKwargs) -> CommonParams:
+    """Extract common parameters from handler kwargs.
+
+    Args:
+        kwargs: Handler kwargs dict.
+
+    Returns:
+        CommonParams with extracted values.
+
+    Raises:
+        ValueError: If endpoint is not provided.
+    """
+    endpoint = kwargs.get("endpoint")
+    if endpoint is None:
+        raise ValueError("endpoint is required for update handlers")
+
+    return CommonParams(
+        turn_number=kwargs.get("turn_number", 0),
+        is_multiturn=kwargs.get("is_multiturn", False),
+        agent_role=kwargs.get("agent_role"),
+        endpoint=endpoint,
+        a2a_agent_name=kwargs.get("a2a_agent_name"),
+        context_id=kwargs.get("context_id"),
+        from_task=kwargs.get("from_task"),
+        from_agent=kwargs.get("from_agent"),
+    )
