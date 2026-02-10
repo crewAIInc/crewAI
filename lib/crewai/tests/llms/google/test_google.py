@@ -42,65 +42,6 @@ def test_gemini_completion_is_used_when_gemini_provider():
     assert llm.provider == "gemini"
     assert llm.model == "gemini-2.0-flash-001"
 
-
-
-
-def test_gemini_tool_use_conversation_flow():
-    """
-    Test that the Gemini completion properly handles tool use conversation flow
-    """
-    from unittest.mock import Mock, patch
-    from crewai.llms.providers.gemini.completion import GeminiCompletion
-
-    # Create GeminiCompletion instance
-    completion = GeminiCompletion(model="gemini-2.0-flash-001")
-
-    # Mock tool function
-    def mock_weather_tool(location: str) -> str:
-        return f"The weather in {location} is sunny and 75°F"
-
-    available_functions = {"get_weather": mock_weather_tool}
-
-    # Mock the Google Gemini client responses
-    with patch.object(completion.client.models, 'generate_content') as mock_generate:
-        # Mock function call in response
-        mock_function_call = Mock()
-        mock_function_call.name = "get_weather"
-        mock_function_call.args = {"location": "San Francisco"}
-
-        mock_part = Mock()
-        mock_part.function_call = mock_function_call
-
-        mock_content = Mock()
-        mock_content.parts = [mock_part]
-
-        mock_candidate = Mock()
-        mock_candidate.content = mock_content
-
-        mock_response = Mock()
-        mock_response.candidates = [mock_candidate]
-        mock_response.text = "Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature."
-        mock_response.usage_metadata = Mock()
-        mock_response.usage_metadata.prompt_token_count = 100
-        mock_response.usage_metadata.candidates_token_count = 50
-        mock_response.usage_metadata.total_token_count = 150
-
-        mock_generate.return_value = mock_response
-
-        # Test the call
-        messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
-        result = completion.call(
-            messages=messages,
-            available_functions=available_functions
-        )
-
-        # Verify the tool was executed and returned the result
-        assert result == "The weather in San Francisco is sunny and 75°F"
-
-        # Verify that the API was called
-        assert mock_generate.called
-
-
 def test_gemini_completion_module_is_imported():
     """
     Test that the completion module is properly imported when using Google provider

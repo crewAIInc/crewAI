@@ -94,30 +94,28 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Hello.\\n\"\n          }\n        ],\n
+        [\n          {\n            \"text\": \"Hello\"\n          }\n        ],\n
         \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
-        \     \"avgLogprobs\": -0.016759576896826427\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1133,\n    \"candidatesTokenCount\": 3,\n    \"totalTokenCount\":
-        1136,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 1133\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 3\n      }\n
-        \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n  \"responseId\":
-        \"vHmLad7mG7-J-sAPmaazgAo\"\n}\n"
+        \     \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        1135,\n    \"candidatesTokenCount\": 1,\n    \"totalTokenCount\": 1158,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 1135\n      }\n    ],\n    \"thoughtsTokenCount\":
+        22\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"46GLaf60NYmY-8YP--PB6QE\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 10 Feb 2026 18:32:30 GMT
+      - Tue, 10 Feb 2026 21:23:47 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2209
+      - gfet4t7; dur=773
       Transfer-Encoding:
       - chunked
       Vary:
@@ -228,30 +226,28 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Farewell.\\n\"\n          }\n        ],\n
+        [\n          {\n            \"text\": \"Farewell.\"\n          }\n        ],\n
         \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
-        \     \"avgLogprobs\": -0.040580272674560547\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1133,\n    \"candidatesTokenCount\": 4,\n    \"totalTokenCount\":
-        1137,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 1133\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 4\n      }\n
-        \   ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash-001\",\n  \"responseId\":
-        \"vnmLacmBKuPUjMcPxtiw4Qc\"\n}\n"
+        \     \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        1135,\n    \"candidatesTokenCount\": 3,\n    \"totalTokenCount\": 1164,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 1135\n      }\n    ],\n    \"thoughtsTokenCount\":
+        26\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"5KGLafeeIv-G-8YP_MfPgAI\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Tue, 10 Feb 2026 18:32:31 GMT
+      - Tue, 10 Feb 2026 21:23:48 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=586
+      - gfet4t7; dur=662
       Transfer-Encoding:
       - chunked
       Vary:
