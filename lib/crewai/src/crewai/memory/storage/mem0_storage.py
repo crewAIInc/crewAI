@@ -24,6 +24,14 @@ class Mem0Storage(Storage):
         self._validate_type(type)
         self.memory_type = type
         self.crew = crew
+        if isinstance(config, str):
+            try:
+                import json as _json
+                config = _json.loads(config)
+            except (ValueError, TypeError):
+                raise TypeError(
+                    f"config must be a dict or valid JSON string, got: {config!r}"
+                )
         self.config = config or {}
 
         self._extract_config_values()
