@@ -172,6 +172,28 @@ class LanceDBStorage:
             row["vector"] = [0.0] * self._vector_dim
         table.add([row])
 
+    def touch_records(self, record_ids: list[str]) -> None:
+        """Update last_accessed to now for the given record IDs.
+
+        Args:
+            record_ids: IDs of records to touch.
+        """
+        if not record_ids or self._table is None:
+            return
+        now = datetime.utcnow().isoformat()
+        for rid in record_ids:
+            safe_id = str(rid).replace("'", "''")
+            rows = (
+                self._table.search([0.0] * self._vector_dim)
+                .where(f"id = '{safe_id}'")
+                .limit(1)
+                .to_list()
+            )
+            if rows:
+                rows[0]["last_accessed"] = now
+                self._table.delete(f"id = '{safe_id}'")
+                self._table.add([rows[0]])
+
     def get_record(self, record_id: str) -> MemoryRecord | None:
         """Return a single record by ID, or None if not found."""
         if self._table is None:

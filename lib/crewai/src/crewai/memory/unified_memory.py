@@ -359,6 +359,15 @@ class Memory:
                 )
                 results = flow.state.final_results
 
+            # Update last_accessed for recalled records
+            if results:
+                try:
+                    touch = getattr(self._storage, "touch_records", None)
+                    if touch is not None:
+                        touch([m.record.id for m in results])
+                except Exception:
+                    pass  # Non-critical: don't fail recall because of touch
+
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
                 self,

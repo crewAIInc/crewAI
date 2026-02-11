@@ -1,8 +1,18 @@
-"""RLM-inspired intelligent recall flow for memory retrieval."""
+"""RLM-inspired intelligent recall flow for memory retrieval.
+
+Implements adaptive-depth retrieval with:
+- LLM query distillation into targeted sub-queries
+- Keyword-driven category filtering
+- Time-based filtering from temporal hints
+- Parallel multi-query, multi-scope search
+- Confidence-based routing with iterative deepening (budget loop)
+- Evidence gap tracking propagated to results
+"""
 
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -27,6 +37,8 @@ class RecallState(BaseModel):
     query: str = ""
     scope: str | None = None
     categories: list[str] | None = None
+    inferred_categories: list[str] = Field(default_factory=list)
+    time_cutoff: datetime | None = None
     limit: int = 10
     query_embeddings: list[tuple[str, list[float]]] = Field(default_factory=list)
     query_analysis: QueryAnalysis | None = None
@@ -41,9 +53,12 @@ class RecallState(BaseModel):
 class RecallFlow(Flow[RecallState]):
     """RLM-inspired intelligent memory recall flow.
 
-    Analyzes the query via LLM to produce targeted sub-queries, embeds each,
-    and searches across candidate scopes in parallel.
+    Analyzes the query via LLM to produce targeted sub-queries and filters,
+    embeds each sub-query, searches across candidate scopes in parallel,
+    and iteratively deepens exploration when confidence is low.
     """
+
+    _skip_auto_memory: bool = True
 
     initial_state = RecallState
 
@@ -60,9 +75,93 @@ class RecallFlow(Flow[RecallState]):
         self._embedder = embedder
         self._config = config or MemoryConfig()
 
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _merged_categories(self) -> list[str] | None:
+        """Merge caller-supplied and LLM-inferred categories."""
+        merged = list(
+            set((self.state.categories or []) + self.state.inferred_categories)
+        )
+        return merged or None
+
+    def _do_search(self) -> list[dict[str, Any]]:
+        """Run parallel search across (embeddings x scopes) with filters.
+
+        Populates ``state.chunk_findings`` and ``state.confidence``.
+        Returns the findings list.
+        """
+        search_categories = self._merged_categories()
+
+        def _search_one(
+            embedding: list[float], scope: str
+        ) -> tuple[str, list[tuple[MemoryRecord, float]]]:
+            raw = self._storage.search(
+                embedding,
+                scope_prefix=scope,
+                categories=search_categories,
+                limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
+                min_score=0.0,
+            )
+            # Post-filter by time cutoff
+            if self.state.time_cutoff and raw:
+                raw = [
+                    (r, s) for r, s in raw if r.created_at >= self.state.time_cutoff
+                ]
+            return scope, raw
+
+        # Build (embedding, scope) task list
+        tasks: list[tuple[list[float], str]] = []
+        for _query_text, embedding in self.state.query_embeddings:
+            for scope in self.state.candidate_scopes:
+                tasks.append((embedding, scope))
+
+        findings: list[dict[str, Any]] = []
+
+        if len(tasks) <= 1:
+            for emb, sc in tasks:
+                scope, results = _search_one(emb, sc)
+                if results:
+                    top_composite, _ = compute_composite_score(
+                        results[0][0], results[0][1], self._config
+                    )
+                    findings.append({
+                        "scope": scope,
+                        "results": results,
+                        "top_score": top_composite,
+                    })
+        else:
+            with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
+                futures = {
+                    pool.submit(_search_one, emb, sc): (emb, sc)
+                    for emb, sc in tasks
+                }
+                for future in as_completed(futures):
+                    scope, results = future.result()
+                    if results:
+                        top_composite, _ = compute_composite_score(
+                            results[0][0], results[0][1], self._config
+                        )
+                        findings.append({
+                            "scope": scope,
+                            "results": results,
+                            "top_score": top_composite,
+                        })
+
+        self.state.chunk_findings = findings
+        self.state.confidence = max(
+            (f["top_score"] for f in findings), default=0.0
+        )
+        return findings
+
+    # ------------------------------------------------------------------
+    # Flow steps
+    # ------------------------------------------------------------------
+
     @start()
     def analyze_query_step(self) -> QueryAnalysis:
-        """Analyze the query and embed distilled sub-queries."""
+        """Analyze the query, embed distilled sub-queries, extract filters."""
         self.state.exploration_budget = self._config.exploration_budget
         available = self._storage.list_scopes(self.state.scope or "/")
         if not available:
@@ -80,6 +179,17 @@ class RecallFlow(Flow[RecallState]):
         )
         self.state.query_analysis = analysis
 
+        # Wire keywords -> category filter
+        if analysis.keywords:
+            self.state.inferred_categories = analysis.keywords
+
+        # Parse time_filter into a datetime cutoff
+        if analysis.time_filter:
+            try:
+                self.state.time_cutoff = datetime.fromisoformat(analysis.time_filter)
+            except ValueError:
+                pass
+
         # Embed distilled recall queries (or fall back to original query)
         queries = analysis.recall_queries if analysis.recall_queries else [self.state.query]
         pairs: list[tuple[str, list[float]]] = []
@@ -87,7 +197,6 @@ class RecallFlow(Flow[RecallState]):
             emb = embed_text(self._embedder, q)
             if emb:
                 pairs.append((q, emb))
-        # Fallback: if no embeddings succeeded, try the original query
         if not pairs:
             emb = embed_text(self._embedder, self.state.query)
             if emb:
@@ -115,68 +224,12 @@ class RecallFlow(Flow[RecallState]):
 
     @listen(filter_and_chunk)
     def search_chunks(self) -> list[Any]:
-        """Search all (query_embedding, scope) pairs in parallel."""
-
-        def _search_one(
-            embedding: list[float], scope: str
-        ) -> tuple[str, list[tuple[MemoryRecord, float]]]:
-            return scope, self._storage.search(
-                embedding,
-                scope_prefix=scope,
-                categories=self.state.categories,
-                limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
-                min_score=0.0,
-            )
-
-        # Build all (embedding, scope) tasks
-        tasks: list[tuple[list[float], str]] = []
-        for _query_text, embedding in self.state.query_embeddings:
-            for scope in self.state.candidate_scopes:
-                tasks.append((embedding, scope))
-
-        findings: list[dict[str, Any]] = []
-
-        if len(tasks) <= 1:
-            # Single task -- skip thread pool overhead
-            for emb, sc in tasks:
-                scope, results = _search_one(emb, sc)
-                if results:
-                    top_composite, _ = compute_composite_score(
-                        results[0][0], results[0][1], self._config
-                    )
-                    findings.append({
-                        "scope": scope,
-                        "results": results,
-                        "top_score": top_composite,
-                    })
-        else:
-            # Multiple tasks -- execute in parallel
-            with ThreadPoolExecutor(max_workers=min(len(tasks), 4)) as pool:
-                futures = {
-                    pool.submit(_search_one, emb, sc): (emb, sc)
-                    for emb, sc in tasks
-                }
-                for future in as_completed(futures):
-                    scope, results = future.result()
-                    if results:
-                        top_composite, _ = compute_composite_score(
-                            results[0][0], results[0][1], self._config
-                        )
-                        findings.append({
-                            "scope": scope,
-                            "results": results,
-                            "top_score": top_composite,
-                        })
-
-        self.state.chunk_findings = findings
-        self.state.confidence = max(
-            (f["top_score"] for f in findings), default=0.0
-        )
-        return findings
+        """Initial parallel search across (embeddings x scopes) with filters."""
+        return self._do_search()
 
     @router(search_chunks)
     def decide_depth(self) -> str:
-        """Route based on confidence and query complexity."""
+        """Route based on confidence, complexity, and remaining budget."""
         analysis = self.state.query_analysis
         if (
             analysis
@@ -196,7 +249,12 @@ class RecallFlow(Flow[RecallState]):
 
     @listen("explore_deeper")
     def recursive_exploration(self) -> list[Any]:
-        """Feed top results back to LLM for deeper context extraction."""
+        """Feed top results back to LLM for deeper context extraction.
+
+        Decrements the exploration budget so the loop terminates.
+        """
+        self.state.exploration_budget -= 1
+
         enhanced = []
         for finding in self.state.chunk_findings:
             if not finding.get("results"):
@@ -213,16 +271,33 @@ class RecallFlow(Flow[RecallState]):
                 response = self._llm.call([{"role": "user", "content": prompt}])
                 if isinstance(response, str) and "missing" in response.lower():
                     self.state.evidence_gaps.append(response[:200])
-                enhanced.append({"scope": finding["scope"], "extraction": response, "results": finding["results"]})
+                enhanced.append({
+                    "scope": finding["scope"],
+                    "extraction": response,
+                    "results": finding["results"],
+                })
             except Exception:
-                enhanced.append({"scope": finding["scope"], "extraction": "", "results": finding["results"]})
+                enhanced.append({
+                    "scope": finding["scope"],
+                    "extraction": "",
+                    "results": finding["results"],
+                })
         self.state.chunk_findings = enhanced
         return enhanced
 
-    @listen("synthesize")
     @listen(recursive_exploration)
+    def re_search(self) -> list[Any]:
+        """Re-search after exploration to update confidence for the router loop."""
+        return self._do_search()
+
+    @router(re_search)
+    def re_decide_depth(self) -> str:
+        """Re-evaluate depth after re-search. Same logic as decide_depth."""
+        return self.decide_depth()
+
+    @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:
-        """Deduplicate, composite-score, and rank all results."""
+        """Deduplicate, composite-score, rank, and attach evidence gaps."""
         seen_ids: set[str] = set()
         matches: list[MemoryMatch] = []
         for finding in self.state.chunk_findings:
@@ -250,4 +325,9 @@ class RecallFlow(Flow[RecallState]):
                     )
         matches.sort(key=lambda m: m.score, reverse=True)
         self.state.final_results = matches[: self.state.limit]
+
+        # Attach evidence gaps to the first result so callers can inspect them
+        if self.state.evidence_gaps and self.state.final_results:
+            self.state.final_results[0].evidence_gaps = list(self.state.evidence_gaps)
+
         return self.state.final_results

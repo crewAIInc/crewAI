@@ -37,6 +37,8 @@ class ConsolidationState(BaseModel):
 class ConsolidationFlow(Flow[ConsolidationState]):
     """Flow that gates and runs memory consolidation on remember()."""
 
+    _skip_auto_memory: bool = True
+
     initial_state = ConsolidationState
 
     def __init__(

@@ -62,10 +62,6 @@ class QueryAnalysis(BaseModel):
         default_factory=list,
         description="Key entities or keywords for filtering.",
     )
-    time_hints: list[str] = Field(
-        default_factory=list,
-        description="Any time or recency hints in the query.",
-    )
     suggested_scopes: list[str] = Field(
         default_factory=list,
         description="Scope paths to search (subset of available scopes).",
@@ -81,6 +77,15 @@ class QueryAnalysis(BaseModel):
             "Each should be a concise question or keyword phrase optimized "
             "for semantic vector search. If the query is already short and "
             "focused, return it as a single item."
+        ),
+    )
+    time_filter: str | None = Field(
+        default=None,
+        description=(
+            "If the query references a specific time period (e.g. 'last week', "
+            "'yesterday', 'in January'), return an ISO 8601 date string representing "
+            "the earliest date that results should match (e.g. '2026-02-01'). "
+            "Return null if no time constraint is implied."
         ),
     )
 
@@ -279,7 +284,7 @@ def analyze_query(
         llm: The LLM instance to use.
 
     Returns:
-        QueryAnalysis with keywords, time_hints, suggested_scopes, complexity.
+        QueryAnalysis with keywords, suggested_scopes, complexity, recall_queries, time_filter.
     """
     scope_desc = ""
     if scope_info:
@@ -315,7 +320,6 @@ def analyze_query(
         scopes = (available_scopes or ["/"])[:5]
         return QueryAnalysis(
             keywords=[],
-            time_hints=[],
             suggested_scopes=scopes,
             complexity="simple",
             recall_queries=[query],

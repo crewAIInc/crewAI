@@ -68,6 +68,10 @@ class MemoryMatch(BaseModel):
         default_factory=list,
         description="Reasons for the match (e.g. semantic, recency, importance).",
     )
+    evidence_gaps: list[str] = Field(
+        default_factory=list,
+        description="Information the system looked for but could not find.",
+    )
 
 
 class ScopeInfo(BaseModel):
