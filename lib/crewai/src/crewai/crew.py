@@ -187,6 +187,7 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -759,7 +760,11 @@ class Crew(FlowTrackable, BaseModel):
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
@@ -949,7 +954,11 @@ class Crew(FlowTrackable, BaseModel):
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
@@ -1524,6 +1533,7 @@ class Crew(FlowTrackable, BaseModel):
                 crew_name=self.name,
                 output=final_task_output,
                 total_tokens=self.token_usage.total_tokens,
+                started_event_id=self._kickoff_event_id,
             ),
         )
 
