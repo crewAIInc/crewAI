@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -68,6 +70,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         }
       ]
       ```
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_workbooks">
@@ -79,6 +82,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `expand` (string, optional): Expand related resources inline
     - `top` (integer, optional): Number of items to return. Minimum: 1, Maximum: 999
     - `orderby` (string, optional): Order results by specified properties
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_worksheets">
@@ -91,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `expand` (string, optional): Expand related resources inline
     - `top` (integer, optional): Number of items to return. Minimum: 1, Maximum: 999
     - `orderby` (string, optional): Order results by specified properties
+
   </Accordion>
 
   <Accordion title="microsoft_excel/create_worksheet">
@@ -99,6 +104,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
     - `name` (string, required): Name of the new worksheet
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_range_data">
@@ -108,6 +114,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet
     - `range` (string, required): Range address (e.g., 'A1:C10')
+
   </Accordion>
 
   <Accordion title="microsoft_excel/update_range_data">
@@ -125,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         ["Jane", 25, "Los Angeles"]
       ]
       ```
+
   </Accordion>
 
   <Accordion title="microsoft_excel/add_table">
@@ -135,6 +143,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `worksheet_name` (string, required): Name of the worksheet
     - `range` (string, required): Range for the table (e.g., 'A1:D10')
     - `has_headers` (boolean, optional): Whether the first row contains headers. Default: true
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_tables">
@@ -143,6 +152,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet
+
   </Accordion>
 
   <Accordion title="microsoft_excel/add_table_row">
@@ -156,6 +166,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       ```json
       ["John Doe", 35, "Manager", "Sales"]
       ```
+
   </Accordion>
 
   <Accordion title="microsoft_excel/create_chart">
@@ -167,6 +178,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `chart_type` (string, required): Type of chart (e.g., 'ColumnClustered', 'Line', 'Pie')
     - `source_data` (string, required): Range of data for the chart (e.g., 'A1:B10')
     - `series_by` (string, optional): How to interpret the data ('Auto', 'Columns', or 'Rows'). Default: Auto
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_cell">
@@ -177,6 +189,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `worksheet_name` (string, required): Name of the worksheet
     - `row` (integer, required): Row number (0-based)
     - `column` (integer, required): Column number (0-based)
+
   </Accordion>
 
   <Accordion title="microsoft_excel/get_used_range">
@@ -185,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet
+
   </Accordion>
 
   <Accordion title="microsoft_excel/list_charts">
@@ -193,6 +207,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet
+
   </Accordion>
 
   <Accordion title="microsoft_excel/delete_worksheet">
@@ -201,6 +216,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet to delete
+
   </Accordion>
 
   <Accordion title="microsoft_excel/delete_table">
@@ -210,6 +226,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `file_id` (string, required): The ID of the Excel file
     - `worksheet_name` (string, required): Name of the worksheet
     - `table_name` (string, required): Name of the table to delete
+
   </Accordion>
 
   <Accordion title="microsoft_excel/list_names">
@@ -217,6 +234,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `file_id` (string, required): The ID of the Excel file
+
   </Accordion>
 </AccordionGroup>
 
@@ -421,36 +439,43 @@ crew.kickoff()
 ### Common Issues
 
 **Permission Errors**
+
 - Ensure your Microsoft account has appropriate permissions for Excel and OneDrive/SharePoint
 - Verify that the OAuth connection includes required scopes (Files.Read.All, Files.ReadWrite.All)
 - Check that you have access to the specific workbooks you're trying to modify
 
 **File ID and Path Issues**
+
 - Verify that file IDs are correct and files exist in your OneDrive or SharePoint
 - Ensure file paths are properly formatted when creating new workbooks
 - Check that workbook files have the correct .xlsx extension
 
 **Worksheet and Range Issues**
+
 - Verify that worksheet names exist in the specified workbook
 - Ensure range addresses are properly formatted (e.g., 'A1:C10')
 - Check that ranges don't exceed worksheet boundaries
 
 **Data Format Issues**
+
 - Ensure data values are properly formatted for Excel (strings, numbers, integers)
 - Verify that 2D arrays for ranges have consistent row and column counts
 - Check that table data includes proper headers when has_headers is true
 
 **Chart Creation Issues**
+
 - Verify that chart types are supported (ColumnClustered, Line, Pie, etc.)
 - Ensure source data ranges contain appropriate data for the chart type
 - Check that the source data range exists and contains data
 
 **Table Management Issues**
+
 - Ensure table names are unique within worksheets
 - Verify that table ranges don't overlap with existing tables
 - Check that new row data matches the table's column structure
 
 **Cell and Range Operations**
+
 - Verify that row and column indices are 0-based for cell operations
 - Ensure ranges contain data when using get_used_range
 - Check that named ranges exist before referencing them
@@ -458,5 +483,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Microsoft Excel integration setup or troubleshooting.
+  Contact our support team for assistance with Microsoft Excel integration setup
+  or troubleshooting.
 </Card>

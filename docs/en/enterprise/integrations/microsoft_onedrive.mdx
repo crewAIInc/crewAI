@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -59,6 +61,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `top` (integer, optional): Number of items to retrieve (max 1000). Default is `50`.
     - `orderby` (string, optional): Order by field (e.g., "name asc", "lastModifiedDateTime desc"). Default is "name asc".
     - `filter` (string, optional): OData filter expression.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/get_file_info">
@@ -66,6 +69,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `item_id` (string, required): The ID of the file or folder.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/download_file">
@@ -73,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `item_id` (string, required): The ID of the file to download.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/upload_file">
@@ -81,6 +86,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file_name` (string, required): Name of the file to upload.
     - `content` (string, required): Base64 encoded file content.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/create_folder">
@@ -88,6 +94,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `folder_name` (string, required): Name of the folder to create.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/delete_item">
@@ -95,6 +102,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `item_id` (string, required): The ID of the file or folder to delete.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/copy_item">
@@ -104,6 +112,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `item_id` (string, required): The ID of the file or folder to copy.
     - `parent_id` (string, optional): The ID of the destination folder (optional, defaults to root).
     - `new_name` (string, optional): New name for the copied item (optional).
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/move_item">
@@ -113,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `item_id` (string, required): The ID of the file or folder to move.
     - `parent_id` (string, required): The ID of the destination folder.
     - `new_name` (string, optional): New name for the item (optional).
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/search_files">
@@ -121,6 +131,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `query` (string, required): Search query string.
     - `top` (integer, optional): Number of results to return (max 1000). Default is `50`.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/share_item">
@@ -130,6 +141,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `item_id` (string, required): The ID of the file or folder to share.
     - `type` (string, optional): Type of sharing link. Enum: `view`, `edit`, `embed`. Default is `view`.
     - `scope` (string, optional): Scope of the sharing link. Enum: `anonymous`, `organization`. Default is `anonymous`.
+
   </Accordion>
 
   <Accordion title="microsoft_onedrive/get_thumbnails">
@@ -137,6 +149,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `item_id` (string, required): The ID of the file.
+
   </Accordion>
 </AccordionGroup>
 
@@ -232,29 +245,35 @@ crew.kickoff()
 ### Common Issues
 
 **Authentication Errors**
+
 - Ensure your Microsoft account has the necessary permissions for file access (e.g., `Files.Read`, `Files.ReadWrite`).
 - Verify that the OAuth connection includes all required scopes.
 
 **File Upload Issues**
+
 - Ensure `file_name` and `content` are provided for file uploads.
 - Content must be Base64 encoded for binary files.
 - Check that you have write permissions to OneDrive.
 
 **File/Folder ID Issues**
+
 - Double-check item IDs for correctness when accessing specific files or folders.
 - Item IDs are returned by other operations like `list_files` or `search_files`.
 - Ensure the referenced items exist and are accessible.
 
 **Search and Filter Operations**
+
 - Use appropriate search terms for `search_files` operations.
 - For `filter` parameters, use proper OData syntax.
 
 **File Operations (Copy/Move)**
+
 - For `move_item`, ensure both `item_id` and `parent_id` are provided.
 - For `copy_item`, only `item_id` is required; `parent_id` defaults to root if not specified.
 - Verify that destination folders exist and are accessible.
 
 **Sharing Link Creation**
+
 - Ensure the item exists before creating sharing links.
 - Choose appropriate `type` and `scope` based on your sharing requirements.
 - `anonymous` scope allows access without sign-in; `organization` requires organizational account.
@@ -262,5 +281,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Microsoft OneDrive integration setup or troubleshooting.
+  Contact our support team for assistance with Microsoft OneDrive integration
+  setup or troubleshooting.
 </Card>

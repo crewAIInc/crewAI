@@ -81,6 +81,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "from_agent": None,
         "agent_role": None,
         "agent_id": None,
+        "event_id": ANY,
+        "parent_event_id": None,
+        "previous_event_id": ANY,
+        "triggered_by_event_id": None,
+        "started_event_id": ANY,
+        "emission_sequence": ANY,
         "query": "test value",
         "limit": 3,
         "score_threshold": 0.35,
@@ -98,6 +104,12 @@ def test_short_term_memory_search_events(short_term_memory):
         "from_agent": None,
         "agent_role": None,
         "agent_id": None,
+        "event_id": ANY,
+        "parent_event_id": None,
+        "previous_event_id": ANY,
+        "triggered_by_event_id": None,
+        "started_event_id": ANY,
+        "emission_sequence": ANY,
         "query": "test value",
         "results": [],
         "limit": 3,
@@ -107,27 +119,33 @@ def test_short_term_memory_search_events(short_term_memory):
 
 
 def test_short_term_memory_save_events(short_term_memory):
-    events = defaultdict(list)
-    save_started = threading.Event()
-    save_completed = threading.Event()
+    events: dict[str, list] = defaultdict(list)
+    condition = threading.Condition()
 
     @crewai_event_bus.on(MemorySaveStartedEvent)
     def on_save_started(source, event):
-        events["MemorySaveStartedEvent"].append(event)
-        save_started.set()
+        with condition:
+            events["MemorySaveStartedEvent"].append(event)
+            condition.notify()
 
     @crewai_event_bus.on(MemorySaveCompletedEvent)
     def on_save_completed(source, event):
-        events["MemorySaveCompletedEvent"].append(event)
-        save_completed.set()
+        with condition:
+            events["MemorySaveCompletedEvent"].append(event)
+            condition.notify()
 
     short_term_memory.save(
         value="test value",
         metadata={"task": "test_task"},
     )
 
-    assert save_started.wait(timeout=2), "Timeout waiting for save started event"
-    assert save_completed.wait(timeout=2), "Timeout waiting for save completed event"
+    with condition:
+        success = condition.wait_for(
+            lambda: len(events["MemorySaveStartedEvent"]) >= 1
+            and len(events["MemorySaveCompletedEvent"]) >= 1,
+            timeout=5,
+        )
+    assert success, "Timeout waiting for save events"
 
     assert len(events["MemorySaveStartedEvent"]) == 1
     assert len(events["MemorySaveCompletedEvent"]) == 1
@@ -144,6 +162,12 @@ def test_short_term_memory_save_events(short_term_memory):
         "from_agent": None,
         "agent_role": None,
         "agent_id": None,
+        "event_id": ANY,
+        "parent_event_id": None,
+        "previous_event_id": ANY,
+        "triggered_by_event_id": None,
+        "started_event_id": ANY,
+        "emission_sequence": ANY,
         "value": "test value",
         "metadata": {"task": "test_task"},
     }
@@ -160,6 +184,12 @@ def test_short_term_memory_save_events(short_term_memory):
         "from_agent": None,
         "agent_role": None,
         "agent_id": None,
+        "event_id": ANY,
+        "parent_event_id": None,
+        "previous_event_id": ANY,
+        "triggered_by_event_id": None,
+        "started_event_id": ANY,
+        "emission_sequence": ANY,
         "value": "test value",
         "metadata": {"task": "test_task"},
         "save_time_ms": ANY,

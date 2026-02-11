@@ -496,3 +496,327 @@ class TestToolHooksIntegration:
         clear_all_tool_call_hooks()
         hooks = get_before_tool_call_hooks()
         assert len(hooks) == 0
+
+    @pytest.mark.vcr()
+    def test_lite_agent_hooks_integration_with_real_tool(self):
+        """Test that LiteAgent executes before/after tool call hooks with real tool calls."""
+        import os
+        from crewai.lite_agent import LiteAgent
+        from crewai.tools import tool
+
+        # Skip if no API key available
+        if not os.environ.get("OPENAI_API_KEY"):
+            pytest.skip("OPENAI_API_KEY not set - skipping real tool test")
+
+        # Track hook invocations
+        hook_calls = {"before": [], "after": []}
+
+        # Create a simple test tool
+        @tool("calculate_sum")
+        def calculate_sum(a: int, b: int) -> int:
+            """Add two numbers together."""
+            return a + b
+
+        def before_tool_call_hook(context: ToolCallHookContext) -> bool:
+            """Log and verify before hook execution."""
+            print(f"\n[BEFORE HOOK] Tool: {context.tool_name}")
+            print(f"[BEFORE HOOK] Tool input: {context.tool_input}")
+            print(f"[BEFORE HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+            print(f"[BEFORE HOOK] Task: {context.task}")
+            print(f"[BEFORE HOOK] Crew: {context.crew}")
+
+            # Track the call
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": context.tool_input,
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+            })
+
+            return True  # Allow execution
+
+        def after_tool_call_hook(context: ToolCallHookContext) -> str | None:
+            """Log and verify after hook execution."""
+            print(f"\n[AFTER HOOK] Tool: {context.tool_name}")
+            print(f"[AFTER HOOK] Tool result: {context.tool_result}")
+            print(f"[AFTER HOOK] Agent: {context.agent.role if context.agent else 'None'}")
+
+            # Track the call
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_result": context.tool_result is not None,
+            })
+
+            return None  # Don't modify result
+
+        # Register hooks
+        register_before_tool_call_hook(before_tool_call_hook)
+        register_after_tool_call_hook(after_tool_call_hook)
+
+        try:
+            # Create LiteAgent with the tool
+            lite_agent = LiteAgent(
+                role="Calculator Assistant",
+                goal="Help with math calculations",
+                backstory="You are a helpful calculator assistant",
+                tools=[calculate_sum],
+                verbose=True,
+            )
+
+            # Execute with a prompt that should trigger tool usage
+            result = lite_agent.kickoff("What is 5 + 3? Use the calculate_sum tool.")
+
+            # Verify hooks were called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+
+            # Verify context had correct attributes for LiteAgent (used in flows)
+            # LiteAgent doesn't have task/crew context, unlike agents in CrewBase
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "calculate_sum", "Tool name should be 'calculate_sum'"
+            assert "a" in before_call["tool_input"], "Tool input should have 'a' parameter"
+            assert "b" in before_call["tool_input"], "Tool input should have 'b' parameter"
+
+            # Verify after hook received result
+            after_call = hook_calls["after"][0]
+            assert after_call["has_result"] is True, "After hook should have tool result"
+            assert after_call["tool_name"] == "calculate_sum", "Tool name should match"
+            # The result should contain the sum (8)
+            assert "8" in str(after_call["tool_result"]), "Tool result should contain the sum"
+
+        finally:
+            # Clean up hooks
+            unregister_before_tool_call_hook(before_tool_call_hook)
+            unregister_after_tool_call_hook(after_tool_call_hook)
+
+
+class TestNativeToolCallingHooksIntegration:
+    """Integration tests for hooks with native function calling (Agent and Crew)."""
+
+    @pytest.mark.vcr()
+    def test_agent_native_tool_hooks_before_and_after(self):
+        """Test that Agent with native tool calling executes before/after hooks."""
+        import os
+        from crewai import Agent
+        from crewai.tools import tool
+
+        hook_calls = {"before": [], "after": []}
+
+        @tool("multiply_numbers")
+        def multiply_numbers(a: int, b: int) -> int:
+            """Multiply two numbers together."""
+            return a * b
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+                "has_agent": context.agent is not None,
+            })
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_agent": context.agent is not None,
+            })
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Calculator",
+                goal="Perform calculations",
+                backstory="You are a calculator assistant",
+                tools=[multiply_numbers],
+                verbose=True,
+            )
+
+            agent.kickoff(
+                messages="What is 7 times 6? Use the multiply_numbers tool."
+            )
+
+            # Verify before hook was called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "multiply_numbers"
+            assert "a" in before_call["tool_input"]
+            assert "b" in before_call["tool_input"]
+            assert before_call["has_agent"] is True
+
+            # Verify after hook was called
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert after_call["tool_name"] == "multiply_numbers"
+            assert "42" in str(after_call["tool_result"])
+            assert after_call["has_agent"] is True
+
+        finally:
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
+
+    @pytest.mark.vcr()
+    def test_crew_native_tool_hooks_before_and_after(self):
+        """Test that Crew with Agent executes before/after hooks with full context."""
+        import os
+        from crewai import Agent, Crew, Task
+        from crewai.tools import tool
+
+
+        hook_calls = {"before": [], "after": []}
+
+        @tool("divide_numbers")
+        def divide_numbers(a: int, b: int) -> float:
+            """Divide first number by second number."""
+            return a / b
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+                "agent_role": context.agent.role if context.agent else None,
+            })
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+                "has_agent": context.agent is not None,
+                "has_task": context.task is not None,
+                "has_crew": context.crew is not None,
+            })
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Math Assistant",
+                goal="Perform division calculations accurately",
+                backstory="You are a math assistant that helps with division",
+                tools=[divide_numbers],
+                verbose=True,
+            )
+
+            task = Task(
+                description="Calculate 100 divided by 4 using the divide_numbers tool.",
+                expected_output="The result of the division",
+                agent=agent,
+            )
+
+            crew = Crew(
+                agents=[agent],
+                tasks=[task],
+                verbose=True,
+            )
+
+            crew.kickoff()
+
+            # Verify before hook was called with full context
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "divide_numbers"
+            assert "a" in before_call["tool_input"]
+            assert "b" in before_call["tool_input"]
+            assert before_call["has_agent"] is True
+            assert before_call["has_task"] is True
+            assert before_call["has_crew"] is True
+            assert before_call["agent_role"] == "Math Assistant"
+
+            # Verify after hook was called with full context
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert after_call["tool_name"] == "divide_numbers"
+            assert "25" in str(after_call["tool_result"])
+            assert after_call["has_agent"] is True
+            assert after_call["has_task"] is True
+            assert after_call["has_crew"] is True
+
+        finally:
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
+
+    @pytest.mark.vcr()
+    def test_before_hook_blocks_tool_execution_in_crew(self):
+        """Test that returning False from before hook blocks tool execution."""
+        import os
+        from crewai import Agent, Crew, Task
+        from crewai.tools import tool
+
+        hook_calls = {"before": [], "after": [], "tool_executed": False}
+
+        @tool("dangerous_operation")
+        def dangerous_operation(action: str) -> str:
+            """Perform a dangerous operation that should be blocked."""
+            hook_calls["tool_executed"] = True
+            return f"Executed: {action}"
+
+        def blocking_before_hook(context: ToolCallHookContext) -> bool | None:
+            hook_calls["before"].append({
+                "tool_name": context.tool_name,
+                "tool_input": dict(context.tool_input),
+            })
+            # Block all calls to dangerous_operation
+            if context.tool_name == "dangerous_operation":
+                return False
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            hook_calls["after"].append({
+                "tool_name": context.tool_name,
+                "tool_result": context.tool_result,
+            })
+            return None
+
+        register_before_tool_call_hook(blocking_before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Test Agent",
+                goal="Try to use the dangerous operation tool",
+                backstory="You are a test agent",
+                tools=[dangerous_operation],
+                verbose=True,
+            )
+
+            task = Task(
+                description="Use the dangerous_operation tool with action 'delete_all'.",
+                expected_output="The result of the operation",
+                agent=agent,
+            )
+
+            crew = Crew(
+                agents=[agent],
+                tasks=[task],
+                verbose=True,
+            )
+
+            crew.kickoff()
+
+            # Verify before hook was called
+            assert len(hook_calls["before"]) > 0, "Before hook was never called"
+            before_call = hook_calls["before"][0]
+            assert before_call["tool_name"] == "dangerous_operation"
+
+            # Verify the actual tool function was NOT executed
+            assert hook_calls["tool_executed"] is False, "Tool should have been blocked"
+
+            # Verify after hook was still called (with blocked message)
+            assert len(hook_calls["after"]) > 0, "After hook was never called"
+            after_call = hook_calls["after"][0]
+            assert "blocked" in after_call["tool_result"].lower()
+
+        finally:
+            unregister_before_tool_call_hook(blocking_before_hook)
+            unregister_after_tool_call_hook(after_hook)

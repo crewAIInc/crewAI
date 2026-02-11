@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -58,6 +59,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `task` (string, 필수): 작업 ID - 댓글이 추가될 작업의 ID입니다. 댓글 작성자는 현재 인증된 사용자입니다.
     - `text` (string, 필수): 텍스트 (예: "This is a comment.").
+
   </Accordion>
 
   <Accordion title="asana/create_project">
@@ -68,6 +70,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `workspace` (string, 필수): 워크스페이스 - Connect Portal Workflow 설정을 사용해 사용자가 프로젝트를 생성할 워크스페이스를 선택할 수 있도록 합니다. 공란인 경우 기본적으로 사용자의 첫 번째 워크스페이스가 선택됩니다.
     - `team` (string, 선택): 팀 - Connect Portal Workflow 설정을 사용해 사용자가 이 프로젝트를 공유할 팀을 선택할 수 있도록 합니다. 공란인 경우 기본적으로 사용자의 첫 번째 팀이 선택됩니다.
     - `notes` (string, 선택): 노트 (예: "These are things we need to purchase.").
+
   </Accordion>
 
   <Accordion title="asana/get_projects">
@@ -76,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `archived` (string, 선택): 보관됨 - 보관된 프로젝트를 보려면 "true", 활성 프로젝트만 보려면 "false", 보관됨과 활성 모두 보려면 "default"를 선택합니다.
       - 옵션: `default`, `true`, `false`
+
   </Accordion>
 
   <Accordion title="asana/get_project_by_id">
@@ -83,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `projectFilterId` (string, 필수): 프로젝트 ID.
+
   </Accordion>
 
   <Accordion title="asana/create_task">
@@ -97,6 +102,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dueAtDate` (string, 선택): 마감 시각 - 이 작업이 완료되어야 하는 날짜와 시간 (ISO 타임스탬프) 입니다. Due On과 함께 사용할 수 없습니다. (예: "2019-09-15T02:06:58.147Z").
     - `assignee` (string, 선택): 담당자 - 이 작업이 할당될 Asana 사용자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
     - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
+
   </Accordion>
 
   <Accordion title="asana/update_task">
@@ -112,6 +118,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `dueAtDate` (string, 선택): 마감 시각 - 이 작업이 완료되어야 하는 날짜와 시간 (ISO 타임스탬프) 입니다. Due On과 함께 사용할 수 없습니다. (예: "2019-09-15T02:06:58.147Z").
     - `assignee` (string, 선택): 담당자 - 이 작업이 할당될 Asana 사용자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
     - `gid` (string, 선택): 외부 ID - 이 작업과 연결할 애플리케이션의 ID입니다. 이 ID를 사용하여 이후 작업 업데이트를 동기화할 수 있습니다.
+
   </Accordion>
 
   <Accordion title="asana/get_tasks">
@@ -122,6 +129,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `project` (string, 선택): 프로젝트 - 작업을 필터링할 프로젝트의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 프로젝트를 선택할 수 있도록 합니다.
     - `assignee` (string, 선택): 담당자 - 작업을 필터링할 담당자의 ID입니다. Connect Portal Workflow 설정을 사용해 사용자가 담당자를 선택할 수 있도록 합니다.
     - `completedSince` (string, 선택): 이후 완료됨 - 미완료이거나 해당 시간(ISO 또는 Unix 타임스탬프) 이후에 완료된 작업만 반환합니다. (예: "2014-04-25T16:15:47-04:00").
+
   </Accordion>
 
   <Accordion title="asana/get_tasks_by_id">
@@ -129,6 +137,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `taskId` (string, 필수): 작업 ID.
+
   </Accordion>
 
   <Accordion title="asana/get_task_by_external_id">
@@ -136,6 +145,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `gid` (string, 필수): 외부 ID - 이 작업이 애플리케이션과 연동(또는 동기화)된 ID입니다.
+
   </Accordion>
 
   <Accordion title="asana/add_task_to_section">
@@ -146,6 +156,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `taskId` (string, 필수): 작업 ID - 작업의 ID입니다. (예: "1204619611402340").
     - `beforeTaskId` (string, 선택): 이전 작업 ID - 이 작업이 삽입될 섹션 내의 작업 ID입니다. 이후 작업 ID와 함께 사용할 수 없습니다. (예: "1204619611402340").
     - `afterTaskId` (string, 선택): 이후 작업 ID - 이 작업이 삽입될 섹션 내의 작업 ID입니다. 이전 작업 ID와 함께 사용할 수 없습니다. (예: "1204619611402340").
+
   </Accordion>
 
   <Accordion title="asana/get_teams">
@@ -153,12 +164,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `workspace` (string, 필수): 워크스페이스 - 인증된 사용자가 볼 수 있는 이 워크스페이스 내의 팀을 반환합니다.
+
   </Accordion>
 
   <Accordion title="asana/get_workspaces">
     **설명:** Asana에서 워크스페이스 목록을 가져옵니다.
 
     **매개변수:** 필요 없음.
+
   </Accordion>
 </AccordionGroup>
 

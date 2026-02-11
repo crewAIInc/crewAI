@@ -1,0 +1,303 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: First Agent\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: First Agent\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: Process initial data\n\nThis is the expected criteria for your final answer: Initial analysis\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2883'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDtfedxKGsb2gnt4ahguuwBBpNik\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894215,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: To process the initial data and provide an initial analysis, I need to delegate the task to the relevant coworker, as the initial processing and analysis will require hands-on work with the data. First, I will delegate the task to the First Agent, providing all the necessary context and details.\\n\\nAction: Delegate work to coworker\\nAction Input: {\\\"task\\\": \\\"Process initial data to perform an initial analysis of the dataset.\\\", \\\"context\\\": \\\"The goal is to conduct an initial analysis of the provided dataset. You need to process the initial data efficiently and effectively, examining key patterns, trends, and insights that can be gleaned. The focus should be on understanding\
+        \ the data's structure, identifying significant variables, and outlining any initial observations that could inform further detailed analysis.\\\", \\\"coworker\\\": \\\"First Agent\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 612,\n    \"completion_tokens\": 165,\n    \"total_tokens\": 777,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_83554c687e\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:38 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2695'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2710'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are First Agent. First backstory\nYour personal goal is: First goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Process initial data to perform an initial analysis of the dataset.\n\nThis is the expected criteria for your final answer: Your best answer to your coworker asking you this, accounting for the context shared.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nThis is the context you''re working with:\nThe goal is to conduct an initial analysis of the provided dataset. You need to process the initial data efficiently and effectively, examining key patterns, trends, and insights that can be gleaned.
+      The focus should be on understanding the data''s structure, identifying significant variables, and outlining any initial observations that could inform further detailed analysis.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1333'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDtiY4DXhbfzn59jvq5qrutGak9t\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894218,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer: To effectively process the initial data for an initial analysis, we should start by thoroughly examining the dataset's structure. This involves assessing the number of records, the types of variables (categorical, numerical, dates, text), and checking for missing or inconsistent values. Begin with descriptive statistics such as mean, median, mode for numerical variables; frequency counts for categorical variables; and basic date range summaries if applicable. Visualizing the data with histograms, boxplots, and bar charts can help quickly identify distributions, outliers, and patterns.\\n\\nNext, identifying key variables that are central\
+        \ to our analysis objective is crucial. This can be done by evaluating correlations and relationships between variables using correlation matrices, scatterplots, or contingency tables depending on variable types. Initial observations should highlight any prominent trends, such as seasonality, clusters, or anomalies, and any data quality issues that need addressing before deeper analysis.\\n\\nSummarize any findings that point to interesting insights or potential hypotheses for follow-up, like variables that strongly relate to target outcomes, apparent grouping in data points, or variables with high missing data needing imputation strategies.\\n\\nTo conclude, this initial processing serves as a foundational step to ensure data quality, understand its characteristics, and identify meaningful factors that will guide more detailed exploratory and predictive analysis moving forward. Preparing a concise report or dashboard with these key initial findings and data health indicators would\
+        \ be the best way to communicate the analysis to stakeholders or the analysis team.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 250,\n    \"completion_tokens\": 301,\n    \"total_tokens\": 551,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_9766e549b2\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:42 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3697'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3713'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Crew Manager. You are a seasoned manager with a knack for getting the best out of your team.\nYou are also known for your ability to delegate work to the right people, and to ask the right questions to get the best out of your team.\nEven though you don''t perform tasks by yourself, you have a lot of experience in the field, which allows you to properly evaluate the work of your team members.\nYour personal goal is: Manage the team to complete the task in the best way possible.\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: Delegate work to coworker\nTool Arguments: {''task'': {''description'': ''The task to delegate'', ''type'': ''str''}, ''context'': {''description'': ''The context for the task'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to delegate to'', ''type'': ''str''}}\nTool Description: Delegate a specific task
+      to one of the following coworkers: First Agent\nThe input to this tool should be the coworker, the task you want them to do, and ALL necessary context to execute the task, they know nothing about the task, so share absolutely everything you know, don''t reference things but instead explain them.\nTool Name: Ask question to coworker\nTool Arguments: {''question'': {''description'': ''The question to ask'', ''type'': ''str''}, ''context'': {''description'': ''The context for the question'', ''type'': ''str''}, ''coworker'': {''description'': ''The role/name of the coworker to ask'', ''type'': ''str''}}\nTool Description: Ask a specific question to one of the following coworkers: First Agent\nThe input to this tool should be the coworker, the question you have for them, and ALL necessary context to ask the question properly, they know nothing about the question, so share absolutely everything you know, don''t reference things but instead explain them.\n\nIMPORTANT: Use the following format
+      in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [Delegate work to coworker, Ask question to coworker], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: Process initial data\n\nThis is the expected criteria for your final answer: Initial analysis\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"Thought: To process the initial
+      data and provide an initial analysis, I need to delegate the task to the relevant coworker, as the initial processing and analysis will require hands-on work with the data. First, I will delegate the task to the First Agent, providing all the necessary context and details.\n\nAction: Delegate work to coworker\nAction Input: {\"task\": \"Process initial data to perform an initial analysis of the dataset.\", \"context\": \"The goal is to conduct an initial analysis of the provided dataset. You need to process the initial data efficiently and effectively, examining key patterns, trends, and insights that can be gleaned. The focus should be on understanding the data''s structure, identifying significant variables, and outlining any initial observations that could inform further detailed analysis.\", \"coworker\": \"First Agent\"}\nObservation: To effectively process the initial data for an initial analysis, we should start by thoroughly examining the dataset''s structure. This involves
+      assessing the number of records, the types of variables (categorical, numerical, dates, text), and checking for missing or inconsistent values. Begin with descriptive statistics such as mean, median, mode for numerical variables; frequency counts for categorical variables; and basic date range summaries if applicable. Visualizing the data with histograms, boxplots, and bar charts can help quickly identify distributions, outliers, and patterns.\n\nNext, identifying key variables that are central to our analysis objective is crucial. This can be done by evaluating correlations and relationships between variables using correlation matrices, scatterplots, or contingency tables depending on variable types. Initial observations should highlight any prominent trends, such as seasonality, clusters, or anomalies, and any data quality issues that need addressing before deeper analysis.\n\nSummarize any findings that point to interesting insights or potential hypotheses for follow-up, like variables
+      that strongly relate to target outcomes, apparent grouping in data points, or variables with high missing data needing imputation strategies.\n\nTo conclude, this initial processing serves as a foundational step to ensure data quality, understand its characteristics, and identify meaningful factors that will guide more detailed exploratory and predictive analysis moving forward. Preparing a concise report or dashboard with these key initial findings and data health indicators would be the best way to communicate the analysis to stakeholders or the analysis team."}],"model":"gpt-4o"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '5516'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDtmzBWKzr8DbUHiu8zxNL19Hs97\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894222,\n  \"model\": \"gpt-4o-2024-08-06\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal Answer: To effectively process the initial data for an initial analysis, we should start by thoroughly examining the dataset's structure. This involves assessing the number of records, the types of variables (categorical, numerical, dates, text), and checking for missing or inconsistent values. Begin with descriptive statistics such as mean, median, mode for numerical variables; frequency counts for categorical variables; and basic date range summaries if applicable. Visualizing the data with histograms, boxplots, and bar charts can help quickly identify distributions, outliers, and patterns.\\n\\nNext, identifying key variables that are central to our\
+        \ analysis objective is crucial. This can be done by evaluating correlations and relationships between variables using correlation matrices, scatterplots, or contingency tables depending on variable types. Initial observations should highlight any prominent trends, such as seasonality, clusters, or anomalies, and any data quality issues that need addressing before deeper analysis.\\n\\nSummarize any findings that point to interesting insights or potential hypotheses for follow-up, like variables that strongly relate to target outcomes, apparent grouping in data points, or variables with high missing data needing imputation strategies.\\n\\nTo conclude, this initial processing serves as a foundational step to ensure data quality, understand its characteristics, and identify meaningful factors that will guide more detailed exploratory and predictive analysis moving forward. Preparing a concise report or dashboard with these key initial findings and data health indicators would be the\
+        \ best way to communicate the analysis to stakeholders or the analysis team.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1071,\n    \"completion_tokens\": 300,\n    \"total_tokens\": 1371,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_83554c687e\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:23:44 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1879'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1893'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

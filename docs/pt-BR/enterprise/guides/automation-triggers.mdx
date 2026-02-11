@@ -25,37 +25,62 @@ Os guias abaixo explicam, em detalhe, como habilitar e testar cada integração:
     <a href="/pt-BR/enterprise/guides/gmail-trigger">Dispare crews quando novos e‑mails chegarem ou threads forem atualizadas.</a>
   </Card>
 
-  <Card title="Trigger do Google Calendar" icon="calendar-days">
-    <a href="/pt-BR/enterprise/guides/google-calendar-trigger">Reaja a eventos de calendário criados, atualizados ou cancelados.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Google Calendar" icon="calendar-days">
+  <a href="/pt-BR/enterprise/guides/google-calendar-trigger">
+    Reaja a eventos de calendário criados, atualizados ou cancelados.
+  </a>
+</Card>
 
-  <Card title="Trigger do Google Drive" icon="folder-open">
-    <a href="/pt-BR/enterprise/guides/google-drive-trigger">Monitore uploads, edições e exclusões de arquivos no Drive.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Google Drive" icon="folder-open">
+  <a href="/pt-BR/enterprise/guides/google-drive-trigger">
+    Monitore uploads, edições e exclusões de arquivos no Drive.
+  </a>
+</Card>
 
-  <Card title="Trigger do Outlook" icon="envelope-open">
-    <a href="/pt-BR/enterprise/guides/outlook-trigger">Automatize respostas a novos e‑mails ou eventos removidos no Outlook.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Outlook" icon="envelope-open">
+  <a href="/pt-BR/enterprise/guides/outlook-trigger">
+    Automatize respostas a novos e‑mails ou eventos removidos no Outlook.
+  </a>
+</Card>
 
-  <Card title="Trigger do OneDrive" icon="cloud">
-    <a href="/pt-BR/enterprise/guides/onedrive-trigger">Audite atividade e compartilhamentos de arquivos no OneDrive.</a>
-  </Card>
+{" "}
+<Card title="Trigger do OneDrive" icon="cloud">
+  <a href="/pt-BR/enterprise/guides/onedrive-trigger">
+    Audite atividade e compartilhamentos de arquivos no OneDrive.
+  </a>
+</Card>
 
-  <Card title="Trigger do Microsoft Teams" icon="comments">
-    <a href="/pt-BR/enterprise/guides/microsoft-teams-trigger">Inicie workflows quando novos chats forem criados no Teams.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Microsoft Teams" icon="comments">
+  <a href="/pt-BR/enterprise/guides/microsoft-teams-trigger">
+    Inicie workflows quando novos chats forem criados no Teams.
+  </a>
+</Card>
 
-  <Card title="Trigger do HubSpot" icon="hubspot">
-    <a href="/pt-BR/enterprise/guides/hubspot-trigger">Execute automações a partir de workflows e eventos de ciclo de vida no HubSpot.</a>
-  </Card>
+{" "}
+<Card title="Trigger do HubSpot" icon="hubspot">
+  <a href="/pt-BR/enterprise/guides/hubspot-trigger">
+    Execute automações a partir de workflows e eventos de ciclo de vida no
+    HubSpot.
+  </a>
+</Card>
 
-  <Card title="Trigger do Salesforce" icon="salesforce">
-    <a href="/pt-BR/enterprise/guides/salesforce-trigger">Conecte processos do Salesforce às suas crews para automação de CRM.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Salesforce" icon="salesforce">
+  <a href="/pt-BR/enterprise/guides/salesforce-trigger">
+    Conecte processos do Salesforce às suas crews para automação de CRM.
+  </a>
+</Card>
 
-  <Card title="Trigger do Slack" icon="slack">
-    <a href="/pt-BR/enterprise/guides/slack-trigger">Dispare crews diretamente de comandos slash no Slack.</a>
-  </Card>
+{" "}
+<Card title="Trigger do Slack" icon="slack">
+  <a href="/pt-BR/enterprise/guides/slack-trigger">
+    Dispare crews diretamente de comandos slash no Slack.
+  </a>
+</Card>
 
   <Card title="Trigger do Zapier" icon="bolt">
     <a href="/pt-BR/enterprise/guides/zapier-trigger">Integre a CrewAI com milhares de apps suportados pelo Zapier.</a>
@@ -79,7 +104,10 @@ Com triggers você pode:
 2. Clique na aba **Triggers** para listar todas as integrações disponíveis
 
 <Frame>
-  <img src="/images/enterprise/list-available-triggers.png" alt="Lista de triggers disponíveis" />
+  <img
+    src="/images/enterprise/list-available-triggers.png"
+    alt="Lista de triggers disponíveis"
+  />
 </Frame>
 
 ### Habilitando e Desabilitando
@@ -87,7 +115,10 @@ Com triggers você pode:
 Cada trigger possui uma chave de ativação:
 
 <Frame>
-  <img src="/images/enterprise/trigger-selected.png" alt="Alternância de trigger habilitado" />
+  <img
+    src="/images/enterprise/trigger-selected.png"
+    alt="Alternância de trigger habilitado"
+  />
 </Frame>
 
 - **Habilitado (azul)** – Executa a automação quando o evento ocorrer
@@ -100,7 +131,10 @@ As alterações são aplicadas imediatamente.
 Use a lista de execuções para acompanhar histórico, status e payloads:
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="Lista de execuções acionadas por triggers" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="Lista de execuções acionadas por triggers"
+  />
 </Frame>
 
 ## Construindo Automações Orientadas por Trigger
@@ -129,6 +163,7 @@ crewai triggers list
 ```
 
 Este comando exibe todos os triggers disponíveis baseados nas suas integrações conectadas, mostrando:
+
 - Nome da integração e status de conexão
 - Tipos de triggers disponíveis
 - Nomes e descrições dos triggers
@@ -148,6 +183,7 @@ crewai triggers run microsoft_onedrive/file_changed
 ```
 
 Este comando:
+
 - Executa sua crew localmente
 - Passa um payload de trigger completo e realista
 - Simula exatamente como sua crew será chamada em produção
@@ -233,17 +269,20 @@ def delegar_para_crew(self, crewai_trigger_payload: dict = None):
 ## Solução de Problemas
 
 **Trigger não dispara:**
+
 - Verifique se o trigger está habilitado na aba Triggers do seu deployment
 - Confira o status da conexão em Tools & Integrations
 - Garanta que todas as variáveis de ambiente necessárias estão configuradas
 
 **Falhas de execução:**
+
 - Consulte os logs de execução para detalhes do erro
 - Use `crewai triggers run <nome_do_trigger>` para testar localmente e ver a estrutura exata do payload
 - Verifique se sua crew pode processar o parâmetro `crewai_trigger_payload`
 - Garanta que sua crew não espera parâmetros que não estão incluídos no payload do trigger
 
 **Problemas de desenvolvimento:**
+
 - Sempre teste com `crewai triggers run <trigger>` antes de fazer deploy para ver o payload completo
 - Lembre-se que `crewai run` NÃO simula chamadas de trigger—use `crewai triggers run` em vez disso
 - Use `crewai triggers list` para verificar quais triggers estão disponíveis para suas integrações conectadas

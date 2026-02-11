@@ -10,7 +10,8 @@ mode: "wide"
 Trigger your automations when files are created, updated, or removed in Google Drive. Typical workflows include summarizing newly uploaded content, enforcing sharing policies, or notifying owners when critical files change.
 
 <Tip>
-  Connect Google Drive in **Tools & Integrations** and confirm the trigger is enabled for the automation you want to monitor.
+  Connect Google Drive in **Tools & Integrations** and confirm the trigger is
+  enabled for the automation you want to monitor.
 </Tip>
 
 ## Enabling the Google Drive Trigger
@@ -20,7 +21,10 @@ Trigger your automations when files are created, updated, or removed in Google D
 3. Locate **Google Drive** and switch the toggle to enable
 
 <Frame>
-  <img src="/images/enterprise/gdrive-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/gdrive-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize file activity
@@ -51,7 +55,9 @@ crewai triggers run google_drive/file_changed
 The `crewai triggers run` command will execute your crew with a complete Drive payload, allowing you to test your parsing logic before deployment.
 
 <Warning>
-  Use `crewai triggers run google_drive/file_changed` (not `crewai run`) to simulate trigger execution during development. After deployment, your crew will automatically receive the trigger payload.
+  Use `crewai triggers run google_drive/file_changed` (not `crewai run`) to
+  simulate trigger execution during development. After deployment, your crew
+  will automatically receive the trigger payload.
 </Warning>
 
 ## Monitoring Executions
@@ -59,7 +65,10 @@ The `crewai triggers run` command will execute your crew with a complete Drive p
 Track history and performance of triggered runs with the **Executions** list in the deployment dashboard.
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Troubleshooting

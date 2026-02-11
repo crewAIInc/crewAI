@@ -1,6 +1,6 @@
 ---
-title: 'MCP Servers as Tools in CrewAI'
-description: 'Learn how to integrate MCP servers as tools in your CrewAI agents using the `crewai-tools` library.'
+title: "MCP Servers as Tools in CrewAI"
+description: "Learn how to integrate MCP servers as tools in your CrewAI agents using the `crewai-tools` library."
 icon: plug
 mode: "wide"
 ---
@@ -87,6 +87,7 @@ We currently support the following transport mechanisms:
 - **Streamable HTTPS**: for remote servers (flexible, potentially bi-directional communication over HTTPS, often utilizing SSE for server-to-client streams)
 
 ## Video Tutorial
+
 Watch this video tutorial for a comprehensive guide on MCP integration with CrewAI:
 
 <iframe
@@ -373,6 +374,7 @@ Each transport type supports specific configuration options:
 ### Common Parameters
 
 All transport types support:
+
 - **`tool_filter`**: Filter function to control which tools are available. Can be:
   - `None` (default): All tools are available
   - Static filter: Created with `create_static_tool_filter()` for allow/block lists
@@ -423,6 +425,7 @@ agent = Agent(
 ```
 
 All connection errors are handled gracefully:
+
 - **Connection failures**: Logged as warnings, agent continues with available tools
 - **Timeout errors**: Connections timeout after 30 seconds (configurable)
 - **Authentication errors**: Logged clearly for debugging
@@ -484,6 +487,7 @@ with MCPServerAdapter(server_params, connect_timeout=60) as mcp_tools:
     )
     # ... rest of your crew setup ...
 ```
+
 This general pattern shows how to integrate tools. For specific examples tailored to each transport, refer to the detailed guides below.
 
 ## Filtering Tools
@@ -570,6 +574,7 @@ When a crew class is decorated with `@CrewBase`, the adapter lifecycle is manage
 - If `mcp_server_params` is not defined, `get_mcp_tools()` simply returns an empty list, allowing the same code paths to run with or without MCP configured.
 
 This makes it safe to call `get_mcp_tools()` from multiple agent methods or selectively enable MCP per environment.
+
 </Tip>
 
 ### Connection Timeout Configuration
@@ -636,7 +641,8 @@ class CrewWithCustomTimeout:
     href="/en/mcp/dsl-integration"
     color="#3B82F6"
   >
-    **Recommended**: Use the simple `mcps=[]` field syntax for effortless MCP integration.
+    **Recommended**: Use the simple `mcps=[]` field syntax for effortless MCP
+    integration.
   </Card>
   <Card
     title="Stdio Transport"
@@ -644,15 +650,12 @@ class CrewWithCustomTimeout:
     href="/en/mcp/stdio"
     color="#10B981"
   >
-    Connect to local MCP servers via standard input/output. Ideal for scripts and local executables.
+    Connect to local MCP servers via standard input/output. Ideal for scripts
+    and local executables.
   </Card>
-  <Card
-    title="SSE Transport"
-    icon="wifi"
-    href="/en/mcp/sse"
-    color="#F59E0B"
-  >
-    Integrate with remote MCP servers using Server-Sent Events for real-time data streaming.
+  <Card title="SSE Transport" icon="wifi" href="/en/mcp/sse" color="#F59E0B">
+    Integrate with remote MCP servers using Server-Sent Events for real-time
+    data streaming.
   </Card>
   <Card
     title="Streamable HTTP Transport"
@@ -660,7 +663,8 @@ class CrewWithCustomTimeout:
     href="/en/mcp/streamable-http"
     color="#8B5CF6"
   >
-    Utilize flexible Streamable HTTP for robust communication with remote MCP servers.
+    Utilize flexible Streamable HTTP for robust communication with remote MCP
+    servers.
   </Card>
   <Card
     title="Connecting to Multiple Servers"
@@ -668,7 +672,8 @@ class CrewWithCustomTimeout:
     href="/en/mcp/multiple-servers"
     color="#EF4444"
   >
-    Aggregate tools from several MCP servers simultaneously using a single adapter.
+    Aggregate tools from several MCP servers simultaneously using a single
+    adapter.
   </Card>
   <Card
     title="Security Considerations"
@@ -676,27 +681,28 @@ class CrewWithCustomTimeout:
     href="/en/mcp/security"
     color="#DC2626"
   >
-    Review important security best practices for MCP integration to keep your agents safe.
+    Review important security best practices for MCP integration to keep your
+    agents safe.
   </Card>
 </CardGroup>
 
 Checkout this repository for full demos and examples of MCP integration with CrewAI! 👇
 
 <Card
-title="GitHub Repository"
-icon="github"
-href="https://github.com/tonykipkemboi/crewai-mcp-demo"
-target="_blank"
+  title="GitHub Repository"
+  icon="github"
+  href="https://github.com/tonykipkemboi/crewai-mcp-demo"
+  target="_blank"
 >
-CrewAI MCP Demo
+  CrewAI MCP Demo
 </Card>
 
 ## Staying Safe with MCP
-<Warning>
-Always ensure that you trust an MCP Server before using it.
-</Warning>
+
+<Warning>Always ensure that you trust an MCP Server before using it.</Warning>
 
 #### Security Warning: DNS Rebinding Attacks
+
 SSE transports can be vulnerable to DNS rebinding attacks if not properly secured.
 To prevent this:
 
@@ -709,6 +715,7 @@ Without these protections, attackers could use DNS rebinding to interact with lo
 For more details, see the [Anthropic's MCP Transport Security docs](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
 
 ### Limitations
-*   **Supported Primitives**: Currently, `MCPServerAdapter` primarily supports adapting MCP `tools`.
-Other MCP primitives like `prompts` or `resources` are not directly integrated as CrewAI components through this adapter at this time.
-*   **Output Handling**: The adapter typically processes the primary text output from an MCP tool (e.g., `.content[0].text`). Complex or multi-modal outputs might require custom handling if not fitting this pattern.
+
+- **Supported Primitives**: Currently, `MCPServerAdapter` primarily supports adapting MCP `tools`.
+  Other MCP primitives like `prompts` or `resources` are not directly integrated as CrewAI components through this adapter at this time.
+- **Output Handling**: The adapter typically processes the primary text output from an MCP tool (e.g., `.content[0].text`). Complex or multi-modal outputs might require custom handling if not fitting this pattern.

@@ -45,6 +45,7 @@ uv add crewai-tools
     - `title` (string, obrigatório): Título da Issue - Especifique o título da issue a ser criada.
     - `body` (string, opcional): Corpo da Issue - Especifique o conteúdo do corpo da issue a ser criada.
     - `assignees` (string, opcional): Responsáveis - Especifique o login dos responsáveis no GitHub como um array de strings para esta issue. (exemplo: `["octocat"]`).
+
   </Accordion>
 
   <Accordion title="github/update_issue">
@@ -59,6 +60,7 @@ uv add crewai-tools
     - `assignees` (string, opcional): Responsáveis - Especifique o login dos responsáveis no GitHub como um array de strings para esta issue. (exemplo: `["octocat"]`).
     - `state` (string, opcional): Estado - Especifique o estado atualizado da issue.
       - Opções: `open`, `closed`
+
   </Accordion>
 
   <Accordion title="github/get_issue_by_number">
@@ -68,6 +70,7 @@ uv add crewai-tools
     - `owner` (string, obrigatório): Proprietário - Especifique o nome do proprietário da conta do repositório associado a esta Issue. (exemplo: "abc").
     - `repo` (string, obrigatório): Repositório - Especifique o nome do repositório associado a esta Issue.
     - `issue_number` (string, obrigatório): Número da Issue - Especifique o número da issue a ser buscada.
+
   </Accordion>
 
   <Accordion title="github/lock_issue">
@@ -79,6 +82,7 @@ uv add crewai-tools
     - `issue_number` (string, obrigatório): Número da Issue - Especifique o número da issue a ser bloqueada.
     - `lock_reason` (string, obrigatório): Motivo do Bloqueio - Especifique um motivo para bloquear a discussão da issue ou pull request.
       - Opções: `off-topic`, `too heated`, `resolved`, `spam`
+
   </Accordion>
 
   <Accordion title="github/search_issue">
@@ -106,6 +110,7 @@ uv add crewai-tools
       }
       ```
       Campos disponíveis: `assignee`, `creator`, `mentioned`, `labels`
+
   </Accordion>
 
   <Accordion title="github/create_release">
@@ -124,6 +129,7 @@ uv add crewai-tools
     - `discussion_category_name` (string, opcional): Nome da Categoria de Discussão - Se especificado, uma discussão da categoria indicada é criada e vinculada ao release. O valor deve ser uma categoria já existente no repositório.
     - `generate_release_notes` (string, opcional): Notas de Release - Especifique se o release criado deve criar automaticamente notas de release usando o nome e a descrição fornecidos.
       - Opções: `true`, `false`
+
   </Accordion>
 
   <Accordion title="github/update_release">
@@ -143,6 +149,7 @@ uv add crewai-tools
     - `discussion_category_name` (string, opcional): Nome da Categoria de Discussão - Se especificado, uma discussão da categoria indicada é criada e vinculada ao release. O valor deve ser uma categoria já existente no repositório.
     - `generate_release_notes` (string, opcional): Notas de Release - Especifique se o release criado deve criar automaticamente notas de release usando o nome e a descrição fornecidos.
       - Opções: `true`, `false`
+
   </Accordion>
 
   <Accordion title="github/get_release_by_id">
@@ -152,6 +159,7 @@ uv add crewai-tools
     - `owner` (string, obrigatório): Proprietário - Especifique o nome do proprietário da conta do repositório associado a este Release. (exemplo: "abc").
     - `repo` (string, obrigatório): Repositório - Especifique o nome do repositório associado a este Release.
     - `id` (string, obrigatório): ID do Release - Especifique o ID do release a ser recuperado.
+
   </Accordion>
 
   <Accordion title="github/get_release_by_tag_name">
@@ -161,6 +169,7 @@ uv add crewai-tools
     - `owner` (string, obrigatório): Proprietário - Especifique o nome do proprietário da conta do repositório associado a este Release. (exemplo: "abc").
     - `repo` (string, obrigatório): Repositório - Especifique o nome do repositório associado a este Release.
     - `tag_name` (string, obrigatório): Nome - Especifique o nome da tag do release a ser recuperado. (exemplo: "v1.0.0").
+
   </Accordion>
 
   <Accordion title="github/delete_release">
@@ -170,6 +179,7 @@ uv add crewai-tools
     - `owner` (string, obrigatório): Proprietário - Especifique o nome do proprietário da conta do repositório associado a este Release. (exemplo: "abc").
     - `repo` (string, obrigatório): Repositório - Especifique o nome do repositório associado a este Release.
     - `id` (string, obrigatório): ID do Release - Especifique o ID do release a ser excluído.
+
   </Accordion>
 </AccordionGroup>
 
@@ -297,5 +307,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para auxílio na configuração ou solução de problemas com a integração do GitHub.
+  Entre em contato com nossa equipe de suporte para auxílio na configuração ou
+  solução de problemas com a integração do GitHub.
 </Card>

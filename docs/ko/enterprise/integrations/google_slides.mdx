@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -57,6 +58,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `title` (string, 필수): 프레젠테이션의 제목.
+
   </Accordion>
 
   <Accordion title="google_slides/get_presentation">
@@ -65,6 +67,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `presentationId` (string, 필수): 검색할 프레젠테이션의 ID.
     - `fields` (string, 선택사항): 응답에 포함할 필드. 성능 향상을 위해 필요한 데이터만 반환하는 데 사용.
+
   </Accordion>
 
   <Accordion title="google_slides/batch_update_presentation">
@@ -74,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `presentationId` (string, 필수): 업데이트할 프레젠테이션의 ID.
     - `requests` (array, 필수): 프레젠테이션에 적용할 업데이트 목록. 각 항목은 요청을 나타내는 객체.
     - `writeControl` (object, 선택사항): 쓰기 요청이 실행되는 방식을 제어합니다. `requiredRevisionId` (string)를 포함.
+
   </Accordion>
 
   <Accordion title="google_slides/get_page">
@@ -82,6 +86,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `presentationId` (string, 필수): 프레젠테이션의 ID.
     - `pageObjectId` (string, 필수): 검색할 페이지의 ID.
+
   </Accordion>
 
   <Accordion title="google_slides/get_thumbnail">
@@ -90,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `presentationId` (string, 필수): 프레젠테이션의 ID.
     - `pageObjectId` (string, 필수): 썸네일 생성을 위한 페이지의 ID.
+
   </Accordion>
 
   <Accordion title="google_slides/import_data_from_sheet">
@@ -99,6 +105,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `presentationId` (string, 필수): 프레젠테이션의 ID.
     - `sheetId` (string, 필수): 가져올 Google 시트의 ID.
     - `dataRange` (string, 필수): 시트에서 가져올 데이터 범위.
+
   </Accordion>
 
   <Accordion title="google_slides/upload_file_to_drive">
@@ -107,6 +114,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `file` (string, 필수): 업로드할 파일 데이터.
     - `presentationId` (string, 필수): 업로드된 파일을 연결할 프레젠테이션의 ID.
+
   </Accordion>
 
   <Accordion title="google_slides/link_file_to_presentation">
@@ -115,6 +123,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `presentationId` (string, 필수): 프레젠테이션의 ID.
     - `fileId` (string, 필수): 연결할 파일의 ID.
+
   </Accordion>
 
   <Accordion title="google_slides/get_all_presentations">
@@ -123,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `pageSize` (integer, 선택사항): 페이지당 반환할 프레젠테이션 수.
     - `pageToken` (string, 선택사항): 페이지네이션을 위한 토큰.
+
   </Accordion>
 
   <Accordion title="google_slides/delete_presentation">
@@ -130,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `presentationId` (string, 필수): 삭제할 프레젠테이션의 ID.
+
   </Accordion>
 </AccordionGroup>
 
@@ -169,15 +180,22 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Google 계정이 Google Slides 및 Google Drive 액세스에 필요한 권한을 가지고 있는지 확인하세요.
 - OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
 
 **프레젠테이션/페이지 ID 문제**
+
 - 프레젠테이션 ID와 페이지 객체 ID가 올바른지 다시 확인하세요.
 - 프레젠테이션이나 페이지가 존재하고 액세스할 수 있는지 확인하세요.
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Google Slides 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Google Slides 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
 </Card>

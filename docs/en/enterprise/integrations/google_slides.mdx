@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -57,6 +59,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `title` (string, required): The title of the presentation.
+
   </Accordion>
 
   <Accordion title="google_slides/get_presentation">
@@ -65,6 +68,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation to retrieve.
     - `fields` (string, optional): The fields to include in the response. Use this to improve performance by only returning needed data.
+
   </Accordion>
 
   <Accordion title="google_slides/batch_update_presentation">
@@ -89,6 +93,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         "requiredRevisionId": "revision_id_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_slides/get_page">
@@ -97,6 +102,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation.
     - `pageObjectId` (string, required): The ID of the page to retrieve.
+
   </Accordion>
 
   <Accordion title="google_slides/get_thumbnail">
@@ -105,6 +111,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation.
     - `pageObjectId` (string, required): The ID of the page for thumbnail generation.
+
   </Accordion>
 
   <Accordion title="google_slides/import_data_from_sheet">
@@ -114,6 +121,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `presentationId` (string, required): The ID of the presentation.
     - `sheetId` (string, required): The ID of the Google Sheet to import from.
     - `dataRange` (string, required): The range of data to import from the sheet.
+
   </Accordion>
 
   <Accordion title="google_slides/upload_file_to_drive">
@@ -122,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `file` (string, required): The file data to upload.
     - `presentationId` (string, required): The ID of the presentation to link the uploaded file.
+
   </Accordion>
 
   <Accordion title="google_slides/link_file_to_presentation">
@@ -130,6 +139,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation.
     - `fileId` (string, required): The ID of the file to link.
+
   </Accordion>
 
   <Accordion title="google_slides/get_all_presentations">
@@ -138,6 +148,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `pageSize` (integer, optional): The number of presentations to return per page.
     - `pageToken` (string, optional): A token for pagination.
+
   </Accordion>
 
   <Accordion title="google_slides/delete_presentation">
@@ -145,6 +156,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `presentationId` (string, required): The ID of the presentation to delete.
+
   </Accordion>
 </AccordionGroup>
 
@@ -346,36 +358,43 @@ crew.kickoff()
 ### Common Issues
 
 **Permission Errors**
+
 - Ensure your Google account has appropriate permissions for Google Slides
 - Verify that the OAuth connection includes required scopes for presentations, spreadsheets, and drive access
 - Check that presentations are shared with the authenticated account
 
 **Presentation ID Issues**
+
 - Verify that presentation IDs are correct and presentations exist
 - Ensure you have access permissions to the presentations you're trying to modify
 - Check that presentation IDs are properly formatted
 
 **Content Update Issues**
+
 - Ensure batch update requests are properly formatted according to Google Slides API specifications
 - Verify that object IDs for slides and elements exist in the presentation
 - Check that write control revision IDs are current if using optimistic concurrency
 
 **Data Import Issues**
+
 - Verify that Google Sheet IDs are correct and accessible
 - Ensure data ranges are properly specified using A1 notation
 - Check that you have read permissions for the source spreadsheets
 
 **File Upload and Linking Issues**
+
 - Ensure file data is properly encoded for upload
 - Verify that Drive file IDs are correct when linking files
 - Check that you have appropriate Drive permissions for file operations
 
 **Page and Thumbnail Operations**
+
 - Verify that page object IDs exist in the specified presentation
 - Ensure presentations have content before attempting to generate thumbnails
 - Check that page structure is valid for thumbnail generation
 
 **Pagination and Listing Issues**
+
 - Use appropriate page sizes for listing presentations
 - Implement proper pagination using page tokens for large result sets
 - Handle empty result sets gracefully
@@ -383,5 +402,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Google Slides integration setup or troubleshooting.
+  Contact our support team for assistance with Google Slides integration setup
+  or troubleshooting.
 </Card>

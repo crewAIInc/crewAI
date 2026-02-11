@@ -1,0 +1,133 @@
+interactions:
+- request:
+    body: '{"input":[{"role":"user","content":"What is the current population of Tokyo?
+      Be very brief."}],"model":"gpt-4o-mini","tools":[{"type":"web_search_preview"}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '157'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/responses
+  response:
+    body:
+      string: "{\n  \"id\": \"resp_032afd4ddbab8993006973114dd1b4819691b5d7306c6ca5c6\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1769148749,\n  \"status\":
+        \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
+        \"developer\"\n  },\n  \"completed_at\": 1769148752,\n  \"error\": null,\n
+        \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
+        null,\n  \"max_output_tokens\": null,\n  \"max_tool_calls\": null,\n  \"model\":
+        \"gpt-4o-mini-2024-07-18\",\n  \"output\": [\n    {\n      \"id\": \"ws_032afd4ddbab8993006973114e536c819690ebb3728000ec00\",\n
+        \     \"type\": \"web_search_call\",\n      \"status\": \"completed\",\n      \"action\":
+        {\n        \"type\": \"search\",\n        \"queries\": [\n          \"current
+        population of Tokyo 2023\"\n        ],\n        \"query\": \"current population
+        of Tokyo 2023\"\n      }\n    },\n    {\n      \"id\": \"msg_032afd4ddbab8993006973114f81ac8196b8a98c55fb77181f\",\n
+        \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
+        [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
+        [\n            {\n              \"type\": \"url_citation\",\n              \"end_index\":
+        187,\n              \"start_index\": 91,\n              \"title\": \"Tokyo,
+        Japan Metro Area Population (1950-2025) | MacroTrends\",\n              \"url\":
+        \"https://www.macrotrends.net/cities/21671/tokyo/population?utm_source=openai\"\n
+        \           },\n            {\n              \"type\": \"url_citation\",\n
+        \             \"end_index\": 352,\n              \"start_index\": 261,\n              \"title\":
+        \"Demographics of Tokyo\",\n              \"url\": \"https://en.wikipedia.org/wiki/Demographics_of_Tokyo?utm_source=openai\"\n
+        \           }\n          ],\n          \"logprobs\": [],\n          \"text\":
+        \"As of 2025, Tokyo's metropolitan area has a population of approximately
+        37 million people. ([macrotrends.net](https://www.macrotrends.net/cities/21671/tokyo/population?utm_source=openai))
+        However, the city proper has a population of about 14 million residents. ([en.wikipedia.org](https://en.wikipedia.org/wiki/Demographics_of_Tokyo?utm_source=openai))
+        \"\n        }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
+        true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
+        null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [\n    {\n      \"type\":
+        \"web_search_preview\",\n      \"search_context_size\": \"medium\",\n      \"user_location\":
+        {\n        \"type\": \"approximate\",\n        \"city\": null,\n        \"country\":
+        \"US\",\n        \"region\": null,\n        \"timezone\": null\n      }\n
+        \   }\n  ],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 313,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 108,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 421\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 06:12:32 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2738'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2742'
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

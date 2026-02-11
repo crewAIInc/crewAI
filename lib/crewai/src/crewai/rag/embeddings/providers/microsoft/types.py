@@ -15,7 +15,7 @@ class AzureProviderConfig(TypedDict, total=False):
     model_name: Annotated[str, "text-embedding-ada-002"]
     default_headers: dict[str, Any]
     dimensions: int
-    deployment_id: str
+    deployment_id: Required[str]
     organization_id: str
 
 

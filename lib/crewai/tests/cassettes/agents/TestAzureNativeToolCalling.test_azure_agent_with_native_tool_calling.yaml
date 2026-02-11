@@ -1,0 +1,164 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Math Assistant. You
+      are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}, {"role": "user", "content": "\nCurrent Task: Calculate what
+      is 15 * 8\n\nThis is the expected criteria for your final answer: The result
+      of the calculation\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}], "stream": false, "stop": ["\nObservation:"], "tool_choice": "auto",
+      "tools": [{"function": {"name": "calculator", "description": "Perform mathematical
+      calculations. Use this for any math operations.", "parameters": {"properties":
+      {"expression": {"description": "Mathematical expression to evaluate", "title":
+      "Expression", "type": "string"}}, "required": ["expression"], "type": "object"}},
+      "type": "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '883'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{},"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"annotations":[],"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"expression\":\"15
+        * 8\"}","name":"calculator"},"id":"call_cJWzKh5LdBpY3Sk8GATS3eRe","type":"function"}]}}],"created":1769122114,"id":"chatcmpl-D0xlavS0V3m00B9Fsjyv39xQWUGFV","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":18,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":137,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":155}}
+
+        '
+    headers:
+      Content-Length:
+      - '1058'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:48:34 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Math Assistant. You
+      are a helpful math assistant.\nYour personal goal is: Help users with mathematical
+      calculations"}, {"role": "user", "content": "\nCurrent Task: Calculate what
+      is 15 * 8\n\nThis is the expected criteria for your final answer: The result
+      of the calculation\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}, {"role": "assistant", "content": "", "tool_calls": [{"id": "call_cJWzKh5LdBpY3Sk8GATS3eRe",
+      "type": "function", "function": {"name": "calculator", "arguments": "{\"expression\":\"15
+      * 8\"}"}}]}, {"role": "tool", "tool_call_id": "call_cJWzKh5LdBpY3Sk8GATS3eRe",
+      "content": "The result of 15 * 8 is 120"}, {"role": "user", "content": "Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}], "stream":
+      false, "stop": ["\nObservation:"], "tool_choice": "auto", "tools": [{"function":
+      {"name": "calculator", "description": "Perform mathematical calculations. Use
+      this for any math operations.", "parameters": {"properties": {"expression":
+      {"description": "Mathematical expression to evaluate", "title": "Expression",
+      "type": "string"}}, "required": ["expression"], "type": "object"}}, "type":
+      "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1375'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"The
+        result of the calculation is 120.","refusal":null,"role":"assistant"}}],"created":1769122115,"id":"chatcmpl-D0xlbUNVA7RVkn0GsuBGoNhgQTtac","model":"gpt-4o-mini-2024-07-18","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":"fp_f97eff32c5","usage":{"completion_tokens":11,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":0,"rejected_prediction_tokens":0},"prompt_tokens":207,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":218}}
+
+        '
+    headers:
+      Content-Length:
+      - '1250'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:48:34 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-4o-mini
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

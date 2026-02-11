@@ -1,0 +1,101 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour personal goal is: test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Analyze the data\n\nThis is the expected criteria for your final answer: Analysis report\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '785'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CjDrgqaRhLfzAxoEC6DDSEscZit5j\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894092,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal Answer:\\n\\nAnalysis Report\\n\\nIntroduction:\\nThe task assigned is to analyze the data provided. Since no specific dataset or details are included in the prompt, I will provide a general framework and methodology for performing data analysis, along with hypothetical examples illustrating key points.\\n\\n1. Understanding the Data:\\nThe first step in data analysis is to understand the nature of the data collected. This includes identifying data types (numerical, categorical, time series), the size of the dataset, and the source of data. For instance, if the data contains sales records, each record may include fields such as date, product\
+        \ category, units sold, and revenue.\\n\\n2. Data Cleaning and Preparation:\\nBefore analysis, the data must be cleaned to remove errors, handle missing values, and normalize data formats. For example, missing sales numbers can be imputed based on averages or removed if insignificant. Incorrect formatting of dates must be standardized to a single format.\\n\\n3. Exploratory Data Analysis (EDA):\\nEDA involves summarizing main characteristics with statistical measures and visualizations:\\n- Descriptive Statistics: Compute mean, median, mode, standard deviation to understand distributions.\\n- Visualization: Use histograms, box plots to find outliers; scatter plots to find correlations.\\nExample: Analyzing sales data might reveal peak sales in specific months and identify the most profitable product categories.\\n\\n4. Identification of Trends and Patterns:\\nLook for trends over time or relationships between variables:\\n- Time Series Analysis: Analyze sales trends monthly, quarterly.\\\
+        n- Correlation Analysis: Identify whether variables like advertising spend correlate with sales.\\n- Segmentation: Cluster data subsets based on similar attributes.\\n\\n5. Hypothesis Testing:\\nTest assumptions using statistical methods such as t-tests, chi-square tests to verify relationships or differences in data groups.\\n\\n6. Predictive Analytics (if applicable):\\nUse regression analysis, machine learning models to predict future values or classify data points.\\n\\n7. Interpretation and Insights:\\nInterpret the statistical outputs in business context. For example, if sales are positively correlated with advertising spend, increasing the budget may boost sales.\\n\\n8. Reporting:\\nCompile findings into a comprehensive report including methodology, results, visualizations, and actionable recommendations.\\n\\nConclusion:\\nA complete data analysis involves systematic steps from data understanding, cleaning, exploratory analysis, statistical testing, to interpretation and\
+        \ reporting. Without specific data, this framework guides thorough and insightful analysis that can be tailored to actual datasets.\\n\\nIf specific data is provided, I can perform concrete quantitative analysis and detailed reporting. Please provide the dataset or data structure for a precise evaluation.\\n\\nEnd of Analysis Report.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 155,\n    \"completion_tokens\": 520,\n    \"total_tokens\": 675,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_9766e549b2\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 05 Dec 2025 00:21:36 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '3942'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '3957'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

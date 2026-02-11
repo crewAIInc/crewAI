@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -62,6 +64,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `name` (string, optional): Customer's full name
     - `description` (string, optional): Customer description for internal reference
     - `metadataCreateCustomer` (object, optional): Additional metadata as key-value pairs (e.g., `{"field1": 1, "field2": 2}`)
+
   </Accordion>
 
   <Accordion title="stripe/get_customer_by_id">
@@ -69,6 +72,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `idGetCustomer` (string, required): The Stripe customer ID to retrieve
+
   </Accordion>
 
   <Accordion title="stripe/get_customers">
@@ -79,6 +83,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `createdAfter` (string, optional): Filter customers created after this date (Unix timestamp)
     - `createdBefore` (string, optional): Filter customers created before this date (Unix timestamp)
     - `limitGetCustomers` (string, optional): Maximum number of customers to return (defaults to 10)
+
   </Accordion>
 
   <Accordion title="stripe/update_customer">
@@ -90,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `name` (string, optional): Updated customer name
     - `description` (string, optional): Updated customer description
     - `metadataUpdateCustomer` (object, optional): Updated metadata as key-value pairs
+
   </Accordion>
 </AccordionGroup>
 
@@ -103,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `customerIdCreateSubscription` (string, required): The customer ID for whom the subscription will be created
     - `plan` (string, required): The plan ID for the subscription - Use Connect Portal Workflow Settings to allow users to select a plan
     - `metadataCreateSubscription` (object, optional): Additional metadata for the subscription
+
   </Accordion>
 
   <Accordion title="stripe/get_subscriptions">
@@ -112,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `customerIdGetSubscriptions` (string, optional): Filter subscriptions by customer ID
     - `subscriptionStatus` (string, optional): Filter by subscription status - Options: incomplete, incomplete_expired, trialing, active, past_due, canceled, unpaid
     - `limitGetSubscriptions` (string, optional): Maximum number of subscriptions to return (defaults to 10)
+
   </Accordion>
 </AccordionGroup>
 
@@ -125,6 +133,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `productName` (string, required): The product name
     - `description` (string, optional): Product description
     - `metadataProduct` (object, optional): Additional product metadata as key-value pairs
+
   </Accordion>
 
   <Accordion title="stripe/get_product_by_id">
@@ -132,6 +141,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `productId` (string, required): The Stripe product ID to retrieve
+
   </Accordion>
 
   <Accordion title="stripe/get_products">
@@ -141,6 +151,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `createdAfter` (string, optional): Filter products created after this date (Unix timestamp)
     - `createdBefore` (string, optional): Filter products created before this date (Unix timestamp)
     - `limitGetProducts` (string, optional): Maximum number of products to return (defaults to 10)
+
   </Accordion>
 </AccordionGroup>
 
@@ -154,6 +165,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `balanceTransactionType` (string, optional): Filter by transaction type - Options: charge, refund, payment, payment_refund
     - `paginationParameters` (object, optional): Pagination settings
       - `pageCursor` (string, optional): Page cursor for pagination
+
   </Accordion>
 
   <Accordion title="stripe/get_plans">
@@ -163,6 +175,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `isPlanActive` (boolean, optional): Filter by plan status - true for active plans, false for inactive plans
     - `paginationParameters` (object, optional): Pagination settings
       - `pageCursor` (string, optional): Page cursor for pagination
+
   </Accordion>
 </AccordionGroup>
 

@@ -12,8 +12,11 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_anthropic_api_key():
-    """Automatically mock ANTHROPIC_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+    """Automatically mock ANTHROPIC_API_KEY for all tests in this module if not already set."""
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            yield
+    else:
         yield
 
 
@@ -40,83 +43,6 @@ def test_anthropic_completion_is_used_when_claude_provider():
     assert llm.model == "claude-3-5-sonnet-20241022"
 
 
-
-
-def test_anthropic_tool_use_conversation_flow():
-    """
-    Test that the Anthropic completion properly handles tool use conversation flow
-    """
-    from unittest.mock import Mock, patch
-    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
-    from anthropic.types.tool_use_block import ToolUseBlock
-
-    # Create AnthropicCompletion instance
-    completion = AnthropicCompletion(model="claude-3-5-sonnet-20241022")
-
-    # Mock tool function
-    def mock_weather_tool(location: str) -> str:
-        return f"The weather in {location} is sunny and 75°F"
-
-    available_functions = {"get_weather": mock_weather_tool}
-
-    # Mock the Anthropic client responses
-    with patch.object(completion.client.messages, 'create') as mock_create:
-        # Mock initial response with tool use - need to properly mock ToolUseBlock
-        mock_tool_use = Mock(spec=ToolUseBlock)
-        mock_tool_use.id = "tool_123"
-        mock_tool_use.name = "get_weather"
-        mock_tool_use.input = {"location": "San Francisco"}
-
-        mock_initial_response = Mock()
-        mock_initial_response.content = [mock_tool_use]
-        mock_initial_response.usage = Mock()
-        mock_initial_response.usage.input_tokens = 100
-        mock_initial_response.usage.output_tokens = 50
-
-        # Mock final response after tool result - properly mock text content
-        mock_text_block = Mock()
-        # Set the text attribute as a string, not another Mock
-        mock_text_block.configure_mock(text="Based on the weather data, it's a beautiful day in San Francisco with sunny skies and 75°F temperature.")
-
-        mock_final_response = Mock()
-        mock_final_response.content = [mock_text_block]
-        mock_final_response.usage = Mock()
-        mock_final_response.usage.input_tokens = 150
-        mock_final_response.usage.output_tokens = 75
-
-        # Configure mock to return different responses on successive calls
-        mock_create.side_effect = [mock_initial_response, mock_final_response]
-
-        # Test the call
-        messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
-        result = completion.call(
-            messages=messages,
-            available_functions=available_functions
-        )
-
-        # Verify the result contains the final response
-        assert "beautiful day in San Francisco" in result
-        assert "sunny skies" in result
-        assert "75°F" in result
-
-        # Verify that two API calls were made (initial + follow-up)
-        assert mock_create.call_count == 2
-
-        # Verify the second call includes tool results
-        second_call_args = mock_create.call_args_list[1][1]  # kwargs of second call
-        messages_in_second_call = second_call_args["messages"]
-
-        # Should have original user message + assistant tool use + user tool result
-        assert len(messages_in_second_call) == 3
-        assert messages_in_second_call[0]["role"] == "user"
-        assert messages_in_second_call[1]["role"] == "assistant"
-        assert messages_in_second_call[2]["role"] == "user"
-
-        # Verify tool result format
-        tool_result = messages_in_second_call[2]["content"][0]
-        assert tool_result["type"] == "tool_result"
-        assert tool_result["tool_use_id"] == "tool_123"
-        assert "sunny and 75°F" in tool_result["content"]
 
 
 def test_anthropic_completion_module_is_imported():
@@ -686,7 +612,7 @@ def test_anthropic_stop_sequences_sync():
     assert llm.stop == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+@pytest.mark.vcr()
 def test_anthropic_stop_sequences_sent_to_api():
     """Test that stop_sequences are properly sent to the Anthropic API."""
     llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
@@ -698,3 +624,369 @@ def test_anthropic_stop_sequences_sent_to_api():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking():
+    """Test that thinking is properly handled and thinking params are passed to messages.create"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    original_create = llm.client.messages.create
+    captured_params = {}
+
+    def capture_and_call(**kwargs):
+        captured_params.update(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        result = llm.call("What is the weather in Tokyo?")
+
+        assert result is not None
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+        assert "thinking" in captured_params
+        assert captured_params["thinking"] == {"type": "enabled", "budget_tokens": 5000}
+
+        assert captured_params["model"] == "claude-sonnet-4-5"
+        assert captured_params["max_tokens"] == 10000
+        assert "messages" in captured_params
+        assert len(captured_params["messages"]) > 0
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_thinking_blocks_preserved_across_turns():
+    """Test that thinking blocks are stored and included in subsequent API calls across turns"""
+    from unittest.mock import patch
+    from crewai.llms.providers.anthropic.completion import AnthropicCompletion
+
+    llm = LLM(
+        model="anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000
+    )
+
+    assert isinstance(llm, AnthropicCompletion)
+
+    # Capture all messages.create calls to verify thinking blocks are included
+    original_create = llm.client.messages.create
+    captured_calls = []
+
+    def capture_and_call(**kwargs):
+        captured_calls.append(kwargs)
+        return original_create(**kwargs)
+
+    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+        # First call - establishes context and generates thinking blocks
+        messages = [{"role": "user", "content": "What is 2+2?"}]
+        first_result = llm.call(messages)
+
+        # Verify first call completed
+        assert first_result is not None
+        assert isinstance(first_result, str)
+        assert len(first_result) > 0
+
+        # Verify thinking blocks were stored after first response
+        assert len(llm.previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
+        first_thinking = llm.previous_thinking_blocks[0]
+        assert first_thinking["type"] == "thinking"
+        assert "thinking" in first_thinking
+        assert "signature" in first_thinking
+
+        # Store the thinking block content for comparison
+        stored_thinking_content = first_thinking["thinking"]
+        stored_signature = first_thinking["signature"]
+
+        # Second call - should include thinking blocks from first call
+        messages.append({"role": "assistant", "content": first_result})
+        messages.append({"role": "user", "content": "Now what is 3+3?"})
+        second_result = llm.call(messages)
+
+        # Verify second call completed
+        assert second_result is not None
+        assert isinstance(second_result, str)
+
+        # Verify at least 2 API calls were made
+        assert len(captured_calls) >= 2, f"Expected at least 2 API calls, got {len(captured_calls)}"
+
+        # Verify second call includes thinking blocks in assistant message
+        second_call_messages = captured_calls[1]["messages"]
+
+        # Should have: user message + assistant message (with thinking blocks) + follow-up user message
+        assert len(second_call_messages) >= 2
+
+        # Find the assistant message in the second call
+        assistant_message = None
+        for msg in second_call_messages:
+            if msg["role"] == "assistant" and isinstance(msg.get("content"), list):
+                assistant_message = msg
+                break
+
+        assert assistant_message is not None, "Assistant message with list content not found in second call"
+        assert isinstance(assistant_message["content"], list)
+
+        # Verify thinking block is included in assistant message content
+        thinking_found = False
+        for block in assistant_message["content"]:
+            if isinstance(block, dict) and block.get("type") == "thinking":
+                thinking_found = True
+                assert "thinking" in block
+                assert "signature" in block
+                # Verify it matches what was stored from the first call
+                assert block["thinking"] == stored_thinking_content
+                assert block["signature"] == stored_signature
+                break
+
+        assert thinking_found, "Thinking block not found in assistant message content in second call"
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_function_calling():
+    """Test that function calling is properly handled"""
+    llm = LLM(model="anthropic/claude-sonnet-4-5")
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather in a given location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"],
+                        "description": "The unit of temperature"
+                    }
+                },
+                "required": ["location"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        "What is the weather in Tokyo? Use the get_weather tool.",
+        tools=tools,
+        available_functions={"get_weather": get_weather}
+    )
+
+    assert result is not None
+    assert isinstance(result, str)
+    assert len(result) > 0
+    # Verify the response includes information about Tokyo's weather
+    assert "tokyo" in result.lower() or "72" in result
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_with_available_functions():
+    """
+    Test that Anthropic provider correctly executes tools when available_functions is provided.
+
+    This specifically tests the fix for double llm_call_completed emission - when
+    available_functions is provided, _handle_tool_execution is called which already
+    emits llm_call_completed, so the caller should not emit it again.
+
+    The test verifies:
+    1. The tool is called with correct arguments
+    2. The tool result is returned directly (not wrapped in conversation)
+    3. The result is valid JSON matching the tool output format
+    """
+    import json
+
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+    # Simple tool that returns a formatted string
+    def create_reasoning_plan(plan: str, steps: list, ready: bool) -> str:
+        """Create a reasoning plan with steps."""
+        return json.dumps({"plan": plan, "steps": steps, "ready": ready})
+
+    tools = [
+        {
+            "name": "create_reasoning_plan",
+            "description": "Create a structured reasoning plan for completing a task",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "plan": {
+                        "type": "string",
+                        "description": "High-level plan description"
+                    },
+                    "steps": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "List of steps to execute"
+                    },
+                    "ready": {
+                        "type": "boolean",
+                        "description": "Whether the plan is ready to execute"
+                    }
+                },
+                "required": ["plan", "steps", "ready"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        messages=[{"role": "user", "content": "Create a simple plan to say hello. Use the create_reasoning_plan tool."}],
+        tools=tools,
+        available_functions={"create_reasoning_plan": create_reasoning_plan}
+    )
+
+    # Verify result is valid JSON from the tool
+    assert result is not None
+    assert isinstance(result, str)
+
+    # Parse the result to verify it's valid JSON
+    parsed_result = json.loads(result)
+    assert "plan" in parsed_result
+    assert "steps" in parsed_result
+    assert "ready" in parsed_result
+
+
+@pytest.mark.vcr(filter_headers=["authorization", "x-api-key"])
+def test_anthropic_tool_execution_returns_tool_result_directly():
+    """
+    Test that when available_functions is provided, the tool result is returned directly
+    without additional LLM conversation (matching OpenAI behavior for reasoning_handler).
+    """
+    llm = LLM(model="anthropic/claude-3-5-haiku-20241022")
+
+    call_count = 0
+
+    def simple_calculator(operation: str, a: int, b: int) -> str:
+        """Perform a simple calculation."""
+        nonlocal call_count
+        call_count += 1
+        if operation == "add":
+            return str(a + b)
+        elif operation == "multiply":
+            return str(a * b)
+        return "Unknown operation"
+
+    tools = [
+        {
+            "name": "simple_calculator",
+            "description": "Perform simple math operations",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["add", "multiply"],
+                        "description": "The operation to perform"
+                    },
+                    "a": {"type": "integer", "description": "First number"},
+                    "b": {"type": "integer", "description": "Second number"}
+                },
+                "required": ["operation", "a", "b"]
+            }
+        }
+    ]
+
+    result = llm.call(
+        messages=[{"role": "user", "content": "Calculate 5 + 3 using the simple_calculator tool with operation 'add'."}],
+        tools=tools,
+        available_functions={"simple_calculator": simple_calculator}
+    )
+
+    # Tool should have been called exactly once
+    assert call_count == 1, f"Expected tool to be called once, got {call_count}"
+
+    # Result should be the direct tool output
+    assert result == "8", f"Expected '8' but got '{result}'"
+
+
+@pytest.mark.vcr()
+def test_anthropic_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for Anthropic models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_anthropic_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for Anthropic models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"

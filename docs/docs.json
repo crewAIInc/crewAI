@@ -61,7 +61,9 @@
             "groups": [
               {
                 "group": "Welcome",
-                "pages": ["index"]
+                "pages": [
+                  "index"
+                ]
               }
             ]
           },
@@ -71,7 +73,11 @@
             "groups": [
               {
                 "group": "Get Started",
-                "pages": ["en/introduction", "en/installation", "en/quickstart"]
+                "pages": [
+                  "en/introduction",
+                  "en/installation",
+                  "en/quickstart"
+                ]
               },
               {
                 "group": "Guides",
@@ -79,17 +85,23 @@
                   {
                     "group": "Strategy",
                     "icon": "compass",
-                    "pages": ["en/guides/concepts/evaluating-use-cases"]
+                    "pages": [
+                      "en/guides/concepts/evaluating-use-cases"
+                    ]
                   },
                   {
                     "group": "Agents",
                     "icon": "user",
-                    "pages": ["en/guides/agents/crafting-effective-agents"]
+                    "pages": [
+                      "en/guides/agents/crafting-effective-agents"
+                    ]
                   },
                   {
                     "group": "Crews",
                     "icon": "users",
-                    "pages": ["en/guides/crews/first-crew"]
+                    "pages": [
+                      "en/guides/crews/first-crew"
+                    ]
                   },
                   {
                     "group": "Flows",
@@ -116,8 +128,10 @@
                   "en/concepts/tasks",
                   "en/concepts/crews",
                   "en/concepts/flows",
+                  "en/concepts/production-architecture",
                   "en/concepts/knowledge",
                   "en/concepts/llms",
+                  "en/concepts/files",
                   "en/concepts/processes",
                   "en/concepts/collaboration",
                   "en/concepts/training",
@@ -253,7 +267,8 @@
                     "pages": [
                       "en/tools/integration/overview",
                       "en/tools/integration/bedrockinvokeagenttool",
-                      "en/tools/integration/crewaiautomationtool"
+                      "en/tools/integration/crewaiautomationtool",
+                      "en/tools/integration/mergeagenthandlertool"
                     ]
                   },
                   {
@@ -277,6 +292,7 @@
                   "en/observability/arize-phoenix",
                   "en/observability/braintrust",
                   "en/observability/datadog",
+                  "en/observability/galileo",
                   "en/observability/langdb",
                   "en/observability/langfuse",
                   "en/observability/langtrace",
@@ -307,6 +323,7 @@
                   "en/learn/hierarchical-process",
                   "en/learn/human-input-on-execution",
                   "en/learn/human-in-the-loop",
+                  "en/learn/human-feedback-in-flows",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
@@ -321,7 +338,9 @@
               },
               {
                 "group": "Telemetry",
-                "pages": ["en/telemetry"]
+                "pages": [
+                  "en/telemetry"
+                ]
               }
             ]
           },
@@ -331,7 +350,9 @@
             "groups": [
               {
                 "group": "Getting Started",
-                "pages": ["en/enterprise/introduction"]
+                "pages": [
+                  "en/enterprise/introduction"
+                ]
               },
               {
                 "group": "Build",
@@ -340,7 +361,8 @@
                   "en/enterprise/features/crew-studio",
                   "en/enterprise/features/marketplace",
                   "en/enterprise/features/agent-repositories",
-                  "en/enterprise/features/tools-and-integrations"
+                  "en/enterprise/features/tools-and-integrations",
+                  "en/enterprise/features/pii-trace-redactions"
                 ]
               },
               {
@@ -348,7 +370,8 @@
                 "pages": [
                   "en/enterprise/features/traces",
                   "en/enterprise/features/webhook-streaming",
-                  "en/enterprise/features/hallucination-guardrail"
+                  "en/enterprise/features/hallucination-guardrail",
+                  "en/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -408,7 +431,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "en/enterprise/guides/build-crew",
-                  "en/enterprise/guides/deploy-crew",
+                  "en/enterprise/guides/prepare-for-deployment",
+                  "en/enterprise/guides/deploy-to-amp",
                   "en/enterprise/guides/kickoff-crew",
                   "en/enterprise/guides/update-crew",
                   "en/enterprise/guides/enable-crew-studio",
@@ -423,7 +447,9 @@
               },
               {
                 "group": "Resources",
-                "pages": ["en/enterprise/resources/frequently-asked-questions"]
+                "pages": [
+                  "en/enterprise/resources/frequently-asked-questions"
+                ]
               }
             ]
           },
@@ -449,7 +475,10 @@
             "groups": [
               {
                 "group": "Examples",
-                "pages": ["en/examples/example", "en/examples/cookbooks"]
+                "pages": [
+                  "en/examples/example",
+                  "en/examples/cookbooks"
+                ]
               }
             ]
           },
@@ -459,7 +488,9 @@
             "groups": [
               {
                 "group": "Release Notes",
-                "pages": ["en/changelog"]
+                "pages": [
+                  "en/changelog"
+                ]
               }
             ]
           }
@@ -498,7 +529,9 @@
             "groups": [
               {
                 "group": "Bem-vindo",
-                "pages": ["pt-BR/index"]
+                "pages": [
+                  "pt-BR/index"
+                ]
               }
             ]
           },
@@ -520,17 +553,23 @@
                   {
                     "group": "Estratégia",
                     "icon": "compass",
-                    "pages": ["pt-BR/guides/concepts/evaluating-use-cases"]
+                    "pages": [
+                      "pt-BR/guides/concepts/evaluating-use-cases"
+                    ]
                   },
                   {
                     "group": "Agentes",
                     "icon": "user",
-                    "pages": ["pt-BR/guides/agents/crafting-effective-agents"]
+                    "pages": [
+                      "pt-BR/guides/agents/crafting-effective-agents"
+                    ]
                   },
                   {
                     "group": "Crews",
                     "icon": "users",
-                    "pages": ["pt-BR/guides/crews/first-crew"]
+                    "pages": [
+                      "pt-BR/guides/crews/first-crew"
+                    ]
                   },
                   {
                     "group": "Flows",
@@ -557,8 +596,10 @@
                   "pt-BR/concepts/tasks",
                   "pt-BR/concepts/crews",
                   "pt-BR/concepts/flows",
+                  "pt-BR/concepts/production-architecture",
                   "pt-BR/concepts/knowledge",
                   "pt-BR/concepts/llms",
+                  "pt-BR/concepts/files",
                   "pt-BR/concepts/processes",
                   "pt-BR/concepts/collaboration",
                   "pt-BR/concepts/training",
@@ -701,10 +742,12 @@
               {
                 "group": "Observabilidade",
                 "pages": [
+                  "pt-BR/observability/tracing",
                   "pt-BR/observability/overview",
                   "pt-BR/observability/arize-phoenix",
                   "pt-BR/observability/braintrust",
                   "pt-BR/observability/datadog",
+                  "pt-BR/observability/galileo",
                   "pt-BR/observability/langdb",
                   "pt-BR/observability/langfuse",
                   "pt-BR/observability/langtrace",
@@ -734,6 +777,7 @@
                   "pt-BR/learn/hierarchical-process",
                   "pt-BR/learn/human-input-on-execution",
                   "pt-BR/learn/human-in-the-loop",
+                  "pt-BR/learn/human-feedback-in-flows",
                   "pt-BR/learn/kickoff-async",
                   "pt-BR/learn/kickoff-for-each",
                   "pt-BR/learn/llm-connections",
@@ -748,7 +792,9 @@
               },
               {
                 "group": "Telemetria",
-                "pages": ["pt-BR/telemetry"]
+                "pages": [
+                  "pt-BR/telemetry"
+                ]
               }
             ]
           },
@@ -758,7 +804,9 @@
             "groups": [
               {
                 "group": "Começando",
-                "pages": ["pt-BR/enterprise/introduction"]
+                "pages": [
+                  "pt-BR/enterprise/introduction"
+                ]
               },
               {
                 "group": "Construir",
@@ -767,7 +815,8 @@
                   "pt-BR/enterprise/features/crew-studio",
                   "pt-BR/enterprise/features/marketplace",
                   "pt-BR/enterprise/features/agent-repositories",
-                  "pt-BR/enterprise/features/tools-and-integrations"
+                  "pt-BR/enterprise/features/tools-and-integrations",
+                  "pt-BR/enterprise/features/pii-trace-redactions"
                 ]
               },
               {
@@ -775,7 +824,8 @@
                 "pages": [
                   "pt-BR/enterprise/features/traces",
                   "pt-BR/enterprise/features/webhook-streaming",
-                  "pt-BR/enterprise/features/hallucination-guardrail"
+                  "pt-BR/enterprise/features/hallucination-guardrail",
+                  "pt-BR/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -819,7 +869,8 @@
                 "group": "Guias",
                 "pages": [
                   "pt-BR/enterprise/guides/build-crew",
-                  "pt-BR/enterprise/guides/deploy-crew",
+                  "pt-BR/enterprise/guides/prepare-for-deployment",
+                  "pt-BR/enterprise/guides/deploy-to-amp",
                   "pt-BR/enterprise/guides/kickoff-crew",
                   "pt-BR/enterprise/guides/update-crew",
                   "pt-BR/enterprise/guides/enable-crew-studio",
@@ -877,7 +928,10 @@
             "groups": [
               {
                 "group": "Exemplos",
-                "pages": ["pt-BR/examples/example", "pt-BR/examples/cookbooks"]
+                "pages": [
+                  "pt-BR/examples/example",
+                  "pt-BR/examples/cookbooks"
+                ]
               }
             ]
           },
@@ -887,7 +941,9 @@
             "groups": [
               {
                 "group": "Notas de Versão",
-                "pages": ["pt-BR/changelog"]
+                "pages": [
+                  "pt-BR/changelog"
+                ]
               }
             ]
           }
@@ -926,7 +982,9 @@
             "groups": [
               {
                 "group": "환영합니다",
-                "pages": ["ko/index"]
+                "pages": [
+                  "ko/index"
+                ]
               }
             ]
           },
@@ -936,7 +994,11 @@
             "groups": [
               {
                 "group": "시작 안내",
-                "pages": ["ko/introduction", "ko/installation", "ko/quickstart"]
+                "pages": [
+                  "ko/introduction",
+                  "ko/installation",
+                  "ko/quickstart"
+                ]
               },
               {
                 "group": "가이드",
@@ -944,17 +1006,23 @@
                   {
                     "group": "전략",
                     "icon": "compass",
-                    "pages": ["ko/guides/concepts/evaluating-use-cases"]
+                    "pages": [
+                      "ko/guides/concepts/evaluating-use-cases"
+                    ]
                   },
                   {
                     "group": "에이전트 (Agents)",
                     "icon": "user",
-                    "pages": ["ko/guides/agents/crafting-effective-agents"]
+                    "pages": [
+                      "ko/guides/agents/crafting-effective-agents"
+                    ]
                   },
                   {
                     "group": "크루 (Crews)",
                     "icon": "users",
-                    "pages": ["ko/guides/crews/first-crew"]
+                    "pages": [
+                      "ko/guides/crews/first-crew"
+                    ]
                   },
                   {
                     "group": "플로우 (Flows)",
@@ -981,8 +1049,10 @@
                   "ko/concepts/tasks",
                   "ko/concepts/crews",
                   "ko/concepts/flows",
+                  "ko/concepts/production-architecture",
                   "ko/concepts/knowledge",
                   "ko/concepts/llms",
+                  "ko/concepts/files",
                   "ko/concepts/processes",
                   "ko/concepts/collaboration",
                   "ko/concepts/training",
@@ -1137,10 +1207,12 @@
               {
                 "group": "Observability",
                 "pages": [
+                  "ko/observability/tracing",
                   "ko/observability/overview",
                   "ko/observability/arize-phoenix",
                   "ko/observability/braintrust",
                   "ko/observability/datadog",
+                  "ko/observability/galileo",
                   "ko/observability/langdb",
                   "ko/observability/langfuse",
                   "ko/observability/langtrace",
@@ -1170,6 +1242,7 @@
                   "ko/learn/hierarchical-process",
                   "ko/learn/human-input-on-execution",
                   "ko/learn/human-in-the-loop",
+                  "ko/learn/human-feedback-in-flows",
                   "ko/learn/kickoff-async",
                   "ko/learn/kickoff-for-each",
                   "ko/learn/llm-connections",
@@ -1184,7 +1257,9 @@
               },
               {
                 "group": "Telemetry",
-                "pages": ["ko/telemetry"]
+                "pages": [
+                  "ko/telemetry"
+                ]
               }
             ]
           },
@@ -1194,7 +1269,9 @@
             "groups": [
               {
                 "group": "시작 안내",
-                "pages": ["ko/enterprise/introduction"]
+                "pages": [
+                  "ko/enterprise/introduction"
+                ]
               },
               {
                 "group": "빌드",
@@ -1203,7 +1280,8 @@
                   "ko/enterprise/features/crew-studio",
                   "ko/enterprise/features/marketplace",
                   "ko/enterprise/features/agent-repositories",
-                  "ko/enterprise/features/tools-and-integrations"
+                  "ko/enterprise/features/tools-and-integrations",
+                  "ko/enterprise/features/pii-trace-redactions"
                 ]
               },
               {
@@ -1211,7 +1289,8 @@
                 "pages": [
                   "ko/enterprise/features/traces",
                   "ko/enterprise/features/webhook-streaming",
-                  "ko/enterprise/features/hallucination-guardrail"
+                  "ko/enterprise/features/hallucination-guardrail",
+                  "ko/enterprise/features/flow-hitl-management"
                 ]
               },
               {
@@ -1255,7 +1334,8 @@
                 "group": "How-To Guides",
                 "pages": [
                   "ko/enterprise/guides/build-crew",
-                  "ko/enterprise/guides/deploy-crew",
+                  "ko/enterprise/guides/prepare-for-deployment",
+                  "ko/enterprise/guides/deploy-to-amp",
                   "ko/enterprise/guides/kickoff-crew",
                   "ko/enterprise/guides/update-crew",
                   "ko/enterprise/guides/enable-crew-studio",
@@ -1285,7 +1365,9 @@
               },
               {
                 "group": "학습 자원",
-                "pages": ["ko/enterprise/resources/frequently-asked-questions"]
+                "pages": [
+                  "ko/enterprise/resources/frequently-asked-questions"
+                ]
               }
             ]
           },
@@ -1311,7 +1393,10 @@
             "groups": [
               {
                 "group": "예시",
-                "pages": ["ko/examples/example", "ko/examples/cookbooks"]
+                "pages": [
+                  "ko/examples/example",
+                  "ko/examples/cookbooks"
+                ]
               }
             ]
           },
@@ -1321,7 +1406,9 @@
             "groups": [
               {
                 "group": "릴리스 노트",
-                "pages": ["ko/changelog"]
+                "pages": [
+                  "ko/changelog"
+                ]
               }
             ]
           }
@@ -1435,6 +1522,18 @@
     {
       "source": "/enterprise/:path*",
       "destination": "/en/enterprise/:path*"
+    },
+    {
+      "source": "/en/enterprise/guides/deploy-crew",
+      "destination": "/en/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/ko/enterprise/guides/deploy-crew",
+      "destination": "/ko/enterprise/guides/deploy-to-amp"
+    },
+    {
+      "source": "/pt-BR/enterprise/guides/deploy-crew",
+      "destination": "/pt-BR/enterprise/guides/deploy-to-amp"
     },
     {
       "source": "/api-reference/:path*",

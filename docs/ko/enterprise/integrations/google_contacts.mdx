@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -61,6 +62,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `personFields` (string, 선택사항): 포함할 필드 (예: 'names,emailAddresses,phoneNumbers'). 기본값: names,emailAddresses,phoneNumbers
     - `requestSyncToken` (boolean, 선택사항): 응답에 동기화 토큰을 포함할지 여부. 기본값: false
     - `sortOrder` (string, 선택사항): 연결을 정렬할 순서. 옵션: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+
   </Accordion>
 
   <Accordion title="google_contacts/search_contacts">
@@ -72,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageSize` (integer, 선택사항): 반환할 결과 수. 최소: 1, 최대: 30
     - `pageToken` (string, 선택사항): 반환할 결과 페이지를 지정하는 토큰.
     - `sources` (array, 선택사항): 검색할 소스. 옵션: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. 기본값: READ_SOURCE_TYPE_CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/list_directory_people">
@@ -84,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `readMask` (string, 선택사항): 읽을 필드 (예: 'names,emailAddresses')
     - `requestSyncToken` (boolean, 선택사항): 응답에 동기화 토큰을 포함할지 여부. 기본값: false
     - `mergeSources` (array, 선택사항): 디렉토리 사람 응답에 병합할 추가 데이터. 옵션: CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/search_directory_people">
@@ -94,6 +98,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sources` (string, 필수): 디렉토리 소스 ('DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE' 사용)
     - `pageSize` (integer, 선택사항): 반환할 결과 수
     - `readMask` (string, 선택사항): 읽을 필드
+
   </Accordion>
 
   <Accordion title="google_contacts/list_other_contacts">
@@ -104,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageToken` (string, 선택사항): 반환할 결과 페이지를 지정하는 토큰.
     - `readMask` (string, 선택사항): 읽을 필드
     - `requestSyncToken` (boolean, 선택사항): 응답에 동기화 토큰을 포함할지 여부. 기본값: false
+
   </Accordion>
 
   <Accordion title="google_contacts/search_other_contacts">
@@ -113,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `query` (string, 필수): 검색 쿼리
     - `readMask` (string, 필수): 읽을 필드 (예: 'names,emailAddresses')
     - `pageSize` (integer, 선택사항): 결과 수
+
   </Accordion>
 
   <Accordion title="google_contacts/get_person">
@@ -121,6 +128,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `resourceName` (string, 필수): 가져올 사람의 리소스 이름 (예: 'people/c123456789')
     - `personFields` (string, 선택사항): 포함할 필드 (예: 'names,emailAddresses,phoneNumbers'). 기본값: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/create_contact">
@@ -132,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `phoneNumbers` (array, 선택사항): 전화번호들. 각 항목은 `value` (string, 전화번호)와 `type` (string, 'home', 'work', 'mobile', 'other', 기본값 'other')이 있는 객체.
     - `addresses` (array, 선택사항): 우편 주소들. 각 항목은 `formattedValue` (string, 형식화된 주소)와 `type` (string, 'home', 'work', 'other', 기본값 'other')이 있는 객체.
     - `organizations` (array, 선택사항): 조직/회사들. 각 항목은 `name` (string, 조직 이름), `title` (string, 직책), `type` (string, 'work', 'other', 기본값 'work')이 있는 객체.
+
   </Accordion>
 
   <Accordion title="google_contacts/update_contact">
@@ -143,6 +152,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `names` (array, 선택사항): 사람의 이름들. 각 항목은 `givenName` (string), `familyName` (string), `displayName` (string)이 있는 객체.
     - `emailAddresses` (array, 선택사항): 이메일 주소들. 각 항목은 `value` (string, 이메일 주소)와 `type` (string, 'home', 'work', 'other')이 있는 객체.
     - `phoneNumbers` (array, 선택사항): 전화번호들. 각 항목은 `value` (string, 전화번호)와 `type` (string, 'home', 'work', 'mobile', 'other')이 있는 객체.
+
   </Accordion>
 
   <Accordion title="google_contacts/delete_contact">
@@ -150,6 +160,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `resourceName` (string, 필수): 삭제할 사람의 리소스 이름 (예: 'people/c123456789').
+
   </Accordion>
 
   <Accordion title="google_contacts/batch_get_people">
@@ -158,6 +169,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `resourceNames` (array, 필수): 가져올 사람들의 리소스 이름 (최대 200개 항목).
     - `personFields` (string, 선택사항): 포함할 필드 (예: 'names,emailAddresses,phoneNumbers'). 기본값: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/list_contact_groups">
@@ -167,6 +179,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageSize` (integer, 선택사항): 반환할 연락처 그룹 수. 최소: 1, 최대: 1000
     - `pageToken` (string, 선택사항): 반환할 결과 페이지를 지정하는 토큰.
     - `groupFields` (string, 선택사항): 포함할 필드 (예: 'name,memberCount,clientData'). 기본값: name,memberCount
+
   </Accordion>
 
   <Accordion title="google_contacts/get_contact_group">
@@ -176,6 +189,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `resourceName` (string, 필수): 연락처 그룹의 리소스 이름 (예: 'contactGroups/myContactGroup').
     - `maxMembers` (integer, 선택사항): 포함할 최대 멤버 수. 최소: 0, 최대: 20000
     - `groupFields` (string, 선택사항): 포함할 필드 (예: 'name,memberCount,clientData'). 기본값: name,memberCount
+
   </Accordion>
 
   <Accordion title="google_contacts/create_contact_group">
@@ -184,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `name` (string, 필수): 연락처 그룹의 이름.
     - `clientData` (array, 선택사항): 클라이언트별 데이터. 각 항목은 `key` (string)와 `value` (string)가 있는 객체.
+
   </Accordion>
 </AccordionGroup>
 
@@ -223,15 +238,22 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Google 계정이 연락처 및 디렉토리 액세스에 필요한 권한을 가지고 있는지 확인하세요.
 - OAuth 연결이 Google People API에 필요한 모든 범위를 포함하는지 확인하세요.
 
 **연락처 생성/업데이트 문제**
+
 - 연락처 생성 시 `email`과 같은 필수 필드가 제공되는지 확인하세요.
 - 연락처를 업데이트하거나 삭제할 때 `resourceName`이 올바른지 확인하세요.
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Google Contacts 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Google Contacts 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
 </Card>

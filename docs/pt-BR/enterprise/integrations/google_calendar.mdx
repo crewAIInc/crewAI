@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -65,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `eventDescription` (string, opcional): Descrição do evento.
     - `eventId` (string, opcional): ID do evento – Um ID da sua aplicação para associar a este evento. Você pode usar esse ID para sincronizar atualizações posteriores neste evento.
     - `includeMeetLink` (boolean, opcional): Incluir link do Google Meet? – Cria automaticamente um link para conferência Google Meet para este evento.
+
   </Accordion>
 
   <Accordion title="google_calendar/update_event">
@@ -79,6 +81,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `attendees` (string, opcional): Participantes – Aceita um array de e-mails ou e-mails separados por vírgula.
     - `eventLocation` (string, opcional): Local do evento.
     - `eventDescription` (string, opcional): Descrição do evento.
+
   </Accordion>
 
   <Accordion title="google_calendar/view_events">
@@ -88,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `calendar` (string, opcional): Calendário – Use as Configurações de Workflow do Connect Portal para permitir que o usuário selecione em qual calendário o evento será adicionado. Padrão para o calendário principal do usuário se deixado em branco.
     - `after` (string, opcional): Após – Filtra eventos que começam após a data fornecida (Unix em milissegundos ou timestamp ISO). (exemplo: "2025-04-12T10:00:00Z ou 1712908800000").
     - `before` (string, opcional): Antes – Filtra eventos que terminam antes da data fornecida (Unix em milissegundos ou timestamp ISO). (exemplo: "2025-04-12T10:00:00Z ou 1712908800000").
+
   </Accordion>
 
   <Accordion title="google_calendar/get_event_by_id">
@@ -96,6 +100,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `eventId` (string, obrigatório): ID do evento.
     - `calendar` (string, opcional): Calendário – Use as Configurações de Workflow do Connect Portal para permitir que o usuário selecione em qual calendário o evento será adicionado. Padrão para o calendário principal do usuário se deixado em branco.
+
   </Accordion>
 
   <Accordion title="google_calendar/delete_event">
@@ -104,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `eventId` (string, obrigatório): ID do evento – O ID do evento do calendário a ser excluído.
     - `calendar` (string, opcional): Calendário – Use as Configurações de Workflow do Connect Portal para permitir que o usuário selecione em qual calendário o evento será adicionado. Padrão para o calendário principal do usuário se deixado em branco.
+
   </Accordion>
 
   <Accordion title="google_calendar/get_contacts">
@@ -116,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_contacts">
@@ -123,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `query` (string, opcional): Termo de pesquisa para buscar contatos.
+
   </Accordion>
 
   <Accordion title="google_calendar/list_directory_people">
@@ -135,6 +143,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_directory_people">
@@ -148,6 +157,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/list_other_contacts">
@@ -160,6 +170,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "pageCursor": "page_cursor_string"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_calendar/search_other_contacts">
@@ -167,6 +178,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `query` (string, opcional): Termo de pesquisa para buscar contatos.
+
   </Accordion>
 
   <Accordion title="google_calendar/get_availability">
@@ -187,6 +199,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         }
       ]
       ```
+
   </Accordion>
 </AccordionGroup>
 
@@ -354,27 +367,32 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Google possui as permissões necessárias para acessar o calendário
 - Verifique se a conexão OAuth inclui todos os escopos necessários para a API do Google Calendar
 - Confirme se as configurações de compartilhamento do calendário permitem o nível de acesso necessário
 
 **Problemas na Criação de Eventos**
+
 - Verifique se os formatos de horário estão corretos (ISO8601 ou timestamps Unix)
 - Assegure-se de que os endereços de e-mail dos participantes estão corretamente formatados
 - Verifique se o calendário de destino existe e está acessível
 - Confirme se os fusos horários estão especificados corretamente
 
 **Disponibilidade e Conflitos de Horário**
+
 - Use formato ISO adequado para os intervalos de horário ao verificar disponibilidade
 - Certifique-se de que os fusos horários estão consistentes em todas as operações
 - Verifique se os IDs dos calendários estão corretos ao consultar múltiplos calendários
 
 **Pesquisa de Contatos e Pessoas**
+
 - Assegure-se de que os termos de pesquisa estão devidamente formatados
 - Verifique se as permissões para acesso ao diretório foram concedidas
 - Certifique-se de que as informações de contato estão atualizadas e acessíveis
 
 **Atualização e Exclusão de Eventos**
+
 - Verifique se os IDs dos eventos estão corretos e se os eventos existem
 - Assegure-se de que você possui permissões de edição para os eventos
 - Verifique se a propriedade do calendário permite modificações
@@ -382,5 +400,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para assistência na configuração da integração com o Google Calendar ou solução de problemas.
+  Entre em contato com nosso time de suporte para assistência na configuração da
+  integração com o Google Calendar ou solução de problemas.
 </Card>

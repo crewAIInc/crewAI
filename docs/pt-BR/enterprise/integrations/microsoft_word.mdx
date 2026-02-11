@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -61,6 +62,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `expand` (string, opcional): Expandir recursos relacionados inline.
     - `top` (integer, opcional): Número de itens a retornar (mín 1, máx 999).
     - `orderby` (string, opcional): Ordenar resultados por propriedades especificadas.
+
   </Accordion>
 
   <Accordion title="microsoft_word/create_text_document">
@@ -69,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `file_name` (string, obrigatório): Nome do documento de texto (deve terminar com .txt).
     - `content` (string, opcional): Conteúdo de texto para o documento. Padrão: "Este é um novo documento de texto criado via API."
+
   </Accordion>
 
   <Accordion title="microsoft_word/get_document_content">
@@ -76,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `file_id` (string, obrigatório): O ID do documento.
+
   </Accordion>
 
   <Accordion title="microsoft_word/get_document_properties">
@@ -83,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `file_id` (string, obrigatório): O ID do documento.
+
   </Accordion>
 
   <Accordion title="microsoft_word/delete_document">
@@ -90,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `file_id` (string, obrigatório): O ID do documento a excluir.
+
   </Accordion>
 </AccordionGroup>
 
@@ -129,15 +135,18 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso a arquivos (ex: `Files.Read.All`, `Files.ReadWrite.All`).
 - Verifique se a conexão OAuth inclui todos os escopos necessários.
 
 **Problemas de Criação de Arquivos**
+
 - Ao criar documentos de texto, certifique-se de que o `file_name` termine com extensão `.txt`.
 - Verifique se você tem permissões de escrita no local de destino (OneDrive/SharePoint).
 
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Microsoft Word.
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft Word.
 </Card>

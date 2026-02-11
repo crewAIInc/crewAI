@@ -36,7 +36,9 @@ uv add crewai-tools
 ### 3. Environment Variable Setup
 
 <Note>
-  To use integrations with `Agent(apps=[])`, you must set the `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise Token.
+  To use integrations with `Agent(apps=[])`, you must set the
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` environment variable with your Enterprise
+  Token.
 </Note>
 
 ```bash
@@ -61,6 +63,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
     - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
     - `sortOrder` (string, optional): The order in which the connections should be sorted. Options: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+
   </Accordion>
 
   <Accordion title="google_contacts/search_contacts">
@@ -72,6 +75,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageSize` (integer, optional): Number of results to return. Minimum: 1, Maximum: 30
     - `pageToken` (string, optional): Token specifying which result page to return.
     - `sources` (array, optional): The sources to search in. Options: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. Default: READ_SOURCE_TYPE_CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/list_directory_people">
@@ -84,6 +88,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `readMask` (string, optional): Fields to read (e.g., 'names,emailAddresses')
     - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
     - `mergeSources` (array, optional): Additional data to merge into the directory people responses. Options: CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/search_directory_people">
@@ -94,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `sources` (string, required): Directory sources (use 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE')
     - `pageSize` (integer, optional): Number of results to return
     - `readMask` (string, optional): Fields to read
+
   </Accordion>
 
   <Accordion title="google_contacts/list_other_contacts">
@@ -104,6 +110,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageToken` (string, optional): Token specifying which result page to return.
     - `readMask` (string, optional): Fields to read
     - `requestSyncToken` (boolean, optional): Whether the response should include a sync token. Default: false
+
   </Accordion>
 
   <Accordion title="google_contacts/search_other_contacts">
@@ -113,6 +120,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `query` (string, required): Search query
     - `readMask` (string, required): Fields to read (e.g., 'names,emailAddresses')
     - `pageSize` (integer, optional): Number of results
+
   </Accordion>
 
   <Accordion title="google_contacts/get_person">
@@ -121,6 +129,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `resourceName` (string, required): The resource name of the person to get (e.g., 'people/c123456789')
     - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/create_contact">
@@ -174,6 +183,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
         }
       ]
       ```
+
   </Accordion>
 
   <Accordion title="google_contacts/update_contact">
@@ -185,6 +195,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `names` (array, optional): Person's names
     - `emailAddresses` (array, optional): Email addresses
     - `phoneNumbers` (array, optional): Phone numbers
+
   </Accordion>
 
   <Accordion title="google_contacts/delete_contact">
@@ -192,6 +203,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **Parameters:**
     - `resourceName` (string, required): The resource name of the person to delete (e.g., 'people/c123456789')
+
   </Accordion>
 
   <Accordion title="google_contacts/batch_get_people">
@@ -200,6 +212,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **Parameters:**
     - `resourceNames` (array, required): Resource names of people to get. Maximum: 200 items
     - `personFields` (string, optional): Fields to include (e.g., 'names,emailAddresses,phoneNumbers'). Default: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/list_contact_groups">
@@ -209,6 +222,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `pageSize` (integer, optional): Number of contact groups to return. Minimum: 1, Maximum: 1000
     - `pageToken` (string, optional): Token specifying which result page to return.
     - `groupFields` (string, optional): Fields to include (e.g., 'name,memberCount,clientData'). Default: name,memberCount
+
   </Accordion>
 </AccordionGroup>
 
@@ -377,36 +391,43 @@ crew.kickoff()
 ### Common Issues
 
 **Permission Errors**
+
 - Ensure your Google account has appropriate permissions for contacts access
 - Verify that the OAuth connection includes required scopes for Google Contacts API
 - Check that directory access permissions are granted for organization contacts
 
 **Resource Name Format Issues**
+
 - Ensure resource names follow the correct format (e.g., 'people/c123456789' for contacts)
 - Verify that contact group resource names use the format 'contactGroups/groupId'
 - Check that resource names exist and are accessible
 
 **Search and Query Issues**
+
 - Ensure search queries are properly formatted and not empty
 - Use appropriate readMask fields for the data you need
 - Verify that search sources are correctly specified (contacts vs profiles)
 
 **Contact Creation and Updates**
+
 - Ensure required fields are provided when creating contacts
 - Verify that email addresses and phone numbers are properly formatted
 - Check that updatePersonFields parameter includes all fields being updated
 
 **Directory Access Issues**
+
 - Ensure you have appropriate permissions to access organization directory
 - Verify that directory sources are correctly specified
 - Check that your organization allows API access to directory information
 
 **Pagination and Limits**
+
 - Be mindful of page size limits (varies by endpoint)
 - Use pageToken for pagination through large result sets
 - Respect API rate limits and implement appropriate delays
 
 **Contact Groups and Organization**
+
 - Ensure contact group names are unique when creating new groups
 - Verify that contacts exist before adding them to groups
 - Check that you have permissions to modify contact groups
@@ -414,5 +435,6 @@ crew.kickoff()
 ### Getting Help
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with Google Contacts integration setup or troubleshooting.
+  Contact our support team for assistance with Google Contacts integration setup
+  or troubleshooting.
 </Card>

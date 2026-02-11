@@ -1,0 +1,190 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. An agent created for testing purposes\nYour personal goal is: Complete test tasks successfully\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Complete this task successfully"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '583'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BtZ1D2lVUgLYhgordU7R0CzmtYBW2\",\n  \"object\": \"chat.completion\",\n  \"created\": 1752582351,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: Please provide me with the specific details or context of the task you need help with, and I will ensure to complete it successfully and provide a thorough response.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 99,\n    \"completion_tokens\": 44,\n    \"total_tokens\": 143,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\"\
+        : 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+    headers:
+      CF-RAY:
+      - 95f93ea9af627e0b-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 15 Jul 2025 12:25:54 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=GRZmZLrjW5ZRHNmUJa4ccrMcy20D1rmeqK6Ptlv0mRY-1752582354-1.0.1.1-xKd_yga48Eedech5TRlThlEpDgsB2whxkWHlCyAGOVMqMcvH1Ju9FdXYbuQ9NdUQcVxPLgiGM35lYhqSLVQiXDyK01dnyp2Gvm560FBN9DY; path=/; expires=Tue, 15-Jul-25 12:55:54 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=MYqswpSR7sqr4kGp6qZVkaL7HDYwMiww49PeN9QBP.A-1752582354973-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '4047'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '4440'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999885'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_5704c0f206a927ddc12aa1a19b612a75
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are an expert evaluator assessing how well an AI agent''s output aligns with its assigned task goal.\n\nScore the agent''s goal alignment on a scale from 0-10 where:\n- 0: Complete misalignment, agent did not understand or attempt the task goal\n- 5: Partial alignment, agent attempted the task but missed key requirements\n- 10: Perfect alignment, agent fully satisfied all task requirements\n\nConsider:\n1. Did the agent correctly interpret the task goal?\n2. Did the final output directly address the requirements?\n3. Did the agent focus on relevant aspects of the task?\n4. Did the agent provide all requested information or deliverables?\n\nReturn your evaluation as JSON with fields ''score'' (number) and ''feedback'' (string).\n"}, {"role": "user", "content": "\nAgent role: Test Agent\nAgent goal: Complete test tasks successfully\n\n\nAgent''s final output:\nPlease provide me with the specific details or context of the task you
+      need help with, and I will ensure to complete it successfully and provide a thorough response.\n\nEvaluate how well the agent''s output aligns with the assigned task goal.\n"}], "model": "gpt-4o-mini", "stop": []}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate, zstd
+      connection:
+      - keep-alive
+      content-length:
+      - '1196'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=GRZmZLrjW5ZRHNmUJa4ccrMcy20D1rmeqK6Ptlv0mRY-1752582354-1.0.1.1-xKd_yga48Eedech5TRlThlEpDgsB2whxkWHlCyAGOVMqMcvH1Ju9FdXYbuQ9NdUQcVxPLgiGM35lYhqSLVQiXDyK01dnyp2Gvm560FBN9DY; _cfuvid=MYqswpSR7sqr4kGp6qZVkaL7HDYwMiww49PeN9QBP.A-1752582354973-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.93.0
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.93.0
+      x-stainless-raw-response:
+      - 'true'
+      x-stainless-read-timeout:
+      - '600.0'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.11.12
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-BtZ1HJP3j6sQ0uiSLSM2fAMCpJSTI\",\n  \"object\": \"chat.completion\",\n  \"created\": 1752582355,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"{\\n  \\\"score\\\": 2,\\n  \\\"feedback\\\": \\\"The agent did not demonstrate a clear understanding of the task goal, which is to complete test tasks successfully. Instead, it asked for more details, indicating a lack of initiative to engage with the task. While it shows a willingness to assist, it failed to provide any actual response to the test tasks and did not address them directly.\\\"\\n}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 230,\n    \"completion_tokens\": 80,\n    \"total_tokens\": 310,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\"\
+        : 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - 95f93ec73a1c7e0b-GRU
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Tue, 15 Jul 2025 12:25:57 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '1544'
+      openai-version:
+      - '2020-10-01'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains; preload
+      x-envoy-upstream-service-time:
+      - '1546'
+      x-ratelimit-limit-requests:
+      - '30000'
+      x-ratelimit-limit-tokens:
+      - '150000000'
+      x-ratelimit-remaining-requests:
+      - '29999'
+      x-ratelimit-remaining-tokens:
+      - '149999732'
+      x-ratelimit-reset-requests:
+      - 2ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_44930ba12ad8d1e3f0beed1d5e3d8b0c
+    status:
+      code: 200
+      message: OK
+version: 1

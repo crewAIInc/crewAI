@@ -3,29 +3,36 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from pydantic import BaseModel
+from typing_extensions import Self
 
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
+from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
     from crewai.llms.hooks.base import BaseInterceptor
-    from crewai.tools.base_tool import BaseTool
 
 
 try:
     from azure.ai.inference import (
         ChatCompletionsClient,
     )
+    from azure.ai.inference.aio import (
+        ChatCompletionsClient as AsyncChatCompletionsClient,
+    )
     from azure.ai.inference.models import (
         ChatCompletions,
         ChatCompletionsToolCall,
+        ChatCompletionsToolDefinition,
+        FunctionDefinition,
+        JsonSchemaFormat,
         StreamingChatCompletionsUpdate,
     )
     from azure.core.credentials import (
@@ -36,12 +43,30 @@ try:
     )
 
     from crewai.events.types.llm_events import LLMCallType
-    from crewai.llms.base_llm import BaseLLM
+    from crewai.llms.base_llm import BaseLLM, llm_call_context
 
 except ImportError:
     raise ImportError(
         'Azure AI Inference native provider not available, to install: uv add "crewai[azure-ai-inference]"'
     ) from None
+
+
+class AzureCompletionParams(TypedDict, total=False):
+    """Type definition for Azure chat completion parameters."""
+
+    messages: list[LLMMessage]
+    stream: bool
+    model_extras: dict[str, Any]
+    response_format: JsonSchemaFormat
+    model: str
+    temperature: float
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    max_tokens: int
+    stop: list[str]
+    tools: list[ChatCompletionsToolDefinition]
+    tool_choice: str
 
 
 class AzureCompletion(BaseLLM):
@@ -67,6 +92,7 @@ class AzureCompletion(BaseLLM):
         stop: list[str] | None = None,
         stream: bool = False,
         interceptor: BaseInterceptor[Any, Any] | None = None,
+        response_format: type[BaseModel] | None = None,
         **kwargs: Any,
     ):
         """Initialize Azure AI Inference chat completion client.
@@ -86,6 +112,9 @@ class AzureCompletion(BaseLLM):
             stop: Stop sequences
             stream: Enable streaming responses
             interceptor: HTTP interceptor (not yet supported for Azure).
+            response_format: Pydantic model for structured output. Used as default when
+                           response_model is not passed to call()/acall() methods.
+                           Only works with OpenAI models deployed on Azure.
             **kwargs: Additional parameters
         """
         if interceptor is not None:
@@ -133,11 +162,14 @@ class AzureCompletion(BaseLLM):
 
         self.client = ChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
 
+        self.async_client = AsyncChatCompletionsClient(**client_kwargs)  # type: ignore[arg-type]
+
         self.top_p = top_p
         self.frequency_penalty = frequency_penalty
         self.presence_penalty = presence_penalty
         self.max_tokens = max_tokens
         self.stream = stream
+        self.response_format = response_format
 
         self.is_openai_model = any(
             prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
@@ -148,7 +180,8 @@ class AzureCompletion(BaseLLM):
             and "/openai/deployments/" in self.endpoint
         )
 
-    def _validate_and_fix_endpoint(self, endpoint: str, model: str) -> str:
+    @staticmethod
+    def _validate_and_fix_endpoint(endpoint: str, model: str) -> str:
         """Validate and fix Azure endpoint URL format.
 
         Azure OpenAI endpoints should be in the format:
@@ -171,10 +204,75 @@ class AzureCompletion(BaseLLM):
 
         return endpoint
 
+    def _handle_api_error(
+        self,
+        error: Exception,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> None:
+        """Handle API errors with appropriate logging and events.
+
+        Args:
+            error: The exception that occurred
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Raises:
+            The original exception after logging and emitting events
+        """
+        if isinstance(error, HttpResponseError):
+            if error.status_code == 401:
+                error_msg = "Azure authentication failed. Check your API key."
+            elif error.status_code == 404:
+                error_msg = (
+                    f"Azure endpoint not found. Check endpoint URL: {self.endpoint}"
+                )
+            elif error.status_code == 429:
+                error_msg = "Azure API rate limit exceeded. Please retry later."
+            else:
+                error_msg = (
+                    f"Azure API HTTP error: {error.status_code} - {error.message}"
+                )
+        else:
+            error_msg = f"Azure API call failed: {error!s}"
+
+        logging.error(error_msg)
+        self._emit_call_failed_event(
+            error=error_msg, from_task=from_task, from_agent=from_agent
+        )
+        raise error
+
+    def _handle_completion_error(
+        self,
+        error: Exception,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> None:
+        """Handle completion-specific errors including context length checks.
+
+        Args:
+            error: The exception that occurred
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Raises:
+            LLMContextLengthExceededError if context window exceeded, otherwise the original exception
+        """
+        if is_context_length_exceeded(error):
+            logging.error(f"Context window exceeded: {error}")
+            raise LLMContextLengthExceededError(str(error)) from error
+
+        error_msg = f"Azure API call failed: {error!s}"
+        logging.error(error_msg)
+        self._emit_call_failed_event(
+            error=error_msg, from_task=from_task, from_agent=from_agent
+        )
+        raise error
+
     def call(
         self,
         messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
+        tools: list[dict[str, Any]] | None = None,
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -190,78 +288,128 @@ class AzureCompletion(BaseLLM):
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            response_model: Response model
 
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            # Emit call started event
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                # Emit call started event
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            # Format messages for Azure
-            formatted_messages = self._format_messages_for_azure(messages)
+                effective_response_model = response_model or self.response_format
 
-            # Prepare completion parameters
-            completion_params = self._prepare_completion_params(
-                formatted_messages, tools, response_model
-            )
+                # Format messages for Azure
+                formatted_messages = self._format_messages_for_azure(messages)
 
-            # Handle streaming vs non-streaming
-            if self.stream:
-                return self._handle_streaming_completion(
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
+
+                # Prepare completion parameters
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, tools, effective_response_model
+                )
+
+                # Handle streaming vs non-streaming
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     completion_params,
                     available_functions,
                     from_task,
                     from_agent,
-                    response_model,
+                    effective_response_model,
                 )
 
-            return self._handle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                response_model,
-            )
+            except Exception as e:
+                return self._handle_api_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
 
-        except HttpResponseError as e:
-            if e.status_code == 401:
-                error_msg = "Azure authentication failed. Check your API key."
-            elif e.status_code == 404:
-                error_msg = (
-                    f"Azure endpoint not found. Check endpoint URL: {self.endpoint}"
+    async def acall(  # type: ignore[return]
+        self,
+        messages: str | list[LLMMessage],
+        tools: list[dict[str, Any]] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Call Azure AI Inference chat completions API asynchronously.
+
+        Args:
+            messages: Input messages for the chat completion
+            tools: List of tool/function definitions
+            callbacks: Callback functions (not used in native implementation)
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Chat completion response or tool call result
+        """
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
                 )
-            elif e.status_code == 429:
-                error_msg = "Azure API rate limit exceeded. Please retry later."
-            else:
-                error_msg = f"Azure API HTTP error: {e.status_code} - {e.message}"
 
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
-        except Exception as e:
-            error_msg = f"Azure API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+                effective_response_model = response_model or self.response_format
+
+                formatted_messages = self._format_messages_for_azure(messages)
+
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, tools, effective_response_model
+                )
+
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
+                    completion_params,
+                    available_functions,
+                    from_task,
+                    from_agent,
+                    effective_response_model,
+                )
+
+            except Exception as e:
+                self._handle_api_error(e, from_task, from_agent)
 
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
         tools: list[dict[str, Any]] | None = None,
         response_model: type[BaseModel] | None = None,
-    ) -> dict[str, Any]:
+    ) -> AzureCompletionParams:
         """Prepare parameters for Azure AI Inference chat completion.
 
         Args:
@@ -272,19 +420,25 @@ class AzureCompletion(BaseLLM):
         Returns:
             Parameters dictionary for Azure API
         """
-        params = {
+        params: AzureCompletionParams = {
             "messages": messages,
             "stream": self.stream,
         }
 
+        if self.stream:
+            params["model_extras"] = {"stream_options": {"include_usage": True}}
+
         if response_model and self.is_openai_model:
-            params["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": response_model.__name__,
-                    "schema": response_model.model_json_schema(),
-                },
-            }
+            model_description = generate_model_description(response_model)
+            json_schema_info = model_description["json_schema"]
+            json_schema_name = json_schema_info["name"]
+
+            params["response_format"] = JsonSchemaFormat(
+                name=json_schema_name,
+                schema=json_schema_info["schema"],
+                description=f"Schema for {json_schema_name}",
+                strict=json_schema_info["strict"],
+            )
 
         # Only include model parameter for non-Azure OpenAI endpoints
         # Azure OpenAI endpoints have the deployment name in the URL
@@ -302,7 +456,7 @@ class AzureCompletion(BaseLLM):
             params["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
-        if self.stop:
+        if self.stop and self.supports_stop_words():
             params["stop"] = self.stop
 
         # Handle tools/functions for Azure OpenAI models
@@ -310,35 +464,48 @@ class AzureCompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
+        additional_params = self.additional_params
+        additional_drop_params = additional_params.get("additional_drop_params")
+        drop_params = additional_params.get("drop_params")
+
+        if drop_params and isinstance(additional_drop_params, list):
+            for drop_param in additional_drop_params:
+                if isinstance(drop_param, str):
+                    params.pop(drop_param, None)  # type: ignore[misc]
+
         return params
 
-    def _convert_tools_for_interference(
+    def _convert_tools_for_interference(  # type: ignore[override]
         self, tools: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
-        """Convert CrewAI tool format to Azure OpenAI function calling format."""
+    ) -> list[ChatCompletionsToolDefinition]:
+        """Convert CrewAI tool format to Azure OpenAI function calling format.
 
+        Args:
+            tools: List of CrewAI tool definitions
+
+        Returns:
+            List of Azure ChatCompletionsToolDefinition objects
+        """
         from crewai.llms.providers.utils.common import safe_tool_conversion
 
-        azure_tools = []
+        azure_tools: list[ChatCompletionsToolDefinition] = []
 
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "Azure")
 
-            azure_tool = {
-                "type": "function",
-                "function": {
-                    "name": name,
-                    "description": description,
-                },
-            }
+            function_def = FunctionDefinition(
+                name=name,
+                description=description,
+                parameters=parameters
+                if isinstance(parameters, dict)
+                else dict(parameters)
+                if parameters
+                else None,
+            )
 
-            if parameters:
-                if isinstance(parameters, dict):
-                    azure_tool["function"]["parameters"] = parameters  # type: ignore
-                else:
-                    azure_tool["function"]["parameters"] = dict(parameters)
+            tool_def = ChatCompletionsToolDefinition(function=function_def)
 
-            azure_tools.append(azure_tool)
+            azure_tools.append(tool_def)
 
         return azure_tools
 
@@ -360,151 +527,323 @@ class AzureCompletion(BaseLLM):
 
         for message in base_formatted:
             role = message.get("role", "user")  # Default to user if no role
-            content = message.get("content", "")
+            # Handle None content - Azure requires string content
+            content = message.get("content") or ""
 
-            # Azure AI Inference requires both 'role' and 'content'
-            azure_messages.append({"role": role, "content": content})
+            if role == "tool":
+                tool_call_id = message.get("tool_call_id", "")
+                if not tool_call_id:
+                    raise ValueError("Tool message missing required tool_call_id")
+                azure_messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": content,
+                    }
+                )
+            # Handle assistant messages with tool_calls
+            elif role == "assistant" and message.get("tool_calls"):
+                tool_calls = message.get("tool_calls", [])
+                azure_msg: LLMMessage = {
+                    "role": "assistant",
+                    "content": content,  # Already defaulted to "" above
+                    "tool_calls": tool_calls,
+                }
+                azure_messages.append(azure_msg)
+            else:
+                # Azure AI Inference requires both 'role' and 'content'
+                azure_messages.append({"role": role, "content": content})
 
         return azure_messages
 
-    def _handle_completion(
+    def _validate_and_emit_structured_output(
         self,
-        params: dict[str, Any],
-        available_functions: dict[str, Any] | None = None,
+        content: str,
+        response_model: type[BaseModel],
+        params: AzureCompletionParams,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-        response_model: type[BaseModel] | None = None,
-    ) -> str | Any:
-        """Handle non-streaming chat completion."""
-        # Make API call
+    ) -> BaseModel:
+        """Validate content against response model and emit completion event.
+
+        Args:
+            content: Response content to validate
+            response_model: Pydantic model for validation
+            params: Completion parameters containing messages
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            Validated Pydantic model instance
+
+        Raises:
+            ValueError: If validation fails
+        """
         try:
-            response: ChatCompletions = self.client.complete(**params)
+            structured_data = response_model.model_validate_json(content)
 
-            if not response.choices:
-                raise ValueError("No choices returned from Azure API")
-
-            choice = response.choices[0]
-            message = choice.message
-
-            # Extract and track token usage
-            usage = self._extract_azure_token_usage(response)
-            self._track_token_usage_internal(usage)
-
-            if response_model and self.is_openai_model:
-                content = message.content or ""
-                try:
-                    structured_data = response_model.model_validate_json(content)
-                    structured_json = structured_data.model_dump_json()
-
-                    self._emit_call_completed_event(
-                        response=structured_json,
-                        call_type=LLMCallType.LLM_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                    )
-
-                    return structured_json
-                except Exception as e:
-                    error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
-                    logging.error(error_msg)
-                    raise ValueError(error_msg) from e
-
-            # Handle tool calls
-            if message.tool_calls and available_functions:
-                tool_call = message.tool_calls[0]  # Handle first tool call
-                if isinstance(tool_call, ChatCompletionsToolCall):
-                    function_name = tool_call.function.name
-
-                    try:
-                        function_args = json.loads(tool_call.function.arguments)
-                    except json.JSONDecodeError as e:
-                        logging.error(f"Failed to parse tool arguments: {e}")
-                        function_args = {}
-
-                    # Execute tool
-                    result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=available_functions,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if result is not None:
-                        return result
-
-            # Extract content
-            content = message.content or ""
-
-            # Apply stop words
-            content = self._apply_stop_words(content)
-
-            # Emit completion event and return content
             self._emit_call_completed_event(
-                response=content,
+                response=structured_data.model_dump_json(),
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
             )
 
+            return structured_data
         except Exception as e:
-            if is_context_length_exceeded(e):
-                logging.error(f"Context window exceeded: {e}")
-                raise LLMContextLengthExceededError(str(e)) from e
-
-            error_msg = f"Azure API call failed: {e!s}"
+            error_msg = f"Failed to validate structured output with model {response_model.__name__}: {e}"
             logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise e
+            raise ValueError(error_msg) from e
 
-        return content
-
-    def _handle_streaming_completion(
+    def _process_completion_response(
         self,
-        params: dict[str, Any],
+        response: ChatCompletions,
+        params: AzureCompletionParams,
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Process completion response with usage tracking, tool execution, and events.
+
+        Args:
+            response: Chat completion response from Azure API
+            params: Completion parameters containing messages
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output
+
+        Returns:
+            Response content or structured output
+        """
+        if not response.choices:
+            raise ValueError("No choices returned from Azure API")
+
+        choice = response.choices[0]
+        message = choice.message
+
+        # Extract and track token usage
+        usage = self._extract_azure_token_usage(response)
+        self._track_token_usage_internal(usage)
+
+        # If there are tool_calls but no available_functions, return the tool_calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if message.tool_calls and not available_functions:
+            self._emit_call_completed_event(
+                response=list(message.tool_calls),
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return list(message.tool_calls)
+
+        # Handle tool calls
+        if message.tool_calls and available_functions:
+            tool_call = message.tool_calls[0]  # Handle first tool call
+            if isinstance(tool_call, ChatCompletionsToolCall):
+                function_name = tool_call.function.name
+
+                try:
+                    function_args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError as e:
+                    logging.error(f"Failed to parse tool arguments: {e}")
+                    function_args = {}
+
+                # Execute tool
+                result = self._handle_tool_execution(
+                    function_name=function_name,
+                    function_args=function_args,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+                if result is not None:
+                    return result
+
+        # Extract content
+        content = message.content or ""
+
+        if response_model and self.is_openai_model:
+            return self._validate_and_emit_structured_output(
+                content=content,
+                response_model=response_model,
+                params=params,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+        content = self._apply_stop_words(content)
+
+        # Emit completion event and return content
+        self._emit_call_completed_event(
+            response=content,
+            call_type=LLMCallType.LLM_CALL,
+            from_task=from_task,
+            from_agent=from_agent,
+            messages=params["messages"],
+        )
+
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], content, from_agent
+        )
+
+    def _handle_completion(
+        self,
+        params: AzureCompletionParams,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming chat completion."""
+        try:
+            # Cast params to Any to avoid type checking issues with TypedDict unpacking
+            response: ChatCompletions = self.client.complete(**params)  # type: ignore[assignment,arg-type]
+            return self._process_completion_response(
+                response=response,
+                params=params,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except Exception as e:
+            return self._handle_completion_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
+
+    def _process_streaming_update(
+        self,
+        update: StreamingChatCompletionsUpdate,
+        full_response: str,
+        tool_calls: dict[int, dict[str, Any]],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
     ) -> str:
-        """Handle streaming chat completion."""
-        full_response = ""
-        tool_calls = {}
+        """Process a single streaming update chunk.
 
-        # Make streaming API call
-        for update in self.client.complete(**params):
-            if isinstance(update, StreamingChatCompletionsUpdate):
-                if update.choices:
-                    choice = update.choices[0]
-                    if choice.delta and choice.delta.content:
-                        content_delta = choice.delta.content
-                        full_response += content_delta
-                        self._emit_stream_chunk_event(
-                            chunk=content_delta,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                        )
+        Args:
+            update: Streaming update from Azure API
+            full_response: Accumulated response content
+            tool_calls: Dictionary of accumulated tool calls
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
 
-                    # Handle tool call streaming
-                    if choice.delta and choice.delta.tool_calls:
-                        for tool_call in choice.delta.tool_calls:
-                            call_id = tool_call.id or "default"
-                            if call_id not in tool_calls:
-                                tool_calls[call_id] = {
-                                    "name": "",
-                                    "arguments": "",
-                                }
+        Returns:
+            Updated full_response string
+        """
+        if update.choices:
+            choice = update.choices[0]
+            response_id = update.id if hasattr(update, "id") else None
+            if choice.delta and choice.delta.content:
+                content_delta = choice.delta.content
+                full_response += content_delta
+                self._emit_stream_chunk_event(
+                    chunk=content_delta,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_id=response_id,
+                )
 
-                            if tool_call.function and tool_call.function.name:
-                                tool_calls[call_id]["name"] = tool_call.function.name
-                            if tool_call.function and tool_call.function.arguments:
-                                tool_calls[call_id]["arguments"] += (
-                                    tool_call.function.arguments
-                                )
+            if choice.delta and choice.delta.tool_calls:
+                for idx, tool_call in enumerate(choice.delta.tool_calls):
+                    if idx not in tool_calls:
+                        tool_calls[idx] = {
+                            "id": tool_call.id,
+                            "name": "",
+                            "arguments": "",
+                        }
+                    elif tool_call.id and not tool_calls[idx]["id"]:
+                        tool_calls[idx]["id"] = tool_call.id
+
+                    if tool_call.function and tool_call.function.name:
+                        tool_calls[idx]["name"] = tool_call.function.name
+                    if tool_call.function and tool_call.function.arguments:
+                        tool_calls[idx]["arguments"] += tool_call.function.arguments
+
+                    self._emit_stream_chunk_event(
+                        chunk=tool_call.function.arguments
+                        if tool_call.function and tool_call.function.arguments
+                        else "",
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        tool_call={
+                            "id": tool_calls[idx]["id"],
+                            "function": {
+                                "name": tool_calls[idx]["name"],
+                                "arguments": tool_calls[idx]["arguments"],
+                            },
+                            "type": "function",
+                            "index": idx,
+                        },
+                        call_type=LLMCallType.TOOL_CALL,
+                        response_id=response_id,
+                    )
+
+        return full_response
+
+    def _finalize_streaming_response(
+        self,
+        full_response: str,
+        tool_calls: dict[int, dict[str, Any]],
+        usage_data: dict[str, int],
+        params: AzureCompletionParams,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Finalize streaming response with usage tracking, tool execution, and events.
+
+        Args:
+            full_response: The complete streamed response content
+            tool_calls: Dictionary of tool calls accumulated during streaming
+            usage_data: Token usage data from the stream
+            params: Completion parameters containing messages
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+            response_model: Pydantic model for structured output validation
+
+        Returns:
+            Final response content after processing, or structured output
+        """
+        self._track_token_usage_internal(usage_data)
+
+        # Handle structured output validation
+        if response_model and self.is_openai_model:
+            return self._validate_and_emit_structured_output(
+                content=full_response,
+                response_model=response_model,
+                params=params,
+                from_task=from_task,
+                from_agent=from_agent,
+            )
+
+        # If there are tool_calls but no available_functions, return them
+        # in OpenAI-compatible format for executor to handle
+        if tool_calls and not available_functions:
+            formatted_tool_calls = [
+                {
+                    "id": call_data.get("id", f"call_{idx}"),
+                    "type": "function",
+                    "function": {
+                        "name": call_data["name"],
+                        "arguments": call_data["arguments"],
+                    },
+                }
+                for idx, call_data in tool_calls.items()
+            ]
+            self._emit_call_completed_event(
+                response=formatted_tool_calls,
+                call_type=LLMCallType.TOOL_CALL,
+                from_task=from_task,
+                from_agent=from_agent,
+                messages=params["messages"],
+            )
+            return formatted_tool_calls
 
         # Handle completed tool calls
         if tool_calls and available_functions:
@@ -541,7 +880,120 @@ class AzureCompletion(BaseLLM):
             messages=params["messages"],
         )
 
-        return full_response
+        return self._invoke_after_llm_call_hooks(
+            params["messages"], full_response, from_agent
+        )
+
+    def _handle_streaming_completion(
+        self,
+        params: AzureCompletionParams,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle streaming chat completion."""
+        full_response = ""
+        tool_calls: dict[int, dict[str, Any]] = {}
+
+        usage_data = {"total_tokens": 0}
+        for update in self.client.complete(**params):  # type: ignore[arg-type]
+            if isinstance(update, StreamingChatCompletionsUpdate):
+                if update.usage:
+                    usage = update.usage
+                    usage_data = {
+                        "prompt_tokens": usage.prompt_tokens,
+                        "completion_tokens": usage.completion_tokens,
+                        "total_tokens": usage.total_tokens,
+                    }
+                    continue
+
+                full_response = self._process_streaming_update(
+                    update=update,
+                    full_response=full_response,
+                    tool_calls=tool_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
+
+    async def _ahandle_completion(
+        self,
+        params: AzureCompletionParams,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle non-streaming chat completion asynchronously."""
+        try:
+            # Cast params to Any to avoid type checking issues with TypedDict unpacking
+            response: ChatCompletions = await self.async_client.complete(**params)  # type: ignore[assignment,arg-type]
+            return self._process_completion_response(
+                response=response,
+                params=params,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
+        except Exception as e:
+            return self._handle_completion_error(e, from_task, from_agent)  # type: ignore[func-returns-value]
+
+    async def _ahandle_streaming_completion(
+        self,
+        params: AzureCompletionParams,
+        available_functions: dict[str, Any] | None = None,
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+        response_model: type[BaseModel] | None = None,
+    ) -> str | Any:
+        """Handle streaming chat completion asynchronously."""
+        full_response = ""
+        tool_calls: dict[int, dict[str, Any]] = {}
+
+        usage_data = {"total_tokens": 0}
+
+        stream = await self.async_client.complete(**params)  # type: ignore[arg-type]
+        async for update in stream:  # type: ignore[union-attr]
+            if isinstance(update, StreamingChatCompletionsUpdate):
+                if hasattr(update, "usage") and update.usage:
+                    usage = update.usage
+                    usage_data = {
+                        "prompt_tokens": getattr(usage, "prompt_tokens", 0),
+                        "completion_tokens": getattr(usage, "completion_tokens", 0),
+                        "total_tokens": getattr(usage, "total_tokens", 0),
+                    }
+                    continue
+
+                full_response = self._process_streaming_update(
+                    update=update,
+                    full_response=full_response,
+                    tool_calls=tool_calls,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
+
+        return self._finalize_streaming_response(
+            full_response=full_response,
+            tool_calls=tool_calls,
+            usage_data=usage_data,
+            params=params,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+            response_model=response_model,
+        )
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -549,8 +1001,28 @@ class AzureCompletion(BaseLLM):
         return self.is_openai_model
 
     def supports_stop_words(self) -> bool:
-        """Check if the model supports stop words."""
-        return True  # Most Azure models support stop sequences
+        """Check if the model supports stop words.
+
+        Models using the Responses API (GPT-5 family, o-series reasoning models,
+        computer-use-preview) do not support stop sequences.
+        See: https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure
+        """
+        model_lower = self.model.lower() if self.model else ""
+
+        if "gpt-5" in model_lower:
+            return False
+
+        o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]
+
+        responses_api_models = ["computer-use-preview"]
+
+        unsupported_stop_models = o_series_models + responses_api_models
+
+        for unsupported in unsupported_stop_models:
+            if unsupported in model_lower:
+                return False
+
+        return True
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
@@ -586,7 +1058,8 @@ class AzureCompletion(BaseLLM):
         # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    def _extract_azure_token_usage(self, response: ChatCompletions) -> dict[str, Any]:
+    @staticmethod
+    def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:
         """Extract token usage from Azure response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
@@ -596,3 +1069,31 @@ class AzureCompletion(BaseLLM):
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
         return {"total_tokens": 0}
+
+    async def aclose(self) -> None:
+        """Close the async client and clean up resources.
+
+        This ensures proper cleanup of the underlying aiohttp session
+        to avoid unclosed connector warnings.
+        """
+        if hasattr(self.async_client, "close"):
+            await self.async_client.close()
+
+    async def __aenter__(self) -> Self:
+        """Async context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Async context manager exit."""
+        await self.aclose()
+
+    def supports_multimodal(self) -> bool:
+        """Check if the model supports multimodal inputs.
+
+        Azure OpenAI vision-enabled models include GPT-4o and GPT-4 Turbo with Vision.
+
+        Returns:
+            True if the model supports images.
+        """
+        vision_models = ("gpt-4o", "gpt-4-turbo", "gpt-4-vision", "gpt-4v")
+        return any(self.model.lower().startswith(m) for m in vision_models)

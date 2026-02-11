@@ -11,7 +11,7 @@ Trace는 crew 실행에 대한 포괄적인 가시성을 제공하여 성능 모
 
 ## Traces란 무엇인가요?
 
-CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출력까지 모든 측면에서 포착하는 상세 실행 기록입니다. Traces에는 다음 내용이 기록됩니다:
+CrewAI AOP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출력까지 모든 측면에서 포착하는 상세 실행 기록입니다. Traces에는 다음 내용이 기록됩니다:
 
 - Agent의 생각 및 추론
 - 작업 실행 세부 정보
@@ -20,9 +20,7 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
 - 실행 시간
 - 비용 추정치
 
-<Frame>
-  ![Traces Overview](/images/enterprise/traces-overview.png)
-</Frame>
+<Frame>![Traces Overview](/images/enterprise/traces-overview.png)</Frame>
 
 ## 트레이스(Traces) 접근하기
 
@@ -51,9 +49,7 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
 - **실행 시간**: crew 런의 전체 소요 시간
 - **예상 비용**: 토큰 사용량을 기반으로 한 대략적인 비용
 
-<Frame>
-  ![Execution Summary](/images/enterprise/trace-summary.png)
-</Frame>
+<Frame>![Execution Summary](/images/enterprise/trace-summary.png)</Frame>
 
 ### 2. Tasks & Agents
 
@@ -64,33 +60,25 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
 - 상태 (완료/실패)
 - task의 개별 실행 시간
 
-<Frame>
-  ![Task List](/images/enterprise/trace-tasks.png)
-</Frame>
+<Frame>![Task List](/images/enterprise/trace-tasks.png)</Frame>
 
 ### 3. 최종 결과
 
 모든 작업이 완료된 후 crew가 생성한 최종 결과를 표시합니다.
 
-<Frame>
-  ![최종 결과](/images/enterprise/final-output.png)
-</Frame>
+<Frame>![최종 결과](/images/enterprise/final-output.png)</Frame>
 
 ### 4. 실행 타임라인
 
 각 작업이 시작되고 종료된 시점을 시각적으로 표현하여 병목 현상이나 병렬 실행 패턴을 파악하는 데 도움이 됩니다.
 
-<Frame>
-  ![실행 타임라인](/images/enterprise/trace-timeline.png)
-</Frame>
+<Frame>![실행 타임라인](/images/enterprise/trace-timeline.png)</Frame>
 
 ### 5. 상세 작업 보기
 
 타임라인이나 작업 목록에서 특정 작업을 클릭하면 다음을 볼 수 있습니다:
 
-<Frame>
-  ![상세 작업 보기](/images/enterprise/trace-detailed-task.png)
-</Frame>
+<Frame>![상세 작업 보기](/images/enterprise/trace-detailed-task.png)</Frame>
 
 - **작업 키**: 작업의 고유 식별자
 - **작업 ID**: 시스템 내의 기술적 식별자
@@ -120,6 +108,7 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
     <Frame>
       ![Failure Points](/images/enterprise/failure.png)
     </Frame>
+
   </Step>
 
   <Step title="성능 최적화">
@@ -129,6 +118,7 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
     - 과도한 토큰 사용
     - 중복된 도구 작업
     - 불필요한 API 호출
+
   </Step>
 
   <Step title="비용 효율성 향상">
@@ -138,9 +128,15 @@ CrewAI AMP의 Traces는 crew의 작동 과정을 처음 입력에서 최종 출�
     - 프롬프트를 더 간결하게 다듬기
     - 자주 액세스하는 정보 캐싱
     - 중복 작업을 최소화하도록 작업 구조화하기
+
   </Step>
 </Steps>
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  트레이스 분석이나 기타 CrewAI 엔터프라이즈 기능에 대한 지원이 필요하시면 저희 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  트레이스 분석이나 기타 CrewAI 엔터프라이즈 기능에 대한 지원이 필요하시면 저희
+  지원팀에 문의하세요.
 </Card>

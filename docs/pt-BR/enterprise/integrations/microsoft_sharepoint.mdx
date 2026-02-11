@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -63,6 +64,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `top` (integer, opcional): Número de itens a retornar (mín 1, máx 999).
     - `skip` (integer, opcional): Número de itens a pular (mín 0).
     - `orderby` (string, opcional): Ordenar resultados por propriedades especificadas (ex: 'displayName desc').
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_site">
@@ -72,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `select` (string, opcional): Selecionar propriedades específicas para retornar (ex: 'displayName,id,webUrl,drives').
     - `expand` (string, opcional): Expandir recursos relacionados inline (ex: 'drives,lists').
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_site_lists">
@@ -79,6 +82,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_list">
@@ -87,6 +91,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `list_id` (string, obrigatório): O ID da lista.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_list_items">
@@ -96,6 +101,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `list_id` (string, obrigatório): O ID da lista.
     - `expand` (string, opcional): Expandir dados relacionados (ex: 'fields').
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/create_list_item">
@@ -105,6 +111,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `list_id` (string, obrigatório): O ID da lista.
     - `fields` (object, obrigatório): Os valores de campo para o novo item.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/update_list_item">
@@ -115,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `list_id` (string, obrigatório): O ID da lista.
     - `item_id` (string, obrigatório): O ID do item a atualizar.
     - `fields` (object, obrigatório): Os valores de campo a atualizar.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/delete_list_item">
@@ -124,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `list_id` (string, obrigatório): O ID da lista.
     - `item_id` (string, obrigatório): O ID do item a excluir.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/upload_file_to_library">
@@ -133,6 +142,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `file_path` (string, obrigatório): O caminho onde fazer upload do arquivo (ex: 'pasta/nomeDoArquivo.txt').
     - `content` (string, obrigatório): O conteúdo do arquivo a fazer upload.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/get_drive_items">
@@ -140,6 +150,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
+
   </Accordion>
 
   <Accordion title="microsoft_sharepoint/delete_drive_item">
@@ -148,6 +159,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `site_id` (string, obrigatório): O ID do site do SharePoint.
     - `item_id` (string, obrigatório): O ID do arquivo ou pasta a excluir.
+
   </Accordion>
 </AccordionGroup>
 
@@ -187,15 +199,18 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso ao SharePoint (ex: `Sites.Read.All`, `Sites.ReadWrite.All`).
 - Verifique se a conexão OAuth inclui todos os escopos necessários.
 
 **Problemas de ID de Site/Lista/Item**
+
 - Verifique novamente os IDs de site, lista e item para correção.
 - Certifique-se de que os recursos referenciados existem e estão acessíveis.
 
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Microsoft SharePoint.
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft SharePoint.
 </Card>

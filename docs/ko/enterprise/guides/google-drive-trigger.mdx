@@ -10,7 +10,8 @@ mode: "wide"
 Trigger your automations when files are created, updated, or removed in Google Drive. Typical workflows include summarizing newly uploaded content, enforcing sharing policies, or notifying owners when critical files change.
 
 <Tip>
-  Connect Google Drive in **Tools & Integrations** and confirm the trigger is enabled for the automation you want to monitor.
+  Connect Google Drive in **Tools & Integrations** and confirm the trigger is
+  enabled for the automation you want to monitor.
 </Tip>
 
 ## Enabling the Google Drive Trigger
@@ -20,7 +21,10 @@ Trigger your automations when files are created, updated, or removed in Google D
 3. Locate **Google Drive** and switch the toggle to enable
 
 <Frame>
-  <img src="/images/enterprise/gdrive-trigger.png" alt="Enable or disable triggers with toggle" />
+  <img
+    src="/images/enterprise/gdrive-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
 </Frame>
 
 ## Example: Summarize file activity
@@ -51,7 +55,8 @@ crewai triggers run google_drive/file_changed
 `crewai triggers run` 명령은 완전한 Drive payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
 
 <Warning>
-  개발 중에는 `crewai triggers run google_drive/file_changed`를 사용하세요 (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+  개발 중에는 `crewai triggers run google_drive/file_changed`를 사용하세요
+  (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
 </Warning>
 
 ## Monitoring Executions
@@ -59,7 +64,10 @@ crewai triggers run google_drive/file_changed
 Track history and performance of triggered runs with the **Executions** list in the deployment dashboard.
 
 <Frame>
-  <img src="/images/enterprise/list-executions.png" alt="List of executions triggered by automation" />
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="List of executions triggered by automation"
+  />
 </Frame>
 
 ## Troubleshooting

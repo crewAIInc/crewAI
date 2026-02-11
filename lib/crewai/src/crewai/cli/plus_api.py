@@ -1,6 +1,8 @@
+import os
 from typing import Any
 from urllib.parse import urljoin
 
+import httpx
 import requests
 
 from crewai.cli.config import Settings
@@ -34,7 +36,9 @@ class PlusAPI:
             self.headers["X-Crewai-Organization-Id"] = settings.org_uuid
 
         self.base_url = (
-            str(settings.enterprise_base_url) or DEFAULT_CREWAI_ENTERPRISE_URL
+            os.getenv("CREWAI_PLUS_URL")
+            or str(settings.enterprise_base_url)
+            or DEFAULT_CREWAI_ENTERPRISE_URL
         )
 
     def _make_request(
@@ -51,8 +55,10 @@ class PlusAPI:
     def get_tool(self, handle: str) -> requests.Response:
         return self._make_request("GET", f"{self.TOOLS_RESOURCE}/{handle}")
 
-    def get_agent(self, handle: str) -> requests.Response:
-        return self._make_request("GET", f"{self.AGENTS_RESOURCE}/{handle}")
+    async def get_agent(self, handle: str) -> httpx.Response:
+        url = urljoin(self.base_url, f"{self.AGENTS_RESOURCE}/{handle}")
+        async with httpx.AsyncClient() as client:
+            return await client.get(url, headers=self.headers)
 
     def publish_tool(
         self,

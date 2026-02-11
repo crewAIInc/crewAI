@@ -1,6 +1,6 @@
 ---
 title: "Kickoff Crew"
-description: "CrewAI AMP에서 Crew를 시작하세요"
+description: "CrewAI AOP에서 Crew를 시작하세요"
 icon: "flag-checkered"
 mode: "wide"
 ---
@@ -17,9 +17,7 @@ Crew를 CrewAI AMP 플랫폼에 배포한 후에는 웹 인터페이스 또는 A
 2. 프로젝트 목록에서 crew 이름을 클릭합니다.
 3. crew의 상세 페이지로 이동합니다.
 
-<Frame>
-  ![Crew Dashboard](/images/enterprise/crew-dashboard.png)
-</Frame>
+<Frame>![Crew Dashboard](/images/enterprise/crew-dashboard.png)</Frame>
 
 ### 2단계: 실행 시작
 
@@ -31,9 +29,7 @@ crew의 상세 페이지에서 실행을 시작할 수 있는 두 가지 옵션�
 2. JSON 에디터에서 crew에 필요한 입력 파라미터를 입력합니다.
 3. `Send Request` 버튼을 클릭합니다.
 
-<Frame>
-  ![Kickoff Endpoint](/images/enterprise/kickoff-endpoint.png)
-</Frame>
+<Frame>![Kickoff Endpoint](/images/enterprise/kickoff-endpoint.png)</Frame>
 
 #### 옵션 B: 시각적 인터페이스 사용
 
@@ -41,9 +37,7 @@ crew의 상세 페이지에서 실행을 시작할 수 있는 두 가지 옵션�
 2. 양식 필드에 필요한 입력값을 입력합니다.
 3. `Run Crew` 버튼을 클릭합니다.
 
-<Frame>
-  ![Run Crew](/images/enterprise/run-crew.png)
-</Frame>
+<Frame>![Run Crew](/images/enterprise/run-crew.png)</Frame>
 
 ### 3단계: 실행 진행 상황 모니터링
 
@@ -52,9 +46,7 @@ crew의 상세 페이지에서 실행을 시작할 수 있는 두 가지 옵션�
 1. `kickoff_id`가 포함된 응답을 받게 됩니다. - **이 ID를 복사하세요**
 2. 이 ID는 실행을 추적하는 데 필수적입니다
 
-<Frame>
-  ![작업 ID 복사](/images/enterprise/copy-task-id.png)
-</Frame>
+<Frame>![작업 ID 복사](/images/enterprise/copy-task-id.png)</Frame>
 
 ### 4단계: 실행 상태 확인
 
@@ -64,11 +56,10 @@ crew의 상세 페이지에서 실행을 시작할 수 있는 두 가지 옵션�
 2. 지정된 필드에 `kickoff_id`를 붙여넣으세요
 3. "Get Status" 버튼을 클릭하세요
 
-<Frame>
-  ![Get Status](/images/enterprise/get-status.png)
-</Frame>
+<Frame>![Get Status](/images/enterprise/get-status.png)</Frame>
 
 상태 응답에는 다음이 표시됩니다:
+
 - 현재 실행 상태(`running`, `completed` 등)
 - 진행 중인 작업에 대한 세부 정보
 - 지금까지 생성된 모든 출력
@@ -122,7 +113,7 @@ curl -X GET \
 응답은 예를 들어 다음과 같이 필수 입력 파라미터 배열을 포함한 JSON 객체로 반환됩니다:
 
 ```json
-{"inputs":["topic","current_year"]}
+{ "inputs": ["topic", "current_year"] }
 ```
 
 이 예시에서는 해당 crew에서 두 개의 입력값인 `topic`과 `current_year`를 필요로 함을 보여줍니다.
@@ -142,7 +133,7 @@ curl -X POST \
 응답에는 추적에 필요한 `kickoff_id`가 포함됩니다:
 
 ```json
-{"kickoff_id":"abcd1234-5678-90ef-ghij-klmnopqrstuv"}
+{ "kickoff_id": "abcd1234-5678-90ef-ghij-klmnopqrstuv" }
 ```
 
 ### 3단계: 실행 상태 확인
@@ -181,6 +172,11 @@ curl -X GET \
 2. "Traces" 탭에서 단계별 실행 세부 정보를 검토하세요
 3. 트레이스 세부 정보에서 LLM 응답과 도구 사용 내역을 확인하세요
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  실행 문제 또는 엔터프라이즈 플랫폼 관련 질문이 있으신 경우, 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  실행 문제 또는 엔터프라이즈 플랫폼 관련 질문이 있으신 경우, 지원팀에
+  문의하세요.
 </Card>

@@ -1,0 +1,195 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: exa_search\nTool Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search the web using Exa\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [exa_search], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "Search for information
+      about AI"}], "model": "gpt-3.5-turbo", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1038'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CULxHPNBHvpaQB9S6dkZ2IZMnhoHO\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761350271,\n  \"model\": \"gpt-3.5-turbo-0125\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I should use the exa_search tool to search for information about AI.\\nAction: exa_search\\nAction Input: {\\\"query\\\": \\\"AI\\\"}\\nObservation: Results related to AI from the exa_search tool.\\n\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 211,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 257,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n   \
+        \   \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - 993d6b3e6b64ffb8-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Oct 2025 23:57:52 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cf_bm=cXZeAPPk9o5VuaArJFruIKai9Oj2X9ResvQgx_qCwdg-1761350272-1.0.1.1-42v7QDan6OIFJYT2vOisNB0AeLg3KsbAiCGsrrsPgH1N13l8o_Vy6HvQCVCIRAqPaHCcvybK8xTxrHKqZgLBRH4XM7.l5IYkFLhgl8IIUA0; path=/; expires=Sat, 25-Oct-25 00:27:52 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - _cfuvid=wGtD6dA8GfZzwvY_uzLiXlAVzOIOJPtIPQYQRS_19oo-1761350272656-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '718'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '791'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999774'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_a2e42e9d98bc4c3db1a4de14cf1a94ec
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Test Agent. Test backstory\nYour personal goal is: Test goal\n\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: exa_search\nTool Arguments: {''query'': {''description'': None, ''type'': ''str''}}\nTool Description: Search the web using Exa\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [exa_search], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final answer to the original input question\n```"}, {"role": "user", "content": "Search for information
+      about AI"}, {"role": "assistant", "content": "Thought: I should use the exa_search tool to search for information about AI.\nAction: exa_search\nAction Input: {\"query\": \"AI\"}\nObservation: Mock search results for: AI"}], "model": "gpt-3.5-turbo", "stream": false}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1250'
+      content-type:
+      - application/json
+      cookie:
+      - __cf_bm=cXZeAPPk9o5VuaArJFruIKai9Oj2X9ResvQgx_qCwdg-1761350272-1.0.1.1-42v7QDan6OIFJYT2vOisNB0AeLg3KsbAiCGsrrsPgH1N13l8o_Vy6HvQCVCIRAqPaHCcvybK8xTxrHKqZgLBRH4XM7.l5IYkFLhgl8IIUA0; _cfuvid=wGtD6dA8GfZzwvY_uzLiXlAVzOIOJPtIPQYQRS_19oo-1761350272656-0.0.1.1-604800000
+      host:
+      - api.openai.com
+      user-agent:
+      - OpenAI/Python 1.109.1
+      x-stainless-arch:
+      - arm64
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - MacOS
+      x-stainless-package-version:
+      - 1.109.1
+      x-stainless-read-timeout:
+      - '600'
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-CULxJl9oGSjAsqxOdTTneU1bawRri\",\n  \"object\": \"chat.completion\",\n  \"created\": 1761350273,\n  \"model\": \"gpt-3.5-turbo-0125\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now know the final answer\\nFinal Answer: I couldn't find a specific answer. Would you like me to search for anything else related to AI?\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 256,\n    \"completion_tokens\": 33,\n    \"total_tokens\": 289,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\"\
+        : \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - 993d6b44dc97ffb8-SJC
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Oct 2025 23:57:53 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - nosniff
+      access-control-expose-headers:
+      - X-Request-ID
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - crewai-iuxna1
+      openai-processing-ms:
+      - '446'
+      openai-project:
+      - proj_xitITlrFeen7zjNSzML82h9x
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '655'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - '10000'
+      x-ratelimit-limit-tokens:
+      - '50000000'
+      x-ratelimit-remaining-requests:
+      - '9999'
+      x-ratelimit-remaining-tokens:
+      - '49999732'
+      x-ratelimit-reset-requests:
+      - 6ms
+      x-ratelimit-reset-tokens:
+      - 0s
+      x-request-id:
+      - req_9ce6b4f80d9546eba4ce23b5fac77153
+    status:
+      code: 200
+      message: OK
+version: 1

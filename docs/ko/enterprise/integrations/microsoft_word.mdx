@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -61,6 +62,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `expand` (string, 선택사항): 관련 리소스를 인라인으로 확장.
     - `top` (integer, 선택사항): 반환할 항목 수 (최소 1, 최대 999).
     - `orderby` (string, 선택사항): 지정된 속성으로 결과 정렬.
+
   </Accordion>
 
   <Accordion title="microsoft_word/create_text_document">
@@ -69,6 +71,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **매개변수:**
     - `file_name` (string, 필수): 텍스트 문서의 이름 (.txt로 끝나야 함).
     - `content` (string, 선택사항): 문서의 텍스트 내용. 기본값: "API를 통해 생성된 새 텍스트 문서입니다."
+
   </Accordion>
 
   <Accordion title="microsoft_word/get_document_content">
@@ -76,6 +79,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `file_id` (string, 필수): 문서의 ID.
+
   </Accordion>
 
   <Accordion title="microsoft_word/get_document_properties">
@@ -83,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `file_id` (string, 필수): 문서의 ID.
+
   </Accordion>
 
   <Accordion title="microsoft_word/delete_document">
@@ -90,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `file_id` (string, 필수): 삭제할 문서의 ID.
+
   </Accordion>
 </AccordionGroup>
 
@@ -129,15 +135,22 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Microsoft 계정이 파일 액세스에 필요한 권한을 가지고 있는지 확인하세요 (예: `Files.Read.All`, `Files.ReadWrite.All`).
 - OAuth 연결이 필요한 모든 범위를 포함하는지 확인하세요.
 
 **파일 생성 문제**
+
 - 텍스트 문서를 만들 때 `file_name`이 `.txt` 확장자로 끝나는지 확인하세요.
 - 대상 위치(OneDrive/SharePoint)에 쓰기 권한이 있는지 확인하세요.
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Microsoft Word 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft Word 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
 </Card>

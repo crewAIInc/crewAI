@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -25,7 +26,10 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     safe_file_paths: list[Path] = Field(default_factory=list)
 
     @field_validator("file_path", "file_paths", mode="before")
-    def validate_file_path(cls, v, info):  # noqa: N805
+    @classmethod
+    def validate_file_path(
+        cls, v: Path | list[Path] | str | list[str] | None, info: Any
+    ) -> Path | list[Path] | str | list[str] | None:
         """Validate that at least one of file_path or file_paths is provided."""
         # Single check if both are None, O(1) instead of nested conditions
         if (
@@ -38,7 +42,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
             raise ValueError("Either file_path or file_paths must be provided")
         return v
 
-    def model_post_init(self, _):
+    def model_post_init(self, _: Any) -> None:
         """Post-initialization method to load content."""
         self.safe_file_paths = self._process_file_paths()
         self.validate_content()
@@ -48,7 +52,7 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
     def load_content(self) -> dict[Path, str]:
         """Load and preprocess file content. Should be overridden by subclasses. Assume that the file path is relative to the project root in the knowledge directory."""
 
-    def validate_content(self):
+    def validate_content(self) -> None:
         """Validate the paths."""
         for path in self.safe_file_paths:
             if not path.exists():
@@ -65,10 +69,17 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
                     color="red",
                 )
 
-    def _save_documents(self):
+    def _save_documents(self) -> None:
         """Save the documents to the storage."""
         if self.storage:
             self.storage.save(self.chunks)
+        else:
+            raise ValueError("No storage found to save documents.")
+
+    async def _asave_documents(self) -> None:
+        """Save the documents to the storage asynchronously."""
+        if self.storage:
+            await self.storage.asave(self.chunks)
         else:
             raise ValueError("No storage found to save documents.")
 

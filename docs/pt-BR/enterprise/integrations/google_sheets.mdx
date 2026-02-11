@@ -37,7 +37,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -59,6 +60,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `spreadsheetId` (string, obrigatório): Planilha - Use as Configurações de Workflow do Portal de Conexão para permitir ao usuário selecionar uma planilha. Por padrão, usa a primeira worksheet da planilha selecionada.
     - `limit` (string, opcional): Limite de linhas - Limita o número máximo de linhas retornadas.
+
   </Accordion>
 
   <Accordion title="google_sheets/append_values">
@@ -76,6 +78,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "columnName4": "columnValue4"
       }
       ```
+
   </Accordion>
 
   <Accordion title="google_sheets/update_values">
@@ -112,6 +115,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
         "columnName4": "newValue4"
       }
       ```
+
   </Accordion>
 </AccordionGroup>
 
@@ -279,32 +283,38 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Permissão**
+
 - Certifique-se de que sua conta Google tem acesso de edição às planilhas alvo
 - Verifique se a conexão OAuth inclui os escopos necessários para a API do Google Sheets
 - Confira se as planilhas estão compartilhadas com a conta autenticada
 
 **Problemas de Estrutura da Planilha**
+
 - Certifique-se de que as worksheets têm cabeçalhos de coluna antes de criar ou atualizar linhas
 - Verifique se os nomes das colunas em `additionalFields` correspondem exatamente aos cabeçalhos
 - Confirme que a worksheet especificada existe na planilha
 
 **Problemas de Tipo e Formato de Dados**
+
 - Garanta que os valores dos dados estejam no formato esperado para cada coluna
 - Utilize formatos de data adequados nas colunas de data (recomenda-se ISO)
 - Verifique se valores numéricos estão devidamente formatados para colunas numéricas
 
 **Problemas com Fórmulas de Filtro**
+
 - Certifique-se de que as fórmulas de filtro seguem a estrutura JSON correta para forma normal disjuntiva
 - Use nomes de campos válidos, correspondendo exatamente aos cabeçalhos das colunas
 - Teste filtros simples antes de criar consultas com múltiplas condições
 - Verifique se os tipos de operadores correspondem aos tipos de dados das colunas
 
 **Limites de Linhas e Performance**
+
 - Fique atento aos limites de linhas ao usar `GOOGLE_SHEETS_GET_ROW`
 - Considere paginação para grandes volumes de dados
 - Use filtros específicos para reduzir a quantidade de dados processados
 
 **Operações de Atualização**
+
 - Certifique-se de que as condições de filtro identifiquem corretamente as linhas a serem atualizadas
 - Teste condições de filtro com pequenos conjuntos de dados antes de grandes atualizações
 - Verifique se todos os campos obrigatórios estão incluídos nas operações de atualização
@@ -312,5 +322,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nosso time de suporte para auxílio na configuração ou solução de problemas da integração com o Google Sheets.
+  Entre em contato com nosso time de suporte para auxílio na configuração ou
+  solução de problemas da integração com o Google Sheets.
 </Card>

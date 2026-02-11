@@ -723,11 +723,11 @@ def test_structured_flow_event_emission():
     assert isinstance(received_events[3], MethodExecutionStartedEvent)
     assert received_events[3].method_name == "send_welcome_message"
     assert received_events[3].params == {}
-    assert received_events[3].state.sent is False
+    assert received_events[3].state["sent"] is False
 
     assert isinstance(received_events[4], MethodExecutionFinishedEvent)
     assert received_events[4].method_name == "send_welcome_message"
-    assert received_events[4].state.sent is True
+    assert received_events[4].state["sent"] is True
     assert received_events[4].result == "Welcome, Anakin!"
 
     assert isinstance(received_events[5], FlowFinishedEvent)
@@ -1202,8 +1202,10 @@ def test_complex_and_or_branching():
     )
     assert execution_order.index("branch_2b") > min_branch_1_index
 
-    # Final should be last and after both 2a and 2b
-    assert execution_order[-1] == "final"
+
+    # Final should be after both 2a and 2b
+    # Note: we don't assert final is last because branch_1c has no downstream
+    # dependencies and can complete after final due to parallel execution
     assert execution_order.index("final") > execution_order.index("branch_2a")
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
@@ -1255,10 +1257,11 @@ def test_conditional_router_paths_exclusivity():
 
 
 def test_state_consistency_across_parallel_branches():
-    """Test that state remains consistent when branches execute sequentially.
+    """Test that state remains consistent when branches execute in parallel.
 
-    Note: Branches triggered by the same parent execute sequentially, not in parallel.
-    This ensures predictable state mutations and prevents race conditions.
+    Note: Branches triggered by the same parent execute in parallel for efficiency.
+    Thread-safe state access via StateProxy ensures no race conditions.
+    We check the execution order to ensure the branches execute in parallel.
     """
     execution_order = []
 
@@ -1295,12 +1298,14 @@ def test_state_consistency_across_parallel_branches():
     flow = StateConsistencyFlow()
     flow.kickoff()
 
-    # Branches execute sequentially, so branch_a runs first, then branch_b
-    assert flow.state["branch_a_value"] == 10  # Sees initial value
-    assert flow.state["branch_b_value"] == 11  # Sees value after branch_a increment
+    assert "branch_a" in execution_order
+    assert "branch_b" in execution_order
+    assert "verify_state" in execution_order
 
-    # Final counter should reflect both increments sequentially
-    assert flow.state["counter"] == 16  # 10 + 1 + 5
+    assert flow.state["branch_a_value"] is not None
+    assert flow.state["branch_b_value"] is not None
+
+    assert flow.state["counter"] == 16
 
 
 def test_deeply_nested_conditions():
@@ -1338,12 +1343,21 @@ def test_deeply_nested_conditions():
     assert "c" in execution_order
     assert "d" in execution_order
 
-    # Result should execute after all starts
+    # Result should execute after at least one AND condition is satisfied
+    # With or_(and_(a, b), and_(c, d)), result fires when EITHER:
+    # - Both a AND b have completed, OR
+    # - Both c AND d have completed
     assert "result" in execution_order
-    assert execution_order.index("result") > execution_order.index("a")
-    assert execution_order.index("result") > execution_order.index("b")
-    assert execution_order.index("result") > execution_order.index("c")
-    assert execution_order.index("result") > execution_order.index("d")
+    result_idx = execution_order.index("result")
+    a_idx = execution_order.index("a")
+    b_idx = execution_order.index("b")
+    c_idx = execution_order.index("c")
+    d_idx = execution_order.index("d")
+
+    # Result must come after at least one complete AND group
+    and_ab_satisfied = result_idx > a_idx and result_idx > b_idx
+    and_cd_satisfied = result_idx > c_idx and result_idx > d_idx
+    assert and_ab_satisfied or and_cd_satisfied
 
 
 def test_mixed_sync_async_execution_order():
@@ -1492,3 +1506,144 @@ def test_flow_copy_state_with_dict_state():
 
     flow.state["test"] = "modified"
     assert copied_state["test"] == "value"
+
+
+class TestFlowAkickoff:
+    """Tests for the native async akickoff method."""
+
+    @pytest.mark.asyncio
+    async def test_akickoff_basic(self):
+        """Test basic akickoff execution."""
+        execution_order = []
+
+        class SimpleFlow(Flow):
+            @start()
+            def step_1(self):
+                execution_order.append("step_1")
+                return "step_1_result"
+
+            @listen(step_1)
+            def step_2(self, result):
+                execution_order.append("step_2")
+                return "final_result"
+
+        flow = SimpleFlow()
+        result = await flow.akickoff()
+
+        assert execution_order == ["step_1", "step_2"]
+        assert result == "final_result"
+
+    @pytest.mark.asyncio
+    async def test_akickoff_with_inputs(self):
+        """Test akickoff with inputs."""
+
+        class InputFlow(Flow):
+            @start()
+            def process_input(self):
+                return self.state.get("value", "default")
+
+        flow = InputFlow()
+        result = await flow.akickoff(inputs={"value": "custom_value"})
+
+        assert result == "custom_value"
+
+    @pytest.mark.asyncio
+    async def test_akickoff_with_async_methods(self):
+        """Test akickoff with async flow methods."""
+        execution_order = []
+
+        class AsyncMethodFlow(Flow):
+            @start()
+            async def async_step_1(self):
+                execution_order.append("async_step_1")
+                await asyncio.sleep(0.01)
+                return "async_result"
+
+            @listen(async_step_1)
+            async def async_step_2(self, result):
+                execution_order.append("async_step_2")
+                await asyncio.sleep(0.01)
+                return f"final_{result}"
+
+        flow = AsyncMethodFlow()
+        result = await flow.akickoff()
+
+        assert execution_order == ["async_step_1", "async_step_2"]
+        assert result == "final_async_result"
+
+    @pytest.mark.asyncio
+    async def test_akickoff_equivalent_to_kickoff_async(self):
+        """Test that akickoff produces the same results as kickoff_async."""
+        execution_order_akickoff = []
+        execution_order_kickoff_async = []
+
+        class TestFlow(Flow):
+            def __init__(self, execution_list):
+                super().__init__()
+                self._execution_list = execution_list
+
+            @start()
+            def step_1(self):
+                self._execution_list.append("step_1")
+                return "result_1"
+
+            @listen(step_1)
+            def step_2(self, result):
+                self._execution_list.append("step_2")
+                return "result_2"
+
+        flow1 = TestFlow(execution_order_akickoff)
+        result1 = await flow1.akickoff()
+
+        flow2 = TestFlow(execution_order_kickoff_async)
+        result2 = await flow2.kickoff_async()
+
+        assert execution_order_akickoff == execution_order_kickoff_async
+        assert result1 == result2
+
+    @pytest.mark.asyncio
+    async def test_akickoff_with_multiple_starts(self):
+        """Test akickoff with multiple start methods."""
+        execution_order = []
+
+        class MultiStartFlow(Flow):
+            @start()
+            def start_a(self):
+                execution_order.append("start_a")
+
+            @start()
+            def start_b(self):
+                execution_order.append("start_b")
+
+        flow = MultiStartFlow()
+        await flow.akickoff()
+
+        assert "start_a" in execution_order
+        assert "start_b" in execution_order
+
+    @pytest.mark.asyncio
+    async def test_akickoff_with_router(self):
+        """Test akickoff with router method."""
+        execution_order = []
+
+        class RouterFlow(Flow):
+            @start()
+            def begin(self):
+                execution_order.append("begin")
+                return "data"
+
+            @router(begin)
+            def route(self, data):
+                execution_order.append("route")
+                return "PATH_A"
+
+            @listen("PATH_A")
+            def handle_path_a(self):
+                execution_order.append("path_a")
+                return "path_a_result"
+
+        flow = RouterFlow()
+        result = await flow.akickoff()
+
+        assert execution_order == ["begin", "route", "path_a"]
+        assert result == "path_a_result"

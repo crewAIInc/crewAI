@@ -12,8 +12,11 @@ from crewai.task import Task
 
 @pytest.fixture(autouse=True)
 def mock_google_api_key():
-    """Automatically mock GOOGLE_API_KEY for all tests in this module."""
-    with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+    """Mock GOOGLE_API_KEY for tests only if real keys are not set."""
+    if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" not in os.environ:
+        with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key"}):
+            yield
+    else:
         yield
 
 
@@ -455,13 +458,11 @@ def test_gemini_model_capabilities():
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
     from crewai.llms.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm_2_0, GeminiCompletion)
-    assert llm_2_0.is_gemini_2 == True
     assert llm_2_0.supports_tools == True
 
     # Test Gemini 1.5 model
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
     assert isinstance(llm_1_5, GeminiCompletion)
-    assert llm_1_5.is_gemini_1_5 == True
     assert llm_1_5.supports_tools == True
 
 
@@ -619,35 +620,70 @@ def test_gemini_environment_variable_api_key():
         assert llm.api_key == "test-google-key"
 
 
+@pytest.mark.vcr()
 def test_gemini_token_usage_tracking():
     """
     Test that token usage is properly tracked for Gemini responses
     """
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the Gemini response with usage information
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
-        mock_response = MagicMock()
-        mock_response.text = "test response"
-        mock_response.candidates = []
-        mock_response.usage_metadata = MagicMock(
-            prompt_token_count=50,
-            candidates_token_count=25,
-            total_token_count=75
-        )
-        mock_generate.return_value = mock_response
+    result = llm.call("Hello")
 
-        result = llm.call("Hello")
+    assert result.strip() == "Hi there! How can I help you today?"
 
-        # Verify the response
-        assert result == "test response"
+    usage = llm.get_token_usage_summary()
+    assert usage.successful_requests == 1
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.total_tokens > 0
 
-        # Verify token usage was extracted
-        usage = llm._extract_token_usage(mock_response)
-        assert usage["prompt_token_count"] == 50
-        assert usage["candidates_token_count"] == 25
-        assert usage["total_token_count"] == 75
-        assert usage["total_tokens"] == 75
+
+@pytest.mark.vcr()
+def test_gemini_tool_returning_float():
+    """
+    Test that Gemini properly handles tools that return non-dict values like floats.
+
+    This is an end-to-end test that verifies the agent can use a tool that returns
+    a float (which gets wrapped in {"result": value} for Gemini's FunctionResponse).
+    """
+    from pydantic import BaseModel, Field
+    from typing import Type
+    from crewai.tools import BaseTool
+
+    class SumNumbersToolInput(BaseModel):
+        a: float = Field(..., description="The first number to add")
+        b: float = Field(..., description="The second number to add")
+
+    class SumNumbersTool(BaseTool):
+        name: str = "sum_numbers"
+        description: str = "Add two numbers together and return the result"
+        args_schema: Type[BaseModel] = SumNumbersToolInput
+
+        def _run(self, a: float, b: float) -> float:
+            return a + b
+
+    sum_tool = SumNumbersTool()
+
+    agent = Agent(
+        role="Calculator",
+        goal="Calculate numbers accurately",
+        backstory="You are a calculator that adds numbers.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[sum_tool],
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is 10000 + 20000? Use the sum_numbers tool to calculate this.",
+        expected_output="The sum of the two numbers",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task], verbose=True)
+    result = crew.kickoff()
+
+    # The result should contain 30000 (the sum)
+    assert "30000" in result.raw
 
 
 def test_gemini_stop_sequences_sync():
@@ -700,3 +736,381 @@ def test_gemini_stop_sequences_sent_to_api():
         assert hasattr(config, 'stop_sequences') or 'stop_sequences' in config.__dict__
         if hasattr(config, 'stop_sequences'):
             assert config.stop_sequences == ["\nObservation:", "\nThought:"]
+
+
+@pytest.mark.vcr()
+@pytest.mark.skip(reason="VCR cannot replay SSE streaming responses")
+def test_google_streaming_returns_usage_metrics():
+    """
+    Test that Google Gemini streaming calls return proper token usage metrics.
+    """
+    agent = Agent(
+        role="Research Assistant",
+        goal="Find information about the capital of Japan",
+        backstory="You are a helpful research assistant.",
+        llm=LLM(model="gemini/gemini-2.0-flash-exp", stream=True),
+        verbose=True,
+    )
+
+    task = Task(
+        description="What is the capital of Japan?",
+        expected_output="The capital of Japan",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    result = crew.kickoff()
+
+    assert result.token_usage is not None
+    assert result.token_usage.total_tokens > 0
+    assert result.token_usage.prompt_tokens > 0
+    assert result.token_usage.completion_tokens > 0
+    assert result.token_usage.successful_requests >= 1
+
+
+@pytest.mark.vcr()
+def test_google_express_mode_works() -> None:
+    """
+    Test Google Vertex AI Express mode with API key authentication.
+    This tests Vertex AI Express mode (aiplatform.googleapis.com) with API key
+    authentication.
+
+    """
+    with patch.dict(os.environ, {"GOOGLE_GENAI_USE_VERTEXAI": "true"}):
+        agent = Agent(
+            role="Research Assistant",
+            goal="Find information about the capital of Japan",
+            backstory="You are a helpful research assistant.",
+            llm=LLM(
+                model="gemini/gemini-2.0-flash-exp",
+            ),
+            verbose=True,
+        )
+
+        task = Task(
+            description="What is the capital of Japan?",
+            expected_output="The capital of Japan",
+            agent=agent,
+        )
+
+
+        crew = Crew(agents=[agent], tasks=[task])
+        result = crew.kickoff()
+
+        assert result.token_usage is not None
+        assert result.token_usage.total_tokens > 0
+        assert result.token_usage.prompt_tokens > 0
+        assert result.token_usage.completion_tokens > 0
+        assert result.token_usage.successful_requests >= 1
+
+
+def test_gemini_2_0_model_detection():
+    """Test that Gemini 2.0 models are properly detected."""
+    # Test Gemini 2.0 models
+    llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+    assert isinstance(llm_2_0, GeminiCompletion)
+    assert llm_2_0.is_gemini_2_0 is True
+
+    llm_2_5 = LLM(model="google/gemini-2.5-flash")
+    assert isinstance(llm_2_5, GeminiCompletion)
+    assert llm_2_5.is_gemini_2_0 is True
+
+    # Test non-2.0 models
+    llm_1_5 = LLM(model="google/gemini-1.5-pro")
+    assert isinstance(llm_1_5, GeminiCompletion)
+    assert llm_1_5.is_gemini_2_0 is False
+
+
+def test_add_property_ordering_to_schema():
+    """Test that _add_property_ordering correctly adds propertyOrdering to schemas."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    # Test simple object schema
+    simple_schema = {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"},
+            "email": {"type": "string"}
+        }
+    }
+
+    result = GeminiCompletion._add_property_ordering(simple_schema)
+
+    assert "propertyOrdering" in result
+    assert result["propertyOrdering"] == ["name", "age", "email"]
+
+    # Test nested object schema
+    nested_schema = {
+        "type": "object",
+        "properties": {
+            "user": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "contact": {
+                        "type": "object",
+                        "properties": {
+                            "email": {"type": "string"},
+                            "phone": {"type": "string"}
+                        }
+                    }
+                }
+            },
+            "id": {"type": "integer"}
+        }
+    }
+
+    result = GeminiCompletion._add_property_ordering(nested_schema)
+
+    assert "propertyOrdering" in result
+    assert result["propertyOrdering"] == ["user", "id"]
+    assert "propertyOrdering" in result["properties"]["user"]
+    assert result["properties"]["user"]["propertyOrdering"] == ["name", "contact"]
+    assert "propertyOrdering" in result["properties"]["user"]["properties"]["contact"]
+    assert result["properties"]["user"]["properties"]["contact"]["propertyOrdering"] == ["email", "phone"]
+
+
+def test_gemini_2_0_response_model_with_property_ordering():
+    """Test that Gemini 2.0 models include propertyOrdering in response schemas."""
+    from pydantic import BaseModel, Field
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+        name: str = Field(..., description="The name")
+        age: int = Field(..., description="The age")
+        email: str = Field(..., description="The email")
+
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    # Prepare generation config with response model
+    config = llm._prepare_generation_config(response_model=TestResponse)
+
+    # Verify that the config has response_json_schema
+    assert hasattr(config, 'response_json_schema') or 'response_json_schema' in config.__dict__
+
+    # Get the schema
+    if hasattr(config, 'response_json_schema'):
+        schema = config.response_json_schema
+    else:
+        schema = config.__dict__.get('response_json_schema', {})
+
+    # Verify propertyOrdering is present for Gemini 2.0
+    assert "propertyOrdering" in schema
+    assert "name" in schema["propertyOrdering"]
+    assert "age" in schema["propertyOrdering"]
+    assert "email" in schema["propertyOrdering"]
+
+
+def test_gemini_1_5_response_model_uses_response_schema():
+    """Test that Gemini 1.5 models use response_schema parameter (not response_json_schema)."""
+    from pydantic import BaseModel, Field
+
+    class TestResponse(BaseModel):
+        """Test response model."""
+        name: str = Field(..., description="The name")
+        age: int = Field(..., description="The age")
+
+    llm = LLM(model="google/gemini-1.5-pro")
+
+    # Prepare generation config with response model
+    config = llm._prepare_generation_config(response_model=TestResponse)
+
+    # Verify that the config uses response_schema (not response_json_schema)
+    assert hasattr(config, 'response_schema') or 'response_schema' in config.__dict__
+    assert not (hasattr(config, 'response_json_schema') and config.response_json_schema is not None)
+
+    # Get the schema
+    if hasattr(config, 'response_schema'):
+        schema = config.response_schema
+    else:
+        schema = config.__dict__.get('response_schema')
+
+    # For Gemini 1.5, response_schema should be the Pydantic model itself
+    # The SDK handles conversion internally
+    assert schema is TestResponse or isinstance(schema, type)
+
+
+# =============================================================================
+# Agent Kickoff Structured Output Tests
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_gemini_agent_kickoff_structured_output_without_tools():
+    """
+    Test that agent kickoff returns structured output without tools.
+    This tests native structured output handling for Gemini models.
+    """
+    from pydantic import BaseModel, Field
+
+    class AnalysisResult(BaseModel):
+        """Structured output for analysis results."""
+
+        topic: str = Field(description="The topic analyzed")
+        key_points: list[str] = Field(description="Key insights from the analysis")
+        summary: str = Field(description="Brief summary of findings")
+
+    agent = Agent(
+        role="Analyst",
+        goal="Provide structured analysis on topics",
+        backstory="You are an expert analyst who provides clear, structured insights.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Analyze the benefits of remote work briefly. Keep it concise.",
+        response_format=AnalysisResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, AnalysisResult), f"Expected AnalysisResult but got {type(result.pydantic)}"
+    assert result.pydantic.topic, "Topic should not be empty"
+    assert len(result.pydantic.key_points) > 0, "Should have at least one key point"
+    assert result.pydantic.summary, "Summary should not be empty"
+
+
+@pytest.mark.vcr()
+def test_gemini_agent_kickoff_structured_output_with_tools():
+    """
+    Test that agent kickoff returns structured output after using tools.
+    This tests post-tool-call structured output handling for Gemini models.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.tools import tool
+
+    class CalculationResult(BaseModel):
+        """Structured output for calculation results."""
+
+        operation: str = Field(description="The mathematical operation performed")
+        result: int = Field(description="The result of the calculation")
+        explanation: str = Field(description="Brief explanation of the calculation")
+
+    @tool
+    def add_numbers(a: int, b: int) -> int:
+        """Add two numbers together and return the sum."""
+        return a + b
+
+    agent = Agent(
+        role="Calculator",
+        goal="Perform calculations using available tools",
+        backstory="You are a calculator assistant that uses tools to compute results.",
+        llm=LLM(model="google/gemini-2.0-flash-001"),
+        tools=[add_numbers],
+        verbose=True,
+    )
+
+    result = agent.kickoff(
+        messages="Calculate 15 + 27 using your add_numbers tool. Report the result.",
+        response_format=CalculationResult,
+    )
+
+    assert result.pydantic is not None, "Expected pydantic output but got None"
+    assert isinstance(result.pydantic, CalculationResult), f"Expected CalculationResult but got {type(result.pydantic)}"
+    assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
+    assert result.pydantic.operation, "Operation should not be empty"
+    assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+
+def test_gemini_stop_words_not_applied_to_structured_output():
+    """
+    Test that stop words are NOT applied when response_model is provided.
+    This ensures JSON responses containing stop word patterns (like "Observation:")
+    are not truncated, which would cause JSON validation to fail.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    class ResearchResult(BaseModel):
+        """Research result that may contain stop word patterns in string fields."""
+
+        finding: str = Field(description="The research finding")
+        observation: str = Field(description="Observation about the finding")
+
+    # Create Gemini completion instance with stop words configured
+    # Gemini uses stop_sequences instead of stop
+    llm = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        stop_sequences=["Observation:", "Final Answer:"],  # Common stop words
+    )
+
+    # JSON response that contains a stop word pattern in a string field
+    # Without the fix, this would be truncated at "Observation:" breaking the JSON
+    json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
+
+    # Test the _validate_structured_output method which is used for structured output handling
+    result = llm._validate_structured_output(json_response, ResearchResult)
+
+    # Should successfully parse the full JSON without truncation
+    assert isinstance(result, ResearchResult)
+    assert result.finding == "The data shows growth"
+    # The observation field should contain the full text including "Observation:"
+    assert "Observation:" in result.observation
+
+
+def test_gemini_stop_words_still_applied_to_regular_responses():
+    """
+    Test that stop words ARE still applied for regular (non-structured) responses.
+    This ensures the fix didn't break normal stop word behavior.
+    """
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    # Create Gemini completion instance with stop words configured
+    # Gemini uses stop_sequences instead of stop
+    llm = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        stop_sequences=["Observation:", "Final Answer:"],
+    )
+
+    # Response that contains a stop word - should be truncated
+    response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
+
+    # Test the _apply_stop_words method directly
+    result = llm._apply_stop_words(response_with_stop_word)
+
+    # Response should be truncated at the stop word
+    assert "Observation:" not in result
+    assert "Found results" not in result
+    assert "I need to search for more information" in result
+
+
+def test_gemini_structured_output_preserves_json_with_stop_word_patterns():
+    """
+    Test that structured output validation preserves JSON content
+    even when string fields contain stop word patterns.
+    """
+    from pydantic import BaseModel, Field
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    class AgentObservation(BaseModel):
+        """Model with fields that might contain stop word-like text."""
+
+        action_taken: str = Field(description="What action was taken")
+        observation_result: str = Field(description="The observation result")
+        final_answer: str = Field(description="The final answer")
+
+    # Gemini uses stop_sequences instead of stop
+    llm = GeminiCompletion(
+        model="gemini-2.0-flash-001",
+        stop_sequences=["Observation:", "Final Answer:", "Action:"],
+    )
+
+    # JSON that contains all the stop word patterns as part of the content
+    json_with_stop_patterns = '''{
+        "action_taken": "Action: Searched the database",
+        "observation_result": "Observation: Found 5 relevant results",
+        "final_answer": "Final Answer: The data shows positive growth"
+    }'''
+
+    # Test the _validate_structured_output method - this should NOT truncate
+    # since it's structured output
+    result = llm._validate_structured_output(json_with_stop_patterns, AgentObservation)
+
+    assert isinstance(result, AgentObservation)
+    assert "Action:" in result.action_taken
+    assert "Observation:" in result.observation_result
+    assert "Final Answer:" in result.final_answer

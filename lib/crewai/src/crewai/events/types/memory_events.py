@@ -14,7 +14,7 @@ class MemoryBaseEvent(BaseEvent):
     agent_role: str | None = None
     agent_id: str | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_agent_params(data)
         self._set_task_params(data)
@@ -93,3 +93,11 @@ class MemoryRetrievalCompletedEvent(MemoryBaseEvent):
     task_id: str | None = None
     memory_content: str
     retrieval_time_ms: float
+
+
+class MemoryRetrievalFailedEvent(MemoryBaseEvent):
+    """Event emitted when memory retrieval for a task prompt fails."""
+
+    type: str = "memory_retrieval_failed"
+    task_id: str | None = None
+    error: str

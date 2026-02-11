@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -61,6 +62,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
     - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
     - `sortOrder` (string, opcional): A ordem na qual as conexões devem ser classificadas. Opções: LAST_MODIFIED_ASCENDING, LAST_MODIFIED_DESCENDING, FIRST_NAME_ASCENDING, LAST_NAME_ASCENDING
+
   </Accordion>
 
   <Accordion title="google_contacts/search_contacts">
@@ -72,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `pageSize` (integer, opcional): Número de resultados a retornar. Mínimo: 1, Máximo: 30
     - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
     - `sources` (array, opcional): As fontes para pesquisar. Opções: READ_SOURCE_TYPE_CONTACT, READ_SOURCE_TYPE_PROFILE. Padrão: READ_SOURCE_TYPE_CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/list_directory_people">
@@ -84,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `readMask` (string, opcional): Campos a ler (ex: 'names,emailAddresses')
     - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
     - `mergeSources` (array, opcional): Dados adicionais para mesclar nas respostas de pessoas do diretório. Opções: CONTACT
+
   </Accordion>
 
   <Accordion title="google_contacts/search_directory_people">
@@ -94,6 +98,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `sources` (string, obrigatório): Fontes de diretório (use 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE')
     - `pageSize` (integer, opcional): Número de resultados a retornar
     - `readMask` (string, opcional): Campos a ler
+
   </Accordion>
 
   <Accordion title="google_contacts/list_other_contacts">
@@ -104,6 +109,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
     - `readMask` (string, opcional): Campos a ler
     - `requestSyncToken` (boolean, opcional): Se a resposta deve incluir um token de sincronização. Padrão: false
+
   </Accordion>
 
   <Accordion title="google_contacts/search_other_contacts">
@@ -113,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `query` (string, obrigatório): Consulta de pesquisa
     - `readMask` (string, obrigatório): Campos a ler (ex: 'names,emailAddresses')
     - `pageSize` (integer, opcional): Número de resultados
+
   </Accordion>
 
   <Accordion title="google_contacts/get_person">
@@ -121,6 +128,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `resourceName` (string, obrigatório): O nome do recurso da pessoa a obter (ex: 'people/c123456789')
     - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/create_contact">
@@ -132,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `phoneNumbers` (array, opcional): Números de telefone. Cada item é um objeto com `value` (string, número de telefone) e `type` (string, 'home', 'work', 'mobile', 'other', padrão 'other').
     - `addresses` (array, opcional): Endereços postais. Cada item é um objeto com `formattedValue` (string, endereço formatado) e `type` (string, 'home', 'work', 'other', padrão 'other').
     - `organizations` (array, opcional): Organizações/empresas. Cada item é um objeto com `name` (string, nome da organização), `title` (string, cargo) e `type` (string, 'work', 'other', padrão 'work').
+
   </Accordion>
 
   <Accordion title="google_contacts/update_contact">
@@ -143,6 +152,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `names` (array, opcional): Nomes da pessoa. Cada item é um objeto com `givenName` (string), `familyName` (string), `displayName` (string).
     - `emailAddresses` (array, opcional): Endereços de email. Cada item é um objeto com `value` (string, endereço de email) e `type` (string, 'home', 'work', 'other').
     - `phoneNumbers` (array, opcional): Números de telefone. Cada item é um objeto com `value` (string, número de telefone) e `type` (string, 'home', 'work', 'mobile', 'other').
+
   </Accordion>
 
   <Accordion title="google_contacts/delete_contact">
@@ -150,6 +160,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `resourceName` (string, obrigatório): O nome do recurso da pessoa a excluir (ex: 'people/c123456789').
+
   </Accordion>
 
   <Accordion title="google_contacts/batch_get_people">
@@ -158,6 +169,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `resourceNames` (array, obrigatório): Nomes de recursos das pessoas a obter (máx 200 itens).
     - `personFields` (string, opcional): Campos a incluir (ex: 'names,emailAddresses,phoneNumbers'). Padrão: names,emailAddresses,phoneNumbers
+
   </Accordion>
 
   <Accordion title="google_contacts/list_contact_groups">
@@ -167,6 +179,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `pageSize` (integer, opcional): Número de grupos de contatos a retornar. Mínimo: 1, Máximo: 1000
     - `pageToken` (string, opcional): Token especificando qual página de resultado retornar.
     - `groupFields` (string, opcional): Campos a incluir (ex: 'name,memberCount,clientData'). Padrão: name,memberCount
+
   </Accordion>
 
   <Accordion title="google_contacts/get_contact_group">
@@ -176,6 +189,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `resourceName` (string, obrigatório): O nome do recurso do grupo de contatos (ex: 'contactGroups/myContactGroup').
     - `maxMembers` (integer, opcional): Número máximo de membros a incluir. Mínimo: 0, Máximo: 20000
     - `groupFields` (string, opcional): Campos a incluir (ex: 'name,memberCount,clientData'). Padrão: name,memberCount
+
   </Accordion>
 
   <Accordion title="google_contacts/create_contact_group">
@@ -184,6 +198,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `name` (string, obrigatório): O nome do grupo de contatos.
     - `clientData` (array, opcional): Dados específicos do cliente. Cada item é um objeto com `key` (string) e `value` (string).
+
   </Accordion>
 </AccordionGroup>
 
@@ -279,24 +294,29 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Google tenha as permissões necessárias para acesso a contatos e diretório.
 - Verifique se a conexão OAuth inclui todos os escopos necessários para a API Google People.
 
 **Problemas de Criação/Atualização de Contatos**
+
 - Certifique-se de que campos obrigatórios como `email` sejam fornecidos para criação de contatos.
 - Verifique se o `resourceName` está correto ao atualizar ou excluir contatos.
 - Confirme se o formato dos dados para `names`, `emailAddresses`, `phoneNumbers`, etc., corresponde às especificações da API.
 
 **Problemas de Pesquisa e Filtro**
+
 - Certifique-se de que os parâmetros de `query` e `readMask` estejam especificados corretamente para `search_contacts` e `search_other_contacts`.
 - Para pesquisas de diretório, certifique-se de que `sources` esteja definido corretamente (ex: 'DIRECTORY_SOURCE_TYPE_DOMAIN_PROFILE').
 
 **Gerenciamento de Grupos de Contatos**
+
 - Ao criar um grupo de contatos, certifique-se de que o `name` seja fornecido.
 - Para `get_contact_group`, certifique-se de que o `resourceName` esteja correto.
 
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Google Contacts.
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Google Contacts.
 </Card>

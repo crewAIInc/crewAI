@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -57,6 +58,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - Nenhum parâmetro necessário.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/get_channels">
@@ -64,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `team_id` (string, obrigatório): O ID da equipe.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/send_message">
@@ -74,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `channel_id` (string, obrigatório): O ID do canal.
     - `message` (string, obrigatório): O conteúdo da mensagem.
     - `content_type` (string, opcional): Tipo de conteúdo (html ou text). Opções: html, text. Padrão: text.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/get_messages">
@@ -83,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `team_id` (string, obrigatório): O ID da equipe.
     - `channel_id` (string, obrigatório): O ID do canal.
     - `top` (integer, opcional): Número de mensagens a recuperar (máx 50). Padrão: 20.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/create_meeting">
@@ -92,6 +97,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `subject` (string, obrigatório): Assunto/título da reunião.
     - `startDateTime` (string, obrigatório): Hora de início da reunião (formato ISO 8601 com fuso horário).
     - `endDateTime` (string, obrigatório): Hora de término da reunião (formato ISO 8601 com fuso horário).
+
   </Accordion>
 
   <Accordion title="microsoft_teams/search_online_meetings_by_join_url">
@@ -99,6 +105,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `join_web_url` (string, obrigatório): A URL de participação na web da reunião a pesquisar.
+
   </Accordion>
 </AccordionGroup>
 
@@ -138,15 +145,18 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso ao Teams.
 - Escopos necessários incluem: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Send`, `ChannelMessage.Read.All`, `OnlineMeetings.ReadWrite`, `OnlineMeetings.Read`.
 
 **Acesso a Equipes e Canais**
+
 - Certifique-se de que você é membro das equipes que está tentando acessar.
 - Verifique novamente os IDs de equipe e canal para correção.
 
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Microsoft Teams.
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft Teams.
 </Card>

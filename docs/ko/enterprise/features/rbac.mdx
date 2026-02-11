@@ -7,7 +7,7 @@ mode: "wide"
 
 ## 개요
 
-CrewAI AMP의 RBAC는 **조직 수준 역할**과 **자동화(Automation) 수준 가시성**을 결합하여 안전하고 확장 가능한 접근 제어를 제공합니다.
+CrewAI AOP의 RBAC는 **조직 수준 역할**과 **자동화(Automation) 수준 가시성**을 결합하여 안전하고 확장 가능한 접근 제어를 제공합니다.
 
 <Frame>
   <img src="/images/enterprise/users_and_roles.png" alt="CrewAI AMP RBAC 개요" />
@@ -31,7 +31,8 @@ CrewAI AMP의 RBAC는 **조직 수준 역할**과 **자동화(Automation) 수준
     <b>Settings → Roles</b>로 이동합니다.
   </Step>
   <Step title="역할 선택">
-    <b>Owner</b> 또는 <b>Member</b>를 사용하거나 <b>Create role</b>로 커스텀 역할을 만듭니다.
+    <b>Owner</b> 또는 <b>Member</b>를 사용하거나 <b>Create role</b>로 커스텀
+    역할을 만듭니다.
   </Step>
   <Step title="멤버에 할당">
     사용자들을 선택하여 역할을 지정합니다. 언제든 변경할 수 있습니다.
@@ -40,9 +41,9 @@ CrewAI AMP의 RBAC는 **조직 수준 역할**과 **자동화(Automation) 수준
 
 ### 구성 요약
 
-| 영역 | 위치 | 옵션 |
-|:---|:---|:---|
-| 사용자 & 역할 | Settings → Roles | Owner, Member; 커스텀 역할 |
+| 영역          | 위치                               | 옵션                              |
+| :------------ | :--------------------------------- | :-------------------------------- |
+| 사용자 & 역할 | Settings → Roles                   | Owner, Member; 커스텀 역할        |
 | 자동화 가시성 | Automation → Settings → Visibility | Private; 사용자/역할 화이트리스트 |
 
 ## 자동화 수준 접근 제어
@@ -82,14 +83,15 @@ Private 모드에서는 화이트리스트에 포함된 사용자/역할만 다�
 
 ### Private 모드 접근 결과
 
-| 동작 | Owner | 화이트리스트 사용자/역할 | 비포함 |
-|:---|:---|:---|:---|
-| 자동화 보기 | ✓ | ✓ | ✗ |
-| 실행/API | ✓ | ✓ | ✗ |
-| 로그/메트릭/설정 | ✓ | ✓ | ✗ |
+| 동작             | Owner | 화이트리스트 사용자/역할 | 비포함 |
+| :--------------- | :---- | :----------------------- | :----- |
+| 자동화 보기      | ✓     | ✓                        | ✗      |
+| 실행/API         | ✓     | ✓                        | ✗      |
+| 로그/메트릭/설정 | ✓     | ✓                        | ✗      |
 
 <Tip>
-Owner는 항상 접근 가능하며, Private 모드에서는 화이트리스트에 포함된 사용자/역할만 권한이 부여됩니다.
+  Owner는 항상 접근 가능하며, Private 모드에서는 화이트리스트에 포함된
+  사용자/역할만 권한이 부여됩니다.
 </Tip>
 
 <Frame>
@@ -97,6 +99,10 @@ Owner는 항상 접근 가능하며, Private 모드에서는 화이트리스트�
 
 </Frame>
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
   RBAC 구성과 점검에 대한 지원이 필요하면 연락해 주세요.
 </Card>

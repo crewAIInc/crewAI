@@ -4,6 +4,613 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 1월 26일">
+  ## v1.9.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.9.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 프로바이더 전반에 걸친 구조화된 출력 및 response_format 지원 추가
+  - 스트리밍 응답에 응답 ID 추가
+  - 부모-자식 계층 구조를 가진 이벤트 순서 추가
+  - Keycloak SSO 인증 지원 추가
+  - 멀티모달 파일 처리 기능 추가
+  - 네이티브 OpenAI responses API 지원 추가
+  - A2A 작업 실행 유틸리티 추가
+  - A2A 서버 구성 및 에이전트 카드 생성 추가
+  - 이벤트 시스템 향상 및 전송 옵션 확장
+  - 도구 호출 메커니즘 개선
+
+  ### 버그 수정
+  - aiocache를 사용할 수 없을 때 폴백 메모리 캐시로 파일 저장소 향상
+  - 문서 목록이 비어 있지 않도록 보장
+  - Bedrock 중지 시퀀스 적절히 처리
+  - Google Vertex API 키 지원 추가
+  - Azure 모델 중지 단어 감지 향상
+  - 흐름 실행 시 HumanFeedbackPending 오류 처리 개선
+  - 실행 스팬 작업 연결 해제 수정
+
+  ### 문서
+  - 네이티브 파일 처리 문서 추가
+  - OpenAI responses API 문서 추가
+  - 에이전트 카드 구현 가이드 추가
+  - A2A 문서 개선
+  - v1.8.0 변경 로그 업데이트
+
+  ### 기여자
+  @Anaisdg, @GininDenis, @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @koushiv777, @lorenzejay, @nicoferdi96, @vinibrsl
+
+</Update>
+
+<Update label="2026년 1월 15일">
+  ## v1.8.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.8.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - A2A 작업 실행 유틸리티 추가
+  - A2A 서버 구성 및 에이전트 카드 생성 추가
+  - 추가 전송 메커니즘 추가
+  - Galileo 통합 지원 추가
+
+  ### 버그 수정
+  - Azure 모델 호환성 개선
+  - parent_flow 감지를 위한 프레임 검사 깊이 확장
+  - 작업 실행 스팬 관리 문제 해결
+  - 흐름 실행 중 휴먼 피드백 시나리오에 대한 오류 처리 향상
+
+  ### 문서
+  - A2A 에이전트 카드 문서 추가
+  - PII 삭제 기능 문서 추가
+
+  ### 기여자
+  @Anaisdg, @GininDenis, @greysonlalonde, @joaomdmoura, @koushiv777, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="2026년 1월 8일">
+  ## v1.8.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.8.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - a2a를 위한 네이티브 비동기 체인 추가
+  - 핸들러 및 설정과 함께 a2a 업데이트 메커니즘(poll/stream/push) 추가
+  - 휴먼 인 더 루프 피드백을 위한 전역 흐름 설정 도입
+  - 스트리밍 도구 호출 이벤트 추가 및 프로바이더 ID 추적 수정
+  - 프로덕션 준비된 Flows 및 Crews 아키텍처 도입
+  - Flows를 위한 HITL 추가
+  - 향상된 이벤트 처리를 위한 EventListener 및 TraceCollectionListener 개선
+
+  ### 버그 수정
+  - 누락된 a2a 종속성을 선택적으로 처리
+  - WorkOS 로그인 폴링을 위한 오류 가져오기 수정
+  - 샘플 문서의 잘못된 트리거 이름 수정
+
+  ### 문서
+  - 웹훅 스트리밍 문서 업데이트
+  - AOP에서 AMP로 문서 언어 조정
+
+  ### 기여자
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta
+
+</Update>
+
+<Update label="2025년 12월 19일">
+  ## v1.7.2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.7.2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 연결 문제 해결
+
+  ### 문서
+  - api-reference/status 문서 페이지 업데이트
+
+  ### 기여자
+  @greysonlalonde, @heitorado, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2025년 12월 16일">
+  ## v1.7.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.7.1)
+
+  ## 변경 사항
+
+  ### 개선 사항
+  - bump 명령에 `--no-commit` 플래그 추가
+  - 도구 인수 직렬화에 JSON 스키마 사용
+
+  ### 버그 수정
+  - 도구 저장소 로그인 실패 시 응답에서 오류 메시지 표시 수정
+  - 비동기 작업 실행 시 future의 정상적인 종료 수정
+  - 인덱스를 추가하여 작업 순서 수정
+  - Windows 신호에 대한 플랫폼 호환성 검사 수정
+  - 프로세스 중단을 방지하기 위한 RPM 컨트롤러 타이머 수정
+  - 토큰 사용량 기록 수정 및 스트림에서 응답 모델 검증
+
+  ### 문서
+  - 비동기에 대한 번역된 문서 추가
+  - AOP Deploy API 문서 추가
+  - 에이전트 핸들러 커넥터 문서 추가
+  - 네이티브 비동기 문서 추가
+
+  ### 기여자
+  @Llamrei, @dragosmc, @gilfeig, @greysonlalonde, @heitorado, @lorenzejay, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="2025년 12월 9일">
+  ## v1.7.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.7.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 흐름 킥오프 추가
+  - 비동기 크루 지원 추가
+  - 비동기 작업 지원 추가
+  - 비동기 지식 지원 추가
+  - 비동기 메모리 지원 추가
+  - 도구 및 에이전트 실행기에 대한 비동기 지원 추가; 타입 및 문서 개선
+  - a2a 확장 API 및 비동기 에이전트 카드 캐싱 구현; 작업 전파 및 스트리밍 수정
+  - 네이티브 비동기 도구 지원 추가
+  - 비동기 llm 지원 추가
+  - sys 이벤트 유형 및 핸들러 생성
+
+  ### 버그 수정
+  - nonetypes가 otel에 전달되지 않도록 보장하는 문제 수정
+  - 토큰 저장소 파일 작업의 교착 상태 수정
+  - otel span이 닫히도록 보장하는 수정
+  - 임베딩에 HuggingFaceEmbeddingFunction 사용, 키 업데이트 및 테스트 추가
+  - 모든 지원되는 anthropic 모델에 대해 supports_tools가 true인지 확인
+  - 라이트 에이전트 흐름에서 훅이 작동하도록 보장
+
+  ### 기여자
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="2025년 11월 29일">
+  ## v1.6.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.6.1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - ChatCompletionsClient 호출이 제대로 작동하도록 수정
+  - 어노테이션에 대해 비동기 메서드가 실행 가능하도록 보장
+  - RagTool.add의 매개변수 수정, 타입 및 테스트 추가
+  - SSE 클라이언트에서 잘못된 매개변수 제거
+  - 'crewai config reset' 명령에서 'oauth2_extra' 설정 삭제
+
+  ### 리팩토링
+  - LLM 클래스에서 모델 검증 및 프로바이더 추론 향상
+
+  ### 기여자
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @lorenzejay
+
+</Update>
+
+<Update label="2025년 11월 25일">
+  ## v1.6.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.6.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 흐름 및 크루에 스트리밍 결과 지원 추가
+  - gemini-3-pro-preview 추가
+  - Entra ID를 사용한 CLI 로그인 지원
+  - Merge Agent Handler 도구 추가
+  - 흐름 이벤트 상태 관리 향상
+
+  ### 버그 수정
+  - 사용자 지정 rag 저장소 지속 경로가 전달된 경우 설정되도록 보장
+  - 퍼지 반환이 더 엄격하고 타입 경고를 표시하도록 보장
+  - openai response_format 매개변수 다시 추가 및 테스트 추가
+  - rag 도구 임베딩 설정 수정
+  - 플롯에서 흐름 실행 시작 패널이 표시되지 않도록 보장
+
+  ### 문서
+  - 문서에서 AMP에서 AOP로 참조 업데이트
+  - AMP에서 AOP로 업데이트
+
+  ### 기여자
+  @Vidit-Ostwal, @gilfeig, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @markmcd
+
+</Update>
+
+<Update label="2025년 11월 22일">
+  ## v0.203.2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/0.203.2)
+
+  ## 변경 사항
+
+  - 0.203.1에서 0.203.2로 핫픽스 버전 범프
+
+</Update>
+
+<Update label="2025년 11월 16일">
+  ## v1.5.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.5.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - a2a 신뢰 원격 완료 상태 플래그 추가
+  - Okta 인증 서버에 대한 더 많은 데이터 가져오기 및 저장
+  - CrewAgentExecutor에서 LLM 호출 전후 훅 구현
+  - TaskOutput 및 LiteAgentOutputs에 메시지 노출
+  - QdrantVectorSearchTool의 스키마 설명 향상
+
+  ### 버그 수정
+  - 추적 인스트루멘테이션 플래그가 올바르게 적용되도록 보장
+  - 사용자 정의 도구 문서 링크 수정 및 Mintlify 깨진 링크 작업 추가
+
+  ### 문서
+  - LLM 기반 검증 지원으로 작업 가드레일 문서 향상
+
+  ### 기여자
+  @danielfsbarreto, @greysonlalonde, @heitorado, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="2025년 11월 7일">
+  ## v1.4.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.4.1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 에이전트 최대 반복 처리 수정
+  - LLM 모델 구문에 대한 라우팅 문제를 해당 프로바이더로 해결
+
+  ### 기여자
+  @greysonlalonde
+
+</Update>
+
+<Update label="2025년 11월 7일">
+  ## v1.4.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.4.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비AST 플롯 경로 지원 추가
+  - MCP에 대한 일급 지원 구현
+  - BaseInterceptor에 Pydantic 검증 던더 추가
+  - LLM 메시지 인터셉터 훅 지원 추가
+  - 효율적인 사용을 위한 i18n 프롬프트 캐싱
+  - QdrantVectorSearchTool 향상
+
+  ### 버그 수정
+  - stopwords 업데이트 유지 관련 문제 수정
+  - 흐름 상태에서 피클할 수 없는 값 해결
+  - 라이트 에이전트가 검증 오류 시 수정되도록 보장
+  - 캐싱이 작동하도록 콜백 인수 해싱 수정
+  - 유효한 URL에서 RAG 소스 콘텐츠 추가 허용
+  - 플롯 노드 선택을 더 부드럽게 만듦
+  - 지식에 대한 중복 문서 ID 수정
+
+  ### 리팩토링
+  - concurrent futures로 MCP 도구 실행 처리 개선
+  - 흐름 처리, 타입 및 로깅 단순화; UI 및 테스트 업데이트
+  - 중지 단어 관리를 속성으로 리팩토링
+
+  ### 문서
+  - embedder를 embedding_model로 마이그레이션하고 도구 문서 전체에 vectordb 필요; 프로바이더 예제 추가 (en/ko/pt-BR)
+
+  ### 기여자
+  @danielfsbarreto, @greysonlalonde, @lorenzejay, @lucasgomide, @tonykipkemboi
+
+</Update>
+
+<Update label="2025년 11월 1일">
+  ## v1.3.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.3.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 흐름 처리, 타입 및 로깅 리팩토링
+  - QdrantVectorSearchTool 향상
+
+  ### 버그 수정
+  - Firecrawl 도구 수정 및 테스트 추가
+  - use_stop_words를 속성으로 리팩토링하고 중지 단어 확인 추가
+
+  ### 문서
+  - embedder를 embedding_model로 마이그레이션하고 도구 문서 전체에 vectordb 필요
+  - 영어, 한국어 및 포르투갈어로 프로바이더 예제 추가
+
+  ### 리팩토링
+  - 흐름 처리 및 UI 업데이트 개선
+
+  ### 기여자
+  @danielfsbarreto, @greysonlalonde, @lorenzejay, @lucasgomide, @tonykipkemboi
+
+</Update>
+
+<Update label="2025년 10월 27일">
+  ## v1.2.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.2.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Datadog 통합 지원 추가
+  - liteagent에서 apps 및 mcps 지원
+
+  ### 문서
+  - 각 통합에 대해 Platform 도구를 호출하기 위한 필수 환경 변수 설명
+  - Datadog 통합 문서 추가
+
+  ### 기여자
+  @barieom, @lorenzejay, @lucasgomide, @sabrenner
+
+</Update>
+
+<Update label="2025년 10월 24일">
+  ## v1.2.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.2.0)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 기본 LLM 모델 업데이트 및 LLM 유틸리티의 오류 로깅 개선
+  - 흐름 시각화 디렉토리 및 메서드 검사 변경
+
+  ### 사용되지 않는 항목 삭제
+  - aisuite 제거
+
+  ### 기여자
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="2025년 10월 21일">
+  ## v1.1.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.1.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - InternalInstructor를 향상하여 여러 LLM 프로바이더 지원
+  - mypy 플러그인 기반 구현
+  - QdrantVectorSearchTool 개선
+
+  ### 버그 수정
+  - 깨진 통합 문서 링크 수정
+  - 이중 추적 호출 수정 및 타입 추가
+  - 템플릿 버전을 최신으로 고정
+
+  ### 문서
+  - LLM 통합 세부 정보 및 예제 업데이트
+
+  ### 리팩토링
+  - CrewBase 타이핑 개선
+
+  ### 기여자
+  @cwarre33, @danielfsbarreto, @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="2025년 10월 20일">
+  ## v1.0.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 버전을 1.0.0으로 범프
+  - Agent 클래스에서 지식 및 가드레일 이벤트 처리 향상
+  - crewai run 명령에 도구 저장소 자격 증명 주입
+
+  ### 버그 수정
+  - Flow 데코레이터에서 중첩된 조건 구조 유지
+  - Printer.print 메서드에 표준 인쇄 매개변수 추가
+  - input()을 사용할 수 없을 때 오류 수정
+  - JWT 디코딩 시 10초 여유 추가
+  - 잘못된 cron 일정 되돌리기
+  - 특정 날짜에 5일마다 실행되도록 cron 일정 수정
+  - 하드코딩된 경로 대신 Docker 바이너리에 시스템 PATH 사용
+  - 템플릿 디렉토리를 올바르게 제외하기 위한 CodeQL 구성 추가
+
+  ### 문서
+  - 취약점 보고를 위한 보안 정책 업데이트
+  - CrewAI AMP에서 텔레메트리 로그 캡처 가이드 추가
+  - 누락된 /resume 파일 추가
+  - HITL 워크플로에서 웹훅 URL 매개변수 명확화
+
+  ### 기여자
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta, @theCyberTech
+
+</Update>
+
+<Update label="2025년 10월 18일">
+  ## v1.0.0b3 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b3)
+
+  ## 변경 사항
+
+  ### 기능
+  - 작업 가드레일 기능 및 검증 향상
+  - 네이티브 SDK 가져오기 지원 개선
+  - Azure 네이티브 테스트 추가
+  - 고급 기능으로 BedrockCompletion 클래스 향상
+  - 클라이언트 매개변수 지원으로 GeminiCompletion 클래스 향상
+  - 추가 클라이언트 매개변수로 AnthropicCompletion 클래스 향상
+
+  ### 버그 수정
+  - Flow 데코레이터에서 중첩된 조건 구조 유지
+  - Printer.print 메서드에 표준 인쇄 매개변수 추가
+  - stdout 인쇄 제거 및 테스트 결정론 개선
+
+  ### 리팩토링
+  - 전체 타이핑을 포함한 메타클래스로 프로젝트 모듈 변환
+
+  ### 기여자
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
+<Update label="2025년 10월 16일">
+  ## v1.0.0b2 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 추가 클라이언트 매개변수로 OpenAICompletion 클래스 향상
+  - 이벤트 버스 스레드 안전성 및 비동기 지원 개선
+  - crewai run 명령에 도구 저장소 자격 증명 주입
+
+  ### 버그 수정
+  - input()을 사용할 수 없을 때 오류가 발생하는 문제 수정
+  - JWT 디코딩 시 10초 여유 추가
+  - task.py에서 복사 및 NOT_SPECIFIED 확인 수정
+
+  ### 문서
+  - 문서에서 CREWAI_PLATFORM_INTEGRATION_TOKEN이 언급되도록 보장
+  - 트리거 문서 업데이트
+
+  ### 기여자
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2025년 10월 14일">
+  ## v1.0.0b1 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0b1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 추가 클라이언트 매개변수로 OpenAICompletion 클래스 향상
+  - 이벤트 버스 스레드 안전성 및 비동기 지원 개선
+  - Bedrock LLM 통합 구현
+
+  ### 버그 수정
+  - 누락된 input() 가용성 문제 수정
+  - 10초 여유를 추가하여 JWT 디코딩 오류 해결
+  - crewai run 명령에 도구 저장소 자격 증명 주입
+  - task.py에서 복사 및 NOT_SPECIFIED 확인 수정
+
+  ### 문서
+  - 문서에서 CREWAI_PLATFORM_INTEGRATION_TOKEN이 언급되도록 보장
+  - 트리거 문서 업데이트
+
+  ### 기여자
+  @Vidit-Ostwal, @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2025년 10월 13일">
+  ## v0.203.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/0.203.1)
+
+  ## 변경 사항
+
+  ### 핵심 개선 및 수정
+  - `crewai run` 명령에 도구 저장소 자격 증명 주입 수정
+  - 토큰 검증 오류를 줄이기 위해 JWT 디코딩 시 10초 여유 추가
+  - 특정 날짜에 5일마다 작업을 실행하도록 의도된 cron 일정 수정(이후 되돌림)
+
+  ### 문서 및 가이드
+  - 취약점 보고 프로세스를 명확히 하기 위해 보안 정책 업데이트
+
+</Update>
+
+<Update label="2025년 10월 9일">
+  ## v1.0.0a4 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - Agent 클래스에서 지식 및 가드레일 이벤트 처리 향상
+  - 로컬 개발을 위한 트리거 목록 및 실행 명령 도입
+  - Platform Actions을 소비하는 새로운 접근 방식으로 문서 업데이트
+  - CrewAI AMP에서 텔레메트리 로그 캡처 가이드 추가
+
+  ### 버그 수정
+  - 잘못된 cron 일정 되돌리기
+  - 특정 날짜에 5일마다 실행되도록 cron 일정 수정
+  - 중복 행 제거 및 명시적 환경 변수 추가
+
+  ### 기여자
+  @greysonlalonde, @heitorado, @joaomdmoura, @lorenzejay, @lucasgomide, @mplachta, @theCyberTech
+
+</Update>
+
+<Update label="2025년 10월 7일">
+  ## v1.0.0a3 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - 플랫폼 작업에 대한 에이전트 지원 추가
+  - 코드 실행기 도구에 인터프리터 인수 추가
+  - 플랫폼 앱 실행에 대한 직접 지원
+
+  ### 문서
+  - 플랫폼 작업 문서 추가
+  - MCP 문서에 stdio 및 sse 전송 유형 추가
+  - AWS 모델 목록 업데이트
+
+  ### 기여자
+  @greysonlalonde, @heitorado, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2025년 10월 3일">
+  ## v1.0.0a2 (프리릴리스)
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.0.0a2)
+
+  ## 변경 사항
+
+  ### 핵심 개선 및 수정
+  - 모노레포를 위한 CI 업데이트
+  - 기본 Anthropic 모델을 claude-sonnet-4-20250514로 업데이트
+  - 모델 업데이트에 대한 테스트 수정
+
+  ### 기여자
+  @greysonlalonde, @lorenzejay
+
+</Update>
+
 <Update label="2025년 9월 30일">
   ## v1.0.0a1
 

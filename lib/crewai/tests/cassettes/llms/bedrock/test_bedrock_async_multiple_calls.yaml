@@ -1,0 +1,80 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "What is 1+1?"}]}],
+      "inferenceConfig": {}}'
+    headers:
+      Content-Length:
+      - '94'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":583},"output":{"message":{"content":[{"text":"1+1=2"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":14,"outputTokens":9,"serverToolUsage":{},"totalTokens":23}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '206'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:51:00 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "user", "content": [{"text": "What is 2+2?"}]}],
+      "inferenceConfig": {}}'
+    headers:
+      Content-Length:
+      - '94'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      amz-sdk-invocation-id:
+      - AMZ-SDK-INVOCATION-ID-XXX
+      amz-sdk-request:
+      - attempt=1
+      authorization:
+      - AUTHORIZATION-XXX
+      x-amz-date:
+      - X-AMZ-DATE-XXX
+    method: POST
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+  response:
+    body:
+      string: '{"metrics":{"latencyMs":869},"output":{"message":{"content":[{"text":"2+2=4"}],"role":"assistant"}},"stopReason":"end_turn","usage":{"inputTokens":14,"outputTokens":9,"serverToolUsage":{},"totalTokens":23}}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '206'
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 01 Dec 2025 08:51:01 GMT
+      x-amzn-RequestId:
+      - X-AMZN-REQUESTID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

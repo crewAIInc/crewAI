@@ -29,7 +29,7 @@ from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
 
 
-ProviderSpec = (
+ProviderSpec: TypeAlias = (
     AzureProviderSpec
     | BedrockProviderSpec
     | CohereProviderSpec

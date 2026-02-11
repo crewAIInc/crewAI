@@ -50,14 +50,17 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7daL1iS0Sfd2xYE8I6DRfQoBU5d\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727214330,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: Hi\",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      194,\n    \"completion_tokens\": 14,\n    \"total_tokens\": 208,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_e375328146\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7daL1iS0Sfd2xYE8I6DRfQoBU5d\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727214330,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: Hi\",\n        \"refusal\": null\n \
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n \
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 194,\n    \"completion_tokens\"\
+        : 14,\n    \"total_tokens\": 208,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_e375328146\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -65,8 +68,6 @@ interactions:
       - 8c85f63eed441cf3-GRU
       Connection:
       - keep-alive
-      Content-Encoding:
-      - gzip
       Content-Type:
       - application/json
       Date:
@@ -101,6 +102,7 @@ interactions:
       - 0s
       x-request-id:
       - req_5b3f55032618ddfdcf27cd8a848c0f4a
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

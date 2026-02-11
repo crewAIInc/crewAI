@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. Configuração de variável de ambiente
 
 <Note>
-  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
 </Note>
 
 ```bash
@@ -57,6 +58,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `title` (string, obrigatório): O título da apresentação.
+
   </Accordion>
 
   <Accordion title="google_slides/get_presentation">
@@ -65,6 +67,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação a ser recuperada.
     - `fields` (string, opcional): Os campos a incluir na resposta. Use isso para melhorar o desempenho retornando apenas os dados necessários.
+
   </Accordion>
 
   <Accordion title="google_slides/batch_update_presentation">
@@ -74,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `presentationId` (string, obrigatório): O ID da apresentação a ser atualizada.
     - `requests` (array, obrigatório): Uma lista de atualizações a aplicar à apresentação. Cada item é um objeto representando uma solicitação.
     - `writeControl` (object, opcional): Fornece controle sobre como as solicitações de escrita são executadas. Contém `requiredRevisionId` (string).
+
   </Accordion>
 
   <Accordion title="google_slides/get_page">
@@ -82,6 +86,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação.
     - `pageObjectId` (string, obrigatório): O ID da página a ser recuperada.
+
   </Accordion>
 
   <Accordion title="google_slides/get_thumbnail">
@@ -90,6 +95,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação.
     - `pageObjectId` (string, obrigatório): O ID da página para geração de miniatura.
+
   </Accordion>
 
   <Accordion title="google_slides/import_data_from_sheet">
@@ -99,6 +105,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `presentationId` (string, obrigatório): O ID da apresentação.
     - `sheetId` (string, obrigatório): O ID da planilha do Google para importar.
     - `dataRange` (string, obrigatório): O intervalo de dados a importar da planilha.
+
   </Accordion>
 
   <Accordion title="google_slides/upload_file_to_drive">
@@ -107,6 +114,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `file` (string, obrigatório): Os dados do arquivo a fazer upload.
     - `presentationId` (string, obrigatório): O ID da apresentação para vincular o arquivo carregado.
+
   </Accordion>
 
   <Accordion title="google_slides/link_file_to_presentation">
@@ -115,6 +123,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação.
     - `fileId` (string, obrigatório): O ID do arquivo a vincular.
+
   </Accordion>
 
   <Accordion title="google_slides/get_all_presentations">
@@ -123,6 +132,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     **Parâmetros:**
     - `pageSize` (integer, opcional): O número de apresentações a retornar por página.
     - `pageToken` (string, opcional): Um token para paginação.
+
   </Accordion>
 
   <Accordion title="google_slides/delete_presentation">
@@ -130,6 +140,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
 
     **Parâmetros:**
     - `presentationId` (string, obrigatório): O ID da apresentação a ser excluída.
+
   </Accordion>
 </AccordionGroup>
 
@@ -225,18 +236,22 @@ crew.kickoff()
 ### Problemas Comuns
 
 **Erros de Autenticação**
+
 - Certifique-se de que sua conta Google tenha as permissões necessárias para acesso ao Google Slides e Google Drive.
 - Verifique se a conexão OAuth inclui todos os escopos necessários.
 
 **Problemas de ID de Apresentação/Página**
+
 - Verifique novamente os IDs de apresentação e IDs de objeto de página para correção.
 - Certifique-se de que a apresentação ou página existe e está acessível.
 
 **Formatação de Solicitação de Atualização em Lote**
+
 - Ao usar `batch_update_presentation`, certifique-se de que o array `requests` esteja formatado corretamente de acordo com a documentação da API do Google Slides.
 - Atualizações complexas frequentemente requerem estruturas JSON específicas para cada tipo de solicitação (ex: `createText`, `insertShape`).
 
 **Problemas de Upload/Vinculação de Arquivos**
+
 - Certifique-se de que o conteúdo do `file` esteja fornecido corretamente para `upload_file_to_drive`.
 - Verifique se o `fileId` está correto ao vincular arquivos a uma apresentação.
 - Verifique as permissões do Google Drive para acesso a arquivos.
@@ -244,5 +259,6 @@ crew.kickoff()
 ### Obtendo Ajuda
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
-  Entre em contato com nossa equipe de suporte para assistência com configuração ou solução de problemas da integração Google Slides.
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Google Slides.
 </Card>

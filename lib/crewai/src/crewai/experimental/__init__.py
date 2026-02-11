@@ -1,3 +1,4 @@
+from crewai.experimental.agent_executor import AgentExecutor, CrewAgentExecutorFlow
 from crewai.experimental.evaluation import (
     AgentEvaluationResult,
     AgentEvaluator,
@@ -22,7 +23,9 @@ from crewai.experimental.evaluation import (
 __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
+    "AgentExecutor",
     "BaseEvaluator",
+    "CrewAgentExecutorFlow",  # Deprecated alias for AgentExecutor
     "EvaluationScore",
     "EvaluationTraceCallback",
     "ExperimentResult",

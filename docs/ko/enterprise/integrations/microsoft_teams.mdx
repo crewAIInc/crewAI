@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -57,6 +58,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - 매개변수가 필요하지 않습니다.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/get_channels">
@@ -64,6 +66,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `team_id` (string, 필수): 팀의 ID.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/send_message">
@@ -74,6 +77,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `channel_id` (string, 필수): 채널의 ID.
     - `message` (string, 필수): 메시지 내용.
     - `content_type` (string, 선택사항): 콘텐츠 유형 (html 또는 text). 옵션: html, text. 기본값: text.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/get_messages">
@@ -83,6 +87,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `team_id` (string, 필수): 팀의 ID.
     - `channel_id` (string, 필수): 채널의 ID.
     - `top` (integer, 선택사항): 검색할 메시지 수 (최대 50). 기본값: 20.
+
   </Accordion>
 
   <Accordion title="microsoft_teams/create_meeting">
@@ -92,6 +97,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `subject` (string, 필수): 회의 제목/제목.
     - `startDateTime` (string, 필수): 회의 시작 시간 (시간대가 포함된 ISO 8601 형식).
     - `endDateTime` (string, 필수): 회의 종료 시간 (시간대가 포함된 ISO 8601 형식).
+
   </Accordion>
 
   <Accordion title="microsoft_teams/search_online_meetings_by_join_url">
@@ -99,6 +105,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **매개변수:**
     - `join_web_url` (string, 필수): 검색할 회의의 웹 참가 URL.
+
   </Accordion>
 </AccordionGroup>
 
@@ -138,15 +145,22 @@ crew.kickoff()
 ### 일반적인 문제
 
 **인증 오류**
+
 - Microsoft 계정이 Teams 액세스에 필요한 권한을 가지고 있는지 확인하세요.
 - 필요한 범위: `Team.ReadBasic.All`, `Channel.ReadBasic.All`, `ChannelMessage.Send`, `ChannelMessage.Read.All`, `OnlineMeetings.ReadWrite`, `OnlineMeetings.Read`.
 
 **팀 및 채널 액세스**
+
 - 액세스하려는 팀의 멤버인지 확인하세요.
 - 팀 및 채널 ID가 올바른지 다시 확인하세요.
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Microsoft Teams 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Microsoft Teams 통합 설정 또는 문제 해결에 대한 지원이 필요하시면 지원팀에
+  문의하세요.
 </Card>

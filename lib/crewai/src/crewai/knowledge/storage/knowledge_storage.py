@@ -25,8 +25,8 @@ class KnowledgeStorage(BaseKnowledgeStorage):
     def __init__(
         self,
         embedder: ProviderSpec
-        | BaseEmbeddingsProvider
-        | type[BaseEmbeddingsProvider]
+        | BaseEmbeddingsProvider[Any]
+        | type[BaseEmbeddingsProvider[Any]]
         | None = None,
         collection_name: str | None = None,
     ) -> None:
@@ -99,6 +99,9 @@ class KnowledgeStorage(BaseKnowledgeStorage):
             )
 
     def save(self, documents: list[str]) -> None:
+        if not documents:
+            return
+
         try:
             client = self._get_client()
             collection_name = (
@@ -127,3 +130,99 @@ class KnowledgeStorage(BaseKnowledgeStorage):
                 ) from e
             Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
             raise
+
+    async def asearch(
+        self,
+        query: list[str],
+        limit: int = 5,
+        metadata_filter: dict[str, Any] | None = None,
+        score_threshold: float = 0.6,
+    ) -> list[SearchResult]:
+        """Search for documents in the knowledge base asynchronously.
+
+        Args:
+            query: List of query strings.
+            limit: Maximum number of results to return.
+            metadata_filter: Optional metadata filter for the search.
+            score_threshold: Minimum similarity score for results.
+
+        Returns:
+            List of search results.
+        """
+        try:
+            if not query:
+                raise ValueError("Query cannot be empty")
+
+            client = self._get_client()
+            collection_name = (
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
+            )
+            query_text = " ".join(query) if len(query) > 1 else query[0]
+
+            return await client.asearch(
+                collection_name=collection_name,
+                query=query_text,
+                limit=limit,
+                metadata_filter=metadata_filter,
+                score_threshold=score_threshold,
+            )
+        except Exception as e:
+            logging.error(
+                f"Error during knowledge search: {e!s}\n{traceback.format_exc()}"
+            )
+            return []
+
+    async def asave(self, documents: list[str]) -> None:
+        """Save documents to the knowledge base asynchronously.
+
+        Args:
+            documents: List of document strings to save.
+        """
+        if not documents:
+            return
+
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
+            )
+            await client.aget_or_create_collection(collection_name=collection_name)
+
+            rag_documents: list[BaseRecord] = [{"content": doc} for doc in documents]
+
+            await client.aadd_documents(
+                collection_name=collection_name, documents=rag_documents
+            )
+        except Exception as e:
+            if "dimension mismatch" in str(e).lower():
+                Logger(verbose=True).log(
+                    "error",
+                    "Embedding dimension mismatch. This usually happens when mixing different embedding models. Try resetting the collection using `crewai reset-memories -a`",
+                    "red",
+                )
+                raise ValueError(
+                    "Embedding dimension mismatch. Make sure you're using the same embedding model "
+                    "across all operations with this collection."
+                    "Try resetting the collection using `crewai reset-memories -a`"
+                ) from e
+            Logger(verbose=True).log("error", f"Failed to upsert documents: {e}", "red")
+            raise
+
+    async def areset(self) -> None:
+        """Reset the knowledge base asynchronously."""
+        try:
+            client = self._get_client()
+            collection_name = (
+                f"knowledge_{self.collection_name}"
+                if self.collection_name
+                else "knowledge"
+            )
+            await client.adelete_collection(collection_name=collection_name)
+        except Exception as e:
+            logging.error(
+                f"Error during knowledge reset: {e!s}\n{traceback.format_exc()}"
+            )

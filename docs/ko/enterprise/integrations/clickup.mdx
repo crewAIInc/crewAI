@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -75,6 +76,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
       }
       ```
       사용 가능한 필드: `space_ids%5B%5D`, `project_ids%5B%5D`, `list_ids%5B%5D`, `statuses%5B%5D`, `include_closed`, `assignees%5B%5D`, `tags%5B%5D`, `due_date_gt`, `due_date_lt`, `date_created_gt`, `date_created_lt`, `date_updated_gt`, `date_updated_lt`
+
   </Accordion>
 
   <Accordion title="clickup/get_task_in_list">
@@ -83,6 +85,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `listId` (string, 필수): 목록 - 작업을 가져올 목록을 선택합니다. 사용자가 ClickUp 목록을 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
     - `taskFilterFormula` (string, 선택): 지정된 필터와 일치하는 작업을 검색합니다. 예: name=task1.
+
   </Accordion>
 
   <Accordion title="clickup/create_task">
@@ -96,6 +99,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `assignees` (string, 선택): 담당자 - 이 작업에 할당할 멤버(또는 멤버 ID 배열)를 선택합니다. 사용자가 ClickUp 멤버를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
     - `dueDate` (string, 선택): 마감일 - 이 작업의 마감일을 지정합니다.
     - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
+
   </Accordion>
 
   <Accordion title="clickup/update_task">
@@ -110,6 +114,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `assignees` (string, 선택): 담당자 - 이 작업에 할당할 멤버(또는 멤버 ID 배열)를 선택합니다. 사용자가 ClickUp 멤버를 선택할 수 있도록 Connect Portal 사용자 설정을 사용하세요.
     - `dueDate` (string, 선택): 마감일 - 이 작업의 마감일을 지정합니다.
     - `additionalFields` (string, 선택): 추가 필드 - 이 작업에 포함할 추가 필드를 JSON으로 지정합니다.
+
   </Accordion>
 
   <Accordion title="clickup/delete_task">
@@ -117,6 +122,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `taskId` (string, 필수): 작업 ID - 삭제할 작업의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_list">
@@ -124,6 +130,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `spaceId` (string, 필수): 스페이스 ID - 목록이 포함된 스페이스의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_custom_fields_in_list">
@@ -131,6 +138,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `listId` (string, 필수): 목록 ID - 사용자 정의 필드를 가져올 목록의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_all_fields_in_list">
@@ -138,6 +146,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `listId` (string, 필수): 목록 ID - 모든 필드를 가져올 목록의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_space">
@@ -145,6 +154,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `spaceId` (string, 선택): 스페이스 ID - 조회할 스페이스의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_folders">
@@ -152,12 +162,14 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `spaceId` (string, 필수): 스페이스 ID - 폴더가 포함된 스페이스의 ID입니다.
+
   </Accordion>
 
   <Accordion title="clickup/get_member">
     **설명:** ClickUp에서 멤버 정보를 가져옵니다.
 
     **파라미터:** 필요 없음.
+
   </Accordion>
 </AccordionGroup>
 
@@ -282,6 +294,11 @@ crew.kickoff()
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  ClickUp 연동 설정 또는 문제 해결에 대한 지원이 필요하신 경우 저희 지원팀에 문의하세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  ClickUp 연동 설정 또는 문제 해결에 대한 지원이 필요하신 경우 저희 지원팀에
+  문의하세요.
 </Card>
