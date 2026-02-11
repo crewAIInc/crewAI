@@ -42,10 +42,10 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6NfywWXSxBmPTEjnpyaIWqF80Bz8\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770413350,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7swcrn2VjQwfR0gqwJR3Yes9D8Oj\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771874,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"10 + 10 equals 20.\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"10 + 10 = 20.\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
         46,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 54,\n    \"prompt_tokens_details\":
@@ -61,11 +61,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 21:29:10 GMT
+      - Wed, 11 Feb 2026 01:04:35 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -81,11 +79,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '288'
+      - '588'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -150,13 +150,13 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6NfyZWuh1ZpzpgkqSDcyZKEhjYnm\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770413350,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7swdwc9DFzA50gO8dbmTe7zrvlXr\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771875,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"10 + 10 equals 20.\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"The sum of 10 + 10 is 20.\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        46,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 54,\n    \"prompt_tokens_details\":
+        46,\n    \"completion_tokens\": 12,\n    \"total_tokens\": 58,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -169,7 +169,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 21:29:11 GMT
+      - Wed, 11 Feb 2026 01:04:36 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -187,11 +187,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '323'
+      - '559'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

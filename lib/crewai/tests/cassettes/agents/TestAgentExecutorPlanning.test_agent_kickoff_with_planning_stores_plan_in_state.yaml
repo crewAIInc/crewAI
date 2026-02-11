@@ -1,401 +1,781 @@
 interactions:
-  - request:
-      body:
-        '{"messages":[{"role":"system","content":"You are a strategic planning assistant.
-        Create minimal, effective execution plans. Prefer fewer steps over more."},{"role":"user","content":"Create
-        a focused execution plan for the following task:\n\n## Task\nWhat is 2 + 2?\n\n##
-        Expected Output\nComplete the task successfully\n\n## Available Tools\nNo tools
-        available\n\n## Planning Principles\nFocus on WHAT needs to be accomplished,
-        not HOW. Group related actions into logical units. Fewer steps = better. Most
-        tasks need 3-6 steps. Hard limit: 20 steps.\n\n## Step Types (only these are
-        valid):\n1. **Tool Step**: Uses a tool to gather information or take action\n2.
-        **Output Step**: Synthesizes prior results into the final deliverable (usually
-        the last step)\n\n## Rules:\n- Each step must either USE A TOOL or PRODUCE THE
-        FINAL OUTPUT\n- Combine related tool calls: \"Research A, B, and C\" = ONE step,
-        not three\n- Combine all synthesis into ONE final output step\n- NO standalone
-        \"thinking\" steps (review, verify, confirm, refine, analyze) - these happen
-        naturally between steps\n\nFor each step: State the action, specify the tool
-        (if any), and note dependencies.\n\nAfter your plan, state READY or NOT READY."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_reasoning_plan","description":"Create
-        or refine a reasoning plan for a task with structured steps","strict":true,"parameters":{"type":"object","properties":{"plan":{"type":"string","description":"A
-        brief summary of the overall plan."},"steps":{"type":"array","description":"List
-        of discrete steps to execute the plan","items":{"type":"object","properties":{"step_number":{"type":"integer","description":"Step
-        number (1-based)"},"description":{"type":"string","description":"What to do
-        in this step"},"tool_to_use":{"type":["string","null"],"description":"Tool to
-        use for this step, or null if no tool needed"},"depends_on":{"type":"array","items":{"type":"integer"},"description":"Step
-        numbers this step depends on (empty array if none)"}},"required":["step_number","description","tool_to_use","depends_on"],"additionalProperties":false}},"ready":{"type":"boolean","description":"Whether
-        the agent is ready to execute the task."}},"required":["plan","steps","ready"],"additionalProperties":false}}}]}'
-      headers:
-        User-Agent:
-          - X-USER-AGENT-XXX
-        accept:
-          - application/json
-        accept-encoding:
-          - ACCEPT-ENCODING-XXX
-        authorization:
-          - AUTHORIZATION-XXX
-        connection:
-          - keep-alive
-        content-length:
-          - "2315"
-        content-type:
-          - application/json
-        host:
-          - api.openai.com
-        x-stainless-arch:
-          - X-STAINLESS-ARCH-XXX
-        x-stainless-async:
-          - "false"
-        x-stainless-lang:
-          - python
-        x-stainless-os:
-          - X-STAINLESS-OS-XXX
-        x-stainless-package-version:
-          - 1.83.0
-        x-stainless-read-timeout:
-          - X-STAINLESS-READ-TIMEOUT-XXX
-        x-stainless-retry-count:
-          - "0"
-        x-stainless-runtime:
-          - CPython
-        x-stainless-runtime-version:
-          - 3.13.3
-      method: POST
-      uri: https://api.openai.com/v1/chat/completions
-    response:
-      body:
-        string:
-          "{\n  \"id\": \"chatcmpl-D62FIyv2pfC7qKbZVvmJNjOVfge1F\",\n  \"object\":
-          \"chat.completion\",\n  \"created\": 1770330972,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-          \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-          \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-          \           \"id\": \"call_xEDChlUntYR0aSxQhkobswea\",\n            \"type\":
-          \"function\",\n            \"function\": {\n              \"name\": \"create_reasoning_plan\",\n
-          \             \"arguments\": \"{\\\"plan\\\":\\\"Calculate the sum of 2 +
-          2 and provide the result as the final output.\\\",\\\"steps\\\":[{\\\"step_number\\\":1,\\\"description\\\":\\\"Calculate
-          the sum of 2 + 2\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[]},{\\\"step_number\\\":2,\\\"description\\\":\\\"Provide
-          the result as final output\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[1]}],\\\"ready\\\":true}\"\n
-          \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
-          []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
-          \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 440,\n    \"completion_tokens\":
-          92,\n    \"total_tokens\": 532,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-          0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-          {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-          0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-          \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
-      headers:
-        CF-RAY:
-          - CF-RAY-XXX
-        Connection:
-          - keep-alive
-        Content-Type:
-          - application/json
-        Date:
-          - Thu, 05 Feb 2026 22:36:13 GMT
-        Server:
-          - cloudflare
-        Set-Cookie:
-          - SET-COOKIE-XXX
-        Strict-Transport-Security:
-          - STS-XXX
-        Transfer-Encoding:
-          - chunked
-        X-Content-Type-Options:
-          - X-CONTENT-TYPE-XXX
-        access-control-expose-headers:
-          - ACCESS-CONTROL-XXX
-        alt-svc:
-          - h3=":443"; ma=86400
-        cf-cache-status:
-          - DYNAMIC
-        openai-organization:
-          - OPENAI-ORG-XXX
-        openai-processing-ms:
-          - "1670"
-        openai-project:
-          - OPENAI-PROJECT-XXX
-        openai-version:
-          - "2020-10-01"
-        x-openai-proxy-wasm:
-          - v0.1
-        x-ratelimit-limit-requests:
-          - X-RATELIMIT-LIMIT-REQUESTS-XXX
-        x-ratelimit-limit-tokens:
-          - X-RATELIMIT-LIMIT-TOKENS-XXX
-        x-ratelimit-remaining-requests:
-          - X-RATELIMIT-REMAINING-REQUESTS-XXX
-        x-ratelimit-remaining-tokens:
-          - X-RATELIMIT-REMAINING-TOKENS-XXX
-        x-ratelimit-reset-requests:
-          - X-RATELIMIT-RESET-REQUESTS-XXX
-        x-ratelimit-reset-tokens:
-          - X-RATELIMIT-RESET-TOKENS-XXX
-        x-request-id:
-          - X-REQUEST-ID-XXX
-      status:
-        code: 200
-        message: OK
-  - request:
-      body:
-        '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
-        assistant that solves math problems step by step\n\nYour goal: Help solve simple
-        math problems\n\nYou are executing a specific step in a multi-step plan. Focus
-        ONLY on completing\nthe current step. Do not plan ahead or worry about future
-        steps.\n\nBefore acting, briefly reason about what you need to do and which
-        approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
-        Current Step\nCalculate the sum of 2 + 2\n\nComplete this step and provide your
-        result."}],"model":"gpt-4o-mini"}'
-      headers:
-        User-Agent:
-          - X-USER-AGENT-XXX
-        accept:
-          - application/json
-        accept-encoding:
-          - ACCEPT-ENCODING-XXX
-        authorization:
-          - AUTHORIZATION-XXX
-        connection:
-          - keep-alive
-        content-length:
-          - "597"
-        content-type:
-          - application/json
-        cookie:
-          - COOKIE-XXX
-        host:
-          - api.openai.com
-        x-stainless-arch:
-          - X-STAINLESS-ARCH-XXX
-        x-stainless-async:
-          - "false"
-        x-stainless-lang:
-          - python
-        x-stainless-os:
-          - X-STAINLESS-OS-XXX
-        x-stainless-package-version:
-          - 1.83.0
-        x-stainless-read-timeout:
-          - X-STAINLESS-READ-TIMEOUT-XXX
-        x-stainless-retry-count:
-          - "0"
-        x-stainless-runtime:
-          - CPython
-        x-stainless-runtime-version:
-          - 3.13.3
-      method: POST
-      uri: https://api.openai.com/v1/chat/completions
-    response:
-      body:
-        string:
-          "{\n  \"id\": \"chatcmpl-D62FJ4ZEkHWSBMZA8bDbMqd7upzwY\",\n  \"object\":
-          \"chat.completion\",\n  \"created\": 1770330973,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-          \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-          \"assistant\",\n        \"content\": \"To calculate the sum of 2 + 2, I simply
-          add the two numbers together.\\n\\n2 + 2 = 4\\n\\nThe result is 4.\",\n        \"refusal\":
-          null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-          \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-          115,\n    \"completion_tokens\": 33,\n    \"total_tokens\": 148,\n    \"prompt_tokens_details\":
-          {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-          {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-          0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-          \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
-      headers:
-        CF-RAY:
-          - CF-RAY-XXX
-        Connection:
-          - keep-alive
-        Content-Type:
-          - application/json
-        Date:
-          - Thu, 05 Feb 2026 22:36:14 GMT
-        Server:
-          - cloudflare
-        Strict-Transport-Security:
-          - STS-XXX
-        Transfer-Encoding:
-          - chunked
-        X-Content-Type-Options:
-          - X-CONTENT-TYPE-XXX
-        access-control-expose-headers:
-          - ACCESS-CONTROL-XXX
-        alt-svc:
-          - h3=":443"; ma=86400
-        cf-cache-status:
-          - DYNAMIC
-        openai-organization:
-          - OPENAI-ORG-XXX
-        openai-processing-ms:
-          - "614"
-        openai-project:
-          - OPENAI-PROJECT-XXX
-        openai-version:
-          - "2020-10-01"
-        x-openai-proxy-wasm:
-          - v0.1
-        x-ratelimit-limit-requests:
-          - X-RATELIMIT-LIMIT-REQUESTS-XXX
-        x-ratelimit-limit-tokens:
-          - X-RATELIMIT-LIMIT-TOKENS-XXX
-        x-ratelimit-remaining-requests:
-          - X-RATELIMIT-REMAINING-REQUESTS-XXX
-        x-ratelimit-remaining-tokens:
-          - X-RATELIMIT-REMAINING-TOKENS-XXX
-        x-ratelimit-reset-requests:
-          - X-RATELIMIT-RESET-REQUESTS-XXX
-        x-ratelimit-reset-tokens:
-          - X-RATELIMIT-RESET-TOKENS-XXX
-        x-request-id:
-          - X-REQUEST-ID-XXX
-      status:
-        code: 200
-        message: OK
-  - request:
-      body:
-        "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
-        observing execution progress. After each step completes, you analyze what happened
-        and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
-        about:\\n1. What new information was learned from this step's result\\n2. Whether
-        the remaining steps still make sense given this new information\\n3. What refinements,
-        if any, are needed for upcoming steps\\n4. Whether the overall goal has already
-        been achieved\\n\\nBe conservative about triggering full replans \u2014 only
-        do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
-        Original task\\n\\n\\n## Expected output\\n\\n\\n\\n## Just completed step 1\\nDescription:
-        Calculate the sum of 2 + 2\\nResult: To calculate the sum of 2 + 2, I simply
-        add the two numbers together.\\n\\n2 + 2 = 4\\n\\nThe result is 4.\\n\\n## Remaining
-        plan steps:\\n  Step 2: Provide the result as final output\\n\\nAnalyze this
-        step's result and provide your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
-        observation after a step execution completes.\\n\\nReturned by the PlannerObserver
-        after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
-        whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
-        3.3): the Planner observes what the Executor\\ndid and incorporates new information
-        into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
-        Whether the step achieved its objective.\\n    key_information_learned: New
-        information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
-        B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
-        Whether pending todos still make sense\\n        given the new information.
-        True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
-        tweaks to upcoming step descriptions.\\n        These are lightweight in-place
-        updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
-        B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
-        is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
-        exclusive with\\n        remaining_plan_still_valid (if this is True, that should
-        be False).\\n    replan_reason: Explanation of why a full replan is needed (None
-        if not).\\n    goal_already_achieved: The overall task goal has been satisfied
-        early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
-        the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
-        new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
-        the remaining pending todos still make sense given new information\",\"title\":\"Remaining
-        Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
-        tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
-        Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
-        remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
-        Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
-        of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
-        overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
-        Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
-      headers:
-        User-Agent:
-          - X-USER-AGENT-XXX
-        accept:
-          - application/json
-        accept-encoding:
-          - ACCEPT-ENCODING-XXX
-        authorization:
-          - AUTHORIZATION-XXX
-        connection:
-          - keep-alive
-        content-length:
-          - "4024"
-        content-type:
-          - application/json
-        cookie:
-          - COOKIE-XXX
-        host:
-          - api.openai.com
-        x-stainless-arch:
-          - X-STAINLESS-ARCH-XXX
-        x-stainless-async:
-          - "false"
-        x-stainless-helper-method:
-          - beta.chat.completions.parse
-        x-stainless-lang:
-          - python
-        x-stainless-os:
-          - X-STAINLESS-OS-XXX
-        x-stainless-package-version:
-          - 1.83.0
-        x-stainless-read-timeout:
-          - X-STAINLESS-READ-TIMEOUT-XXX
-        x-stainless-retry-count:
-          - "0"
-        x-stainless-runtime:
-          - CPython
-        x-stainless-runtime-version:
-          - 3.13.3
-      method: POST
-      uri: https://api.openai.com/v1/chat/completions
-    response:
-      body:
-        string:
-          "{\n  \"id\": \"chatcmpl-D62FKmJpd8tlJ6Y3OChUQsoz2o5ps\",\n  \"object\":
-          \"chat.completion\",\n  \"created\": 1770330974,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-          \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-          \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
-          calculation for 2 + 2 is 4.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":true}\",\n
-          \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-          null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-          789,\n    \"completion_tokens\": 64,\n    \"total_tokens\": 853,\n    \"prompt_tokens_details\":
-          {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-          {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-          0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-          \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
-      headers:
-        CF-RAY:
-          - CF-RAY-XXX
-        Connection:
-          - keep-alive
-        Content-Type:
-          - application/json
-        Date:
-          - Thu, 05 Feb 2026 22:36:15 GMT
-        Server:
-          - cloudflare
-        Strict-Transport-Security:
-          - STS-XXX
-        Transfer-Encoding:
-          - chunked
-        X-Content-Type-Options:
-          - X-CONTENT-TYPE-XXX
-        access-control-expose-headers:
-          - ACCESS-CONTROL-XXX
-        alt-svc:
-          - h3=":443"; ma=86400
-        cf-cache-status:
-          - DYNAMIC
-        openai-organization:
-          - OPENAI-ORG-XXX
-        openai-processing-ms:
-          - "1181"
-        openai-project:
-          - OPENAI-PROJECT-XXX
-        openai-version:
-          - "2020-10-01"
-        x-openai-proxy-wasm:
-          - v0.1
-        x-ratelimit-limit-requests:
-          - X-RATELIMIT-LIMIT-REQUESTS-XXX
-        x-ratelimit-limit-tokens:
-          - X-RATELIMIT-LIMIT-TOKENS-XXX
-        x-ratelimit-remaining-requests:
-          - X-RATELIMIT-REMAINING-REQUESTS-XXX
-        x-ratelimit-remaining-tokens:
-          - X-RATELIMIT-REMAINING-TOKENS-XXX
-        x-ratelimit-reset-requests:
-          - X-RATELIMIT-RESET-REQUESTS-XXX
-        x-ratelimit-reset-tokens:
-          - X-RATELIMIT-RESET-TOKENS-XXX
-        x-request-id:
-          - X-REQUEST-ID-XXX
-      status:
-        code: 200
-        message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are a strategic planning assistant.
+      Create minimal, effective execution plans. Prefer fewer steps over more."},{"role":"user","content":"Create
+      a focused execution plan for the following task:\n\n## Task\nWhat is 2 + 2?\n\n##
+      Expected Output\nComplete the task successfully\n\n## Available Tools\nNo tools
+      available\n\n## Planning Principles\nFocus on WHAT needs to be accomplished,
+      not HOW. Group related actions into logical units. Fewer steps = better. Most
+      tasks need 3-6 steps. Hard limit: 20 steps.\n\n## Step Types (only these are
+      valid):\n1. **Tool Step**: Uses a tool to gather information or take action\n2.
+      **Output Step**: Synthesizes prior results into the final deliverable (usually
+      the last step)\n\n## Rules:\n- Each step must either USE A TOOL or PRODUCE THE
+      FINAL OUTPUT\n- Combine related tool calls: \"Research A, B, and C\" = ONE step,
+      not three\n- Combine all synthesis into ONE final output step\n- NO standalone
+      \"thinking\" steps (review, verify, confirm, refine, analyze) - these happen
+      naturally between steps\n\nFor each step: State the action, specify the tool
+      (if any), and note dependencies.\n\nAfter your plan, state READY or NOT READY."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"create_reasoning_plan","description":"Create
+      or refine a reasoning plan for a task with structured steps","strict":true,"parameters":{"type":"object","properties":{"plan":{"type":"string","description":"A
+      brief summary of the overall plan."},"steps":{"type":"array","description":"List
+      of discrete steps to execute the plan","items":{"type":"object","properties":{"step_number":{"type":"integer","description":"Step
+      number (1-based)"},"description":{"type":"string","description":"What to do
+      in this step"},"tool_to_use":{"type":["string","null"],"description":"Tool to
+      use for this step, or null if no tool needed"},"depends_on":{"type":"array","items":{"type":"integer"},"description":"Step
+      numbers this step depends on (empty array if none)"}},"required":["step_number","description","tool_to_use","depends_on"],"additionalProperties":false}},"ready":{"type":"boolean","description":"Whether
+      the agent is ready to execute the task."}},"required":["plan","steps","ready"],"additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2315'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7sucBVKCmsTak9j942bnJ6N1AuTp\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771750,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_OBLxVBttHEOnE06W6eBk8udl\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"create_reasoning_plan\",\n
+        \             \"arguments\": \"{\\\"plan\\\":\\\"Calculate the sum of 2 and
+        2.\\\",\\\"steps\\\":[{\\\"step_number\\\":1,\\\"description\\\":\\\"Perform
+        the addition of 2 and 2\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[]},{\\\"step_number\\\":2,\\\"description\\\":\\\"Output
+        the result of the addition\\\",\\\"tool_to_use\\\":null,\\\"depends_on\\\":[1]}],\\\"ready\\\":true}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 440,\n    \"completion_tokens\":
+        84,\n    \"total_tokens\": 524,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:33 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '2250'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
+      assistant that solves math problems step by step\n\nYour goal: Help solve simple
+      math problems\n\nYou are executing a specific step in a multi-step plan. Focus
+      ONLY on completing\nthe current step. Do not plan ahead or worry about future
+      steps.\n\nBefore acting, briefly reason about what you need to do and which
+      approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nPerform the addition of 2 and 2\n\nComplete this step and provide
+      your result."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '602'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7sufbS872OOIMBzOVOZv0SDcR9OR\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771753,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"To perform the addition of 2 and 2,
+        I will combine the two numbers:\\n\\n2 + 2 = 4\\n\\nThe result is 4.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        115,\n    \"completion_tokens\": 32,\n    \"total_tokens\": 147,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1407'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n\\n## Just completed step 1\\nDescription:
+      Perform the addition of 2 and 2\\nResult: To perform the addition of 2 and 2,
+      I will combine the two numbers:\\n\\n2 + 2 = 4\\n\\nThe result is 4.\\n\\n##
+      Remaining plan steps:\\n  Step 2: Output the result of the addition\\n\\nAnalyze
+      this step's result and provide your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4026'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7sugkxTuKbiOtwhKkgOPH9A8O7w2\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771754,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
+        addition operation was completed successfully, and the result is confirmed
+        as 4.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":false}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        788,\n    \"completion_tokens\": 68,\n    \"total_tokens\": 856,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:36 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1821'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
+      assistant that solves math problems step by step\n\nYour goal: Help solve simple
+      math problems\n\nYou are executing a specific step in a multi-step plan. Focus
+      ONLY on completing\nthe current step. Do not plan ahead or worry about future
+      steps.\n\nBefore acting, briefly reason about what you need to do and which
+      approach\nor tool would be most helpful for this specific step."},{"role":"user","content":"##
+      Current Step\nOutput the result of the addition\n\n## Context from previous
+      steps:\nStep 1 result: To perform the addition of 2 and 2, I will combine the
+      two numbers:\n\n2 + 2 = 4\n\nThe result is 4.\n\nComplete this step and provide
+      your result."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '756'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7suiXp4AZCC6jrd43DcjTgNIn2XM\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771756,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The result of the addition is 4.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        155,\n    \"completion_tokens\": 9,\n    \"total_tokens\": 164,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:36 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '385'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"messages\":[{\"role\":\"system\",\"content\":\"You are a Planning Agent
+      observing execution progress. After each step completes, you analyze what happened
+      and decide whether the remaining plan is still valid.\\n\\nReason step-by-step
+      about:\\n1. What new information was learned from this step's result\\n2. Whether
+      the remaining steps still make sense given this new information\\n3. What refinements,
+      if any, are needed for upcoming steps\\n4. Whether the overall goal has already
+      been achieved\\n\\nBe conservative about triggering full replans \u2014 only
+      do so when the remaining plan is fundamentally wrong, not just suboptimal.\"},{\"role\":\"user\",\"content\":\"##
+      Original task\\n\\n\\n## Expected output\\n\\n\\n## Previously completed steps:\\n
+      \ Step 1: Perform the addition of 2 and 2\\n    Result: To perform the addition
+      of 2 and 2, I will combine the two numbers:\\n\\n2 + 2 = 4\\n\\nThe result is
+      4.\\n\\n## Just completed step 2\\nDescription: Output the result of the addition\\nResult:
+      The result of the addition is 4.\\n\\n\\nAnalyze this step's result and provide
+      your observation.\"}],\"model\":\"gpt-4o-mini\",\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"schema\":{\"description\":\"Planner's
+      observation after a step execution completes.\\n\\nReturned by the PlannerObserver
+      after EVERY step \u2014 not just failures.\\nThe Planner uses this to decide
+      whether to continue, refine, or replan.\\n\\nBased on PLAN-AND-ACT (Section
+      3.3): the Planner observes what the Executor\\ndid and incorporates new information
+      into the remaining plan.\\n\\nAttributes:\\n    step_completed_successfully:
+      Whether the step achieved its objective.\\n    key_information_learned: New
+      information revealed by this step\\n        (e.g., \\\"Found 3 products: A,
+      B, C\\\"). Used to refine upcoming steps.\\n    remaining_plan_still_valid:
+      Whether pending todos still make sense\\n        given the new information.
+      True does NOT mean no refinement needed.\\n    suggested_refinements: Minor
+      tweaks to upcoming step descriptions.\\n        These are lightweight in-place
+      updates, not a full replan.\\n        Example: [\\\"Step 3 should select product
+      B instead of 'best product'\\\"]\\n    needs_full_replan: The remaining plan
+      is fundamentally wrong and must\\n        be regenerated from scratch. Mutually
+      exclusive with\\n        remaining_plan_still_valid (if this is True, that should
+      be False).\\n    replan_reason: Explanation of why a full replan is needed (None
+      if not).\\n    goal_already_achieved: The overall task goal has been satisfied
+      early.\\n        No more steps needed \u2014 skip remaining todos and finalize.\",\"properties\":{\"step_completed_successfully\":{\"description\":\"Whether
+      the step achieved what it was asked to do\",\"title\":\"Step Completed Successfully\",\"type\":\"boolean\"},\"key_information_learned\":{\"default\":\"\",\"description\":\"What
+      new information this step revealed\",\"title\":\"Key Information Learned\",\"type\":\"string\"},\"remaining_plan_still_valid\":{\"default\":true,\"description\":\"Whether
+      the remaining pending todos still make sense given new information\",\"title\":\"Remaining
+      Plan Still Valid\",\"type\":\"boolean\"},\"suggested_refinements\":{\"anyOf\":[{\"items\":{\"type\":\"string\"},\"type\":\"array\"},{\"type\":\"null\"}],\"description\":\"Minor
+      tweaks to descriptions of upcoming steps (lightweight, no full replan)\",\"title\":\"Suggested
+      Refinements\"},\"needs_full_replan\":{\"default\":false,\"description\":\"The
+      remaining plan is fundamentally wrong and must be regenerated\",\"title\":\"Needs
+      Full Replan\",\"type\":\"boolean\"},\"replan_reason\":{\"anyOf\":[{\"type\":\"string\"},{\"type\":\"null\"}],\"description\":\"Explanation
+      of why a full replan is needed\",\"title\":\"Replan Reason\"},\"goal_already_achieved\":{\"default\":false,\"description\":\"The
+      overall task goal has been satisfied early; no more steps needed\",\"title\":\"Goal
+      Already Achieved\",\"type\":\"boolean\"}},\"required\":[\"step_completed_successfully\",\"key_information_learned\",\"remaining_plan_still_valid\",\"suggested_refinements\",\"needs_full_replan\",\"replan_reason\",\"goal_already_achieved\"],\"title\":\"StepObservation\",\"type\":\"object\",\"additionalProperties\":false},\"name\":\"StepObservation\",\"strict\":true}},\"stream\":false}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '4078'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7sujyEacBTnf7PFkgAkAVfwQKYdh\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771757,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"step_completed_successfully\\\":true,\\\"key_information_learned\\\":\\\"The
+        result of the addition is confirmed to be 4.\\\",\\\"remaining_plan_still_valid\\\":true,\\\"suggested_refinements\\\":null,\\\"needs_full_replan\\\":false,\\\"replan_reason\\\":null,\\\"goal_already_achieved\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        800,\n    \"completion_tokens\": 64,\n    \"total_tokens\": 864,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:38 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1701'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Math Assistant. You have
+      completed a multi-step task. Synthesize the results from all steps into a single,
+      coherent final response that directly addresses the original task. Do NOT list
+      step numbers or say ''Step 1 result''. Produce a clean, polished answer as if
+      you did it all at once."},{"role":"user","content":"## Original Task\nWhat is
+      2 + 2?\n\n## Results from each step\nStep 1 (Perform the addition of 2 and 2):\nTo
+      perform the addition of 2 and 2, I will combine the two numbers:\n\n2 + 2 =
+      4\n\nThe result is 4.\n\nStep 2 (Output the result of the addition):\nThe result
+      of the addition is 4.\n\nSynthesize these results into a single, coherent final
+      answer."}],"model":"gpt-4o-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '742'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D7sukM0SIKXBdTM8rRUNeb0mRHpgt\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771758,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The result of adding 2 and 2 is 4.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        169,\n    \"completion_tokens\": 13,\n    \"total_tokens\": 182,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 01:02:39 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '780'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
 version: 1

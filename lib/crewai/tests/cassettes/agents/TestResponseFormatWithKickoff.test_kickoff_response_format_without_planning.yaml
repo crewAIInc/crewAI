@@ -47,11 +47,11 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6NfzfSu3KkFRgIbm3Z222RJMTPy9\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770413351,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7swZDEfk1b9ktyWB0gNodkLy52oo\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771871,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"answer\\\":42,\\\"explanation\\\":\\\"To
-        find the sum of 15 and 27, we simply add the two numbers together: 15 + 27
+        find the sum of 15 and 27, you simply add the two numbers together: 15 + 27
         = 42.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
         \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
         \ \"usage\": {\n    \"prompt_tokens\": 117,\n    \"completion_tokens\": 37,\n
@@ -68,11 +68,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 21:29:12 GMT
+      - Wed, 11 Feb 2026 01:04:32 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -88,11 +86,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '976'
+      - '1044'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -162,15 +162,15 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6Ng1hVush1SBz7bgwbNvbWC8F3Lm\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770413353,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D7swbsTqOlBi8nU9034XxlMfDIfJY\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770771873,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"{\\\"answer\\\":42,\\\"explanation\\\":\\\"To
-        find the sum of 15 and 27, you simply add the two numbers together: 15 + 27
-        = 42.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        solve 15 + 27, you simply add the two numbers together: 15 plus 27 equals
+        42.\\\"}\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
         \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-        \ \"usage\": {\n    \"prompt_tokens\": 117,\n    \"completion_tokens\": 37,\n
-        \   \"total_tokens\": 154,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        \ \"usage\": {\n    \"prompt_tokens\": 117,\n    \"completion_tokens\": 34,\n
+        \   \"total_tokens\": 151,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -183,7 +183,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 21:29:14 GMT
+      - Wed, 11 Feb 2026 01:04:34 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -201,11 +201,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1057'
+      - '1228'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
