@@ -990,3 +990,134 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
     assert result.pydantic.result == 42, f"Expected result 42 but got {result.pydantic.result}"
     assert result.pydantic.operation, "Operation should not be empty"
     assert result.pydantic.explanation, "Explanation should not be empty"
+
+
+@pytest.mark.vcr()
+def test_anthropic_cached_prompt_tokens():
+    """
+    Test that Anthropic correctly extracts and tracks cached_prompt_tokens
+    from cache_read_input_tokens. Uses cache_control to enable prompt caching
+    and sends the same large prompt twice so the second call hits the cache.
+    """
+    # Anthropic requires cache_control blocks and >=1024 tokens for caching
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929")
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.completion_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_anthropic_streaming_cached_prompt_tokens():
+    """
+    Test that Anthropic streaming correctly extracts and tracks cached_prompt_tokens.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant. {padding}"
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929", stream=True)
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call: creates the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say hello in one word.")},
+    ])
+
+    # Second call: same system prompt should hit the cache
+    llm.call([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": _ephemeral_user("Say goodbye in one word.")},
+    ])
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
+
+
+@pytest.mark.vcr()
+def test_anthropic_cached_prompt_tokens_with_tools():
+    """
+    Test that Anthropic correctly tracks cached_prompt_tokens when tools are used.
+    The large system prompt should be cached across tool-calling requests.
+    """
+    padding = "This is padding text to ensure the prompt is large enough for caching. " * 80
+    system_msg = f"You are a helpful assistant that uses tools. {padding}"
+
+    def get_weather(location: str) -> str:
+        return f"The weather in {location} is sunny and 72°F"
+
+    tools = [
+        {
+            "name": "get_weather",
+            "description": "Get the current weather for a location",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city name"
+                    }
+                },
+                "required": ["location"],
+            },
+        }
+    ]
+
+    llm = LLM(model="anthropic/claude-sonnet-4-5-20250929")
+
+    def _ephemeral_user(text: str):
+        return [{"type": "text", "text": text, "cache_control": {"type": "ephemeral"}}]
+
+    # First call with tool: creates the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": _ephemeral_user("What is the weather in Tokyo?")},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    # Second call with same system prompt + tools: should hit the cache
+    llm.call(
+        [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": _ephemeral_user("What is the weather in Paris?")},
+        ],
+        tools=tools,
+        available_functions={"get_weather": get_weather},
+    )
+
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens > 0
+    assert usage.prompt_tokens > 0
+    assert usage.successful_requests == 2
+    # The second call should have cached prompt tokens
+    assert usage.cached_prompt_tokens > 0
