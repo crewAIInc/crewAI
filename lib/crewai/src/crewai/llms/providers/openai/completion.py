@@ -13,6 +13,10 @@ from openai.lib.streaming.chat import ChatCompletionStream
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from openai.types.chat.chat_completion import Choice
 from openai.types.chat.chat_completion_chunk import ChoiceDelta
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+    Function as OpenAIFunction,
+)
 from openai.types.responses import Response
 from pydantic import BaseModel
 
@@ -1855,6 +1859,20 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
+        # If there are tool_calls but no available_functions, return the tool_calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
+            tool_call_list = self._build_tool_call_list(tool_calls)
+            if tool_call_list:
+                self._emit_call_completed_event(
+                    response=tool_call_list,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return tool_call_list
+
         full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
@@ -2175,6 +2193,20 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
+        # If there are tool_calls but no available_functions, return the tool_calls
+        # This allows the caller (e.g., executor) to handle tool execution
+        if tool_calls and not available_functions:
+            tool_call_list = self._build_tool_call_list(tool_calls)
+            if tool_call_list:
+                self._emit_call_completed_event(
+                    response=tool_call_list,
+                    call_type=LLMCallType.TOOL_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                )
+                return tool_call_list
+
         full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
@@ -2186,6 +2218,45 @@ class OpenAICompletion(BaseLLM):
         )
 
         return full_response
+
+    def _build_tool_call_list(
+        self, tool_calls: dict[int, dict[str, Any]]
+    ) -> list[ChatCompletionMessageToolCall]:
+        """Build a list of ChatCompletionMessageToolCall from accumulated streaming data.
+
+        This method converts the tool call data accumulated during streaming into
+        proper OpenAI tool call objects that can be returned to the caller for
+        external handling (when available_functions is None).
+
+        Args:
+            tool_calls: Dict mapping tool index to accumulated tool call data
+                        with keys: 'id', 'name', 'arguments', 'index'
+
+        Returns:
+            List of ChatCompletionMessageToolCall objects
+        """
+        result: list[ChatCompletionMessageToolCall] = []
+
+        for call_data in tool_calls.values():
+            tool_id = call_data.get("id")
+            function_name = call_data.get("name", "")
+            arguments = call_data.get("arguments", "")
+
+            # Skip incomplete tool calls (missing id, name, or arguments)
+            if not tool_id or not function_name or not arguments:
+                continue
+
+            tool_call = ChatCompletionMessageToolCall(
+                id=tool_id,
+                type="function",
+                function=OpenAIFunction(
+                    name=function_name,
+                    arguments=arguments,
+                ),
+            )
+            result.append(tool_call)
+
+        return result
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
