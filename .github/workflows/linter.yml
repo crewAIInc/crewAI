@@ -26,15 +26,15 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             .venv
-          key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+          key: uv-main-py3.12-${{ hashFiles('uv.lock') }}
           restore-keys: |
-            uv-main-py3.11-
+            uv-main-py3.12-
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
           version: "0.8.4"
-          python-version: "3.11"
+          python-version: "3.12"
           enable-cache: false
 
       - name: Install dependencies
@@ -66,4 +66,4 @@ jobs:
             ~/.cache/uv
             ~/.local/share/uv
             .venv
-          key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+          key: uv-main-py3.12-${{ hashFiles('uv.lock') }}
