@@ -44,6 +44,7 @@ from crewai.llms.constants import (
     BEDROCK_MODELS,
     GEMINI_MODELS,
     OPENAI_MODELS,
+    TZAFON_MODELS,
 )
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -244,6 +245,9 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
+    # tzafon
+    "tzafon.sm-1": 8192,
+    "tzafon.northstar-cua-fast": 8192,
     # bedrock
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
@@ -325,6 +329,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "tzafon",
 ]
 
 
@@ -384,6 +389,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "tzafon": "tzafon",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -469,6 +475,9 @@ class LLM(BaseLLM):
                 for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
             )
 
+        if provider == "tzafon":
+            return model_lower.startswith("tzafon.")
+
         return False
 
     @classmethod
@@ -504,6 +513,9 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "tzafon" and model in TZAFON_MODELS:
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -536,6 +548,9 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        if model in TZAFON_MODELS:
+            return "tzafon"
+
         return "openai"
 
     @classmethod
@@ -567,6 +582,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "tzafon":
+            from crewai.llms.providers.tzafon.completion import TzafonCompletion
+
+            return TzafonCompletion
 
         return None
 
