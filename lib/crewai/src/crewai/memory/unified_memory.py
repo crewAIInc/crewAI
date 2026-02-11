@@ -425,12 +425,9 @@ class Memory:
             The updated MemoryRecord.
 
         Raises:
-            ValueError: If the storage does not support get_record or the record is not found.
+            ValueError: If the record is not found.
         """
-        get_record = getattr(self._storage, "get_record", None)
-        if get_record is None:
-            raise ValueError("This storage backend does not support update by ID")
-        existing = get_record(record_id)
+        existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
         now = datetime.utcnow()
@@ -478,10 +475,16 @@ class Memory:
         return self._storage.list_scopes(path)
 
     def list_records(
-        self, scope: str | None = None, limit: int = 200
+        self, scope: str | None = None, limit: int = 200, offset: int = 0
     ) -> list[MemoryRecord]:
-        """List records in a scope, newest first."""
-        return self._storage.list_records(scope_prefix=scope, limit=limit)
+        """List records in a scope, newest first.
+
+        Args:
+            scope: Optional scope path prefix to filter by.
+            limit: Maximum number of records to return.
+            offset: Number of records to skip (for pagination).
+        """
+        return self._storage.list_records(scope_prefix=scope, limit=limit, offset=offset)
 
     def info(self, path: str = "/") -> ScopeInfo:
         """Return scope info for path."""

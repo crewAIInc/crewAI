@@ -173,7 +173,7 @@ class LanceDBStorage:
         table.add([row])
 
     def get_record(self, record_id: str) -> MemoryRecord | None:
-        """Return a record by ID, or None if not found. LanceDB-only."""
+        """Return a single record by ID, or None if not found."""
         if self._table is None:
             return None
         safe_id = str(record_id).replace("'", "''")
@@ -275,13 +275,22 @@ class LanceDBStorage:
         return q.limit(limit).to_list()
 
     def list_records(
-        self, scope_prefix: str | None = None, limit: int = 200
+        self, scope_prefix: str | None = None, limit: int = 200, offset: int = 0
     ) -> list[MemoryRecord]:
-        """List records in a scope, newest first. LanceDB-only (TUI use)."""
-        rows = self._scan_rows(scope_prefix, limit=limit)
+        """List records in a scope, newest first.
+
+        Args:
+            scope_prefix: Optional scope path prefix to filter by.
+            limit: Maximum number of records to return.
+            offset: Number of records to skip (for pagination).
+
+        Returns:
+            List of MemoryRecord, ordered by created_at descending.
+        """
+        rows = self._scan_rows(scope_prefix, limit=limit + offset)
         records = [self._row_to_record(r) for r in rows]
         records.sort(key=lambda r: r.created_at, reverse=True)
-        return records[:limit]
+        return records[offset : offset + limit]
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"

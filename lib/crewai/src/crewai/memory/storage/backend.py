@@ -70,6 +70,35 @@ class StorageBackend(Protocol):
         """Update an existing record. Replaces the record with the same ID."""
         ...
 
+    def get_record(self, record_id: str) -> MemoryRecord | None:
+        """Return a single record by ID, or None if not found.
+
+        Args:
+            record_id: The unique ID of the record.
+
+        Returns:
+            The MemoryRecord, or None if no record with that ID exists.
+        """
+        ...
+
+    def list_records(
+        self,
+        scope_prefix: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+    ) -> list[MemoryRecord]:
+        """List records in a scope, newest first.
+
+        Args:
+            scope_prefix: Optional scope path prefix to filter by.
+            limit: Maximum number of records to return.
+            offset: Number of records to skip (for pagination).
+
+        Returns:
+            List of MemoryRecord, ordered by created_at descending.
+        """
+        ...
+
     def get_scope_info(self, scope: str) -> ScopeInfo:
         """Get information about a scope.
 
