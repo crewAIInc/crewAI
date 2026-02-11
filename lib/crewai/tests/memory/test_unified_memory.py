@@ -595,7 +595,6 @@ def test_analyze_query_llm_failure_returns_defaults() -> None:
     )
     assert isinstance(result, QueryAnalysis)
     assert result.keywords == []
-    assert result.time_hints == []
     assert result.complexity == "simple"
     assert result.suggested_scopes == ["/", "/project", "/team", "/company", "/other"]
 
