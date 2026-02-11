@@ -245,7 +245,7 @@ class MemoryTUI(App[None]):
                 query,
                 scope=scope,
                 limit=10,
-                depth="shallow",
+                depth="deep",
             )
             if not matches:
                 panel.update("[dim]No memories found.[/]")

@@ -384,7 +384,7 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10, depth="shallow")
+                    matches = unified_memory.recall(query, limit=10)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
                             f"- {m.record.content}" for m in matches
@@ -622,7 +622,7 @@ class Agent(BaseAgent):
                 )
                 if unified_memory is not None:
                     query = task.description
-                    matches = unified_memory.recall(query, limit=10, depth="shallow")
+                    matches = unified_memory.recall(query, limit=10)
                     if matches:
                         memory = "Relevant memories:\n" + "\n".join(
                             f"- {m.record.content}" for m in matches

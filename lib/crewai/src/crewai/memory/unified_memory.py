@@ -285,16 +285,21 @@ class Memory:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: Literal["shallow", "deep", "auto"] = "auto",
+        depth: Literal["shallow", "deep"] = "deep",
     ) -> list[MemoryMatch]:
-        """Retrieve relevant memories. Shallow = direct vector search; deep/auto = RecallFlow.
+        """Retrieve relevant memories.
+
+        ``shallow`` embeds the query directly and runs a single vector search.
+        ``deep`` (default) uses the RecallFlow: the LLM distills the query into
+        targeted sub-queries, selects scopes, searches in parallel, and applies
+        confidence-based routing for optional deeper exploration.
 
         Args:
             query: Natural language query.
             scope: Optional scope prefix to search within.
             categories: Optional category filter.
             limit: Max number of results.
-            depth: "shallow" for direct search, "deep" or "auto" for intelligent flow.
+            depth: "shallow" for direct vector search, "deep" for intelligent flow.
 
         Returns:
             List of MemoryMatch, ordered by relevance.
@@ -341,16 +346,15 @@ class Memory:
                 flow = RecallFlow(
                     storage=self._storage,
                     llm=self._llm,
+                    embedder=self._embedder,
                     config=self._config,
                 )
-                embedding = embed_text(self._embedder, query)
                 flow.kickoff(
                     inputs={
                         "query": query,
                         "scope": scope,
                         "categories": categories or [],
                         "limit": limit,
-                        "query_embedding": embedding,
                     }
                 )
                 results = flow.state.final_results
@@ -540,7 +544,7 @@ class Memory:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: Literal["shallow", "deep", "auto"] = "auto",
+        depth: Literal["shallow", "deep"] = "deep",
     ) -> list[MemoryMatch]:
         """Async recall: delegates to sync for now."""
         return self.recall(

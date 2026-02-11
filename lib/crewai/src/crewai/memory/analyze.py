@@ -74,6 +74,15 @@ class QueryAnalysis(BaseModel):
         default="simple",
         description="One of 'simple' (single fact) or 'complex' (aggregation/reasoning).",
     )
+    recall_queries: list[str] = Field(
+        default_factory=list,
+        description=(
+            "1-3 short, targeted search phrases distilled from the query. "
+            "Each should be a concise question or keyword phrase optimized "
+            "for semantic vector search. If the query is already short and "
+            "focused, return it as a single item."
+        ),
+    )
 
 
 class ExtractedMemories(BaseModel):
@@ -309,6 +318,7 @@ def analyze_query(
             time_hints=[],
             suggested_scopes=scopes,
             complexity="simple",
+            recall_queries=[query],
         )
 
 

@@ -67,7 +67,7 @@ class MemoryScope:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: str = "auto",
+        depth: str = "deep",
     ) -> list[MemoryMatch]:
         """Recall within this scope (root path and below)."""
         search_scope = self._scope_path(scope) if scope else (self._root or "/")
@@ -184,7 +184,7 @@ class MemorySlice:
         scope: str | None = None,
         categories: list[str] | None = None,
         limit: int = 10,
-        depth: str = "auto",
+        depth: str = "deep",
     ) -> list[MemoryMatch]:
         """Recall across all slice scopes; results merged and re-ranked."""
         cats = categories or self._categories

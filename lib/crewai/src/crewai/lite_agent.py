@@ -544,7 +544,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         start_time = time.time()
         memory_block = ""
         try:
-            matches = self._memory.recall(query, limit=10, depth="shallow")
+            matches = self._memory.recall(query, limit=10)
             if matches:
                 memory_block = "Relevant memories:\n" + "\n".join(
                     f"- {m.record.content}" for m in matches
