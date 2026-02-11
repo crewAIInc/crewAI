@@ -1711,9 +1711,10 @@ class Agent(BaseAgent):
             from crewai.tools.memory_tools import create_memory_tools
 
             existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
-            for mt in create_memory_tools(agent_memory):
-                if sanitize_tool_name(mt.name) not in existing_names:
-                    raw_tools.append(mt)
+            raw_tools.extend(
+                mt for mt in create_memory_tools(agent_memory)
+                if sanitize_tool_name(mt.name) not in existing_names
+            )
 
         parsed_tools = parse_tools(raw_tools)
 

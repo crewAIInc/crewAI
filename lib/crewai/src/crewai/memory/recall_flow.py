@@ -112,10 +112,11 @@ class RecallFlow(Flow[RecallState]):
             return scope, raw
 
         # Build (embedding, scope) task list
-        tasks: list[tuple[list[float], str]] = []
-        for _query_text, embedding in self.state.query_embeddings:
-            for scope in self.state.candidate_scopes:
-                tasks.append((embedding, scope))
+        tasks: list[tuple[list[float], str]] = [
+            (embedding, scope)
+            for _query_text, embedding in self.state.query_embeddings
+            for scope in self.state.candidate_scopes
+        ]
 
         findings: list[dict[str, Any]] = []
 

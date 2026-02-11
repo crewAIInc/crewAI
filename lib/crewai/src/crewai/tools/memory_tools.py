@@ -53,9 +53,7 @@ class RecallMemoryTool(BaseTool):
         matches = self.memory.recall(query, scope=scope, limit=5, depth=actual_depth)
         if not matches:
             return "No relevant memories found."
-        lines: list[str] = []
-        for m in matches:
-            lines.append(f"- (score={m.score:.2f}) {m.record.content}")
+        lines = [f"- (score={m.score:.2f}) {m.record.content}" for m in matches]
         return "Found memories:\n" + "\n".join(lines)
 
 

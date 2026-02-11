@@ -315,7 +315,7 @@ class Memory:
                     touch = getattr(self._storage, "touch_records", None)
                     if touch is not None:
                         touch([m.record.id for m in results])
-                except Exception:
+                except Exception:  # noqa: S110
                     pass  # Non-critical: don't fail recall because of touch
 
             elapsed_ms = (time.perf_counter() - start) * 1000
