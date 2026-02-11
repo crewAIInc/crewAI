@@ -230,7 +230,7 @@ class TestDeployCommand(unittest.TestCase):
         [project]
         name = "test_project"
         version = "0.1.0"
-        requires-python = ">=3.10,<3.14"
+        requires-python = ">=3.10,<3.15"
         dependencies = ["crewai"]
         """,
     )
@@ -249,7 +249,7 @@ class TestDeployCommand(unittest.TestCase):
     [project]
     name = "test_project"
     version = "0.1.0"
-    requires-python = ">=3.10,<3.14"
+    requires-python = ">=3.10,<3.15"
     dependencies = ["crewai"]
     """,
     )
