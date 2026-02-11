@@ -1,400 +1,428 @@
 interactions:
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '694'
+      - '404'
       content-type:
       - application/json
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-BgufUtDqGzvqPZx2NmkqqxdW4G8rQ\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567308,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: The top 10 best soccer players in the world, as of October 2023, can be identified based on their recent performances, skills, impact on games, and overall contributions to their teams. Here is the structured list:\\n\\n1. **Lionel Messi (Inter Miami CF)**\\n   - Position: Forward\\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\\n   - Achievements: Multiple Ballon d'Or winner, Copa America champion, World Cup champion (2022).\\n\\n2. **Kylian Mbappé (Paris Saint-Germain)**\\n   - Position: Forward\\n   - Key Attributes: Speed, technique, finishing.\\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple\
-        \ domestic cups.\\n\\n3. **Erling Haaland (Manchester City)**\\n   - Position: Forward\\n   - Key Attributes: Power, speed, goal-scoring instinct.\\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\\n\\n4. **Kevin De Bruyne (Manchester City)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, creativity.\\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\\n\\n5. **Karim Benzema (Al-Ittihad)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\\n   - Achievements: 2022 Ballon d'Or winner, multiple Champions Leagues with Real Madrid.\\n\\n6. **Neymar Jr. (Al Hilal)**\\n   - Position: Forward\\n   - Key Attributes: Flair, dribbling, creativity.\\n   - Achievements: Multiple domestic league titles, Champions League runner-up.\\n\\n7. **Robert Lewandowski (FC Barcelona)**\\n   - Position: Forward\\n   - Key Attributes: Finishing,\
-        \ positioning, aerial ability.\\n   - Achievements: FIFA Best Men's Player, multiple Bundesliga titles, La Liga champion (2023).\\n\\n8. **Mohamed Salah (Liverpool)**\\n   - Position: Forward\\n   - Key Attributes: Speed, finishing, dribbling.\\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\\n\\n9. **Vinícius Júnior (Real Madrid)**\\n   - Position: Forward\\n   - Key Attributes: Speed, dribbling, creativity.\\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\\n\\n10. **Luka Modrić (Real Madrid)**\\n    - Position: Midfielder\\n    - Key Attributes: Passing, vision, tactical intelligence.\\n    - Achievements: Multiple Champions League titles, Ballon d'Or winner (2018).\\n\\nThis list is compiled based on their current form, past performances, and contributions to their respective teams in both domestic and international competitions. Player rankings can vary based on personal opinion and specific criteria used for\
-        \ evaluation, but these players have consistently been regarded as some of the best in the world as of October 2023.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 122,\n    \"completion_tokens\": 643,\n    \"total_tokens\": 765,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D6L3hzoRVVEa07HZsM9wpi2RVRKQp\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403289,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Here is a structured list of the top
+        10 best soccer players in the world as of 2024, based on recent performances,
+        awards, and overall impact on the game:\\n\\n1. **Kylian Mbapp\xE9**  \\n
+        \  - Nationality: French  \\n   - Club: Paris Saint-Germain (PSG)  \\n   -
+        Position: Forward  \\n   - Key Highlights: Multiple Ligue 1 titles, World
+        Cup winner (2018), known for speed, dribbling, and scoring prowess.\\n\\n2.
+        **Erling Haaland**  \\n   - Nationality: Norwegian  \\n   - Club: Manchester
+        City  \\n   - Position: Striker  \\n   - Key Highlights: Premier League Golden
+        Boot winner, incredible goal-scoring record, physical presence, and finishing
+        skills.\\n\\n3. **Lionel Messi**  \\n   - Nationality: Argentine  \\n   -
+        Club: Inter Miami  \\n   - Position: Forward/Attacking Midfielder  \\n   -
+        Key Highlights: Seven Ballon d\u2019Or awards, World Cup winner (2022), exceptional
+        playmaking and dribbling ability.\\n\\n4. **Kevin De Bruyne**  \\n   - Nationality:
+        Belgian  \\n   - Club: Manchester City  \\n   - Position: Midfielder  \\n
+        \  - Key Highlights: One of the best playmakers globally, assists leader,
+        consistent high-level performance in the Premier League.\\n\\n5. **Robert
+        Lewandowski**  \\n   - Nationality: Polish  \\n   - Club: FC Barcelona  \\n
+        \  - Position: Striker  \\n   - Key Highlights: Exceptional goal-scoring record,
+        multiple Bundesliga top scorer awards, key figure in Bayern Munich\u2019s
+        dominance before transferring.\\n\\n6. **Karim Benzema**  \\n   - Nationality:
+        French  \\n   - Club: Al-Ittihad  \\n   - Position: Striker  \\n   - Key Highlights:
+        Ballon d\u2019Or winner (2022), excellent technical skills, leadership at
+        Real Madrid before recent transfer.\\n\\n7. **Mohamed Salah**  \\n   - Nationality:
+        Egyptian  \\n   - Club: Liverpool  \\n   - Position: Forward  \\n   - Key
+        Highlights: Premier League Golden Boot winner, known for speed, dribbling,
+        and goal-scoring consistency.\\n\\n8. **Vin\xEDcius J\xFAnior**  \\n   - Nationality:
+        Brazilian  \\n   - Club: Real Madrid  \\n   - Position: Winger  \\n   - Key
+        Highlights: Key player for Real Madrid, exceptional dribbling and pace, rising
+        star in world football.\\n\\n9. **Jude Bellingham**  \\n   - Nationality:
+        English  \\n   - Club: Real Madrid  \\n   - Position: Midfielder  \\n   -
+        Key Highlights: Young talent with maturity beyond years, influential midfielder
+        with great vision and work rate.\\n\\n10. **Thibaut Courtois**  \\n    - Nationality:
+        Belgian  \\n    - Club: Real Madrid  \\n    - Position: Goalkeeper  \\n    -
+        Key Highlights: One of the best goalkeepers globally, crucial performances
+        in La Liga and Champions League.\\n\\nThese rankings consider individual talent,
+        recent achievements, influence on matches, and overall contribution to club
+        and country.\",\n        \"refusal\": null,\n        \"annotations\": []\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
+        621,\n    \"total_tokens\": 689,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9b5400dcd624b-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:55:42 GMT
+      - Fri, 06 Feb 2026 18:41:40 GMT
       Server:
       - cloudflare
       Set-Cookie:
-      - __cf_bm=8Yv8F0ZCFAo2lf.qoqxao70yxyjVvIV90zQqVF6bVzQ-1749567342-1.0.1.1-fZgnv3RDfunvCO1koxwwFJrHnxSx_rwS_FHvQ6xxDPpKHwYr7dTqIQLZrNgSX5twGyK4F22rUmkuiS6KMVogcinChk8lmHtJBTUVTFjr2KU; path=/; expires=Tue, 10-Jun-25 15:25:42 GMT; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
-      - _cfuvid=wzh8YnmXvLq1G0RcIVijtzboQtCZyIe2uZiochkBLqE-1749567342267-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '33288'
+      - '10634'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '33292'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999859'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_6a587ea22edef774ecdada790a320cab
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: The top 10 best soccer players in the world, as of October 2023, can be identified based on their recent performances, skills, impact on games, and overall contributions to their teams. Here is the structured list:\n\n1. **Lionel Messi (Inter Miami CF)**\n   -
-      Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\n\n3. **Erling Haaland (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements:
-      2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Neymar Jr. (Al Hilal)**\n   - Position: Forward\n   - Key Attributes: Flair, dribbling, creativity.\n   - Achievements: Multiple domestic league titles, Champions League runner-up.\n\n7. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning, aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n8. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\n\n9. **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Position: Forward\n   - Key Attributes: Speed, dribbling, creativity.\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\n\n10. **Luka Modri\u0107 (Real Madrid)**\n    - Position: Midfielder\n    - Key Attributes: Passing, vision,
-      tactical intelligence.\n    - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\nThis list is compiled based on their current form, past performances, and contributions to their respective teams in both domestic and international competitions. Player rankings can vary based on personal opinion and specific criteria used for evaluation, but these players have consistently been regarded as some of the best in the world as of October 2023."}, {"role": "user", "content": "You are not allowed to include Brazilian players"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '3594'
+      - '404'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=8Yv8F0ZCFAo2lf.qoqxao70yxyjVvIV90zQqVF6bVzQ-1749567342-1.0.1.1-fZgnv3RDfunvCO1koxwwFJrHnxSx_rwS_FHvQ6xxDPpKHwYr7dTqIQLZrNgSX5twGyK4F22rUmkuiS6KMVogcinChk8lmHtJBTUVTFjr2KU; _cfuvid=wzh8YnmXvLq1G0RcIVijtzboQtCZyIe2uZiochkBLqE-1749567342267-0.0.1.1-604800000
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-BgugJkCDtB2EfvAMiIFK0reeLKFBl\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567359,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: Here is an updated list of the top 10 best soccer players in the world as of October 2023, excluding Brazilian players:\\n\\n1. **Lionel Messi (Inter Miami CF)**\\n   - Position: Forward\\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\\n   - Achievements: Multiple Ballon d'Or winner, Copa America champion, World Cup champion (2022).\\n\\n2. **Kylian Mbappé (Paris Saint-Germain)**\\n   - Position: Forward\\n   - Key Attributes: Speed, technique, finishing.\\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\\n\\n3. **Erling Haaland (Manchester City)**\\n   - Position: Forward\\\
-        n   - Key Attributes: Power, speed, goal-scoring instinct.\\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\\n\\n4. **Kevin De Bruyne (Manchester City)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, creativity.\\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\\n\\n5. **Karim Benzema (Al-Ittihad)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\\n   - Achievements: 2022 Ballon d'Or winner, multiple Champions Leagues with Real Madrid.\\n\\n6. **Robert Lewandowski (FC Barcelona)**\\n   - Position: Forward\\n   - Key Attributes: Finishing, positioning, aerial ability.\\n   - Achievements: FIFA Best Men's Player, multiple Bundesliga titles, La Liga champion (2023).\\n\\n7. **Mohamed Salah (Liverpool)**\\n   - Position: Forward\\n   - Key Attributes: Speed, finishing, dribbling.\\n   - Achievements: Premier League\
-        \ champion, FA Cup, UEFA Champions League winner.\\n\\n8. **Vinícius Júnior (Real Madrid)**\\n   - Position: Forward\\n   - Key Attributes: Speed, dribbling, creativity.\\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\\n\\n9. **Luka Modrić (Real Madrid)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, tactical intelligence.\\n   - Achievements: Multiple Champions League titles, Ballon d'Or winner (2018).\\n\\n10. **Harry Kane (Bayern Munich)**\\n    - Position: Forward\\n    - Key Attributes: Goal-scoring, technique, playmaking.\\n    - Achievements: Golden Boot winner, Premier League titles, UEFA European Championship runner-up.\\n\\nThis list has been adjusted to exclude Brazilian players and focuses on those who have made significant impacts in their clubs and on the international stage as of October 2023. Each player is recognized for their exceptional skills, performances, and achievements.\",\n        \"refusal\": null,\n\
-        \        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 781,\n    \"completion_tokens\": 610,\n    \"total_tokens\": 1391,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D6L3sn9nSnGGOMKrS88avliVF7XTv\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403300,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here's a structured list
+        of the top 10 best soccer players in the world as of 2024, considering their
+        performance, skills, achievements, and impact in recent seasons:\\n\\n###
+        Top 10 Best Soccer Players in the World (2024)\\n\\n| Rank | Player Name         |
+        Nationality | Club (2023/24 Season)      | Position         | Key Attributes
+        \                  | Recent Achievements                  |\\n|-------|---------------------|-------------|----------------------------|------------------|---------------------------------|------------------------------------|\\n|
+        1     | Lionel Messi        | Argentina   | Paris Saint-Germain (PSG)   |
+        Forward/Playmaker| Dribbling, Vision, Free kicks   | 2023 World Cup Golden
+        Ball, Club Successes |\\n| 2     | Kylian Mbapp\xE9       | France      |
+        Paris Saint-Germain (PSG)   | Forward          | Speed, Finishing, Dribbling
+        \    | Ligue 1 Top Scorer, World Cup Winner 2018|\\n| 3     | Erling Haaland
+        \     | Norway      | Manchester City             | Striker          | Strength,
+        Finishing, Positioning| Premier League Golden Boot, Champions League Impact|\\n|
+        4     | Kevin De Bruyne     | Belgium     | Manchester City             |
+        Midfielder       | Passing, Vision, Creativity     | Premier League Titles,
+        Key Playmaker|\\n| 5     | Robert Lewandowski  | Poland      | FC Barcelona
+        \              | Striker          | Finishing, Positioning, Composure| La
+        Liga Top Scorer, Consistent Scorer|\\n| 6     | Neymar Jr.          | Brazil
+        \     | Al-Hilal                   | Forward/Winger   | Dribbling, Creativity,
+        Flair    | Copa America Titles, Club Success |\\n| 7     | Mohamed Salah       |
+        Egypt       | Liverpool                  | Forward/Winger   | Pace, Finishing,
+        Work Rate      | Premier League Golden Boot, Champions League Winner|\\n|
+        8     | Vin\xEDcius Jr.        | Brazil      | Real Madrid                |
+        Winger           | Speed, Dribbling, Crossing     | La Liga Titles, UEFA Champions
+        League Winner|\\n| 9     | Luka Modri\u0107         | Croatia     | Real Madrid
+        \               | Midfielder       | Passing, Control, Experience    | Ballon
+        d\u2019Or 2018, Multiple Champions League Titles|\\n| 10    | Karim Benzema
+        \      | France      | Al-Ittihad                | Striker          | Finishing,
+        Link-up Play, Movements| Ballon d\u2019Or 2022, UEFA Champions League Top
+        Scorer |\\n\\n### Notes:\\n- The rankings reflect a combination of individual
+        skill, recent performance, consistency, and influence on the game.\\n- Players\u2019
+        clubs are based on the 2023/24 season affiliations.\\n- Achievements highlight
+        recent titles, awards, or standout contributions.\\n\\nIf you would like me
+        to focus on specific leagues, historical players, or emerging talents, just
+        let me know!\",\n        \"refusal\": null,\n        \"annotations\": []\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
+        605,\n    \"total_tokens\": 673,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9b6782db84d3b-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:56:30 GMT
+      - Fri, 06 Feb 2026 18:41:49 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '31484'
+      - '9044'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '31490'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149999166'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_aa737cf40bb76af9f458bfd35f7a77a1
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: The top 10 best soccer players in the world, as of October 2023, can be identified based on their recent performances, skills, impact on games, and overall contributions to their teams. Here is the structured list:\n\n1. **Lionel Messi (Inter Miami CF)**\n   -
-      Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\n\n3. **Erling Haaland (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements:
-      2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Neymar Jr. (Al Hilal)**\n   - Position: Forward\n   - Key Attributes: Flair, dribbling, creativity.\n   - Achievements: Multiple domestic league titles, Champions League runner-up.\n\n7. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning, aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n8. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\n\n9. **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Position: Forward\n   - Key Attributes: Speed, dribbling, creativity.\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\n\n10. **Luka Modri\u0107 (Real Madrid)**\n    - Position: Midfielder\n    - Key Attributes: Passing, vision,
-      tactical intelligence.\n    - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\nThis list is compiled based on their current form, past performances, and contributions to their respective teams in both domestic and international competitions. Player rankings can vary based on personal opinion and specific criteria used for evaluation, but these players have consistently been regarded as some of the best in the world as of October 2023."}, {"role": "user", "content": "You are not allowed to include Brazilian players"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: Here is an updated list of the top 10 best soccer players in the world as of October 2023, excluding Brazilian players:\n\n1. **Lionel Messi (Inter Miami CF)**\n   - Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2.
-      **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\n\n3. **Erling Haaland (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements: 2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning,
-      aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n7. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\n\n8. **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Position: Forward\n   - Key Attributes: Speed, dribbling, creativity.\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\n\n9. **Luka Modri\u0107 (Real Madrid)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, tactical intelligence.\n   - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\n10. **Harry Kane (Bayern Munich)**\n    - Position: Forward\n    - Key Attributes: Goal-scoring, technique, playmaking.\n    - Achievements: Golden Boot winner, Premier League titles, UEFA European Championship runner-up.\n\nThis list has been adjusted to exclude Brazilian
-      players and focuses on those who have made significant impacts in their clubs and on the international stage as of October 2023. Each player is recognized for their exceptional skills, performances, and achievements."}, {"role": "user", "content": "You are not allowed to include Brazilian players"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
     headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
       accept:
       - application/json
       accept-encoding:
-      - gzip, deflate, zstd
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
       connection:
       - keep-alive
       content-length:
-      - '6337'
+      - '404'
       content-type:
       - application/json
       cookie:
-      - __cf_bm=8Yv8F0ZCFAo2lf.qoqxao70yxyjVvIV90zQqVF6bVzQ-1749567342-1.0.1.1-fZgnv3RDfunvCO1koxwwFJrHnxSx_rwS_FHvQ6xxDPpKHwYr7dTqIQLZrNgSX5twGyK4F22rUmkuiS6KMVogcinChk8lmHtJBTUVTFjr2KU; _cfuvid=wzh8YnmXvLq1G0RcIVijtzboQtCZyIe2uZiochkBLqE-1749567342267-0.0.1.1-604800000
+      - COOKIE-XXX
       host:
       - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
       x-stainless-arch:
-      - arm64
+      - X-STAINLESS-ARCH-XXX
       x-stainless-async:
       - 'false'
       x-stainless-lang:
       - python
       x-stainless-os:
-      - MacOS
+      - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
+      - 1.83.0
       x-stainless-read-timeout:
-      - '600.0'
+      - X-STAINLESS-READ-TIMEOUT-XXX
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.9
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-BgugsAmyI50uQ6SpCp89ZZY4eD1Pz\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567394,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: Here is the revised list of the top 10 best soccer players in the world as of October 2023, explicitly excluding Brazilian players:\\n\\n1. **Lionel Messi (Inter Miami CF)**\\n   - Position: Forward\\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\\n   - Achievements: Multiple Ballon d'Or winner, Copa America champion, World Cup champion (2022).\\n\\n2. **Kylian Mbappé (Paris Saint-Germain)**\\n   - Position: Forward\\n   - Key Attributes: Speed, technique, finishing.\\n   - Achievements: FIFA World Cup champion (2018), multiple Ligue 1 titles, and various domestic cups.\\n\\n3. **Erling Haaland (Manchester City)**\\n\
-        \   - Position: Forward\\n   - Key Attributes: Power, speed, goal-scoring instinct.\\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\\n\\n4. **Kevin De Bruyne (Manchester City)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, creativity.\\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\\n\\n5. **Karim Benzema (Al-Ittihad)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\\n   - Achievements: 2022 Ballon d'Or winner, multiple Champions Leagues with Real Madrid.\\n\\n6. **Robert Lewandowski (FC Barcelona)**\\n   - Position: Forward\\n   - Key Attributes: Finishing, positioning, aerial ability.\\n   - Achievements: FIFA Best Men's Player, multiple Bundesliga titles, La Liga champion (2023).\\n\\n7. **Mohamed Salah (Liverpool)**\\n   - Position: Forward\\n   - Key Attributes: Speed, finishing, dribbling.\\n   -\
-        \ Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\\n\\n8. **Luka Modrić (Real Madrid)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, tactical intelligence.\\n   - Achievements: Multiple Champions League titles, Ballon d'Or winner (2018).\\n\\n9. **Harry Kane (Bayern Munich)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, technique, playmaking.\\n   - Achievements: Golden Boot winner, Premier League titles, UEFA European Championship runner-up.\\n\\n10. **Rodri (Manchester City)**\\n    - Position: Midfielder\\n    - Key Attributes: Defensive skills, passing, positional awareness.\\n    - Achievements: Premier League titles, UEFA Champions League winner (2023).\\n\\nThis list is curated while adhering to the restriction of excluding Brazilian players. Each player included has demonstrated exceptional skills and remarkable performances, solidifying their status as some of the best in the world as of October 2023.\"\
-        ,\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1407,\n    \"completion_tokens\": 605,\n    \"total_tokens\": 2012,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_62a23a81ef\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D6L4102eMwTEPeHxfyN9Kh7rjBoX6\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403309,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
+        10 best soccer players in the world as of 2024, considering their recent performances,
+        skills, impact, and accolades:\\n\\n1. **Lionel Messi**  \\n   - Nationality:
+        Argentine  \\n   - Position: Forward  \\n   - Key Achievements: 7 Ballon d'Or
+        awards, led Argentina to 2021 Copa Am\xE9rica victory and 2022 FIFA World
+        Cup triumph, exceptional dribbling and playmaking skills.\\n\\n2. **Kylian
+        Mbapp\xE9**  \\n   - Nationality: French  \\n   - Position: Forward  \\n   -
+        Key Achievements: FIFA World Cup winner (2018), multiple Ligue 1 titles, known
+        for incredible speed, finishing, and consistency.\\n\\n3. **Erling Haaland**
+        \ \\n   - Nationality: Norwegian  \\n   - Position: Striker  \\n   - Key Achievements:
+        Premier League Golden Boot winner (2022-23), prolific goal scorer, physical
+        presence, and finishing ability.\\n\\n4. **Karim Benzema**  \\n   - Nationality:
+        French  \\n   - Position: Forward  \\n   - Key Achievements: 2022 Ballon d'Or
+        winner, key player for Real Madrid\u2019s recent Champions League victories,
+        excellent technical skills and leadership.\\n\\n5. **Kevin De Bruyne**  \\n
+        \  - Nationality: Belgian  \\n   - Position: Midfielder  \\n   - Key Achievements:
+        Premier League playmaker, known for vision, passing accuracy, and creativity.\\n\\n6.
+        **Robert Lewandowski**  \\n   - Nationality: Polish  \\n   - Position: Striker
+        \ \\n   - Key Achievements: Multiple Bundesliga top scorer titles, consistent
+        goal scorer, known for positioning and finishing.\\n\\n7. **Neymar Jr.**  \\n
+        \  - Nationality: Brazilian  \\n   - Position: Forward  \\n   - Key Achievements:
+        Exceptional dribbling, creativity, and flair; multiple domestic titles and
+        Copa Libertadores winner.\\n\\n8. **Mohamed Salah**  \\n   - Nationality:
+        Egyptian  \\n   - Position: Forward  \\n   - Key Achievements: Premier League
+        Golden Boot, consistent goal scoring with Liverpool, known for speed and finishing.\\n\\n9.
+        **Luka Modri\u0107**  \\n   - Nationality: Croatian  \\n   - Position: Midfielder
+        \ \\n   - Key Achievements: 2018 Ballon d\u2019Or winner, pivotal midfield
+        maestro, excellent passing and control.\\n\\n10. **Thibaut Courtois**  \\n
+        \   - Nationality: Belgian  \\n    - Position: Goalkeeper  \\n    - Key Achievements:
+        Exceptional shot-stopper, key player in Real Madrid's recent successes.\\n\\nThis
+        list includes a blend of forwards, midfielders, and a goalkeeper, showcasing
+        the best talents in various positions worldwide. The rankings may vary slightly
+        depending on current form and opinions, but these players consistently rank
+        among the best globally.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
+        575,\n    \"total_tokens\": 643,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
     headers:
       CF-RAY:
-      - 94d9b7561f204d3b-GRU
+      - CF-RAY-XXX
       Connection:
       - keep-alive
       Content-Type:
       - application/json
       Date:
-      - Tue, 10 Jun 2025 14:56:46 GMT
+      - Fri, 06 Feb 2026 18:41:57 GMT
       Server:
       - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
       Transfer-Encoding:
       - chunked
       X-Content-Type-Options:
-      - nosniff
+      - X-CONTENT-TYPE-XXX
       access-control-expose-headers:
-      - X-Request-ID
+      - ACCESS-CONTROL-XXX
       alt-svc:
       - h3=":443"; ma=86400
       cf-cache-status:
       - DYNAMIC
       openai-organization:
-      - crewai-iuxna1
+      - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '12189'
+      - '7948'
+      openai-project:
+      - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '12193'
+      x-openai-proxy-wasm:
+      - v0.1
       x-ratelimit-limit-requests:
-      - '30000'
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
-      - '150000000'
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
       x-ratelimit-remaining-requests:
-      - '29999'
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
       x-ratelimit-remaining-tokens:
-      - '149998513'
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
       x-ratelimit-reset-requests:
-      - 2ms
+      - X-RATELIMIT-RESET-REQUESTS-XXX
       x-ratelimit-reset-tokens:
-      - 0s
+      - X-RATELIMIT-RESET-TOKENS-XXX
       x-request-id:
-      - req_1098f5a5384f4a26aecf0c9e4e4d1fc0
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages": [{"role": "system", "content": "You are Sports Analyst. You are an expert at gathering and organizing information. You carefully collect details and present them in a structured way.\nYour personal goal is: Gather information about the best soccer players\n\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"}, {"role": "user", "content": "Top 10 best players in the world?"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: The top 10 best soccer players in the world, as of October 2023, can be identified based on their recent performances, skills, impact on games, and overall contributions to their teams. Here is the structured list:\n\n1. **Lionel Messi (Inter Miami CF)**\n   -
-      Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\n\n3. **Erling Haaland (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements:
-      2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Neymar Jr. (Al Hilal)**\n   - Position: Forward\n   - Key Attributes: Flair, dribbling, creativity.\n   - Achievements: Multiple domestic league titles, Champions League runner-up.\n\n7. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning, aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n8. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\n\n9. **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Position: Forward\n   - Key Attributes: Speed, dribbling, creativity.\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\n\n10. **Luka Modri\u0107 (Real Madrid)**\n    - Position: Midfielder\n    - Key Attributes: Passing, vision,
-      tactical intelligence.\n    - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\nThis list is compiled based on their current form, past performances, and contributions to their respective teams in both domestic and international competitions. Player rankings can vary based on personal opinion and specific criteria used for evaluation, but these players have consistently been regarded as some of the best in the world as of October 2023."}, {"role": "user", "content": "You are not allowed to include Brazilian players"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: Here is an updated list of the top 10 best soccer players in the world as of October 2023, excluding Brazilian players:\n\n1. **Lionel Messi (Inter Miami CF)**\n   - Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2.
-      **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), Ligue 1 titles, multiple domestic cups.\n\n3. **Erling Haaland (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements: 2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning,
-      aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n7. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\n\n8. **Vin\u00edcius J\u00fanior (Real Madrid)**\n   - Position: Forward\n   - Key Attributes: Speed, dribbling, creativity.\n   - Achievements: UEFA Champions League winner (2022), La Liga champion (2023).\n\n9. **Luka Modri\u0107 (Real Madrid)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, tactical intelligence.\n   - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\n10. **Harry Kane (Bayern Munich)**\n    - Position: Forward\n    - Key Attributes: Goal-scoring, technique, playmaking.\n    - Achievements: Golden Boot winner, Premier League titles, UEFA European Championship runner-up.\n\nThis list has been adjusted to exclude Brazilian
-      players and focuses on those who have made significant impacts in their clubs and on the international stage as of October 2023. Each player is recognized for their exceptional skills, performances, and achievements."}, {"role": "user", "content": "You are not allowed to include Brazilian players"}, {"role": "assistant", "content": "Thought: I now can give a great answer  \nFinal Answer: Here is the revised list of the top 10 best soccer players in the world as of October 2023, explicitly excluding Brazilian players:\n\n1. **Lionel Messi (Inter Miami CF)**\n   - Position: Forward\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\n   - Achievements: Multiple Ballon d''Or winner, Copa America champion, World Cup champion (2022).\n\n2. **Kylian Mbapp\u00e9 (Paris Saint-Germain)**\n   - Position: Forward\n   - Key Attributes: Speed, technique, finishing.\n   - Achievements: FIFA World Cup champion (2018), multiple Ligue 1 titles, and various domestic cups.\n\n3. **Erling Haaland
-      (Manchester City)**\n   - Position: Forward\n   - Key Attributes: Power, speed, goal-scoring instinct.\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\n\n4. **Kevin De Bruyne (Manchester City)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, creativity.\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\n\n5. **Karim Benzema (Al-Ittihad)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\n   - Achievements: 2022 Ballon d''Or winner, multiple Champions Leagues with Real Madrid.\n\n6. **Robert Lewandowski (FC Barcelona)**\n   - Position: Forward\n   - Key Attributes: Finishing, positioning, aerial ability.\n   - Achievements: FIFA Best Men''s Player, multiple Bundesliga titles, La Liga champion (2023).\n\n7. **Mohamed Salah (Liverpool)**\n   - Position: Forward\n   - Key Attributes: Speed, finishing, dribbling.\n   - Achievements:
-      Premier League champion, FA Cup, UEFA Champions League winner.\n\n8. **Luka Modri\u0107 (Real Madrid)**\n   - Position: Midfielder\n   - Key Attributes: Passing, vision, tactical intelligence.\n   - Achievements: Multiple Champions League titles, Ballon d''Or winner (2018).\n\n9. **Harry Kane (Bayern Munich)**\n   - Position: Forward\n   - Key Attributes: Goal-scoring, technique, playmaking.\n   - Achievements: Golden Boot winner, Premier League titles, UEFA European Championship runner-up.\n\n10. **Rodri (Manchester City)**\n    - Position: Midfielder\n    - Key Attributes: Defensive skills, passing, positional awareness.\n    - Achievements: Premier League titles, UEFA Champions League winner (2023).\n\nThis list is curated while adhering to the restriction of excluding Brazilian players. Each player included has demonstrated exceptional skills and remarkable performances, solidifying their status as some of the best in the world as of October 2023."}, {"role": "user", "content":
-      "You are not allowed to include Brazilian players"}], "model": "gpt-4o-mini", "stop": ["\nObservation:"]}'
-    headers:
-      accept:
-      - application/json
-      accept-encoding:
-      - gzip, deflate, zstd
-      connection:
-      - keep-alive
-      content-length:
-      - '9093'
-      content-type:
-      - application/json
-      cookie:
-      - __cf_bm=8Yv8F0ZCFAo2lf.qoqxao70yxyjVvIV90zQqVF6bVzQ-1749567342-1.0.1.1-fZgnv3RDfunvCO1koxwwFJrHnxSx_rwS_FHvQ6xxDPpKHwYr7dTqIQLZrNgSX5twGyK4F22rUmkuiS6KMVogcinChk8lmHtJBTUVTFjr2KU; _cfuvid=wzh8YnmXvLq1G0RcIVijtzboQtCZyIe2uZiochkBLqE-1749567342267-0.0.1.1-604800000
-      host:
-      - api.openai.com
-      user-agent:
-      - OpenAI/Python 1.78.0
-      x-stainless-arch:
-      - arm64
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - MacOS
-      x-stainless-package-version:
-      - 1.78.0
-      x-stainless-raw-response:
-      - 'true'
-      x-stainless-read-timeout:
-      - '600.0'
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.12.9
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-BguhCefN1bN2OeYRo5ChhUqNBLUda\",\n  \"object\": \"chat.completion\",\n  \"created\": 1749567414,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"Thought: I now can give a great answer  \\nFinal Answer: Here is a refined list of the top 10 best soccer players in the world as of October 2023, ensuring that no Brazilian players are included:\\n\\n1. **Lionel Messi (Inter Miami CF)**\\n   - Position: Forward\\n   - Key Attributes: Dribbling, vision, goal-scoring ability.\\n   - Achievements: Multiple Ballon d'Or winner, Copa America champion, World Cup champion (2022).\\n\\n2. **Kylian Mbappé (Paris Saint-Germain)**\\n   - Position: Forward\\n   - Key Attributes: Speed, technique, finishing.\\n   - Achievements: FIFA World Cup champion (2018), multiple Ligue 1 titles, various domestic cups.\\n\\n3. **Erling Haaland (Manchester City)**\\\
-        n   - Position: Forward\\n   - Key Attributes: Power, speed, goal-scoring instinct.\\n   - Achievements: Bundesliga top scorer, UEFA Champions League winner (2023), Premier League titles.\\n\\n4. **Kevin De Bruyne (Manchester City)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, creativity.\\n   - Achievements: Multiple Premier League titles, FA Cups, UEFA Champions League winner (2023).\\n\\n5. **Karim Benzema (Al-Ittihad)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, playmaking, tactical intelligence.\\n   - Achievements: 2022 Ballon d'Or winner, multiple Champions Leagues with Real Madrid.\\n\\n6. **Robert Lewandowski (FC Barcelona)**\\n   - Position: Forward\\n   - Key Attributes: Finishing, positioning, aerial ability.\\n   - Achievements: FIFA Best Men's Player, multiple Bundesliga titles, La Liga champion (2023).\\n\\n7. **Mohamed Salah (Liverpool)**\\n   - Position: Forward\\n   - Key Attributes: Speed, finishing, dribbling.\\n   -\
-        \ Achievements: Premier League champion, FA Cup, UEFA Champions League winner.\\n\\n8. **Luka Modrić (Real Madrid)**\\n   - Position: Midfielder\\n   - Key Attributes: Passing, vision, tactical intelligence.\\n   - Achievements: Multiple Champions League titles, Ballon d'Or winner (2018).\\n\\n9. **Harry Kane (Bayern Munich)**\\n   - Position: Forward\\n   - Key Attributes: Goal-scoring, technique, playmaking.\\n   - Achievements: Golden Boot winner, multiple Premier League titles, UEFA European Championship runner-up.\\n\\n10. **Son Heung-min (Tottenham Hotspur)**\\n    - Position: Forward\\n    - Key Attributes: Speed, finishing, playmaking.\\n    - Achievements: Premier League Golden Boot winner, multiple domestic cup titles.\\n\\nThis list has been carefully revised to exclude all Brazilian players while highlighting some of the most talented individuals in soccer as of October 2023. Each player has showcased remarkable effectiveness and skill, contributing significantly to their\
-        \ teams on both domestic and international stages.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 2028,\n    \"completion_tokens\": 614,\n    \"total_tokens\": 2642,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 1280,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_34a54ae93c\"\n}\n"
-    headers:
-      CF-RAY:
-      - 94d9b7d24d991d2c-GRU
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Tue, 10 Jun 2025 14:57:29 GMT
-      Server:
-      - cloudflare
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - nosniff
-      access-control-expose-headers:
-      - X-Request-ID
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - crewai-iuxna1
-      openai-processing-ms:
-      - '35291'
-      openai-version:
-      - '2020-10-01'
-      strict-transport-security:
-      - max-age=31536000; includeSubDomains; preload
-      x-envoy-upstream-service-time:
-      - '35294'
-      x-ratelimit-limit-requests:
-      - '30000'
-      x-ratelimit-limit-tokens:
-      - '150000000'
-      x-ratelimit-remaining-requests:
-      - '29999'
-      x-ratelimit-remaining-tokens:
-      - '149997855'
-      x-ratelimit-reset-requests:
-      - 2ms
-      x-ratelimit-reset-tokens:
-      - 0s
-      x-request-id:
-      - req_4676152d4227ac1825d1240ddef231d6
+      - X-REQUEST-ID-XXX
     status:
       code: 200
       message: OK
