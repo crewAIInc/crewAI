@@ -1580,10 +1580,12 @@ class AnthropicCompletion(BaseLLM):
             usage = response.usage
             input_tokens = getattr(usage, "input_tokens", 0)
             output_tokens = getattr(usage, "output_tokens", 0)
+            cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
             return {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": input_tokens + output_tokens,
+                "cached_prompt_tokens": cache_read_tokens,
             }
         return {"total_tokens": 0}
 
