@@ -174,6 +174,32 @@ class TestSummarizeDirectGemini:
         assert "</summary>" in summary_msg["content"]
 
 
+class TestSummarizeDirectAzure:
+    """Test direct summarize_messages calls with Azure."""
+
+    @pytest.mark.vcr()
+    def test_summarize_direct_azure(self) -> None:
+        """Test summarize_messages with azure/gpt-4o-mini."""
+        llm = LLM(model="azure/gpt-4o-mini", temperature=0)
+        i18n = I18N()
+        messages = _build_conversation_messages(include_system=True)
+
+        summarize_messages(
+            messages=messages,
+            llm=llm,
+            callbacks=[],
+            i18n=i18n,
+        )
+
+        assert len(messages) >= 2
+        assert messages[0]["role"] == "system"
+        summary_msg = messages[-1]
+        assert summary_msg["role"] == "user"
+        assert len(summary_msg["content"]) > 0
+        assert "<summary>" in summary_msg["content"]
+        assert "</summary>" in summary_msg["content"]
+
+
 class TestCrewKickoffCompaction:
     """Test compaction triggered via Crew.kickoff() with small context window."""
 
