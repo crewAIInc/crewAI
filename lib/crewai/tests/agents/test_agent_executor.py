@@ -834,3 +834,293 @@ class TestResponseFormatWithKickoff:
         assert result is not None
         assert result.pydantic is None
         assert "20" in str(result)
+
+
+class TestReasoningEffort:
+    """Test reasoning_effort levels in PlanningConfig.
+
+    - low:  observe() runs (validates step success), but skip decide/replan/refine
+    - medium: observe() runs, replan on failure only (mocked)
+    - high: full observation pipeline with decide/replan/refine/goal-achieved
+    """
+
+    @pytest.mark.vcr()
+    def test_reasoning_effort_low_skips_decide_and_replan(self):
+        """Low effort: observe runs but decide/replan/refine are never called.
+
+        Verifies that with reasoning_effort='low':
+        1. The agent produces a correct result
+        2. The observation phase still runs (observations are stored)
+        3. The decide_next_action/refine/replan pipeline is bypassed
+        """
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Tutor",
+            goal="Solve multi-step math problems accurately",
+            backstory="An expert math tutor who breaks down problems step by step",
+            llm=llm,
+            planning_config=PlanningConfig(
+                reasoning_effort="low",
+                max_attempts=1,
+                max_steps=10,
+            ),
+            verbose=False,
+        )
+
+        # Capture the executor to inspect state after execution
+        executor_ref = [None]
+        original_invoke = AgentExecutor.invoke
+
+        def capture_executor(self, inputs):
+            result = original_invoke(self, inputs)
+            executor_ref[0] = self
+            return result
+
+        with patch.object(AgentExecutor, "invoke", capture_executor):
+            result = agent.kickoff(
+                "What is the sum of the first 3 prime numbers (2, 3, 5)?"
+            )
+
+        assert result is not None
+        assert "10" in str(result)
+
+        # Verify observations were still collected (observe() ran)
+        executor = executor_ref[0]
+        if executor is not None and executor.state.todos.items:
+            assert len(executor.state.observations) > 0, (
+                "Low effort should still run observe() to validate steps"
+            )
+
+            # Verify no replan was triggered
+            assert executor.state.replan_count == 0, (
+                "Low effort should never trigger replanning"
+            )
+
+            # Check execution log for reasoning_effort annotation
+            observation_logs = [
+                log for log in executor.state.execution_log
+                if log.get("type") == "observation"
+            ]
+            for log in observation_logs:
+                assert log.get("reasoning_effort") == "low"
+
+    @pytest.mark.vcr()
+    def test_reasoning_effort_high_runs_full_observation_pipeline(self):
+        """High effort: full observation pipeline with decide/replan/refine.
+
+        Verifies that with reasoning_effort='high':
+        1. The agent produces a correct result
+        2. Observations are stored
+        3. The full decide_next_action pipeline runs (the observation-driven
+           routing is exercised, even if it just routes to continue_plan)
+        """
+        from crewai import Agent, PlanningConfig
+        from crewai.llm import LLM
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        llm = LLM("gpt-4o-mini")
+
+        agent = Agent(
+            role="Math Tutor",
+            goal="Solve multi-step math problems accurately",
+            backstory="An expert math tutor who breaks down problems step by step",
+            llm=llm,
+            planning_config=PlanningConfig(
+                reasoning_effort="high",
+                max_attempts=1,
+                max_steps=10,
+            ),
+            verbose=False,
+        )
+
+        executor_ref = [None]
+        original_invoke = AgentExecutor.invoke
+
+        def capture_executor(self, inputs):
+            result = original_invoke(self, inputs)
+            executor_ref[0] = self
+            return result
+
+        with patch.object(AgentExecutor, "invoke", capture_executor):
+            result = agent.kickoff(
+                "What is the sum of the first 3 prime numbers (2, 3, 5)?"
+            )
+
+        assert result is not None
+        assert "10" in str(result)
+
+        # Verify observations were collected
+        executor = executor_ref[0]
+        if executor is not None and executor.state.todos.items:
+            assert len(executor.state.observations) > 0, (
+                "High effort should run observe() on every step"
+            )
+
+            # Check execution log shows high reasoning_effort
+            observation_logs = [
+                log for log in executor.state.execution_log
+                if log.get("type") == "observation"
+            ]
+            for log in observation_logs:
+                assert log.get("reasoning_effort") == "high"
+
+    def test_reasoning_effort_medium_replans_on_failure(self):
+        """Medium effort: replan triggered when observation reports failure.
+
+        This test mocks the PlannerObserver to simulate a failed step,
+        verifying that medium effort routes to replan_now on failure
+        but continues on success.
+        """
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import (
+            StepObservation,
+            TodoItem,
+            TodoList,
+        )
+
+        # --- Build a minimal mock executor with medium effort ---
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.verbose = False
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "medium"
+
+        # Provide the real method under test (bound to our mock)
+        executor.handle_step_observed_medium = (
+            AgentExecutor.handle_step_observed_medium.__get__(executor)
+        )
+        executor._printer = Mock()
+
+        # --- Case 1: step succeeded → should return "continue_plan" ---
+        success_todo = TodoItem(
+            step_number=1,
+            description="Calculate something",
+            status="running",
+            result="42",
+        )
+        success_observation = StepObservation(
+            step_completed_successfully=True,
+            key_information_learned="Got the answer",
+            remaining_plan_still_valid=True,
+        )
+
+        # Set up state
+        todo_list = TodoList(items=[success_todo])
+        executor.state = Mock()
+        executor.state.todos = todo_list
+        executor.state.observations = {1: success_observation}
+
+        route = executor.handle_step_observed_medium()
+        assert route == "continue_plan", (
+            "Medium effort should continue on successful step"
+        )
+        assert success_todo.status == "completed"
+
+        # --- Case 2: step failed → should return "replan_now" ---
+        failed_todo = TodoItem(
+            step_number=2,
+            description="Divide by zero",
+            status="running",
+            result="Error: division by zero",
+        )
+        failed_observation = StepObservation(
+            step_completed_successfully=False,
+            key_information_learned="Division failed",
+            remaining_plan_still_valid=False,
+            needs_full_replan=True,
+            replan_reason="Step failed with error",
+        )
+
+        todo_list_2 = TodoList(items=[failed_todo])
+        executor.state.todos = todo_list_2
+        executor.state.observations = {2: failed_observation}
+        executor.state.last_replan_reason = None
+
+        route = executor.handle_step_observed_medium()
+        assert route == "replan_now", (
+            "Medium effort should trigger replan on failed step"
+        )
+        assert executor.state.last_replan_reason == "Step did not complete successfully"
+
+    def test_reasoning_effort_low_marks_complete_without_deciding(self):
+        """Low effort: mark_completed is called, decide_next_action is not.
+
+        Unit test verifying the low handler's behavior directly.
+        """
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import TodoItem, TodoList
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.verbose = False
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "low"
+
+        # Bind the real method
+        executor.handle_step_observed_low = (
+            AgentExecutor.handle_step_observed_low.__get__(executor)
+        )
+        executor._printer = Mock()
+
+        todo = TodoItem(
+            step_number=1,
+            description="Do something",
+            status="running",
+            result="Done successfully",
+        )
+        todo_list = TodoList(items=[todo])
+        executor.state = Mock()
+        executor.state.todos = todo_list
+
+        route = executor.handle_step_observed_low()
+        assert route == "continue_plan"
+        assert todo.status == "completed"
+        assert todo.result == "Done successfully"
+
+    def test_planning_config_reasoning_effort_default_is_low(self):
+        """Verify PlanningConfig defaults reasoning_effort to 'low'."""
+        from crewai.agent.planning_config import PlanningConfig
+
+        config = PlanningConfig()
+        assert config.reasoning_effort == "low"
+
+    def test_planning_config_reasoning_effort_validation(self):
+        """Verify PlanningConfig rejects invalid reasoning_effort values."""
+        from pydantic import ValidationError
+        from crewai.agent.planning_config import PlanningConfig
+
+        with pytest.raises(ValidationError):
+            PlanningConfig(reasoning_effort="ultra")
+
+        # Valid values should work
+        for level in ("low", "medium", "high"):
+            config = PlanningConfig(reasoning_effort=level)
+            assert config.reasoning_effort == level
+
+    def test_get_reasoning_effort_reads_from_config(self):
+        """Verify _get_reasoning_effort reads from agent.planning_config."""
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        executor = Mock(spec=AgentExecutor)
+        executor._get_reasoning_effort = (
+            AgentExecutor._get_reasoning_effort.__get__(executor)
+        )
+
+        # Case 1: planning_config with reasoning_effort set
+        executor.agent = Mock()
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "high"
+        assert executor._get_reasoning_effort() == "high"
+
+        # Case 2: no planning_config → defaults to "low"
+        executor.agent.planning_config = None
+        assert executor._get_reasoning_effort() == "low"
+
+        # Case 3: planning_config without reasoning_effort attr → defaults to "low"
+        executor.agent.planning_config = Mock(spec=[])
+        assert executor._get_reasoning_effort() == "low"

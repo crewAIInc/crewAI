@@ -468,6 +468,18 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
         return self._planner_observer
 
+    def _get_reasoning_effort(self) -> str:
+        """Get the reasoning effort level from the agent's planning config.
+
+        Returns:
+            The reasoning effort level: "low", "medium", or "high".
+            Defaults to "low" if no planning config is set.
+        """
+        config = getattr(self.agent, "planning_config", None)
+        if config is not None and hasattr(config, "reasoning_effort"):
+            return config.reasoning_effort
+        return "low"
+
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
         """Build an isolated execution context for a single todo.
 
@@ -506,18 +518,27 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     # -------------------------------------------------------------------------
 
     @router("step_executed")
-    def observe_step_result(self) -> Literal["step_observed"]:
-        """THE OBSERVATION STEP — runs after EVERY step execution.
+    def observe_step_result(
+        self,
+    ) -> Literal["step_observed_low", "step_observed_medium", "step_observed_high"]:
+        """Observe step result and route based on reasoning_effort level.
 
-        This is the Planner's opportunity to incorporate new information
-        learned during execution. It is NOT an error handler — it runs on
-        every step, including successes.
+        Always runs PlannerObserver.observe() to validate whether the step
+        succeeded. Then routes to the appropriate handler based on the
+        agent's reasoning_effort setting:
+
+        - "low": observe → mark complete → continue (no replan/refine)
+        - "medium": observe → replan on failure only (no refine)
+        - "high": observe → full decide pipeline (replan/refine/goal-achieved)
 
         Based on PLAN-AND-ACT Section 3.3.
         """
         current_todo = self.state.todos.current_todo
+        effort = self._get_reasoning_effort()
+
         if not current_todo:
-            return "step_observed"
+            # No todo — route to low handler which will just continue
+            return "step_observed_low"
 
         observer = self._ensure_planner_observer()
         all_completed = self.state.todos.get_completed_todos()
@@ -542,13 +563,15 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 "remaining_plan_still_valid": observation.remaining_plan_still_valid,
                 "needs_full_replan": observation.needs_full_replan,
                 "goal_already_achieved": observation.goal_already_achieved,
+                "reasoning_effort": effort,
             }
         )
 
         if self.agent.verbose:
             self._printer.print(
                 content=(
-                    f"[Observe] Step {current_todo.step_number}: "
+                    f"[Observe] Step {current_todo.step_number} "
+                    f"(effort={effort}): "
                     f"success={observation.step_completed_successfully}, "
                     f"plan_valid={observation.remaining_plan_still_valid}, "
                     f"learned={observation.key_information_learned[:80]}..."
@@ -556,9 +579,85 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 color="cyan",
             )
 
-        return "step_observed"
+        if effort == "high":
+            return "step_observed_high"
+        if effort == "medium":
+            return "step_observed_medium"
+        return "step_observed_low"
 
-    @router("step_observed")
+    # -- Low effort: observe → mark complete → continue (no replan/refine) --
+
+    @router("step_observed_low")
+    def handle_step_observed_low(
+        self,
+    ) -> Literal["continue_plan"]:
+        """Low reasoning effort: mark step complete and continue linearly.
+
+        Skips the entire decide/replan/refine pipeline. The observation
+        still validates success, but execution proceeds regardless.
+        """
+        current_todo = self.state.todos.current_todo
+        if not current_todo:
+            return "continue_plan"
+
+        self.state.todos.mark_completed(
+            current_todo.step_number, result=current_todo.result
+        )
+
+        if self.agent.verbose:
+            completed = self.state.todos.completed_count
+            total = len(self.state.todos.items)
+            self._printer.print(
+                content=f"[Low] Step {current_todo.step_number} done ({completed}/{total}) — continuing",
+                color="green",
+            )
+
+        return "continue_plan"
+
+    # -- Medium effort: observe → replan on failure only (no refine) --
+
+    @router("step_observed_medium")
+    def handle_step_observed_medium(
+        self,
+    ) -> Literal["continue_plan", "replan_now"]:
+        """Medium reasoning effort: replan only when a step fails.
+
+        On success, marks the step complete and continues without
+        refinement or early goal detection. On failure, triggers replanning
+        so the agent can recover.
+        """
+        current_todo = self.state.todos.current_todo
+        if not current_todo:
+            return "continue_plan"
+
+        observation = self.state.observations.get(current_todo.step_number)
+
+        # If observation is missing or step succeeded — continue
+        if not observation or observation.step_completed_successfully:
+            self.state.todos.mark_completed(
+                current_todo.step_number, result=current_todo.result
+            )
+            if self.agent.verbose:
+                completed = self.state.todos.completed_count
+                total = len(self.state.todos.items)
+                self._printer.print(
+                    content=f"[Medium] Step {current_todo.step_number} succeeded ({completed}/{total}) — continuing",
+                    color="green",
+                )
+            return "continue_plan"
+
+        # Step failed — trigger replan
+        if self.agent.verbose:
+            self._printer.print(
+                content=f"[Medium] Step {current_todo.step_number} failed — triggering replan",
+                color="yellow",
+            )
+        self.state.last_replan_reason = "Step did not complete successfully"
+        return "replan_now"
+
+    # -- High effort: full observation pipeline (existing behavior) --
+
+    @router("step_observed_high")
     def decide_next_action(
         self,
     ) -> Literal[
@@ -567,10 +666,11 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         "refine_and_continue",
         "continue_plan",
     ]:
-        """Route based on the Planner's observation.
+        """High reasoning effort: full observation-driven routing.
 
-        This replaces the old reactive _should_replan() heuristics with
-        proactive, LLM-driven decisions.
+        Routes based on the Planner's observation. Can trigger early goal
+        achievement, full replanning, lightweight refinement, or simple
+        continuation. This is the most adaptive but highest-latency path.
         """
         current_todo = self.state.todos.current_todo
         if not current_todo:
