@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "João Moura", email = "joaomdmoura@gmail.com" },
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "lancedb~=0.5.4",
     "pytube~=15.0.0",
