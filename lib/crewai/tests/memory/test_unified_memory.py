@@ -108,7 +108,7 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
         MemoryRecord(content="b", scope="/team", embedding=[0.0] * 4),
     ])
     scopes = storage.list_scopes("/")
-    assert "/" in scopes
+    assert "/team" in scopes  # list_scopes returns children, not root itself
     info = storage.get_scope_info("/")
     assert info.record_count >= 1
     assert info.path == "/"
@@ -180,8 +180,9 @@ def test_memory_list_scopes_info_tree(tmp_path: Path, mock_embedder: MagicMock) 
 
     m = Memory(storage=str(tmp_path / "db4"), llm=MagicMock(), embedder=mock_embedder)
     m.remember("Root", scope="/", categories=[], importance=0.5, metadata={})
+    m.remember("Team note", scope="/team", categories=[], importance=0.5, metadata={})
     scopes = m.list_scopes("/")
-    assert "/" in scopes
+    assert "/team" in scopes  # list_scopes returns children, not root itself
     info = m.info("/")
     assert info.record_count >= 1
     tree = m.tree("/", max_depth=2)
