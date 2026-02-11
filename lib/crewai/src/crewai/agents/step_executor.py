@@ -246,7 +246,7 @@ or tool would be most helpful for this specific step.{tools_section}"""
 
         Returns the final answer text.
         """
-        for iteration in range(_MAX_STEP_ITERATIONS):
+        for _iteration in range(_MAX_STEP_ITERATIONS):
             enforce_rpm_limit(self.request_within_rpm_limit)
 
             if self._use_native_tools:
@@ -511,7 +511,7 @@ or tool would be most helpful for this specific step.{tools_section}"""
                     if hook(before_hook_context) is False:
                         hook_blocked = True
                         break
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             if hook_blocked:
@@ -576,7 +576,7 @@ or tool would be most helpful for this specific step.{tools_section}"""
                     if hook_result is not None:
                         result = hook_result
                         after_hook_context.tool_result = result
-            except Exception:
+            except Exception:  # noqa: S110
                 pass
 
             # Emit tool finished event
@@ -647,7 +647,7 @@ or tool would be most helpful for this specific step.{tools_section}"""
                 if "Final Answer:" in answer_str:
                     return answer_str.split("Final Answer:")[-1].strip()
                 return answer_str
-        except Exception:
+        except Exception:  # noqa: S110
             pass
 
         return "Step could not be completed within the iteration limit."
