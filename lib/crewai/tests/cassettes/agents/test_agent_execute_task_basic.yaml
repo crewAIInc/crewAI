@@ -1,6 +1,10 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour personal goal is: test goal\nTo give my best complete final answer to the task respond using the exact following format:\n\nThought: I now can give a great answer\nFinal Answer: Your final answer must be the great and the most complete as possible, it must be outcome described.\n\nI MUST use these formats, my job depends on it!"},{"role":"user","content":"\nCurrent Task: Calculate 2 + 2\n\nThis is the expected criteria for your final answer: The result of the calculation\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: Calculate
+      2 + 2\n\nThis is the expected criteria for your final answer: The result of
+      the calculation\nyou MUST return the actual complete content as the final answer,
+      not a summary.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -13,7 +17,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '797'
+      - '396'
       content-type:
       - application/json
       host:
@@ -35,13 +39,23 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CjDsYJQa2tIYBbNloukSWecpsTvdK\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894146,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal Answer: The result of the calculation 2 + 2 is 4.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 161,\n    \"completion_tokens\": 25,\n    \"total_tokens\": 186,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_11f3029f6b\"\
-        \n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D5DTjYe6n92Rjo4Ox6NiZpAAdBLF0\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770135823,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"The result of the calculation 2 + 2
+        is 4.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 75,\n    \"completion_tokens\": 14,\n
+        \   \"total_tokens\": 89,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -50,7 +64,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 05 Dec 2025 00:22:27 GMT
+      - Tue, 03 Feb 2026 16:23:43 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -70,13 +84,11 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '516'
+      - '636'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '529'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

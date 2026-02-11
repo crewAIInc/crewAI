@@ -24,6 +24,7 @@ from pydantic import (
 )
 from typing_extensions import Self
 
+from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
     apply_training_data,
@@ -212,13 +213,23 @@ class Agent(BaseAgent):
         default="safe",
         description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
     )
-    reasoning: bool = Field(
+    planning_config: PlanningConfig | None = Field(
+        default=None,
+        description="Configuration for agent planning before task execution.",
+    )
+    planning: bool = Field(
         default=False,
         description="Whether the agent should reflect and create a plan before executing a task.",
     )
+    reasoning: bool = Field(
+        default=False,
+        description="[DEPRECATED: Use planning_config instead] Whether the agent should reflect and create a plan before executing a task.",
+        deprecated=True,
+    )
     max_reasoning_attempts: int | None = Field(
         default=None,
-        description="Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        description="[DEPRECATED: Use planning_config.max_attempts instead] Maximum number of reasoning attempts before executing the task. If None, will try until ready.",
+        deprecated=True,
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -285,7 +296,25 @@ class Agent(BaseAgent):
         if self.allow_code_execution:
             self._validate_docker_installation()
 
+        # Handle backward compatibility: convert reasoning=True to planning_config
+        if self.reasoning and self.planning_config is None:
+            import warnings
+
+            warnings.warn(
+                "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            self.planning_config = PlanningConfig(
+                max_attempts=self.max_reasoning_attempts,
+            )
+
         return self
+
+    @property
+    def planning_enabled(self) -> bool:
+        """Check if planning is enabled for this agent."""
+        return self.planning_config is not None or self.planning
 
     def _setup_agent_executor(self) -> None:
         if not self.cache_handler:
@@ -362,7 +391,11 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        # Only call handle_reasoning for legacy CrewAgentExecutor
+        # For AgentExecutor, planning is handled in AgentExecutor.generate_plan()
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(self, task)
+
         self._inject_date_to_task(task)
 
         if self.tools_handler:
@@ -599,7 +632,10 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        handle_reasoning(self, task)
+        if self.executor_class is not AgentExecutor:
+            handle_reasoning(
+                self, task
+            )  # we need this till CrewAgentExecutor migrates to AgentExecutor
         self._inject_date_to_task(task)
 
         if self.tools_handler:
