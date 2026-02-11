@@ -200,6 +200,25 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
     - `clientData` (array, opcional): Dados específicos do cliente. Cada item é um objeto com `key` (string) e `value` (string).
 
   </Accordion>
+
+  <Accordion title="google_contacts/update_contact_group">
+    **Descrição:** Atualizar informações de um grupo de contatos.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso do grupo de contatos (ex: 'contactGroups/myContactGroup').
+    - `name` (string, obrigatório): O nome do grupo de contatos.
+    - `clientData` (array, opcional): Dados específicos do cliente. Cada item é um objeto com `key` (string) e `value` (string).
+
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact_group">
+    **Descrição:** Excluir um grupo de contatos.
+
+    **Parâmetros:**
+    - `resourceName` (string, obrigatório): O nome do recurso do grupo de contatos a excluir (ex: 'contactGroups/myContactGroup').
+    - `deleteContacts` (boolean, opcional): Se os contatos do grupo também devem ser excluídos. Padrão: false
+
+  </Accordion>
 </AccordionGroup>
 
 ## Exemplos de Uso
