@@ -1,8 +1,9 @@
+import re
 import sys
+from urllib.parse import urlparse
 from unittest.mock import MagicMock, patch
 
 import pytest
-from urllib.parse import urlparse
 
 # Create mock classes that will be used by our fixture
 class MockStagehandModule:
@@ -171,10 +172,11 @@ def test_navigate_command(mock_run, stagehand_tool):
     )
 
     # Assertions
+    assert "Successfully navigated to " in result
+
     # Extract URL from result string and check its host
     # Example result: "Successfully navigated to https://example.com"
-    import re
-    url_match = re.search(r'https?://[^\s]+', result)
+    url_match = re.search(r"https?://[^\s]+", result)
     assert url_match is not None
     parsed = urlparse(url_match.group(0))
     assert parsed.hostname == "example.com"
