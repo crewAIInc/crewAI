@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeGuard, cast
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from anthropic import Anthropic, AsyncAnthropic, transform_schema
     from anthropic.types import Message, TextBlock, ThinkingBlock, ToolUseBlock
-    from anthropic.types.beta import BetaMessage, BetaTextBlock
+    from anthropic.types.beta import BetaMessage, BetaTextBlock, BetaToolUseBlock
     import httpx
 except ImportError:
     raise ImportError(
@@ -266,35 +266,46 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            # Emit call started event
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                # Emit call started event
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            # Format messages for Anthropic
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                # Format messages for Anthropic
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            # Prepare completion parameters
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                # Prepare completion parameters
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools, available_functions
+                )
 
-            effective_response_model = response_model or self.response_format
+                effective_response_model = response_model or self.response_format
 
-            # Handle streaming vs non-streaming
-            if self.stream:
-                return self._handle_streaming_completion(
+                # Handle streaming vs non-streaming
+                if self.stream:
+                    return self._handle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return self._handle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -302,21 +313,13 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return self._handle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def acall(
         self,
@@ -342,28 +345,37 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages, system_message = self._format_messages_for_anthropic(
-                messages
-            )
+                formatted_messages, system_message = (
+                    self._format_messages_for_anthropic(messages)
+                )
 
-            completion_params = self._prepare_completion_params(
-                formatted_messages, system_message, tools
-            )
+                completion_params = self._prepare_completion_params(
+                    formatted_messages, system_message, tools, available_functions
+                )
 
-            effective_response_model = response_model or self.response_format
+                effective_response_model = response_model or self.response_format
 
-            if self.stream:
-                return await self._ahandle_streaming_completion(
+                if self.stream:
+                    return await self._ahandle_streaming_completion(
+                        completion_params,
+                        available_functions,
+                        from_task,
+                        from_agent,
+                        effective_response_model,
+                    )
+
+                return await self._ahandle_completion(
                     completion_params,
                     available_functions,
                     from_task,
@@ -371,27 +383,20 @@ class AnthropicCompletion(BaseLLM):
                     effective_response_model,
                 )
 
-            return await self._ahandle_completion(
-                completion_params,
-                available_functions,
-                from_task,
-                from_agent,
-                effective_response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"Anthropic API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"Anthropic API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
         system_message: str | None = None,
         tools: list[dict[str, Any]] | None = None,
+        available_functions: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Prepare parameters for Anthropic messages API.
 
@@ -399,6 +404,8 @@ class AnthropicCompletion(BaseLLM):
             messages: Formatted messages for Anthropic
             system_message: Extracted system message
             tools: Tool definitions
+            available_functions: Available functions for tool calling. When provided
+                with a single tool, tool_choice is automatically set to force tool use.
 
         Returns:
             Parameters dictionary for Anthropic API
@@ -424,7 +431,13 @@ class AnthropicCompletion(BaseLLM):
 
         # Handle tools for Claude 3+
         if tools and self.supports_tools:
-            params["tools"] = self._convert_tools_for_interference(tools)
+            converted_tools = self._convert_tools_for_interference(tools)
+            params["tools"] = converted_tools
+
+            if available_functions and len(converted_tools) == 1:
+                tool_name = converted_tools[0].get("name")
+                if tool_name and tool_name in available_functions:
+                    params["tool_choice"] = {"type": "tool", "name": tool_name}
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
@@ -691,7 +704,7 @@ class AnthropicCompletion(BaseLLM):
             else:
                 for block in response.content:
                     if (
-                        isinstance(block, ToolUseBlock)
+                        isinstance(block, (ToolUseBlock, BetaToolUseBlock))
                         and block.name == "structured_output"
                     ):
                         structured_data = response_model.model_validate(block.input)
@@ -707,7 +720,9 @@ class AnthropicCompletion(BaseLLM):
         # Check if Claude wants to use tools
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -724,15 +739,11 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                # Handle tool use conversation flow internally
-                return self._handle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         content = ""
         thinking_blocks: list[ThinkingBlock] = []
@@ -926,21 +937,19 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
                 if not available_functions:
                     return list(tool_uses)
 
-                return self._handle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                # Execute first tool and return result directly
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         full_response = self._apply_stop_words(full_response)
 
@@ -958,7 +967,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _execute_tools_and_collect_results(
         self,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
         from_agent: Any | None = None,
@@ -966,7 +975,7 @@ class AnthropicCompletion(BaseLLM):
         """Execute tools and collect results in Anthropic format.
 
         Args:
-            tool_uses: List of tool use blocks from Claude's response
+            tool_uses: List of tool use blocks from Claude's response (regular or beta API)
             available_functions: Available functions for tool calling
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
@@ -999,10 +1008,45 @@ class AnthropicCompletion(BaseLLM):
 
         return tool_results
 
+    def _execute_first_tool(
+        self,
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
+        available_functions: dict[str, Any],
+        from_task: Any | None = None,
+        from_agent: Any | None = None,
+    ) -> Any | None:
+        """Execute the first tool from the tool_uses list and return its result.
+
+        This is used when available_functions is provided, to directly execute
+        the tool and return its result (matching OpenAI behavior for use cases
+        like reasoning_handler).
+
+        Args:
+            tool_uses: List of tool use blocks from Claude's response
+            available_functions: Available functions for tool calling
+            from_task: Task that initiated the call
+            from_agent: Agent that initiated the call
+
+        Returns:
+            The result of the first tool execution, or None if execution failed
+        """
+        tool_use = tool_uses[0]
+        function_name = tool_use.name
+        function_args = cast(dict[str, Any], tool_use.input)
+
+        return self._handle_tool_execution(
+            function_name=function_name,
+            function_args=function_args,
+            available_functions=available_functions,
+            from_task=from_task,
+            from_agent=from_agent,
+        )
+
+    # TODO: we drop this
     def _handle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,
@@ -1194,9 +1238,12 @@ class AnthropicCompletion(BaseLLM):
                         )
                         return structured_data
 
+        # Handle both ToolUseBlock (regular API) and BetaToolUseBlock (beta API features)
         if response.content:
             tool_uses = [
-                block for block in response.content if isinstance(block, ToolUseBlock)
+                block
+                for block in response.content
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
@@ -1211,14 +1258,11 @@ class AnthropicCompletion(BaseLLM):
                     )
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    response,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         content = ""
         if response.content:
@@ -1392,21 +1436,18 @@ class AnthropicCompletion(BaseLLM):
             tool_uses = [
                 block
                 for block in final_message.content
-                if isinstance(block, ToolUseBlock)
+                if isinstance(block, (ToolUseBlock, BetaToolUseBlock))
             ]
 
             if tool_uses:
                 if not available_functions:
                     return list(tool_uses)
 
-                return await self._ahandle_tool_use_conversation(
-                    final_message,
-                    tool_uses,
-                    params,
-                    available_functions,
-                    from_task,
-                    from_agent,
+                result = self._execute_first_tool(
+                    tool_uses, available_functions, from_task, from_agent
                 )
+                if result is not None:
+                    return result
 
         full_response = self._apply_stop_words(full_response)
 
@@ -1423,7 +1464,7 @@ class AnthropicCompletion(BaseLLM):
     async def _ahandle_tool_use_conversation(
         self,
         initial_response: Message | BetaMessage,
-        tool_uses: list[ToolUseBlock],
+        tool_uses: list[ToolUseBlock | BetaToolUseBlock],
         params: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Any | None = None,

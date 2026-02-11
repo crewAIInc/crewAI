@@ -220,7 +220,7 @@ def test_get_conversion_instructions_gpt() -> None:
         supports_function_calling.return_value = True
         instructions = get_conversion_instructions(SimpleModel, llm)
         # Now using OpenAPI schema format for all models
-        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert "Format your final answer according to the following OpenAPI schema:" in instructions
         assert '"type": "json_schema"' in instructions
         assert '"name": "SimpleModel"' in instructions
         assert "Do not include the OpenAPI schema in the final output" in instructions
@@ -231,7 +231,7 @@ def test_get_conversion_instructions_non_gpt() -> None:
     with patch.object(LLM, "supports_function_calling", return_value=False):
         instructions = get_conversion_instructions(SimpleModel, llm)
         # Now using OpenAPI schema format for all models
-        assert "Ensure your final answer strictly adheres to the following OpenAPI schema:" in instructions
+        assert "Format your final answer according to the following OpenAPI schema:" in instructions
         assert '"type": "json_schema"' in instructions
         assert '"name": "SimpleModel"' in instructions
         assert "Do not include the OpenAPI schema in the final output" in instructions

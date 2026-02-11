@@ -42,6 +42,8 @@ if TYPE_CHECKING:
     from crewai.llm import LLM
     from crewai.task import Task
 
+_create_plus_client_hook: Callable[[], Any] | None = None
+
 
 class SummaryContent(TypedDict):
     """Structure for summary content entries.
@@ -91,7 +93,11 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
     for tool in tools:
         if isinstance(tool, CrewAITool):
-            tools_list.append(tool.to_structured_tool())
+            structured_tool = tool.to_structured_tool()
+            structured_tool.current_usage_count = 0
+            if structured_tool._original_tool:
+                structured_tool._original_tool.current_usage_count = 0
+            tools_list.append(structured_tool)
         else:
             raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
 
@@ -182,6 +188,7 @@ def convert_tools_to_openai_schema(
                 "name": sanitized_name,
                 "description": description,
                 "parameters": parameters,
+                "strict": True,
             },
         }
         openai_tools.append(schema)
@@ -817,12 +824,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        from crewai.cli.authentication.token import get_auth_token
-        from crewai.cli.plus_api import PlusAPI
+        if callable(_create_plus_client_hook):
+            client = _create_plus_client_hook()
+        else:
+            from crewai.cli.authentication.token import get_auth_token
+            from crewai.cli.plus_api import PlusAPI
 
-        client = PlusAPI(api_key=get_auth_token())
+            client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
-        response = client.get_agent(from_repository)
+        response = asyncio.run(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."
@@ -924,7 +934,7 @@ def extract_tool_call_info(
         )
         func_info = tool_call.get("function", {})
         func_name = func_info.get("name", "") or tool_call.get("name", "")
-        func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+        func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
 

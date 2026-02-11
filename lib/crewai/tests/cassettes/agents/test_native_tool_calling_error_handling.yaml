@@ -2,9 +2,8 @@ interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
       things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
-      Task: Use the failing_tool to do something.\n\nThis is VERY important to you,
-      your job depends on it!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
-      tool always fails","parameters":{"properties":{},"type":"object"}}}]}'
+      Task: Use the failing_tool to do something."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -17,7 +16,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '477'
+      - '476'
       content-type:
       - application/json
       host:
@@ -39,26 +38,26 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0vm2JDsOmy0czXPAr4vnw3wvuqYZ\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769114454,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6L3dV6acwapgRyxmnzGfuOXemtjJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403285,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_8xr8rPUDWzLfQ3LOWPHtBUjK\",\n            \"type\":
+        \           \"id\": \"call_GCdaOdo32pr1sSk4RzO0tiB9\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"failing_tool\",\n
         \             \"arguments\": \"{}\"\n            }\n          }\n        ],\n
         \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
         null,\n      \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\":
-        {\n    \"prompt_tokens\": 78,\n    \"completion_tokens\": 11,\n    \"total_tokens\":
-        89,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
+        {\n    \"prompt_tokens\": 65,\n    \"completion_tokens\": 11,\n    \"total_tokens\":
+        76,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
         0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
         0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
         \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -67,7 +66,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 20:40:54 GMT
+      - Fri, 06 Feb 2026 18:41:25 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -87,13 +86,11 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '593'
+      - '436'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '621'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -116,12 +113,9 @@ interactions:
 - request:
     body: '{"messages":[{"role":"system","content":"You are Calculator. You calculate
       things.\nYour personal goal is: Perform calculations efficiently"},{"role":"user","content":"\nCurrent
-      Task: Use the failing_tool to do something.\n\nThis is VERY important to you,
-      your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_8xr8rPUDWzLfQ3LOWPHtBUjK","content":"Error
-      executing tool: This tool always fails"},{"role":"user","content":"Analyze the
-      tool result. If requirements are met, provide the Final Answer. Otherwise, call
-      the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
-      tool always fails","parameters":{"properties":{},"type":"object"}}}]}'
+      Task: Use the failing_tool to do something."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_GCdaOdo32pr1sSk4RzO0tiB9","type":"function","function":{"name":"failing_tool","arguments":"{}"}}]},{"role":"tool","tool_call_id":"call_GCdaOdo32pr1sSk4RzO0tiB9","name":"failing_tool","content":"Error
+      executing tool: This tool always fails"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"failing_tool","description":"This
+      tool always fails","strict":true,"parameters":{"properties":{},"type":"object","additionalProperties":false,"required":[]}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -134,7 +128,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '941'
+      - '778'
       content-type:
       - application/json
       cookie:
@@ -158,22 +152,25 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.3
+      - 3.13.5
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0vm3xcywoKBW75bhBXfkGJNim6Th\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769114455,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D6L3dhjDZOoihHvXvRpbJD3ReGu0z\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770403285,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Error: This tool always fails.\",\n
-        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
-        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        141,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 149,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"The attempt to use the failing tool
+        resulted in an error, as expected since it is designed to always fail. If
+        there's anything else you would like to calculate or explore, please let me
+        know!\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 93,\n    \"completion_tokens\": 40,\n
+        \   \"total_tokens\": 133,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_6c0d1490cb\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -182,7 +179,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 20:40:55 GMT
+      - Fri, 06 Feb 2026 18:41:26 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -200,13 +197,11 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '420'
+      - '776'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '436'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

@@ -17,7 +17,7 @@ from openai.types.responses import Response
 from pydantic import BaseModel
 
 from crewai.events.types.llm_events import LLMCallType
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -382,23 +382,35 @@ class OpenAICompletion(BaseLLM):
         Returns:
             Completion response or tool call result.
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages = self._format_messages(messages)
+                formatted_messages = self._format_messages(messages)
 
-            if not self._invoke_before_llm_call_hooks(formatted_messages, from_agent):
-                raise ValueError("LLM call blocked by before_llm_call hook")
+                if not self._invoke_before_llm_call_hooks(
+                    formatted_messages, from_agent
+                ):
+                    raise ValueError("LLM call blocked by before_llm_call hook")
 
-            if self.api == "responses":
-                return self._call_responses(
+                if self.api == "responses":
+                    return self._call_responses(
+                        messages=formatted_messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                return self._call_completions(
                     messages=formatted_messages,
                     tools=tools,
                     available_functions=available_functions,
@@ -407,22 +419,13 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
-            return self._call_completions(
-                messages=formatted_messages,
-                tools=tools,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"OpenAI API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"OpenAI API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     def _call_completions(
         self,
@@ -479,20 +482,30 @@ class OpenAICompletion(BaseLLM):
         Returns:
             Completion response or tool call result.
         """
-        try:
-            self._emit_call_started_event(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-            )
+        with llm_call_context():
+            try:
+                self._emit_call_started_event(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                )
 
-            formatted_messages = self._format_messages(messages)
+                formatted_messages = self._format_messages(messages)
 
-            if self.api == "responses":
-                return await self._acall_responses(
+                if self.api == "responses":
+                    return await self._acall_responses(
+                        messages=formatted_messages,
+                        tools=tools,
+                        available_functions=available_functions,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        response_model=response_model,
+                    )
+
+                return await self._acall_completions(
                     messages=formatted_messages,
                     tools=tools,
                     available_functions=available_functions,
@@ -501,22 +514,13 @@ class OpenAICompletion(BaseLLM):
                     response_model=response_model,
                 )
 
-            return await self._acall_completions(
-                messages=formatted_messages,
-                tools=tools,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-
-        except Exception as e:
-            error_msg = f"OpenAI API call failed: {e!s}"
-            logging.error(error_msg)
-            self._emit_call_failed_event(
-                error=error_msg, from_task=from_task, from_agent=from_agent
-            )
-            raise
+            except Exception as e:
+                error_msg = f"OpenAI API call failed: {e!s}"
+                logging.error(error_msg)
+                self._emit_call_failed_event(
+                    error=error_msg, from_task=from_task, from_agent=from_agent
+                )
+                raise
 
     async def _acall_completions(
         self,
@@ -848,7 +852,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -865,6 +868,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -979,7 +984,6 @@ class OpenAICompletion(BaseLLM):
                         return result
 
             content = response.output_text or ""
-            content = self._apply_stop_words(content)
 
             if response_model:
                 try:
@@ -996,6 +1000,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1131,8 +1137,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1148,6 +1152,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1259,8 +1265,6 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-        full_response = self._apply_stop_words(full_response)
-
         if response_model:
             try:
                 structured_result = self._validate_structured_output(
@@ -1276,6 +1280,8 @@ class OpenAICompletion(BaseLLM):
                 return structured_result
             except ValueError as e:
                 logging.warning(f"Structured output validation failed: {e}")
+
+        full_response = self._apply_stop_words(full_response)
 
         self._emit_call_completed_event(
             response=full_response,
@@ -1519,25 +1525,30 @@ class OpenAICompletion(BaseLLM):
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
         from crewai.llms.providers.utils.common import safe_tool_conversion
+        from crewai.utilities.pydantic_schema_utils import (
+            force_additional_properties_false,
+        )
 
         openai_tools = []
 
         for tool in tools:
             name, description, parameters = safe_tool_conversion(tool, "OpenAI")
 
-            openai_tool = {
+            openai_tool: dict[str, Any] = {
                 "type": "function",
                 "function": {
                     "name": name,
                     "description": description,
+                    "strict": True,
                 },
             }
 
             if parameters:
-                if isinstance(parameters, dict):
-                    openai_tool["function"]["parameters"] = parameters  # type: ignore
-                else:
-                    openai_tool["function"]["parameters"] = dict(parameters)
+                params_dict = (
+                    parameters if isinstance(parameters, dict) else dict(parameters)
+                )
+                params_dict = force_additional_properties_false(params_dict)
+                openai_tool["function"]["parameters"] = params_dict
 
             openai_tools.append(openai_tool)
         return openai_tools
@@ -1623,7 +1634,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1640,6 +1650,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
@@ -1940,7 +1952,6 @@ class OpenAICompletion(BaseLLM):
                     return result
 
             content = message.content or ""
-            content = self._apply_stop_words(content)
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1957,6 +1968,8 @@ class OpenAICompletion(BaseLLM):
                     return structured_result
                 except ValueError as e:
                     logging.warning(f"Structured output validation failed: {e}")
+
+            content = self._apply_stop_words(content)
 
             self._emit_call_completed_event(
                 response=content,
