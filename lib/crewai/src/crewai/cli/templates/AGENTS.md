@@ -57,8 +57,8 @@ uv sync                   # Sync dependencies
 uv lock                   # Lock dependencies
 
 # Project scaffolding
-crewai create crew <name> --skip-provider   # New crew project
-crewai create flow <name> --skip-provider  # New flow project
+crewai create crew <name> --skip_provider   # New crew project
+crewai create flow <name> --skip_provider  # New flow project
 
 # Running
 crewai run                  # Run crew or flow (auto-detects from pyproject.toml)
@@ -982,7 +982,7 @@ Python >=3.10, <3.14
 ```bash
 uv tool install crewai        # Install CrewAI CLI
 uv tool list                  # Verify installation
-crewai create crew my_crew --skip-provider   # Scaffold a new project
+crewai create crew my_crew --skip_provider   # Scaffold a new project
 crewai install                # Install project dependencies
 crewai run                    # Execute
 ```
