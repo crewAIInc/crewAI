@@ -1704,6 +1704,17 @@ class Agent(BaseAgent):
 
         # Prepare tools
         raw_tools: list[BaseTool] = self.tools or []
+
+        # Inject memory tools for standalone kickoff (crew path handles its own)
+        agent_memory = getattr(self, "memory", None)
+        if agent_memory is not None:
+            from crewai.tools.memory_tools import create_memory_tools
+
+            existing_names = {sanitize_tool_name(t.name) for t in raw_tools}
+            for mt in create_memory_tools(agent_memory):
+                if sanitize_tool_name(mt.name) not in existing_names:
+                    raw_tools.append(mt)
+
         parsed_tools = parse_tools(raw_tools)
 
         # Build agent_info for backward-compatible event emission

@@ -1295,6 +1295,11 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
+        # Add memory tools if memory is available (agent or crew level)
+        resolved_memory = getattr(agent, "memory", None) or self._memory
+        if resolved_memory is not None:
+            tools = self._add_memory_tools(tools, resolved_memory)
+
         files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
@@ -1401,6 +1406,22 @@ class Crew(FlowTrackable, BaseModel):
             # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
+
+    def _add_memory_tools(
+        self, tools: list[BaseTool], memory: Any
+    ) -> list[BaseTool]:
+        """Add recall and remember tools when memory is available.
+
+        Args:
+            tools: Current list of tools.
+            memory: The resolved Memory, MemoryScope, or MemorySlice instance.
+
+        Returns:
+            Updated list with memory tools added.
+        """
+        from crewai.tools.memory_tools import create_memory_tools
+
+        return self._merge_tools(tools, create_memory_tools(memory))
 
     def _add_file_tools(
         self, tools: list[BaseTool], files: dict[str, Any]

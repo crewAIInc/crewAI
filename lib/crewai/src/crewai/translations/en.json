@@ -55,7 +55,9 @@
       "name": "Add image to content",
       "description": "See image to understand its content, you can optionally ask a question about the image",
       "default_action": "Please provide a detailed description of this image, including all visual elements, context, and any notable details you can observe."
-    }
+    },
+    "recall_memory": "Search through the team's shared memory for relevant information. Use this when you need to find facts, decisions, preferences, or past results that may have been stored previously. The query should describe what you're looking for in natural language.",
+    "save_to_memory": "Store an important fact, decision, observation, or lesson in memory so it can be recalled later by you or other agents. Use this when you encounter something worth remembering beyond the current task -- a decision made, a preference discovered, a key finding, or a correction."
   },
   "memory": {
     "save_system": "You analyze content to be stored in a hierarchical memory system.\nGiven the content and the existing scopes and categories, output:\n1. suggested_scope: The best matching existing scope path, or a new path if none fit (use / for root).\n2. categories: A list of categories (reuse existing when relevant, add new ones if needed).\n3. importance: A number from 0.0 to 1.0 indicating how significant this memory is.\n4. extracted_metadata: A JSON object with any entities, dates, or topics you can extract.",
