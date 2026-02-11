@@ -1,12 +1,5 @@
-"""Integration tests for structured context compaction (summarize_messages).
-
-These tests use VCR cassettes to record and replay real API calls.
-
-To record cassettes for the first time:
-    PYTEST_VCR_RECORD_MODE=all pytest lib/crewai/tests/utilities/test_summarize_integration.py -v
-
-To replay from cassettes:
-    pytest lib/crewai/tests/utilities/test_summarize_integration.py -v
+"""
+Integration tests for structured context compaction (summarize_messages).
 """
 
 from __future__ import annotations
