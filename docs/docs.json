@@ -112,6 +112,13 @@
                     ]
                   },
                   {
+                    "group": "Coding Tools",
+                    "icon": "terminal",
+                    "pages": [
+                      "en/guides/coding-tools/agents-md"
+                    ]
+                  },
+                  {
                     "group": "Advanced",
                     "icon": "gear",
                     "pages": [

@@ -224,6 +224,60 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `groupFields` (string, optional): Fields to include (e.g., 'name,memberCount,clientData'). Default: name,memberCount
 
   </Accordion>
+
+  <Accordion title="google_contacts/get_contact_group">
+    **Description:** Get a specific contact group by resource name.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the contact group (e.g., 'contactGroups/myContactGroup')
+    - `maxMembers` (integer, optional): Maximum number of members to include. Minimum: 0, Maximum: 20000
+    - `groupFields` (string, optional): Fields to include (e.g., 'name,memberCount,clientData'). Default: name,memberCount
+
+  </Accordion>
+
+  <Accordion title="google_contacts/create_contact_group">
+    **Description:** Create a new contact group (label).
+
+    **Parameters:**
+    - `name` (string, required): The name of the contact group
+    - `clientData` (array, optional): Client-specific data
+      ```json
+      [
+        {
+          "key": "data_key",
+          "value": "data_value"
+        }
+      ]
+      ```
+
+  </Accordion>
+
+  <Accordion title="google_contacts/update_contact_group">
+    **Description:** Update a contact group's information.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the contact group (e.g., 'contactGroups/myContactGroup')
+    - `name` (string, required): The name of the contact group
+    - `clientData` (array, optional): Client-specific data
+      ```json
+      [
+        {
+          "key": "data_key",
+          "value": "data_value"
+        }
+      ]
+      ```
+
+  </Accordion>
+
+  <Accordion title="google_contacts/delete_contact_group">
+    **Description:** Delete a contact group.
+
+    **Parameters:**
+    - `resourceName` (string, required): The resource name of the contact group to delete (e.g., 'contactGroups/myContactGroup')
+    - `deleteContacts` (boolean, optional): Whether to delete contacts in the group as well. Default: false
+
+  </Accordion>
 </AccordionGroup>
 
 ## Usage Examples
