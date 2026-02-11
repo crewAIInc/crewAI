@@ -283,6 +283,13 @@ def create_crew(
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "crew"
 
+    # Copy AGENTS.md to project root (top-level projects only)
+    if not parent_folder:
+        agents_md_src = package_dir / "templates" / "AGENTS.md"
+        if agents_md_src.exists():
+            shutil.copy2(agents_md_src, folder_path / "AGENTS.md")
+            click.secho(f"  - Created {folder_path / 'AGENTS.md'}", fg="green")
+
     root_template_files = (
         [".gitignore", "pyproject.toml", "README.md", "knowledge/user_preference.txt"]
         if not parent_folder
