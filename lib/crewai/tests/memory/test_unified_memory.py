@@ -481,14 +481,16 @@ def test_composite_score_reranks_results(
         llm=MagicMock(),
         embedder=MagicMock(return_value=[emb]),
     )
-    # Same embedding so same semantic score from storage
-    mem.remember(
-        "Important decision",
+    # Save both records directly to storage (bypass encoding flow)
+    # to test composite scoring in isolation without consolidation merging them.
+    record_high = MemoryRecord(
+        content="Important decision",
         scope="/",
         categories=[],
         importance=1.0,
-        metadata={},
+        embedding=emb,
     )
+    mem._storage.save([record_high])
     old = datetime.utcnow() - timedelta(days=90)
     record_low = MemoryRecord(
         content="Old trivial note",

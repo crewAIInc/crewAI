@@ -16,11 +16,7 @@ from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.analyze import (
-    MemoryAnalysis,
-    analyze_for_save,
-    extract_memories_from_content,
-)
+from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.storage.lancedb_storage import LanceDBStorage
@@ -146,6 +142,11 @@ class Memory:
     ) -> MemoryRecord:
         """Store content in memory. Infers scope/categories/importance via LLM when not provided.
 
+        The full encoding pipeline is implemented as an ``EncodingFlow``:
+        check whether LLM analysis is needed, infer or apply defaults,
+        embed the content, then delegate to ``ConsolidationFlow`` for
+        conflict resolution and storage.
+
         Args:
             content: Text to remember.
             scope: Optional scope path; inferred if None.
@@ -159,6 +160,8 @@ class Memory:
         Raises:
             Exception: On save failure (events emitted).
         """
+        from crewai.memory.encoding_flow import EncodingFlow
+
         _source = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -171,50 +174,7 @@ class Memory:
             )
             start = time.perf_counter()
 
-            need_analysis = (
-                scope is None
-                or categories is None
-                or importance is None
-                or (metadata is None and scope is None)
-            )
-            if need_analysis:
-                existing_scopes = self._storage.list_scopes("/")
-                if not existing_scopes:
-                    existing_scopes = ["/"]
-                existing_categories = list(
-                    self._storage.list_categories(scope_prefix=None).keys()
-                )
-                analysis: MemoryAnalysis = analyze_for_save(
-                    content,
-                    existing_scopes,
-                    existing_categories,
-                    self._llm,
-                )
-                scope = scope or analysis.suggested_scope or "/"
-                categories = categories if categories is not None else analysis.categories
-                importance = (
-                    importance
-                    if importance is not None
-                    else analysis.importance
-                )
-                metadata = dict(
-                    metadata or {},
-                    **(
-                        analysis.extracted_metadata.model_dump()
-                        if analysis.extracted_metadata
-                        else {}
-                    ),
-                )
-            else:
-                scope = scope or "/"
-                categories = categories or []
-                metadata = metadata or {}
-                importance = importance if importance is not None else self._config.default_importance
-
-            embedding = embed_text(self._embedder, content)
-            from crewai.memory.consolidation_flow import ConsolidationFlow
-
-            flow = ConsolidationFlow(
+            flow = EncodingFlow(
                 storage=self._storage,
                 llm=self._llm,
                 embedder=self._embedder,
@@ -222,31 +182,21 @@ class Memory:
             )
             flow.kickoff(
                 inputs={
-                    "new_content": content,
-                    "new_embedding": embedding,
+                    "content": content,
                     "scope": scope,
                     "categories": categories,
-                    "metadata": metadata or {},
+                    "metadata": metadata,
                     "importance": importance,
                 },
             )
             record = flow.state.result_record
-            if record is None:
-                record = MemoryRecord(
-                    content=content,
-                    scope=scope,
-                    categories=categories,
-                    metadata=metadata or {},
-                    importance=importance,
-                    embedding=embedding if embedding else None,
-                )
-                self._storage.save([record])
+
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
                 self,
                 MemorySaveCompletedEvent(
                     value=content,
-                    metadata=metadata or {},
+                    metadata=flow.state.resolved_metadata or metadata or {},
                     agent_role=None,
                     save_time_ms=elapsed_ms,
                     source_type=_source,

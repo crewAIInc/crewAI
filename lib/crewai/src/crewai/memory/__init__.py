@@ -1,6 +1,7 @@
 """Memory module: unified Memory with LLM analysis and pluggable storage."""
 
 from crewai.memory.consolidation_flow import ConsolidationFlow
+from crewai.memory.encoding_flow import EncodingFlow
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
 from crewai.memory.types import (
@@ -13,6 +14,7 @@ from crewai.memory.types import (
 
 __all__ = [
     "ConsolidationFlow",
+    "EncodingFlow",
     "Memory",
     "MemoryMatch",
     "MemoryRecord",
