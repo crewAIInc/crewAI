@@ -1,6 +1,7 @@
 import os
 import sys
 import types
+from typing import Any
 from unittest.mock import patch, MagicMock
 import openai
 import pytest
@@ -1792,3 +1793,165 @@ def test_openai_responses_api_cached_prompt_tokens_with_tools():
     assert usage.total_tokens > 0
     assert usage.successful_requests == 2
     assert usage.cached_prompt_tokens > 0
+def test_openai_streaming_returns_tool_calls_without_available_functions():
+    """Test that streaming returns tool calls list when available_functions is None.
+
+    This mirrors the non-streaming path where tool_calls are returned for
+    the executor to handle. Reproduces the bug where streaming with tool
+    calls would return empty text instead of tool_calls when
+    available_functions was not provided (as the crew executor does).
+    """
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    mock_chunk_1 = MagicMock()
+    mock_chunk_1.choices = [MagicMock()]
+    mock_chunk_1.choices[0].delta = MagicMock()
+    mock_chunk_1.choices[0].delta.content = None
+    mock_chunk_1.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_1.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_1.choices[0].delta.tool_calls[0].id = "call_abc123"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.name = "calculator"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.arguments = '{"expr'
+    mock_chunk_1.choices[0].finish_reason = None
+    mock_chunk_1.usage = None
+    mock_chunk_1.id = "chatcmpl-1"
+
+    mock_chunk_2 = MagicMock()
+    mock_chunk_2.choices = [MagicMock()]
+    mock_chunk_2.choices[0].delta = MagicMock()
+    mock_chunk_2.choices[0].delta.content = None
+    mock_chunk_2.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_2.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_2.choices[0].delta.tool_calls[0].id = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.name = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.arguments = 'ession": "1+1"}'
+    mock_chunk_2.choices[0].finish_reason = None
+    mock_chunk_2.usage = None
+    mock_chunk_2.id = "chatcmpl-1"
+
+    mock_chunk_3 = MagicMock()
+    mock_chunk_3.choices = [MagicMock()]
+    mock_chunk_3.choices[0].delta = MagicMock()
+    mock_chunk_3.choices[0].delta.content = None
+    mock_chunk_3.choices[0].delta.tool_calls = None
+    mock_chunk_3.choices[0].finish_reason = "tool_calls"
+    mock_chunk_3.usage = MagicMock()
+    mock_chunk_3.usage.prompt_tokens = 10
+    mock_chunk_3.usage.completion_tokens = 5
+    mock_chunk_3.id = "chatcmpl-1"
+
+    with patch.object(
+        llm.client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+    ):
+        result = llm.call(
+            messages=[{"role": "user", "content": "Calculate 1+1"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "calculator",
+                    "description": "Calculate expression",
+                    "parameters": {"type": "object", "properties": {"expression": {"type": "string"}}},
+                },
+            }],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list), f"Expected list of tool calls, got {type(result)}: {result}"
+    assert len(result) == 1
+    assert result[0]["function"]["name"] == "calculator"
+    assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
+    assert result[0]["id"] == "call_abc123"
+    assert result[0]["type"] == "function"
+
+
+@pytest.mark.asyncio
+async def test_openai_async_streaming_returns_tool_calls_without_available_functions():
+    """Test that async streaming returns tool calls list when available_functions is None.
+
+    Same as the sync test but for the async path (_ahandle_streaming_completion).
+    """
+    llm = LLM(model="openai/gpt-4o-mini", stream=True)
+
+    mock_chunk_1 = MagicMock()
+    mock_chunk_1.choices = [MagicMock()]
+    mock_chunk_1.choices[0].delta = MagicMock()
+    mock_chunk_1.choices[0].delta.content = None
+    mock_chunk_1.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_1.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_1.choices[0].delta.tool_calls[0].id = "call_abc123"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.name = "calculator"
+    mock_chunk_1.choices[0].delta.tool_calls[0].function.arguments = '{"expr'
+    mock_chunk_1.choices[0].finish_reason = None
+    mock_chunk_1.usage = None
+    mock_chunk_1.id = "chatcmpl-1"
+
+    mock_chunk_2 = MagicMock()
+    mock_chunk_2.choices = [MagicMock()]
+    mock_chunk_2.choices[0].delta = MagicMock()
+    mock_chunk_2.choices[0].delta.content = None
+    mock_chunk_2.choices[0].delta.tool_calls = [MagicMock()]
+    mock_chunk_2.choices[0].delta.tool_calls[0].index = 0
+    mock_chunk_2.choices[0].delta.tool_calls[0].id = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function = MagicMock()
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.name = None
+    mock_chunk_2.choices[0].delta.tool_calls[0].function.arguments = 'ession": "1+1"}'
+    mock_chunk_2.choices[0].finish_reason = None
+    mock_chunk_2.usage = None
+    mock_chunk_2.id = "chatcmpl-1"
+
+    mock_chunk_3 = MagicMock()
+    mock_chunk_3.choices = [MagicMock()]
+    mock_chunk_3.choices[0].delta = MagicMock()
+    mock_chunk_3.choices[0].delta.content = None
+    mock_chunk_3.choices[0].delta.tool_calls = None
+    mock_chunk_3.choices[0].finish_reason = "tool_calls"
+    mock_chunk_3.usage = MagicMock()
+    mock_chunk_3.usage.prompt_tokens = 10
+    mock_chunk_3.usage.completion_tokens = 5
+    mock_chunk_3.id = "chatcmpl-1"
+
+    class MockAsyncStream:
+        """Async iterator that mimics OpenAI's async streaming response."""
+
+        def __init__(self, chunks: list[Any]) -> None:
+            self._chunks = chunks
+            self._index = 0
+
+        def __aiter__(self) -> "MockAsyncStream":
+            return self
+
+        async def __anext__(self) -> Any:
+            if self._index >= len(self._chunks):
+                raise StopAsyncIteration
+            chunk = self._chunks[self._index]
+            self._index += 1
+            return chunk
+
+    async def mock_create(**kwargs: Any) -> MockAsyncStream:
+        return MockAsyncStream([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+
+    with patch.object(
+        llm.async_client.chat.completions, "create", side_effect=mock_create
+    ):
+        result = await llm.acall(
+            messages=[{"role": "user", "content": "Calculate 1+1"}],
+            tools=[{
+                "type": "function",
+                "function": {
+                    "name": "calculator",
+                    "description": "Calculate expression",
+                    "parameters": {"type": "object", "properties": {"expression": {"type": "string"}}},
+                },
+            }],
+            available_functions=None,
+        )
+
+    assert isinstance(result, list), f"Expected list of tool calls, got {type(result)}: {result}"
+    assert len(result) == 1
+    assert result[0]["function"]["name"] == "calculator"
+    assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
+    assert result[0]["id"] == "call_abc123"
+    assert result[0]["type"] == "function"
