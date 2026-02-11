@@ -119,6 +119,8 @@ MCP_TOOL_EXECUTION_TIMEOUT: Final[int] = 30
 MCP_DISCOVERY_TIMEOUT: Final[int] = 15
 MCP_MAX_RETRIES: Final[int] = 3
 
+_passthrough_exceptions: tuple[type[Exception], ...] = ()
+
 # Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
 _mcp_schema_cache: dict[str, Any] = {}
 _cache_ttl: Final[int] = 300  # 5 minutes
@@ -512,6 +514,8 @@ class Agent(BaseAgent):
                     ),
                 )
                 raise e
+            if isinstance(e, _passthrough_exceptions):
+                raise
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 crewai_event_bus.emit(
@@ -747,6 +751,8 @@ class Agent(BaseAgent):
                     ),
                 )
                 raise e
+            if isinstance(e, _passthrough_exceptions):
+                raise
             self._times_executed += 1
             if self._times_executed > self.max_retry_limit:
                 crewai_event_bus.emit(
@@ -1981,7 +1987,7 @@ class Agent(BaseAgent):
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
             plan=executor.state.plan,
             todos=todo_results,
             replan_count=executor.state.replan_count,
@@ -2066,7 +2072,7 @@ class Agent(BaseAgent):
             pydantic=formatted_result,
             agent_role=self.role,
             usage_metrics=usage_metrics.model_dump() if usage_metrics else None,
-            messages=executor.messages,
+            messages=list(executor.state.messages),
             plan=executor.state.plan,
             todos=todo_results,
             replan_count=executor.state.replan_count,

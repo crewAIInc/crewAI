@@ -397,8 +397,8 @@ class AgentReasoning:
                     # Parse steps from the response
                     steps: list[PlanStep] = []
                     raw_steps = result.get("steps", [])
-                    for step_data in raw_steps:
-                        try:
+                    try:
+                        for step_data in raw_steps:
                             step = PlanStep(
                                 step_number=step_data.get("step_number", 0),
                                 description=step_data.get("description", ""),
@@ -406,10 +406,10 @@ class AgentReasoning:
                                 depends_on=step_data.get("depends_on", []),
                             )
                             steps.append(step)
-                        except Exception as step_error:
-                            self.logger.warning(
-                                f"Failed to parse step: {step_data}, error: {step_error}"
-                            )
+                    except Exception as step_error:
+                        self.logger.warning(
+                            f"Failed to parse step: {step_data}, error: {step_error}"
+                        )
                     return result["plan"], steps, result["ready"]
             except (json.JSONDecodeError, KeyError):
                 pass

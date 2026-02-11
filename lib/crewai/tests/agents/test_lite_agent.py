@@ -606,9 +606,10 @@ def test_lite_agent_with_invalid_llm():
 
 
 @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
+@patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_action_tool.requests.post")
 @patch("crewai_tools.tools.crewai_platform_tools.crewai_platform_tool_builder.requests.get")
 @pytest.mark.vcr()
-def test_agent_kickoff_with_platform_tools(mock_get):
+def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     """Test that Agent.kickoff() properly integrates platform tools with LiteAgent"""
     mock_response = Mock()
     mock_response.raise_for_status.return_value = None
@@ -631,6 +632,15 @@ def test_agent_kickoff_with_platform_tools(mock_get):
         }
     }
     mock_get.return_value = mock_response
+
+    # Mock the platform tool execution
+    mock_post_response = Mock()
+    mock_post_response.ok = True
+    mock_post_response.json.return_value = {
+        "success": True,
+        "issue_url": "https://github.com/test/repo/issues/1"
+    }
+    mock_post.return_value = mock_post_response
 
     agent = Agent(
         role="Test Agent",

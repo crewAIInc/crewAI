@@ -3,7 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, cast
 
 from crewai.events.event_listener import event_listener
-from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
 from crewai.utilities.printer import Printer
 
 
@@ -149,12 +154,12 @@ class LLMCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-_before_llm_call_hooks: list[BeforeLLMCallHookType] = []
-_after_llm_call_hooks: list[AfterLLMCallHookType] = []
+_before_llm_call_hooks: list[BeforeLLMCallHookType | BeforeLLMCallHookCallable] = []
+_after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = []
 
 
 def register_before_llm_call_hook(
-    hook: BeforeLLMCallHookType,
+    hook: BeforeLLMCallHookType | BeforeLLMCallHookCallable,
 ) -> None:
     """Register a global before_llm_call hook.
 
@@ -190,7 +195,7 @@ def register_before_llm_call_hook(
 
 
 def register_after_llm_call_hook(
-    hook: AfterLLMCallHookType,
+    hook: AfterLLMCallHookType | AfterLLMCallHookCallable,
 ) -> None:
     """Register a global after_llm_call hook.
 
@@ -217,7 +222,9 @@ def register_after_llm_call_hook(
     _after_llm_call_hooks.append(hook)
 
 
-def get_before_llm_call_hooks() -> list[BeforeLLMCallHookType]:
+def get_before_llm_call_hooks() -> list[
+    BeforeLLMCallHookType | BeforeLLMCallHookCallable
+]:
     """Get all registered global before_llm_call hooks.
 
     Returns:
@@ -226,7 +233,7 @@ def get_before_llm_call_hooks() -> list[BeforeLLMCallHookType]:
     return _before_llm_call_hooks.copy()
 
 
-def get_after_llm_call_hooks() -> list[AfterLLMCallHookType]:
+def get_after_llm_call_hooks() -> list[AfterLLMCallHookType | AfterLLMCallHookCallable]:
     """Get all registered global after_llm_call hooks.
 
     Returns:
@@ -236,7 +243,7 @@ def get_after_llm_call_hooks() -> list[AfterLLMCallHookType]:
 
 
 def unregister_before_llm_call_hook(
-    hook: BeforeLLMCallHookType,
+    hook: BeforeLLMCallHookType | BeforeLLMCallHookCallable,
 ) -> bool:
     """Unregister a specific global before_llm_call hook.
 
@@ -262,7 +269,7 @@ def unregister_before_llm_call_hook(
 
 
 def unregister_after_llm_call_hook(
-    hook: AfterLLMCallHookType,
+    hook: AfterLLMCallHookType | AfterLLMCallHookCallable,
 ) -> bool:
     """Unregister a specific global after_llm_call hook.
 

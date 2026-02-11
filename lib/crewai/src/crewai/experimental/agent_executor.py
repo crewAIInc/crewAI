@@ -19,6 +19,7 @@ from crewai.agents.parser import (
     AgentFinish,
     OutputParserError,
 )
+from crewai.core.providers.human_input import get_provider
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
@@ -37,7 +38,8 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, listen, or_, router, start
+from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
     get_before_llm_call_hooks,
@@ -47,7 +49,12 @@ from crewai.hooks.tool_hooks import (
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
 )
-from crewai.hooks.types import AfterLLMCallHookType, BeforeLLMCallHookType
+from crewai.hooks.types import (
+    AfterLLMCallHookCallable,
+    AfterLLMCallHookType,
+    BeforeLLMCallHookCallable,
+    BeforeLLMCallHookType,
+)
 from crewai.utilities.agent_utils import (
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
@@ -225,8 +232,12 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         self._instance_id = str(uuid4())[:8]
 
-        self.before_llm_call_hooks: list[BeforeLLMCallHookType] = []
-        self.after_llm_call_hooks: list[AfterLLMCallHookType] = []
+        self.before_llm_call_hooks: list[
+            BeforeLLMCallHookType | BeforeLLMCallHookCallable
+        ] = []
+        self.after_llm_call_hooks: list[
+            AfterLLMCallHookType | AfterLLMCallHookCallable
+        ] = []
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
@@ -337,17 +348,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         Flow initialization is deferred to prevent event emission during agent setup.
         Returns the temporary state until invoke() is called.
         """
+        if self._flow_initialized and hasattr(self, "_state_lock"):
+            return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
         return self._state
-
-    @property
-    def messages(self) -> list[LLMMessage]:
-        """Compatibility property for mixin - returns state messages."""
-        return self._state.messages
-
-    @messages.setter
-    def messages(self, value: list[LLMMessage]) -> None:
-        """Set state messages."""
-        self._state.messages = value
 
     @property
     def iterations(self) -> int:
@@ -358,6 +361,16 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     def iterations(self, value: int) -> None:
         """Set state iterations."""
         self._state.iterations = value
+
+    @property
+    def messages(self) -> list[LLMMessage]:
+        """Compatibility property - returns state messages."""
+        return self._state.messages
+
+    @messages.setter
+    def messages(self, value: list[LLMMessage]) -> None:
+        """Set state messages."""
+        self._state.messages = value
 
     @start()
     def generate_plan(self) -> None:
@@ -492,7 +505,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
     # Plan-and-Execute: New Observation-Driven Flow Methods
     # -------------------------------------------------------------------------
 
-    @listen("step_executed")
+    @router("step_executed")
     def observe_step_result(self) -> Literal["step_observed"]:
         """THE OBSERVATION STEP — runs after EVERY step execution.
 
@@ -626,7 +639,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
         return "continue_plan"
 
-    @listen("refine_and_continue")
+    @router("refine_and_continue")
     def handle_refine_and_continue(self) -> Literal["has_todos"]:
         """Lightweight plan refinement — update pending todo descriptions.
 
@@ -668,14 +681,14 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         return "has_todos"
 
-    @listen("continue_plan")
+    @router("continue_plan")
     def handle_continue_plan(self) -> Literal["has_todos", "all_todos_complete"]:
         """Continue to the next todo after a successful step."""
         if self.state.todos.is_complete:
             return "all_todos_complete"
         return "has_todos"
 
-    @listen("goal_achieved")
+    @router("goal_achieved")
     def handle_goal_achieved(self) -> Literal["all_todos_complete"]:
         """Handle early goal achievement — skip remaining todos."""
         completed = self.state.todos.get_completed_todos()
@@ -702,7 +715,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             )
         return "all_todos_complete"
 
-    @listen("replan_now")
+    @router("replan_now")
     def handle_replan_now(
         self,
     ) -> Literal["has_todos", "all_todos_complete"]:
@@ -1209,7 +1222,6 @@ provide clear results that can be used by subsequent steps."""
             if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 # Store tool calls for sequential processing
                 self.state.pending_tool_calls = list(answer)
-
                 return "native_tool_calls"
 
             if isinstance(answer, BaseModel):
@@ -1490,6 +1502,7 @@ provide clear results that can be used by subsequent steps."""
                     agent_key=agent_key,
                 ),
             )
+            error_event_emitted = False
 
             track_delegation_if_needed(func_name, args_dict, self.task)
 
@@ -1565,6 +1578,7 @@ provide clear results that can be used by subsequent steps."""
                                 error=e,
                             ),
                         )
+                        error_event_emitted = True
             elif max_usage_reached and original_tool:
                 # Return error message when max usage limit is reached
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
@@ -1593,20 +1607,20 @@ provide clear results that can be used by subsequent steps."""
                         color="red",
                     )
 
-            # Emit tool usage finished event
-            crewai_event_bus.emit(
-                self,
-                event=ToolUsageFinishedEvent(
-                    output=result,
-                    tool_name=func_name,
-                    tool_args=args_dict,
-                    from_agent=self.agent,
-                    from_task=self.task,
-                    agent_key=agent_key,
-                    started_at=started_at,
-                    finished_at=datetime.now(),
-                ),
-            )
+            if not error_event_emitted:
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageFinishedEvent(
+                        output=result,
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                        started_at=started_at,
+                        finished_at=datetime.now(),
+                    ),
+                )
 
             # Append tool result message
             tool_message: LLMMessage = {
@@ -1705,6 +1719,8 @@ provide clear results that can be used by subsequent steps."""
     @listen("initialized")
     def continue_iteration(self) -> Literal["check_iteration"]:
         """Bridge listener that connects iteration loop back to iteration check."""
+        if self._flow_initialized:
+            self._discard_or_listener(FlowMethodName("continue_iteration"))
         return "check_iteration"
 
     @router(or_(initialize_reasoning, continue_iteration))
@@ -2139,10 +2155,13 @@ provide clear results that can be used by subsequent steps."""
         Regenerates the execution plan based on what has been learned
         from previous attempts, including failures and partial results.
 
+        NOTE: Callers are responsible for incrementing ``replan_count``
+        before calling this method (to allow the guard check in each
+        caller's own flow method).
+
         Args:
             reason: The reason for triggering the replan.
         """
-        self.state.replan_count += 1
         self.state.last_replan_reason = reason
 
         if self.agent.verbose:
@@ -2274,6 +2293,7 @@ Consider:
         Called when dynamic replanning is triggered. Regenerates the plan
         and routes back to todo-driven execution.
         """
+        self.state.replan_count += 1
         reason = self.state.last_replan_reason or "Dynamic replan triggered"
         self._trigger_replan(reason)
 
@@ -2491,7 +2511,7 @@ Consider:
                 )
 
             if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
+                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
             self._create_short_term_memory(formatted_answer)
             self._create_long_term_memory(formatted_answer)
@@ -2705,17 +2725,22 @@ Consider:
         Returns:
             Final answer after feedback.
         """
-        output_str = (
-            str(formatted_answer.output)
-            if isinstance(formatted_answer.output, BaseModel)
-            else formatted_answer.output
-        )
-        human_feedback = self._ask_human_input(output_str)
+        provider = get_provider()
+        return provider.handle_feedback(formatted_answer, self)
 
-        if self._is_training_mode():
-            return self._handle_training_feedback(formatted_answer, human_feedback)
+    async def _ahandle_human_feedback(
+        self, formatted_answer: AgentFinish
+    ) -> AgentFinish:
+        """Process human feedback asynchronously and refine answer.
 
-        return self._handle_regular_feedback(formatted_answer, human_feedback)
+        Args:
+            formatted_answer: Initial agent result.
+
+        Returns:
+            Final answer after feedback.
+        """
+        provider = get_provider()
+        return await provider.handle_feedback_async(formatted_answer, self)
 
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
@@ -2724,101 +2749,6 @@ Consider:
             True if in training mode.
         """
         return bool(self.crew and self.crew._train)
-
-    def _handle_training_feedback(
-        self, initial_answer: AgentFinish, feedback: str
-    ) -> AgentFinish:
-        """Process training feedback and generate improved answer.
-
-        Args:
-            initial_answer: Initial agent output.
-            feedback: Training feedback.
-
-        Returns:
-            Improved answer.
-        """
-        self._handle_crew_training_output(initial_answer, feedback)
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow for improved answer
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get improved answer from state
-        improved_answer = self.state.current_answer
-        if not isinstance(improved_answer, AgentFinish):
-            raise RuntimeError(
-                "Training feedback iteration did not produce final answer"
-            )
-
-        self._handle_crew_training_output(improved_answer)
-        self.state.ask_for_human_input = False
-        return improved_answer
-
-    def _handle_regular_feedback(
-        self, current_answer: AgentFinish, initial_feedback: str
-    ) -> AgentFinish:
-        """Process regular feedback iteratively until user is satisfied.
-
-        Args:
-            current_answer: Current agent output.
-            initial_feedback: Initial user feedback.
-
-        Returns:
-            Final answer after iterations.
-        """
-        feedback = initial_feedback
-        answer = current_answer
-
-        while self.state.ask_for_human_input:
-            if feedback.strip() == "":
-                self.state.ask_for_human_input = False
-            else:
-                answer = self._process_feedback_iteration(feedback)
-                output_str = (
-                    str(answer.output)
-                    if isinstance(answer.output, BaseModel)
-                    else answer.output
-                )
-                feedback = self._ask_human_input(output_str)
-
-        return answer
-
-    def _process_feedback_iteration(self, feedback: str) -> AgentFinish:
-        """Process a single feedback iteration and generate updated response.
-
-        Args:
-            feedback: User feedback.
-
-        Returns:
-            Updated agent response.
-        """
-        self.state.messages.append(
-            format_message_for_llm(
-                self._i18n.slice("feedback_instructions").format(feedback=feedback)
-            )
-        )
-
-        # Re-run flow
-        self.state.iterations = 0
-        self.state.is_finished = False
-        self.state.current_answer = None
-
-        self.kickoff()
-
-        # Get answer from state
-        answer = self.state.current_answer
-        if not isinstance(answer, AgentFinish):
-            raise RuntimeError("Feedback iteration did not produce final answer")
-
-        return answer
 
     @classmethod
     def __get_pydantic_core_schema__(

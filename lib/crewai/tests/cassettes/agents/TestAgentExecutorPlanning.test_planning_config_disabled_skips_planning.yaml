@@ -1,8 +1,8 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are Test Agent. A helpful
-      test assistant\nYour personal goal is: Answer questions"},{"role":"user","content":"\nCurrent
-      Task: What is 2+2? Reply with just the number.\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are Math Assistant. A helpful
+      assistant\nYour personal goal is: Help solve simple math problems"},{"role":"user","content":"\nCurrent
+      Task: What is 5 + 5?\n\nProvide your complete response:"}],"model":"gpt-4o-mini"}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -15,7 +15,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '272'
+      - '260'
       content-type:
       - application/json
       host:
@@ -37,22 +37,22 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.5
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6L4AzMHXLXDfyclWS6fJSwS0cvOl\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403318,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D4yTf8T2iADffpPCJBZhntLlaoaSy\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770078159,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"4\",\n        \"refusal\": null,\n
-        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 50,\n    \"completion_tokens\":
-        1,\n    \"total_tokens\": 51,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"5 + 5 equals 10.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        47,\n    \"completion_tokens\": 8,\n    \"total_tokens\": 55,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_1590f93f9d\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -61,7 +61,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 18:41:58 GMT
+      - Tue, 03 Feb 2026 00:22:40 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -81,7 +81,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '264'
+      - '515'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
