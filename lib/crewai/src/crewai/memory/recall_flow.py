@@ -189,6 +189,7 @@ class RecallFlow(Flow[RecallState]):
             try:
                 self.state.time_cutoff = datetime.fromisoformat(analysis.time_filter)
             except ValueError:
+                # If the time filter isn't a valid ISO format, ignore it and proceed without a cutoff.
                 pass
 
         # Embed distilled recall queries (or fall back to original query)
