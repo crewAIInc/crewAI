@@ -1,97 +1,316 @@
 ---
-title: Brave Search
-description: The `BraveSearchTool` is designed to search the internet using the Brave Search API.
+title: Brave Search Tools
+description: A suite of tools for querying the Brave Search API — covering web, news, image, and video search.
 icon: searchengin
 mode: "wide"
 ---
 
-# `BraveSearchTool`
+# Brave Search Tools
 
 ## Description
 
-This tool is designed to perform web searches using the Brave Search API. It allows you to search the internet with a specified query and retrieve relevant results. The tool supports customizable result counts and country-specific searches.
+CrewAI offers a family of Brave Search tools, each targeting a specific [Brave Search API](https://brave.com/search/api/) endpoint.
+Rather than a single catch-all tool, you can pick exactly the tool that matches the kind of results your agent needs:
+
+| Tool | Endpoint | Use case |
+| --- | --- | --- |
+| `BraveWebSearchTool` | Web Search | General web results, snippets, and URLs |
+| `BraveNewsSearchTool` | News Search | Recent news articles and headlines |
+| `BraveImageSearchTool` | Image Search | Image results with dimensions and source URLs |
+| `BraveVideoSearchTool` | Video Search | Video results from across the web |
+| `BraveLocalPOIsTool` | Local POIs | Find points of interest (e.g., restaurants) |
+| `BraveLocalPOIsDescriptionTool` | Local POIs | Retrieve AI-generated location descriptions |
+| `BraveLLMContextTool` | LLM Context | Pre-extracted web content optimized for AI agents, LLM grounding, and RAG pipelines. |
+
+All tools share a common base class (`BraveSearchToolBase`) that provides consistent behavior — rate limiting, automatic retries on `429` responses, header and parameter validation, and optional file saving.
+
+<Note>
+  The older `BraveSearchTool` class is still available for backwards compatibility, but it is considered **legacy** and will not receive the same level of attention going forward. We recommend migrating to the specific tools listed above, which offer richer configuration and a more focused interface.
+</Note>
+
+<Note>
+    While many tools (e.g., _BraveWebSearchTool_, _BraveNewsSearchTool_, _BraveImageSearchTool_, and _BraveVideoSearchTool_) can be used with a free Brave Search API subscription/plan, some parameters (e.g., `enable_snippets`) and tools (e.g., _BraveLocalPOIsTool_ and _BraveLocalPOIsDescriptionTool_) require a paid plan. Consult your subscription plan's capabilities for clarification.
+</Note>
 
 ## Installation
-
-To incorporate this tool into your project, follow the installation instructions below:
 
 ```shell
 pip install 'crewai[tools]'
 ```
 
-## Steps to Get Started
+## Getting Started
 
-To effectively use the `BraveSearchTool`, follow these steps:
+1. **Install the package** — confirm that `crewai[tools]` is installed in your Python environment.
+2. **Get an API key** — sign up at [api-dashboard.search.brave.com/login](https://api-dashboard.search.brave.com/login) to generate a key.
+3. **Set the environment variable** — store your key as `BRAVE_API_KEY`, or pass it directly via the `api_key` parameter.
 
-1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment.
-2. **API Key Acquisition**: Acquire a Brave Search API key at https://api.search.brave.com/app/keys (sign in to generate a key).
-3. **Environment Configuration**: Store your obtained API key in an environment variable named `BRAVE_API_KEY` to facilitate its use by the tool.
+## Quick Examples
 
-## Example
-
-The following example demonstrates how to initialize the tool and execute a search with a given query:
+### Web Search
 
 ```python Code
-from crewai_tools import BraveSearchTool
+from crewai_tools import BraveWebSearchTool
 
-# Initialize the tool for internet searching capabilities
-tool = BraveSearchTool()
-
-# Execute a search
-results = tool.run(search_query="CrewAI agent framework")
+tool = BraveWebSearchTool()
+results = tool.run(q="CrewAI agent framework")
 print(results)
 ```
 
-## Parameters
-
-The `BraveSearchTool` accepts the following parameters:
-
-- **search_query**: Mandatory. The search query you want to use to search the internet.
-- **country**: Optional. Specify the country for the search results. Default is empty string.
-- **n_results**: Optional. Number of search results to return. Default is `10`.
-- **save_file**: Optional. Whether to save the search results to a file. Default is `False`.
-
-## Example with Parameters
-
-Here is an example demonstrating how to use the tool with additional parameters:
+### News Search
 
 ```python Code
-from crewai_tools import BraveSearchTool
+from crewai_tools import BraveNewsSearchTool
 
-# Initialize the tool with custom parameters
-tool = BraveSearchTool(
-    country="US",
-    n_results=5,
-    save_file=True
+tool = BraveNewsSearchTool()
+results = tool.run(q="latest AI breakthroughs")
+print(results)
+```
+
+### Image Search
+
+```python Code
+from crewai_tools import BraveImageSearchTool
+
+tool = BraveImageSearchTool()
+results = tool.run(q="northern lights photography")
+print(results)
+```
+
+### Video Search
+
+```python Code
+from crewai_tools import BraveVideoSearchTool
+
+tool = BraveVideoSearchTool()
+results = tool.run(q="how to build AI agents")
+print(results)
+```
+
+### Location POI Descriptions
+
+```python Code
+from crewai_tools import (
+    BraveWebSearchTool,
+    BraveLocalPOIsDescriptionTool,
 )
 
-# Execute a search
-results = tool.run(search_query="Latest AI developments")
-print(results)
+web_search = BraveWebSearchTool(raw=True)
+poi_details = BraveLocalPOIsDescriptionTool()
+
+results = web_search.run(q="italian restaurants in pensacola, florida")
+
+if "locations" in results:
+    location_ids = [ loc["id"] for loc in results["locations"]["results"] ]
+    if location_ids:
+        descriptions = poi_details.run(ids=location_ids)
+        print(descriptions)
+```
+
+## Common Constructor Parameters
+
+Every Brave Search tool accepts the following parameters at initialization:
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `api_key` | `str \| None` | `None` | Brave API key. Falls back to the `BRAVE_API_KEY` environment variable. |
+| `headers` | `dict \| None` | `None` | Additional HTTP headers to send with every request (e.g., `api-version`, geolocation headers). |
+| `requests_per_second` | `float` | `1.0` | Maximum request rate. The tool will sleep between calls to stay within this limit. |
+| `save_file` | `bool` | `False` | When `True`, each response is written to a timestamped `.txt` file. |
+| `raw` | `bool` | `False` | When `True`, the full API JSON response is returned without any refinement. |
+| `timeout` | `int` | `30` | HTTP request timeout in seconds. |
+| `country` | `str \| None` | `None` | Legacy shorthand for geo-targeting (e.g., `"US"`). Prefer using the `country` query parameter directly. |
+| `n_results` | `int` | `10` | Legacy shorthand for result count. Prefer using the `count` query parameter directly. |
+
+<Warning>
+  The `country` and `n_results` constructor parameters exist for backwards compatibility. They are applied as defaults when the corresponding query parameters (`country`, `count`) are not provided at call time. For new code, we recommend passing `country` and `count` directly as query parameters instead.
+</Warning>
+
+## Query Parameters
+
+Each tool validates its query parameters against a Pydantic schema before sending the request.
+The parameters vary slightly per endpoint — here is a summary of the most commonly used ones:
+
+### BraveWebSearchTool
+
+| Parameter | Description |
+| --- | --- |
+| `q` | **(required)** Search query string (max 400 chars). |
+| `country` | Two-letter country code for geo-targeting (e.g., `"US"`). |
+| `search_lang` | Two-letter language code for results (e.g., `"en"`). |
+| `count` | Max number of results to return (1–20). |
+| `offset` | Skip the first N pages of results (0–9). |
+| `safesearch` | Content filter: `"off"`, `"moderate"`, or `"strict"`. |
+| `freshness` | Recency filter: `"pd"` (past day), `"pw"` (past week), `"pm"` (past month), `"py"` (past year), or a date range like `"2025-01-01to2025-06-01"`. |
+| `extra_snippets` | Include up to 5 additional text snippets per result. |
+| `goggles` | Brave Goggles URL(s) and/or source for custom re-ranking. |
+
+For the complete parameter and header reference, see the [Brave Web Search API documentation](https://api-dashboard.search.brave.com/api-reference/web/search/get).
+
+### BraveNewsSearchTool
+
+| Parameter | Description |
+| --- | --- |
+| `q` | **(required)** Search query string (max 400 chars). |
+| `country` | Two-letter country code for geo-targeting. |
+| `search_lang` | Two-letter language code for results. |
+| `count` | Max number of results to return (1–50). |
+| `offset` | Skip the first N pages of results (0–9). |
+| `safesearch` | Content filter: `"off"`, `"moderate"`, or `"strict"`. |
+| `freshness` | Recency filter (same options as Web Search). |
+| `goggles` | Brave Goggles URL(s) and/or source for custom re-ranking. |
+
+For the complete parameter and header reference, see the [Brave News Search API documentation](https://api-dashboard.search.brave.com/api-reference/news/news_search/get).
+
+### BraveImageSearchTool
+
+| Parameter | Description |
+| --- | --- |
+| `q` | **(required)** Search query string (max 400 chars). |
+| `country` | Two-letter country code for geo-targeting. |
+| `search_lang` | Two-letter language code for results. |
+| `count` | Max number of results to return (1–200). |
+| `safesearch` | Content filter: `"off"` or `"strict"`. |
+| `spellcheck` | Attempt to correct spelling errors in the query. |
+
+For the complete parameter and header reference, see the [Brave Image Search API documentation](https://api-dashboard.search.brave.com/api-reference/images/image_search).
+
+### BraveVideoSearchTool
+
+| Parameter | Description |
+| --- | --- |
+| `q` | **(required)** Search query string (max 400 chars). |
+| `country` | Two-letter country code for geo-targeting. |
+| `search_lang` | Two-letter language code for results. |
+| `count` | Max number of results to return (1–50). |
+| `offset` | Skip the first N pages of results (0–9). |
+| `safesearch` | Content filter: `"off"`, `"moderate"`, or `"strict"`. |
+| `freshness` | Recency filter (same options as Web Search). |
+
+For the complete parameter and header reference, see the [Brave Video Search API documentation](https://api-dashboard.search.brave.com/api-reference/videos/video_search/get).
+
+### BraveLocalPOIsTool
+
+| Parameter | Description |
+| --- | --- |
+| `ids` | **(required)** A list of unique identifiers for the desired locations. |
+| `search_lang` | Two-letter language code for results. |
+
+For the complete parameter and header reference, see [Brave Local POIs API documentation](https://api-dashboard.search.brave.com/api-reference/web/local_pois).
+
+### BraveLocalPOIsDescriptionTool
+
+| Parameter | Description |
+| --- | --- |
+| `ids` | **(required)** A list of unique identifiers for the desired locations. |
+
+For the complete parameter and header reference, see [Brave POI Descriptions API documentation](https://api-dashboard.search.brave.com/api-reference/web/poi_descriptions).
+
+## Custom Headers
+
+All tools support custom HTTP request headers. The Web Search tool, for example, accepts geolocation headers for location-aware results:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(
+    headers={
+        "x-loc-lat": "37.7749",
+        "x-loc-long": "-122.4194",
+        "x-loc-city": "San Francisco",
+        "x-loc-state": "CA",
+        "x-loc-country": "US",
+    }
+)
+
+results = tool.run(q="best coffee shops nearby")
+```
+
+You can also update headers after initialization using the `set_headers()` method:
+
+```python Code
+tool.set_headers({"api-version": "2025-01-01"})
+```
+
+## Raw Mode
+
+By default, each tool refines the API response into a concise list of results. If you need the full, unprocessed API response, enable raw mode:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(raw=True)
+full_response = tool.run(q="Brave Search API")
 ```
 
 ## Agent Integration Example
 
-Here's how to integrate the `BraveSearchTool` with a CrewAI agent:
+Here's how to equip a CrewAI agent with multiple Brave Search tools:
 
 ```python Code
 from crewai import Agent
 from crewai.project import agent
-from crewai_tools import BraveSearchTool
+from crewai_tools import BraveWebSearchTool, BraveNewsSearchTool
 
-# Initialize the tool
-brave_search_tool = BraveSearchTool()
+web_search = BraveWebSearchTool()
+news_search = BraveNewsSearchTool()
 
-# Define an agent with the BraveSearchTool
 @agent
 def researcher(self) -> Agent:
     return Agent(
         config=self.agents_config["researcher"],
-        allow_delegation=False,
-        tools=[brave_search_tool]
+        tools=[web_search, news_search],
     )
 ```
 
+## Advanced Example
+
+Combining multiple parameters for a targeted search:
+
+```python Code
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(
+    requests_per_second=0.5,  # conservative rate limit
+    save_file=True,
+)
+
+results = tool.run(
+    q="artificial intelligence news",
+    country="US",
+    search_lang="en",
+    count=5,
+    freshness="pm",           # past month only
+    extra_snippets=True,
+)
+print(results)
+```
+
+## Migrating from `BraveSearchTool` (Legacy)
+
+If you are currently using `BraveSearchTool`, switching to the new tools is straightforward:
+
+```python Code
+# Before (legacy)
+from crewai_tools import BraveSearchTool
+
+tool = BraveSearchTool(country="US", n_results=5, save_file=True)
+results = tool.run(search_query="AI agents")
+
+# After (recommended)
+from crewai_tools import BraveWebSearchTool
+
+tool = BraveWebSearchTool(save_file=True)
+results = tool.run(q="AI agents", country="US", count=5)
+```
+
+Key differences:
+- **Import**: Use `BraveWebSearchTool` (or the news/image/video variant) instead of `BraveSearchTool`.
+- **Query parameter**: Use `q` instead of `search_query`. (Both `search_query` and `query` are still accepted for convenience, but `q` is the preferred parameter.)
+- **Result count**: Pass `count` as a query parameter instead of `n_results` at init time.
+- **Country**: Pass `country` as a query parameter instead of at init time.
+- **API key**: Can now be passed directly via `api_key=` in addition to the `BRAVE_API_KEY` environment variable.
+- **Rate limiting**: Configurable via `requests_per_second` with automatic retry on `429` responses.
+
 ## Conclusion
 
-By integrating the `BraveSearchTool` into Python projects, users gain the ability to conduct real-time, relevant searches across the internet directly from their applications. The tool provides a simple interface to the powerful Brave Search API, making it easy to retrieve and process search results programmatically. By adhering to the setup and usage guidelines provided, incorporating this tool into projects is streamlined and straightforward. 
+The Brave Search tool suite gives your CrewAI agents flexible, endpoint-specific access to the Brave Search API. Whether you need web pages, breaking news, images, or videos, there is a dedicated tool with validated parameters and built-in resilience. Pick the tool that fits your use case, and refer to the [Brave Search API documentation](https://brave.com/search/api/) for the full details on available parameters and response formats.
