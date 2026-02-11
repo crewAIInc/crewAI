@@ -659,12 +659,23 @@ class CambAudioSeparationTool(BaseTool):
         client = _get_camb_client(key, self.base_url, self.timeout)
 
         kwargs: dict[str, Any] = {}
-        if audio_file_path:
+        if audio_url:
+            import httpx
+
+            resp = httpx.get(audio_url)
+            resp.raise_for_status()
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+                tmp.write(resp.content)
+                tmp_path = tmp.name
+            with open(tmp_path, "rb") as f:
+                kwargs["media_file"] = f
+                result = client.audio_separation.create_audio_separation(**kwargs)
+        elif audio_file_path:
             with open(audio_file_path, "rb") as f:
                 kwargs["media_file"] = f
                 result = client.audio_separation.create_audio_separation(**kwargs)
         else:
-            result = client.audio_separation.create_audio_separation(**kwargs)
+            return json.dumps({"error": "No audio source provided"})
 
         task_id = result.task_id
         status = _poll_task(client.audio_separation.get_audio_separation_status, task_id)

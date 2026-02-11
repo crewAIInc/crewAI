@@ -27,10 +27,9 @@ API_KEY = os.environ.get("CAMB_API_KEY")
 if not API_KEY:
     raise RuntimeError("Set CAMB_API_KEY environment variable to run examples")
 
-AUDIO_SAMPLE = os.environ.get(
-    "CAMB_AUDIO_SAMPLE",
-    str(Path(__file__).resolve().parents[8] / "yt-dlp" / "voices" / "original" / "sabrina-original-clip.mp3"),
-)
+AUDIO_SAMPLE = os.environ.get("CAMB_AUDIO_SAMPLE")
+if not AUDIO_SAMPLE:
+    raise RuntimeError("Set CAMB_AUDIO_SAMPLE environment variable to a local audio file path")
 
 
 def play(path: str):

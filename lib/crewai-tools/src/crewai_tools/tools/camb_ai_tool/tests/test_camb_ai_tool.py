@@ -130,8 +130,14 @@ def test_translation_api_error_workaround(mock_get_client):
 # ---------------------------------------------------------------------------
 
 
+@patch("httpx.get")
 @patch("crewai_tools.tools.camb_ai_tool.camb_ai_tool._get_camb_client")
-def test_transcription(mock_get_client):
+def test_transcription(mock_get_client, mock_httpx_get):
+    mock_resp = Mock()
+    mock_resp.content = b"fake audio data"
+    mock_resp.raise_for_status = Mock()
+    mock_httpx_get.return_value = mock_resp
+
     mock_client = MagicMock()
     mock_get_client.return_value = mock_client
 
@@ -276,7 +282,7 @@ def test_toolkit_get_tools():
     with patch.dict("os.environ", {"CAMB_API_KEY": "test-key"}):
         toolkit = CambAIToolkit()
         tools = toolkit.get_tools()
-        assert len(tools) == 8
+        assert len(tools) == 9
 
 
 def test_toolkit_selective():
@@ -286,7 +292,7 @@ def test_toolkit_selective():
                                  include_voice_clone=False, include_voice_list=False,
                                  include_text_to_sound=False, include_audio_separation=False)
         tools = toolkit.get_tools()
-        assert len(tools) == 2
+        assert len(tools) == 3
 
 
 def test_toolkit_no_key_raises():

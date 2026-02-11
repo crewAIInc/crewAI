@@ -11,6 +11,7 @@ from crewai_tools.tools.camb_ai_tool.camb_ai_tool import (
     CambTranslationTool,
     CambTTSTool,
     CambVoiceCloneTool,
+    CambVoiceFromDescriptionTool,
     CambVoiceListTool,
 )
 from crewai_tools.tools.brightdata_tool import (
@@ -209,6 +210,7 @@ __all__ = [
     "CambTranslationTool",
     "CambTTSTool",
     "CambVoiceCloneTool",
+    "CambVoiceFromDescriptionTool",
     "CambVoiceListTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
