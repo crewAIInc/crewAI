@@ -170,29 +170,7 @@ This template follows enterprise best practices for CrewAI development:
 - **Flow-Based Architecture**: Uses `Flow` class with state management instead of standalone crews
 - **Minimal Crew Classes**: Crews are just wiring, configuration lives in YAML
 - **Type Safety**: Pydantic models for state and tool inputs
-- **UV Package Management**: Enterprise-ready dependency management
 - **Clean Code**: Follows PEP 8, single responsibility principle, and DRY principles
-
-## Development Commands
-
-### Package Management (Always use uv)
-
-```bash
-# Add new packages
-uv add package_name
-
-# Sync dependencies
-uv sync
-
-# Lock dependencies
-uv lock
-```
-
-### Running Tests
-
-```bash
-uv run pytest
-```
 
 ## Support
 
