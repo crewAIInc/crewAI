@@ -393,3 +393,58 @@ class TestBraceExpansion:
         )
         # Should appear exactly once
         assert result.count("x.py") == 1
+
+
+class TestSensitiveFileProtection:
+    """Tests for sensitive file exclusion (secrets leakage prevention)."""
+
+    @pytest.mark.parametrize(
+        "name",
+        [".env", ".env.local", ".netrc", ".npmrc", "secrets.json", "server.pem"],
+    )
+    def test_sensitive_files_excluded(self, tmp_path: Path, name: str) -> None:
+        """Sensitive files are skipped even if they contain matches."""
+        (tmp_path / name).write_text("MATCH_ME\n")
+        tool = GrepTool(allow_unrestricted_paths=True)
+        result = tool._run(pattern="MATCH_ME", path=str(tmp_path))
+        assert "No matches found" in result
+
+    def test_sensitive_file_blocked_by_direct_path(self, tmp_path: Path) -> None:
+        """A .env passed as the explicit path argument is still blocked."""
+        env = tmp_path / ".env"
+        env.write_text("SECRET=abc\n")
+        tool = GrepTool(allow_unrestricted_paths=True)
+        result = tool._run(pattern="SECRET", path=str(env))
+        assert "No matches found" in result
+
+
+class TestFileSizeLimit:
+    """Tests for max_file_size_bytes guard."""
+
+    def test_large_file_skipped(self, tmp_path: Path) -> None:
+        """Files over max_file_size_bytes are skipped."""
+        (tmp_path / "big.txt").write_text("needle\n" * 100)
+        tool = GrepTool(allow_unrestricted_paths=True, max_file_size_bytes=50)
+        result = tool._run(pattern="needle", path=str(tmp_path))
+        assert "No matches found" in result
+
+    def test_large_file_searched_with_raised_limit(self, tmp_path: Path) -> None:
+        """Raising the limit lets the same file be searched."""
+        (tmp_path / "big.txt").write_text("needle\n" * 100)
+        tool = GrepTool(allow_unrestricted_paths=True, max_file_size_bytes=50_000)
+        result = tool._run(pattern="needle", path=str(tmp_path))
+        assert "needle" in result
+
+
+class TestContextLinesUpperBound:
+    """Tests for context_lines validation bounds."""
+
+    def test_negative_rejected(self) -> None:
+        """context_lines < 0 is rejected by Pydantic."""
+        with pytest.raises(ValidationError):
+            GrepToolSchema(pattern="x", context_lines=-1)
+
+    def test_over_max_rejected(self) -> None:
+        """context_lines > MAX_CONTEXT_LINES is rejected by Pydantic."""
+        with pytest.raises(ValidationError):
+            GrepToolSchema(pattern="x", context_lines=MAX_CONTEXT_LINES + 1)
