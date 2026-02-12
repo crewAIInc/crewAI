@@ -8409,6 +8409,12 @@
             "description": "When False (default), searches are restricted to the current working directory. Set to True to allow searching any path on the filesystem.",
             "title": "Allow Unrestricted Paths",
             "type": "boolean"
+          },
+          "max_file_size_bytes": {
+            "default": 10485760,
+            "description": "Maximum file size in bytes to search. Files larger than this are skipped. Defaults to 10 MB.",
+            "title": "Max File Size Bytes",
+            "type": "integer"
           }
         },
         "title": "GrepTool",
@@ -8427,7 +8433,9 @@
           },
           "context_lines": {
             "default": 0,
-            "description": "Number of lines to show before and after each match",
+            "description": "Number of lines to show before and after each match (0-10)",
+            "maximum": 10,
+            "minimum": 0,
             "title": "Context Lines",
             "type": "integer"
           },
