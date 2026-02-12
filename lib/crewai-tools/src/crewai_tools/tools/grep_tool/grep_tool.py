@@ -2,20 +2,26 @@
 
 from __future__ import annotations
 
-import os
-import re
 from dataclasses import dataclass, field
+from itertools import chain
+import os
 from pathlib import Path
+import re
+import signal
+import sys
 from typing import Literal
 
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
+
 
 MAX_OUTPUT_CHARS = 50_000
 MAX_FILES = 10_000
 MAX_MATCHES_PER_FILE = 200
 MAX_LINE_LENGTH = 500
 BINARY_CHECK_SIZE = 8192
+MAX_REGEX_LENGTH = 1_000
+REGEX_MATCH_TIMEOUT_SECONDS = 5
 
 SKIP_DIRS = frozenset(
     {
@@ -61,7 +67,7 @@ class GrepToolSchema(BaseModel):
     )
     glob_pattern: str | None = Field(
         default=None,
-        description="Glob pattern to filter files (e.g. '*.py', '*.{ts,tsx}')",
+        description="Glob pattern to filter files (e.g. '*.py'). Supports brace expansion (e.g. '*.{ts,tsx}').",
     )
     output_mode: Literal["content", "files_with_matches", "count"] = Field(
         default="content",
@@ -89,13 +95,16 @@ class GrepTool(BaseTool):
 
     Example:
         >>> tool = GrepTool()
-        >>> result = tool.run(pattern="def.*main", path="/path/to/project")
+        >>> result = tool.run(pattern="def.*main", path="src")
         >>> result = tool.run(
         ...     pattern="TODO",
-        ...     path="/path/to/project",
         ...     glob_pattern="*.py",
         ...     context_lines=2,
         ... )
+
+        To search any path on the filesystem (opt-in):
+        >>> tool = GrepTool(allow_unrestricted_paths=True)
+        >>> result = tool.run(pattern="error", path="/var/log/app")
     """
 
     name: str = "Search file contents"
@@ -105,6 +114,13 @@ class GrepTool(BaseTool):
         "Returns matching content with line numbers, file paths only, or match counts."
     )
     args_schema: type[BaseModel] = GrepToolSchema
+    allow_unrestricted_paths: bool = Field(
+        default=False,
+        description=(
+            "When False (default), searches are restricted to the current working "
+            "directory. Set to True to allow searching any path on the filesystem."
+        ),
+    )
 
     def _run(
         self,
@@ -131,12 +147,31 @@ class GrepTool(BaseTool):
         Returns:
             Formatted search results as a string.
         """
-        # Resolve search path
-        search_path = Path(path) if path else Path(os.getcwd())
+        # Resolve search path — constrained to cwd unless unrestricted
+        cwd = Path(os.getcwd()).resolve()
+        if path:
+            candidate = Path(path)
+            if candidate.is_absolute():
+                search_path = candidate.resolve()
+            else:
+                search_path = (cwd / candidate).resolve()
+            # Prevent traversal outside the working directory (unless opted in)
+            if not self.allow_unrestricted_paths:
+                try:
+                    search_path.relative_to(cwd)
+                except ValueError:
+                    return (
+                        f"Error: Path '{path}' is outside the working directory. "
+                        "Initialize with GrepTool(allow_unrestricted_paths=True) to allow this."
+                    )
+        else:
+            search_path = cwd
         if not search_path.exists():
             return f"Error: Path '{search_path}' does not exist."
 
-        # Compile regex
+        # Compile regex with length guard to mitigate ReDoS
+        if len(pattern) > MAX_REGEX_LENGTH:
+            return f"Error: Pattern too long ({len(pattern)} chars). Maximum is {MAX_REGEX_LENGTH}."
         flags = re.IGNORECASE if case_insensitive else 0
         try:
             compiled = re.compile(pattern, flags)
@@ -173,6 +208,28 @@ class GrepTool(BaseTool):
 
         return output
 
+    @staticmethod
+    def _expand_brace_pattern(pattern: str) -> list[str]:
+        """Expand a simple brace pattern into individual globs.
+
+        Handles a single level of brace expansion, e.g.
+        ``*.{py,txt}`` -> ``['*.py', '*.txt']``.
+        Nested braces are *not* supported and the pattern is returned as-is.
+
+        Args:
+            pattern: Glob pattern that may contain ``{a,b,...}`` syntax.
+
+        Returns:
+            List of expanded patterns (or the original if no braces found).
+        """
+        match = re.search(r"\{([^{}]+)\}", pattern)
+        if not match:
+            return [pattern]
+        prefix = pattern[: match.start()]
+        suffix = pattern[match.end() :]
+        alternatives = match.group(1).split(",")
+        return [f"{prefix}{alt.strip()}{suffix}" for alt in alternatives]
+
     def _collect_files(self, search_path: Path, glob_pattern: str | None) -> list[Path]:
         """Collect files to search.
 
@@ -186,11 +243,15 @@ class GrepTool(BaseTool):
         if search_path.is_file():
             return [search_path]
 
-        pattern = glob_pattern or "*"
+        patterns = self._expand_brace_pattern(glob_pattern) if glob_pattern else ["*"]
+        seen: set[Path] = set()
         files: list[Path] = []
-        for p in search_path.rglob(pattern):
+        for p in chain.from_iterable(search_path.rglob(pat) for pat in patterns):
             if not p.is_file():
                 continue
+            if p in seen:
+                continue
+            seen.add(p)
             # Skip hidden/build directories
             if any(part in SKIP_DIRS for part in p.relative_to(search_path).parts):
                 continue
@@ -199,6 +260,37 @@ class GrepTool(BaseTool):
                 break
 
         return sorted(files)
+
+    @staticmethod
+    def _safe_search(compiled_pattern: re.Pattern[str], line: str) -> re.Match[str] | None:
+        """Run a regex search with a per-line timeout to mitigate ReDoS.
+
+        On platforms that support SIGALRM (Unix), a timeout is enforced.
+        On Windows, the search runs without a timeout but is still bounded
+        by MAX_LINE_LENGTH truncation applied earlier in the pipeline.
+
+        Args:
+            compiled_pattern: Compiled regex pattern.
+            line: The text line to search.
+
+        Returns:
+            Match object if found, None otherwise (including on timeout).
+        """
+        if sys.platform == "win32":
+            return compiled_pattern.search(line)
+
+        def _timeout_handler(signum: int, frame: object) -> None:
+            raise TimeoutError
+
+        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(REGEX_MATCH_TIMEOUT_SECONDS)
+        try:
+            return compiled_pattern.search(line)
+        except TimeoutError:
+            return None
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
 
     def _is_binary_file(self, file_path: Path) -> bool:
         """Check if a file is binary by looking for null bytes.
@@ -244,7 +336,7 @@ class GrepTool(BaseTool):
         # Find matching line numbers
         match_line_nums: list[int] = []
         for i, line in enumerate(lines):
-            if compiled_pattern.search(line):
+            if self._safe_search(compiled_pattern, line):
                 match_line_nums.append(i)
                 if len(match_line_nums) >= MAX_MATCHES_PER_FILE:
                     break
