@@ -8,7 +8,7 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.cli.version import is_newer_version_available
+from crewai.cli.version import is_current_version_yanked, is_newer_version_available
 
 
 _disable_version_check: ContextVar[bool] = ContextVar(
@@ -103,6 +103,22 @@ To update, run: uv sync --upgrade-package crewai"""
                     padding=(1, 2),
                 )
                 self.console.print(panel)
+                self.console.print()
+
+            is_yanked, yanked_reason = is_current_version_yanked()
+            if is_yanked:
+                yanked_message = f"Version {current} has been yanked from PyPI."
+                if yanked_reason:
+                    yanked_message += f"\nReason: {yanked_reason}"
+                yanked_message += "\n\nTo update, run: uv sync --upgrade-package crewai"
+
+                yanked_panel = Panel(
+                    yanked_message,
+                    title="Yanked Version",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+                self.console.print(yanked_panel)
                 self.console.print()
         except Exception:  # noqa: S110
             # Silently ignore errors in version check - it's non-critical
