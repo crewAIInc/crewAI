@@ -737,6 +737,27 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, title, style)
 
+    @staticmethod
+    def _simplify_tools_field(fields: dict[str, Any]) -> dict[str, Any]:
+        """Simplify the tools field to show only tool names instead of full definitions.
+
+        Args:
+            fields: Dictionary of fields that may contain a 'tools' key with
+                    full tool objects.
+
+        Returns:
+            The fields dictionary with 'tools' replaced by a comma-separated
+            string of tool names.
+        """
+        if "tools" in fields:
+            tools = fields["tools"]
+            if tools:
+                tool_names = [getattr(t, "name", str(t)) for t in tools]
+                fields["tools"] = ", ".join(tool_names) if tool_names else "None"
+            else:
+                fields["tools"] = "None"
+        return fields
+
     def handle_lite_agent_execution(
         self,
         lite_agent_role: str,
@@ -747,6 +768,8 @@ To enable tracing, do any one of these:
         """Handle lite agent execution events with panel display."""
         if not self.verbose:
             return
+
+        fields = self._simplify_tools_field(fields)
 
         if status == "started":
             self.create_lite_agent_branch(lite_agent_role)
