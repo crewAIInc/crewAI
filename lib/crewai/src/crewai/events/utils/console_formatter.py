@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 import os
 import threading
 from typing import Any, ClassVar, cast
@@ -7,7 +8,37 @@ from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.cli.version import is_newer_version_available
+from crewai.cli.version import is_current_version_yanked, is_newer_version_available
+
+
+_disable_version_check: ContextVar[bool] = ContextVar(
+    "_disable_version_check", default=False
+)
+
+_suppress_console_output: ContextVar[bool] = ContextVar(
+    "_suppress_console_output", default=False
+)
+
+
+def set_suppress_console_output(suppress: bool) -> object:
+    """Set whether to suppress all console output.
+
+    Args:
+        suppress: True to suppress output, False to show it.
+
+    Returns:
+        A token that can be used to restore the previous value.
+    """
+    return _suppress_console_output.set(suppress)
+
+
+def should_suppress_console_output() -> bool:
+    """Check if console output should be suppressed.
+
+    Returns:
+        True if output should be suppressed, False otherwise.
+    """
+    return _suppress_console_output.get()
 
 
 class ConsoleFormatter:
@@ -46,7 +77,13 @@ class ConsoleFormatter:
         if not self.verbose:
             return
 
+        if _disable_version_check.get():
+            return
+
         if os.getenv("CI", "").lower() in ("true", "1"):
+            return
+
+        if os.getenv("CREWAI_DISABLE_VERSION_CHECK", "").lower() in ("true", "1"):
             return
 
         try:
@@ -67,6 +104,22 @@ To update, run: uv sync --upgrade-package crewai"""
                 )
                 self.console.print(panel)
                 self.console.print()
+
+            is_yanked, yanked_reason = is_current_version_yanked()
+            if is_yanked:
+                yanked_message = f"Version {current} has been yanked from PyPI."
+                if yanked_reason:
+                    yanked_message += f"\nReason: {yanked_reason}"
+                yanked_message += "\n\nTo update, run: uv sync --upgrade-package crewai"
+
+                yanked_panel = Panel(
+                    yanked_message,
+                    title="Yanked Version",
+                    border_style="red",
+                    padding=(1, 2),
+                )
+                self.console.print(yanked_panel)
+                self.console.print()
         except Exception:  # noqa: S110
             # Silently ignore errors in version check - it's non-critical
             pass
@@ -76,7 +129,11 @@ To update, run: uv sync --upgrade-package crewai"""
         from crewai.events.listeners.tracing.utils import (
             has_user_declined_tracing,
             is_tracing_enabled_in_context,
+            should_suppress_tracing_messages,
         )
+
+        if should_suppress_tracing_messages():
+            return
 
         if not is_tracing_enabled_in_context():
             if has_user_declined_tracing():
@@ -129,6 +186,8 @@ To enable tracing, do any one of these:
 
     def print(self, *args: Any, **kwargs: Any) -> None:
         """Print to console. Simplified to only handle panel-based output."""
+        if should_suppress_console_output():
+            return
         # Skip blank lines during streaming
         if len(args) == 0 and self._is_streaming:
             return
@@ -483,6 +542,9 @@ To enable tracing, do any one of these:
             call_type: The type of LLM call (LLM_CALL or TOOL_CALL).
         """
         if not self.verbose:
+            return
+
+        if should_suppress_console_output():
             return
 
         self._is_streaming = True

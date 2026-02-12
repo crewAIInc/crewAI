@@ -14,13 +14,18 @@ paths-ignore:
   - "lib/crewai/src/crewai/experimental/a2a/**"
 
 paths:
+  # Include GitHub Actions workflows/composite actions for CodeQL actions analysis
+  - ".github/workflows/**"
+  - ".github/actions/**"
   # Include all Python source code from workspace packages
   - "lib/crewai/src/**"
   - "lib/crewai-tools/src/**"
+  - "lib/crewai-files/src/**"
   - "lib/devtools/src/**"
   # Include tests (but exclude cassettes via paths-ignore)
   - "lib/crewai/tests/**"
   - "lib/crewai-tools/tests/**"
+  - "lib/crewai-files/tests/**"
   - "lib/devtools/tests/**"
 
 # Configure specific queries or packs if needed

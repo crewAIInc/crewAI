@@ -108,6 +108,86 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `join_web_url` (string, required): The join web URL of the meeting to search for.
 
   </Accordion>
+
+  <Accordion title="microsoft_teams/search_online_meetings_by_meeting_id">
+    **Description:** Search online meetings by external Meeting ID.
+
+    **Parameters:**
+    - `join_meeting_id` (string, required): The meeting ID (numeric code) that attendees use to join. This is the joinMeetingId shown in meeting invitations, not the Graph API meeting id.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_meeting">
+    **Description:** Get details of a specific online meeting.
+
+    **Parameters:**
+    - `meeting_id` (string, required): The Graph API meeting ID (a long alphanumeric string). Obtain from create_meeting or search_online_meetings actions. Different from the numeric joinMeetingId.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_team_members">
+    **Description:** Get members of a specific team.
+
+    **Parameters:**
+    - `team_id` (string, required): The unique identifier of the team. Obtain from get_teams action.
+    - `top` (integer, optional): Maximum number of members to retrieve per page (1-999). Default is `100`.
+    - `skip_token` (string, optional): Pagination token from a previous response. When the response includes @odata.nextLink, extract the $skiptoken parameter value and pass it here to get the next page of results.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/create_channel">
+    **Description:** Create a new channel in a team.
+
+    **Parameters:**
+    - `team_id` (string, required): The unique identifier of the team. Obtain from get_teams action.
+    - `display_name` (string, required): Name of the channel as displayed in Teams. Must be unique within the team. Max 50 characters.
+    - `description` (string, optional): Optional description explaining the channel's purpose. Visible in channel details. Max 1024 characters.
+    - `membership_type` (string, optional): Channel visibility. Enum: `standard`, `private`. "standard" = visible to all team members, "private" = visible only to specifically added members. Default is `standard`.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/get_message_replies">
+    **Description:** Get replies to a specific message in a channel.
+
+    **Parameters:**
+    - `team_id` (string, required): The unique identifier of the team. Obtain from get_teams action.
+    - `channel_id` (string, required): The unique identifier of the channel. Obtain from get_channels action.
+    - `message_id` (string, required): The unique identifier of the parent message. Obtain from get_messages action.
+    - `top` (integer, optional): Maximum number of replies to retrieve per page (1-50). Default is `50`.
+    - `skip_token` (string, optional): Pagination token from a previous response. When the response includes @odata.nextLink, extract the $skiptoken parameter value and pass it here to get the next page of results.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/reply_to_message">
+    **Description:** Reply to a message in a Teams channel.
+
+    **Parameters:**
+    - `team_id` (string, required): The unique identifier of the team. Obtain from get_teams action.
+    - `channel_id` (string, required): The unique identifier of the channel. Obtain from get_channels action.
+    - `message_id` (string, required): The unique identifier of the message to reply to. Obtain from get_messages action.
+    - `message` (string, required): The reply content. For HTML, include formatting tags. For text, plain text only.
+    - `content_type` (string, optional): Content format. Enum: `html`, `text`. "text" for plain text, "html" for rich text with formatting. Default is `text`.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/update_meeting">
+    **Description:** Update an existing online meeting.
+
+    **Parameters:**
+    - `meeting_id` (string, required): The unique identifier of the meeting. Obtain from create_meeting or search_online_meetings actions.
+    - `subject` (string, optional): New meeting title.
+    - `startDateTime` (string, optional): New start time in ISO 8601 format with timezone. Example: "2024-01-20T10:00:00-08:00".
+    - `endDateTime` (string, optional): New end time in ISO 8601 format with timezone.
+
+  </Accordion>
+
+  <Accordion title="microsoft_teams/delete_meeting">
+    **Description:** Delete an online meeting.
+
+    **Parameters:**
+    - `meeting_id` (string, required): The unique identifier of the meeting to delete. Obtain from create_meeting or search_online_meetings actions.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Usage Examples
