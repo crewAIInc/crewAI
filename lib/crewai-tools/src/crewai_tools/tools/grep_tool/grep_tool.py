@@ -262,7 +262,9 @@ class GrepTool(BaseTool):
         return sorted(files)
 
     @staticmethod
-    def _safe_search(compiled_pattern: re.Pattern[str], line: str) -> re.Match[str] | None:
+    def _safe_search(
+        compiled_pattern: re.Pattern[str], line: str
+    ) -> re.Match[str] | None:
         """Run a regex search with a per-line timeout to mitigate ReDoS.
 
         On platforms that support SIGALRM (Unix), a timeout is enforced.
