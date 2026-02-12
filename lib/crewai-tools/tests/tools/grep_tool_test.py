@@ -5,9 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from crewai_tools import GrepTool
-from crewai_tools.tools.grep_tool.grep_tool import MAX_REGEX_LENGTH
+from crewai_tools.tools.grep_tool.grep_tool import (
+    MAX_CONTEXT_LINES,
+    MAX_REGEX_LENGTH,
+    GrepToolSchema,
+)
 
 
 @pytest.fixture

@@ -22,6 +22,8 @@ MAX_LINE_LENGTH = 500
 BINARY_CHECK_SIZE = 8192
 MAX_REGEX_LENGTH = 1_000
 REGEX_MATCH_TIMEOUT_SECONDS = 5
+MAX_CONTEXT_LINES = 10
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 SKIP_DIRS = frozenset(
     {
@@ -34,6 +36,44 @@ SKIP_DIRS = frozenset(
         ".mypy_cache",
         ".pytest_cache",
     }
+)
+
+# File names that may contain secrets or credentials — always excluded from
+# search results to prevent accidental sensitive-content leakage.
+SENSITIVE_FILE_NAMES = frozenset(
+    {
+        ".env",
+        ".env.local",
+        ".env.development",
+        ".env.production",
+        ".env.staging",
+        ".env.test",
+        ".netrc",
+        ".npmrc",
+        ".pypirc",
+        ".docker/config.json",
+        ".aws/credentials",
+        ".ssh/id_rsa",
+        ".ssh/id_ed25519",
+        ".ssh/id_ecdsa",
+        ".ssh/id_dsa",
+        "credentials.json",
+        "service-account.json",
+        "secrets.yaml",
+        "secrets.yml",
+        "secrets.json",
+    }
+)
+
+# Glob-style suffixes that indicate sensitive content (matched against the
+# full file name, e.g. "app.env.bak" won't match, but ".env.bak" will).
+SENSITIVE_FILE_PATTERNS = (
+    ".pem",
+    ".key",
+    ".p12",
+    ".pfx",
+    ".jks",
+    ".keystore",
 )
 
 
@@ -79,7 +119,9 @@ class GrepToolSchema(BaseModel):
     )
     context_lines: int = Field(
         default=0,
-        description="Number of lines to show before and after each match",
+        ge=0,
+        le=MAX_CONTEXT_LINES,
+        description=f"Number of lines to show before and after each match (0-{MAX_CONTEXT_LINES})",
     )
     include_line_numbers: bool = Field(
         default=True,
@@ -119,6 +161,13 @@ class GrepTool(BaseTool):
         description=(
             "When False (default), searches are restricted to the current working "
             "directory. Set to True to allow searching any path on the filesystem."
+        ),
+    )
+    max_file_size_bytes: int = Field(
+        default=MAX_FILE_SIZE_BYTES,
+        description=(
+            "Maximum file size in bytes to search. Files larger than this are "
+            "skipped. Defaults to 10 MB."
         ),
     )
 
@@ -233,6 +282,10 @@ class GrepTool(BaseTool):
     def _collect_files(self, search_path: Path, glob_pattern: str | None) -> list[Path]:
         """Collect files to search.
 
+        Sensitive files (e.g. ``.env``, ``.netrc``, key material) are
+        automatically excluded even when searched by explicit path so that
+        credentials cannot leak into tool output.
+
         Args:
             search_path: File or directory to search.
             glob_pattern: Optional glob pattern to filter files.
@@ -241,6 +294,8 @@ class GrepTool(BaseTool):
             List of file paths to search.
         """
         if search_path.is_file():
+            if self._is_sensitive_file(search_path):
+                return []
             return [search_path]
 
         patterns = self._expand_brace_pattern(glob_pattern) if glob_pattern else ["*"]
@@ -254,6 +309,8 @@ class GrepTool(BaseTool):
             seen.add(p)
             # Skip hidden/build directories
             if any(part in SKIP_DIRS for part in p.relative_to(search_path).parts):
+                continue
+            if self._is_sensitive_file(p):
                 continue
             files.append(p)
             if len(files) >= MAX_FILES:
@@ -294,6 +351,46 @@ class GrepTool(BaseTool):
             signal.alarm(0)
             signal.signal(signal.SIGALRM, old_handler)
 
+    @staticmethod
+    def _is_sensitive_file(file_path: Path) -> bool:
+        """Check whether a file is likely to contain secrets or credentials.
+
+        The check is deliberately conservative — it matches exact file names
+        (e.g. ``.env``, ``.netrc``) as well as common key/certificate
+        extensions.  Files whose *name* starts with ``.env`` (including
+        variants like ``.env.local``, ``.env.production``, etc.) are also
+        excluded.
+
+        Args:
+            file_path: Path to the file.
+
+        Returns:
+            True if the file should be skipped.
+        """
+        name = file_path.name
+
+        # Exact-name match (e.g. ".env", ".netrc", "secrets.json")
+        if name in SENSITIVE_FILE_NAMES:
+            return True
+
+        # Any .env variant (.env.backup, .env.staging.old, …)
+        if name.startswith(".env"):
+            return True
+
+        # Extension-based match for key/cert material
+        if any(name.endswith(ext) for ext in SENSITIVE_FILE_PATTERNS):
+            return True
+
+        # Check path components for well-known sensitive dirs/files
+        # e.g. ".aws/credentials" or ".ssh/id_rsa"
+        parts = file_path.parts
+        for i, _part in enumerate(parts):
+            remaining = "/".join(parts[i:])
+            if remaining in SENSITIVE_FILE_NAMES:
+                return True
+
+        return False
+
     def _is_binary_file(self, file_path: Path) -> bool:
         """Check if a file is binary by looking for null bytes.
 
@@ -326,7 +423,18 @@ class GrepTool(BaseTool):
         Returns:
             FileSearchResult if matches found, None otherwise.
         """
+        if self._is_sensitive_file(file_path):
+            return None
+
         if self._is_binary_file(file_path):
+            return None
+
+        # Skip files that are too large to safely read into memory
+        try:
+            file_size = file_path.stat().st_size
+        except OSError:
+            return None
+        if file_size > self.max_file_size_bytes:
             return None
 
         try:
