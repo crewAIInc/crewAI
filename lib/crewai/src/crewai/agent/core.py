@@ -1946,8 +1946,8 @@ class Agent(BaseAgent):
                 f"Result: {output_text}"
             )
             extracted = agent_memory.extract_memories(raw)
-            for mem in extracted:
-                agent_memory.remember(mem)
+            if extracted:
+                agent_memory.remember_many(extracted)
         except Exception as e:
             self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 

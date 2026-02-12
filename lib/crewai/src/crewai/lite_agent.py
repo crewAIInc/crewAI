@@ -586,8 +586,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                 f"Result: {output_text}"
             )
             extracted = self._memory.extract_memories(raw)
-            for mem in extracted:
-                self._memory.remember(mem, agent_role=self.role)
+            if extracted:
+                self._memory.remember_many(extracted, agent_role=self.role)
         except Exception as e:
             if self.verbose:
                 self._printer.print(

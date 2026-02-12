@@ -179,6 +179,42 @@ class Memory:
                 ) from e
         return self._embedder_instance
 
+    def _encode_single(
+        self,
+        content: str,
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
+    ) -> MemoryRecord:
+        """Run the EncodingFlow for a single item. No event emission.
+
+        This is the core encoding logic shared by ``remember()`` and
+        ``remember_many()``. Events are managed by the calling method.
+        """
+        from crewai.memory.encoding_flow import EncodingFlow
+
+        flow = EncodingFlow(
+            storage=self._storage,
+            llm=self._llm,
+            embedder=self._embedder,
+            config=self._config,
+        )
+        flow.kickoff(
+            inputs={
+                "content": content,
+                "scope": scope,
+                "categories": categories,
+                "metadata": metadata,
+                "importance": importance,
+                "source": source,
+                "private": private,
+            },
+        )
+        return flow.state.result_record
+
     def remember(
         self,
         content: str,
@@ -213,48 +249,31 @@ class Memory:
         Raises:
             Exception: On save failure (events emitted).
         """
-        from crewai.memory.encoding_flow import EncodingFlow
-
-        _source = "unified_memory"
+        _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
                 self,
                 MemorySaveStartedEvent(
                     value=content,
                     metadata=metadata,
-                    source_type=_source,
+                    source_type=_source_type,
                 ),
             )
             start = time.perf_counter()
 
-            flow = EncodingFlow(
-                storage=self._storage,
-                llm=self._llm,
-                embedder=self._embedder,
-                config=self._config,
+            record = self._encode_single(
+                content, scope, categories, metadata, importance, source, private
             )
-            flow.kickoff(
-                inputs={
-                    "content": content,
-                    "scope": scope,
-                    "categories": categories,
-                    "metadata": metadata,
-                    "importance": importance,
-                    "source": source,
-                    "private": private,
-                },
-            )
-            record = flow.state.result_record
 
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
                 self,
                 MemorySaveCompletedEvent(
                     value=content,
-                    metadata=flow.state.resolved_metadata or metadata or {},
+                    metadata=metadata or {},
                     agent_role=agent_role,
                     save_time_ms=elapsed_ms,
-                    source_type=_source,
+                    source_type=_source_type,
                 ),
             )
             return record
@@ -265,7 +284,84 @@ class Memory:
                     value=content,
                     metadata=metadata,
                     error=str(e),
-                    source_type=_source,
+                    source_type=_source_type,
+                ),
+            )
+            raise
+
+    def remember_many(
+        self,
+        contents: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
+        agent_role: str | None = None,
+    ) -> list[MemoryRecord]:
+        """Store multiple items in memory in a single batch.
+
+        Emits one ``MemorySaveStartedEvent`` and one ``MemorySaveCompletedEvent``
+        for the entire batch. Each item runs through the full EncodingFlow
+        (analysis, embedding, consolidation) individually.
+
+        Args:
+            contents: List of text items to remember.
+            scope: Optional scope applied to all items (each may be overridden by LLM analysis).
+            categories: Optional categories applied to all items.
+            metadata: Optional metadata applied to all items.
+            importance: Optional importance applied to all items.
+            source: Optional provenance identifier applied to all items.
+            private: Privacy flag applied to all items.
+            agent_role: Optional agent role for event metadata.
+
+        Returns:
+            List of created MemoryRecords.
+        """
+        if not contents:
+            return []
+
+        _source_type = "unified_memory"
+        try:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveStartedEvent(
+                    value=f"{len(contents)} memories",
+                    metadata=metadata,
+                    source_type=_source_type,
+                ),
+            )
+            start = time.perf_counter()
+
+            records: list[MemoryRecord] = []
+            for content in contents:
+                record = self._encode_single(
+                    content, scope, categories, metadata, importance, source, private
+                )
+                if record is not None:
+                    records.append(record)
+
+            elapsed_ms = (time.perf_counter() - start) * 1000
+            crewai_event_bus.emit(
+                self,
+                MemorySaveCompletedEvent(
+                    value=f"{len(records)} memories saved",
+                    metadata=metadata or {},
+                    agent_role=agent_role,
+                    save_time_ms=elapsed_ms,
+                    source_type=_source_type,
+                ),
+            )
+            return records
+        except Exception as e:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveFailedEvent(
+                    value=f"{len(contents)} memories (batch)",
+                    metadata=metadata,
+                    error=str(e),
+                    source_type=_source_type,
                 ),
             )
             raise
@@ -567,6 +663,29 @@ class Memory:
             importance=importance,
             source=source,
             private=private,
+        )
+
+    async def aremember_many(
+        self,
+        contents: list[str],
+        scope: str | None = None,
+        categories: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+        importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
+        agent_role: str | None = None,
+    ) -> list[MemoryRecord]:
+        """Async remember_many: delegates to sync for now."""
+        return self.remember_many(
+            contents,
+            scope=scope,
+            categories=categories,
+            metadata=metadata,
+            importance=importance,
+            source=source,
+            private=private,
+            agent_role=agent_role,
         )
 
     async def arecall(

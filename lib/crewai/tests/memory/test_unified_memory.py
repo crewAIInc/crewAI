@@ -345,9 +345,9 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
 
     raw_expected = "Task: Do research\nAgent: Researcher\nExpected result: A report\nResult: We found X and Y."
     mock_memory.extract_memories.assert_called_once_with(raw_expected)
-    assert mock_memory.remember.call_count == 2
-    calls = [mock_memory.remember.call_args_list[i][0][0] for i in range(2)]
-    assert calls == ["Fact A.", "Fact B."]
+    mock_memory.remember_many.assert_called_once()
+    saved_contents = mock_memory.remember_many.call_args.args[0]
+    assert saved_contents == ["Fact A.", "Fact B."]
 
 
 def test_executor_save_to_memory_skips_delegation_output() -> None:
@@ -668,7 +668,7 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     # Mock recall to verify it's called, but return real results
     with patch.object(mem, "recall", wraps=mem.recall) as recall_mock, \
          patch.object(mem, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
-         patch.object(mem, "remember", wraps=mem.remember) as remember_mock:
+         patch.object(mem, "remember_many", wraps=mem.remember_many) as remember_many_mock:
         result = agent.kickoff("What database do we use?")
 
     assert result is not None
@@ -677,12 +677,14 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     # Verify recall was called (passive memory injection)
     recall_mock.assert_called_once()
 
-    # Verify extract_memories and remember were called (passive save after execution)
+    # Verify extract_memories and remember_many were called (passive batch save)
     extract_mock.assert_called_once()
     raw_content = extract_mock.call_args.args[0]
     assert "Input:" in raw_content
     assert "Agent:" in raw_content
     assert "Result:" in raw_content
 
-    # remember was called for the extracted memory
-    remember_mock.assert_called()
+    # remember_many was called with the extracted memories
+    remember_many_mock.assert_called_once()
+    saved_contents = remember_many_mock.call_args.args[0]
+    assert "PostgreSQL is used." in saved_contents
