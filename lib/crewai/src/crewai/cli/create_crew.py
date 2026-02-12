@@ -143,6 +143,12 @@ def create_folder_structure(
         (folder_path / "src" / folder_name).mkdir(parents=True)
         (folder_path / "src" / folder_name / "tools").mkdir(parents=True)
         (folder_path / "src" / folder_name / "config").mkdir(parents=True)
+        
+        # Copy AGENTS.md to project root (top-level projects only)
+        package_dir = Path(__file__).parent
+        agents_md_src = package_dir / "templates" / "AGENTS.md"
+        if agents_md_src.exists():
+            shutil.copy2(agents_md_src, folder_path / "AGENTS.md")
 
     return folder_path, folder_name, class_name
 
