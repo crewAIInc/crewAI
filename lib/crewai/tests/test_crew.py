@@ -4769,9 +4769,14 @@ def test_memory_remember_receives_task_content():
         memory=True,
     )
 
-    with patch.object(
-        crew._memory, "extract_memories", wraps=crew._memory.extract_memories
-    ) as extract_mock:
+    with (
+        patch.object(
+            crew._memory, "extract_memories", wraps=crew._memory.extract_memories
+        ) as extract_mock,
+        # Mock recall to avoid LLM calls for query analysis (not in cassette).
+        # This test is about the save path (extract_memories), not recall.
+        patch.object(crew._memory, "recall", return_value=[]),
+    ):
         crew.kickoff()
 
     extract_mock.assert_called()
