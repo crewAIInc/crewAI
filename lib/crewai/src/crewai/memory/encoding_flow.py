@@ -67,7 +67,7 @@ class EncodingFlow(Flow[EncodingState]):
         embedder: Any,
         config: MemoryConfig | None = None,
     ) -> None:
-        super().__init__()
+        super().__init__(suppress_flow_events=True)
         self._storage = storage
         self._llm = llm
         self._embedder = embedder

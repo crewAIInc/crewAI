@@ -46,7 +46,7 @@ class CrewAgentExecutorMixin:
             )
             extracted = memory.extract_memories(raw)
             for mem in extracted:
-                memory.remember(mem)
+                memory.remember(mem, agent_role=self.agent.role)
         except Exception as e:
             self.agent._logger.log(
                 "error", f"Failed to save to memory: {e}"

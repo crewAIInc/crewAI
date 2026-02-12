@@ -139,6 +139,7 @@ class Memory:
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        agent_role: str | None = None,
     ) -> MemoryRecord:
         """Store content in memory. Infers scope/categories/importance via LLM when not provided.
 
@@ -197,7 +198,7 @@ class Memory:
                 MemorySaveCompletedEvent(
                     value=content,
                     metadata=flow.state.resolved_metadata or metadata or {},
-                    agent_role=None,
+                    agent_role=agent_role,
                     save_time_ms=elapsed_ms,
                     source_type=_source,
                 ),
