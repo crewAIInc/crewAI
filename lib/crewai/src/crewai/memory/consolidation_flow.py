@@ -26,6 +26,8 @@ class ConsolidationState(BaseModel):
     categories: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     importance: float = 0.5
+    source: str | None = None
+    private: bool = False
     similar_records: list[MemoryRecord] = Field(default_factory=list)
     top_similarity: float = 0.0
     plan: ConsolidationPlan | None = None
@@ -157,6 +159,8 @@ class ConsolidationFlow(Flow[ConsolidationState]):
             metadata=self.state.metadata,
             importance=self.state.importance,
             embedding=self.state.new_embedding if self.state.new_embedding else None,
+            source=self.state.source,
+            private=self.state.private,
         )
         if not new_record.embedding:
             new_embedding = embed_text(self._embedder, self.state.new_content)

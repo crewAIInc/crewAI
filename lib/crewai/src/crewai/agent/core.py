@@ -1790,6 +1790,49 @@ class Agent(BaseAgent):
         if input_files:
             all_files.update(input_files)
 
+        # Inject memory context for standalone kickoff (recall before execution)
+        if agent_memory is not None:
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalStartedEvent(
+                        task_id=None,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                    ),
+                )
+                start_time = time.time()
+                matches = agent_memory.recall(formatted_messages, limit=10)
+                memory_block = ""
+                if matches:
+                    memory_block = "Relevant memories:\n" + "\n".join(
+                        f"- {m.record.content}" for m in matches
+                    )
+                if memory_block:
+                    formatted_messages += "\n\n" + self.i18n.slice("memory").format(
+                        memory=memory_block
+                    )
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalCompletedEvent(
+                        task_id=None,
+                        memory_content=memory_block,
+                        retrieval_time_ms=(time.time() - start_time) * 1000,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                    ),
+                )
+            except Exception as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=MemoryRetrievalFailedEvent(
+                        task_id=None,
+                        source_type="agent_kickoff",
+                        from_agent=self,
+                        error=str(e),
+                    ),
+                )
+
         # Build the input dict for the executor
         inputs: dict[str, Any] = {
             "input": formatted_messages,
@@ -1860,6 +1903,9 @@ class Agent(BaseAgent):
                     response_format=response_format,
                 )
 
+            # Save to memory after execution (passive save)
+            self._save_kickoff_to_memory(messages, output.raw)
+
             crewai_event_bus.emit(
                 self,
                 event=LiteAgentExecutionCompletedEvent(
@@ -1879,6 +1925,31 @@ class Agent(BaseAgent):
                 ),
             )
             raise
+
+    def _save_kickoff_to_memory(
+        self, messages: str | list[LLMMessage], output_text: str
+    ) -> None:
+        """Save kickoff result to memory. No-op if agent has no memory."""
+        agent_memory = getattr(self, "memory", None)
+        if agent_memory is None:
+            return
+        try:
+            if isinstance(messages, str):
+                input_str = messages
+            else:
+                input_str = "\n".join(
+                    str(msg.get("content", "")) for msg in messages if msg.get("content")
+                ) or "User request"
+            raw = (
+                f"Input: {input_str}\n"
+                f"Agent: {self.role}\n"
+                f"Result: {output_text}"
+            )
+            extracted = agent_memory.extract_memories(raw)
+            for mem in extracted:
+                agent_memory.remember(mem)
+        except Exception as e:
+            self._logger.log("error", f"Failed to save kickoff result to memory: {e}")
 
     def _execute_and_build_output(
         self,
@@ -2161,6 +2232,9 @@ class Agent(BaseAgent):
                     inputs=inputs,
                     response_format=response_format,
                 )
+
+            # Save to memory after async execution (passive save)
+            self._save_kickoff_to_memory(messages, output.raw)
 
             crewai_event_bus.emit(
                 self,

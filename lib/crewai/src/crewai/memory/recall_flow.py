@@ -39,6 +39,8 @@ class RecallState(BaseModel):
     categories: list[str] | None = None
     inferred_categories: list[str] = Field(default_factory=list)
     time_cutoff: datetime | None = None
+    source: str | None = None
+    include_private: bool = False
     limit: int = 10
     query_embeddings: list[tuple[str, list[float]]] = Field(default_factory=list)
     query_analysis: QueryAnalysis | None = None
@@ -108,6 +110,12 @@ class RecallFlow(Flow[RecallState]):
             if self.state.time_cutoff and raw:
                 raw = [
                     (r, s) for r, s in raw if r.created_at >= self.state.time_cutoff
+                ]
+            # Privacy filter
+            if not self.state.include_private and raw:
+                raw = [
+                    (r, s) for r, s in raw
+                    if not r.private or r.source == self.state.source
                 ]
             return scope, raw
 

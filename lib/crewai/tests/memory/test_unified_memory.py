@@ -621,3 +621,68 @@ def test_remember_survives_llm_failure(
     assert record.importance == 0.5
     assert record.id is not None
     assert mem._storage.count() == 1
+
+
+# --- Agent.kickoff() memory integration ---
+
+
+def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """Agent.kickoff() with memory should recall before execution and save after."""
+    from unittest.mock import Mock, patch
+
+    from crewai.agent.core import Agent
+    from crewai.llm import LLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.types.usage_metrics import UsageMetrics
+
+    # Create a real memory with mock embedder
+    mem = Memory(
+        storage=str(tmp_path / "agent_kickoff_db"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    # Pre-populate a memory record
+    mem.remember("The team uses PostgreSQL.", scope="/", categories=["database"], importance=0.8)
+
+    # Create mock LLM for the agent
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: PostgreSQL is the database."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.supports_function_calling.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10, prompt_tokens=5, completion_tokens=5,
+        cached_prompt_tokens=0, successful_requests=1,
+    )
+
+    agent = Agent(
+        role="Tester",
+        goal="Test memory integration",
+        backstory="You test things.",
+        llm=mock_llm,
+        memory=mem,
+        verbose=False,
+    )
+
+    # Mock recall to verify it's called, but return real results
+    with patch.object(mem, "recall", wraps=mem.recall) as recall_mock, \
+         patch.object(mem, "extract_memories", return_value=["PostgreSQL is used."]) as extract_mock, \
+         patch.object(mem, "remember", wraps=mem.remember) as remember_mock:
+        result = agent.kickoff("What database do we use?")
+
+    assert result is not None
+    assert result.raw is not None
+
+    # Verify recall was called (passive memory injection)
+    recall_mock.assert_called_once()
+
+    # Verify extract_memories and remember were called (passive save after execution)
+    extract_mock.assert_called_once()
+    raw_content = extract_mock.call_args.args[0]
+    assert "Input:" in raw_content
+    assert "Agent:" in raw_content
+    assert "Result:" in raw_content
+
+    # remember was called for the extracted memory
+    remember_mock.assert_called()

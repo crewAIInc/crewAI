@@ -32,12 +32,16 @@ class EncodingState(BaseModel):
     categories: list[str] | None = None
     metadata: dict[str, Any] | None = None
     importance: float | None = None
+    source: str | None = None
+    private: bool = False
 
     # Resolved values (populated by analysis or defaults step)
     resolved_scope: str = "/"
     resolved_categories: list[str] = Field(default_factory=list)
     resolved_metadata: dict[str, Any] = Field(default_factory=dict)
     resolved_importance: float = 0.5
+    resolved_source: str | None = None
+    resolved_private: bool = False
 
     # Embedding and result
     embedding: list[float] = Field(default_factory=list)
@@ -133,6 +137,9 @@ class EncodingFlow(Flow[EncodingState]):
                 else {}
             ),
         )
+        # Source and private are never LLM-inferred
+        self.state.resolved_source = self.state.source
+        self.state.resolved_private = self.state.private
         return analysis
 
     # ------------------------------------------------------------------
@@ -150,6 +157,8 @@ class EncodingFlow(Flow[EncodingState]):
             if self.state.importance is not None
             else self._config.default_importance
         )
+        self.state.resolved_source = self.state.source
+        self.state.resolved_private = self.state.private
         return "defaults_applied"
 
     # ------------------------------------------------------------------
@@ -185,6 +194,8 @@ class EncodingFlow(Flow[EncodingState]):
                 "categories": self.state.resolved_categories,
                 "metadata": self.state.resolved_metadata,
                 "importance": self.state.resolved_importance,
+                "source": self.state.resolved_source,
+                "private": self.state.resolved_private,
             },
         )
         self.state.result_record = cflow.state.result_record

@@ -50,6 +50,8 @@ class MemoryScope:
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
     ) -> MemoryRecord:
         """Remember content; scope is relative to this scope's root."""
         path = self._scope_path(scope)
@@ -59,6 +61,8 @@ class MemoryScope:
             categories=categories,
             metadata=metadata,
             importance=importance,
+            source=source,
+            private=private,
         )
 
     def recall(
@@ -68,6 +72,8 @@ class MemoryScope:
         categories: list[str] | None = None,
         limit: int = 10,
         depth: str = "deep",
+        source: str | None = None,
+        include_private: bool = False,
     ) -> list[MemoryMatch]:
         """Recall within this scope (root path and below)."""
         search_scope = self._scope_path(scope) if scope else (self._root or "/")
@@ -77,6 +83,8 @@ class MemoryScope:
             categories=categories,
             limit=limit,
             depth=depth,
+            source=source,
+            include_private=include_private,
         )
 
     def extract_memories(self, content: str) -> list[str]:
@@ -166,6 +174,8 @@ class MemorySlice:
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
     ) -> MemoryRecord:
         """Remember into an explicit scope. Required when read_only=False."""
         if self._read_only:
@@ -176,6 +186,8 @@ class MemorySlice:
             categories=categories,
             metadata=metadata,
             importance=importance,
+            source=source,
+            private=private,
         )
 
     def recall(
@@ -185,6 +197,8 @@ class MemorySlice:
         categories: list[str] | None = None,
         limit: int = 10,
         depth: str = "deep",
+        source: str | None = None,
+        include_private: bool = False,
     ) -> list[MemoryMatch]:
         """Recall across all slice scopes; results merged and re-ranked."""
         cats = categories or self._categories
@@ -196,6 +210,8 @@ class MemorySlice:
                 categories=cats,
                 limit=limit * _RECALL_OVERSAMPLE_FACTOR,
                 depth=depth,
+                source=source,
+                include_private=include_private,
             )
             all_matches.extend(matches)
         seen_ids: set[str] = set()

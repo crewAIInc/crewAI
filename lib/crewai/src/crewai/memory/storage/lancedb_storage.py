@@ -38,7 +38,7 @@ class LanceDBStorage:
         Args:
             path: Directory path for the LanceDB database. Defaults to
                   ``$CREWAI_STORAGE_DIR/memory`` if the env var is set,
-                  otherwise ``./.crewai/memory``.
+                  otherwise ``db_storage_path() / memory`` (platform data dir).
             table_name: Name of the table for memory records.
             vector_dim: Dimensionality of the embedding vector. When ``None``
                   (default), the dimension is auto-detected from the existing
@@ -46,7 +46,12 @@ class LanceDBStorage:
         """
         if path is None:
             storage_dir = os.environ.get("CREWAI_STORAGE_DIR")
-            path = Path(storage_dir) / "memory" if storage_dir else Path("./.crewai/memory")
+            if storage_dir:
+                path = Path(storage_dir) / "memory"
+            else:
+                from crewai.utilities.paths import db_storage_path
+
+                path = Path(db_storage_path()) / "memory"
         self._path = Path(path)
         self._path.mkdir(parents=True, exist_ok=True)
         self._table_name = table_name
@@ -91,6 +96,8 @@ class LanceDBStorage:
                 "importance": 0.5,
                 "created_at": datetime.utcnow().isoformat(),
                 "last_accessed": datetime.utcnow().isoformat(),
+                "source": "",
+                "private": False,
                 "vector": [0.0] * vector_dim,
             }
         ]
@@ -122,6 +129,8 @@ class LanceDBStorage:
             "importance": record.importance,
             "created_at": record.created_at.isoformat(),
             "last_accessed": record.last_accessed.isoformat(),
+            "source": record.source or "",
+            "private": record.private,
             "vector": record.embedding if record.embedding else [0.0] * self._vector_dim,
         }
 
@@ -144,6 +153,8 @@ class LanceDBStorage:
             created_at=_parse_dt(row.get("created_at")),
             last_accessed=_parse_dt(row.get("last_accessed")),
             embedding=row.get("vector"),
+            source=row.get("source") or None,
+            private=bool(row.get("private", False)),
         )
 
     def save(self, records: list[MemoryRecord]) -> None:

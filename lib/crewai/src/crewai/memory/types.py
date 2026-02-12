@@ -55,6 +55,20 @@ class MemoryRecord(BaseModel):
         default=None,
         description="Vector embedding for semantic search. Computed on save if not provided.",
     )
+    source: str | None = Field(
+        default=None,
+        description=(
+            "Origin of this memory (e.g. user ID, session ID). "
+            "Used for provenance tracking and privacy filtering."
+        ),
+    )
+    private: bool = Field(
+        default=False,
+        description=(
+            "If True, this memory is only visible to recall requests from the same source, "
+            "or when include_private=True is passed."
+        ),
+    )
 
 
 class MemoryMatch(BaseModel):

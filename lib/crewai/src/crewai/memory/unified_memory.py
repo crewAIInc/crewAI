@@ -139,6 +139,8 @@ class Memory:
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
         agent_role: str | None = None,
     ) -> MemoryRecord:
         """Store content in memory. Infers scope/categories/importance via LLM when not provided.
@@ -154,6 +156,9 @@ class Memory:
             categories: Optional categories; inferred if None.
             metadata: Optional metadata; merged with LLM-extracted if scope/categories/importance inferred.
             importance: Optional importance 0-1; inferred if None.
+            source: Optional provenance identifier (e.g. user ID, session ID).
+            private: If True, only visible to recall from the same source.
+            agent_role: Optional agent role for event metadata.
 
         Returns:
             The created MemoryRecord.
@@ -188,6 +193,8 @@ class Memory:
                     "categories": categories,
                     "metadata": metadata,
                     "importance": importance,
+                    "source": source,
+                    "private": private,
                 },
             )
             record = flow.state.result_record
@@ -237,6 +244,8 @@ class Memory:
         categories: list[str] | None = None,
         limit: int = 10,
         depth: Literal["shallow", "deep"] = "deep",
+        source: str | None = None,
+        include_private: bool = False,
     ) -> list[MemoryMatch]:
         """Retrieve relevant memories.
 
@@ -251,6 +260,9 @@ class Memory:
             categories: Optional category filter.
             limit: Max number of results.
             depth: "shallow" for direct vector search, "deep" for intelligent flow.
+            source: Optional provenance filter. Private records are only visible
+                    when this matches the record's source.
+            include_private: If True, all private records are visible regardless of source.
 
         Returns:
             List of MemoryMatch, ordered by relevance.
@@ -280,6 +292,12 @@ class Memory:
                         limit=limit,
                         min_score=0.0,
                     )
+                    # Privacy filter
+                    if not include_private:
+                        raw = [
+                            (r, s) for r, s in raw
+                            if not r.private or r.source == source
+                        ]
                     results = []
                     for r, s in raw:
                         composite, reasons = compute_composite_score(
@@ -306,6 +324,8 @@ class Memory:
                         "scope": scope,
                         "categories": categories or [],
                         "limit": limit,
+                        "source": source,
+                        "include_private": include_private,
                     }
                 )
                 results = flow.state.final_results
@@ -488,6 +508,8 @@ class Memory:
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        source: str | None = None,
+        private: bool = False,
     ) -> MemoryRecord:
         """Async remember: delegates to sync for now."""
         return self.remember(
@@ -496,6 +518,8 @@ class Memory:
             categories=categories,
             metadata=metadata,
             importance=importance,
+            source=source,
+            private=private,
         )
 
     async def arecall(
@@ -505,6 +529,8 @@ class Memory:
         categories: list[str] | None = None,
         limit: int = 10,
         depth: Literal["shallow", "deep"] = "deep",
+        source: str | None = None,
+        include_private: bool = False,
     ) -> list[MemoryMatch]:
         """Async recall: delegates to sync for now."""
         return self.recall(
@@ -513,4 +539,6 @@ class Memory:
             categories=categories,
             limit=limit,
             depth=depth,
+            source=source,
+            include_private=include_private,
         )
