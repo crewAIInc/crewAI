@@ -102,8 +102,6 @@ class Memory:
             complex_query_threshold: For complex queries, explore deeper below this confidence.
             exploration_budget: Number of LLM-driven exploration rounds during deep recall.
         """
-        from crewai.llm import LLM
-
         self._config = MemoryConfig(
             recency_weight=recency_weight,
             semantic_weight=semantic_weight,
@@ -117,20 +115,69 @@ class Memory:
             complex_query_threshold=complex_query_threshold,
             exploration_budget=exploration_budget,
         )
-        self._llm = LLM(model=llm) if isinstance(llm, str) else llm
+
+        # Store raw config for lazy initialization. LLM and embedder are only
+        # built on first access so that Memory() never fails at construction
+        # time (e.g. when auto-created by Flow without an API key set).
+        self._llm_config: BaseLLM | str = llm
+        self._llm_instance: BaseLLM | None = None if isinstance(llm, str) else llm
+        self._embedder_config: Any = embedder
+        self._embedder_instance: Any = (
+            embedder if (embedder is not None and not isinstance(embedder, dict)) else None
+        )
+
+        # Storage is initialized eagerly (local, no API key needed).
         if storage == "lancedb":
             self._storage = LanceDBStorage()
         elif isinstance(storage, str):
             self._storage = LanceDBStorage(path=storage)
         else:
             self._storage = storage
-        if embedder is None:
-            self._embedder = _default_embedder()
-        elif isinstance(embedder, dict):
-            from crewai.rag.embeddings.factory import build_embedder
-            self._embedder = build_embedder(embedder)
-        else:
-            self._embedder = embedder
+
+    _MEMORY_DOCS_URL = "https://docs.crewai.com/concepts/memory"
+
+    @property
+    def _llm(self) -> BaseLLM:
+        """Lazy LLM initialization -- only created when first needed."""
+        if self._llm_instance is None:
+            from crewai.llm import LLM
+
+            try:
+                self._llm_instance = LLM(model=self._llm_config)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
+                    "To fix this, do one of the following:\n"
+                    '  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n'
+                    '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
+                    '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
+                    "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
+                    '    and use depth="shallow" for recall.\n\n'
+                    f"Docs: {self._MEMORY_DOCS_URL}"
+                ) from e
+        return self._llm_instance
+
+    @property
+    def _embedder(self) -> Any:
+        """Lazy embedder initialization -- only created when first needed."""
+        if self._embedder_instance is None:
+            try:
+                if isinstance(self._embedder_config, dict):
+                    from crewai.rag.embeddings.factory import build_embedder
+
+                    self._embedder_instance = build_embedder(self._embedder_config)
+                else:
+                    self._embedder_instance = _default_embedder()
+            except Exception as e:
+                raise RuntimeError(
+                    f"Memory requires an embedder for vector search but initialization failed: {e}\n\n"
+                    "To fix this, do one of the following:\n"
+                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-small)\n"
+                    '  - Pass a different embedder: Memory(embedder={{"provider": "google", "config": {{...}}}})\n'
+                    "  - Pass a callable: Memory(embedder=my_embedding_function)\n\n"
+                    f"Docs: {self._MEMORY_DOCS_URL}"
+                ) from e
+        return self._embedder_instance
 
     def remember(
         self,
