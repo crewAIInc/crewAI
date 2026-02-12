@@ -171,10 +171,21 @@ class ToolSpec(TypedDict, total=False):
     inputSchema: ToolInputSchema
 
 
-class ConverseToolTypeDef(TypedDict):
-    """Type definition for a Converse API tool."""
+class SystemTool(TypedDict):
+    """Type definition for a system tool in Converse API."""
+
+    name: str
+
+
+class ConverseToolTypeDef(TypedDict, total=False):
+    """Type definition for a Converse API tool.
+    
+    Supports both regular tools (toolSpec) and system tools (systemTool).
+    System tools are built-in AWS tools like nova_grounding for web search.
+    """
 
     toolSpec: ToolSpec
+    systemTool: SystemTool
 
 
 class BedrockConverseRequestBody(TypedDict, total=False):
@@ -244,6 +255,7 @@ class BedrockCompletion(BaseLLM):
         guardrail_config: dict[str, Any] | None = None,
         additional_model_request_fields: dict[str, Any] | None = None,
         additional_model_response_field_paths: list[str] | None = None,
+        system_tools: list[dict[str, Any]] | None = None,
         interceptor: BaseInterceptor[Any, Any] | None = None,
         response_format: type[BaseModel] | None = None,
         **kwargs: Any,
@@ -265,6 +277,7 @@ class BedrockCompletion(BaseLLM):
             guardrail_config: Guardrail configuration for content filtering
             additional_model_request_fields: Model-specific request parameters
             additional_model_response_field_paths: Custom response field paths
+            system_tools: List of system tool configurations (e.g., Nova Web Grounding)
             interceptor: HTTP interceptor (not yet supported for Bedrock).
             response_format: Pydantic model for structured output. Used as default when
                            response_model is not passed to call()/acall() methods.
@@ -332,6 +345,7 @@ class BedrockCompletion(BaseLLM):
         self.additional_model_response_field_paths = (
             additional_model_response_field_paths
         )
+        self.system_tools = system_tools or []
 
         # Model-specific settings
         self.is_claude_model = "claude" in model.lower()
@@ -412,13 +426,17 @@ class BedrockCompletion(BaseLLM):
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
+                # Add tool config if present (including system tools)
                 # Bedrock requires toolConfig when messages have toolUse/toolResult
-                if tools:
+                all_tools = list(tools) if tools else []
+                if self.system_tools:
+                    all_tools.extend(self.system_tools)
+
+                if all_tools:
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
-                            cast(object, self._format_tools_for_converse(tools)),
+                            cast(object, self._format_tools_for_converse(all_tools)),
                         )
                     }
                     body["toolConfig"] = tool_config
@@ -543,13 +561,17 @@ class BedrockCompletion(BaseLLM):
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
+                # Add tool config if present (including system tools)
                 # Bedrock requires toolConfig when messages have toolUse/toolResult
-                if tools:
+                all_tools = list(tools) if tools else []
+                if self.system_tools:
+                    all_tools.extend(self.system_tools)
+
+                if all_tools:
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
                             "Sequence[ToolTypeDef]",
-                            cast(object, self._format_tools_for_converse(tools)),
+                            cast(object, self._format_tools_for_converse(all_tools)),
                         )
                     }
                     body["toolConfig"] = tool_config
@@ -766,73 +788,110 @@ class BedrockCompletion(BaseLLM):
 
             # Process content blocks and handle tool use correctly
             text_content = ""
+            has_system_tool_content = False  # Flag to check if system tools were used
 
             for content_block in content:
                 # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
 
-                # Handle tool use - corrected structure according to AWS API docs
-                elif "toolUse" in content_block and available_functions:
+                # Check if system tools were used (don't extract, just detect)
+                if "citationsContent" in content_block or "toolResult" in content_block:
+                    has_system_tool_content = True
+
+                # Handle tool use blocks
+                if "toolUse" in content_block:
                     tool_use_block = content_block["toolUse"]
-                    tool_use_id = tool_use_block.get("toolUseId")
-                    function_name = tool_use_block["name"]
-                    function_args = tool_use_block.get("input", {})
+                    tool_type = tool_use_block.get("type", "")
+                    
+                    # Check if this is a system tool
+                    if tool_type == "server_tool_use":
+                        has_system_tool_content = True
+                        logging.debug(
+                            f"System tool used: {tool_use_block.get('name')} (ID: {tool_use_block.get('toolUseId')})"
+                        )
+                    elif available_functions:
+                        # Regular tool - execute it
+                        tool_use_id = tool_use_block.get("toolUseId")
+                        function_name = tool_use_block.get("name", "")
+                        function_args = tool_use_block.get("input", {})
 
-                    if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
-                        continue
+                        if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
+                            continue
 
-                    logging.debug(
-                        f"Tool use requested: {function_name} with ID {tool_use_id}"
-                    )
-
-                    # Execute the tool
-                    tool_result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=dict(available_functions),
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if tool_result is not None:
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": [{"toolUse": tool_use_block}],
-                            }
+                        logging.debug(
+                            f"Tool use requested: {function_name} with ID {tool_use_id}"
                         )
 
-                        messages.append(
-                            {
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "toolResult": {
-                                            "toolUseId": tool_use_id,
-                                            "content": [{"text": str(tool_result)}],
+                        tool_result = self._handle_tool_execution(
+                            function_name=function_name,
+                            function_args=function_args,
+                            available_functions=dict(available_functions),
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        )
+
+                        if tool_result is not None:
+                            messages.append(
+                                {
+                                    "role": "assistant",
+                                    "content": [{"toolUse": tool_use_block}],
+                                }
+                            )
+
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "toolResult": {
+                                                "toolUseId": tool_use_id,
+                                                "content": [{"text": str(tool_result)}],
+                                            }
                                         }
-                                    }
-                                ],
-                            }
-                        )
+                                    ],
+                                }
+                            )
 
-                        return self._handle_converse(
-                            messages,
-                            body,
-                            available_functions,
-                            from_task,
-                            from_agent,
-                            response_model,
+                            return self._handle_converse(
+                                messages,
+                                body,
+                                available_functions,
+                                from_task,
+                                from_agent,
+                                response_model,
+                            )
+
+                # Handle tool results (for system tools, these are already in the response)
+                if "toolResult" in content_block:
+                    tool_result_block = content_block["toolResult"]
+                    result_type = tool_result_block.get("type", "")
+                    if result_type:
+                        logging.debug(
+                            f"System tool result: {result_type} (ID: {tool_result_block.get('toolUseId')})"
                         )
 
             # Apply stop sequences if configured
             text_content = self._apply_stop_words(text_content)
 
             # Validate final response
-            if not text_content or text_content.strip() == "":
-                logging.warning("Extracted empty text content from Bedrock response")
-                text_content = "I apologize, but I couldn't generate a proper response. Please try again."
+            # Skip empty-text fallback when system tools provided content
+            # (system tool responses may lack text blocks but have citationsContent/toolResult)
+            if (not text_content or text_content.strip() == "") and not has_system_tool_content:
+                if stop_reason == "tool_use":
+                    logging.warning(
+                        "LLM stopped with tool_use but no text content. "
+                        "This may indicate the LLM is trying to use agent tools as function calls "
+                        "instead of following the ReAct Action/Input pattern."
+                    )
+                    # Return a message that guides the LLM back to ReAct pattern
+                    text_content = (
+                        "Thought: I need to use the available tools following the correct format.\n"
+                        "I should use the Action and Action Input format as specified in the instructions."
+                    )
+                else:
+                    logging.warning("Extracted empty text content from Bedrock response")
+                    text_content = "I apologize, but I couldn't generate a proper response. Please try again."
 
             self._emit_call_completed_event(
                 response=text_content,
@@ -842,6 +901,22 @@ class BedrockCompletion(BaseLLM):
                 messages=messages,
             )
 
+            # If system tools were used, return the full raw Bedrock response
+            # This preserves the complete structure without any transformation
+            if self.system_tools and has_system_tool_content:
+                # Apply hooks to text for any transformations needed
+                final_text = self._invoke_after_llm_call_hooks(
+                    messages,
+                    text_content,
+                    from_agent,
+                )
+                # Return the raw response with the processed text added for convenience
+                return {
+                    **response,  # Full raw Bedrock response (output, stopReason, usage, metrics, etc.)
+                    "processed_text": final_text,  # Processed text after hooks (for convenience)
+                }
+            
+            # For regular calls without system tools, return just text (backward compatible)
             return self._invoke_after_llm_call_hooks(
                 messages,
                 text_content,
@@ -1351,68 +1426,87 @@ class BedrockCompletion(BaseLLM):
                 )
                 return non_structured_output_tool_uses
 
+            # Process content blocks and handle tool use correctly
             text_content = ""
+            has_system_tool_content = False  # Flag to check if system tools were used
 
             for content_block in content:
+                # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
 
-                elif "toolUse" in content_block and available_functions:
+                # Check if system tools were used (don't extract, just detect)
+                if "citationsContent" in content_block or "toolResult" in content_block:
+                    has_system_tool_content = True
+
+                # Handle tool use blocks
+                if "toolUse" in content_block:
                     tool_use_block = content_block["toolUse"]
-                    tool_use_id = tool_use_block.get("toolUseId")
-                    function_name = tool_use_block["name"]
-                    function_args = tool_use_block.get("input", {})
+                    tool_type = tool_use_block.get("type", "")
 
-                    # Skip structured_output - it's handled above
-                    if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
-                        continue
+                    # Check if this is a system tool
+                    if tool_type == "server_tool_use":
+                        has_system_tool_content = True
+                        logging.debug(
+                            f"System tool used: {tool_use_block.get('name')} (ID: {tool_use_block.get('toolUseId')})"
+                        )
+                    elif available_functions:
+                        # Regular tool - execute it
+                        tool_use_id = tool_use_block.get("toolUseId")
+                        function_name = tool_use_block.get("name", "")
+                        function_args = tool_use_block.get("input", {})
 
-                    logging.debug(
-                        f"Tool use requested: {function_name} with ID {tool_use_id}"
-                    )
+                        # Skip structured_output - it's handled above
+                        if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
+                            continue
 
-                    tool_result = self._handle_tool_execution(
-                        function_name=function_name,
-                        function_args=function_args,
-                        available_functions=dict(available_functions),
-                        from_task=from_task,
-                        from_agent=from_agent,
-                    )
-
-                    if tool_result is not None:
-                        messages.append(
-                            {
-                                "role": "assistant",
-                                "content": [{"toolUse": tool_use_block}],
-                            }
+                        logging.debug(
+                            f"Tool use requested: {function_name} with ID {tool_use_id}"
                         )
 
-                        messages.append(
-                            {
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "toolResult": {
-                                            "toolUseId": tool_use_id,
-                                            "content": [{"text": str(tool_result)}],
+                        tool_result = self._handle_tool_execution(
+                            function_name=function_name,
+                            function_args=function_args,
+                            available_functions=dict(available_functions),
+                            from_task=from_task,
+                            from_agent=from_agent,
+                        )
+
+                        if tool_result is not None:
+                            messages.append(
+                                {
+                                    "role": "assistant",
+                                    "content": [{"toolUse": tool_use_block}],
+                                }
+                            )
+
+                            messages.append(
+                                {
+                                    "role": "user",
+                                    "content": [
+                                        {
+                                            "toolResult": {
+                                                "toolUseId": tool_use_id,
+                                                "content": [{"text": str(tool_result)}],
+                                            }
                                         }
-                                    }
-                                ],
-                            }
-                        )
+                                    ],
+                                }
+                            )
 
-                        return await self._ahandle_converse(
-                            messages,
-                            body,
-                            available_functions,
-                            from_task,
-                            from_agent,
-                            response_model,
-                        )
+                            return await self._ahandle_converse(
+                                messages,
+                                body,
+                                available_functions,
+                                from_task,
+                                from_agent,
+                                response_model,
+                            )
 
             text_content = self._apply_stop_words(text_content)
 
-            if not text_content or text_content.strip() == "":
+            # Skip empty-text fallback when system tools provided content
+            if (not text_content or text_content.strip() == "") and not has_system_tool_content:
                 logging.warning("Extracted empty text content from Bedrock response")
                 text_content = "I apologize, but I couldn't generate a proper response. Please try again."
 
@@ -1424,6 +1518,22 @@ class BedrockCompletion(BaseLLM):
                 messages=messages,
             )
 
+            # If system tools were used, return the full raw Bedrock response
+            # This preserves the complete structure without any transformation
+            if self.system_tools and has_system_tool_content:
+                # Apply hooks to text for any transformations needed
+                final_text = self._invoke_after_llm_call_hooks(
+                    messages,
+                    text_content,
+                    from_agent,
+                )
+                # Return the raw response with processed text added for convenience
+                return {
+                    **response,  # Full raw Bedrock response (output, stopReason, usage, metrics, etc.)
+                    "processed_text": final_text,  # Processed text after hooks (for convenience)
+                }
+
+            # For regular calls without system tools, return just text (backward compatible)
             return text_content
 
         except ClientError as e:
@@ -1941,13 +2051,29 @@ class BedrockCompletion(BaseLLM):
     def _format_tools_for_converse(
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
-        """Convert CrewAI tools to Converse API format following AWS specification."""
+        """Convert CrewAI tools to Converse API format following AWS specification.
+        
+        Supports both regular tools (toolSpec) and system tools (systemTool).
+        System tools like nova_grounding are passed through directly.
+        """
         from crewai.llms.providers.utils.common import safe_tool_conversion
 
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
             try:
+                # Check if this is a system tool (e.g., nova_grounding)
+                if "systemTool" in tool:
+                    # System tools are passed through directly
+                    system_tool: SystemTool = {
+                        "name": tool["systemTool"]["name"]
+                    }
+                    converse_tool: ConverseToolTypeDef = {"systemTool": system_tool}
+                    converse_tools.append(converse_tool)
+                    logging.debug(f"Added system tool: {system_tool['name']}")
+                    continue
+
+                # Handle regular toolSpec tools (existing logic)
                 name, description, parameters = safe_tool_conversion(tool, "Bedrock")
 
                 tool_spec: ToolSpec = {

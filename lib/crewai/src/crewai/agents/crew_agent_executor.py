@@ -358,7 +358,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                # breakpoint()
+                # Handle dict response from Bedrock system tools
+                # When system tools are used, Bedrock returns full response dict
+                # Extract processed_text for agent processing
+                if isinstance(answer, dict) and "processed_text" in answer:
+                    answer = answer["processed_text"]
+
                 if self.response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
@@ -522,6 +527,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     verbose=self.agent.verbose,
                 )
 
+                # Handle dict response from Bedrock system tools
+                if isinstance(answer, dict) and "processed_text" in answer:
+                    answer = answer["processed_text"]
+
                 # Check if the response is a list of tool calls
                 if (
                     isinstance(answer, list)
@@ -612,6 +621,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             executor_context=self,
             verbose=self.agent.verbose,
         )
+
+        # Handle dict response from Bedrock system tools
+        if isinstance(answer, dict) and "processed_text" in answer:
+            answer = answer["processed_text"]
 
         if isinstance(answer, BaseModel):
             output_json = answer.model_dump_json()
@@ -1070,6 +1083,12 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     verbose=self.agent.verbose,
                 )
 
+                # Handle dict response from Bedrock system tools
+                # When system tools are used, Bedrock returns full response dict
+                # Extract processed_text for agent processing
+                if isinstance(answer, dict) and "processed_text" in answer:
+                    answer = answer["processed_text"]
+
                 if self.response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
@@ -1224,6 +1243,11 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
+
+                # Handle dict response from Bedrock system tools
+                if isinstance(answer, dict) and "processed_text" in answer:
+                    answer = answer["processed_text"]
+
                 # Check if the response is a list of tool calls
                 if (
                     isinstance(answer, list)
@@ -1314,6 +1338,10 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             executor_context=self,
             verbose=self.agent.verbose,
         )
+
+        # Handle dict response from Bedrock system tools
+        if isinstance(answer, dict) and "processed_text" in answer:
+            answer = answer["processed_text"]
 
         if isinstance(answer, BaseModel):
             output_json = answer.model_dump_json()
