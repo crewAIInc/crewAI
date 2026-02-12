@@ -43,16 +43,16 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8VyQjxbF61AtKGn1p8WMKBbBIZ4x\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921902,\n  \"model\": \"o4-mini-2025-04-16\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WgUtv0H2vpqmMoeX3h5tFRo8KKr\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924634,\n  \"model\": \"o4-mini-2025-04-16\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"The image is a line chart titled \u201CRevenue
-        Over Time,\u201D plotting annual revenue (in $ millions) from 2020 to 2024.
-        It shows a straight, upward-sloping line rising in $50 M increments\u2014from
-        \\\\$100 M in 2020 up to \\\\$300 M in 2024.\",\n        \"refusal\": null,\n
+        \"assistant\",\n        \"content\": \"The image is a simple line chart titled
+        \u201CRevenue Over Time\u201D that plots annual revenue (in millions of dollars)
+        from 2020 to 2024. It shows a straight, upward\u2010sloping line rising evenly
+        from \\\\$100 M in 2020 to \\\\$300 M in 2024.\",\n        \"refusal\": null,\n
         \       \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 563,\n    \"completion_tokens\":
-        278,\n    \"total_tokens\": 841,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        273,\n    \"total_tokens\": 836,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 192,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -65,7 +65,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:06 GMT
+      - Thu, 12 Feb 2026 19:30:37 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -83,7 +83,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '4252'
+      - '3160'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -161,19 +161,19 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8VyVRMFdp8W58Xh8TO7KU5oHZs72\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921907,\n  \"model\": \"o4-mini-2025-04-16\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WgY1oxQs1DUkENf0DTBDenkMT1G\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924638,\n  \"model\": \"o4-mini-2025-04-16\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"The chart is a simple line graph titled
-        \u201CRevenue Over Time.\u201D It plots annual revenue (in millions of dollars)
-        from 2020 through 2024, showing a steady increase:  \\n\u2022 2020: $100 M
-        \ \\n\u2022 2021: $150 M  \\n\u2022 2022: $200 M  \\n\u2022 2023: $250 M  \\n\u2022
-        2024: $300 M\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n
-        \   \"prompt_tokens\": 563,\n    \"completion_tokens\": 233,\n    \"total_tokens\":
-        796,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
+        \"assistant\",\n        \"content\": \"The image is a simple line chart titled
+        \u201CRevenue Over Time.\u201D The horizontal axis shows years from 2020 to
+        2024, and the vertical axis shows revenue in millions of dollars. The line
+        rises steadily from $100 M in 2020 to $300 M in 2024, indicating consistent
+        year-over-year growth.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\":
+        {\n    \"prompt_tokens\": 563,\n    \"completion_tokens\": 152,\n    \"total_tokens\":
+        715,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
         0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-        128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
+        64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
         \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
@@ -184,7 +184,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:10 GMT
+      - Thu, 12 Feb 2026 19:30:40 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -202,7 +202,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3707'
+      - '2496'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

@@ -45,13 +45,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_015NmdCvw9wtvUbBu8FT2mWV","type":"message","role":"assistant","content":[{"type":"text","text":"This
-        image shows a linear graph titled \"Revenue Over Time\" that depicts a steady
-        increase in revenue from around $100 in 2020 to approximately $300 by 2024.
-        The x-axis represents years from 2020.0 to 2024.0, while the y-axis shows
-        revenue in millions of dollars. The blue line demonstrates a consistent, straight
-        upward trajectory, suggesting consistent and predictable revenue growth over
-        this four-year period."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":485,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":100,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01QgPLhuYEg6TCUTrnsGFxH8","type":"message","role":"assistant","content":[{"type":"text","text":"This
+        image is a line graph showing \"Revenue Over Time\" from 2020 to 2024. The
+        x-axis represents years, while the y-axis represents revenue in dollars (from
+        $100 to $300). The graph displays a steady, linear increase in revenue over
+        this period, with a consistent upward slope indicating consistent growth year
+        over year."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":485,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":77,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -62,7 +61,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:48:02 GMT
+      - Thu, 12 Feb 2026 19:30:50 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +87,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:47:59Z'
+      - '2026-02-12T19:30:48Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -102,7 +101,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '2738'
+      - '2198'
     status:
       code: 200
       message: OK
@@ -152,13 +151,11 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01BhcsbakpoCguLqQRYQhVQc","type":"message","role":"assistant","content":[{"type":"text","text":"This
-        is a line graph showing \"Revenue Over Time\" from 2020 to 2024. The vertical
-        axis represents revenue in some monetary unit (appears to be in $, ranging
-        from 100 to 300), and the horizontal axis represents years. The blue line
-        shows a steady, linear increase in revenue over the time period, starting
-        around $100 in 2020 and rising consistently to approximately $300 by 2024,
-        indicating consistent and predictable revenue growth."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":485,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":103,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_017jsHA14R65RXwNiPJU2Cnb","type":"message","role":"assistant","content":[{"type":"text","text":"This
+        image is a line graph showing \"Revenue Over Time\" from 2020 to 2024. The
+        x-axis represents years, and the y-axis represents revenue in dollars (from
+        100 to 300). The blue line shows a steady, linear increase in revenue over
+        this time period, with the slope indicating consistent growth year over year."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":485,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":76,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -169,7 +166,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:48:05 GMT
+      - Thu, 12 Feb 2026 19:30:53 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -195,7 +192,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:48:02Z'
+      - '2026-02-12T19:30:50Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -209,7 +206,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '3002'
+      - '3043'
     status:
       code: 200
       message: OK

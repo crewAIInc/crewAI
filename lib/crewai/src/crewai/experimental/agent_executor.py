@@ -226,6 +226,8 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
         # Execution guard to prevent concurrent/duplicate executions
         self._execution_lock = threading.Lock()
+        self._finalize_lock = threading.Lock()
+        self._finalize_called: bool = False
         self._is_executing: bool = False
         self._has_been_invoked: bool = False
         self._flow_initialized: bool = False
@@ -1218,6 +1220,9 @@ provide clear results that can be used by subsequent steps."""
 
         Returns routing decision based on parsing result.
         """
+        if self.state.is_finished:
+            return "parsed"
+
         try:
             enforce_rpm_limit(self.request_within_rpm_limit)
 
@@ -1294,6 +1299,9 @@ provide clear results that can be used by subsequent steps."""
 
         Returns routing decision based on whether tool calls or final answer.
         """
+        if self.state.is_finished:
+            return "native_finished"
+
         try:
             # Clear pending tools - LLM will decide what to do next after reading
             # the reflection prompt. It can either:
@@ -2051,6 +2059,16 @@ provide clear results that can be used by subsequent steps."""
         Handles both the legacy ReAct path (current_answer already set) and
         the Plan-and-Execute path (synthesize from completed todos).
         """
+        # Guard against duplicate finalization — the flow may trigger finalize
+        # more than once when concurrent branches both reach a terminal state.
+        # Use a lock to atomically check-and-set _finalize_called so only the
+        # first caller proceeds.  We use a separate flag (not is_finished)
+        # because is_finished should only be set when finalization succeeds.
+        with self._finalize_lock:
+            if self._finalize_called:
+                return "completed"
+            self._finalize_called = True
+
         if self.agent.verbose:
             self._printer.print(
                 content=f"[Finalize] todos_count={len(self.state.todos.items)}, todos_with_results={sum(1 for t in self.state.todos.items if t.result)}",
@@ -2092,7 +2110,6 @@ provide clear results that can be used by subsequent steps."""
             return "skipped"
 
         self.state.is_finished = True
-
         self._show_logs(self.state.current_answer)
 
         return "completed"

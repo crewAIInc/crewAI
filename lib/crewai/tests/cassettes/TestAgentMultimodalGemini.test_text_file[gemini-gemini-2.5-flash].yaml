@@ -26,34 +26,30 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"These guidelines provide instructions
-        for writing effective feedback. Feedback should be clear, concise, specific,
-        and balanced, focusing on behaviors and outcomes with examples. It should
-        also be respectful, constructive, and objective, suggesting actionable next
-        steps for improvement and be proofread before submission.\\n\"\n          }\n
+        [\n          {\n            \"text\": \"These guidelines provide a framework
+        for giving effective feedback, emphasizing clarity, specificity, balance,
+        respect, objectivity, actionable next steps, and proofreading.\"\n          }\n
         \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.27340631131772641\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 164,\n    \"candidatesTokenCount\": 54,\n    \"totalTokenCount\":
-        218,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 164\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 54\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"kSqOadGYAsXQjMcP9YfmuAQ\"\n}\n"
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        166,\n    \"candidatesTokenCount\": 29,\n    \"totalTokenCount\": 223,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 166\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 28\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"PUqOaZ3pMYi8_uMP25m7gAQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:29 GMT
+      - Thu, 12 Feb 2026 21:46:37 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1041
+      - gfet4t7; dur=671
       Transfer-Encoding:
       - chunked
       Vary:
@@ -96,34 +92,30 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"These guidelines outline how to provide
-        effective feedback: be clear, concise, and specific, focusing on behavior
-        and outcomes with examples. Balance positive aspects with areas for improvement,
-        offering constructive, respectful suggestions and actionable next steps, all
-        while referencing objective criteria and ensuring the feedback is well-written
-        and proofread.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n
-        \     },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.25106738043613119\n
-        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 164,\n    \"candidatesTokenCount\":
-        61,\n    \"totalTokenCount\": 225,\n    \"promptTokensDetails\": [\n      {\n
-        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 164\n      }\n    ],\n
-        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 61\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n
-        \ \"responseId\": \"kiqOaePiC96RjMcP3auj8Q4\"\n}\n"
+        [\n          {\n            \"text\": \"These guidelines provide instructions
+        on how to deliver effective, constructive, and respectful feedback, emphasizing
+        clarity, specificity, balance, and actionable suggestions for improvement.\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        166,\n    \"candidatesTokenCount\": 29,\n    \"totalTokenCount\": 269,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 166\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 74\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"PkqOaf-bLu-v_uMPnorr8Qs\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:31 GMT
+      - Thu, 12 Feb 2026 21:46:38 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1024
+      - gfet4t7; dur=898
       Transfer-Encoding:
       - chunked
       Vary:

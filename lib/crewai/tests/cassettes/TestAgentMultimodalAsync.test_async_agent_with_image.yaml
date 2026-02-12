@@ -1,73 +1,5 @@
 interactions:
 - request:
-    body: '{"trace_id": "031d490f-36b3-4488-b715-55fa0f2e4106", "execution_type":
-      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
-      "crew_name": "Unknown Crew", "flow_name": null, "crewai_version": "1.9.3", "privacy_level":
-      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
-      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2026-02-12T18:43:55.911567+00:00"}}'
-    headers:
-      Accept:
-      - '*/*'
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '434'
-      Content-Type:
-      - application/json
-      User-Agent:
-      - X-USER-AGENT-XXX
-      X-Crewai-Version:
-      - 1.9.3
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-    method: POST
-    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/batches
-  response:
-    body:
-      string: '{"error":"bad_credentials","message":"Bad credentials"}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '55'
-      Content-Type:
-      - application/json; charset=utf-8
-      Date:
-      - Thu, 12 Feb 2026 18:43:56 GMT
-      cache-control:
-      - no-store
-      content-security-policy:
-      - CSP-FILTERED
-      expires:
-      - '0'
-      permissions-policy:
-      - PERMISSIONS-POLICY-XXX
-      pragma:
-      - no-cache
-      referrer-policy:
-      - REFERRER-POLICY-XXX
-      strict-transport-security:
-      - STS-XXX
-      vary:
-      - Accept
-      x-content-type-options:
-      - X-CONTENT-TYPE-XXX
-      x-frame-options:
-      - X-FRAME-OPTIONS-XXX
-      x-permitted-cross-domain-policies:
-      - X-PERMITTED-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-      x-runtime:
-      - X-RUNTIME-XXX
-      x-xss-protection:
-      - X-XSS-PROTECTION-XXX
-    status:
-      code: 401
-      message: Unauthorized
-- request:
     body: '{"messages":[{"role":"system","content":"You are File Analyst. Expert at
       analyzing various file types.\nYour personal goal is: Analyze and describe files
       accurately"},{"role":"user","content":[{"type":"text","text":"\nCurrent Task:
@@ -111,21 +43,22 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8VxM69sJdGCO4sqAiok9MYpK8vYh\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921836,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8Wf7ODGo7Ffmb2OtAcjYHQNubTgn\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924549,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"The image is a line graph titled \\\"Revenue
-        Over Time.\\\" The x-axis represents the years, ranging from 2020 to 2024,
-        with fractional year markers indicating points between the standard yearly
-        divisions. The y-axis shows revenue in millions of dollars, ranging from 100
-        to 300 million.\\n\\nThe line on the graph appears to increase steadily over
-        the years, indicating growth in revenue. It starts at just above 100 million
-        in 2020 and trends upward, reaching about 300 million by 2024. The graph includes
-        grid lines for better readability and visual reference. Overall, it illustrates
-        a positive trend in revenue over the specified time period.\",\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        14213,\n    \"completion_tokens\": 131,\n    \"total_tokens\": 14344,\n    \"prompt_tokens_details\":
+        Over Time.\\\" It displays a linear increase in revenue measured in millions
+        of dollars ($M) over a time period from the year 2020 to 2024. \\n\\n- The
+        x-axis represents the years, ranging from 2020 to 2024, with markers indicating
+        half-year increments (e.g., 2020.5 for mid-2020).\\n- The y-axis shows revenue,
+        starting from 100 million dollars and going up to 300 million dollars, with
+        ticks indicating increments of 25 million dollars.\\n- The plotted line shows
+        a consistent upward trend, suggesting steady revenue growth during the specified
+        timeframe. \\n\\nOverall, the graph effectively visualizes the increase in
+        revenue over the specified years, emphasizing a positive growth trajectory.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        14213,\n    \"completion_tokens\": 156,\n    \"total_tokens\": 14369,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -138,7 +71,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:43:59 GMT
+      - Thu, 12 Feb 2026 19:29:13 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -156,7 +89,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2647'
+      - '3561'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -234,22 +167,20 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8VxQSUirryNn9E4INnAaQ9xLL0xl\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921840,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WfCkYRXaXH3HOW85tuMAlkbhQ6y\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924554,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"The image is a line graph titled \\\"Revenue
-        Over Time.\\\" The x-axis represents time, ranging from the year 2020 to 2024,
-        with increments marked at half-year intervals. The y-axis indicates revenue
-        in millions of dollars, ranging from 100 to 300. \\n\\nThe graph features
-        a steady upward trend, indicating that revenue increases consistently over
-        the time period shown. This suggests positive growth in revenue from the starting
-        point in 2020, continuing to rise towards 2024. The line is simple and clear,
-        with a light blue color, and a grid is present for better visibility of the
-        data points.\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 14213,\n    \"completion_tokens\":
-        125,\n    \"total_tokens\": 14338,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"The image is a line graph depicting
+        revenue over time. The x-axis represents the years from 2020 to 2024, while
+        the y-axis shows the revenue in millions of dollars, ranging from 100 to 300
+        million. The graph illustrates a steady increase in revenue, with a clear
+        upward trend from the beginning of 2020 to the middle of 2024. The line is
+        smooth and continuous, indicating consistent growth in revenue throughout
+        the specified time period. The title of the graph is \\\"Revenue Over Time.\\\"\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        14213,\n    \"completion_tokens\": 105,\n    \"total_tokens\": 14318,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
@@ -261,7 +192,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:02 GMT
+      - Thu, 12 Feb 2026 19:29:16 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -279,7 +210,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2673'
+      - '2273'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

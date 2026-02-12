@@ -27,35 +27,31 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"I see a line graph titled \\\"Revenue
-        Over Time\\\". The x-axis represents the year, ranging from 2020 to 2024.
-        The y-axis represents revenue in millions of dollars ($M), ranging from 100
-        to 300. A single blue line shows a linear increase in revenue from $100M in
-        2020 to $300M in 2024. The graph has a grid.\\n\"\n          }\n        ],\n
-        \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
-        \     \"avgLogprobs\": -0.13460521697998046\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1454,\n    \"candidatesTokenCount\": 100,\n    \"totalTokenCount\":
-        1554,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"IMAGE\",\n
-        \       \"tokenCount\": 1290\n      },\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 164\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 100\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"lyqOabaLKfLkjMcPs-amqA8\"\n}\n"
+        [\n          {\n            \"text\": \"I see one main image file, which is
+        a line graph titled \\\"Revenue Over Time\\\". Additionally, I see four cropped
+        versions of this same image file, provided as hints. All of these are image
+        files.\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 424,\n    \"candidatesTokenCount\": 42,\n    \"totalTokenCount\":
+        619,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 166\n      },\n      {\n        \"modality\": \"IMAGE\",\n
+        \       \"tokenCount\": 258\n      }\n    ],\n    \"thoughtsTokenCount\":
+        153\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"S0qOafPzOYi8_uMP25m7gAQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:37 GMT
+      - Thu, 12 Feb 2026 21:46:51 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2151
+      - gfet4t7; dur=1764
       Transfer-Encoding:
       - chunked
       Vary:
@@ -99,23 +95,36 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
-      string: "{\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"Resource
-        exhausted. Please try again later. Please refer to https://cloud.google.com/vertex-ai/generative-ai/docs/error-code-429
-        for more details.\",\n    \"status\": \"RESOURCE_EXHAUSTED\"\n  }\n}\n"
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"I see multiple image files.\\n\\nSpecifically:\\n1.
+        \ One primary image file displaying a line graph titled \\\"Revenue Over Time\\\".\\n2.
+        \ Four additional image files, which are cropped sections of the primary image.\\n\\nAll
+        these files are visual representations, likely in a format such as PNG or
+        JPEG, used to display the graph content.\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 424,\n    \"candidatesTokenCount\":
+        70,\n    \"totalTokenCount\": 781,\n    \"cachedContentTokenCount\": 287,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 166\n      },\n      {\n        \"modality\": \"IMAGE\",\n
+        \       \"tokenCount\": 258\n      }\n    ],\n    \"cacheTokensDetails\":
+        [\n      {\n        \"modality\": \"IMAGE\",\n        \"tokenCount\": 175\n
+        \     },\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\":
+        112\n      }\n    ],\n    \"thoughtsTokenCount\": 287\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"TkqOaY-SG_yM_uMPqMyF2A0\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:40 GMT
+      - Thu, 12 Feb 2026 21:46:54 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2162
+      - gfet4t7; dur=2473
       Transfer-Encoding:
       - chunked
       Vary:
@@ -129,6 +138,6 @@ interactions:
       X-XSS-Protection:
       - '0'
     status:
-      code: 429
-      message: Too Many Requests
+      code: 200
+      message: OK
 version: 1

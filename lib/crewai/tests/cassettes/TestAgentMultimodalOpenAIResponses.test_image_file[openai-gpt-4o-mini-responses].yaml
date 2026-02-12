@@ -43,36 +43,34 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_003d4c3429ecc26c00698e1f8024c48195a3add3bdba7cda22\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921856,\n  \"status\":
+      string: "{\n  \"id\": \"resp_0a64109d8e2fc97b00698e2a7246a88193b7c90b54dacc69dd\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924658,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921858,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924660,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-        \ \"output\": [\n    {\n      \"id\": \"msg_003d4c3429ecc26c00698e1f80a8888195a71bc6b2673d7c67\",\n
+        \ \"output\": [\n    {\n      \"id\": \"msg_0a64109d8e2fc97b00698e2a7342c881939fdc506144cc28e6\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
         [],\n          \"logprobs\": [],\n          \"text\": \"The image is a line
-        graph titled \\\"Revenue Over Time.\\\" It plots revenue (in millions of dollars)
-        on the vertical axis against time (in years) on the horizontal axis, spanning
-        from 2020 to 2024. The graph shows a steady, upward trend in revenue, starting
-        at around $100 million in 2020 and increasing to approximately $300 million
-        by 2024, indicating consistent growth over the specified period. The line
-        is smooth and linear, suggesting steady revenue growth year over year.\"\n
-        \       }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
-        true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
-        null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
-        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
-        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
-        \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
-        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [],\n  \"top_logprobs\":
-        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
-        14214,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
-        \   \"output_tokens\": 103,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
-        0\n    },\n    \"total_tokens\": 14317\n  },\n  \"user\": null,\n  \"metadata\":
-        {}\n}"
+        graph titled \\\"Revenue Over Time,\\\" depicting revenue growth from 2020
+        to 2024. The y-axis represents revenue in millions of dollars, ranging from
+        100 to 300. The x-axis indicates the years from 2020 to 2024. The line shows
+        a steady increase in revenue, indicating consistent growth over the specified
+        period.\"\n        }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n
+        \ \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\": null,\n
+        \ \"reasoning\": {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    },\n
+        \   \"verbosity\": \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n  \"tools\":
+        [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n
+        \ \"usage\": {\n    \"input_tokens\": 14214,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 75,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 14289\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -81,7 +79,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:18 GMT
+      - Thu, 12 Feb 2026 19:31:00 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -97,7 +95,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2142'
+      - '2223'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -167,35 +165,34 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_0fa9c0067a031fe500698e1f82649081a3882a9172070cc899\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921858,\n  \"status\":
+      string: "{\n  \"id\": \"resp_0f2df6179286a80400698e2a74b5048192980513881a6944a0\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924660,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921860,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924665,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-        \ \"output\": [\n    {\n      \"id\": \"msg_0fa9c0067a031fe500698e1f82fe6c81a3bbd4a56089d8cb62\",\n
+        \ \"output\": [\n    {\n      \"id\": \"msg_0f2df6179286a80400698e2a7757dc8192b0dfe49ad4aed578\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
-        [],\n          \"logprobs\": [],\n          \"text\": \"The image is a line
-        graph titled \\\"Revenue Over Time.\\\" It plots revenue (measured in millions
-        of dollars) on the vertical axis and time (from 2020 to 2024) on the horizontal
-        axis. The graph shows a steady upward trend in revenue, beginning at around
-        100 million in early 2020 and increasing consistently to approximately 300
-        million by the end of 2024. The line is smooth and linear, indicating consistent
-        growth over the specified period.\"\n        }\n      ],\n      \"role\":
-        \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n  \"presence_penalty\":
-        0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\":
-        null,\n  \"reasoning\": {\n    \"effort\": null,\n    \"summary\": null\n
-        \ },\n  \"safety_identifier\": null,\n  \"service_tier\": \"default\",\n  \"store\":
-        true,\n  \"temperature\": 1.0,\n  \"text\": {\n    \"format\": {\n      \"type\":
-        \"text\"\n    },\n    \"verbosity\": \"medium\"\n  },\n  \"tool_choice\":
-        \"auto\",\n  \"tools\": [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
-        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 14214,\n    \"input_tokens_details\":
-        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 97,\n    \"output_tokens_details\":
-        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 14311\n  },\n
-        \ \"user\": null,\n  \"metadata\": {}\n}"
+        [],\n          \"logprobs\": [],\n          \"text\": \"The image displays
+        a line chart titled \\\"Revenue Over Time.\\\" The x-axis represents the years
+        from 2020 to 2024, while the y-axis shows revenue in millions of dollars,
+        ranging from 100 to 300. The graph illustrates a steady upward trend in revenue,
+        indicating consistent growth over the specified period.\"\n        }\n      ],\n
+        \     \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
+        null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
+        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
+        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
+        \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
+        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [],\n  \"top_logprobs\":
+        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
+        14214,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
+        \   \"output_tokens\": 65,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 14279\n  },\n  \"user\": null,\n  \"metadata\":
+        {}\n}"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -204,7 +201,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:20 GMT
+      - Thu, 12 Feb 2026 19:31:05 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -220,7 +217,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2291'
+      - '5149'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

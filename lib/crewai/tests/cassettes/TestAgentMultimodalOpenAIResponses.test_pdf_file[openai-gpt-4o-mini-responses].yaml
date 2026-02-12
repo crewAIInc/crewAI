@@ -43,31 +43,32 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_0f0b09669f6dc23c00698e1f7357108190b48d6a78ffeb75ef\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921843,\n  \"status\":
+      string: "{\n  \"id\": \"resp_0524700d6a86aa2600698e2a7b511c8196869afcb28543046c\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924667,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921844,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924668,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-        \ \"output\": [\n    {\n      \"id\": \"msg_0f0b09669f6dc23c00698e1f74354481909f02f62edf6b10bf\",\n
+        \ \"output\": [\n    {\n      \"id\": \"msg_0524700d6a86aa2600698e2a7c10c48196a1c0042a9a870127\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
-        [],\n          \"logprobs\": [],\n          \"text\": \"Please upload the
-        document you would like me to analyze, and I'll help identify its type.\"\n
-        \       }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
-        true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
-        null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
-        null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
-        \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
-        \   \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\": \"medium\"\n
-        \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [],\n  \"top_logprobs\":
-        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
-        53,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
-        \   \"output_tokens\": 19,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
-        0\n    },\n    \"total_tokens\": 72\n  },\n  \"user\": null,\n  \"metadata\":
-        {}\n}"
+        [],\n          \"logprobs\": [],\n          \"text\": \"It appears there was
+        no document provided for analysis. Please upload the document you'd like me
+        to examine, and I'll be happy to help identify its type and provide a detailed
+        description.\"\n        }\n      ],\n      \"role\": \"assistant\"\n    }\n
+        \ ],\n  \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\":
+        null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\": null,\n
+        \ \"reasoning\": {\n    \"effort\": null,\n    \"summary\": null\n  },\n  \"safety_identifier\":
+        null,\n  \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\":
+        1.0,\n  \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    },\n
+        \   \"verbosity\": \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n  \"tools\":
+        [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n
+        \ \"usage\": {\n    \"input_tokens\": 53,\n    \"input_tokens_details\": {\n
+        \     \"cached_tokens\": 0\n    },\n    \"output_tokens\": 36,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 89\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -76,9 +77,11 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:04 GMT
+      - Thu, 12 Feb 2026 19:31:08 GMT
       Server:
       - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -92,13 +95,11 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1356'
+      - '1439'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      set-cookie:
-      - SET-COOKIE-XXX
       x-ratelimit-limit-requests:
       - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:
@@ -162,22 +163,21 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_0138031ab91abec100698e1f753fd081a3bd60a98120f9b1b2\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921845,\n  \"status\":
+      string: "{\n  \"id\": \"resp_061c22eec2c866c500698e2a7cd9348193929f5dfa4eba1ff6\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924668,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921847,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924669,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-        \ \"output\": [\n    {\n      \"id\": \"msg_0138031ab91abec100698e1f76657081a3b07d101c08e68f3b\",\n
+        \ \"output\": [\n    {\n      \"id\": \"msg_061c22eec2c866c500698e2a7d2b18819389b67df0fc6ffaf6\",\n
         \     \"type\": \"message\",\n      \"status\": \"completed\",\n      \"content\":
         [\n        {\n          \"type\": \"output_text\",\n          \"annotations\":
         [],\n          \"logprobs\": [],\n          \"text\": \"To assist you accurately,
-        I need to examine the specific document in question. Please upload the document
-        you'd like me to analyze, and I will describe its type and any relevant details.\"\n
-        \       }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
-        true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
+        please upload the document you would like me to analyze.\"\n        }\n      ],\n
+        \     \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\": true,\n
+        \ \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
         null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
         null,\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n  \"service_tier\":
         \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n  \"text\": {\n
@@ -185,8 +185,8 @@ interactions:
         \ },\n  \"tool_choice\": \"auto\",\n  \"tools\": [],\n  \"top_logprobs\":
         0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
         53,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
-        \   \"output_tokens\": 37,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
-        0\n    },\n    \"total_tokens\": 90\n  },\n  \"user\": null,\n  \"metadata\":
+        \   \"output_tokens\": 17,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
+        0\n    },\n    \"total_tokens\": 70\n  },\n  \"user\": null,\n  \"metadata\":
         {}\n}"
     headers:
       CF-RAY:
@@ -196,7 +196,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:07 GMT
+      - Thu, 12 Feb 2026 19:31:09 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -212,13 +212,11 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '1899'
+      - '836'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      set-cookie:
-      - SET-COOKIE-XXX
       x-ratelimit-limit-requests:
       - X-RATELIMIT-LIMIT-REQUESTS-XXX
       x-ratelimit-limit-tokens:

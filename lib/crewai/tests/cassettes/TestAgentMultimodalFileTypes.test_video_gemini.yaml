@@ -30,30 +30,29 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The video shows a white square moving
-        across a blue background. The square starts on the left side of the screen,
-        moves towards the center, pauses briefly, and then moves towards the right
-        side of the screen before stopping.\"\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -0.2619009884920987\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        1327,\n    \"candidatesTokenCount\": 44,\n    \"totalTokenCount\": 1371,\n
-        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"VIDEO\",\n
+        [\n          {\n            \"text\": \"The video is a simple animation. A
+        white square moves from the left side of the screen to the center, then to
+        the right side, against a blue background. The movement is linear and smooth.\\n\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.35358294045052879\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 1327,\n    \"candidatesTokenCount\": 41,\n    \"totalTokenCount\":
+        1368,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"VIDEO\",\n
         \       \"tokenCount\": 1290\n      },\n      {\n        \"modality\": \"TEXT\",\n
         \       \"tokenCount\": 37\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 44\n
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 41\n
         \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"6x-OaaHaBbSv_uMPj_qo8Ak\"\n}\n"
+        \"tTKOacnvBICbjMcPr_iviQE\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:46:06 GMT
+      - Thu, 12 Feb 2026 20:06:18 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=3570
+      - gfet4t7; dur=5984
       Transfer-Encoding:
       - chunked
       Vary:
@@ -100,31 +99,28 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The video is a simple animation featuring
-        a white square moving across a blue background. Initially, the square is positioned
-        on the left side of the frame. It then moves to the center and subsequently
-        shifts to the right side of the frame before returning to the left again.
-        This movement is repeated throughout the short video.\\n\"\n          }\n
-        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.52482707916744176\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1327,\n    \"candidatesTokenCount\": 63,\n    \"totalTokenCount\":
-        1390,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 37\n      },\n      {\n        \"modality\": \"VIDEO\",\n
-        \       \"tokenCount\": 1290\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 63\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"7h-OafCdKdvh_uMP96nB6Qk\"\n}\n"
+        [\n          {\n            \"text\": \"The video shows a white square moving
+        from the left side of the screen to the center, and then to the right, against
+        a blue background.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n
+        \     },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.2401906967163086\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 1327,\n    \"candidatesTokenCount\":
+        30,\n    \"totalTokenCount\": 1357,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 37\n      },\n      {\n
+        \       \"modality\": \"VIDEO\",\n        \"tokenCount\": 1290\n      }\n
+        \   ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 30\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash\",\n  \"responseId\": \"uzKOacfwBNuL-sAPtNf9gAw\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:46:09 GMT
+      - Thu, 12 Feb 2026 20:06:21 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=3403
+      - gfet4t7; dur=2929
       Transfer-Encoding:
       - chunked
       Vary:

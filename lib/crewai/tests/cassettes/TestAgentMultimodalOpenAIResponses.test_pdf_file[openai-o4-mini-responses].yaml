@@ -43,32 +43,31 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_0d8d791bc4714c2900698e1f85381c8192ba3d78d94ef31b8a\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921861,\n  \"status\":
+      string: "{\n  \"id\": \"resp_064e248119b2b15200698e2a850d908190ab1c6ba7b548c6c2\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924677,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921864,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924678,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"o4-mini-2025-04-16\",\n
-        \ \"output\": [\n    {\n      \"id\": \"rs_0d8d791bc4714c2900698e1f86900881928f6a9e86020e0f94\",\n
+        \ \"output\": [\n    {\n      \"id\": \"rs_064e248119b2b15200698e2a85b12081909cd1fbbe97495d44\",\n
         \     \"type\": \"reasoning\",\n      \"summary\": []\n    },\n    {\n      \"id\":
-        \"msg_0d8d791bc4714c2900698e1f87d3c48192b48d2de6c1cda3da\",\n      \"type\":
+        \"msg_064e248119b2b15200698e2a8648488190a03c7b0dc1e83d9d\",\n      \"type\":
         \"message\",\n      \"status\": \"completed\",\n      \"content\": [\n        {\n
         \         \"type\": \"output_text\",\n          \"annotations\": [],\n          \"logprobs\":
-        [],\n          \"text\": \"I\\u2019m ready to help\\u2014please upload the
-        document (or paste its text or metadata) so I can analyze it and determine
-        its type.\"\n        }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n
-        \ \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\":
-        null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\": null,\n
-        \ \"reasoning\": {\n    \"effort\": \"medium\",\n    \"summary\": null\n  },\n
-        \ \"safety_identifier\": null,\n  \"service_tier\": \"default\",\n  \"store\":
+        [],\n          \"text\": \"Could you please upload or provide the document
+        you\\u2019d like me to analyze?\"\n        }\n      ],\n      \"role\": \"assistant\"\n
+        \   }\n  ],\n  \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\":
+        null,\n  \"reasoning\": {\n    \"effort\": \"medium\",\n    \"summary\": null\n
+        \ },\n  \"safety_identifier\": null,\n  \"service_tier\": \"default\",\n  \"store\":
         true,\n  \"temperature\": 1.0,\n  \"text\": {\n    \"format\": {\n      \"type\":
         \"text\"\n    },\n    \"verbosity\": \"medium\"\n  },\n  \"tool_choice\":
         \"auto\",\n  \"tools\": [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
         \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 52,\n    \"input_tokens_details\":
-        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 196,\n    \"output_tokens_details\":
-        {\n      \"reasoning_tokens\": 128\n    },\n    \"total_tokens\": 248\n  },\n
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 81,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 0\n    },\n    \"total_tokens\": 133\n  },\n
         \ \"user\": null,\n  \"metadata\": {}\n}"
     headers:
       CF-RAY:
@@ -78,7 +77,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:24 GMT
+      - Thu, 12 Feb 2026 19:31:18 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -94,7 +93,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3262'
+      - '1769'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -164,33 +163,33 @@ interactions:
     uri: https://api.openai.com/v1/responses
   response:
     body:
-      string: "{\n  \"id\": \"resp_09d57ad21f5529e300698e1f8898748193ba8c6536ba1288b7\",\n
-        \ \"object\": \"response\",\n  \"created_at\": 1770921864,\n  \"status\":
+      string: "{\n  \"id\": \"resp_05091b7975cea42100698e2a86f30881908983fbd92fbd48a4\",\n
+        \ \"object\": \"response\",\n  \"created_at\": 1770924679,\n  \"status\":
         \"completed\",\n  \"background\": false,\n  \"billing\": {\n    \"payer\":
-        \"developer\"\n  },\n  \"completed_at\": 1770921867,\n  \"error\": null,\n
+        \"developer\"\n  },\n  \"completed_at\": 1770924683,\n  \"error\": null,\n
         \ \"frequency_penalty\": 0.0,\n  \"incomplete_details\": null,\n  \"instructions\":
         \"You are File Analyst. Expert at analyzing various file types.\\nYour personal
         goal is: Analyze and describe files accurately\",\n  \"max_output_tokens\":
         null,\n  \"max_tool_calls\": null,\n  \"model\": \"o4-mini-2025-04-16\",\n
-        \ \"output\": [\n    {\n      \"id\": \"rs_09d57ad21f5529e300698e1f894a9481938fdeb1787cafbe32\",\n
+        \ \"output\": [\n    {\n      \"id\": \"rs_05091b7975cea42100698e2a87b52c8190b25a662c10b2753f\",\n
         \     \"type\": \"reasoning\",\n      \"summary\": []\n    },\n    {\n      \"id\":
-        \"msg_09d57ad21f5529e300698e1f8afcd08193954bf9c8c9b2485e\",\n      \"type\":
+        \"msg_05091b7975cea42100698e2a8b3eec8190b6f7c247a04ea9ce\",\n      \"type\":
         \"message\",\n      \"status\": \"completed\",\n      \"content\": [\n        {\n
         \         \"type\": \"output_text\",\n          \"annotations\": [],\n          \"logprobs\":
-        [],\n          \"text\": \"I\\u2019m not seeing a document to analyze\\u2014could
-        you please upload the file or paste its content so I can determine its type?\"\n
-        \       }\n      ],\n      \"role\": \"assistant\"\n    }\n  ],\n  \"parallel_tool_calls\":
-        true,\n  \"presence_penalty\": 0.0,\n  \"previous_response_id\": null,\n  \"prompt_cache_key\":
-        null,\n  \"prompt_cache_retention\": null,\n  \"reasoning\": {\n    \"effort\":
-        \"medium\",\n    \"summary\": null\n  },\n  \"safety_identifier\": null,\n
-        \ \"service_tier\": \"default\",\n  \"store\": true,\n  \"temperature\": 1.0,\n
-        \ \"text\": {\n    \"format\": {\n      \"type\": \"text\"\n    },\n    \"verbosity\":
-        \"medium\"\n  },\n  \"tool_choice\": \"auto\",\n  \"tools\": [],\n  \"top_logprobs\":
-        0,\n  \"top_p\": 1.0,\n  \"truncation\": \"disabled\",\n  \"usage\": {\n    \"input_tokens\":
-        52,\n    \"input_tokens_details\": {\n      \"cached_tokens\": 0\n    },\n
-        \   \"output_tokens\": 235,\n    \"output_tokens_details\": {\n      \"reasoning_tokens\":
-        192\n    },\n    \"total_tokens\": 287\n  },\n  \"user\": null,\n  \"metadata\":
-        {}\n}"
+        [],\n          \"text\": \"I don\\u2019t see a document attached. Could you
+        please upload the file or share its contents so I can determine what type
+        of document it is?\"\n        }\n      ],\n      \"role\": \"assistant\"\n
+        \   }\n  ],\n  \"parallel_tool_calls\": true,\n  \"presence_penalty\": 0.0,\n
+        \ \"previous_response_id\": null,\n  \"prompt_cache_key\": null,\n  \"prompt_cache_retention\":
+        null,\n  \"reasoning\": {\n    \"effort\": \"medium\",\n    \"summary\": null\n
+        \ },\n  \"safety_identifier\": null,\n  \"service_tier\": \"default\",\n  \"store\":
+        true,\n  \"temperature\": 1.0,\n  \"text\": {\n    \"format\": {\n      \"type\":
+        \"text\"\n    },\n    \"verbosity\": \"medium\"\n  },\n  \"tool_choice\":
+        \"auto\",\n  \"tools\": [],\n  \"top_logprobs\": 0,\n  \"top_p\": 1.0,\n  \"truncation\":
+        \"disabled\",\n  \"usage\": {\n    \"input_tokens\": 52,\n    \"input_tokens_details\":
+        {\n      \"cached_tokens\": 0\n    },\n    \"output_tokens\": 254,\n    \"output_tokens_details\":
+        {\n      \"reasoning_tokens\": 192\n    },\n    \"total_tokens\": 306\n  },\n
+        \ \"user\": null,\n  \"metadata\": {}\n}"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -199,7 +198,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:44:27 GMT
+      - Thu, 12 Feb 2026 19:31:24 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -215,7 +214,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3043'
+      - '5181'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

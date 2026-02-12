@@ -45,13 +45,13 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01TtkefUHzsVG6dcGJD9sXV1","type":"message","role":"assistant","content":[{"type":"text","text":"I
-        see two files:\n\n1. An image file (PNG or similar) of a line graph titled
-        \"Revenue Over Time\"\n   - The x-axis shows years from 2020.0 to 2024.0\n   -
-        The y-axis shows revenue from $100 to $300\n   - The graph shows a linear
-        upward trend of revenue over time\n\n2. A PDF document with a single page,
-        which appears to be blank or white\n\nWould you like me to provide more details
-        about either of these files?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":3,"cache_creation_input_tokens":2091,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":2091,"ephemeral_1h_input_tokens":0},"output_tokens":115,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01XFeDCcTxbHAPAiXik49BvH","type":"message","role":"assistant","content":[{"type":"text","text":"I
+        see two files:\n\n1. An image file (chart/graph):\n- A line graph titled \"Revenue
+        Over Time\"\n- X-axis shows years from 2020 to 2024\n- Y-axis shows revenue
+        in dollars, ranging from 100 to 300\n- The line shows a steady, linear increase
+        in revenue over the time period\n\n2. A PDF document:\n- The PDF appears to
+        be a blank or white page\n- No visible text or content is present in the PDF
+        file\n\nWould you like me to provide more details about either of these files?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":3,"cache_creation_input_tokens":2091,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":2091,"ephemeral_1h_input_tokens":0},"output_tokens":127,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -62,7 +62,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:47:56 GMT
+      - Thu, 12 Feb 2026 19:30:44 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -88,7 +88,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:47:53Z'
+      - '2026-02-12T19:30:40Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -102,7 +102,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '3378'
+      - '3283'
     status:
       code: 200
       message: OK
@@ -152,12 +152,12 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_016rJDV7xAfrfHXep6EFxphz","type":"message","role":"assistant","content":[{"type":"text","text":"I
-        see two files in this submission:\n\n1. An image file (graph): A line chart
-        titled \"Revenue Over Time\" showing a steady linear increase in revenue from
-        around $100 to $300 between 2020 and 2024.\n\n2. A PDF document that appears
-        to be blank or white in its first page.\n\nWould you like me to provide more
-        details about either of these files?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":3,"cache_creation_input_tokens":0,"cache_read_input_tokens":2091,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":88,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01M5sCZgL9qiCbfHLBGQcDax","type":"message","role":"assistant","content":[{"type":"text","text":"I
+        see two files:\n\n1. An image file (a line graph) showing \"Revenue Over Time\"
+        from 2020 to 2024, with the y-axis representing revenue in dollars and showing
+        a steady linear increase from around 100 to 300 over the time period.\n\n2.
+        A PDF document (currently appears blank or white in the preview)\n\nWould
+        you like me to provide more details about either of these files?"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":3,"cache_creation_input_tokens":0,"cache_read_input_tokens":2091,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":95,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -168,7 +168,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:47:59 GMT
+      - Thu, 12 Feb 2026 19:30:47 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -194,7 +194,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:47:56Z'
+      - '2026-02-12T19:30:44Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -208,7 +208,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '2555'
+      - '3073'
     status:
       code: 200
       message: OK

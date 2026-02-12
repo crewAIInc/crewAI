@@ -30,31 +30,31 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The text provides guidelines for writing
-        effective reviews. Key principles include being clear, concise, specific,
-        and constructive; focusing on behavior and outcomes; balancing positive feedback
-        with areas for improvement; using objective criteria; suggesting next steps;
-        and proofreading before submitting the review. The guidelines aim to ensure
-        feedback is easily understood, impactful, and actionable.\\n\"\n          }\n
+        [\n          {\n            \"text\": \"The text provides guidelines for giving
+        effective feedback. Key principles include being clear, focusing on behavior
+        and outcomes with specific examples, balancing positive and constructive criticism,
+        remaining respectful, using objective criteria, suggesting actionable next
+        steps, and proofreading for clarity and tone. In essence, feedback should
+        be easily understood, objective, and geared towards improvement.\\n\"\n          }\n
         \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.27790459464578066\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 163,\n    \"candidatesTokenCount\": 68,\n    \"totalTokenCount\":
-        231,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \"STOP\",\n      \"avgLogprobs\": -0.24900928895864913\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 163,\n    \"candidatesTokenCount\": 67,\n    \"totalTokenCount\":
+        230,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
         \       \"tokenCount\": 163\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 68\n
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 67\n
         \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"VSCOabHRNtvh_uMP96nB6Qk\"\n}\n"
+        \"SDSOaae8LLzRjMcPptjXkQ4\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:47:51 GMT
+      - Thu, 12 Feb 2026 20:12:58 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1388
+      - gfet4t7; dur=1742
       Transfer-Encoding:
       - chunked
       Vary:
@@ -101,31 +101,30 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"These guidelines outline how to provide
-        effective feedback. Feedback should be clear, concise, and focus on specific
-        behaviors and outcomes with supporting examples. It should balance positive
-        aspects with areas for improvement, be respectful and constructive, and reference
-        objective criteria when possible. Actionable next steps should be suggested,
-        and the feedback should be proofread for tone, grammar, and clarity before
-        submission.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n
-        \     \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.12800926208496094\n
-        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 163,\n    \"candidatesTokenCount\":
-        75,\n    \"totalTokenCount\": 238,\n    \"promptTokensDetails\": [\n      {\n
-        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 163\n      }\n    ],\n
-        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 75\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n
-        \ \"responseId\": \"VyCOafa1EtfR_uMPsueW6Qk\"\n}\n"
+        [\n          {\n            \"text\": \"The text provides guidelines for writing
+        effective feedback. Key recommendations include being clear, concise, specific,
+        and respectful. Feedback should focus on behavior and outcomes, balance positive
+        and negative aspects, use objective criteria, and suggest actionable next
+        steps. Proofreading is essential before submitting feedback.\\n\"\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.29874773892489348\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 163,\n    \"candidatesTokenCount\": 55,\n    \"totalTokenCount\":
+        218,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 163\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 55\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
+        \"SjSOab3-HaajjMcP38-yyQw\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:47:52 GMT
+      - Thu, 12 Feb 2026 20:12:59 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1185
+      - gfet4t7; dur=1198
       Transfer-Encoding:
       - chunked
       Vary:

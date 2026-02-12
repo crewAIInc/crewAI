@@ -43,19 +43,20 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8Vz5b6D86Bzfq5T8H92101A6Dgzt\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921943,\n  \"model\": \"o4-mini-2025-04-16\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WfeaQ5MclYvsuSOPFzuCbDDygYP\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924582,\n  \"model\": \"o4-mini-2025-04-16\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"The image is a simple line chart titled
-        \u201CRevenue Over Time,\u201D with the x-axis showing years 2020 through
-        2024 and the y-axis showing revenue in millions of dollars. It plots a straight-line
-        increase from about $100 M in 2020 to about $300 M in 2024, rising roughly
-        $50 M each year.\",\n        \"refusal\": null,\n        \"annotations\":
+        \u201CRevenue Over Time.\u201D  \\n\u2022 X-axis: Years from 2020 to 2024
+        \ \\n\u2022 Y-axis: Revenue in millions of dollars ($M)  \\n\u2022 Data points:
+        \ \\n  \u2013 2020: $100 M  \\n  \u2013 2021: $150 M  \\n  \u2013 2022: $200
+        M  \\n  \u2013 2023: $250 M  \\n  \u2013 2024: $300 M  \\n\\nIt shows a steady,
+        linear increase of $50 M per year.\",\n        \"refusal\": null,\n        \"annotations\":
         []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\":
-        {\n    \"prompt_tokens\": 563,\n    \"completion_tokens\": 222,\n    \"total_tokens\":
-        785,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
+        {\n    \"prompt_tokens\": 563,\n    \"completion_tokens\": 328,\n    \"total_tokens\":
+        891,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
         0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-        128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
+        192,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
         \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
@@ -66,7 +67,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:46 GMT
+      - Thu, 12 Feb 2026 19:29:46 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -84,7 +85,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3826'
+      - '3950'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -162,19 +163,20 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8Vz9oIIB8TdG2kQa87g7KHWaqkHz\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921947,\n  \"model\": \"o4-mini-2025-04-16\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WfiXJ7A4LmHm6P0Xr3qHNxoqsVk\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924586,\n  \"model\": \"o4-mini-2025-04-16\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"The image is a simple line chart titled
-        \u201CRevenue Over Time.\u201D The horizontal axis spans years 2020 through
-        2024, and the vertical axis shows revenue in millions of dollars (from $100
-        M up to $300 M). A single blue line rises steadily from $100 M in 2020 to
-        $300 M in 2024, indicating linear year-over-year revenue growth.\",\n        \"refusal\":
+        \u201CRevenue Over Time.\u201D  \\n- The horizontal axis is labeled \u201CYear\u201D
+        (2020, 2021, 2022, 2023, 2024).  \\n- The vertical axis is labeled \u201CRevenue
+        ($M)\u201D and runs from $100 M to $300 M.  \\n- The plotted line rises steadily
+        from $100 M in 2020 to $300 M in 2024, showing a uniform $50 M increase each
+        year.  \\n- Light gridlines appear in the background for reference.\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"stop\"\n
         \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 563,\n    \"completion_tokens\":
-        166,\n    \"total_tokens\": 729,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        263,\n    \"total_tokens\": 826,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-        {\n      \"reasoning_tokens\": 64,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        {\n      \"reasoning_tokens\": 128,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": null\n}\n"
     headers:
@@ -185,7 +187,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:49 GMT
+      - Thu, 12 Feb 2026 19:29:49 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -203,7 +205,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2769'
+      - '3028'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

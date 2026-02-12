@@ -30,27 +30,27 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The audio appears to contain the distinct
-        sound of a single beep.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n
-        \     },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.352912357875279\n
+        [\n          {\n            \"text\": \"The audio appears to contain the sound
+        of a sine wave. \\n\"\n          }\n        ],\n        \"role\": \"model\"\n
+        \     },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.16834642205919539\n
         \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 62,\n    \"candidatesTokenCount\":
         14,\n    \"totalTokenCount\": 76,\n    \"promptTokensDetails\": [\n      {\n
         \       \"modality\": \"TEXT\",\n        \"tokenCount\": 37\n      },\n      {\n
         \       \"modality\": \"AUDIO\",\n        \"tokenCount\": 25\n      }\n    ],\n
         \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
         \       \"tokenCount\": 14\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n
-        \ \"responseId\": \"8h-Oae6HDqfRjMcP846UiA4\"\n}\n"
+        \ \"responseId\": \"vjKOadbcDYCbjMcPr_iviQE\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:46:11 GMT
+      - Thu, 12 Feb 2026 20:06:23 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1342
+      - gfet4t7; dur=1898
       Transfer-Encoding:
       - chunked
       Vary:
@@ -97,27 +97,27 @@ interactions:
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The audio appears to contain the sound
-        of a sine wave.\\n\"\n          }\n        ],\n        \"role\": \"model\"\n
-        \     },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\": -0.19189137678879958\n
-        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 62,\n    \"candidatesTokenCount\":
-        13,\n    \"totalTokenCount\": 75,\n    \"promptTokensDetails\": [\n      {\n
-        \       \"modality\": \"AUDIO\",\n        \"tokenCount\": 25\n      },\n      {\n
-        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 37\n      }\n    ],\n
-        \   \"candidatesTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 13\n      }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n
-        \ \"responseId\": \"8x-Oaf33It6RjMcP5Kuj8Q4\"\n}\n"
+        [\n          {\n            \"text\": \"The audio appears to contain the distinct
+        sound of a high-pitched whistle.\\n\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
+        -0.34221607446670532\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        62,\n    \"candidatesTokenCount\": 16,\n    \"totalTokenCount\": 78,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 37\n
+        \     },\n      {\n        \"modality\": \"AUDIO\",\n        \"tokenCount\":
+        25\n      }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
+        \"TEXT\",\n        \"tokenCount\": 16\n      }\n    ]\n  },\n  \"modelVersion\":
+        \"gemini-2.0-flash\",\n  \"responseId\": \"wDKOacrKC6rQjMcPmtawkAI\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 18:46:12 GMT
+      - Thu, 12 Feb 2026 20:06:25 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1347
+      - gfet4t7; dur=1643
       Transfer-Encoding:
       - chunked
       Vary:

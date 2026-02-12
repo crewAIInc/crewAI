@@ -45,10 +45,11 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_014Fwz8AuSsqCDZFeWbM272v","type":"message","role":"assistant","content":[{"type":"text","text":"I
-        apologize, but the document appears to be completely blank or white. There
-        is no discernible text, image, or content visible on this page. The file is
-        a PDF document, but it contains no readable information that I can analyze."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1658,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":53,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01C8ZkZMunUVDUDd8mh1r1We","type":"message","role":"assistant","content":[{"type":"text","text":"I
+        apologize, but the image appears to be completely blank or white. Without
+        any visible text, graphics, or distinguishing features, I cannot determine
+        the type of document. The file is a PDF, but the content page seems to be
+        empty or failed to render properly."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1658,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":58,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -59,7 +60,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:48:07 GMT
+      - Thu, 12 Feb 2026 19:30:55 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -85,7 +86,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:48:05Z'
+      - '2026-02-12T19:30:53Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -99,7 +100,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1947'
+      - '2129'
     status:
       code: 200
       message: OK
@@ -149,10 +150,11 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01ACZd27CU6WZB4AuXn5bkdr","type":"message","role":"assistant","content":[{"type":"text","text":"I
-        apologize, but the document appears to be a blank white page. While it is
-        a PDF file format, there is no visible content or text on this page that I
-        can analyze or describe."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1658,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":43,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_013jb7edagayZxqGs6ioACyU","type":"message","role":"assistant","content":[{"type":"text","text":"I
+        apologize, but the image appears to be completely blank or white. There are
+        no visible contents or text that I can analyze to determine the type of document.
+        Without any discernible information, I cannot definitively state what type
+        of document this is."}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":1658,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":55,"service_tier":"standard","inference_geo":"not_available"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -163,7 +165,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:48:09 GMT
+      - Thu, 12 Feb 2026 19:30:58 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -189,7 +191,7 @@ interactions:
       anthropic-ratelimit-requests-remaining:
       - '3999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T18:48:07Z'
+      - '2026-02-12T19:30:56Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -203,7 +205,7 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1713'
+      - '2005'
     status:
       code: 200
       message: OK

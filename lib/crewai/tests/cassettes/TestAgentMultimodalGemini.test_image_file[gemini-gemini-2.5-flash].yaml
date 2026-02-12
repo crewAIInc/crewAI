@@ -26,35 +26,32 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The image is a line graph titled \\\"Revenue
-        Over Time\\\". The x-axis represents the year, ranging from 2020 to 2024.
-        The y-axis represents revenue in millions of dollars, ranging from 100 to
-        300. The graph shows a straight line trending upwards, indicating a steady
-        increase in revenue over the specified time period.\\n\"\n          }\n        ],\n
-        \       \"role\": \"model\"\n      },\n      \"finishReason\": \"STOP\",\n
-        \     \"avgLogprobs\": -0.19183443769623962\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1328,\n    \"candidatesTokenCount\": 79,\n    \"totalTokenCount\":
-        1407,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 38\n      },\n      {\n        \"modality\": \"IMAGE\",\n
-        \       \"tokenCount\": 1290\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 79\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"jCqOaeGHGOi9jMcPmN3ssAw\"\n}\n"
+        [\n          {\n            \"text\": \"This is a line graph titled \\\"Revenue
+        Over Time,\\\" displaying a steady, linear increase in revenue from $100M
+        in 2020 to $300M in 2024. The x-axis represents \\\"Year,\\\" and the y-axis
+        represents \\\"Revenue ($M).\\\"\"\n          }\n        ],\n        \"role\":
+        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"index\": 0\n
+        \   }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\": 298,\n    \"candidatesTokenCount\":
+        63,\n    \"totalTokenCount\": 543,\n    \"promptTokensDetails\": [\n      {\n
+        \       \"modality\": \"TEXT\",\n        \"tokenCount\": 40\n      },\n      {\n
+        \       \"modality\": \"IMAGE\",\n        \"tokenCount\": 258\n      }\n    ],\n
+        \   \"thoughtsTokenCount\": 182\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n
+        \ \"responseId\": \"QUqOaZ_-AYi8_uMP25m7gAQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:26 GMT
+      - Thu, 12 Feb 2026 21:46:41 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1863
+      - gfet4t7; dur=2169
       Transfer-Encoding:
       - chunked
       Vary:
@@ -97,34 +94,33 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"The image is a line graph titled \\\"Revenue
-        Over Time\\\". The x-axis represents the year from 2020 to 2024, and the y-axis
-        represents revenue in millions of dollars. The graph shows a linear increase
-        in revenue from $100 million in 2020 to $300 million in 2024.\\n\"\n          }\n
+        [\n          {\n            \"text\": \"This image is a line graph titled
+        \\\"Revenue Over Time\\\". It displays revenue in millions of dollars ($M)
+        on the y-axis, ranging from $100M to $300M, against the year on the x-axis,
+        spanning from 2020 to 2024. A single blue line shows a consistent, linear
+        increase in revenue from $100M in 2020 to $300M in 2024.\"\n          }\n
         \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
-        \"STOP\",\n      \"avgLogprobs\": -0.059104222517747149\n    }\n  ],\n  \"usageMetadata\":
-        {\n    \"promptTokenCount\": 1328,\n    \"candidatesTokenCount\": 78,\n    \"totalTokenCount\":
-        1406,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"IMAGE\",\n
-        \       \"tokenCount\": 1290\n      },\n      {\n        \"modality\": \"TEXT\",\n
-        \       \"tokenCount\": 38\n      }\n    ],\n    \"candidatesTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 78\n
-        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
-        \"jiqOaYGkEI7UjMcPjoCm8Qw\"\n}\n"
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        298,\n    \"candidatesTokenCount\": 102,\n    \"totalTokenCount\": 584,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 40\n      },\n      {\n        \"modality\": \"IMAGE\",\n
+        \       \"tokenCount\": 258\n      }\n    ],\n    \"thoughtsTokenCount\":
+        184\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"QkqOaff5Or6o_uMPwP3KgAY\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:28 GMT
+      - Thu, 12 Feb 2026 21:46:43 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2514
+      - gfet4t7; dur=1925
       Transfer-Encoding:
       - chunked
       Vary:

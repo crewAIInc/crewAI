@@ -43,17 +43,16 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8Vyr7LN4KGyqqhS94I0vIGmErAF6\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921929,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WgAzd8jYvPcWJroJO4Y1HW3RX7v\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924614,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"The image is a line graph titled \\\"Revenue
-        Over Time,\\\" displaying changes in revenue from 2020 to 2024. The x-axis
-        represents the year, while the y-axis indicates revenue in millions of dollars
-        ($M). The graph shows a steady linear increase in revenue, starting at $100M
-        in 2020 and reaching $300M by 2024.\",\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 472,\n    \"completion_tokens\":
-        74,\n    \"total_tokens\": 546,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        Over Time.\\\" It shows a linear increase in revenue from $100 million in
+        2020 to $300 million in 2024. The x-axis represents the year, while the y-axis
+        represents revenue in millions of dollars.\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 472,\n    \"completion_tokens\":
+        54,\n    \"total_tokens\": 526,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
         0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
@@ -66,7 +65,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:32 GMT
+      - Thu, 12 Feb 2026 19:30:17 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -84,7 +83,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3091'
+      - '2767'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
@@ -162,18 +161,18 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D8Vyuzdzk5Zopbl17BlPgZHpEr3Zz\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770921932,\n  \"model\": \"gpt-4o-2024-08-06\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8WgDX1n1Uvs3hWCsTWtkQZ3uhMsJ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770924617,\n  \"model\": \"gpt-4o-2024-08-06\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"The image is a line graph titled \\\"Revenue
-        Over Time,\\\" showing a linear increase in revenue from $100 million in 2020
-        to $300 million in 2024. The x-axis represents the years from 2020 to 2024,
-        and the y-axis represents the revenue in millions of dollars ($M). The line
-        steadily rises, indicating consistent growth over the period.\",\n        \"refusal\":
-        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
-        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        472,\n    \"completion_tokens\": 76,\n    \"total_tokens\": 548,\n    \"prompt_tokens_details\":
-        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        Over Time,\\\" showing a consistent increase in revenue from 2020 to 2024.
+        The x-axis represents the years, while the y-axis represents revenue in millions
+        of dollars ($M), ranging from 100 to 300. The graph demonstrates a steady
+        upward trend.\",\n        \"refusal\": null,\n        \"annotations\": []\n
+        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
+        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 472,\n    \"completion_tokens\":
+        63,\n    \"total_tokens\": 535,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_ad98c18a04\"\n}\n"
@@ -185,7 +184,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 18:45:36 GMT
+      - Thu, 12 Feb 2026 19:30:20 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -203,7 +202,7 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '3966'
+      - '3561'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:

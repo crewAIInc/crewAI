@@ -26,31 +26,29 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Based on the provided audio, I hear
-        the sound of a telephone ringing.\\n\"\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -0.26358166337013245\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        66,\n    \"candidatesTokenCount\": 16,\n    \"totalTokenCount\": 82,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 41\n
+        [\n          {\n            \"text\": \"I hear a **phone ringing**.\"\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        76,\n    \"candidatesTokenCount\": 7,\n    \"totalTokenCount\": 137,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 43\n
         \     },\n      {\n        \"modality\": \"AUDIO\",\n        \"tokenCount\":
-        25\n      }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 16\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-2.0-flash\",\n  \"responseId\": \"kyqOaf7iGNWJ-sAPh-fEmQ4\"\n}\n"
+        33\n      }\n    ],\n    \"thoughtsTokenCount\": 54\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"O0qOafWMFb-U_uMPmq2sAQ\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:33 GMT
+      - Thu, 12 Feb 2026 21:46:35 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=1765
+      - gfet4t7; dur=1813
       Transfer-Encoding:
       - chunked
       Vary:
@@ -93,31 +91,29 @@ interactions:
       x-goog-api-key:
       - X-GOOG-API-KEY-XXX
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
   response:
     body:
       string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
-        [\n          {\n            \"text\": \"Based on the provided audio, I hear
-        the distinct sound of a dial tone.\\n\"\n          }\n        ],\n        \"role\":
-        \"model\"\n      },\n      \"finishReason\": \"STOP\",\n      \"avgLogprobs\":
-        -0.082689825226278865\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
-        66,\n    \"candidatesTokenCount\": 17,\n    \"totalTokenCount\": 83,\n    \"promptTokensDetails\":
-        [\n      {\n        \"modality\": \"AUDIO\",\n        \"tokenCount\": 25\n
-        \     },\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\":
-        41\n      }\n    ],\n    \"candidatesTokensDetails\": [\n      {\n        \"modality\":
-        \"TEXT\",\n        \"tokenCount\": 17\n      }\n    ]\n  },\n  \"modelVersion\":
-        \"gemini-2.0-flash\",\n  \"responseId\": \"lSqOad_xC8XQjMcP9YfmuAQ\"\n}\n"
+        [\n          {\n            \"text\": \"The audio contains a **telephone dial
+        tone**.\"\n          }\n        ],\n        \"role\": \"model\"\n      },\n
+        \     \"finishReason\": \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 76,\n    \"candidatesTokenCount\": 9,\n    \"totalTokenCount\":
+        126,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 43\n      },\n      {\n        \"modality\": \"AUDIO\",\n
+        \       \"tokenCount\": 33\n      }\n    ],\n    \"thoughtsTokenCount\": 41\n
+        \ },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"PEqOafTwO_yT_uMP6d_hqAI\"\n}\n"
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 12 Feb 2026 19:31:35 GMT
+      - Thu, 12 Feb 2026 21:46:37 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2323
+      - gfet4t7; dur=1615
       Transfer-Encoding:
       - chunked
       Vary:
