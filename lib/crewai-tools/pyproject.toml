@@ -38,6 +38,9 @@ sqlalchemy = [
 multion = [
     "multion>=1.1.0",
 ]
+nimble-python = [
+    "nimble-python>=0.4.0",
+]
 firecrawl-py = [
     "firecrawl-py>=1.8.0",
 ]

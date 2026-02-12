@@ -1441,6 +1441,9 @@ multion = [
 mysql = [
     { name = "pymysql" },
 ]
+nimble-python = [
+    { name = "nimble-python" },
+]
 oxylabs = [
     { name = "oxylabs" },
 ]
@@ -1526,6 +1529,7 @@ requires-dist = [
     { name = "multion", marker = "extra == 'multion'", specifier = ">=1.1.0" },
     { name = "nest-asyncio", marker = "extra == 'bedrock'", specifier = ">=1.6.0" },
     { name = "nest-asyncio", marker = "extra == 'contextual'", specifier = ">=1.6.0" },
+    { name = "nimble-python", marker = "extra == 'nimble-python'", specifier = ">=0.4.0" },
     { name = "oxylabs", marker = "extra == 'oxylabs'", specifier = "==2.0.0" },
     { name = "patronus", marker = "extra == 'patronus'", specifier = ">=0.0.16" },
     { name = "playwright", marker = "extra == 'bedrock'", specifier = ">=1.52.0" },
@@ -1556,7 +1560,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "nimble-python", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -4259,6 +4263,23 @@ resolution-markers = [
 sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762", size = 2068504, upload-time = "2025-12-08T17:02:38.159Z" },
+]
+
+[[package]]
+name = "nimble-python"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1b/d2/411d62768130bfdc273216113787eab051543b13c430ceefb90553a4bbe9/nimble_python-0.4.0.tar.gz", hash = "sha256:82b743253dec318383fc81526fc5c9573ff1fa27ba06d33422a0d1951dd29c2a", size = 262863, upload-time = "2026-02-09T18:49:12.21Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e7/5f/d963b5d12aceedbe7cacb6e05ad0ae7513c34c0c84a386b66da6c4d8f6d9/nimble_python-0.4.0-py3-none-any.whl", hash = "sha256:b1c3237c307529d8d16f947a5631dbe6c5f39c08f32f3e1670441b58d973f252", size = 124011, upload-time = "2026-02-09T18:49:10.898Z" },
 ]
 
 [[package]]
