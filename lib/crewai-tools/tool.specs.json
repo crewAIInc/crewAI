@@ -6697,9 +6697,9 @@
       }
     },
     {
-      "description": "A tool that reads the content of a file. To use this tool, provide a 'file_path' parameter with the path to the file you want to read. Optionally, provide 'start_line' to start reading from a specific line and 'line_count' to limit the number of lines read.",
+      "description": "Read content from a file on disk. Returns file content with line numbers prefixed (format: 'LINE_NUMBER|CONTENT'). Use 'offset' to start from a specific line (negative values read from end), and 'limit' to control how many lines to read. For large files, reads are automatically limited.",
       "env_vars": [],
-      "humanized_name": "Read a file's content",
+      "humanized_name": "read_file",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -6738,7 +6738,7 @@
             "type": "object"
           }
         },
-        "description": "A tool for reading file contents.\n\nThis tool inherits its schema handling from BaseTool to avoid recursive schema\ndefinition issues. The args_schema is set to FileReadToolSchema which defines\nthe required file_path parameter. The schema should not be overridden in the\nconstructor as it would break the inheritance chain and cause infinite loops.\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool(file_path=\"/path/to/file.txt\")\n    >>> content = tool.run()  # Reads /path/to/file.txt\n    >>> content = tool.run(file_path=\"/path/to/other.txt\")  # Reads other.txt\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", start_line=100, line_count=50\n    ... )  # Reads lines 100-149",
+        "description": "A tool for reading file contents with line number support.\n\nThis tool provides Claude Code-like file reading capabilities:\n- Line number prefixes for easy reference\n- Offset/limit support for reading specific portions of large files\n- Negative offset support for reading from end of file\n- Binary file detection\n- File metadata (total lines) in response header\n\nThe tool supports two ways of specifying the file path:\n1. At construction time via the file_path parameter\n2. At runtime via the file_path parameter in the tool's input\n\nArgs:\n    file_path (Optional[str]): Path to the file to be read. If provided,\n        this becomes the default file path for the tool.\n    **kwargs: Additional keyword arguments passed to BaseTool.\n\nExample:\n    >>> tool = FileReadTool()\n    >>> content = tool.run(file_path=\"/path/to/file.txt\")  # Reads entire file\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", offset=100, limit=50\n    ... )  # Lines 100-149\n    >>> content = tool.run(\n    ...     file_path=\"/path/to/file.txt\", offset=-20\n    ... )  # Last 20 lines",
         "properties": {
           "file_path": {
             "anyOf": [
@@ -6766,6 +6766,25 @@
             "title": "File Path",
             "type": "string"
           },
+          "include_line_numbers": {
+            "default": true,
+            "description": "Whether to prefix each line with its line number (format: 'LINE_NUMBER|CONTENT')",
+            "title": "Include Line Numbers",
+            "type": "boolean"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum number of lines to read. If None, reads up to the default limit (500 lines) for large files, or entire file for small files.",
+            "title": "Limit"
+          },
           "line_count": {
             "anyOf": [
               {
@@ -6776,8 +6795,21 @@
               }
             ],
             "default": null,
-            "description": "Number of lines to read. If None, reads the entire file",
+            "description": "[DEPRECATED: Use 'limit' instead] Number of lines to read.",
             "title": "Line Count"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Line number to start reading from. Positive values are 1-indexed from the start. Negative values count from the end (e.g., -10 reads last 10 lines). If None, reads from the beginning.",
+            "title": "Offset"
           },
           "start_line": {
             "anyOf": [
@@ -6788,8 +6820,8 @@
                 "type": "null"
               }
             ],
-            "default": 1,
-            "description": "Line number to start reading from (1-indexed)",
+            "default": null,
+            "description": "[DEPRECATED: Use 'offset' instead] Line number to start reading from (1-indexed).",
             "title": "Start Line"
           }
         },
@@ -8357,6 +8389,113 @@
           "content_types"
         ],
         "title": "GithubSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Find files matching a glob pattern. Use to discover files by name or extension. Examples: '*.py' finds all Python files, '**/*.yaml' finds YAML files recursively, 'test_*.py' finds test files. Returns matching file paths sorted by modification time.",
+      "env_vars": [],
+      "humanized_name": "glob",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool for finding files matching glob patterns.\n\nRecursively searches for files matching a glob pattern within a directory.\nUseful for discovering files by name, extension, or path pattern.\nComplements GrepTool which searches by file content.\n\nExample:\n    >>> tool = GlobTool()\n    >>> result = tool.run(pattern=\"*.py\", path=\"/path/to/project\")\n    >>> result = tool.run(pattern=\"**/*.yaml\", output_mode=\"detailed\")",
+        "properties": {},
+        "title": "GlobTool",
+        "type": "object"
+      },
+      "name": "GlobTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Schema for glob tool arguments.",
+        "properties": {
+          "dirs_only": {
+            "default": false,
+            "description": "If True, only match directories, not files.",
+            "title": "Dirs Only",
+            "type": "boolean"
+          },
+          "files_only": {
+            "default": true,
+            "description": "If True (default), only match files, not directories.",
+            "title": "Files Only",
+            "type": "boolean"
+          },
+          "include_hidden": {
+            "default": false,
+            "description": "Whether to include hidden files and directories (starting with '.').",
+            "title": "Include Hidden",
+            "type": "boolean"
+          },
+          "output_mode": {
+            "default": "paths",
+            "description": "Output format: 'paths' shows file paths one per line, 'tree' shows directory tree structure, 'detailed' includes file sizes.",
+            "enum": [
+              "paths",
+              "tree",
+              "detailed"
+            ],
+            "title": "Output Mode",
+            "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Directory to search in. Defaults to current working directory.",
+            "title": "Path"
+          },
+          "pattern": {
+            "description": "Glob pattern to match files. Examples: '*.py' (Python files), '**/*.yaml' (all YAML files recursively), 'src/**/*.ts' (TypeScript in src), 'test_*.py' (test files). Patterns not starting with '**/' are auto-prefixed for recursive search.",
+            "title": "Pattern",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ],
+        "title": "GlobToolSchema",
         "type": "object"
       }
     },
