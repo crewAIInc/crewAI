@@ -31,6 +31,8 @@ from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.context import reset_current_task_id, set_current_task_id
+from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -496,6 +498,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task synchronously."""
+        self.start_time = datetime.datetime.now()
         return self._execute_core(agent, context, tools)
 
     @property
@@ -536,6 +539,7 @@ class Task(BaseModel):
     ) -> None:
         """Execute the task asynchronously with context handling."""
         try:
+            self.start_time = datetime.datetime.now()
             result = self._execute_core(agent, context, tools)
             future.set_result(result)
         except Exception as e:
@@ -548,6 +552,7 @@ class Task(BaseModel):
         tools: list[BaseTool] | None = None,
     ) -> TaskOutput:
         """Execute the task asynchronously using native async/await."""
+        self.start_time = datetime.datetime.now()
         return await self._aexecute_core(agent, context, tools)
 
     async def _aexecute_core(
@@ -557,6 +562,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task asynchronously."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -565,8 +571,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -578,6 +582,8 @@ class Task(BaseModel):
                 context=context,
                 tools=tools,
             )
+
+            self._post_agent_execution(agent)
 
             if not self._guardrails and not self._guardrail:
                 pydantic_output, json_output = self._export_output(result)
@@ -644,6 +650,7 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
 
     def _execute_core(
         self,
@@ -652,6 +659,7 @@ class Task(BaseModel):
         tools: list[Any] | None,
     ) -> TaskOutput:
         """Run the core execution logic of the task."""
+        task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
             agent = agent or self.agent
@@ -660,8 +668,6 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
-            self.start_time = datetime.datetime.now()
 
             self.prompt_context = context
             tools = tools or self.tools or []
@@ -673,6 +679,8 @@ class Task(BaseModel):
                 context=context,
                 tools=tools,
             )
+
+            self._post_agent_execution(agent)
 
             if not self._guardrails and not self._guardrail:
                 pydantic_output, json_output = self._export_output(result)
@@ -740,6 +748,10 @@ class Task(BaseModel):
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
+            reset_current_task_id(task_id_token)
+
+    def _post_agent_execution(self, agent: BaseAgent) -> None:
+        pass
 
     def prompt(self) -> str:
         """Generates the task prompt with optional markdown formatting.
@@ -862,6 +874,11 @@ Follow these guidelines:
             ) from e
         except ValueError as e:
             raise ValueError(f"Error interpolating description: {e!s}") from e
+
+        self.description = process_content(self.description, {"task": self})
+        self._original_expected_output = process_content(
+            self._original_expected_output, {"task": self}
+        )
 
         try:
             self.expected_output = interpolate_only(

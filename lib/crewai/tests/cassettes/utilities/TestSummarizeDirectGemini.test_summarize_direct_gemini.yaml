@@ -1,0 +1,103 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "Analyze the following conversation and
+      create a structured summary that preserves all information needed to continue
+      the task seamlessly.\n\n<conversation>\n[USER]: Research the latest developments
+      in large language models. Focus on architecture improvements and training techniques.\n\n[ASSISTANT]:
+      I''ll research the latest developments in large language models. Based on my
+      knowledge, recent advances include:\n1. Mixture of Experts (MoE) architectures\n2.
+      Improved attention mechanisms like Flash Attention\n3. Better training data
+      curation techniques\n4. Constitutional AI and RLHF improvements\n\n[USER]: Can
+      you go deeper on the MoE architectures? What are the key papers?\n\n[ASSISTANT]:
+      Key papers on Mixture of Experts:\n- Switch Transformers (Google, 2021) - simplified
+      MoE routing\n- GShard - scaling to 600B parameters\n- Mixtral (Mistral AI) -
+      open-source MoE model\nThe main advantage is computational efficiency: only
+      a subset of experts is activated per token.\n</conversation>\n\nCreate a summary
+      with these sections:\n1. **Task Overview**: What is the agent trying to accomplish?\n2.
+      **Current State**: What has been completed so far? What step is the agent on?\n3.
+      **Important Discoveries**: Key facts, data, tool results, or findings that must
+      not be lost.\n4. **Next Steps**: What should the agent do next based on the
+      conversation?\n5. **Context to Preserve**: Any specific values, names, URLs,
+      code snippets, or details referenced in the conversation.\n\nWrap your entire
+      summary in <summary> tags.\n\n<summary>\n[Your structured summary here]\n</summary>"}],
+      "role": "user"}], "systemInstruction": {"parts": [{"text": "You are a precise
+      assistant that creates structured summaries of agent conversations. You preserve
+      critical context needed for seamless task continuation."}], "role": "user"},
+      "generationConfig": {"temperature": 0.0}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1895'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"```xml\\n\\u003csummary\\u003e\\n**Task
+        Overview**: Research the latest developments in large language models, focusing
+        on architecture improvements and training techniques.\\n\\n**Current State**:
+        The agent has identified several key areas of advancement in LLMs: Mixture
+        of Experts (MoE) architectures, improved attention mechanisms (Flash Attention),
+        better training data curation, and Constitutional AI/RLHF improvements. The
+        user has requested a deeper dive into MoE architectures. The agent has provided
+        an initial overview of MoE architectures and listed some key papers.\\n\\n**Important
+        Discoveries**:\\n*   Key MoE papers: Switch Transformers (Google, 2021), GShard,
+        Mixtral (Mistral AI).\\n*   MoE advantage: Computational efficiency through
+        selective activation of experts.\\n\\n**Next Steps**: Continue researching
+        MoE architectures based on the user's request for more detail. The agent should
+        elaborate further on the listed papers and potentially find more recent or
+        relevant publications.\\n\\n**Context to Preserve**:\\n*   Focus areas: Architecture
+        improvements and training techniques for LLMs.\\n*   Specific architectures:
+        Mixture of Experts (MoE), Flash Attention.\\n*   Training techniques: Data
+        curation, Constitutional AI, RLHF.\\n*   Specific papers: Switch Transformers
+        (Google, 2021), GShard, Mixtral (Mistral AI).\\n\\u003c/summary\\u003e\\n```\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"avgLogprobs\": -0.14186729703630721\n    }\n  ],\n  \"usageMetadata\":
+        {\n    \"promptTokenCount\": 373,\n    \"candidatesTokenCount\": 280,\n    \"totalTokenCount\":
+        653,\n    \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 373\n      }\n    ],\n    \"candidatesTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 280\n
+        \     }\n    ]\n  },\n  \"modelVersion\": \"gemini-2.0-flash\",\n  \"responseId\":
+        \"GEGKabP3OcGH-8YPzZCj2Ao\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 09 Feb 2026 20:18:35 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2310
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

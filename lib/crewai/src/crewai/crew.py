@@ -187,6 +187,7 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -751,18 +752,27 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
             clear_files(self.id)
             detach(token)
+
+    def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
+        return result
 
     def kickoff_for_each(
         self,
@@ -936,13 +946,19 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
@@ -1181,6 +1197,9 @@ class Crew(FlowTrackable, BaseModel):
             self.manager_agent = manager
         manager.crew = self
 
+    def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        return None
+
     def _execute_tasks(
         self,
         tasks: list[Task],
@@ -1197,6 +1216,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
 
         task_outputs: list[TaskOutput] = []
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
@@ -1305,8 +1327,10 @@ class Crew(FlowTrackable, BaseModel):
         if files:
             supported_types: list[str] = []
             if agent and agent.llm and agent.llm.supports_multimodal():
-                provider = getattr(agent.llm, "provider", None) or getattr(
-                    agent.llm, "model", "openai"
+                provider = (
+                    getattr(agent.llm, "provider", None)
+                    or getattr(agent.llm, "model", None)
+                    or "openai"
                 )
                 api = getattr(agent.llm, "api", None)
                 supported_types = get_supported_content_types(provider, api)
@@ -1502,12 +1526,14 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+        crewai_event_bus.flush()
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
                 crew_name=self.name,
                 output=final_task_output,
                 total_tokens=self.token_usage.total_tokens,
+                started_event_id=self._kickoff_event_id,
             ),
         )
 
@@ -2011,7 +2037,13 @@ class Crew(FlowTrackable, BaseModel):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
-        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            should_suppress_tracing_messages,
+        )
+
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 
