@@ -236,9 +236,7 @@ class StepExecutor:
                     ).format(step_number=step_num, result=result)
                 )
 
-        parts.append(
-            self._i18n.retrieve("planning", "step_executor_complete_step")
-        )
+        parts.append(self._i18n.retrieve("planning", "step_executor_complete_step"))
 
         return "\n".join(parts)
 
