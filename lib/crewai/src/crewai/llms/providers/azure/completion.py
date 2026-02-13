@@ -171,13 +171,14 @@ class AzureCompletion(BaseLLM):
         self.stream = stream
         self.response_format = response_format
 
-        self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
-        )
-
         self.is_azure_openai_endpoint = (
             "openai.azure.com" in self.endpoint
             and "/openai/deployments/" in self.endpoint
+        )
+
+        self.is_openai_model = (
+            any(prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"])
+            or self.is_azure_openai_endpoint
         )
 
     @staticmethod
