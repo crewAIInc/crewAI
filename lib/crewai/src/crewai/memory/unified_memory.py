@@ -204,8 +204,20 @@ class Memory:
         """Submit a save operation to the background thread pool.
 
         The future is tracked so that ``drain_writes()`` can wait for it.
+        If the pool has been shut down (e.g. after ``close()``), the save
+        runs synchronously as a fallback so late saves still succeed.
         """
-        future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+        try:
+            future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+        except RuntimeError:
+            # Pool shut down -- run synchronously as fallback
+            future = Future()
+            try:
+                result = fn(*args, **kwargs)
+                future.set_result(result)
+            except Exception as exc:
+                future.set_exception(exc)
+            return future
         with self._pending_lock:
             self._pending_saves.append(future)
         future.add_done_callback(self._on_save_done)
