@@ -2,7 +2,7 @@ import logging
 import re
 from typing import Any
 
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import generate_tool_parameters_schema
 from crewai.utilities.string_utils import sanitize_tool_name
 
 
@@ -78,8 +78,7 @@ def extract_tool_info(tool: dict[str, Any]) -> tuple[str, str, dict[str, Any]]:
         # Also check for args_schema (Pydantic format)
         if not parameters and "args_schema" in tool:
             if hasattr(tool["args_schema"], "model_json_schema"):
-                schema_output = generate_model_description(tool["args_schema"])
-                parameters = schema_output.get("json_schema", {}).get("schema", {})
+                parameters = generate_tool_parameters_schema(tool["args_schema"])
 
     return name, description, parameters
 

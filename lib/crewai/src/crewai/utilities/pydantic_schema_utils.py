@@ -454,6 +454,64 @@ def generate_model_description(model: type[BaseModel]) -> ModelDescription:
     }
 
 
+def _strip_schema_metadata(schema: Any) -> Any:
+    """Recursively strip metadata fields that are unsupported by non-OpenAI providers.
+
+    Removes fields like 'title', 'default', and 'additionalProperties' that
+    Gemini and Bedrock/Anthropic APIs do not accept in tool parameter schemas.
+
+    Args:
+        schema: JSON schema dict or list to clean.
+
+    Returns:
+        Cleaned schema without unsupported metadata fields.
+    """
+    _unsupported_keys = {"title", "default", "additionalProperties"}
+
+    if isinstance(schema, dict):
+        for key in _unsupported_keys:
+            schema.pop(key, None)
+        for value in schema.values():
+            _strip_schema_metadata(value)
+    elif isinstance(schema, list):
+        for item in schema:
+            _strip_schema_metadata(item)
+    return schema
+
+
+def generate_tool_parameters_schema(model: type[BaseModel]) -> dict[str, Any]:
+    """Generate a provider-agnostic JSON schema for tool parameters.
+
+    Unlike ``generate_model_description`` (which targets OpenAI strict mode),
+    this function produces a clean schema compatible with **all** LLM providers
+    including Google Gemini and AWS Bedrock / Anthropic Claude.
+
+    Specifically it:
+    * resolves ``$ref`` references and removes ``$defs``,
+    * strips null types from ``anyOf`` unions,
+    * removes metadata keys unsupported by Gemini / Bedrock (``title``,
+      ``default``, ``additionalProperties``),
+    * preserves the original ``required`` array (does **not** force every
+      property to be required).
+
+    Args:
+        model: A Pydantic model class representing the tool's arguments.
+
+    Returns:
+        A plain JSON-schema ``dict`` suitable for use as tool parameters.
+    """
+    json_schema = model.model_json_schema(ref_template="#/$defs/{model}")
+
+    json_schema = resolve_refs(json_schema)
+    json_schema.pop("$defs", None)
+
+    json_schema = strip_null_from_types(json_schema)
+
+    json_schema = _strip_schema_metadata(json_schema)
+
+    return json_schema
+
+
 FORMAT_TYPE_MAP: dict[str, type[Any]] = {
     "base64": Annotated[bytes, Field(json_schema_extra={"format": "base64"})],  # type: ignore[dict-item]
     "binary": StrictBytes,
