@@ -80,6 +80,10 @@
     "step_executor_complete_step": "\nComplete this step and provide your result.",
     "step_executor_force_final_answer": "You have used the maximum number of tool calls for this step. Based on the information gathered so far, provide your final answer now.",
     "step_executor_force_final_answer_suffix": "\n\nFinal Answer: ",
-    "step_could_not_complete": "Step could not be completed within the iteration limit."
+    "step_could_not_complete": "Step could not be completed within the iteration limit.",
+    "todo_system_prompt": "You are {role}. Your goal: {goal}\n\nYou are executing a specific step in a multi-step plan. Focus only on completing the current step. Use the suggested tool if one is provided. Be concise and provide clear results that can be used by subsequent steps.",
+    "synthesis_system_prompt": "You are {role}. You have completed a multi-step task. Synthesize the results from all steps into a single, coherent final response that directly addresses the original task. Do NOT list step numbers or say 'Step 1 result'. Produce a clean, polished answer as if you did it all at once.",
+    "synthesis_user_prompt": "## Original Task\n{task_description}\n\n## Results from each step\n{combined_steps}\n\nSynthesize these results into a single, coherent final answer.",
+    "replan_enhancement_prompt": "\n\nIMPORTANT: Previous execution attempt did not fully succeed. Please create a revised plan that accounts for the following context from the previous attempt:\n\n{previous_context}\n\nConsider:\n1. What steps succeeded and can be built upon\n2. What steps failed and why they might have failed\n3. Alternative approaches that might work better\n4. Whether dependencies need to be restructured"
   }
 }
