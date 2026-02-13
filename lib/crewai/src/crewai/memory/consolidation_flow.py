@@ -50,11 +50,26 @@ class ConsolidationFlow(Flow[ConsolidationState]):
         embedder: Any,
         config: MemoryConfig | None = None,
     ) -> None:
-        super().__init__(suppress_flow_events=True)
+        super().__init__()
         self._storage = storage
         self._llm = llm
         self._embedder = embedder
         self._config = config or MemoryConfig()
+
+    def run_sync(self) -> MemoryRecord | None:
+        """Execute the consolidation pipeline procedurally (no async event loop).
+
+        This is used when called from within another Flow (e.g. EncodingFlow)
+        where ``kickoff()`` would fail due to nested ``asyncio.run()`` calls.
+        """
+        self.find_similar()
+        route = self.check_threshold()
+        if route == "needs_consolidation":
+            self.analyze_conflicts()
+        else:
+            self.insert_only_path()
+        self.execute_plan()
+        return self.state.result_record
 
     @start()
     def find_similar(self) -> list[MemoryRecord]:

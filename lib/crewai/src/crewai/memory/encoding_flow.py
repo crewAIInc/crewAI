@@ -71,7 +71,7 @@ class EncodingFlow(Flow[EncodingState]):
         embedder: Any,
         config: MemoryConfig | None = None,
     ) -> None:
-        super().__init__(suppress_flow_events=True)
+        super().__init__()
         self._storage = storage
         self._llm = llm
         self._embedder = embedder
@@ -177,7 +177,13 @@ class EncodingFlow(Flow[EncodingState]):
 
     @listen(embed_content)
     def consolidate(self) -> MemoryRecord | None:
-        """Run ConsolidationFlow for conflict resolution and storage."""
+        """Run ConsolidationFlow for conflict resolution and storage.
+
+        Uses ``run_sync()`` instead of ``kickoff()`` because this step
+        executes inside the EncodingFlow's async event loop. Calling
+        ``kickoff()`` (which wraps ``asyncio.run()``) from within a
+        running loop would fail silently.
+        """
         from crewai.memory.consolidation_flow import ConsolidationFlow
 
         cflow = ConsolidationFlow(
@@ -186,18 +192,17 @@ class EncodingFlow(Flow[EncodingState]):
             embedder=self._embedder,
             config=self._config,
         )
-        cflow.kickoff(
-            inputs={
-                "new_content": self.state.content,
-                "new_embedding": self.state.embedding,
-                "scope": self.state.resolved_scope,
-                "categories": self.state.resolved_categories,
-                "metadata": self.state.resolved_metadata,
-                "importance": self.state.resolved_importance,
-                "source": self.state.resolved_source,
-                "private": self.state.resolved_private,
-            },
-        )
+        # Populate state field-by-field to avoid replacing the StateProxy's
+        # underlying object (which would desync the proxy from _state).
+        cflow.state.new_content = self.state.content
+        cflow.state.new_embedding = self.state.embedding
+        cflow.state.scope = self.state.resolved_scope
+        cflow.state.categories = self.state.resolved_categories
+        cflow.state.metadata = self.state.resolved_metadata
+        cflow.state.importance = self.state.resolved_importance
+        cflow.state.source = self.state.resolved_source
+        cflow.state.private = self.state.resolved_private
+        cflow.run_sync()
         self.state.result_record = cflow.state.result_record
         self.state.consolidation_stats = {
             "records_updated": cflow.state.records_updated,
