@@ -653,16 +653,29 @@ class AnthropicCompletion(BaseLLM):
         formatted_messages = validated_messages
 
         # Ensure role alternation is maintained after filtering
-        # If filtering created consecutive same-role messages, insert placeholders
+        # If filtering created consecutive same-role messages, merge them
+        # This preserves all original content without injecting synthetic messages
         fixed_messages: list[LLMMessage] = []
-        for i, message in enumerate(formatted_messages):
-            if i > 0 and fixed_messages:
+        for message in formatted_messages:
+            if fixed_messages:
                 prev_role = fixed_messages[-1].get("role")
                 curr_role = message.get("role")
                 if prev_role == curr_role:
-                    # Insert a placeholder message to maintain alternation
-                    placeholder_role = "assistant" if curr_role == "user" else "user"
-                    fixed_messages.append({"role": placeholder_role, "content": "..."})
+                    # Merge consecutive same-role messages
+                    prev_content = fixed_messages[-1].get("content", "")
+                    curr_content = message.get("content", "")
+
+                    # Handle both string and list content formats
+                    if isinstance(prev_content, str) and isinstance(curr_content, str):
+                        merged = f"{prev_content}\n\n{curr_content}".strip()
+                        fixed_messages[-1]["content"] = merged
+                    elif isinstance(prev_content, list) and isinstance(curr_content, list):
+                        fixed_messages[-1]["content"] = prev_content + curr_content
+                    elif isinstance(prev_content, str) and isinstance(curr_content, list):
+                        fixed_messages[-1]["content"] = [{"type": "text", "text": prev_content}] + curr_content
+                    elif isinstance(prev_content, list) and isinstance(curr_content, str):
+                        fixed_messages[-1]["content"] = prev_content + [{"type": "text", "text": curr_content}]
+                    continue
             fixed_messages.append(message)
         formatted_messages = fixed_messages
 
