@@ -16,7 +16,6 @@ class VoyageAIProvider(BaseEmbeddingsProvider[VoyageAIEmbeddingFunction]):
         description="Voyage AI embedding function class",
     )
     model: str = Field(
-        default="voyage-2",
         description="Model to use for embeddings",
         validation_alias=AliasChoices("EMBEDDINGS_VOYAGEAI_MODEL", "VOYAGEAI_MODEL"),
     )
