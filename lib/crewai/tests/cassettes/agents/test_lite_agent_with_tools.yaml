@@ -4,9 +4,8 @@ interactions:
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
       Task: What is the population of Tokyo and how many people would that be per
-      square kilometer if Tokyo''s area is 2,194 square kilometers?\n\nThis is VERY
-      important to you, your job depends on it!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      square kilometer if Tokyo''s area is 2,194 square kilometers?"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -19,7 +18,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '752'
+      - '737'
       content-type:
       - application/json
       host:
@@ -46,21 +45,21 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWEY5aWisWibS5wCCRZd8EtOeCC\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105786,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8ZN7HR1GNm9rkv48gTpuAiq7GZVQ\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770934965,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_SDEJLw8giXTnpn5F0rSPgSO6\",\n            \"type\":
+        \           \"id\": \"call_xHt7bWBXRZDd5s3BgOyKj9Dr\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"search_web\",\n
         \             \"arguments\": \"{\\\"query\\\":\\\"current population of Tokyo
         2023\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        129,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 149,\n    \"prompt_tokens_details\":
+        116,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 136,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_373a14eb6f\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -69,11 +68,9 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:16:26 GMT
+      - Thu, 12 Feb 2026 22:22:46 GMT
       Server:
       - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
       Strict-Transport-Security:
       - STS-XXX
       Transfer-Encoding:
@@ -89,13 +86,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '646'
+      - '820'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '666'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -120,14 +117,11 @@ interactions:
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
       Task: What is the population of Tokyo and how many people would that be per
-      square kilometer if Tokyo''s area is 2,194 square kilometers?\n\nThis is VERY
-      important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_SDEJLw8giXTnpn5F0rSPgSO6","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"current
-      population of Tokyo 2023\"}"}}]},{"role":"tool","tool_call_id":"call_SDEJLw8giXTnpn5F0rSPgSO6","content":"Tokyo''s
+      square kilometer if Tokyo''s area is 2,194 square kilometers?"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_xHt7bWBXRZDd5s3BgOyKj9Dr","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"current
+      population of Tokyo 2023\"}"}}]},{"role":"tool","tool_call_id":"call_xHt7bWBXRZDd5s3BgOyKj9Dr","name":"search_web","content":"Tokyo''s
       population in 2023 was approximately 21 million people in the city proper, and
-      37 million in the greater metropolitan area."},{"role":"user","content":"Analyze
-      the tool result. If requirements are met, provide the Final Answer. Otherwise,
-      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      37 million in the greater metropolitan area."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -140,7 +134,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1347'
+      - '1168'
       content-type:
       - application/json
       cookie:
@@ -169,19 +163,24 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWFH0RTZQzqCOqB6oE7YaXUpwpt\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105787,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8ZN8gRx8GsQXjbVe1AdS2fgS2s7g\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770934966,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"The population of Tokyo in 2023 is
-        approximately 21 million people. Given Tokyo's area of 2,194 square kilometers,
-        the population density is about 9,573 people per square kilometer.\",\n        \"refusal\":
+        \"assistant\",\n        \"content\": \"The current population of Tokyo in
+        2023 is approximately 21 million people in the city proper. \\n\\nTo find
+        the population density (people per square kilometer), we can use the following
+        formula:\\n\\n\\\\[\\n\\\\text{Population Density} = \\\\frac{\\\\text{Population}}{\\\\text{Area}}\\n\\\\]\\n\\nGiven
+        that Tokyo's area is 2,194 square kilometers:\\n\\n\\\\[\\n\\\\text{Population
+        Density} = \\\\frac{21,000,000 \\\\text{ people}}{2,194 \\\\text{ km}^2} \\\\approx
+        9,570 \\\\text{ people/km}^2\\n\\\\]\\n\\nThus, the population density of
+        Tokyo is approximately 9,570 people per square kilometer.\",\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        220,\n    \"completion_tokens\": 42,\n    \"total_tokens\": 262,\n    \"prompt_tokens_details\":
+        172,\n    \"completion_tokens\": 145,\n    \"total_tokens\": 317,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_373a14eb6f\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -190,7 +189,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:16:27 GMT
+      - Thu, 12 Feb 2026 22:22:49 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -208,13 +207,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '907'
+      - '3116'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '973'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -238,9 +237,8 @@ interactions:
     body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
-      Task: What are the effects of climate change on coral reefs?\n\nThis is VERY
-      important to you, your job depends on it!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      Task: What are the effects of climate change on coral reefs?"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -253,7 +251,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '676'
+      - '661'
       content-type:
       - application/json
       cookie:
@@ -282,21 +280,21 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWGhLco3obH1zYP6PqrxHOzr58H\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105788,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8ZNBk5TYpwCnSSMgPcTEeasE7G1J\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770934969,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
-        \           \"id\": \"call_2QbttIDG2E7pyHGU5y0VMZYI\",\n            \"type\":
+        \           \"id\": \"call_pM5HfiZm56h6UY7WWi9w5EQo\",\n            \"type\":
         \"function\",\n            \"function\": {\n              \"name\": \"search_web\",\n
         \             \"arguments\": \"{\\\"query\\\":\\\"effects of climate change
         on coral reefs\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
         null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
         \     \"finish_reason\": \"tool_calls\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-        112,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 132,\n    \"prompt_tokens_details\":
+        99,\n    \"completion_tokens\": 20,\n    \"total_tokens\": 119,\n    \"prompt_tokens_details\":
         {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -305,7 +303,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:16:28 GMT
+      - Thu, 12 Feb 2026 22:22:50 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -323,13 +321,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '567'
+      - '483'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '584'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -353,16 +351,13 @@ interactions:
     body: '{"messages":[{"role":"system","content":"You are Research Assistant. You
       are a helpful research assistant who can search for information about the population
       of Tokyo.\nYour personal goal is: Find information about the population of Tokyo"},{"role":"user","content":"\nCurrent
-      Task: What are the effects of climate change on coral reefs?\n\nThis is VERY
-      important to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_2QbttIDG2E7pyHGU5y0VMZYI","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"effects
-      of climate change on coral reefs\"}"}}]},{"role":"tool","tool_call_id":"call_2QbttIDG2E7pyHGU5y0VMZYI","content":"Climate
+      Task: What are the effects of climate change on coral reefs?"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_pM5HfiZm56h6UY7WWi9w5EQo","type":"function","function":{"name":"search_web","arguments":"{\"query\":\"effects
+      of climate change on coral reefs\"}"}}]},{"role":"tool","tool_call_id":"call_pM5HfiZm56h6UY7WWi9w5EQo","name":"search_web","content":"Climate
       change severely impacts coral reefs through: 1) Ocean warming causing coral
       bleaching, 2) Ocean acidification reducing calcification, 3) Sea level rise
       affecting light availability, 4) Increased storm frequency damaging reef structures.
-      Sources: NOAA Coral Reef Conservation Program, Global Coral Reef Alliance."},{"role":"user","content":"Analyze
-      the tool result. If requirements are met, provide the Final Answer. Otherwise,
-      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
-      the web for information about a topic.","parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object"}}}]}'
+      Sources: NOAA Coral Reef Conservation Program, Global Coral Reef Alliance."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"search_web","description":"Search
+      the web for information about a topic.","strict":true,"parameters":{"properties":{"query":{"title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -375,7 +370,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1467'
+      - '1288'
       content-type:
       - application/json
       cookie:
@@ -404,24 +399,29 @@ interactions:
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D0tWGy9RIEM5ioFwhUbwGssr4LoAo\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1769105788,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8ZNCfVJ8SjsPUcwDFEXkhJZIv59Z\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770934970,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Climate change severely impacts coral
-        reefs through the following effects:\\n\\n1. Ocean warming leads to coral
-        bleaching, which occurs when corals expel the symbiotic algae (zooxanthellae)
-        that provide them with food and color.\\n2. Ocean acidification reduces the
-        ability of corals to calcify and build their skeletons, weakening their structures.\\n3.
-        Sea level rise affects light availability, which is crucial for coral photosynthesis.\\n4.
-        Increased storm frequency and intensity result in physical damage to reef
-        structures.\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 235,\n    \"completion_tokens\":
-        103,\n    \"total_tokens\": 338,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        \"assistant\",\n        \"content\": \"Climate change has significant effects
+        on coral reefs, including:\\n\\n1. **Ocean Warming**: Increased temperatures
+        lead to coral bleaching, a stress response where corals expel the algae (zooxanthellae)
+        that live in their tissues, causing them to lose their color and vital energy
+        source.\\n\\n2. **Ocean Acidification**: As CO2 levels rise, oceans absorb
+        more carbon dioxide, leading to increased acidity. This reduces the ability
+        of corals to calcify, weakening their structures and making it harder for
+        them to grow.\\n\\n3. **Sea Level Rise**: Rising sea levels impact the availability
+        of light for corals, which depend on sunlight for photosynthesis, potentially
+        limiting their growth.\\n\\n4. **Increased Storm Frequency**: More frequent
+        and intense storms can physically damage coral structures, leading to further
+        degradation of reef ecosystems.\\n\\nThese factors combined jeopardize coral
+        health, biodiversity, and the ecosystems that depend on coral reefs.\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        187,\n    \"completion_tokens\": 189,\n    \"total_tokens\": 376,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+        \"default\",\n  \"system_fingerprint\": \"fp_f4ae844694\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -430,7 +430,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 22 Jan 2026 18:16:31 GMT
+      - Thu, 12 Feb 2026 22:22:54 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -448,13 +448,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '2311'
+      - '4432'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
-      x-envoy-upstream-service-time:
-      - '2408'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

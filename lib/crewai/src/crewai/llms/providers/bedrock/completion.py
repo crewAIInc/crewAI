@@ -1838,7 +1838,10 @@ class BedrockCompletion(BaseLLM):
                     )
 
         # CRITICAL: Handle model-specific conversation requirements
-        # Cohere and some other models require conversation to end with user message
+        # Cohere and some other models require conversation to end with user message.
+        # Anthropic models on Bedrock also reject assistant messages in the final
+        # position when tools are present ("pre-filling the assistant response is
+        # not supported").
         if converse_messages:
             last_message = converse_messages[-1]
             if last_message["role"] == "assistant":
@@ -1863,6 +1866,20 @@ class BedrockCompletion(BaseLLM):
                         {
                             "role": "user",
                             "content": [{"text": "Continue your response."}],
+                        }
+                    )
+                # Anthropic (Claude) models reject assistant-last messages when
+                # tools are in the request. Append a user message so the
+                # Converse API accepts the payload.
+                elif "anthropic" in self.model.lower() or "claude" in self.model.lower():
+                    converse_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "text": "Please continue and provide your final answer."
+                                }
+                            ],
                         }
                     )
 

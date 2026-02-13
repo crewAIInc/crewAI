@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
+from datetime import datetime
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -37,6 +39,7 @@ from crewai.utilities.types import LLMMessage
 if TYPE_CHECKING:
     from crewai.agent import Agent
     from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from crewai.agents.tools_handler import ToolsHandler
     from crewai.experimental.agent_executor import AgentExecutor
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
@@ -322,6 +325,66 @@ def enforce_rpm_limit(
         request_within_rpm_limit()
 
 
+def _prepare_llm_call(
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    messages: list[LLMMessage],
+    printer: Printer,
+    verbose: bool = True,
+) -> list[LLMMessage]:
+    """Shared pre-call logic: run before hooks and resolve messages.
+
+    Args:
+        executor_context: Optional executor context for hook invocation.
+        messages: The messages to send to the LLM.
+        printer: Printer instance for output.
+        verbose: Whether to print output.
+
+    Returns:
+        The resolved messages list (may come from executor_context).
+
+    Raises:
+        ValueError: If a before hook blocks the call.
+    """
+    if executor_context is not None:
+        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
+            raise ValueError("LLM call blocked by before_llm_call hook")
+        messages = executor_context.messages
+    return messages
+
+
+def _validate_and_finalize_llm_response(
+    answer: Any,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+    printer: Printer,
+    verbose: bool = True,
+) -> str | BaseModel | Any:
+    """Shared post-call logic: validate response and run after hooks.
+
+    Args:
+        answer: The raw LLM response.
+        executor_context: Optional executor context for hook invocation.
+        printer: Printer instance for output.
+        verbose: Whether to print output.
+
+    Returns:
+        The potentially modified response.
+
+    Raises:
+        ValueError: If the response is None or empty.
+    """
+    if not answer:
+        if verbose:
+            printer.print(
+                content="Received None or empty response from LLM call.",
+                color="red",
+            )
+        raise ValueError("Invalid response from LLM call - None or empty.")
+
+    return _setup_after_llm_call_hooks(
+        executor_context, answer, printer, verbose=verbose
+    )
+
+
 def get_llm_response(
     llm: LLM | BaseLLM,
     messages: list[LLMMessage],
@@ -358,11 +421,7 @@ def get_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
+    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
     try:
         answer = llm.call(
@@ -376,16 +435,9 @@ def get_llm_response(
         )
     except Exception as e:
         raise e
-    if not answer:
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(
-        executor_context, answer, printer, verbose=verbose
+    return _validate_and_finalize_llm_response(
+        answer, executor_context, printer, verbose=verbose
     )
 
 
@@ -415,6 +467,7 @@ async def aget_llm_response(
         from_agent: Optional agent context for the LLM call.
         response_model: Optional Pydantic model for structured outputs.
         executor_context: Optional executor context for hook invocation.
+        verbose: Whether to print output.
 
     Returns:
         The response from the LLM as a string, Pydantic model (when response_model is provided),
@@ -424,10 +477,7 @@ async def aget_llm_response(
         Exception: If an error occurs.
         ValueError: If the response is None or empty.
     """
-    if executor_context is not None:
-        if not _setup_before_llm_call_hooks(executor_context, printer, verbose=verbose):
-            raise ValueError("LLM call blocked by before_llm_call hook")
-        messages = executor_context.messages
+    messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
     try:
         answer = await llm.acall(
@@ -441,16 +491,9 @@ async def aget_llm_response(
         )
     except Exception as e:
         raise e
-    if not answer:
-        if verbose:
-            printer.print(
-                content="Received None or empty response from LLM call.",
-                color="red",
-            )
-        raise ValueError("Invalid response from LLM call - None or empty.")
 
-    return _setup_after_llm_call_hooks(
-        executor_context, answer, printer, verbose=verbose
+    return _validate_and_finalize_llm_response(
+        answer, executor_context, printer, verbose=verbose
     )
 
 
@@ -937,6 +980,385 @@ def extract_tool_call_info(
         func_args = func_info.get("arguments") or tool_call.get("input") or {}
         return call_id, sanitize_tool_name(func_name), func_args
     return None
+
+
+def is_tool_call_list(response: list[Any]) -> bool:
+    """Check if a response from the LLM is a list of tool calls.
+
+    Supports OpenAI, Anthropic, Bedrock, and Gemini formats.
+
+    Args:
+        response: The response to check.
+
+    Returns:
+        True if the response appears to be a list of tool calls.
+    """
+    if not response:
+        return False
+    first_item = response[0]
+    # OpenAI-style
+    if hasattr(first_item, "function") or (
+        isinstance(first_item, dict) and "function" in first_item
+    ):
+        return True
+    # Anthropic-style (ToolUseBlock)
+    if (
+        hasattr(first_item, "type")
+        and getattr(first_item, "type", None) == "tool_use"
+    ):
+        return True
+    if hasattr(first_item, "name") and hasattr(first_item, "input"):
+        return True
+    # Bedrock-style
+    if (
+        isinstance(first_item, dict)
+        and "name" in first_item
+        and "input" in first_item
+    ):
+        return True
+    # Gemini-style
+    if hasattr(first_item, "function_call") and first_item.function_call:
+        return True
+    return False
+
+
+def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -> bool:
+    """Check if the LLM supports native function calling and tools are available.
+
+    Args:
+        llm: The LLM instance.
+        original_tools: Original BaseTool instances.
+
+    Returns:
+        True if native function calling is supported and tools exist.
+    """
+    return (
+        hasattr(llm, "supports_function_calling")
+        and callable(getattr(llm, "supports_function_calling", None))
+        and llm.supports_function_calling()
+        and bool(original_tools)
+    )
+
+
+def setup_native_tools(
+    original_tools: list[BaseTool],
+) -> tuple[list[dict[str, Any]], dict[str, Callable[..., Any]]]:
+    """Convert tools to OpenAI schema format for native function calling.
+
+    Args:
+        original_tools: Original BaseTool instances.
+
+    Returns:
+        Tuple of (openai_tools_schema, available_functions_dict).
+    """
+    return convert_tools_to_openai_schema(original_tools)
+
+
+def build_tool_calls_assistant_message(
+    tool_calls: list[Any],
+) -> tuple[LLMMessage | None, list[dict[str, Any]]]:
+    """Build an assistant message containing tool call reports.
+
+    Extracts info from each tool call, builds the standard assistant message
+    format, and preserves raw Gemini parts when applicable.
+
+    Args:
+        tool_calls: Raw tool call objects from the LLM response.
+
+    Returns:
+        Tuple of (assistant_message, tool_calls_to_report).
+        assistant_message is None if no valid tool calls found.
+    """
+    tool_calls_to_report: list[dict[str, Any]] = []
+    for tool_call in tool_calls:
+        info = extract_tool_call_info(tool_call)
+        if not info:
+            continue
+        call_id, func_name, func_args = info
+        tool_calls_to_report.append(
+            {
+                "id": call_id,
+                "type": "function",
+                "function": {
+                    "name": func_name,
+                    "arguments": func_args
+                    if isinstance(func_args, str)
+                    else json.dumps(func_args),
+                },
+            }
+        )
+
+    if not tool_calls_to_report:
+        return None, []
+
+    assistant_message: LLMMessage = {
+        "role": "assistant",
+        "content": None,
+        "tool_calls": tool_calls_to_report,
+    }
+    # Preserve raw parts for Gemini compatibility
+    if all(type(tc).__qualname__ == "Part" for tc in tool_calls):
+        assistant_message["raw_tool_call_parts"] = list(tool_calls)
+
+    return assistant_message, tool_calls_to_report
+
+
+@dataclass
+class NativeToolCallResult:
+    """Result from executing a single native tool call."""
+
+    call_id: str
+    func_name: str
+    result: str
+    from_cache: bool = False
+    result_as_answer: bool = False
+    tool_message: LLMMessage = field(default_factory=dict)  # type: ignore[assignment]
+
+
+def execute_single_native_tool_call(
+    tool_call: Any,
+    *,
+    available_functions: dict[str, Callable[..., Any]],
+    original_tools: list[BaseTool],
+    structured_tools: list[CrewStructuredTool] | None,
+    tools_handler: ToolsHandler | None,
+    agent: Agent | None,
+    task: Task | None,
+    crew: Any | None,
+    event_source: Any,
+    printer: Printer | None = None,
+    verbose: bool = False,
+) -> NativeToolCallResult:
+    """Execute a single native tool call with full lifecycle management.
+
+    Handles: arg parsing, tool lookup, max-usage check, cache read/write,
+    before/after hooks, event emission, and result_as_answer detection.
+
+    Args:
+        tool_call: Raw tool call object from the LLM.
+        available_functions: Map of sanitized tool name -> callable.
+        original_tools: Original BaseTool list (for cache_function, result_as_answer).
+        structured_tools: Structured tools list (for hook context).
+        tools_handler: Optional handler with cache.
+        agent: The agent instance.
+        task: The current task.
+        crew: The crew instance.
+        event_source: The object to use as event emitter source.
+        printer: Optional printer for verbose logging.
+        verbose: Whether to print verbose output.
+
+    Returns:
+        NativeToolCallResult with all execution details.
+    """
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.tool_usage_events import (
+        ToolUsageErrorEvent,
+        ToolUsageFinishedEvent,
+        ToolUsageStartedEvent,
+    )
+    from crewai.hooks.tool_hooks import (
+        ToolCallHookContext,
+        get_after_tool_call_hooks,
+        get_before_tool_call_hooks,
+    )
+
+    info = extract_tool_call_info(tool_call)
+    if not info:
+        return NativeToolCallResult(
+            call_id="", func_name="", result="Unrecognized tool call format"
+        )
+
+    call_id, func_name, func_args = info
+
+    # Parse arguments
+    if isinstance(func_args, str):
+        try:
+            args_dict = json.loads(func_args)
+        except json.JSONDecodeError:
+            args_dict = {}
+    else:
+        args_dict = func_args
+
+    agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
+
+    # Find original tool for cache_function and result_as_answer
+    original_tool: BaseTool | None = None
+    for tool in original_tools:
+        if sanitize_tool_name(tool.name) == func_name:
+            original_tool = tool
+            break
+
+    # Check max usage count
+    max_usage_reached = False
+    if (
+        original_tool
+        and original_tool.max_usage_count is not None
+        and original_tool.current_usage_count >= original_tool.max_usage_count
+    ):
+        max_usage_reached = True
+
+    # Check cache
+    from_cache = False
+    input_str = json.dumps(args_dict) if args_dict else ""
+    result = "Tool not found"
+
+    if tools_handler and tools_handler.cache:
+        cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
+        if cached_result is not None:
+            result = (
+                str(cached_result) if not isinstance(cached_result, str) else cached_result
+            )
+            from_cache = True
+
+    # Emit tool started event
+    started_at = datetime.now()
+    crewai_event_bus.emit(
+        event_source,
+        event=ToolUsageStartedEvent(
+            tool_name=func_name,
+            tool_args=args_dict,
+            from_agent=agent,
+            from_task=task,
+            agent_key=agent_key,
+        ),
+    )
+
+    track_delegation_if_needed(func_name, args_dict, task)
+
+    # Find structured tool for hooks
+    structured_tool: CrewStructuredTool | None = None
+    for structured in structured_tools or []:
+        if sanitize_tool_name(structured.name) == func_name:
+            structured_tool = structured
+            break
+
+    # Before hooks
+    hook_blocked = False
+    before_hook_context = ToolCallHookContext(
+        tool_name=func_name,
+        tool_input=args_dict,
+        tool=structured_tool,  # type: ignore[arg-type]
+        agent=agent,
+        task=task,
+        crew=crew,
+    )
+    try:
+        for hook in get_before_tool_call_hooks():
+            if hook(before_hook_context) is False:
+                hook_blocked = True
+                break
+    except Exception:  # noqa: S110
+        pass
+
+    error_event_emitted = False
+    if hook_blocked:
+        result = f"Tool execution blocked by hook. Tool: {func_name}"
+    elif not from_cache and not max_usage_reached:
+        if func_name in available_functions:
+            try:
+                tool_func = available_functions[func_name]
+                raw_result = tool_func(**args_dict)
+
+                # Cache result
+                if tools_handler and tools_handler.cache:
+                    should_cache = True
+                    if original_tool:
+                        should_cache = original_tool.cache_function(args_dict, raw_result)
+                    if should_cache:
+                        tools_handler.cache.add(
+                            tool=func_name, input=input_str, output=raw_result
+                        )
+
+                result = (
+                    str(raw_result) if not isinstance(raw_result, str) else raw_result
+                )
+            except Exception as e:
+                result = f"Error executing tool: {e}"
+                if task:
+                    task.increment_tools_errors()
+                crewai_event_bus.emit(
+                    event_source,
+                    event=ToolUsageErrorEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=agent,
+                        from_task=task,
+                        agent_key=agent_key,
+                        error=e,
+                    ),
+                )
+                error_event_emitted = True
+    elif max_usage_reached and original_tool:
+        result = (
+            f"Tool '{func_name}' has reached its usage limit of "
+            f"{original_tool.max_usage_count} times and cannot be used anymore."
+        )
+
+    # After hooks
+    after_hook_context = ToolCallHookContext(
+        tool_name=func_name,
+        tool_input=args_dict,
+        tool=structured_tool,  # type: ignore[arg-type]
+        agent=agent,
+        task=task,
+        crew=crew,
+        tool_result=result,
+    )
+    try:
+        for after_hook in get_after_tool_call_hooks():
+            hook_result = after_hook(after_hook_context)
+            if hook_result is not None:
+                result = hook_result
+                after_hook_context.tool_result = result
+    except Exception:  # noqa: S110
+        pass
+
+    # Emit tool finished event (only if error event wasn't already emitted)
+    if not error_event_emitted:
+        crewai_event_bus.emit(
+            event_source,
+            event=ToolUsageFinishedEvent(
+                output=result,
+                tool_name=func_name,
+                tool_args=args_dict,
+                from_agent=agent,
+                from_task=task,
+                agent_key=agent_key,
+                started_at=started_at,
+                finished_at=datetime.now(),
+            ),
+        )
+
+    # Build tool result message
+    tool_message: LLMMessage = {
+        "role": "tool",
+        "tool_call_id": call_id,
+        "name": func_name,
+        "content": result,
+    }
+
+    if verbose and printer:
+        cache_info = " (from cache)" if from_cache else ""
+        printer.print(
+            content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
+            color="green",
+        )
+
+    # Check result_as_answer
+    is_result_as_answer = bool(
+        original_tool
+        and hasattr(original_tool, "result_as_answer")
+        and original_tool.result_as_answer
+    )
+
+    return NativeToolCallResult(
+        call_id=call_id,
+        func_name=func_name,
+        result=result,
+        from_cache=from_cache,
+        result_as_answer=is_result_as_answer,
+        tool_message=tool_message,
+    )
 
 
 def _setup_before_llm_call_hooks(
