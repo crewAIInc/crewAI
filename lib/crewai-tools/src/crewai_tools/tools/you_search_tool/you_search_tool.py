@@ -63,6 +63,7 @@ Language = Literal[
     "NL",
     "EN",
     "EN-GB",
+    "EN-US",
     "ET",
     "FI",
     "FR",
@@ -167,7 +168,7 @@ class YouSearchTool(BaseTool):
             # Build request parameters
             params: dict[str, Any] = {
                 "query": query,
-                "count": self.count,
+                "count": max(1, min(self.count, 100)),
             }
 
             # Add offset if specified (range: 0-9)
