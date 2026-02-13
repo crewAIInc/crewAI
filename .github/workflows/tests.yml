@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
-        group: [1, 2, 3, 4, 5, 6, 7, 8]
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        group: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,6 +40,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           enable-cache: false
 
+      - name: Install system build dependencies
+        if: matrix.python-version == '3.14'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-dev libxslt-dev libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev libheif-dev
+
       - name: Install the project
         run: uv sync --all-groups --all-extras
 
@@ -49,7 +53,7 @@ jobs:
           path: .test_durations_py*
           key: test-durations-py${{ matrix.python-version }}
 
-      - name: Run tests (group ${{ matrix.group }} of 8)
+      - name: Run tests (group ${{ matrix.group }} of 16)
         run: |
           PYTHON_VERSION_SAFE=$(echo "${{ matrix.python-version }}" | tr '.' '_')
           DURATION_FILE="../../.test_durations_py${PYTHON_VERSION_SAFE}"
@@ -73,17 +77,17 @@ jobs:
 
           cd lib/crewai && uv run pytest \
             -vv \
-            --splits 8 \
+            --splits 16 \
             --group ${{ matrix.group }} \
             $DURATIONS_ARG \
             --durations=10 \
             --maxfail=3
 
-      - name: Run tool tests (group ${{ matrix.group }} of 8)
+      - name: Run tool tests (group ${{ matrix.group }} of 16)
         run: |
           cd lib/crewai-tools && uv run pytest \
             -vv \
-            --splits 8 \
+            --splits 16 \
             --group ${{ matrix.group }} \
             --durations=10 \
             --maxfail=3

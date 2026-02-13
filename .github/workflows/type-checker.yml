@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - name: Checkout code
@@ -38,6 +38,10 @@ jobs:
           version: "0.8.4"
           python-version: ${{ matrix.python-version }}
           enable-cache: false
+
+      - name: Install system build dependencies
+        if: matrix.python-version == '3.14'
+        run: sudo apt-get update && sudo apt-get install -y libxml2-dev libxslt-dev libavformat-dev libavcodec-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev libheif-dev
 
       - name: Install dependencies
         run: uv sync --all-groups --all-extras

@@ -1,7 +1,7 @@
 name = "crewai-workspace"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 authors = [
     { name = "Joao Moura", email = "joao@crewai.com" }
 ]
@@ -142,6 +142,11 @@ python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
 
+
+[tool.uv]
+constraint-dependencies = [
+    "onnxruntime<1.24; python_version < '3.11'",
+]
 
 [tool.uv.workspace]
 members = [

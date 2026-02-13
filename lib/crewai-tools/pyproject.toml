@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "João Moura", email = "joaomdmoura@gmail.com" },
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "lancedb~=0.5.4",
     "pytube~=15.0.0",
@@ -118,7 +118,7 @@ rag = [
     "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
 ]
 xml = [
-    "unstructured[local-inference, all-docs]>=0.17.2"
+    "unstructured[local-inference, all-docs]>=0.17.2,<0.18.31"
 ]
 oxylabs = [
     "oxylabs==2.0.0"
