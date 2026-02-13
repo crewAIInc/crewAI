@@ -349,8 +349,9 @@ class LanceDBStorage:
             sc = str(row.get("scope", ""))
             if child_prefix and sc.startswith(child_prefix):
                 rest = sc[len(child_prefix):]
-                if "/" not in rest and rest:
-                    children.add(sc)
+                first_component = rest.split("/", 1)[0]
+                if first_component:
+                    children.add(child_prefix + first_component)
             try:
                 cat_str = row.get("categories_str") or "[]"
                 categories_set.update(json.loads(cat_str))
@@ -382,8 +383,9 @@ class LanceDBStorage:
             sc = str(row.get("scope", ""))
             if sc.startswith(prefix) and sc != (prefix.rstrip("/") or "/"):
                 rest = sc[len(prefix):]
-                if "/" not in rest and rest:
-                    children.add(prefix + rest)
+                first_component = rest.split("/", 1)[0]
+                if first_component:
+                    children.add(prefix + first_component)
         return sorted(children)
 
     def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:

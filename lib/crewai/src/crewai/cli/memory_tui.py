@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+import asyncio
+from typing import Any
 
 from textual.app import App, ComposeResult
-from textual.containers import Horizontal
-from textual.widgets import Footer, Header, Input, Static, Tree
+from textual.containers import Horizontal, Vertical
+from textual.widgets import Footer, Header, Input, OptionList, Static, Tree
 
 
 # -- CrewAI brand palette --
@@ -32,13 +33,6 @@ class MemoryTUI(App[None]):
 
     TITLE = "CrewAI Memory"
     SUB_TITLE = "Browse scopes and recall memories"
-
-    PAGE_SIZE: ClassVar[int] = 20
-
-    BINDINGS: ClassVar[list[tuple[str, str, str]]] = [
-        ("n", "next_page", "Next page"),
-        ("p", "prev_page", "Prev page"),
-    ]
 
     CSS = f"""
     Header {{
@@ -75,13 +69,34 @@ class MemoryTUI(App[None]):
     #scope-tree > .tree--guides-selected {{
         color: {_SECONDARY};
     }}
-    #info-panel {{
+    #right-panel {{
         width: 70%;
+        padding: 0 1;
+    }}
+    #info-panel {{
+        height: 2fr;
         padding: 1 2;
         overflow-y: auto;
+        border: round {_SECONDARY};
+    }}
+    #info-panel:focus {{
+        border: round {_PRIMARY};
     }}
     #info-panel LoadingIndicator {{
         color: {_PRIMARY};
+    }}
+    #entry-list {{
+        height: 1fr;
+        border: round {_SECONDARY};
+        padding: 0 1;
+        scrollbar-color: {_PRIMARY};
+    }}
+    #entry-list:focus {{
+        border: round {_PRIMARY};
+    }}
+    #entry-list > .option-list--option-highlighted {{
+        background: {_SECONDARY};
+        color: {_TERTIARY};
     }}
     #recall-input {{
         margin: 0 1 1 1;
@@ -102,7 +117,8 @@ class MemoryTUI(App[None]):
         self._init_error: str | None = None
         self._selected_scope: str = "/"
         self._entries: list[Any] = []
-        self._page: int = 0
+        self._view_mode: str = "list"  # "list" | "recall"
+        self._recall_matches: list[Any] = []
         self._last_scope_info: Any = None
         self._custom_embedder = embedder_config is not None
         try:
@@ -128,12 +144,19 @@ class MemoryTUI(App[None]):
                 if self._init_error
                 else "Select a scope or type a recall query."
             )
-            yield Static(initial, id="info-panel")
+            with Vertical(id="right-panel"):
+                yield Static(initial, id="info-panel")
+                yield OptionList(id="entry-list")
         yield Input(
             placeholder="Type a query and press Enter to recall...",
             id="recall-input",
         )
         yield Footer()
+
+    def on_mount(self) -> None:
+        """Set initial border titles on mounted widgets."""
+        self.query_one("#info-panel", Static).border_title = "Detail"
+        self.query_one("#entry-list", OptionList).border_title = "Entries"
 
     def _build_scope_tree(self) -> Tree[str]:
         tree: Tree[str] = Tree("/", id="scope-tree")
@@ -164,9 +187,105 @@ class MemoryTUI(App[None]):
             node = parent_node.add(label, data=child)
             self._add_children(node, child, depth + 1, max_depth)
 
+    # -- Populating the OptionList -------------------------------------------
+
+    def _populate_entry_list(self) -> None:
+        """Clear the OptionList and fill it with the current scope's entries."""
+        option_list = self.query_one("#entry-list", OptionList)
+        option_list.clear_options()
+        for record in self._entries:
+            date_str = record.created_at.strftime("%Y-%m-%d")
+            preview = (
+                (record.content[:80] + "…")
+                if len(record.content) > 80
+                else record.content
+            )
+            label = (
+                f"{date_str}  "
+                f"[bold]{record.importance:.1f}[/]  "
+                f"{preview}"
+            )
+            option_list.add_option(label)
+
+    def _populate_recall_list(self) -> None:
+        """Clear the OptionList and fill it with the current recall matches."""
+        option_list = self.query_one("#entry-list", OptionList)
+        option_list.clear_options()
+        if not self._recall_matches:
+            return
+        for m in self._recall_matches:
+            preview = (
+                (m.record.content[:80] + "…")
+                if len(m.record.content) > 80
+                else m.record.content
+            )
+            label = (
+                f"[bold]\\[{m.score:.2f}][/]  "
+                f"{preview}  "
+                f"[dim]scope={m.record.scope}[/]"
+            )
+            option_list.add_option(label)
+
+    # -- Detail rendering ----------------------------------------------------
+
+    def _format_record_detail(self, record: Any, context_line: str = "") -> str:
+        """Format a full MemoryRecord as Rich markup for the detail view.
+
+        Args:
+            record: A MemoryRecord instance.
+            context_line: Optional header line shown above the fields
+                (e.g. "Entry 3 of 47").
+
+        Returns:
+            A Rich-markup string with all meaningful record fields.
+        """
+        sep = f"[bold {_PRIMARY}]{'─' * 44}[/]"
+        lines: list[str] = []
+
+        if context_line:
+            lines.append(context_line)
+            lines.append("")
+
+        # -- Fields block --
+        lines.append(f"[dim]ID:[/]             {record.id}")
+        lines.append(f"[dim]Scope:[/]          [bold]{record.scope}[/]")
+        lines.append(f"[dim]Importance:[/]      [bold]{record.importance:.2f}[/]")
+        lines.append(
+            f"[dim]Created:[/]        "
+            f"{record.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        lines.append(
+            f"[dim]Last accessed:[/]  "
+            f"{record.last_accessed.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        lines.append(
+            f"[dim]Categories:[/]     "
+            f"{', '.join(record.categories) if record.categories else 'none'}"
+        )
+        lines.append(f"[dim]Source:[/]         {record.source or '-'}")
+        lines.append(f"[dim]Private:[/]        {'Yes' if record.private else 'No'}")
+
+        # -- Content block --
+        lines.append(f"\n{sep}")
+        lines.append("[bold]Content[/]\n")
+        lines.append(record.content)
+
+        # -- Metadata block --
+        if record.metadata:
+            lines.append(f"\n{sep}")
+            lines.append("[bold]Metadata[/]\n")
+            for k, v in record.metadata.items():
+                lines.append(f"[dim]{k}:[/] {v}")
+
+        return "\n".join(lines)
+
+    # -- Event handlers ------------------------------------------------------
+
     def on_tree_node_selected(self, event: Tree.NodeSelected[str]) -> None:
+        """Load entries for the selected scope and populate the OptionList."""
         path = event.node.data if event.node.data is not None else "/"
         self._selected_scope = path
+        self._view_mode = "list"
         panel = self.query_one("#info-panel", Static)
         if self._memory is None:
             panel.update(self._init_error or "No memory loaded.")
@@ -174,53 +293,52 @@ class MemoryTUI(App[None]):
         info = self._memory.info(path)
         self._last_scope_info = info
         self._entries = self._memory.list_records(scope=path, limit=200)
-        self._page = 0
-        self._render_panel()
+        panel.update(_format_scope_info(info))
+        panel.border_title = "Detail"
+        entry_list = self.query_one("#entry-list", OptionList)
+        entry_list.border_title = f"Entries ({len(self._entries)})"
+        self._populate_entry_list()
 
-    def _render_panel(self) -> None:
-        """Refresh info panel with scope info and current page of entries."""
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
+        """Live-update the info panel with the detail of the highlighted entry."""
         panel = self.query_one("#info-panel", Static)
-        if self._last_scope_info is None:
-            return
-        lines: list[str] = [_format_scope_info(self._last_scope_info)]
-        total = len(self._entries)
-        if total == 0:
-            lines.append("\n[dim]No entries in this scope.[/]")
-        else:
-            total_pages = (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE
-            page_num = self._page + 1
-            lines.append(
-                f"\n[bold {_PRIMARY}]{'─' * 44}[/]\n"
-                f"[bold]Entries[/] [dim](page {page_num} of {total_pages})[/]\n"
-            )
-            start = self._page * self.PAGE_SIZE
-            end = min(start + self.PAGE_SIZE, total)
-            for record in self._entries[start:end]:
-                date_str = record.created_at.strftime("%Y-%m-%d")
-                preview = (record.content[:100] + "…") if len(record.content) > 100 else record.content
-                lines.append(
-                    f"[{_SECONDARY}]{date_str}[/]  "
-                    f"[bold]{record.importance:.1f}[/]  "
-                    f"[dim]{preview}[/]"
+        idx = event.option_index
+
+        if self._view_mode == "list":
+            if idx < len(self._entries):
+                record = self._entries[idx]
+                total = len(self._entries)
+                context = (
+                    f"[bold {_PRIMARY}]Entry {idx + 1} of {total}[/]  "
+                    f"[dim]in[/] [bold]{self._selected_scope}[/]"
                 )
-            if total_pages > 1:
-                lines.append("\n[dim]\\[n] next  \\[p] prev[/]")
-        panel.update("\n".join(lines))
+                panel.border_title = f"Entry {idx + 1} of {total}"
+                panel.update(self._format_record_detail(record, context_line=context))
 
-    def action_next_page(self) -> None:
-        """Go to next page of entries."""
-        total_pages = (len(self._entries) + self.PAGE_SIZE - 1) // self.PAGE_SIZE
-        if total_pages <= 0:
-            return
-        self._page = min(self._page + 1, total_pages - 1)
-        self._render_panel()
-
-    def action_prev_page(self) -> None:
-        """Go to previous page of entries."""
-        if self._page <= 0:
-            return
-        self._page -= 1
-        self._render_panel()
+        elif self._view_mode == "recall":
+            if idx < len(self._recall_matches):
+                match = self._recall_matches[idx]
+                total = len(self._recall_matches)
+                panel.border_title = f"Match {idx + 1} of {total}"
+                score_color = _PRIMARY if match.score >= 0.5 else "dim"
+                header_lines: list[str] = [
+                    f"[bold {_PRIMARY}]Recall Match {idx + 1} of {total}[/]\n",
+                    f"[dim]Score:[/]          [{score_color}][bold]{match.score:.2f}[/][/]",
+                    (
+                        f"[dim]Match reasons:[/]  "
+                        f"{', '.join(match.match_reasons) if match.match_reasons else '-'}"
+                    ),
+                    (
+                        f"[dim]Evidence gaps:[/]  "
+                        f"{', '.join(match.evidence_gaps) if match.evidence_gaps else 'none'}"
+                    ),
+                    f"\n[bold {_PRIMARY}]{'─' * 44}[/]",
+                ]
+                record_detail = self._format_record_detail(match.record)
+                header_lines.append(record_detail)
+                panel.update("\n".join(header_lines))
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
         query = event.value.strip()
@@ -233,6 +351,7 @@ class MemoryTUI(App[None]):
         self.run_worker(self._do_recall(query), exclusive=True)
 
     async def _do_recall(self, query: str) -> None:
+        """Execute a recall query and display results in the OptionList."""
         panel = self.query_one("#info-panel", Static)
         panel.loading = True
         try:
@@ -241,32 +360,38 @@ class MemoryTUI(App[None]):
                 if self._selected_scope != "/"
                 else None
             )
-            matches = self._memory.recall(
-                query,
-                scope=scope,
-                limit=10,
-                depth="deep",
+            loop = asyncio.get_event_loop()
+            matches = await loop.run_in_executor(
+                None,
+                lambda: self._memory.recall(
+                    query, scope=scope, limit=10, depth="deep"
+                ),
             )
-            if not matches:
+            self._recall_matches = matches or []
+            self._view_mode = "recall"
+
+            if not self._recall_matches:
                 panel.update("[dim]No memories found.[/]")
+                self.query_one("#entry-list", OptionList).clear_options()
                 return
-            lines: list[str] = []
+
+            info_lines: list[str] = []
             if not self._custom_embedder:
-                lines.append(
+                info_lines.append(
                     "[dim italic]Note: Using default OpenAI embedder. "
                     "If memories were created with a different embedder, "
                     "pass --embedder-provider to match.[/]\n"
                 )
-            for m in matches:
-                content = m.record.content
-                score_color = _PRIMARY if m.score >= 0.5 else "dim"
-                lines.append(f"[{score_color}]\\[{m.score:.2f}][/] {content[:120]}")
-                lines.append(
-                    f"       [dim]scope={m.record.scope}  "
-                    f"importance={m.record.importance:.1f}[/]"
-                )
-                lines.append("")
-            panel.update("\n".join(lines))
+            info_lines.append(
+                f"[bold]Recall Results[/] [dim]"
+                f"({len(self._recall_matches)} matches)[/]\n"
+                f"[dim]Navigate the list below to view details.[/]"
+            )
+            panel.update("\n".join(info_lines))
+            panel.border_title = "Recall Detail"
+            entry_list = self.query_one("#entry-list", OptionList)
+            entry_list.border_title = f"Recall Results ({len(self._recall_matches)})"
+            self._populate_recall_list()
         except Exception as e:
             panel.update(f"[bold red]Error:[/] {e}")
         finally:
