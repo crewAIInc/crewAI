@@ -4,14 +4,19 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import logging
 import os
 from pathlib import Path
-from typing import Any
+import threading
+import time
+from typing import Any, ClassVar
 
 import lancedb
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
+
+_logger = logging.getLogger(__name__)
 
 # Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
 # Used when creating new tables and for zero-vector placeholder scans.
@@ -23,9 +28,25 @@ DEFAULT_VECTOR_DIM = 1536
 # listing, or deletion. Internal only -- not user-configurable.
 _SCAN_ROWS_LIMIT = 50_000
 
+# Retry settings for LanceDB commit conflicts (optimistic concurrency).
+# Under heavy write load (many concurrent saves), the table version can
+# advance rapidly. 5 retries with 0.2s base delay (0.2 + 0.4 + 0.8 + 1.6 + 3.2 = 6.2s max)
+# gives enough headroom to catch up with version advancement.
+_MAX_RETRIES = 5
+_RETRY_BASE_DELAY = 0.2  # seconds; doubles on each retry
+
 
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
+
+    # Class-level registry: maps resolved database path -> shared write lock.
+    # When multiple Memory instances (e.g. agent + crew) independently create
+    # LanceDBStorage pointing at the same directory, they share one lock so
+    # their writes don't conflict.
+    # Uses RLock (reentrant) so callers can hold the lock for a batch of
+    # operations while the individual methods re-acquire it without deadlocking.
+    _path_locks: ClassVar[dict[str, threading.RLock]] = {}
+    _path_locks_guard: ClassVar[threading.Lock] = threading.Lock()
 
     def __init__(
         self,
@@ -57,6 +78,13 @@ class LanceDBStorage:
         self._table_name = table_name
         self._db = lancedb.connect(str(self._path))
 
+        # Get or create a shared write lock for this database path.
+        resolved = str(self._path.resolve())
+        with LanceDBStorage._path_locks_guard:
+            if resolved not in LanceDBStorage._path_locks:
+                LanceDBStorage._path_locks[resolved] = threading.RLock()
+            self._write_lock = LanceDBStorage._path_locks[resolved]
+
         # Try to open an existing table and infer dimension from its schema.
         # If no table exists yet, defer creation until the first save so the
         # dimension can be auto-detected from the embedder's actual output.
@@ -72,6 +100,17 @@ class LanceDBStorage:
             self._vector_dim = vector_dim
             self._table = self._create_table(vector_dim)
 
+    @property
+    def write_lock(self) -> threading.RLock:
+        """The shared reentrant write lock for this database path.
+
+        Callers can acquire this to hold the lock across multiple storage
+        operations (e.g. delete + update + save as one atomic batch).
+        Individual methods also acquire it internally, but since it's
+        reentrant (RLock), the same thread won't deadlock.
+        """
+        return self._write_lock
+
     @staticmethod
     def _infer_dim_from_table(table: lancedb.table.Table) -> int:
         """Read vector dimension from an existing table's schema."""
@@ -83,6 +122,40 @@ class LanceDBStorage:
                 except Exception:
                     break
         return DEFAULT_VECTOR_DIM
+
+    def _retry_write(self, op: str, *args: Any, **kwargs: Any) -> Any:
+        """Execute a table operation with retry on LanceDB commit conflicts.
+
+        Args:
+            op: Method name on the table object (e.g. "add", "delete").
+            *args, **kwargs: Passed to the table method.
+
+        LanceDB uses optimistic concurrency: if two transactions overlap,
+        the second to commit fails with an ``OSError`` containing
+        "Commit conflict". This helper retries with exponential backoff,
+        refreshing the table reference before each retry so the retried
+        call uses the latest committed version (not a stale reference).
+        """
+        delay = _RETRY_BASE_DELAY
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                return getattr(self._table, op)(*args, **kwargs)
+            except OSError as e:  # noqa: PERF203
+                if "Commit conflict" not in str(e) or attempt >= _MAX_RETRIES:
+                    raise
+                _logger.debug(
+                    "LanceDB commit conflict on %s (attempt %d/%d), retrying in %.1fs",
+                    op, attempt + 1, _MAX_RETRIES, delay,
+                )
+                # Refresh table to pick up the latest version before retrying.
+                # The next getattr(self._table, op) will use the fresh table.
+                try:
+                    self._table = self._db.open_table(self._table_name)
+                except Exception:  # noqa: S110
+                    pass  # table refresh is best-effort
+                time.sleep(delay)
+                delay *= 2
+        return None  # unreachable, but satisfies type checker
 
     def _create_table(self, vector_dim: int) -> lancedb.table.Table:
         """Create a new table with the given vector dimension."""
@@ -166,22 +239,24 @@ class LanceDBStorage:
             if r.embedding and len(r.embedding) > 0:
                 dim = len(r.embedding)
                 break
-        self._ensure_table(vector_dim=dim)
-        rows = [self._record_to_row(r) for r in records]
-        for r in rows:
-            if r["vector"] is None or len(r["vector"]) != self._vector_dim:
-                r["vector"] = [0.0] * self._vector_dim
-        self._table.add(rows)
+        with self._write_lock:
+            self._ensure_table(vector_dim=dim)
+            rows = [self._record_to_row(r) for r in records]
+            for r in rows:
+                if r["vector"] is None or len(r["vector"]) != self._vector_dim:
+                    r["vector"] = [0.0] * self._vector_dim
+            self._retry_write("add", rows)
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by ID. Preserves created_at, updates last_accessed."""
-        table = self._ensure_table()
-        safe_id = str(record.id).replace("'", "''")
-        table.delete(f"id = '{safe_id}'")
-        row = self._record_to_row(record)
-        if row["vector"] is None or len(row["vector"]) != self._vector_dim:
-            row["vector"] = [0.0] * self._vector_dim
-        table.add([row])
+        with self._write_lock:
+            self._ensure_table()
+            safe_id = str(record.id).replace("'", "''")
+            self._retry_write("delete", f"id = '{safe_id}'")
+            row = self._record_to_row(record)
+            if row["vector"] is None or len(row["vector"]) != self._vector_dim:
+                row["vector"] = [0.0] * self._vector_dim
+            self._retry_write("add", [row])
 
     def touch_records(self, record_ids: list[str]) -> None:
         """Update last_accessed to now for the given record IDs.
@@ -191,19 +266,20 @@ class LanceDBStorage:
         """
         if not record_ids or self._table is None:
             return
-        now = datetime.utcnow().isoformat()
-        for rid in record_ids:
-            safe_id = str(rid).replace("'", "''")
-            rows = (
-                self._table.search([0.0] * self._vector_dim)
-                .where(f"id = '{safe_id}'")
-                .limit(1)
-                .to_list()
-            )
-            if rows:
-                rows[0]["last_accessed"] = now
-                self._table.delete(f"id = '{safe_id}'")
-                self._table.add([rows[0]])
+        with self._write_lock:
+            now = datetime.utcnow().isoformat()
+            for rid in record_ids:
+                safe_id = str(rid).replace("'", "''")
+                rows = (
+                    self._table.search([0.0] * self._vector_dim)
+                    .where(f"id = '{safe_id}'")
+                    .limit(1)
+                    .to_list()
+                )
+                if rows:
+                    rows[0]["last_accessed"] = now
+                    self._retry_write("delete", f"id = '{safe_id}'")
+                    self._retry_write("add", [rows[0]])
 
     def get_record(self, record_id: str) -> MemoryRecord | None:
         """Return a single record by ID, or None if not found."""
@@ -257,46 +333,46 @@ class LanceDBStorage:
     ) -> int:
         if self._table is None:
             return 0
-        if record_ids and not (categories or metadata_filter):
+        with self._write_lock:
+            if record_ids and not (categories or metadata_filter):
+                before = self._table.count_rows()
+                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
+                self._retry_write("delete", f"id IN ({ids_expr})")
+                return before - self._table.count_rows()
+            if categories or metadata_filter:
+                rows = self._scan_rows(scope_prefix)
+                to_delete: list[str] = []
+                for row in rows:
+                    record = self._row_to_record(row)
+                    if categories and not any(c in record.categories for c in categories):
+                        continue
+                    if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
+                        continue
+                    if older_than and record.created_at >= older_than:
+                        continue
+                    to_delete.append(record.id)
+                if not to_delete:
+                    return 0
+                before = self._table.count_rows()
+                ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
+                self._retry_write("delete", f"id IN ({ids_expr})")
+                return before - self._table.count_rows()
+            conditions = []
+            if scope_prefix is not None and scope_prefix.strip("/"):
+                prefix = scope_prefix.rstrip("/")
+                if not prefix.startswith("/"):
+                    prefix = "/" + prefix
+                conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
+            if older_than is not None:
+                conditions.append(f"created_at < '{older_than.isoformat()}'")
+            if not conditions:
+                before = self._table.count_rows()
+                self._retry_write("delete", "id != ''")
+                return before - self._table.count_rows()
+            where_expr = " AND ".join(conditions)
             before = self._table.count_rows()
-            ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
-            self._table.delete(f"id IN ({ids_expr})")
+            self._retry_write("delete", where_expr)
             return before - self._table.count_rows()
-        if categories or metadata_filter:
-            rows = self._scan_rows(scope_prefix)
-            to_delete: list[str] = []
-            for row in rows:
-                record = self._row_to_record(row)
-                if categories and not any(c in record.categories for c in categories):
-                    continue
-                if metadata_filter and not all(record.metadata.get(k) == v for k, v in metadata_filter.items()):
-                    continue
-                if older_than and record.created_at >= older_than:
-                    continue
-                to_delete.append(record.id)
-            if not to_delete:
-                return 0
-            before = self._table.count_rows()
-            ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
-            self._table.delete(f"id IN ({ids_expr})")
-            return before - self._table.count_rows()
-        conditions = []
-        if scope_prefix is not None and scope_prefix.strip("/"):
-            prefix = scope_prefix.rstrip("/")
-            if not prefix.startswith("/"):
-                prefix = "/" + prefix
-            conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
-        if older_than is not None:
-            conditions.append(f"created_at < '{older_than.isoformat()}'")
-        if not conditions:
-            # Delete all rows (scope_prefix is "/" or None and no older_than)
-            before = self._table.count_rows()
-            self._table.delete("id != ''")
-            return before - self._table.count_rows()
-        where_expr = " AND ".join(conditions)
-        before = self._table.count_rows()
-        self._table.delete(where_expr)
-        return before - self._table.count_rows()
 
     def _scan_rows(self, scope_prefix: str | None = None, limit: int = _SCAN_ROWS_LIMIT) -> list[dict[str, Any]]:
         """Scan rows optionally filtered by scope prefix."""

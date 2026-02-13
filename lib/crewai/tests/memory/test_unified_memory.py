@@ -712,6 +712,7 @@ def test_batch_embed_single_call(tmp_path: Path) -> None:
         categories=["test"],
         importance=0.5,
     )
+    mem.drain_writes()  # wait for background save
     # The embedder should have been called exactly once with all 3 texts
     embedder.assert_called_once()
     texts_arg = embedder.call_args.args[0]
@@ -731,7 +732,7 @@ def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
     llm.supports_function_calling.return_value = False
     mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
 
-    records = mem.remember_many(
+    mem.remember_many(
         [
             "CrewAI ensures reliable operation.",
             "CrewAI ensures reliable operation.",
@@ -741,7 +742,7 @@ def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
         categories=["reliability"],
         importance=0.7,
     )
-    assert len(records) == 1
+    mem.drain_writes()  # wait for background save
     assert mem._storage.count() == 1
 
 
@@ -770,13 +771,13 @@ def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
     llm.supports_function_calling.return_value = False
     mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
 
-    records = mem.remember_many(
+    mem.remember_many(
         ["CrewAI handles complex tasks.", "Python is the best language."],
         scope="/test",
         categories=["tech"],
         importance=0.6,
     )
-    assert len(records) == 2
+    mem.drain_writes()  # wait for background save
     assert mem._storage.count() == 2
 
 
@@ -811,12 +812,13 @@ def test_batch_consolidation_deduplicates_against_storage(
     assert mem._storage.count() == 1
 
     # remember_many with the same content + a new one (all identical embeddings)
-    records = mem.remember_many(
+    mem.remember_many(
         ["CrewAI is great.", "CrewAI is wonderful."],
         scope="/test",
         categories=["review"],
         importance=0.7,
     )
+    mem.drain_writes()  # wait for background save
     # Intra-batch dedup fires: same embedding = 1.0 >= 0.98, so item 1 is dropped.
     # The remaining item finds the pre-existing record (similarity 1.0 >= 0.85).
     # LLM says don't insert -> no new records. Total stays at 1.
@@ -853,6 +855,7 @@ def test_parallel_find_similar_runs_all_searches(tmp_path: Path) -> None:
             categories=["test"],
             importance=0.5,
         )
+        mem.drain_writes()  # wait for background save
         # All 3 items should trigger a storage search
         assert search_mock.call_count == 3
 
@@ -911,10 +914,85 @@ def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
     mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
 
     # No scope/categories/importance -> all 3 need field resolution (Group C)
-    records = mem.remember_many(["Fact A.", "Fact B.", "Fact C."])
-    assert len(records) == 3
+    mem.remember_many(["Fact A.", "Fact B.", "Fact C."])
+    mem.drain_writes()  # wait for background save
     # Each item triggers one analyze_for_save call -> 3 parallel LLM calls
     assert llm.call.call_count == 3
-    # All should have the LLM-inferred scope
-    for r in records:
-        assert r.scope == "/inferred"
+    assert mem._storage.count() == 3
+
+
+# --- Non-blocking save tests ---
+
+
+def test_remember_many_returns_immediately(tmp_path: Path) -> None:
+    """remember_many() should return an empty list immediately (non-blocking)."""
+    from crewai.memory.unified_memory import Memory
+
+    call_count = 0
+
+    def distinct_embedder(texts: list[str]) -> list[list[float]]:
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            emb = [0.0] * 1536
+            emb[(call_count + i) % 1536] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=distinct_embedder)
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    result = mem.remember_many(
+        ["Fact A.", "Fact B."],
+        scope="/test",
+        categories=["test"],
+        importance=0.5,
+    )
+    # Returns immediately with empty list (save is in background)
+    assert result == []
+    # After draining, records should exist
+    mem.drain_writes()
+    assert mem._storage.count() == 2
+
+
+def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """recall() should automatically wait for pending background saves."""
+    from crewai.memory.unified_memory import Memory
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=mock_embedder)
+
+    # Submit a background save
+    mem.remember_many(
+        ["Python is great."],
+        scope="/test",
+        categories=["lang"],
+        importance=0.7,
+    )
+    # Recall should drain the pending save first, then find the record
+    matches = mem.recall("Python", scope="/test", limit=5, depth="shallow")
+    assert len(matches) >= 1
+    assert "Python" in matches[0].record.content
+
+
+def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """close() should drain pending saves and shut down the pool."""
+    from crewai.memory.unified_memory import Memory
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=mock_embedder)
+
+    mem.remember_many(
+        ["Important fact."],
+        scope="/test",
+        categories=["test"],
+        importance=0.9,
+    )
+    mem.close()
+    # After close, records should be persisted
+    assert mem._storage.count() == 1

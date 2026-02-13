@@ -26,7 +26,7 @@ from crewai.memory.types import (
     MemoryMatch,
     MemoryRecord,
     compute_composite_score,
-    embed_text,
+    embed_texts,
 )
 
 
@@ -170,47 +170,71 @@ class RecallFlow(Flow[RecallState]):
 
     @start()
     def analyze_query_step(self) -> QueryAnalysis:
-        """Analyze the query, embed distilled sub-queries, extract filters."""
+        """Analyze the query, embed distilled sub-queries, extract filters.
+
+        Short queries (below ``query_analysis_threshold`` characters) skip
+        the LLM call entirely and embed the raw query directly -- saving
+        ~1-3s per recall. Longer queries (e.g. full task descriptions)
+        benefit from LLM distillation into targeted sub-queries.
+
+        Sub-queries are embedded in a single batch ``embed_texts()`` call
+        rather than sequential ``embed_text()`` calls.
+        """
         self.state.exploration_budget = self._config.exploration_budget
-        available = self._storage.list_scopes(self.state.scope or "/")
-        if not available:
-            available = ["/"]
-        scope_info = (
-            self._storage.get_scope_info(self.state.scope or "/")
-            if self.state.scope
-            else None
-        )
-        analysis = analyze_query(
-            self.state.query,
-            available,
-            scope_info,
-            self._llm,
-        )
-        self.state.query_analysis = analysis
 
-        # Wire keywords -> category filter
-        if analysis.keywords:
-            self.state.inferred_categories = analysis.keywords
+        query_len = len(self.state.query)
+        skip_llm = query_len < self._config.query_analysis_threshold
 
-        # Parse time_filter into a datetime cutoff
-        if analysis.time_filter:
-            try:
-                self.state.time_cutoff = datetime.fromisoformat(analysis.time_filter)
-            except ValueError:
-                # If the time filter isn't a valid ISO format, ignore it and proceed without a cutoff.
-                pass
+        if skip_llm:
+            # Short query: skip LLM, embed raw query directly
+            analysis = QueryAnalysis(
+                keywords=[],
+                suggested_scopes=[],
+                complexity="simple",
+                recall_queries=[self.state.query],
+            )
+            self.state.query_analysis = analysis
+        else:
+            # Long query: use LLM to distill sub-queries and extract filters
+            available = self._storage.list_scopes(self.state.scope or "/")
+            if not available:
+                available = ["/"]
+            scope_info = (
+                self._storage.get_scope_info(self.state.scope or "/")
+                if self.state.scope
+                else None
+            )
+            analysis = analyze_query(
+                self.state.query,
+                available,
+                scope_info,
+                self._llm,
+            )
+            self.state.query_analysis = analysis
 
-        # Embed distilled recall queries (or fall back to original query)
+            # Wire keywords -> category filter
+            if analysis.keywords:
+                self.state.inferred_categories = analysis.keywords
+
+            # Parse time_filter into a datetime cutoff
+            if analysis.time_filter:
+                try:
+                    self.state.time_cutoff = datetime.fromisoformat(analysis.time_filter)
+                except ValueError:
+                    pass
+
+        # Batch-embed all sub-queries in ONE call
         queries = analysis.recall_queries if analysis.recall_queries else [self.state.query]
-        pairs: list[tuple[str, list[float]]] = []
-        for q in queries[:3]:
-            emb = embed_text(self._embedder, q)
-            if emb:
-                pairs.append((q, emb))
+        queries = queries[:3]
+        embeddings = embed_texts(self._embedder, queries)
+        pairs: list[tuple[str, list[float]]] = [
+            (q, emb) for q, emb in zip(queries, embeddings, strict=False) if emb
+        ]
         if not pairs:
-            emb = embed_text(self._embedder, self.state.query)
-            if emb:
-                pairs.append((self.state.query, emb))
+            # Fallback: embed the raw query if distilled queries all failed
+            fallback_emb = embed_texts(self._embedder, [self.state.query])
+            if fallback_emb and fallback_emb[0]:
+                pairs = [(self.state.query, fallback_emb[0])]
         self.state.query_embeddings = pairs
         return analysis
 

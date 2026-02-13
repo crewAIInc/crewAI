@@ -261,6 +261,17 @@ class MemoryConfig(BaseModel):
             "to fill the final result set."
         ),
     )
+    query_analysis_threshold: int = Field(
+        default=250,
+        ge=0,
+        description=(
+            "Character count threshold for LLM query analysis during deep recall. "
+            "Queries shorter than this are embedded directly without an LLM call "
+            "to distill sub-queries or infer scopes (saving ~1-3s). Longer queries "
+            "(e.g. full task descriptions) benefit from LLM distillation. "
+            "Set to 0 to always use LLM analysis."
+        ),
+    )
 
 
 def embed_text(embedder: Any, text: str) -> list[float]:

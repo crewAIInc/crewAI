@@ -840,21 +840,27 @@ class Flow(Generic[T], metaclass=FlowMeta):
             raise ValueError("No memory configured for this flow")
         return self.memory.recall(query, **kwargs)
 
-    def remember(self, content: str, **kwargs: Any) -> Any:
-        """Store content in memory. Delegates to this flow's memory.
+    def remember(self, content: str | list[str], **kwargs: Any) -> Any:
+        """Store one or more items in memory.
+
+        Pass a single string for synchronous save (returns the MemoryRecord).
+        Pass a list of strings for non-blocking batch save (returns immediately).
 
         Args:
-            content: Text to remember.
-            **kwargs: Passed to memory.remember (e.g. scope, categories, metadata).
+            content: Text or list of texts to remember.
+            **kwargs: Passed to memory.remember / remember_many
+                      (e.g. scope, categories, metadata, importance).
 
         Returns:
-            Result of memory.remember(content, **kwargs).
+            MemoryRecord for single item, empty list for batch (background save).
 
         Raises:
             ValueError: If no memory is configured for this flow.
         """
         if self.memory is None:
             raise ValueError("No memory configured for this flow")
+        if isinstance(content, list):
+            return self.memory.remember_many(content, **kwargs)
         return self.memory.remember(content, **kwargs)
 
     def extract_memories(self, content: str) -> list[str]:

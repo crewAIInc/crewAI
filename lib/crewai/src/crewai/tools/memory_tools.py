@@ -110,8 +110,8 @@ class RememberTool(BaseTool):
                 f"Saved to memory (scope={record.scope}, "
                 f"importance={record.importance:.1f})."
             )
-        records = self.memory.remember_many(contents)
-        return f"Saved {len(records)} items to memory."
+        self.memory.remember_many(contents)
+        return f"Saving {len(contents)} items to memory in background."
 
 
 def create_memory_tools(memory: Any) -> list[BaseTool]:

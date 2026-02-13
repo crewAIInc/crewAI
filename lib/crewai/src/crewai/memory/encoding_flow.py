@@ -324,68 +324,60 @@ class EncodingFlow(Flow[EncodingState]):
 
     @listen(parallel_analyze)
     def execute_plans(self) -> None:
-        """Apply all consolidation plans with batch re-embedding and bulk insert."""
+        """Apply all consolidation plans with batch re-embedding and bulk insert.
+
+        Actions are deduplicated across items before applying: when multiple
+        items reference the same existing record (e.g. both want to delete it),
+        only the first action is applied. This prevents LanceDB commit
+        conflicts from two operations targeting the same record.
+        """
         items = list(self.state.items)
         now = datetime.utcnow()
 
-        # --- First pass: collect update actions that need re-embedding ---
-        update_tasks: list[tuple[int, str, str]] = []  # (item_idx, record_id, new_content)
+        # --- Deduplicate actions across all items ---
+        # Multiple items may reference the same existing record (because their
+        # similar_records overlap). Collect one action per record_id, first wins.
+        # Also build a map from record_id to the original MemoryRecord for updates.
+        dedup_deletes: set[str] = set()  # record_ids to delete
+        dedup_updates: dict[str, tuple[int, str]] = {}  # record_id -> (item_idx, new_content)
+        all_similar: dict[str, MemoryRecord] = {}  # record_id -> MemoryRecord
+
         for i, item in enumerate(items):
             if item.dropped or item.plan is None:
                 continue
-            update_tasks.extend(
-                (i, action.record_id, action.new_content)
-                for action in item.plan.actions
-                if action.action == "update" and action.new_content
-            )
+            for r in item.similar_records:
+                if r.id not in all_similar:
+                    all_similar[r.id] = r
+            for action in item.plan.actions:
+                rid = action.record_id
+                if action.action == "delete" and rid not in dedup_deletes and rid not in dedup_updates:
+                    dedup_deletes.add(rid)
+                elif action.action == "update" and action.new_content and rid not in dedup_deletes and rid not in dedup_updates:
+                    dedup_updates[rid] = (i, action.new_content)
 
         # --- Batch re-embed all update contents in ONE call ---
+        update_list = list(dedup_updates.items())  # [(record_id, (item_idx, new_content)), ...]
         update_embeddings: list[list[float]] = []
-        if update_tasks:
-            update_contents = [content for _, _, content in update_tasks]
+        if update_list:
+            update_contents = [content for _, (_, content) in update_list]
             update_embeddings = embed_texts(self._embedder, update_contents)
 
-        # Build lookup: (item_idx, record_id) -> embedding
-        update_emb_map: dict[tuple[int, str], list[float]] = {}
-        for (item_idx, record_id, _), emb in zip(update_tasks, update_embeddings, strict=False):
-            update_emb_map[(item_idx, record_id)] = emb
+        update_emb_map: dict[str, list[float]] = {}
+        for (rid, _), emb in zip(update_list, update_embeddings, strict=False):
+            update_emb_map[rid] = emb
 
-        # --- Second pass: apply all plans ---
+        # --- Apply all storage mutations under one lock ---
+        # Hold the write lock for the entire delete + update + insert sequence
+        # so no other pipeline can interleave and cause version conflicts.
+        # The lock is reentrant (RLock), so the individual storage methods
+        # can re-acquire it without deadlocking.
+        # Collect records to insert (outside lock -- pure data assembly)
         to_insert: list[tuple[int, MemoryRecord]] = []
-
         for i, item in enumerate(items):
             if item.dropped or item.plan is None:
                 continue
-
-            plan = item.plan
-            record_by_id = {r.id: r for r in item.similar_records}
-
-            # Apply update/delete actions
-            for action in plan.actions:
-                if action.action == "delete":
-                    self._storage.delete(record_ids=[action.record_id])
-                    self.state.records_deleted += 1
-                elif action.action == "update" and action.new_content:
-                    existing = record_by_id.get(action.record_id)
-                    if existing is not None:
-                        new_emb = update_emb_map.get((i, action.record_id), [])
-                        updated = MemoryRecord(
-                            id=existing.id,
-                            content=action.new_content,
-                            scope=existing.scope,
-                            categories=existing.categories,
-                            metadata=existing.metadata,
-                            importance=existing.importance,
-                            created_at=existing.created_at,
-                            last_accessed=now,
-                            embedding=new_emb if new_emb else existing.embedding,
-                        )
-                        self._storage.update(updated)
-                        self.state.records_updated += 1
-                        record_by_id[action.record_id] = updated
-
-            if plan.insert_new:
-                new_record = MemoryRecord(
+            if item.plan.insert_new:
+                to_insert.append((i, MemoryRecord(
                     content=item.content,
                     scope=item.resolved_scope,
                     categories=item.resolved_categories,
@@ -394,27 +386,59 @@ class EncodingFlow(Flow[EncodingState]):
                     embedding=item.embedding if item.embedding else None,
                     source=item.resolved_source,
                     private=item.resolved_private,
-                )
-                to_insert.append((i, new_record))
-            else:
-                first_updated = next(
-                    (
-                        record_by_id[a.record_id]
-                        for a in plan.actions
-                        if a.action == "update" and a.record_id in record_by_id
-                    ),
-                    None,
-                )
-                item.result_record = (
-                    first_updated
-                    if first_updated is not None
-                    else (item.similar_records[0] if item.similar_records else None)
-                )
+                )))
 
-        # Bulk insert all new records at once
-        if to_insert:
-            records = [r for _, r in to_insert]
-            self._storage.save(records)
-            self.state.records_inserted += len(records)
-            for idx, record in to_insert:
-                items[idx].result_record = record
+        # All storage mutations under one lock so no other pipeline can
+        # interleave and cause version conflicts. The lock is reentrant
+        # (RLock) so the individual storage methods re-acquire it safely.
+        updated_records: dict[str, MemoryRecord] = {}
+        with self._storage.write_lock:
+            if dedup_deletes:
+                self._storage.delete(record_ids=list(dedup_deletes))
+                self.state.records_deleted += len(dedup_deletes)
+
+            for rid, (_item_idx, new_content) in dedup_updates.items():
+                existing = all_similar.get(rid)
+                if existing is not None:
+                    new_emb = update_emb_map.get(rid, [])
+                    updated = MemoryRecord(
+                        id=existing.id,
+                        content=new_content,
+                        scope=existing.scope,
+                        categories=existing.categories,
+                        metadata=existing.metadata,
+                        importance=existing.importance,
+                        created_at=existing.created_at,
+                        last_accessed=now,
+                        embedding=new_emb if new_emb else existing.embedding,
+                    )
+                    self._storage.update(updated)
+                    self.state.records_updated += 1
+                    updated_records[rid] = updated
+
+            if to_insert:
+                records = [r for _, r in to_insert]
+                self._storage.save(records)
+                self.state.records_inserted += len(records)
+                for idx, record in to_insert:
+                    items[idx].result_record = record
+
+        # Set result_record for non-insert items (after lock, using updated_records)
+        for _i, item in enumerate(items):
+            if item.dropped or item.plan is None or item.plan.insert_new:
+                continue
+            if item.result_record is not None:
+                continue
+            first_updated = next(
+                (
+                    updated_records[a.record_id]
+                    for a in item.plan.actions
+                    if a.action == "update" and a.record_id in updated_records
+                ),
+                None,
+            )
+            item.result_record = (
+                first_updated
+                if first_updated is not None
+                else (item.similar_records[0] if item.similar_records else None)
+            )

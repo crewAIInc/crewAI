@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
+import threading
 import time
 from typing import Any, Literal
 
@@ -83,6 +85,9 @@ class Memory:
         # How many LLM-driven exploration rounds the RecallFlow is allowed to run.
         # 0 = always shallow (vector search only); higher = more thorough but slower.
         exploration_budget: int = 1,
+        # Queries shorter than this skip LLM analysis (saving ~1-3s).
+        # Longer queries (full task descriptions) benefit from LLM distillation.
+        query_analysis_threshold: int = 200,
     ) -> None:
         """Initialize Memory.
 
@@ -101,6 +106,7 @@ class Memory:
             confidence_threshold_low: Recall confidence below which deeper exploration is triggered.
             complex_query_threshold: For complex queries, explore deeper below this confidence.
             exploration_budget: Number of LLM-driven exploration rounds during deep recall.
+            query_analysis_threshold: Queries shorter than this skip LLM analysis during deep recall.
         """
         self._config = MemoryConfig(
             recency_weight=recency_weight,
@@ -114,6 +120,7 @@ class Memory:
             confidence_threshold_low=confidence_threshold_low,
             complex_query_threshold=complex_query_threshold,
             exploration_budget=exploration_budget,
+            query_analysis_threshold=query_analysis_threshold,
         )
 
         # Store raw config for lazy initialization. LLM and embedder are only
@@ -133,6 +140,16 @@ class Memory:
             self._storage = LanceDBStorage(path=storage)
         else:
             self._storage = storage
+
+        # Background save queue. max_workers=1 serializes saves to avoid
+        # concurrent storage mutations (two saves finding the same similar
+        # record and both trying to update/delete it). Within each save,
+        # the parallel LLM calls still run on their own thread pool.
+        self._save_pool = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="memory-save"
+        )
+        self._pending_saves: list[Future[Any]] = []
+        self._pending_lock = threading.Lock()
 
     _MEMORY_DOCS_URL = "https://docs.crewai.com/concepts/memory"
 
@@ -178,6 +195,55 @@ class Memory:
                     f"Docs: {self._MEMORY_DOCS_URL}"
                 ) from e
         return self._embedder_instance
+
+    # ------------------------------------------------------------------
+    # Background write queue
+    # ------------------------------------------------------------------
+
+    def _submit_save(self, fn: Any, *args: Any, **kwargs: Any) -> Future[Any]:
+        """Submit a save operation to the background thread pool.
+
+        The future is tracked so that ``drain_writes()`` can wait for it.
+        """
+        future: Future[Any] = self._save_pool.submit(fn, *args, **kwargs)
+        with self._pending_lock:
+            self._pending_saves.append(future)
+        future.add_done_callback(self._on_save_done)
+        return future
+
+    def _on_save_done(self, future: Future[Any]) -> None:
+        """Remove a completed future from the pending list and emit failure event if needed."""
+        with self._pending_lock:
+            try:
+                self._pending_saves.remove(future)
+            except ValueError:
+                pass  # already removed
+        exc = future.exception()
+        if exc is not None:
+            crewai_event_bus.emit(
+                self,
+                MemorySaveFailedEvent(
+                    value="background save",
+                    error=str(exc),
+                    source_type="unified_memory",
+                ),
+            )
+
+    def drain_writes(self) -> None:
+        """Block until all pending background saves have completed.
+
+        Called automatically by ``recall()`` and should be called by the
+        crew at shutdown to ensure no saves are lost.
+        """
+        with self._pending_lock:
+            pending = list(self._pending_saves)
+        for future in pending:
+            future.result()  # blocks until done; re-raises exceptions
+
+    def close(self) -> None:
+        """Drain pending saves and shut down the background thread pool."""
+        self.drain_writes()
+        self._save_pool.shutdown(wait=True)
 
     def _encode_batch(
         self,
@@ -232,18 +298,17 @@ class Memory:
         private: bool = False,
         agent_role: str | None = None,
     ) -> MemoryRecord:
-        """Store content in memory. Infers scope/categories/importance via LLM when not provided.
+        """Store a single item in memory (synchronous).
 
-        The full encoding pipeline is implemented as an ``EncodingFlow``:
-        check whether LLM analysis is needed, infer or apply defaults,
-        embed the content, then perform consolidation (conflict resolution)
-        and storage.
+        Routes through the same serialized save pool as ``remember_many``
+        to prevent races, but blocks until the save completes so the caller
+        gets the ``MemoryRecord`` back immediately.
 
         Args:
             content: Text to remember.
             scope: Optional scope path; inferred if None.
             categories: Optional categories; inferred if None.
-            metadata: Optional metadata; merged with LLM-extracted if scope/categories/importance inferred.
+            metadata: Optional metadata; merged with LLM-extracted if inferred.
             importance: Optional importance 0-1; inferred if None.
             source: Optional provenance identifier (e.g. user ID, session ID).
             private: If True, only visible to recall from the same source.
@@ -267,9 +332,13 @@ class Memory:
             )
             start = time.perf_counter()
 
-            records = self._encode_batch(
-                [content], scope, categories, metadata, importance, source, private
+            # Submit through the save pool for proper serialization,
+            # then immediately wait for the result.
+            future = self._submit_save(
+                self._encode_batch,
+                [content], scope, categories, metadata, importance, source, private,
             )
+            records = future.result()
             record = records[0] if records else None
 
             elapsed_ms = (time.perf_counter() - start) * 1000
@@ -307,15 +376,20 @@ class Memory:
         private: bool = False,
         agent_role: str | None = None,
     ) -> list[MemoryRecord]:
-        """Store multiple items in memory in a single batch.
+        """Store multiple items in memory (non-blocking).
 
-        Emits one ``MemorySaveStartedEvent`` and one ``MemorySaveCompletedEvent``
-        for the entire batch. Each item runs through the full EncodingFlow
-        (analysis, embedding, consolidation) individually.
+        The encoding pipeline runs in a background thread. This method
+        returns immediately so the caller (e.g. agent) is not blocked.
+        A ``MemorySaveStartedEvent`` is emitted immediately; the
+        ``MemorySaveCompletedEvent`` is emitted when the background
+        save finishes.
+
+        Any subsequent ``recall()`` call will automatically wait for
+        pending saves to complete before searching (read barrier).
 
         Args:
             contents: List of text items to remember.
-            scope: Optional scope applied to all items (each may be overridden by LLM analysis).
+            scope: Optional scope applied to all items.
             categories: Optional categories applied to all items.
             metadata: Optional metadata applied to all items.
             importance: Optional importance applied to all items.
@@ -324,50 +398,58 @@ class Memory:
             agent_role: Optional agent role for event metadata.
 
         Returns:
-            List of created MemoryRecords.
+            Empty list (records are not available until the background save completes).
         """
         if not contents:
             return []
 
-        _source_type = "unified_memory"
-        try:
-            crewai_event_bus.emit(
-                self,
-                MemorySaveStartedEvent(
-                    value=f"{len(contents)} memories",
-                    metadata=metadata,
-                    source_type=_source_type,
-                ),
-            )
-            start = time.perf_counter()
+        self._submit_save(
+            self._background_encode_batch,
+            contents, scope, categories, metadata,
+            importance, source, private, agent_role,
+        )
+        return []
 
-            records = self._encode_batch(
-                contents, scope, categories, metadata, importance, source, private
-            )
+    def _background_encode_batch(
+        self,
+        contents: list[str],
+        scope: str | None,
+        categories: list[str] | None,
+        metadata: dict[str, Any] | None,
+        importance: float | None,
+        source: str | None,
+        private: bool,
+        agent_role: str | None,
+    ) -> list[MemoryRecord]:
+        """Run the encoding pipeline in a background thread with event emission.
 
-            elapsed_ms = (time.perf_counter() - start) * 1000
-            crewai_event_bus.emit(
-                self,
-                MemorySaveCompletedEvent(
-                    value=f"{len(records)} memories saved",
-                    metadata=metadata or {},
-                    agent_role=agent_role,
-                    save_time_ms=elapsed_ms,
-                    source_type=_source_type,
-                ),
-            )
-            return records
-        except Exception as e:
-            crewai_event_bus.emit(
-                self,
-                MemorySaveFailedEvent(
-                    value=f"{len(contents)} memories (batch)",
-                    metadata=metadata,
-                    error=str(e),
-                    source_type=_source_type,
-                ),
-            )
-            raise
+        Both started and completed events are emitted here (in the background
+        thread) so they pair correctly on the event bus scope stack.
+        """
+        crewai_event_bus.emit(
+            self,
+            MemorySaveStartedEvent(
+                value=f"{len(contents)} memories (background)",
+                metadata=metadata,
+                source_type="unified_memory",
+            ),
+        )
+        start = time.perf_counter()
+        records = self._encode_batch(
+            contents, scope, categories, metadata, importance, source, private
+        )
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        crewai_event_bus.emit(
+            self,
+            MemorySaveCompletedEvent(
+                value=f"{len(records)} memories saved",
+                metadata=metadata or {},
+                agent_role=agent_role,
+                save_time_ms=elapsed_ms,
+                source_type="unified_memory",
+            ),
+        )
+        return records
 
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from a raw content blob using the LLM.
@@ -413,6 +495,10 @@ class Memory:
         Returns:
             List of MemoryMatch, ordered by relevance.
         """
+        # Read barrier: wait for any pending background saves to finish
+        # so that the search sees all persisted records.
+        self.drain_writes()
+
         _source = "unified_memory"
         try:
             crewai_event_bus.emit(
