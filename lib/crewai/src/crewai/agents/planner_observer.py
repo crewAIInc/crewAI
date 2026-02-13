@@ -1,6 +1,6 @@
 """PlannerObserver: Observation phase after each step execution.
 
-Implements the "Observe" phase from PLAN-AND-ACT (Section 3.3). After every
+Implements the "Observe" phase. After every
 step execution, the Planner analyzes what happened, what new information was
 learned, and whether the remaining plan is still valid.
 
@@ -19,6 +19,7 @@ from crewai.events.types.observation_events import (
     StepObservationFailedEvent,
     StepObservationStartedEvent,
 )
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import StepObservation, TodoItem
 from crewai.utilities.types import LLMMessage
@@ -53,6 +54,7 @@ class PlannerObserver:
         self.agent = agent
         self.task = task
         self.llm = self._resolve_llm()
+        self._i18n: I18N = get_i18n()
 
     def _resolve_llm(self) -> Any:
         """Resolve which LLM to use for observation/planning.
@@ -238,18 +240,7 @@ class PlannerObserver:
             task_desc = self.task.description or ""
             task_goal = self.task.expected_output or ""
 
-        system_prompt = (
-            "You are a Planning Agent observing execution progress. "
-            "After each step completes, you analyze what happened and decide "
-            "whether the remaining plan is still valid.\n\n"
-            "Reason step-by-step about:\n"
-            "1. What new information was learned from this step's result\n"
-            "2. Whether the remaining steps still make sense given this new information\n"
-            "3. What refinements, if any, are needed for upcoming steps\n"
-            "4. Whether the overall goal has already been achieved\n\n"
-            "Be conservative about triggering full replans — only do so when the "
-            "remaining plan is fundamentally wrong, not just suboptimal."
-        )
+        system_prompt = self._i18n.retrieve("planning", "observation_system_prompt")
 
         # Build context of what's been done
         completed_summary = ""
@@ -276,15 +267,14 @@ class PlannerObserver:
                 remaining_lines
             )
 
-        user_prompt = (
-            f"## Original task\n{task_desc}\n\n"
-            f"## Expected output\n{task_goal}\n"
-            f"{completed_summary}\n"
-            f"\n## Just completed step {completed_step.step_number}\n"
-            f"Description: {completed_step.description}\n"
-            f"Result: {result}\n"
-            f"{remaining_summary}\n\n"
-            "Analyze this step's result and provide your observation."
+        user_prompt = self._i18n.retrieve("planning", "observation_user_prompt").format(
+            task_description=task_desc,
+            task_goal=task_goal,
+            completed_summary=completed_summary,
+            step_number=completed_step.step_number,
+            step_description=completed_step.description,
+            step_result=result,
+            remaining_summary=remaining_summary,
         )
 
         return [
@@ -298,24 +288,17 @@ class PlannerObserver:
         remaining_todos: list[TodoItem],
     ) -> list[LLMMessage]:
         """Build messages for the refinement LLM call."""
-        system_prompt = (
-            "You are refining upcoming plan steps based on new information. "
-            "Update the step descriptions to be more specific and actionable "
-            "given what was learned. Keep the same step numbers.\n\n"
-            "Respond with one line per step in the format:\n"
-            "Step N: <refined description>"
-        )
+        system_prompt = self._i18n.retrieve("planning", "refinement_system_prompt")
 
         refinements = "\n".join(observation.suggested_refinements or [])
         todo_lines = "\n".join(
             f"Step {t.step_number}: {t.description}" for t in remaining_todos
         )
 
-        user_prompt = (
-            f"## New information learned\n{observation.key_information_learned}\n\n"
-            f"## Suggested refinements\n{refinements}\n\n"
-            f"## Current pending steps\n{todo_lines}\n\n"
-            "Update the step descriptions to incorporate the new information."
+        user_prompt = self._i18n.retrieve("planning", "refinement_user_prompt").format(
+            key_information_learned=observation.key_information_learned,
+            refinements=refinements,
+            todo_lines=todo_lines,
         )
 
         return [

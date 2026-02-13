@@ -89,7 +89,12 @@ class I18N(BaseModel):
     def retrieve(
         self,
         kind: Literal[
-            "slices", "errors", "tools", "reasoning", "hierarchical_manager_agent"
+            "slices",
+            "errors",
+            "tools",
+            "reasoning",
+            "planning",
+            "hierarchical_manager_agent",
         ],
         key: str,
     ) -> str:

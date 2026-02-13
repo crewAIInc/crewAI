@@ -2,10 +2,7 @@
 
 Implements a bounded ReAct loop scoped to ONE todo item. The tool execution
 machinery (native function calling, text-parsed tools, caching, hooks) lives
-here — moved from AgentExecutor so the outer Plan-and-Execute loop stays clean.
-
-Based on PLAN-AND-ACT (Section 3.2): The Executor translates high-level plan
-steps into concrete environment actions.
+here — moved from AgentExecutor so the outer loop stays clean.
 """
 
 from __future__ import annotations
@@ -199,36 +196,49 @@ class StepExecutor:
         tools_section = ""
         if self.tools and not self._use_native_tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
-            tools_section = f"\n\nAvailable tools: {tool_names}"
-            tools_section += "\n\nTo use a tool, respond with:\nThought: <your reasoning>\nAction: <tool_name>\nAction Input: <input>"
-            tools_section += "\n\nWhen you have the final answer, respond with:\nThought: <your reasoning>\nFinal Answer: <your answer>"
+            tools_section = self._i18n.retrieve(
+                "planning", "step_executor_tools_section"
+            ).format(tool_names=tool_names)
 
-        return f"""You are {role}. {backstory}
-
-Your goal: {goal}
-
-You are executing a specific step in a multi-step plan. Focus ONLY on completing
-the current step. Do not plan ahead or worry about future steps.
-
-Before acting, briefly reason about what you need to do and which approach
-or tool would be most helpful for this specific step.{tools_section}"""
+        return self._i18n.retrieve("planning", "step_executor_system_prompt").format(
+            role=role,
+            backstory=backstory,
+            goal=goal,
+            tools_section=tools_section,
+        )
 
     def _build_user_prompt(self, todo: TodoItem, context: StepExecutionContext) -> str:
         """Build the user prompt for this specific step."""
         parts: list[str] = []
 
-        parts.append(f"## Current Step\n{todo.description}")
+        parts.append(
+            self._i18n.retrieve("planning", "step_executor_user_prompt").format(
+                step_description=todo.description,
+            )
+        )
 
         if todo.tool_to_use:
-            parts.append(f"\nSuggested tool: {todo.tool_to_use}")
+            parts.append(
+                self._i18n.retrieve("planning", "step_executor_suggested_tool").format(
+                    tool_to_use=todo.tool_to_use,
+                )
+            )
 
         # Include dependency results (final results only, no traces)
         if context.dependency_results:
-            parts.append("\n## Context from previous steps:")
+            parts.append(
+                self._i18n.retrieve("planning", "step_executor_context_header")
+            )
             for step_num, result in sorted(context.dependency_results.items()):
-                parts.append(f"Step {step_num} result: {result}")
+                parts.append(
+                    self._i18n.retrieve(
+                        "planning", "step_executor_context_entry"
+                    ).format(step_number=step_num, result=result)
+                )
 
-        parts.append("\nComplete this step and provide your result.")
+        parts.append(
+            self._i18n.retrieve("planning", "step_executor_complete_step")
+        )
 
         return "\n".join(parts)
 
@@ -625,12 +635,13 @@ or tool would be most helpful for this specific step.{tools_section}"""
 
     def _force_final_answer(self, messages: list[LLMMessage]) -> str:
         """Force the LLM to provide a final answer when max iterations reached."""
-        force_prompt = (
-            "You have used the maximum number of tool calls for this step. "
-            "Based on the information gathered so far, provide your final answer now."
+        force_prompt = self._i18n.retrieve(
+            "planning", "step_executor_force_final_answer"
         )
         if not self._use_native_tools:
-            force_prompt += "\n\nFinal Answer: "
+            force_prompt += self._i18n.retrieve(
+                "planning", "step_executor_force_final_answer_suffix"
+            )
 
         messages.append(format_message_for_llm(force_prompt, role="user"))
 
@@ -650,7 +661,7 @@ or tool would be most helpful for this specific step.{tools_section}"""
         except Exception:  # noqa: S110
             pass
 
-        return "Step could not be completed within the iteration limit."
+        return self._i18n.retrieve("planning", "step_could_not_complete")
 
     # ------------------------------------------------------------------
     # Internal: Native tool support
