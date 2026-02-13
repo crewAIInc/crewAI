@@ -150,53 +150,47 @@ class YouSearchTool(BaseTool):
 
     def _run(
         self,
-        **kwargs: Any,
-    ) -> Any:
+        query: str,
+    ) -> str:
         """Execute the search operation.
 
         Args:
-            **kwargs: Keyword arguments including query and optional parameters.
+            query: The search query string.
 
         Returns:
             JSON string containing the search results.
         """
         try:
-            # Support both "search_query" and "query" for backwards compatibility
-            query = kwargs.get("search_query") or kwargs.get("query")
             if not query:
                 raise ValueError("Query is required")
 
             # Build request parameters
             params: dict[str, Any] = {
                 "query": query,
-                "count": kwargs.get("count", self.count),
+                "count": self.count,
             }
 
             # Add offset if specified (range: 0-9)
-            offset = kwargs.get("offset", self.offset)
-            if offset is not None:
-                params["offset"] = max(0, min(offset, 9))
+            if self.offset is not None:
+                params["offset"] = max(0, min(self.offset, 9))
 
-            if country := kwargs.get("country", self.country):
-                params["country"] = country
+            if self.country:
+                params["country"] = self.country
 
-            if language := kwargs.get("language", self.language):
-                params["language"] = language
+            if self.language:
+                params["language"] = self.language
 
-            if freshness := kwargs.get("freshness", self.freshness):
-                params["freshness"] = freshness
+            if self.freshness:
+                params["freshness"] = self.freshness
 
-            if safesearch := kwargs.get("safesearch", self.safesearch):
-                params["safesearch"] = safesearch
+            if self.safesearch:
+                params["safesearch"] = self.safesearch
 
-            if livecrawl := kwargs.get("livecrawl", self.livecrawl):
-                params["livecrawl"] = livecrawl
+            if self.livecrawl:
+                params["livecrawl"] = self.livecrawl
 
-            if livecrawl_formats := kwargs.get(
-                "livecrawl_formats",
-                self.livecrawl_formats,
-            ):
-                params["livecrawl_formats"] = livecrawl_formats
+            if self.livecrawl_formats:
+                params["livecrawl_formats"] = self.livecrawl_formats
 
             # Setup request headers
             headers = {
@@ -209,7 +203,7 @@ class YouSearchTool(BaseTool):
                 self.search_url,
                 headers=headers,
                 params=params,
-                timeout=kwargs.get("timeout", self.timeout),
+                timeout=self.timeout,
             )
             response.raise_for_status()
             results = response.json()

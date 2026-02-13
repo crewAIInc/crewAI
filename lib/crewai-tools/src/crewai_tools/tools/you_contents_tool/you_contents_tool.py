@@ -58,13 +58,11 @@ class YouContentsTool(BaseTool):
     def _run(
         self,
         urls: list[str] | str,
-        **kwargs: Any,
     ) -> str:
         """Extract content from the given URL(s).
 
         Args:
             urls: The URL(s) to extract content from.
-            **kwargs: Additional keyword arguments.
 
         Returns:
             JSON string containing the extracted content.
@@ -79,13 +77,12 @@ class YouContentsTool(BaseTool):
             # Build request payload
             payload: dict[str, Any] = {
                 "urls": url_list,
-                "formats": kwargs.get("formats", self.formats),
+                "formats": self.formats,
             }
 
             # Add crawl timeout if specified (must be between 1-60)
-            crawl_timeout = kwargs.get("crawl_timeout", self.crawl_timeout)
-            if crawl_timeout is not None:
-                payload["crawl_timeout"] = min(max(crawl_timeout, 1), 60)
+            if self.crawl_timeout is not None:
+                payload["crawl_timeout"] = min(max(self.crawl_timeout, 1), 60)
 
             # Setup request headers
             headers = {
@@ -98,7 +95,7 @@ class YouContentsTool(BaseTool):
                 self.contents_url,
                 headers=headers,
                 json=payload,
-                timeout=kwargs.get("timeout", self.timeout),
+                timeout=self.timeout,
             )
             response.raise_for_status()
             results = response.json()

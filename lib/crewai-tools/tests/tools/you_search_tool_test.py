@@ -85,14 +85,14 @@ def test_you_search_tool_search(mock_get, you_search_tool):
 
 
 @patch("requests.get")
-def test_you_search_tool_with_search_query_param(mock_get):
+def test_you_search_tool_with_query_param(mock_get):
     tool = YouSearchTool()
     mock_response = {"hits": []}
     mock_get.return_value.json.return_value = mock_response
     mock_get.return_value.status_code = 200
 
-    # Test backwards compatibility with search_query parameter
-    result = tool.run(search_query="test")
+    # Test with query parameter
+    result = tool.run(query="test")
     assert result is not None
 
     # Verify the API was called with correct parameters
@@ -139,18 +139,19 @@ def test_you_search_tool_with_offset(mock_get):
 @patch("requests.get")
 def test_you_search_tool_offset_clamping(mock_get):
     """Test that offset is clamped to 0-9 range"""
-    tool = YouSearchTool()
     mock_response = {"hits": []}
     mock_get.return_value.json.return_value = mock_response
     mock_get.return_value.status_code = 200
 
     # Test offset too high
-    tool.run(query="test", offset=15)
+    tool = YouSearchTool(offset=15)
+    tool.run(query="test")
     call_args = mock_get.call_args
     assert call_args.kwargs["params"]["offset"] == 9  # Should be clamped to max
 
     # Test offset too low
-    tool.run(query="test", offset=-5)
+    tool2 = YouSearchTool(offset=-5)
+    tool2.run(query="test")
     call_args = mock_get.call_args
     assert call_args.kwargs["params"]["offset"] == 0  # Should be clamped to min
 
@@ -216,10 +217,9 @@ def test_you_search_tool_request_exception(mock_get):
 def test_you_search_tool_missing_query():
     tool = YouSearchTool()
 
-    result = tool.run()
-
-    # Should handle missing query gracefully
-    assert "Invalid parameters" in result or "Query is required" in result
+    # Should raise TypeError for missing required argument
+    with pytest.raises(TypeError):
+        tool.run()
 
 
 @patch("requests.get")
