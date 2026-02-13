@@ -119,7 +119,7 @@ class MemoryConfig(BaseModel):
 
     Users configure these values via ``Memory(...)`` keyword arguments.
     This model is not part of the public API -- it exists so that the config
-    can be passed as a single object to RecallFlow, ConsolidationFlow, and
+    can be passed as a single object to RecallFlow, EncodingFlow, and
     compute_composite_score.
     """
 
@@ -183,6 +183,17 @@ class MemoryConfig(BaseModel):
         description=(
             "Maximum number of existing records to compare against when checking "
             "for consolidation during a save."
+        ),
+    )
+    batch_dedup_threshold: float = Field(
+        default=0.98,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Cosine similarity threshold for dropping near-exact duplicates "
+            "within a single remember_many() batch. Only items with similarity "
+            ">= this value are dropped. Set very high (0.98) to avoid "
+            "discarding useful memories that are merely similar."
         ),
     )
 
@@ -273,6 +284,40 @@ def embed_text(embedder: Any, text: str) -> list[float]:
     if isinstance(first, list):
         return [float(x) for x in first]
     return list(first)
+
+
+def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
+    """Embed multiple texts in a single API call.
+
+    The embedder already accepts ``list[str]``, so this just calls it once
+    with the full batch and normalises the output format.
+
+    Args:
+        embedder: Callable that accepts a list of strings and returns embeddings.
+        texts: List of texts to embed.
+
+    Returns:
+        List of embeddings, one per input text. Empty texts produce empty lists.
+    """
+    if not texts:
+        return []
+    # Filter out empty texts, remembering their positions
+    valid: list[tuple[int, str]] = [
+        (i, t) for i, t in enumerate(texts) if t and t.strip()
+    ]
+    if not valid:
+        return [[] for _ in texts]
+
+    result = embedder([t for _, t in valid])
+    embeddings: list[list[float]] = [[] for _ in texts]
+    for (orig_idx, _), emb in zip(valid, result, strict=False):
+        if hasattr(emb, "tolist"):
+            embeddings[orig_idx] = emb.tolist()
+        elif isinstance(emb, list):
+            embeddings[orig_idx] = [float(x) for x in emb]
+        else:
+            embeddings[orig_idx] = list(emb)
+    return embeddings
 
 
 def compute_composite_score(

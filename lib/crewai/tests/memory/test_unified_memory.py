@@ -119,8 +119,9 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
 
 @pytest.fixture
 def mock_embedder() -> MagicMock:
+    """Embedder mock that returns one embedding per input text (batch-aware)."""
     m = MagicMock()
-    m.return_value = [[0.1] * 1536]  # Chroma-style returns list of lists
+    m.side_effect = lambda texts: [[0.1] * 1536 for _ in texts]
     return m
 
 
@@ -556,6 +557,7 @@ def test_analyze_for_save_llm_failure_returns_defaults() -> None:
     from crewai.memory.analyze import MemoryAnalysis, analyze_for_save
 
     llm = MagicMock()
+    llm.supports_function_calling.return_value = False
     llm.call.side_effect = RuntimeError("API rate limit")
     result = analyze_for_save(
         "some content",
@@ -604,7 +606,7 @@ def test_analyze_query_llm_failure_returns_defaults() -> None:
 def test_remember_survives_llm_failure(
     tmp_path: Path, mock_embedder: MagicMock
 ) -> None:
-    """When analyze_for_save fails (LLM raises), remember() still saves with defaults."""
+    """When the LLM raises during parallel_analyze, remember() still saves with defaults."""
     from crewai.memory.unified_memory import Memory
 
     llm = MagicMock()
@@ -688,3 +690,231 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     remember_many_mock.assert_called_once()
     saved_contents = remember_many_mock.call_args.args[0]
     assert "PostgreSQL is used." in saved_contents
+
+
+# --- Batch EncodingFlow tests ---
+
+
+def test_batch_embed_single_call(tmp_path: Path) -> None:
+    """remember_many with 3 items should call the embedder exactly once with all 3 texts."""
+    from crewai.memory.unified_memory import Memory
+
+    embedder = MagicMock()
+    embedder.side_effect = lambda texts: [[0.1] * 1536 for _ in texts]
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    mem.remember_many(
+        ["Fact A.", "Fact B.", "Fact C."],
+        scope="/test",
+        categories=["test"],
+        importance=0.5,
+    )
+    # The embedder should have been called exactly once with all 3 texts
+    embedder.assert_called_once()
+    texts_arg = embedder.call_args.args[0]
+    assert len(texts_arg) == 3
+    assert texts_arg == ["Fact A.", "Fact B.", "Fact C."]
+
+
+def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
+    """remember_many with 3 identical strings should store only 1 record."""
+    from crewai.memory.unified_memory import Memory
+
+    embedder = MagicMock()
+    # All identical embeddings -> cosine similarity = 1.0
+    embedder.side_effect = lambda texts: [[0.5] * 1536 for _ in texts]
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    records = mem.remember_many(
+        [
+            "CrewAI ensures reliable operation.",
+            "CrewAI ensures reliable operation.",
+            "CrewAI ensures reliable operation.",
+        ],
+        scope="/test",
+        categories=["reliability"],
+        importance=0.7,
+    )
+    assert len(records) == 1
+    assert mem._storage.count() == 1
+
+
+def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
+    """remember_many with distinct items should keep all of them."""
+    from crewai.memory.unified_memory import Memory
+    import math
+
+    # Return different embeddings for different texts
+    call_count = 0
+
+    def varying_embedder(texts: list[str]) -> list[list[float]]:
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            # Create orthogonal-ish embeddings so similarity is low
+            emb = [0.0] * 1536
+            idx = (call_count + i) % 1536
+            emb[idx] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=varying_embedder)
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    records = mem.remember_many(
+        ["CrewAI handles complex tasks.", "Python is the best language."],
+        scope="/test",
+        categories=["tech"],
+        importance=0.6,
+    )
+    assert len(records) == 2
+    assert mem._storage.count() == 2
+
+
+def test_batch_consolidation_deduplicates_against_storage(
+    tmp_path: Path,
+) -> None:
+    """Pre-insert a record, then remember_many with same + new content."""
+    from crewai.memory.unified_memory import Memory
+    from crewai.memory.analyze import ConsolidationPlan
+
+    emb = [0.1] * 1536
+    embedder = MagicMock()
+    embedder.side_effect = lambda texts: [emb for _ in texts]
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = True
+    # After intra-batch dedup (identical embeddings), only 1 item survives.
+    # That item hits parallel_analyze which calls analyze_for_consolidation.
+    # The single-item call returns a ConsolidationPlan directly.
+    llm.call.return_value = ConsolidationPlan(
+        actions=[], insert_new=False, insert_reason="duplicate"
+    )
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    # Pre-insert
+    from crewai.memory.types import MemoryRecord
+
+    mem._storage.save([
+        MemoryRecord(content="CrewAI is great.", scope="/test", importance=0.7, embedding=emb),
+    ])
+    assert mem._storage.count() == 1
+
+    # remember_many with the same content + a new one (all identical embeddings)
+    records = mem.remember_many(
+        ["CrewAI is great.", "CrewAI is wonderful."],
+        scope="/test",
+        categories=["review"],
+        importance=0.7,
+    )
+    # Intra-batch dedup fires: same embedding = 1.0 >= 0.98, so item 1 is dropped.
+    # The remaining item finds the pre-existing record (similarity 1.0 >= 0.85).
+    # LLM says don't insert -> no new records. Total stays at 1.
+    assert mem._storage.count() == 1
+
+
+def test_parallel_find_similar_runs_all_searches(tmp_path: Path) -> None:
+    """remember_many with 3 distinct items should run 3 storage searches."""
+    from unittest.mock import patch
+    from crewai.memory.unified_memory import Memory
+
+    call_count = 0
+
+    def distinct_embedder(texts: list[str]) -> list[list[float]]:
+        """Return unique embeddings per text so dedup doesn't drop them."""
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            emb = [0.0] * 1536
+            emb[(call_count + i) % 1536] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=distinct_embedder)
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    with patch.object(mem._storage, "search", wraps=mem._storage.search) as search_mock:
+        mem.remember_many(
+            ["Alpha fact.", "Beta fact.", "Gamma fact."],
+            scope="/test",
+            categories=["test"],
+            importance=0.5,
+        )
+        # All 3 items should trigger a storage search
+        assert search_mock.call_count == 3
+
+
+def test_single_remember_uses_batch_flow(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """Single remember() should work through the batch flow (batch of 1)."""
+    from crewai.memory.unified_memory import Memory
+
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = False
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=mock_embedder)
+
+    record = mem.remember(
+        "Single fact.",
+        scope="/project",
+        categories=["decision"],
+        importance=0.8,
+    )
+    assert record is not None
+    assert record.content == "Single fact."
+    assert record.scope == "/project"
+    assert record.importance == 0.8
+    assert mem._storage.count() == 1
+
+
+def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
+    """remember_many with 3 items needing LLM should make 3 concurrent LLM calls."""
+    from unittest.mock import call
+    from crewai.memory.unified_memory import Memory
+    from crewai.memory.analyze import MemoryAnalysis, ExtractedMetadata
+
+    call_count = 0
+
+    def distinct_embedder(texts: list[str]) -> list[list[float]]:
+        """Return unique embeddings per text so dedup doesn't drop them."""
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            emb = [0.0] * 1536
+            emb[(call_count + i) % 1536] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=distinct_embedder)
+    llm = MagicMock()
+    llm.supports_function_calling.return_value = True
+    # Return a valid MemoryAnalysis for field resolution calls
+    llm.call.return_value = MemoryAnalysis(
+        suggested_scope="/inferred",
+        categories=["auto"],
+        importance=0.6,
+        extracted_metadata=ExtractedMetadata(),
+    )
+
+    mem = Memory(storage=str(tmp_path / "db"), llm=llm, embedder=embedder)
+
+    # No scope/categories/importance -> all 3 need field resolution (Group C)
+    records = mem.remember_many(["Fact A.", "Fact B.", "Fact C."])
+    assert len(records) == 3
+    # Each item triggers one analyze_for_save call -> 3 parallel LLM calls
+    assert llm.call.call_count == 3
+    # All should have the LLM-inferred scope
+    for r in records:
+        assert r.scope == "/inferred"

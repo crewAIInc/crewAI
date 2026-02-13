@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.i18n import get_i18n
 
+
 _logger = logging.getLogger(__name__)
 
 
@@ -196,77 +197,6 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
         return [content]
 
 
-async def aextract_memories_from_content(content: str, llm: Any) -> list[str]:
-    """Async variant of extract_memories_from_content."""
-    return extract_memories_from_content(content, llm)
-
-
-def analyze_for_save(
-    content: str,
-    existing_scopes: list[str],
-    existing_categories: list[str],
-    llm: Any,
-) -> MemoryAnalysis:
-    """Use the LLM to infer scope, categories, importance, and metadata for a memory.
-
-    On LLM failure, returns safe defaults so remember() still persists the content.
-
-    Args:
-        content: The memory content to analyze.
-        existing_scopes: Current scope paths in the memory store.
-        existing_categories: Current categories in use.
-        llm: The LLM instance to use.
-
-    Returns:
-        MemoryAnalysis with suggested_scope, categories, importance, extracted_metadata.
-    """
-    user = _get_prompt("save_user").format(
-        content=content,
-        existing_scopes=existing_scopes or ["/"],
-        existing_categories=existing_categories or [],
-    )
-    messages = [
-        {"role": "system", "content": _get_prompt("save_system")},
-        {"role": "user", "content": user},
-    ]
-    try:
-        if getattr(llm, "supports_function_calling", lambda: False)():
-            response = llm.call(messages, response_model=MemoryAnalysis)
-            if isinstance(response, MemoryAnalysis):
-                return response
-            return MemoryAnalysis.model_validate(response)
-        response = llm.call(messages)
-        if isinstance(response, MemoryAnalysis):
-            return response
-        if isinstance(response, str):
-            data = json.loads(response)
-            return MemoryAnalysis.model_validate(data)
-        return MemoryAnalysis.model_validate(response)
-    except Exception as e:
-        _logger.warning(
-            "Memory save analysis failed, using defaults (scope=/, importance=0.5): %s",
-            e,
-            exc_info=False,
-        )
-        return MemoryAnalysis(
-            suggested_scope="/",
-            categories=[],
-            importance=0.5,
-            extracted_metadata=ExtractedMetadata(),
-        )
-
-
-async def aanalyze_for_save(
-    content: str,
-    existing_scopes: list[str],
-    existing_categories: list[str],
-    llm: Any,
-) -> MemoryAnalysis:
-    """Async variant of analyze_for_save."""
-    # Fallback to sync if no acall
-    return analyze_for_save(content, existing_scopes, existing_categories, llm)
-
-
 def analyze_query(
     query: str,
     available_scopes: list[str],
@@ -326,15 +256,75 @@ def analyze_query(
         )
 
 
+_SAVE_DEFAULTS = MemoryAnalysis(
+    suggested_scope="/",
+    categories=[],
+    importance=0.5,
+    extracted_metadata=ExtractedMetadata(),
+)
+
+
+def analyze_for_save(
+    content: str,
+    existing_scopes: list[str],
+    existing_categories: list[str],
+    llm: Any,
+) -> MemoryAnalysis:
+    """Infer scope, categories, importance, and metadata for a single memory.
+
+    Uses the small ``MemoryAnalysis`` schema (4 fields) for fast LLM response.
+    On failure, returns safe defaults so the memory still gets persisted.
+
+    Args:
+        content: The memory content to analyze.
+        existing_scopes: Current scope paths in the memory store.
+        existing_categories: Current categories in use.
+        llm: The LLM instance to use.
+
+    Returns:
+        MemoryAnalysis with suggested_scope, categories, importance, extracted_metadata.
+    """
+    user = _get_prompt("save_user").format(
+        content=content,
+        existing_scopes=existing_scopes or ["/"],
+        existing_categories=existing_categories or [],
+    )
+    messages = [
+        {"role": "system", "content": _get_prompt("save_system")},
+        {"role": "user", "content": user},
+    ]
+    try:
+        if getattr(llm, "supports_function_calling", lambda: False)():
+            response = llm.call(messages, response_model=MemoryAnalysis)
+            if isinstance(response, MemoryAnalysis):
+                return response
+            return MemoryAnalysis.model_validate(response)
+        response = llm.call(messages)
+        if isinstance(response, MemoryAnalysis):
+            return response
+        if isinstance(response, str):
+            data = json.loads(response)
+            return MemoryAnalysis.model_validate(data)
+        return MemoryAnalysis.model_validate(response)
+    except Exception as e:
+        _logger.warning(
+            "Memory save analysis failed, using defaults: %s", e, exc_info=False,
+        )
+        return _SAVE_DEFAULTS
+
+
+_CONSOLIDATION_DEFAULT = ConsolidationPlan(actions=[], insert_new=True)
+
+
 def analyze_for_consolidation(
     new_content: str,
     existing_records: list[MemoryRecord],
     llm: Any,
 ) -> ConsolidationPlan:
-    """Use the LLM to decide how to consolidate new content with existing memories.
+    """Decide insert/update/delete for a single memory against similar existing records.
 
-    On LLM failure, returns a safe default (insert_new=True, no actions) so save
-    is never blocked.
+    Uses the small ``ConsolidationPlan`` schema (3 fields) for fast LLM response.
+    On failure, returns a safe default (insert_new=True) so the memory still gets persisted.
 
     Args:
         new_content: The new content to store.
@@ -346,11 +336,12 @@ def analyze_for_consolidation(
     """
     if not existing_records:
         return ConsolidationPlan(actions=[], insert_new=True)
-    records_lines = []
+    records_lines: list[str] = []
     for r in existing_records:
         created = r.created_at.isoformat() if r.created_at else ""
         records_lines.append(
-            f"- id={r.id} | scope={r.scope} | importance={r.importance:.2f} | created={created}\n  content: {r.content[:200]}{'...' if len(r.content) > 200 else ''}"
+            f"- id={r.id} | scope={r.scope} | importance={r.importance:.2f} | created={created}\n"
+            f"  content: {r.content[:200]}{'...' if len(r.content) > 200 else ''}"
         )
     user = _get_prompt("consolidation_user").format(
         new_content=new_content,
@@ -375,18 +366,6 @@ def analyze_for_consolidation(
         return ConsolidationPlan.model_validate(response)
     except Exception as e:
         _logger.warning(
-            "Consolidation analysis failed, defaulting to insert only: %s",
-            e,
-            exc_info=False,
+            "Consolidation analysis failed, defaulting to insert: %s", e, exc_info=False,
         )
-        return ConsolidationPlan(actions=[], insert_new=True)
-
-
-async def aanalyze_query(
-    query: str,
-    available_scopes: list[str],
-    scope_info: ScopeInfo | None,
-    llm: Any,
-) -> QueryAnalysis:
-    """Async variant of analyze_query."""
-    return analyze_query(query, available_scopes, scope_info, llm)
+        return _CONSOLIDATION_DEFAULT

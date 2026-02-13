@@ -114,8 +114,7 @@ def test_crew_memory_with_google_vertex_embedder(
     # with a fake embedder that doesn't need real API calls.
     memory._embedder = _fake_embedder
 
-    # Also mock the LLM analysis (analyze_for_save) so remember() doesn't need
-    # an LLM call -- pass all fields explicitly to skip analysis.
+    # Pass all fields explicitly to skip LLM analysis in the encoding flow.
     record = memory.remember(
         content=f"AI summary: {result.raw[:100]}",
         scope="/test",

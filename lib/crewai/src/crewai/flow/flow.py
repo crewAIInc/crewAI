@@ -806,7 +806,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             )
 
         # Auto-create memory if not provided at class or instance level.
-        # Internal flows (RecallFlow, ConsolidationFlow) set _skip_auto_memory
+        # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
         # to avoid creating a wasteful standalone Memory instance.
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
             from crewai.memory.unified_memory import Memory

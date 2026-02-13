@@ -179,17 +179,17 @@ class Memory:
                 ) from e
         return self._embedder_instance
 
-    def _encode_single(
+    def _encode_batch(
         self,
-        content: str,
+        contents: list[str],
         scope: str | None = None,
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
-    ) -> MemoryRecord:
-        """Run the EncodingFlow for a single item. No event emission.
+    ) -> list[MemoryRecord]:
+        """Run the batch EncodingFlow for one or more items. No event emission.
 
         This is the core encoding logic shared by ``remember()`` and
         ``remember_many()``. Events are managed by the calling method.
@@ -202,18 +202,24 @@ class Memory:
             embedder=self._embedder,
             config=self._config,
         )
-        flow.kickoff(
-            inputs={
-                "content": content,
+        items_input = [
+            {
+                "content": c,
                 "scope": scope,
                 "categories": categories,
                 "metadata": metadata,
                 "importance": importance,
                 "source": source,
                 "private": private,
-            },
-        )
-        return flow.state.result_record
+            }
+            for c in contents
+        ]
+        flow.kickoff(inputs={"items": items_input})
+        return [
+            item.result_record
+            for item in flow.state.items
+            if not item.dropped and item.result_record is not None
+        ]
 
     def remember(
         self,
@@ -230,8 +236,8 @@ class Memory:
 
         The full encoding pipeline is implemented as an ``EncodingFlow``:
         check whether LLM analysis is needed, infer or apply defaults,
-        embed the content, then delegate to ``ConsolidationFlow`` for
-        conflict resolution and storage.
+        embed the content, then perform consolidation (conflict resolution)
+        and storage.
 
         Args:
             content: Text to remember.
@@ -261,9 +267,10 @@ class Memory:
             )
             start = time.perf_counter()
 
-            record = self._encode_single(
-                content, scope, categories, metadata, importance, source, private
+            records = self._encode_batch(
+                [content], scope, categories, metadata, importance, source, private
             )
+            record = records[0] if records else None
 
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
@@ -334,13 +341,9 @@ class Memory:
             )
             start = time.perf_counter()
 
-            records: list[MemoryRecord] = []
-            for content in contents:
-                record = self._encode_single(
-                    content, scope, categories, metadata, importance, source, private
-                )
-                if record is not None:
-                    records.append(record)
+            records = self._encode_batch(
+                contents, scope, categories, metadata, importance, source, private
+            )
 
             elapsed_ms = (time.perf_counter() - start) * 1000
             crewai_event_bus.emit(
