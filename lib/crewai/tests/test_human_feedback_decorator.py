@@ -399,3 +399,88 @@ class TestCollapseToOutcome:
             )
 
         assert result == "approved"  # First in list
+
+
+class TestListenerRouterPathDetection:
+    """Tests for router path detection when combining @listen and @human_feedback."""
+
+    def test_listener_with_human_feedback_emit_has_router_paths(self):
+        """Test that @listen + @human_feedback(emit=...) correctly sets router paths.
+
+        This test verifies that the Flow metaclass correctly detects router paths
+        from the __router_paths__ attribute set by @human_feedback, instead of
+        trying to parse source code (which fails with IndentationError for
+        multi-decorated methods).
+
+        Regression test for: combining @listen and @human_feedback(emit=...) caused
+        IndentationError during Flow class initialization because source parsing
+        doesn't handle multiple decorators well.
+        """
+
+        class TestFlow(Flow):
+            @start()
+            def begin(self):
+                return "start"
+
+            @listen("begin")
+            @human_feedback(
+                message="Review this:",
+                emit=["approved", "rejected", "needs_revision"],
+                llm="gpt-4o-mini",
+            )
+            def review(self):
+                return "content to review"
+
+            @listen("approved")
+            def on_approved(self):
+                return "published"
+
+            @listen("rejected")
+            def on_rejected(self):
+                return "discarded"
+
+        # Verify the Flow class was created without IndentationError
+        # and router_paths are correctly detected
+        assert "review" in TestFlow._router_paths
+        assert TestFlow._router_paths["review"] == [
+            "approved",
+            "rejected",
+            "needs_revision",
+        ]
+
+        # Verify the method is registered as both a listener and a router
+        assert "review" in TestFlow._listeners
+        assert "review" in TestFlow._routers
+
+    def test_multiple_listener_routers_detected(self):
+        """Test that multiple @listen + @human_feedback combinations work."""
+
+        class MultiListenerFlow(Flow):
+            @start()
+            @human_feedback(
+                message="First review:",
+                emit=["continue", "stop"],
+                llm="gpt-4o-mini",
+            )
+            def step1(self):
+                return "step 1"
+
+            @listen("continue")
+            @human_feedback(
+                message="Second review:",
+                emit=["finalize", "revise"],
+                llm="gpt-4o-mini",
+            )
+            def step2(self):
+                return "step 2"
+
+            @listen("finalize")
+            def final(self):
+                return "done"
+
+        # Both should have their router paths detected
+        assert "step1" in MultiListenerFlow._router_paths
+        assert MultiListenerFlow._router_paths["step1"] == ["continue", "stop"]
+
+        assert "step2" in MultiListenerFlow._router_paths
+        assert MultiListenerFlow._router_paths["step2"] == ["finalize", "revise"]
