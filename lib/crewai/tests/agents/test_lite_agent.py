@@ -1156,6 +1156,6 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     assert call_kw.get("limit") == 10
     # depth is not passed explicitly; Memory.recall() defaults to "deep"
     mock_memory.extract_memories.assert_called_once()
-    assert mock_memory.remember.call_count == 2
-    mock_memory.remember.assert_any_call("Fact one.", agent_role="Test")
-    mock_memory.remember.assert_any_call("Fact two.", agent_role="Test")
+    mock_memory.remember_many.assert_called_once_with(
+        ["Fact one.", "Fact two."], agent_role="Test"
+    )
