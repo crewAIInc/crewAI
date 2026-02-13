@@ -700,6 +700,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
+    verbose: bool = True
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -713,6 +714,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         persistence: FlowPersistence | None = None,
         tracing: bool | None = None,
         suppress_flow_events: bool = False,
+        verbose: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize a new Flow instance.
@@ -754,6 +756,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
+        self.verbose = verbose
         # Apply any additional kwargs
         if kwargs:
             self._initialize_state(kwargs)
@@ -2510,6 +2513,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         )
 
         # Pause live updates during human input
+        event_listener.formatter.verbose = self.verbose
         formatter = event_listener.formatter
         formatter.pause_live_updates()
 
@@ -2681,6 +2685,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         from crewai.events.event_listener import event_listener
 
+        event_listener.formatter.verbose = self.verbose
         event_listener.formatter.console.print(message, style=color)
         if level == "info":
             logger.info(message)

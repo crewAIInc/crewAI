@@ -75,7 +75,7 @@ class ExampleFlow(Flow):
 
 
 
-flow = ExampleFlow()
+flow = ExampleFlow(verbose=True) #The verbose flag defaults to True. Set it to False to disable verbose flow execution
 flow.plot()
 result = flow.kickoff()
 
