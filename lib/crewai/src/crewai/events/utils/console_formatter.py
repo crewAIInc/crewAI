@@ -170,16 +170,16 @@ To enable tracing, do any one of these:
         """Create standardized status content with consistent formatting."""
         content = Text()
         content.append(f"{title}\n", style=f"{status_style} bold")
-        content.append("Name: \n", style="white")
+        content.append("Name: ", style="white")
         content.append(f"{name}\n", style=status_style)
 
         for label, value in fields.items():
-            content.append(f"{label}: \n", style="white")
+            content.append(f"{label}: ", style="white")
             content.append(
                 f"{value}\n", style=fields.get(f"{label}_style", status_style)
             )
         if tool_args:
-            content.append("Tool Args: \n", style="white")
+            content.append("Tool Args: ", style="white")
             content.append(f"{tool_args}\n", style=status_style)
 
         return content

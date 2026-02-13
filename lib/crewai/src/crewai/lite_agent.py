@@ -479,6 +479,19 @@ class LiteAgent(FlowTrackable, BaseModel):
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        # Inject memory tools once if memory is configured (mirrors Agent._prepare_kickoff)
+        if self._memory is not None:
+            from crewai.tools.memory_tools import create_memory_tools
+            from crewai.utilities.agent_utils import sanitize_tool_name
+
+            existing_names = {sanitize_tool_name(t.name) for t in self._parsed_tools}
+            memory_tools = [
+                mt for mt in create_memory_tools(self._memory)
+                if sanitize_tool_name(mt.name) not in existing_names
+            ]
+            if memory_tools:
+                self._parsed_tools = self._parsed_tools + parse_tools(memory_tools)
+
         # Create agent info for event emission
         agent_info = {
             "id": self.id,
