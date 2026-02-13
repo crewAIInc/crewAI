@@ -507,9 +507,7 @@ def generate_tool_parameters_schema(model: type[BaseModel]) -> dict[str, Any]:
 
     json_schema = strip_null_from_types(json_schema)
 
-    json_schema = _strip_schema_metadata(json_schema)
-
-    return json_schema
+    return _strip_schema_metadata(json_schema)
 
 
 FORMAT_TYPE_MAP: dict[str, type[Any]] = {
