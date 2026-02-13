@@ -176,13 +176,23 @@ class EncodingFlow(Flow[EncodingState]):
     # ------------------------------------------------------------------
 
     @listen(embed_content)
-    def consolidate(self) -> MemoryRecord | None:
+    async def consolidate(self) -> MemoryRecord | None:
         """Run ConsolidationFlow for conflict resolution and storage.
 
-        Uses ``run_sync()`` instead of ``kickoff()`` because this step
-        executes inside the EncodingFlow's async event loop. Calling
-        ``kickoff()`` (which wraps ``asyncio.run()``) from within a
-        running loop would fail silently.
+        Defined as ``async`` so the Flow executor awaits it directly in
+        the event loop instead of dispatching to a thread.  This lets us
+        ``await cflow.kickoff_async()``, the standard Flow entry-point
+        that properly initialises state via ``_initialize_state(inputs)``
+        -- avoiding the nested ``asyncio.run()`` crash that the sync
+        ``kickoff()`` would cause.
+
+        Note: ``list()`` / ``dict()`` calls materialise the
+        ``LockedListProxy`` / ``LockedDictProxy`` wrappers returned by
+        ``self.state.*`` into plain Python objects.  This is necessary
+        because Pydantic's ``model_validate`` (used inside
+        ``_initialize_state``) reads list/dict data via C-level internals
+        that bypass the proxy's Python-level ``__iter__`` / ``__getitem__``
+        and see the empty builtin storage instead.
         """
         from crewai.memory.consolidation_flow import ConsolidationFlow
 
@@ -192,17 +202,18 @@ class EncodingFlow(Flow[EncodingState]):
             embedder=self._embedder,
             config=self._config,
         )
-        # Populate state field-by-field to avoid replacing the StateProxy's
-        # underlying object (which would desync the proxy from _state).
-        cflow.state.new_content = self.state.content
-        cflow.state.new_embedding = self.state.embedding
-        cflow.state.scope = self.state.resolved_scope
-        cflow.state.categories = self.state.resolved_categories
-        cflow.state.metadata = self.state.resolved_metadata
-        cflow.state.importance = self.state.resolved_importance
-        cflow.state.source = self.state.resolved_source
-        cflow.state.private = self.state.resolved_private
-        cflow.run_sync()
+        await cflow.kickoff_async(
+            inputs={
+                "new_content": self.state.content,
+                "new_embedding": list(self.state.embedding),
+                "scope": self.state.resolved_scope,
+                "categories": list(self.state.resolved_categories),
+                "metadata": dict(self.state.resolved_metadata),
+                "importance": self.state.resolved_importance,
+                "source": self.state.resolved_source,
+                "private": self.state.resolved_private,
+            },
+        )
         self.state.result_record = cflow.state.result_record
         self.state.consolidation_stats = {
             "records_updated": cflow.state.records_updated,

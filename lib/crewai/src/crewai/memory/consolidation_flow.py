@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from crewai.flow.flow import Flow, listen, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.memory.analyze import (
     ConsolidationPlan,
     analyze_for_consolidation,
@@ -56,21 +56,6 @@ class ConsolidationFlow(Flow[ConsolidationState]):
         self._embedder = embedder
         self._config = config or MemoryConfig()
 
-    def run_sync(self) -> MemoryRecord | None:
-        """Execute the consolidation pipeline procedurally (no async event loop).
-
-        This is used when called from within another Flow (e.g. EncodingFlow)
-        where ``kickoff()`` would fail due to nested ``asyncio.run()`` calls.
-        """
-        self.find_similar()
-        route = self.check_threshold()
-        if route == "needs_consolidation":
-            self.analyze_conflicts()
-        else:
-            self.insert_only_path()
-        self.execute_plan()
-        return self.state.result_record
-
     @start()
     def find_similar(self) -> list[MemoryRecord]:
         """Search for existing records similar to the new content (cheap pre-check)."""
@@ -117,8 +102,7 @@ class ConsolidationFlow(Flow[ConsolidationState]):
         """Fast path: no similar records above threshold; plan stays None."""
         return None
 
-    @listen(insert_only_path)
-    @listen(analyze_conflicts)
+    @listen(or_(insert_only_path, analyze_conflicts))
     def execute_plan(self) -> MemoryRecord | None:
         """Apply consolidation plan or insert new record; set state.result_record."""
         now = datetime.utcnow()
