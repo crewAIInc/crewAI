@@ -23,7 +23,7 @@ def test_you_contents_tool_initialization():
     assert tool.formats == ["markdown"]
     assert tool.crawl_timeout == 10
     assert tool.timeout == 60
-    assert tool.contents_url == "https://api.ydc-index.io/contents"
+    assert tool.contents_url == "https://ydc-index.io/v1/contents"
 
 
 def test_you_contents_tool_custom_initialization():

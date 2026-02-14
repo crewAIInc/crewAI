@@ -25,7 +25,7 @@ class YouContentsTool(BaseTool):
         "Returns structured data in markdown, HTML, or metadata format."
     )
     args_schema: type[BaseModel] = YouContentsToolSchema
-    contents_url: str = "https://api.ydc-index.io/contents"
+    contents_url: str = "https://ydc-index.io/v1/contents"
     formats: list[Literal["markdown", "html", "metadata"]] = Field(
         default_factory=lambda: ["markdown"],
     )

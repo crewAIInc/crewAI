@@ -26,7 +26,7 @@ def test_you_search_tool_initialization():
     assert tool.language is None
     assert tool.safesearch == "moderate"
     assert tool.timeout == 60
-    assert tool.search_url == "https://api.ydc-index.io/search"
+    assert tool.search_url == "https://ydc-index.io/v1/search"
 
 
 def test_you_search_tool_custom_initialization():

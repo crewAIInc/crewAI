@@ -121,7 +121,7 @@ class YouSearchTool(BaseTool):
         "advanced search operators and filters."
     )
     args_schema: type[BaseModel] = YouSearchToolSchema
-    search_url: str = "https://api.ydc-index.io/search"
+    search_url: str = "https://ydc-index.io/v1/search"
     count: int = 10
     offset: int | None = None
     country: Country | None = "US"
@@ -189,9 +189,8 @@ class YouSearchTool(BaseTool):
 
             if self.livecrawl:
                 params["livecrawl"] = self.livecrawl
-
-            if self.livecrawl_formats:
-                params["livecrawl_formats"] = self.livecrawl_formats
+                if self.livecrawl_formats:
+                    params["livecrawl_formats"] = self.livecrawl_formats
 
             # Setup request headers
             headers = {
