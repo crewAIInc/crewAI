@@ -416,13 +416,18 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
-class LockedListProxy(Generic[T]):
+class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
     """Thread-safe proxy for list operations.
 
-    Wraps a list and uses a lock for all mutating operations.
+    Subclasses ``list`` so that ``isinstance(proxy, list)`` returns True,
+    which is required by libraries like LanceDB and Pydantic that do strict
+    type checks. All mutations go through the lock; reads delegate to the
+    underlying list.
     """
 
     def __init__(self, lst: list[T], lock: threading.Lock) -> None:
+        # Do NOT call super().__init__() -- we don't want to copy data into
+        # the builtin list storage. All access goes through self._list.
         self._list = lst
         self._lock = lock
 
@@ -476,14 +481,32 @@ class LockedListProxy(Generic[T]):
     def __bool__(self) -> bool:
         return bool(self._list)
 
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        """Compare based on the underlying list contents."""
+        if isinstance(other, LockedListProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._list == second._list
+        with self._lock:
+            return self._list == other
 
-class LockedDictProxy(Generic[T]):
+    def __ne__(self, other: object) -> bool:  # type: ignore[override]
+        return not self.__eq__(other)
+
+
+class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
     """Thread-safe proxy for dict operations.
 
-    Wraps a dict and uses a lock for all mutating operations.
+    Subclasses ``dict`` so that ``isinstance(proxy, dict)`` returns True,
+    which is required by libraries like Pydantic that do strict type checks.
+    All mutations go through the lock; reads delegate to the underlying dict.
     """
 
     def __init__(self, d: dict[str, T], lock: threading.Lock) -> None:
+        # Do NOT call super().__init__() -- we don't want to copy data into
+        # the builtin dict storage. All access goes through self._dict.
         self._dict = d
         self._lock = lock
 
@@ -540,6 +563,20 @@ class LockedDictProxy(Generic[T]):
 
     def __bool__(self) -> bool:
         return bool(self._dict)
+
+    def __eq__(self, other: object) -> bool:  # type: ignore[override]
+        """Compare based on the underlying dict contents."""
+        if isinstance(other, LockedDictProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._dict == second._dict
+        with self._lock:
+            return self._dict == other
+
+    def __ne__(self, other: object) -> bool:  # type: ignore[override]
+        return not self.__eq__(other)
 
 
 class StateProxy(Generic[T]):
@@ -700,6 +737,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
+    memory: Any = None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -767,6 +805,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 ),
             )
 
+        # Auto-create memory if not provided at class or instance level.
+        # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
+        # to avoid creating a wasteful standalone Memory instance.
+        if self.memory is None and not getattr(self, "_skip_auto_memory", False):
+            from crewai.memory.unified_memory import Memory
+
+            self.memory = Memory()
+
         # Register all flow-related methods
         for method_name in dir(self):
             if not method_name.startswith("_"):
@@ -776,6 +822,62 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
+
+    def recall(self, query: str, **kwargs: Any) -> Any:
+        """Recall relevant memories. Delegates to this flow's memory.
+
+        Args:
+            query: Natural language query.
+            **kwargs: Passed to memory.recall (e.g. scope, categories, limit, depth).
+
+        Returns:
+            Result of memory.recall(query, **kwargs).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.recall(query, **kwargs)
+
+    def remember(self, content: str | list[str], **kwargs: Any) -> Any:
+        """Store one or more items in memory.
+
+        Pass a single string for synchronous save (returns the MemoryRecord).
+        Pass a list of strings for non-blocking batch save (returns immediately).
+
+        Args:
+            content: Text or list of texts to remember.
+            **kwargs: Passed to memory.remember / remember_many
+                      (e.g. scope, categories, metadata, importance).
+
+        Returns:
+            MemoryRecord for single item, empty list for batch (background save).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        if isinstance(content, list):
+            return self.memory.remember_many(content, **kwargs)
+        return self.memory.remember(content, **kwargs)
+
+    def extract_memories(self, content: str) -> list[str]:
+        """Extract discrete memories from content. Delegates to this flow's memory.
+
+        Args:
+            content: Raw text (e.g. task + result dump).
+
+        Returns:
+            List of short, self-contained memory statements.
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.extract_memories(content)
 
     def _mark_or_listener_fired(self, listener_name: FlowMethodName) -> bool:
         """Mark an OR listener as fired atomically.
