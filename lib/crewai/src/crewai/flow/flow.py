@@ -2533,8 +2533,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 return (None, None)
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
-            # Also clear from fired OR listeners for cyclic flows
-            self._discard_or_listener(listener_name)
+            # Clear ALL fired OR listeners so they can fire again in the new cycle.
+            # This mirrors what _execute_start_method does for start-method cycles.
+            # Only discarding the individual listener is insufficient because
+            # downstream or_() listeners (e.g., method_a listening to
+            # or_(handler_a, handler_b)) would remain suppressed across iterations.
+            self._clear_or_listeners()
 
         try:
             method = self._methods[listener_name]
