@@ -73,6 +73,8 @@ flow.kickoff()
 | `default_outcome` | `str` | 아니오 | 피드백이 제공되지 않을 때 사용할 outcome. `emit`에 있어야 합니다 |
 | `metadata` | `dict` | 아니오 | 엔터프라이즈 통합을 위한 추가 데이터 |
 | `provider` | `HumanFeedbackProvider` | 아니오 | 비동기/논블로킹 피드백을 위한 커스텀 프로바이더. [비동기 인간 피드백](#비동기-인간-피드백-논블로킹) 참조 |
+| `learn` | `bool` | 아니오 | HITL 학습 활성화: 피드백에서 교훈을 추출하고 향후 출력을 사전 검토합니다. 기본값 `False`. [피드백에서 학습하기](#피드백에서-학습하기) 참조 |
+| `learn_limit` | `int` | 아니오 | 사전 검토를 위해 불러올 최대 과거 교훈 수. 기본값 `5` |
 
 ### 기본 사용법 (라우팅 없음)
 
@@ -576,6 +578,64 @@ async def on_slack_feedback_async(flow_id: str, slack_message: str):
 5. **자동 영속성**: `HumanFeedbackPending`이 발생하면 상태가 자동으로 저장되며 기본적으로 `SQLiteFlowPersistence` 사용
 6. **커스텀 영속성**: 필요한 경우 `from_pending()`에 커스텀 영속성 인스턴스 전달
 
+## 피드백에서 학습하기
+
+`learn=True` 매개변수는 인간 검토자와 메모리 시스템 간의 피드백 루프를 활성화합니다. 활성화되면 시스템은 과거 인간의 수정 사항에서 학습하여 출력을 점진적으로 개선합니다.
+
+### 작동 방식
+
+1. **피드백 후**: LLM이 출력 + 피드백에서 일반화 가능한 교훈을 추출하고 `source="hitl"`로 메모리에 저장합니다. 피드백이 단순한 승인(예: "좋아 보입니다")인 경우 아무것도 저장하지 않습니다.
+2. **다음 검토 전**: 과거 HITL 교훈을 메모리에서 불러와 LLM이 인간이 보기 전에 출력을 개선하는 데 적용합니다.
+
+시간이 지남에 따라 각 수정 사항이 향후 검토에 반영되므로 인간은 점진적으로 더 나은 사전 검토된 출력을 보게 됩니다.
+
+### 예제
+
+```python Code
+class ArticleReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="Review this article draft:",
+        emit=["approved", "needs_revision"],
+        llm="gpt-4o-mini",
+        learn=True,  # HITL 학습 활성화
+    )
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
+    @listen("approved")
+    def publish(self):
+        print(f"Publishing: {self.last_human_feedback.output}")
+
+    @listen("needs_revision")
+    def revise(self):
+        print("Revising based on feedback...")
+```
+
+**첫 번째 실행**: 인간이 원시 출력을 보고 "사실에 대한 주장에는 항상 인용을 포함하세요."라고 말합니다. 교훈이 추출되어 메모리에 저장됩니다.
+
+**두 번째 실행**: 시스템이 인용 교훈을 불러와 출력을 사전 검토하여 인용을 추가한 후 개선된 버전을 표시합니다. 인간의 역할이 "모든 것을 수정"에서 "시스템이 놓친 것을 찾기"로 전환됩니다.
+
+### 구성
+
+| 매개변수 | 기본값 | 설명 |
+|-----------|--------|------|
+| `learn` | `False` | HITL 학습 활성화 |
+| `learn_limit` | `5` | 사전 검토를 위해 불러올 최대 과거 교훈 수 |
+
+### 주요 설계 결정
+
+- **모든 것에 동일한 LLM 사용**: 데코레이터의 `llm` 매개변수는 outcome 매핑, 교훈 추출, 사전 검토에 공유됩니다. 여러 모델을 구성할 필요가 없습니다.
+- **구조화된 출력**: 추출과 사전 검토 모두 LLM이 지원하는 경우 Pydantic 모델과 함께 function calling을 사용하고, 그렇지 않으면 텍스트 파싱으로 폴백합니다.
+- **논블로킹 저장**: 교훈은 백그라운드 스레드에서 실행되는 `remember_many()`를 통해 저장됩니다 -- Flow는 즉시 계속됩니다.
+- **우아한 저하**: 추출 중 LLM이 실패하면 아무것도 저장하지 않습니다. 사전 검토 중 실패하면 원시 출력이 표시됩니다. 어느 쪽의 실패도 Flow를 차단하지 않습니다.
+- **범위/카테고리 불필요**: 교훈을 저장할 때 `source`만 전달됩니다. 인코딩 파이프라인이 범위, 카테고리, 중요도를 자동으로 추론합니다.
+
+<Note>
+`learn=True`는 Flow에 메모리가 사용 가능해야 합니다. Flow는 기본적으로 자동으로 메모리를 얻지만, `_skip_auto_memory`로 비활성화한 경우 HITL 학습은 조용히 건너뜁니다.
+</Note>
+
+
 ## 관련 문서
 
 - [Flow 개요](/ko/concepts/flows) - CrewAI Flow에 대해 알아보기
@@ -583,3 +643,4 @@ async def on_slack_feedback_async(flow_id: str, slack_message: str):
 - [Flow 영속성](/ko/concepts/flows#persistence) - Flow 상태 영속화
 - [@router를 사용한 라우팅](/ko/concepts/flows#router) - 조건부 라우팅에 대해 더 알아보기
 - [실행 시 인간 입력](/ko/learn/human-input-on-execution) - 태스크 수준 인간 입력
+- [메모리](/ko/concepts/memory) - HITL 학습에서 사용되는 통합 메모리 시스템
