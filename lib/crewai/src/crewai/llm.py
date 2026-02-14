@@ -325,8 +325,6 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
-    "groq",
-    "meta"
 ]
 
 

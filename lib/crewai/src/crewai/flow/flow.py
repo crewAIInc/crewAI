@@ -1974,6 +1974,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return final_output
         finally:
+            # Ensure all background memory saves complete before returning
+            if self.memory is not None and hasattr(self.memory, "drain_writes"):
+                self.memory.drain_writes()
             if request_id_token is not None:
                 current_flow_request_id.reset(request_id_token)
             if flow_id_token is not None:
