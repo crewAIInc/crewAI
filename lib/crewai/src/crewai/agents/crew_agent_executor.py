@@ -238,9 +238,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.ask_for_human_input:
             formatted_answer = self._handle_human_feedback(formatted_answer)
 
-        self._create_short_term_memory(formatted_answer)
-        self._create_long_term_memory(formatted_answer)
-        self._create_external_memory(formatted_answer)
+        self._save_to_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
     def _inject_multimodal_files(self, inputs: dict[str, Any] | None = None) -> None:
@@ -1019,9 +1017,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         if self.ask_for_human_input:
             formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
-        self._create_short_term_memory(formatted_answer)
-        self._create_long_term_memory(formatted_answer)
-        self._create_external_memory(formatted_answer)
+        self._save_to_memory(formatted_answer)
         return {"output": formatted_answer.output}
 
     async def _ainvoke_loop(self) -> AgentFinish:

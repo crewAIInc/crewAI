@@ -103,16 +103,14 @@ class TestAsyncAgentExecutor:
             ),
         ):
             with patch.object(executor, "_show_start_logs"):
-                with patch.object(executor, "_create_short_term_memory"):
-                    with patch.object(executor, "_create_long_term_memory"):
-                        with patch.object(executor, "_create_external_memory"):
-                            result = await executor.ainvoke(
-                                {
-                                    "input": "test input",
-                                    "tool_names": "",
-                                    "tools": "",
-                                }
-                            )
+                with patch.object(executor, "_save_to_memory"):
+                    result = await executor.ainvoke(
+                        {
+                            "input": "test input",
+                            "tool_names": "",
+                            "tools": "",
+                        }
+                    )
 
         assert result == {"output": expected_output}
 
@@ -288,16 +286,14 @@ class TestAsyncAgentExecutor:
             ):
                 with patch.object(executor, "_show_start_logs"):
                     with patch.object(executor, "_show_logs"):
-                        with patch.object(executor, "_create_short_term_memory"):
-                            with patch.object(executor, "_create_long_term_memory"):
-                                with patch.object(executor, "_create_external_memory"):
-                                    return await executor.ainvoke(
-                                        {
-                                            "input": f"test {executor_id}",
-                                            "tool_names": "",
-                                            "tools": "",
-                                        }
-                                    )
+                        with patch.object(executor, "_save_to_memory"):
+                            return await executor.ainvoke(
+                                {
+                                    "input": f"test {executor_id}",
+                                    "tool_names": "",
+                                    "tools": "",
+                                }
+                            )
 
         results = await asyncio.gather(
             create_and_run_executor(1),

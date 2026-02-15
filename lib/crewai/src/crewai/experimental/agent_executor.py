@@ -1106,9 +1106,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if self.state.ask_for_human_input:
                 formatted_answer = self._handle_human_feedback(formatted_answer)
 
-            self._create_short_term_memory(formatted_answer)
-            self._create_long_term_memory(formatted_answer)
-            self._create_external_memory(formatted_answer)
+            self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
 
@@ -1191,9 +1189,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
             if self.state.ask_for_human_input:
                 formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
-            self._create_short_term_memory(formatted_answer)
-            self._create_long_term_memory(formatted_answer)
-            self._create_external_memory(formatted_answer)
+            self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
 
