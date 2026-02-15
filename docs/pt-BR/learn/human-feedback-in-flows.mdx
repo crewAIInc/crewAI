@@ -73,6 +73,8 @@ Quando este flow é executado, ele irá:
 | `default_outcome` | `str` | Não | Outcome a usar se nenhum feedback for fornecido. Deve estar em `emit` |
 | `metadata` | `dict` | Não | Dados adicionais para integrações enterprise |
 | `provider` | `HumanFeedbackProvider` | Não | Provider customizado para feedback assíncrono/não-bloqueante. Veja [Feedback Humano Assíncrono](#feedback-humano-assíncrono-não-bloqueante) |
+| `learn` | `bool` | Não | Habilitar aprendizado HITL: destila lições do feedback e pré-revisa saídas futuras. Padrão `False`. Veja [Aprendendo com Feedback](#aprendendo-com-feedback) |
+| `learn_limit` | `int` | Não | Máximo de lições passadas para recuperar na pré-revisão. Padrão `5` |
 
 ### Uso Básico (Sem Roteamento)
 
@@ -576,6 +578,64 @@ Se você está usando um framework web assíncrono (FastAPI, aiohttp, Slack Bolt
 5. **Persistência automática**: O estado é automaticamente salvo quando `HumanFeedbackPending` é lançado e usa `SQLiteFlowPersistence` por padrão
 6. **Persistência customizada**: Passe uma instância de persistência customizada para `from_pending()` se necessário
 
+## Aprendendo com Feedback
+
+O parâmetro `learn=True` habilita um ciclo de feedback entre revisores humanos e o sistema de memória. Quando habilitado, o sistema melhora progressivamente suas saídas aprendendo com correções humanas anteriores.
+
+### Como Funciona
+
+1. **Após o feedback**: O LLM extrai lições generalizáveis da saída + feedback e as armazena na memória com `source="hitl"`. Se o feedback for apenas aprovação (ex: "parece bom"), nada é armazenado.
+2. **Antes da próxima revisão**: Lições HITL passadas são recuperadas da memória e aplicadas pelo LLM para melhorar a saída antes que o humano a veja.
+
+Com o tempo, o humano vê saídas pré-revisadas progressivamente melhores porque cada correção informa revisões futuras.
+
+### Exemplo
+
+```python Code
+class ArticleReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="Review this article draft:",
+        emit=["approved", "needs_revision"],
+        llm="gpt-4o-mini",
+        learn=True,  # enable HITL learning
+    )
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
+    @listen("approved")
+    def publish(self):
+        print(f"Publishing: {self.last_human_feedback.output}")
+
+    @listen("needs_revision")
+    def revise(self):
+        print("Revising based on feedback...")
+```
+
+**Primeira execução**: O humano vê a saída bruta e diz "Sempre inclua citações para afirmações factuais." A lição é destilada e armazenada na memória.
+
+**Segunda execução**: O sistema recupera a lição sobre citações, pré-revisa a saída para adicionar citações e então mostra a versão melhorada. O trabalho do humano muda de "corrigir tudo" para "identificar o que o sistema deixou passar."
+
+### Configuração
+
+| Parâmetro | Padrão | Descrição |
+|-----------|--------|-----------|
+| `learn` | `False` | Habilitar aprendizado HITL |
+| `learn_limit` | `5` | Máximo de lições passadas para recuperar na pré-revisão |
+
+### Decisões de Design Principais
+
+- **Mesmo LLM para tudo**: O parâmetro `llm` no decorador é compartilhado pelo mapeamento de outcome, destilação de lições e pré-revisão. Não é necessário configurar múltiplos modelos.
+- **Saída estruturada**: Tanto a destilação quanto a pré-revisão usam function calling com modelos Pydantic quando o LLM suporta, com fallback para parsing de texto caso contrário.
+- **Armazenamento não-bloqueante**: Lições são armazenadas via `remember_many()` que executa em uma thread em segundo plano -- o flow continua imediatamente.
+- **Degradação graciosa**: Se o LLM falhar durante a destilação, nada é armazenado. Se falhar durante a pré-revisão, a saída bruta é mostrada. Nenhuma falha bloqueia o flow.
+- **Sem escopo/categorias necessários**: Ao armazenar lições, apenas `source` é passado. O pipeline de codificação infere escopo, categorias e importância automaticamente.
+
+<Note>
+`learn=True` requer que o Flow tenha memória disponível. Flows obtêm memória automaticamente por padrão, mas se você a desabilitou com `_skip_auto_memory`, o aprendizado HITL será silenciosamente ignorado.
+</Note>
+
+
 ## Documentação Relacionada
 
 - [Visão Geral de Flows](/pt-BR/concepts/flows) - Aprenda sobre CrewAI Flows
@@ -583,3 +643,4 @@ Se você está usando um framework web assíncrono (FastAPI, aiohttp, Slack Bolt
 - [Persistência de Flows](/pt-BR/concepts/flows#persistence) - Persistindo estado de flows
 - [Roteamento com @router](/pt-BR/concepts/flows#router) - Mais sobre roteamento condicional
 - [Input Humano na Execução](/pt-BR/learn/human-input-on-execution) - Input humano no nível de task
+- [Memória](/pt-BR/concepts/memory) - O sistema unificado de memória usado pelo aprendizado HITL

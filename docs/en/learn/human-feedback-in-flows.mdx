@@ -73,6 +73,8 @@ When this flow runs, it will:
 | `default_outcome` | `str` | No | Outcome to use if no feedback provided. Must be in `emit` |
 | `metadata` | `dict` | No | Additional data for enterprise integrations |
 | `provider` | `HumanFeedbackProvider` | No | Custom provider for async/non-blocking feedback. See [Async Human Feedback](#async-human-feedback-non-blocking) |
+| `learn` | `bool` | No | Enable HITL learning: distill lessons from feedback and pre-review future output. Default `False`. See [Learning from Feedback](#learning-from-feedback) |
+| `learn_limit` | `int` | No | Max past lessons to recall for pre-review. Default `5` |
 
 ### Basic Usage (No Routing)
 
@@ -576,6 +578,64 @@ If you're using an async web framework (FastAPI, aiohttp, Slack Bolt async mode)
 5. **Automatic persistence**: State is automatically saved when `HumanFeedbackPending` is raised and uses `SQLiteFlowPersistence` by default
 6. **Custom persistence**: Pass a custom persistence instance to `from_pending()` if needed
 
+## Learning from Feedback
+
+The `learn=True` parameter enables a feedback loop between human reviewers and the memory system. When enabled, the system progressively improves its outputs by learning from past human corrections.
+
+### How It Works
+
+1. **After feedback**: The LLM extracts generalizable lessons from the output + feedback and stores them in memory with `source="hitl"`. If the feedback is just approval (e.g. "looks good"), nothing is stored.
+2. **Before next review**: Past HITL lessons are recalled from memory and applied by the LLM to improve the output before the human sees it.
+
+Over time, the human sees progressively better pre-reviewed output because each correction informs future reviews.
+
+### Example
+
+```python Code
+class ArticleReviewFlow(Flow):
+    @start()
+    @human_feedback(
+        message="Review this article draft:",
+        emit=["approved", "needs_revision"],
+        llm="gpt-4o-mini",
+        learn=True,  # enable HITL learning
+    )
+    def generate_article(self):
+        return self.crew.kickoff(inputs={"topic": "AI Safety"}).raw
+
+    @listen("approved")
+    def publish(self):
+        print(f"Publishing: {self.last_human_feedback.output}")
+
+    @listen("needs_revision")
+    def revise(self):
+        print("Revising based on feedback...")
+```
+
+**First run**: The human sees the raw output and says "Always include citations for factual claims." The lesson is distilled and stored in memory.
+
+**Second run**: The system recalls the citation lesson, pre-reviews the output to add citations, then shows the improved version. The human's job shifts from "fix everything" to "catch what the system missed."
+
+### Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `learn` | `False` | Enable HITL learning |
+| `learn_limit` | `5` | Max past lessons to recall for pre-review |
+
+### Key Design Decisions
+
+- **Same LLM for everything**: The `llm` parameter on the decorator is shared by outcome collapsing, lesson distillation, and pre-review. No need to configure multiple models.
+- **Structured output**: Both distillation and pre-review use function calling with Pydantic models when the LLM supports it, falling back to text parsing otherwise.
+- **Non-blocking storage**: Lessons are stored via `remember_many()` which runs in a background thread -- the flow continues immediately.
+- **Graceful degradation**: If the LLM fails during distillation, nothing is stored. If it fails during pre-review, the raw output is shown. Neither failure blocks the flow.
+- **No scope/categories needed**: When storing lessons, only `source` is passed. The encoding pipeline infers scope, categories, and importance automatically.
+
+<Note>
+`learn=True` requires the Flow to have memory available. Flows get memory automatically by default, but if you've disabled it with `_skip_auto_memory`, HITL learning will be silently skipped.
+</Note>
+
+
 ## Related Documentation
 
 - [Flows Overview](/en/concepts/flows) - Learn about CrewAI Flows
@@ -583,3 +643,4 @@ If you're using an async web framework (FastAPI, aiohttp, Slack Bolt async mode)
 - [Flow Persistence](/en/concepts/flows#persistence) - Persisting flow state
 - [Routing with @router](/en/concepts/flows#router) - More about conditional routing
 - [Human Input on Execution](/en/learn/human-input-on-execution) - Task-level human input
+- [Memory](/en/concepts/memory) - The unified memory system used by HITL learning
