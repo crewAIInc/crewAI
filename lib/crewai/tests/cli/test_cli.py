@@ -66,7 +66,9 @@ def mock_crew():
 def mock_get_crews(mock_crew):
     with mock.patch(
         "crewai.cli.reset_memories_command.get_crews", return_value=[mock_crew]
-    ) as mock_get_crew:
+    ) as mock_get_crew, mock.patch(
+        "crewai.cli.reset_memories_command.get_flows", return_value=[]
+    ):
         yield mock_get_crew
 
 
@@ -191,6 +193,79 @@ def test_reset_memory_from_many_crews(mock_get_crews, runner):
         assert f"[Crew ({crew.id})] Knowledge has been reset." in result.output
 
     assert call_count == 2, "reset_memories should have been called twice"
+
+
+@pytest.fixture
+def mock_flow():
+    _mock = mock.Mock()
+    _mock.name = "TestFlow"
+    _mock.memory = mock.Mock()
+    _mock.memory.reset = mock.Mock()
+    return _mock
+
+
+@pytest.fixture
+def mock_get_flows(mock_flow):
+    with mock.patch(
+        "crewai.cli.reset_memories_command.get_flows", return_value=[mock_flow]
+    ) as mock_get_flow, mock.patch(
+        "crewai.cli.reset_memories_command.get_crews", return_value=[]
+    ):
+        yield mock_get_flow
+
+
+def test_reset_flow_memory(mock_get_flows, mock_flow, runner):
+    result = runner.invoke(reset_memories, ["-m"])
+    mock_flow.memory.reset.assert_called_once()
+    assert "[Flow (TestFlow)] Memory has been reset." in result.output
+
+
+def test_reset_flow_all_memories(mock_get_flows, mock_flow, runner):
+    result = runner.invoke(reset_memories, ["-a"])
+    mock_flow.memory.reset.assert_called_once()
+    assert "[Flow (TestFlow)] Reset memories command has been completed." in result.output
+
+
+def test_reset_flow_knowledge_no_effect(mock_get_flows, mock_flow, runner):
+    result = runner.invoke(reset_memories, ["--knowledge"])
+    mock_flow.memory.reset.assert_not_called()
+    assert "[Flow (TestFlow)]" not in result.output
+
+
+def test_reset_no_crew_or_flow_found(runner):
+    with mock.patch(
+        "crewai.cli.reset_memories_command.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.cli.reset_memories_command.get_flows", return_value=[]
+    ):
+        result = runner.invoke(reset_memories, ["-m"])
+        assert "No crew or flow found." in result.output
+
+
+def test_reset_crew_and_flow_memory(mock_crew, mock_flow, runner):
+    with mock.patch(
+        "crewai.cli.reset_memories_command.get_crews", return_value=[mock_crew]
+    ), mock.patch(
+        "crewai.cli.reset_memories_command.get_flows", return_value=[mock_flow]
+    ):
+        result = runner.invoke(reset_memories, ["-m"])
+        mock_crew.reset_memories.assert_called_once_with(command_type="memory")
+        mock_flow.memory.reset.assert_called_once()
+        assert f"[Crew ({mock_crew.name})] Memory has been reset." in result.output
+        assert "[Flow (TestFlow)] Memory has been reset." in result.output
+
+
+def test_reset_flow_memory_none(runner):
+    mock_flow = mock.Mock()
+    mock_flow.name = "NoMemFlow"
+    mock_flow.memory = None
+    with mock.patch(
+        "crewai.cli.reset_memories_command.get_crews", return_value=[]
+    ), mock.patch(
+        "crewai.cli.reset_memories_command.get_flows", return_value=[mock_flow]
+    ):
+        result = runner.invoke(reset_memories, ["-m"])
+        assert "[Flow (NoMemFlow)] Memory has been reset." in result.output
 
 
 def test_reset_no_memory_flags(runner):
