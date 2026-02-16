@@ -1804,8 +1804,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._pending_and_listeners.clear()
                 self._clear_or_listeners()
             else:
-                # We're restoring from persistence, set the flag
-                self._is_execution_resuming = True
+                # Only enter resumption mode if there are completed methods to
+                # replay.  When _completed_methods is empty (e.g. a pure
+                # state-reload via kickoff(inputs={"id": ...})), the flow
+                # executes from scratch and the flag would incorrectly
+                # suppress cyclic re-execution on the second iteration.
+                if self._completed_methods:
+                    self._is_execution_resuming = True
 
             if inputs:
                 # Override the id in the state if it exists in inputs
