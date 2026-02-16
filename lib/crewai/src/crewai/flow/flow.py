@@ -77,7 +77,7 @@ from crewai.flow.flow_wrappers import (
     StartMethod,
 )
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.types import FlowExecutionData, FlowMethodName, PendingListenerKey
+from crewai.flow.types import FlowExecutionData, FlowMethodName, InputHistoryEntry, PendingListenerKey
 from crewai.flow.utils import (
     _extract_all_methods,
     _extract_all_methods_recursive,
@@ -786,7 +786,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.suppress_flow_events: bool = suppress_flow_events
 
         # User input history (for self.ask())
-        self._input_history: list[dict[str, Any]] = []
+        self._input_history: list[InputHistoryEntry] = []
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
