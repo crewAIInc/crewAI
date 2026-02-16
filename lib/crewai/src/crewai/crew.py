@@ -32,6 +32,8 @@ from rich.console import Console
 from rich.panel import Panel
 from typing_extensions import Self
 
+from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
+
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
@@ -326,7 +328,12 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         # TODO: Improve typing
-        return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return v
+        return v
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
@@ -358,11 +365,11 @@ class Crew(FlowTrackable, BaseModel):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            embedder = None
+            embedder: BaseEmbeddingsProvider[Any] | None = None
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
-                embedder = build_embedder(self.embedder)
+                embedder = build_embedder(cast(Any, self.embedder))
             self._memory = Memory(embedder=embedder)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
@@ -1410,9 +1417,7 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
-    def _add_memory_tools(
-        self, tools: list[BaseTool], memory: Any
-    ) -> list[BaseTool]:
+    def _add_memory_tools(self, tools: list[BaseTool], memory: Any) -> list[BaseTool]:
         """Add recall and remember tools when memory is available.
 
         Args:
