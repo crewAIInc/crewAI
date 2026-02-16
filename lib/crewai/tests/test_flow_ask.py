@@ -10,9 +10,7 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from typing import Any
-from unittest.mock import MagicMock, call, patch
-
-from pydantic import BaseModel
+from unittest.mock import MagicMock, patch
 
 from crewai.flow import Flow, flow_config, listen, start
 from crewai.flow.async_feedback.providers import ConsoleProvider
@@ -628,7 +626,7 @@ class TestAskIntegration:
                 return "processed"
 
         flow = TestFlow()
-        result = flow.kickoff()
+        flow.kickoff()
         assert "gathered:AI agents" in execution_log
         assert "processing" in execution_log
 
@@ -731,7 +729,7 @@ class TestAskIntegration:
         flow = TestFlow()
 
         with patch.object(flow, "_request_human_feedback", return_value="looks good"):
-            result = flow.kickoff()
+            flow.kickoff()
 
         # Flow completed with both ask and human_feedback
         assert flow.last_human_feedback is not None
