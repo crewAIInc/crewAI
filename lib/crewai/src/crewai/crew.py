@@ -32,8 +32,6 @@ from rich.console import Console
 from rich.panel import Panel
 from typing_extensions import Self
 
-from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
-
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
@@ -365,7 +363,7 @@ class Crew(FlowTrackable, BaseModel):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            embedder: BaseEmbeddingsProvider[Any] | None = None
+            embedder = None
             if self.embedder is not None:
                 from crewai.rag.embeddings.factory import build_embedder
 
