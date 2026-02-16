@@ -77,7 +77,7 @@ from crewai.flow.flow_wrappers import (
     StartMethod,
 )
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.types import FlowExecutionData, FlowMethodName, PendingListenerKey
+from crewai.flow.types import FlowExecutionData, FlowMethodName, InputHistoryEntry, PendingListenerKey
 from crewai.flow.utils import (
     _extract_all_methods,
     _extract_all_methods_recursive,
@@ -738,6 +738,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
     tracing: bool | None = None
     stream: bool = False
     memory: Any = None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
+    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -783,6 +784,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self.last_human_feedback: HumanFeedbackResult | None = None
         self._pending_feedback_context: PendingFeedbackContext | None = None
         self.suppress_flow_events: bool = suppress_flow_events
+
+        # User input history (for self.ask())
+        self._input_history: list[InputHistoryEntry] = []
 
         # Initialize state with initial values
         self._state = self._create_initial_state()
@@ -2119,15 +2123,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
-            if asyncio.iscoroutinefunction(method):
-                result = await method(*args, **kwargs)
-            else:
-                # Run sync methods in thread pool for isolation
-                # This allows Agent.kickoff() to work synchronously inside Flow methods
-                import contextvars
+            # Set method name in context so ask() can read it without
+            # stack inspection.  Must happen before copy_context() so the
+            # value propagates into the thread pool for sync methods.
+            from crewai.flow.flow_context import current_flow_method_name
 
-                ctx = contextvars.copy_context()
-                result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+            method_name_token = current_flow_method_name.set(method_name)
+            try:
+                if asyncio.iscoroutinefunction(method):
+                    result = await method(*args, **kwargs)
+                else:
+                    # Run sync methods in thread pool for isolation
+                    # This allows Agent.kickoff() to work synchronously inside Flow methods
+                    import contextvars
+
+                    ctx = contextvars.copy_context()
+                    result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+            finally:
+                current_flow_method_name.reset(method_name_token)
 
             # Auto-await coroutines returned from sync methods (enables AgentExecutor pattern)
             if asyncio.iscoroutine(result):
@@ -2581,6 +2594,201 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if not isinstance(e, HumanFeedbackPending):
                 logger.error(f"Error executing listener {listener_name}: {e}")
             raise
+
+    # ── User Input (self.ask) ────────────────────────────────────────
+
+    def _resolve_input_provider(self) -> Any:
+        """Resolve the input provider using the priority chain.
+
+        Resolution order:
+        1. ``self.input_provider`` (per-flow override)
+        2. ``flow_config.input_provider`` (global default)
+        3. ``ConsoleInputProvider()`` (built-in fallback)
+
+        Returns:
+            An object implementing the ``InputProvider`` protocol.
+        """
+        from crewai.flow.async_feedback.providers import ConsoleProvider
+        from crewai.flow.flow_config import flow_config
+
+        if self.input_provider is not None:
+            return self.input_provider
+        if flow_config.input_provider is not None:
+            return flow_config.input_provider
+        return ConsoleProvider()
+
+    def _checkpoint_state_for_ask(self) -> None:
+        """Auto-checkpoint flow state before waiting for user input.
+
+        If persistence is configured, saves the current state so that
+        ``self.state`` is recoverable even if the process crashes while
+        waiting for input.
+
+        This is best-effort: if persistence is not configured, this is a no-op.
+        """
+        if self._persistence is None:
+            return
+        try:
+            state_data = (
+                self._state
+                if isinstance(self._state, dict)
+                else self._state.model_dump()
+            )
+            self._persistence.save_state(
+                flow_uuid=self.flow_id,
+                method_name="_ask_checkpoint",
+                state_data=state_data,
+            )
+        except Exception:
+            logger.debug("Failed to checkpoint state before ask()", exc_info=True)
+
+    def ask(
+        self,
+        message: str,
+        timeout: float | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        """Request input from the user during flow execution.
+
+        Blocks the current thread until the user provides input or the
+        timeout expires. Works in both sync and async flow methods (the
+        flow framework runs sync methods in a thread pool via
+        ``asyncio.to_thread``, so the event loop stays free).
+
+        Timeout ensures flows always terminate. When timeout expires,
+        ``None`` is returned, enabling the pattern::
+
+            while (msg := self.ask("You: ", timeout=300)) is not None:
+                process(msg)
+
+        Before waiting for input, the current ``self.state`` is automatically
+        checkpointed to persistence (if configured) for durability.
+
+        Args:
+            message: The question or prompt to display to the user.
+            timeout: Maximum seconds to wait for input. ``None`` means
+                wait indefinitely. When timeout expires, returns ``None``.
+                Note: timeout is best-effort for the provider call --
+                ``ask()`` returns ``None`` promptly, but the underlying
+                ``request_input()`` may continue running in a background
+                thread until it completes naturally. Network providers
+                should implement their own internal timeouts.
+            metadata: Optional metadata to send to the input provider,
+                such as user ID, channel, session context. The provider
+                can use this to route the question to the right recipient.
+
+        Returns:
+            The user's input as a string, or ``None`` on timeout, disconnect,
+            or provider error. Empty string ``""`` means the user pressed
+            Enter without typing (intentional empty input).
+
+        Example:
+            ```python
+            class MyFlow(Flow):
+                @start()
+                def gather_info(self):
+                    topic = self.ask(
+                        "What topic should we research?",
+                        metadata={"user_id": "u123", "channel": "#research"},
+                    )
+                    if topic is None:
+                        return "No input received"
+                    return topic
+            ```
+        """
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+        from datetime import datetime
+
+        from crewai.events.types.flow_events import (
+            FlowInputReceivedEvent,
+            FlowInputRequestedEvent,
+        )
+        from crewai.flow.flow_context import current_flow_method_name
+        from crewai.flow.input_provider import InputResponse
+
+        method_name = current_flow_method_name.get("unknown")
+
+        # Emit input requested event
+        crewai_event_bus.emit(
+            self,
+            FlowInputRequestedEvent(
+                type="flow_input_requested",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                metadata=metadata,
+            ),
+        )
+
+        # Auto-checkpoint state before waiting
+        self._checkpoint_state_for_ask()
+
+        provider = self._resolve_input_provider()
+        raw: str | InputResponse | None = None
+
+        try:
+            if timeout is not None:
+                # Manual executor management to avoid shutdown(wait=True)
+                # deadlock when the provider call outlives the timeout.
+                executor = ThreadPoolExecutor(max_workers=1)
+                future = executor.submit(
+                    provider.request_input, message, self, metadata
+                )
+                try:
+                    raw = future.result(timeout=timeout)
+                except FuturesTimeoutError:
+                    future.cancel()
+                    raw = None
+                finally:
+                    # wait=False so we don't block if the provider is still
+                    # running (e.g. input() stuck waiting for user).
+                    # cancel_futures=True cleans up any queued-but-not-started tasks.
+                    executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                raw = provider.request_input(message, self, metadata=metadata)
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            logger.debug("Input provider error in ask()", exc_info=True)
+            raw = None
+
+        # Normalize provider response: str, InputResponse, or None
+        response: str | None = None
+        response_metadata: dict[str, Any] | None = None
+
+        if isinstance(raw, InputResponse):
+            response = raw.text
+            response_metadata = raw.metadata
+        elif isinstance(raw, str):
+            response = raw
+        else:
+            response = None
+
+        # Record in history
+        self._input_history.append({
+            "message": message,
+            "response": response,
+            "method_name": method_name,
+            "timestamp": datetime.now(),
+            "metadata": metadata,
+            "response_metadata": response_metadata,
+        })
+
+        # Emit input received event
+        crewai_event_bus.emit(
+            self,
+            FlowInputReceivedEvent(
+                type="flow_input_received",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                response=response,
+                metadata=metadata,
+                response_metadata=response_metadata,
+            ),
+        )
+
+        return response
 
     def _request_human_feedback(
         self,
