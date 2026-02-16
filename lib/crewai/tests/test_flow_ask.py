@@ -12,7 +12,6 @@ from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, call, patch
 
-import pytest
 from pydantic import BaseModel
 
 from crewai.flow import Flow, flow_config, listen, start
