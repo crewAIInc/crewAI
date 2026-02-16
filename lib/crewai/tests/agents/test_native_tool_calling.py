@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from typing import Type
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -693,9 +693,7 @@ class TestDictToolCallArgExtraction:
         """Helper to create a minimal executor for testing _handle_native_tool_calls."""
         from crewai.agents.crew_agent_executor import CrewAgentExecutor
         from crewai.agents.tools_handler import ToolsHandler
-        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
-
-        agent = Agent(
+        agent= Agent(
             role="Test Agent",
             goal="Test tool calling",
             backstory="Testing agent",
