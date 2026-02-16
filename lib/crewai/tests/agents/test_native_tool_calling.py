@@ -7,7 +7,8 @@ when the LLM supports it, across multiple providers.
 from __future__ import annotations
 
 import os
-from unittest.mock import patch
+from typing import Type
+from unittest.mock import MagicMock, patch
 
 import pytest
 from pydantic import BaseModel, Field
@@ -655,3 +656,251 @@ class TestMaxUsageCountWithNativeToolCalling:
         assert result is not None
         # Verify usage count was incremented for each successful call
         assert tool.current_usage_count == 2
+
+
+# =============================================================================
+# Dict Tool Call Argument Extraction Tests (Issue #4495)
+# =============================================================================
+
+
+class KBQueryInput(BaseModel):
+    """Input schema for knowledge base query tool."""
+
+    query: str = Field(..., description="Natural language query for the knowledge base.")
+
+
+class KBRetrieverTool(BaseTool):
+    """A mock knowledge base retriever tool for testing."""
+
+    name: str = "kb_retrieve"
+    description: str = "Retrieve information from a knowledge base"
+    args_schema: Type[BaseModel] = KBQueryInput
+
+    def _run(self, query: str) -> str:
+        return f"KB result for: {query}"
+
+
+class TestDictToolCallArgExtraction:
+    """Tests for tool call argument extraction from dict-style tool calls.
+
+    Regression tests for issue #4495 where Bedrock-style dict tool calls
+    had their arguments silently dropped because the default value '{}' for
+    func_info.get('arguments', '{}') was truthy, preventing fallback to
+    tool_call.get('input').
+    """
+
+    def _create_executor_with_tool(self, tool: BaseTool) -> "CrewAgentExecutor":
+        """Helper to create a minimal executor for testing _handle_native_tool_calls."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.agents.tools_handler import ToolsHandler
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        agent = Agent(
+            role="Test Agent",
+            goal="Test tool calling",
+            backstory="Testing agent",
+            tools=[tool],
+            llm=LLM(model="gpt-4o-mini"),
+            verbose=False,
+        )
+        task = Task(
+            description="Test task",
+            expected_output="Test output",
+            agent=agent,
+        )
+
+        executor = CrewAgentExecutor(
+            agent=agent,
+            task=task,
+            llm=agent.llm,
+            crew=None,
+            prompt={"system": "You are a test agent", "user": "Execute: {input}"},
+            max_iter=5,
+            tools=[],
+            tools_names="",
+            stop_words=[],
+            tools_description="",
+            tools_handler=ToolsHandler(),
+            original_tools=[tool],
+        )
+        executor.messages = []
+        return executor
+
+    def test_bedrock_dict_tool_call_passes_arguments(self) -> None:
+        """Test that Bedrock-style dict tool calls correctly extract arguments.
+
+        This is the core regression test for issue #4495. Previously, arguments
+        were lost because func_info.get('arguments', '{}') returned the truthy
+        default string '{}', preventing the fallback to tool_call.get('input').
+        """
+        tool = KBRetrieverTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"kb_retrieve": tool.run}
+
+        bedrock_tool_calls = [
+            {
+                "toolUseId": "tooluse_abc123",
+                "name": "kb_retrieve",
+                "input": {"query": "What is the capital of France?"},
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            bedrock_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+        assert "KB result for: What is the capital of France?" in tool_message["content"]
+        assert "Error" not in tool_message["content"]
+
+    def test_openai_dict_tool_call_passes_arguments(self) -> None:
+        """Test that OpenAI-style dict tool calls still work correctly."""
+        tool = KBRetrieverTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"kb_retrieve": tool.run}
+
+        openai_tool_calls = [
+            {
+                "id": "call_abc123",
+                "function": {
+                    "name": "kb_retrieve",
+                    "arguments": '{"query": "What is AI?"}',
+                },
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            openai_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+        assert "KB result for: What is AI?" in tool_message["content"]
+        assert "Error" not in tool_message["content"]
+
+    def test_bedrock_dict_with_empty_input(self) -> None:
+        """Test Bedrock-style dict tool call with empty input dict."""
+        tool = CalculatorTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"calculator": tool.run}
+
+        bedrock_tool_calls = [
+            {
+                "toolUseId": "tooluse_abc123",
+                "name": "calculator",
+                "input": {},
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            bedrock_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+
+    def test_bedrock_dict_tool_call_with_custom_base_tool(self) -> None:
+        """Test that a custom BaseTool wrapper receives arguments correctly via Bedrock format.
+
+        This reproduces the exact scenario from issue #4495 where a custom wrapper
+        around BedrockKBRetrieverTool fails with '_run() missing 1 required positional argument'.
+        """
+        class InnerResult:
+            def __init__(self, content: str):
+                self.content = content
+
+        class ParsedKBTool(BaseTool):
+            name: str = "kb.retrieve"
+            description: str = "Retrieve and parse from knowledge base"
+            args_schema: Type[BaseModel] = KBQueryInput
+
+            def _run(self, query: str) -> str:
+                return f"Parsed result for query: {query}"
+
+        tool = ParsedKBTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"kb_retrieve": tool.run}
+
+        bedrock_tool_calls = [
+            {
+                "toolUseId": "tooluse_xyz789",
+                "name": "kb_retrieve",
+                "input": {"query": "Tell me about CrewAI"},
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            bedrock_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+        assert "Parsed result for query: Tell me about CrewAI" in tool_message["content"]
+        assert "missing 1 required positional argument" not in tool_message["content"]
+
+    def test_dict_tool_call_without_function_or_input_keys(self) -> None:
+        """Test dict tool call with only function key (OpenAI dict format) works."""
+        tool = KBRetrieverTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"kb_retrieve": tool.run}
+
+        dict_tool_calls = [
+            {
+                "id": "call_999",
+                "function": {
+                    "name": "kb_retrieve",
+                    "arguments": '{"query": "test query"}',
+                },
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            dict_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+        assert "KB result for: test query" in tool_message["content"]
+
+    def test_bedrock_dict_tool_call_multiple_args(self) -> None:
+        """Test Bedrock-style dict tool call with multiple arguments."""
+
+        class MultiArgInput(BaseModel):
+            location: str = Field(description="Location to search")
+            radius: int = Field(description="Search radius in km")
+
+        class MultiArgTool(BaseTool):
+            name: str = "location_search"
+            description: str = "Search within a radius of a location"
+            args_schema: Type[BaseModel] = MultiArgInput
+
+            def _run(self, location: str, radius: int) -> str:
+                return f"Found results within {radius}km of {location}"
+
+        tool = MultiArgTool()
+        executor = self._create_executor_with_tool(tool)
+
+        available_functions = {"location_search": tool.run}
+
+        bedrock_tool_calls = [
+            {
+                "toolUseId": "tooluse_multi",
+                "name": "location_search",
+                "input": {"location": "Paris", "radius": 50},
+            }
+        ]
+
+        result = executor._handle_native_tool_calls(
+            bedrock_tool_calls, available_functions
+        )
+
+        tool_message = executor.messages[-2]
+        assert tool_message["role"] == "tool"
+        assert "Found results within 50km of Paris" in tool_message["content"]
+        assert "Error" not in tool_message["content"]
