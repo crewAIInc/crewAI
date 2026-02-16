@@ -468,13 +468,13 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
                                         module_attr
                                     ):
                                         flow_instances.append(flow_instance)
-                                except Exception:
+                                except Exception:  # noqa: S112
                                     continue
 
                             if flow_instances:
                                 break
 
-                        except Exception:
+                        except Exception:  # noqa: S112
                             continue
 
                     except (ImportError, AttributeError):
@@ -483,7 +483,7 @@ def get_flows(flow_path: str = "main.py") -> list[Flow]:
             if flow_instances:
                 break
 
-    except Exception:
+    except Exception:  # noqa: S110
         pass
 
     return flow_instances
