@@ -655,3 +655,182 @@ class TestMaxUsageCountWithNativeToolCalling:
         assert result is not None
         # Verify usage count was incremented for each successful call
         assert tool.current_usage_count == 2
+
+
+# =============================================================================
+# Regression Test: Missing Required Args (#4495)
+# =============================================================================
+
+
+class KBQueryInput(BaseModel):
+    """Input schema requiring a 'query' field."""
+
+    query: str = Field(..., description="Search query for the knowledge base")
+
+
+class KBRetrieveTool(BaseTool):
+    """Tool with required 'query' arg — reproduces #4495 scenario."""
+
+    name: str = "kb_retrieve"
+    description: str = "Retrieve from knowledge base"
+    args_schema: type[BaseModel] = KBQueryInput
+
+    def _run(self, query: str) -> str:
+        return f"Results for: {query}"
+
+
+class TestNativeToolCallingMissingArgs:
+    """Regression tests for #4495: missing required args in native mode."""
+
+    def test_native_tool_call_with_missing_required_arg(self) -> None:
+        """When native mode dispatches a tool call with empty args,
+        the executor must return a validation error rather than a raw
+        TypeError, and must NOT call _run().
+
+        Before the fix, BaseTool.run() was called with {} which raised:
+            TypeError: _run() missing 1 required positional argument: 'query'
+        After the fix, args_schema.model_validate({}) catches the missing
+        field and raises a descriptive error.
+        """
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.utilities.agent_utils import sanitize_tool_name
+
+        tool = KBRetrieveTool()
+
+        # Track whether _run was called
+        run_called = False
+        original_run_method = tool._run
+
+        def tracking_run(*args, **kwargs):
+            nonlocal run_called
+            run_called = True
+            return original_run_method(*args, **kwargs)
+
+        tool._run = tracking_run
+
+        # Build available_functions the same way the executor does
+        func_name = sanitize_tool_name(tool.name)
+        available_functions = {func_name: tool.run}
+
+        # Simulate an OpenAI-style tool call with EMPTY arguments
+        tool_call = SimpleNamespace(
+            id="call_test_001",
+            function=SimpleNamespace(
+                name="kb_retrieve",
+                arguments="{}",  # <-- missing required 'query'
+            ),
+        )
+
+        # Create a minimal executor with mocked dependencies.
+        # String attrs are required because ToolUsageStartedEvent extracts
+        # task.name / task.id / agent.id for Pydantic-validated fields.
+        mock_agent = MagicMock()
+        mock_agent.verbose = False
+        mock_agent.key = "test_agent"
+        mock_agent.role = "Test"
+        mock_agent.id = "agent-test-001"
+        mock_agent.security_config = None
+        mock_agent.fingerprint = None
+
+        mock_llm = MagicMock()
+        mock_task = MagicMock()
+        mock_task.name = "Test task"
+        mock_task.description = "Test task description"
+        mock_task.id = "task-test-001"
+        mock_task.increment_tools_errors = MagicMock()
+        mock_task.increment_delegations = MagicMock()
+
+        executor = CrewAgentExecutor.__new__(CrewAgentExecutor)
+        executor.agent = mock_agent
+        executor.task = mock_task
+        executor.crew = None
+        executor.llm = mock_llm
+        executor.original_tools = [tool]
+        executor.tools = []
+        executor.messages = []
+        executor.tools_handler = None
+        executor._printer = MagicMock()
+        executor._i18n = MagicMock()
+
+        # Call _handle_native_tool_calls directly
+        result = executor._handle_native_tool_calls(
+            [tool_call], available_functions
+        )
+
+        # _run must NOT have been called — validation should catch the error first
+        assert not run_called, (
+            "_run() was called despite missing required args. "
+            "The validation patch did not intercept the call."
+        )
+
+        # The executor appends a tool-result message to self.messages
+        tool_messages = [m for m in executor.messages if m.get("role") == "tool"]
+        assert len(tool_messages) >= 1, "Expected a tool result message"
+        tool_result_content = tool_messages[-1].get("content", "")
+
+        # The result should mention validation failure, not a raw TypeError
+        assert "validation" in tool_result_content.lower() or "required" in tool_result_content.lower(), (
+            f"Expected validation error in tool result, got: {tool_result_content}"
+        )
+
+    def test_native_tool_call_with_valid_args_still_works(self) -> None:
+        """Ensure the validation patch does not break normal tool execution."""
+        from types import SimpleNamespace
+        from unittest.mock import MagicMock
+
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.utilities.agent_utils import sanitize_tool_name
+
+        tool = KBRetrieveTool()
+        func_name = sanitize_tool_name(tool.name)
+        available_functions = {func_name: tool.run}
+
+        # Valid tool call WITH the required 'query' argument
+        tool_call = SimpleNamespace(
+            id="call_test_002",
+            function=SimpleNamespace(
+                name="kb_retrieve",
+                arguments='{"query": "test search"}',
+            ),
+        )
+
+        mock_agent = MagicMock()
+        mock_agent.verbose = False
+        mock_agent.key = "test_agent"
+        mock_agent.role = "Test"
+        mock_agent.id = "agent-test-002"
+        mock_agent.security_config = None
+        mock_agent.fingerprint = None
+
+        mock_llm = MagicMock()
+        mock_task = MagicMock()
+        mock_task.name = "Test task"
+        mock_task.description = "Test task description"
+        mock_task.id = "task-test-002"
+        mock_task.increment_tools_errors = MagicMock()
+        mock_task.increment_delegations = MagicMock()
+
+        executor = CrewAgentExecutor.__new__(CrewAgentExecutor)
+        executor.agent = mock_agent
+        executor.task = mock_task
+        executor.crew = None
+        executor.llm = mock_llm
+        executor.original_tools = [tool]
+        executor.tools = []
+        executor.messages = []
+        executor.tools_handler = None
+        executor._printer = MagicMock()
+        executor._i18n = MagicMock()
+
+        result = executor._handle_native_tool_calls(
+            [tool_call], available_functions
+        )
+
+        # The tool result should contain the successful response
+        tool_messages = [m for m in executor.messages if m.get("role") == "tool"]
+        assert len(tool_messages) >= 1
+        tool_result_content = tool_messages[-1].get("content", "")
+        assert "Results for: test search" in tool_result_content

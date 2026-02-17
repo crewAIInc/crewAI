@@ -856,6 +856,15 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             if func_name in available_functions:
                 try:
                     tool_func = available_functions[func_name]
+
+                    # Validate arguments against tool schema before execution.
+                    # Native mode bypasses CrewStructuredTool.invoke()/_parse_args(),
+                    # so without this, missing required args cause a raw TypeError
+                    # that the LLM cannot self-correct.  (Fixes #4495)
+                    if original_tool and getattr(original_tool, "args_schema", None):
+                        validated = original_tool.args_schema.model_validate(args_dict)
+                        args_dict = validated.model_dump()
+
                     raw_result = tool_func(**args_dict)
 
                     # Add to cache after successful execution (before string conversion)
