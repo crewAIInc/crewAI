@@ -41,16 +41,18 @@ def _get_camb_client(api_key: str, base_url: Optional[str], timeout: float):
     return CambAI(**kwargs)
 
 
-def _poll_task(client_method, task_id, *, run_id=None, max_attempts=60, interval=2.0):
+def _poll_task(client_method, task_id, *, max_attempts=60, interval=2.0):
     """Poll an async CAMB AI task until completion."""
+    _SUCCESS = {"completed", "SUCCESS"}
+    _FAILURE = {"failed", "FAILED", "error", "ERROR", "TIMEOUT", "PAYMENT_REQUIRED"}
     for _ in range(max_attempts):
-        status = client_method(task_id, run_id=run_id)
+        status = client_method(task_id)
         if hasattr(status, "status"):
             val = status.status
-            if val in ("completed", "SUCCESS"):
+            if val in _SUCCESS:
                 return status
-            if val in ("failed", "FAILED", "error"):
-                raise RuntimeError(f"Task failed: {getattr(status, 'error', 'Unknown error')}")
+            if val in _FAILURE:
+                raise RuntimeError(f"Task failed: {getattr(status, 'error', val)}")
         time.sleep(interval)
     raise TimeoutError(f"Task {task_id} did not complete within {max_attempts * interval}s")
 
