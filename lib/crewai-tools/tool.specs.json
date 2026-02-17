@@ -20252,18 +20252,6 @@
       "humanized_name": "Web Automation Tool",
       "init_params_schema": {
         "$defs": {
-          "AvailableModel": {
-            "enum": [
-              "gpt-4o",
-              "gpt-4o-mini",
-              "claude-3-5-sonnet-latest",
-              "claude-3-7-sonnet-latest",
-              "computer-use-preview",
-              "gemini-2.0-flash"
-            ],
-            "title": "AvailableModel",
-            "type": "string"
-          },
           "EnvVar": {
             "properties": {
               "default": {
@@ -20340,17 +20328,6 @@
             ],
             "default": null,
             "title": "Model Api Key"
-          },
-          "model_name": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/AvailableModel"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": "claude-3-7-sonnet-latest"
           },
           "project_id": {
             "anyOf": [
