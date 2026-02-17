@@ -1,8 +1,7 @@
 from collections.abc import Generator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import contextvars
-import os
-from typing import Any
+from typing import Any, ContextManager
 
 
 _platform_integration_token: contextvars.ContextVar[str | None] = (
@@ -32,18 +31,28 @@ def get_platform_integration_token() -> str | None:
     return _platform_integration_token.get()
 
 
-@contextmanager
-def platform_integration_context(integration_token: str) -> Generator[None, Any, None]:
+def platform_integration_context(integration_token: str | None) -> ContextManager[None]:
     """Context manager to temporarily set the platform integration token.
 
     Args:
       integration_token: The integration token to set within the context.
+                        If None or falsy, returns nullcontext (no-op).
+
+    Returns:
+        A context manager that either sets the token or does nothing.
     """
-    token = set_platform_integration_token(integration_token)
-    try:
-        yield
-    finally:
-        reset_platform_integration_token(token)
+    if not integration_token:
+        return nullcontext()
+
+    @contextmanager
+    def _token_context() -> Generator[None, Any, None]:
+        token = set_platform_integration_token(integration_token)
+        try:
+            yield
+        finally:
+            reset_platform_integration_token(token)
+
+    return _token_context()
 
 _current_task_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "current_task_id", default=None
