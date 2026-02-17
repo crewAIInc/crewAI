@@ -742,8 +742,15 @@ class BedrockCompletion(BaseLLM):
                     "I apologize, but I received an empty response. Please try again."
                 )
 
-            # If there are tool uses but no available_functions, return them for the executor to handle
-            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            # Collect client-side tool uses only; server_tool_use blocks are
+            # system tools executed by Bedrock server-side (e.g. nova_grounding)
+            # and must NOT be returned to the executor as regular tool calls.
+            tool_uses = [
+                block["toolUse"]
+                for block in content
+                if "toolUse" in block
+                and block["toolUse"].get("type") != "server_tool_use"
+            ]
 
             # Check for structured_output tool call first
             if response_model and tool_uses:
@@ -1400,8 +1407,15 @@ class BedrockCompletion(BaseLLM):
                     "I apologize, but I received an empty response. Please try again."
                 )
 
-            # If there are tool uses but no available_functions, return them for the executor to handle
-            tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+            # Collect client-side tool uses only; server_tool_use blocks are
+            # system tools executed by Bedrock server-side (e.g. nova_grounding)
+            # and must NOT be returned to the executor as regular tool calls.
+            tool_uses = [
+                block["toolUse"]
+                for block in content
+                if "toolUse" in block
+                and block["toolUse"].get("type") != "server_tool_use"
+            ]
 
             # Check for structured_output tool call first
             if response_model and tool_uses:
