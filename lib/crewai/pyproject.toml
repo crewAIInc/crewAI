@@ -26,6 +26,8 @@ dependencies = [
     # Authentication and Security
     "python-dotenv~=1.1.1",
     "pyjwt>=2.9.0,<3",
+    # TUI
+    "textual>=7.5.0",
     # Configuration and Utils
     "click~=8.1.7",
     "appdirs~=1.4.4",
@@ -39,6 +41,7 @@ dependencies = [
     "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
+    "lancedb>=0.4.0",
 ]
 
 [project.urls]
