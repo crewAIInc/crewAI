@@ -789,21 +789,32 @@ class BedrockCompletion(BaseLLM):
             # Process content blocks and handle tool use correctly
             text_content = ""
             has_system_tool_content = False  # Flag to check if system tools were used
+            citation_urls: list[str] = []  # Collect citation URLs from system tools
 
             for content_block in content:
                 # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
 
-                # Check if system tools were used (don't extract, just detect)
-                if "citationsContent" in content_block or "toolResult" in content_block:
+                # Extract citations from system tool responses
+                if "citationsContent" in content_block:
+                    has_system_tool_content = True
+                    citations = content_block["citationsContent"].get("citations", [])
+                    for citation in citations:
+                        location = citation.get("location", {})
+                        web = location.get("web", {})
+                        url = web.get("url")
+                        if url:
+                            citation_urls.append(url)
+
+                if "toolResult" in content_block:
                     has_system_tool_content = True
 
                 # Handle tool use blocks
                 if "toolUse" in content_block:
                     tool_use_block = content_block["toolUse"]
                     tool_type = tool_use_block.get("type", "")
-                    
+
                     # Check if this is a system tool
                     if tool_type == "server_tool_use":
                         has_system_tool_content = True
@@ -870,6 +881,13 @@ class BedrockCompletion(BaseLLM):
                         logging.debug(
                             f"System tool result: {result_type} (ID: {tool_result_block.get('toolUseId')})"
                         )
+
+            # Append citation URLs to text content
+            if citation_urls:
+                citations_text = "\n\nSources:\n" + "\n".join(
+                    f"[{url}]" for url in citation_urls
+                )
+                text_content += citations_text
 
             # Apply stop sequences if configured
             text_content = self._apply_stop_words(text_content)
@@ -1429,14 +1447,25 @@ class BedrockCompletion(BaseLLM):
             # Process content blocks and handle tool use correctly
             text_content = ""
             has_system_tool_content = False  # Flag to check if system tools were used
+            citation_urls: list[str] = []  # Collect citation URLs from system tools
 
             for content_block in content:
                 # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
 
-                # Check if system tools were used (don't extract, just detect)
-                if "citationsContent" in content_block or "toolResult" in content_block:
+                # Extract citations from system tool responses
+                if "citationsContent" in content_block:
+                    has_system_tool_content = True
+                    citations = content_block["citationsContent"].get("citations", [])
+                    for citation in citations:
+                        location = citation.get("location", {})
+                        web = location.get("web", {})
+                        url = web.get("url")
+                        if url:
+                            citation_urls.append(url)
+
+                if "toolResult" in content_block:
                     has_system_tool_content = True
 
                 # Handle tool use blocks
@@ -1502,6 +1531,13 @@ class BedrockCompletion(BaseLLM):
                                 from_agent,
                                 response_model,
                             )
+
+            # Append citation URLs to text content
+            if citation_urls:
+                citations_text = "\n\nSources:\n" + "\n".join(
+                    f"[{url}]" for url in citation_urls
+                )
+                text_content += citations_text
 
             text_content = self._apply_stop_words(text_content)
 
