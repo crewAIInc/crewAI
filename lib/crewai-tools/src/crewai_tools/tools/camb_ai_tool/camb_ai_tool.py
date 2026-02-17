@@ -292,6 +292,8 @@ class CambTranslationTool(BaseTool):
             for chunk in result:
                 if hasattr(chunk, "text"):
                     chunks.append(chunk.text)
+                elif isinstance(chunk, bytes):
+                    chunks.append(chunk.decode("utf-8"))
                 elif isinstance(chunk, str):
                     chunks.append(chunk)
             return "".join(chunks)
