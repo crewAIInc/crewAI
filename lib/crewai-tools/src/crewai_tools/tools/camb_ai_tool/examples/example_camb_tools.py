@@ -41,7 +41,7 @@ def play(path: str):
         print(f"  Audio file at: {path} (afplay not available on this platform)")
 
 
-def test_tts():
+def example_tts():
     """1. Text-to-Speech: convert text to audio."""
     tool = CambTTSTool(api_key=API_KEY)
     path = tool._run(text="Hello from CAMB AI and crewAI! This is a text to speech test.", language="en-us")
@@ -50,7 +50,7 @@ def test_tts():
     play(path)
 
 
-def test_translation():
+def example_translation():
     """2. Translation: translate text between languages."""
     tool = CambTranslationTool(api_key=API_KEY)
     result = tool._run(text="Hello, how are you?", source_language=1, target_language=2)
@@ -58,7 +58,7 @@ def test_translation():
     assert len(result) > 0
 
 
-def test_voice_list():
+def example_voice_list():
     """3. Voice List: list available voices."""
     tool = CambVoiceListTool(api_key=API_KEY)
     result = tool._run()
@@ -66,7 +66,7 @@ def test_voice_list():
     assert "id" in result
 
 
-def test_transcription():
+def example_transcription():
     """4. Transcription: transcribe audio from local file."""
     tool = CambTranscriptionTool(api_key=API_KEY)
     result = tool._run(language=1, audio_file_path=AUDIO_SAMPLE)
@@ -74,7 +74,7 @@ def test_transcription():
     assert "text" in result
 
 
-def test_translated_tts():
+def example_translated_tts():
     """5. Translated TTS: translate and speak in one step."""
     tool = CambTranslatedTTSTool(api_key=API_KEY)
     path = tool._run(text="Hello, how are you?", source_language=1, target_language=2)
@@ -83,7 +83,7 @@ def test_translated_tts():
     play(path)
 
 
-def test_text_to_sound():
+def example_text_to_sound():
     """6. Text-to-Sound: generate audio from a description."""
     tool = CambTextToSoundTool(api_key=API_KEY)
     path = tool._run(prompt="gentle rain on a rooftop", duration=5.0, audio_type="sound")
@@ -92,7 +92,7 @@ def test_text_to_sound():
     play(path)
 
 
-def test_voice_clone():
+def example_voice_clone():
     """7. Voice Clone: clone a voice from an audio sample."""
     tool = CambVoiceCloneTool(api_key=API_KEY)
     result = tool._run(voice_name="test_clone_crewai", audio_file_path=AUDIO_SAMPLE, gender=2)
@@ -100,7 +100,7 @@ def test_voice_clone():
     assert "voice_id" in result
 
 
-def test_audio_separation():
+def example_audio_separation():
     """8. Audio Separation: separate vocals from background."""
     tool = CambAudioSeparationTool(api_key=API_KEY)
     result = tool._run(audio_file_path=AUDIO_SAMPLE)
@@ -108,7 +108,7 @@ def test_audio_separation():
     assert "status" in result
 
 
-def test_voice_from_description():
+def example_voice_from_description():
     """9. Voice from Description: generate a voice from text description."""
     tool = CambVoiceFromDescriptionTool(api_key=API_KEY)
     result = tool._run(
@@ -120,18 +120,18 @@ def test_voice_from_description():
 
 
 if __name__ == "__main__":
-    tests = [
-        test_tts,
-        test_translation,
-        test_voice_list,
-        test_transcription,
-        test_translated_tts,
-        test_text_to_sound,
-        test_voice_clone,
-        test_audio_separation,
-        test_voice_from_description,
+    examples = [
+        example_tts,
+        example_translation,
+        example_voice_list,
+        example_transcription,
+        example_translated_tts,
+        example_text_to_sound,
+        example_voice_clone,
+        example_audio_separation,
+        example_voice_from_description,
     ]
-    for t in tests:
+    for t in examples:
         print(f"\n--- {t.__doc__} ---")
         try:
             t()

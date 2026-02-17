@@ -336,9 +336,12 @@ class CambTranscriptionTool(BaseTool):
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 tmp.write(resp.content)
                 tmp_path = tmp.name
-            with open(tmp_path, "rb") as f:
-                kwargs["media_file"] = f
-                result = client.transcription.create_transcription(**kwargs)
+            try:
+                with open(tmp_path, "rb") as f:
+                    kwargs["media_file"] = f
+                    result = client.transcription.create_transcription(**kwargs)
+            finally:
+                os.unlink(tmp_path)
         elif audio_file_path:
             with open(audio_file_path, "rb") as f:
                 kwargs["media_file"] = f
@@ -450,7 +453,7 @@ class CambTranslatedTTSTool(BaseTool):
                     fmt = _detect_audio_format(resp.content, resp.headers.get("content-type", ""))
                     return resp.content, fmt
 
-        return b"", "pcm"
+        raise RuntimeError("Failed to retrieve audio from translated TTS result")
 
 
 class CambVoiceCloneTool(BaseTool):
@@ -667,9 +670,12 @@ class CambAudioSeparationTool(BaseTool):
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
                 tmp.write(resp.content)
                 tmp_path = tmp.name
-            with open(tmp_path, "rb") as f:
-                kwargs["media_file"] = f
-                result = client.audio_separation.create_audio_separation(**kwargs)
+            try:
+                with open(tmp_path, "rb") as f:
+                    kwargs["media_file"] = f
+                    result = client.audio_separation.create_audio_separation(**kwargs)
+            finally:
+                os.unlink(tmp_path)
         elif audio_file_path:
             with open(audio_file_path, "rb") as f:
                 kwargs["media_file"] = f
