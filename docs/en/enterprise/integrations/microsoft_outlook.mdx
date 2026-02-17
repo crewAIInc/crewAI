@@ -133,6 +133,74 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `companyName` (string, optional): Contact's company name.
 
   </Accordion>
+
+  <Accordion title="microsoft_outlook/get_message">
+    **Description:** Get a specific email message by ID.
+
+    **Parameters:**
+    - `message_id` (string, required): The unique identifier of the message. Obtain from get_messages action.
+    - `select` (string, optional): Comma-separated list of properties to return. Example: "id,subject,body,from,receivedDateTime". Default is "id,subject,body,from,toRecipients,receivedDateTime".
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/reply_to_email">
+    **Description:** Reply to an email message.
+
+    **Parameters:**
+    - `message_id` (string, required): The unique identifier of the message to reply to. Obtain from get_messages action.
+    - `comment` (string, required): The reply message content. Can be plain text or HTML. The original message will be quoted below this content.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/forward_email">
+    **Description:** Forward an email message.
+
+    **Parameters:**
+    - `message_id` (string, required): The unique identifier of the message to forward. Obtain from get_messages action.
+    - `to_recipients` (array, required): Array of recipient email addresses to forward to. Example: ["john@example.com", "jane@example.com"].
+    - `comment` (string, optional): Optional message to include above the forwarded content. Can be plain text or HTML.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/mark_message_read">
+    **Description:** Mark a message as read or unread.
+
+    **Parameters:**
+    - `message_id` (string, required): The unique identifier of the message. Obtain from get_messages action.
+    - `is_read` (boolean, required): Set to true to mark as read, false to mark as unread.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_message">
+    **Description:** Delete an email message.
+
+    **Parameters:**
+    - `message_id` (string, required): The unique identifier of the message to delete. Obtain from get_messages action.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/update_event">
+    **Description:** Update an existing calendar event.
+
+    **Parameters:**
+    - `event_id` (string, required): The unique identifier of the event. Obtain from get_calendar_events action.
+    - `subject` (string, optional): New subject/title for the event.
+    - `start_time` (string, optional): New start time in ISO 8601 format (e.g., "2024-01-20T10:00:00"). REQUIRED: Must also provide start_timezone when using this field.
+    - `start_timezone` (string, optional): Timezone for start time. REQUIRED when updating start_time. Examples: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `end_time` (string, optional): New end time in ISO 8601 format. REQUIRED: Must also provide end_timezone when using this field.
+    - `end_timezone` (string, optional): Timezone for end time. REQUIRED when updating end_time. Examples: "Pacific Standard Time", "Eastern Standard Time", "UTC".
+    - `location` (string, optional): New location for the event.
+    - `body` (string, optional): New body/description for the event. Supports HTML formatting.
+
+  </Accordion>
+
+  <Accordion title="microsoft_outlook/delete_event">
+    **Description:** Delete a calendar event.
+
+    **Parameters:**
+    - `event_id` (string, required): The unique identifier of the event to delete. Obtain from get_calendar_events action.
+
+  </Accordion>
 </AccordionGroup>
 
 ## Usage Examples

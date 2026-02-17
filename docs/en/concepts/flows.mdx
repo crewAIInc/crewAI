@@ -975,6 +975,79 @@ result = streaming.result
 
 Learn more about streaming in the [Streaming Flow Execution](/en/learn/streaming-flow-execution) guide.
 
+## Memory in Flows
+
+Every Flow automatically has access to CrewAI's unified [Memory](/concepts/memory) system. You can store, recall, and extract memories directly inside any flow method using three built-in convenience methods.
+
+### Built-in Methods
+
+| Method | Description |
+| :--- | :--- |
+| `self.remember(content, **kwargs)` | Store content in memory. Accepts optional `scope`, `categories`, `metadata`, `importance`. |
+| `self.recall(query, **kwargs)` | Retrieve relevant memories. Accepts optional `scope`, `categories`, `limit`, `depth`. |
+| `self.extract_memories(content)` | Break raw text into discrete, self-contained memory statements. |
+
+A default `Memory()` instance is created automatically when the Flow initializes. You can also pass a custom one:
+
+```python
+from crewai.flow.flow import Flow
+from crewai import Memory
+
+custom_memory = Memory(
+    recency_weight=0.5,
+    recency_half_life_days=7,
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+
+flow = MyFlow(memory=custom_memory)
+```
+
+### Example: Research and Analyze Flow
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+
+class ResearchAnalysisFlow(Flow):
+    @start()
+    def gather_data(self):
+        # Simulate research findings
+        findings = (
+            "PostgreSQL handles 10k concurrent connections with connection pooling. "
+            "MySQL caps at around 5k. MongoDB scales horizontally but adds complexity."
+        )
+
+        # Extract atomic facts and remember each one
+        memories = self.extract_memories(findings)
+        for mem in memories:
+            self.remember(mem, scope="/research/databases")
+
+        return findings
+
+    @listen(gather_data)
+    def analyze(self, raw_findings):
+        # Recall relevant past research (from this run or previous runs)
+        past = self.recall("database performance and scaling", limit=10, depth="shallow")
+
+        context_lines = [f"- {m.record.content}" for m in past]
+        context = "\n".join(context_lines) if context_lines else "No prior context."
+
+        return {
+            "new_findings": raw_findings,
+            "prior_context": context,
+            "total_memories": len(past),
+        }
+
+
+flow = ResearchAnalysisFlow()
+result = flow.kickoff()
+print(result)
+```
+
+Because memory persists across runs (backed by LanceDB on disk), the `analyze` step will recall findings from previous executions too -- enabling flows that learn and accumulate knowledge over time.
+
+See the [Memory documentation](/concepts/memory) for details on scopes, slices, composite scoring, embedder configuration, and more.
+
 ### Using the CLI
 
 Starting from version 0.103.0, you can run flows using the `crewai run` command:

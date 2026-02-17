@@ -2,6 +2,7 @@ import base64
 from json import JSONDecodeError
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 from typing import Any
@@ -54,6 +55,11 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         tree_copy(template_dir, project_root)
         tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
         tree_find_and_replace(project_root, "{{class_name}}", class_name)
+
+        # Copy AGENTS.md to project root
+        agents_md_src = Path(__file__).parent.parent / "templates" / "AGENTS.md"
+        if agents_md_src.exists():
+            shutil.copy2(agents_md_src, project_root / "AGENTS.md")
 
         old_directory = os.getcwd()
         os.chdir(project_root)

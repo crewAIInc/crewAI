@@ -372,10 +372,7 @@ class TestFlowInvoke:
         task.human_input = False
 
         crew = Mock()
-        crew._short_term_memory = None
-        crew._long_term_memory = None
-        crew._entity_memory = None
-        crew._external_memory = None
+        crew._memory = None
 
         agent = Mock()
         agent.role = "Test"
@@ -398,14 +395,10 @@ class TestFlowInvoke:
         }
 
     @patch.object(AgentExecutor, "kickoff")
-    @patch.object(AgentExecutor, "_create_short_term_memory")
-    @patch.object(AgentExecutor, "_create_long_term_memory")
-    @patch.object(AgentExecutor, "_create_external_memory")
+    @patch.object(AgentExecutor, "_save_to_memory")
     def test_invoke_success(
         self,
-        mock_external_memory,
-        mock_long_term_memory,
-        mock_short_term_memory,
+        mock_save_to_memory,
         mock_kickoff,
         mock_dependencies,
     ):
@@ -425,9 +418,7 @@ class TestFlowInvoke:
 
         assert result == {"output": "Final result"}
         mock_kickoff.assert_called_once()
-        mock_short_term_memory.assert_called_once()
-        mock_long_term_memory.assert_called_once()
-        mock_external_memory.assert_called_once()
+        mock_save_to_memory.assert_called_once()
 
     @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
@@ -443,14 +434,10 @@ class TestFlowInvoke:
             executor.invoke(inputs)
 
     @patch.object(AgentExecutor, "kickoff")
-    @patch.object(AgentExecutor, "_create_short_term_memory")
-    @patch.object(AgentExecutor, "_create_long_term_memory")
-    @patch.object(AgentExecutor, "_create_external_memory")
+    @patch.object(AgentExecutor, "_save_to_memory")
     def test_invoke_with_system_prompt(
         self,
-        mock_external_memory,
-        mock_long_term_memory,
-        mock_short_term_memory,
+        mock_save_to_memory,
         mock_kickoff,
         mock_dependencies,
     ):
@@ -470,9 +457,7 @@ class TestFlowInvoke:
 
         inputs = {"input": "test", "tool_names": "", "tools": ""}
         result = executor.invoke(inputs)
-        mock_short_term_memory.assert_called_once()
-        mock_long_term_memory.assert_called_once()
-        mock_external_memory.assert_called_once()
+        mock_save_to_memory.assert_called_once()
         mock_kickoff.assert_called_once()
 
         assert result == {"output": "Done"}

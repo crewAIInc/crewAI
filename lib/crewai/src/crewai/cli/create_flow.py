@@ -1,3 +1,4 @@
+import shutil
 from pathlib import Path
 
 import click
@@ -33,6 +34,11 @@ def create_flow(name):
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "flow"
+
+    # Copy AGENTS.md to project root
+    agents_md_src = package_dir / "templates" / "AGENTS.md"
+    if agents_md_src.exists():
+        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
 
     # List of template files to copy
     root_template_files = [".gitignore", "pyproject.toml", "README.md"]
