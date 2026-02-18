@@ -4,7 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from crewai.context import platform_integration_context
+from crewai.context import platform_integration_context, set_platform_integration_token, reset_platform_integration_token
 from crewai_tools.tools.crewai_platform_tools.misc import (
     get_platform_integration_token,
 )
@@ -13,6 +13,17 @@ from crewai_tools.tools.crewai_platform_tools.misc import (
 
 class TestTokenRetrievalWithFallback:
     """Test token retrieval logic with environment fallback."""
+
+    @pytest.fixture
+    def clean_context(self):
+        token = set_platform_integration_token(None)
+        env_backup = os.environ.pop("CREWAI_PLATFORM_INTEGRATION_TOKEN", None)
+        yield
+        reset_platform_integration_token(token)
+        if env_backup is not None:
+            os.environ["CREWAI_PLATFORM_INTEGRATION_TOKEN"] = env_backup
+        else:
+            os.environ.pop("CREWAI_PLATFORM_INTEGRATION_TOKEN", None)
 
     def test_context_token_takes_precedence(self, clean_context):
         """Test that context token takes precedence over environment variable."""

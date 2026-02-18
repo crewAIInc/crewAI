@@ -1,7 +1,7 @@
 from collections.abc import Generator
-from contextlib import contextmanager, nullcontext
+from contextlib import AbstractContextManager, contextmanager, nullcontext
 import contextvars
-from typing import Any, ContextManager
+from typing import Any
 
 
 _platform_integration_token: contextvars.ContextVar[str | None] = (
@@ -31,7 +31,7 @@ def get_platform_integration_token() -> str | None:
     return _platform_integration_token.get()
 
 
-def platform_integration_context(integration_token: str | None) -> ContextManager[None]:
+def platform_integration_context(integration_token: str | None) -> AbstractContextManager[None]:
     """Context manager to temporarily set the platform integration token.
 
     Args:
