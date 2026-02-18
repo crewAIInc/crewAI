@@ -8,6 +8,7 @@ from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    _strip_markdown_fences,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -952,3 +953,162 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests for _strip_markdown_fences  (issue #4509)
+# ---------------------------------------------------------------------------
+
+
+def test_strip_markdown_fences_with_json_tag() -> None:
+    raw = '```json\n{"name": "Alice", "age": 30}\n```'
+    assert _strip_markdown_fences(raw) == '{"name": "Alice", "age": 30}'
+
+
+def test_strip_markdown_fences_without_language_tag() -> None:
+    raw = '```\n{"name": "Bob", "age": 25}\n```'
+    assert _strip_markdown_fences(raw) == '{"name": "Bob", "age": 25}'
+
+
+def test_strip_markdown_fences_multiline_json() -> None:
+    raw = '```json\n{\n  "name": "Charlie",\n  "age": 35\n}\n```'
+    result = _strip_markdown_fences(raw)
+    parsed = json.loads(result)
+    assert parsed == {"name": "Charlie", "age": 35}
+
+
+def test_strip_markdown_fences_plain_json_unchanged() -> None:
+    raw = '{"name": "Dave", "age": 40}'
+    assert _strip_markdown_fences(raw) == raw
+
+
+def test_strip_markdown_fences_with_surrounding_whitespace() -> None:
+    raw = '  ```json\n{"key": "value"}\n```  '
+    assert json.loads(_strip_markdown_fences(raw)) == {"key": "value"}
+
+
+# ---------------------------------------------------------------------------
+# Tests for Converter.to_pydantic with markdown-wrapped JSON (issue #4509)
+# ---------------------------------------------------------------------------
+
+
+def test_converter_to_pydantic_strips_markdown_fences_function_calling() -> None:
+    """When LLM supports function calling but returns markdown-wrapped JSON string,
+    the converter should strip fences and parse successfully."""
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.call.return_value = '```json\n{"name": "Alice", "age": 30}\n```'
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Alice, Age: 30",
+        model=SimpleModel,
+        instructions="Convert to JSON.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Alice"
+    assert output.age == 30
+
+
+def test_converter_to_pydantic_strips_markdown_fences_no_function_calling() -> None:
+    """When LLM does NOT support function calling and returns markdown-wrapped JSON,
+    the converter should strip fences and parse successfully."""
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = '```json\n{"name": "Bob", "age": 25}\n```'
+
+    converter = Converter(
+        llm=llm,
+        text="Name: Bob, Age: 25",
+        model=SimpleModel,
+        instructions="Convert to JSON.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Bob"
+    assert output.age == 25
+
+
+def test_converter_to_pydantic_strips_fences_multiline_function_calling() -> None:
+    """Multiline markdown-fenced JSON should be parsed correctly (function calling path)."""
+    from crewai.utilities.evaluators.task_evaluator import Entity, TaskEvaluation
+
+    evaluation_json = json.dumps({
+        "suggestions": ["Improve research depth"],
+        "quality": 8.5,
+        "entities": [
+            {
+                "name": "AI",
+                "type": "Technology",
+                "description": "Artificial Intelligence",
+                "relationships": ["Healthcare"],
+            }
+        ],
+    })
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.call.return_value = f"```json\n{evaluation_json}\n```"
+
+    converter = Converter(
+        llm=llm,
+        text="Evaluate this task.",
+        model=TaskEvaluation,
+        instructions="Convert to JSON.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, TaskEvaluation)
+    assert output.quality == 8.5
+    assert len(output.suggestions) == 1
+    assert len(output.entities) == 1
+    assert output.entities[0].name == "AI"
+
+
+def test_converter_to_pydantic_strips_fences_multiline_no_function_calling() -> None:
+    """Multiline markdown-fenced JSON should be parsed correctly (non-function-calling path)."""
+    from crewai.utilities.evaluators.task_evaluator import Entity, TaskEvaluation
+
+    evaluation_json = json.dumps({
+        "suggestions": ["Better analysis needed"],
+        "quality": 7.0,
+        "entities": [],
+    })
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = False
+    llm.call.return_value = f"```json\n{evaluation_json}\n```"
+
+    converter = Converter(
+        llm=llm,
+        text="Evaluate this task.",
+        model=TaskEvaluation,
+        instructions="Convert to JSON.",
+    )
+
+    output = converter.to_pydantic()
+    assert isinstance(output, TaskEvaluation)
+    assert output.quality == 7.0
+
+
+# ---------------------------------------------------------------------------
+# Tests for convert_to_model with markdown-wrapped JSON (issue #4509)
+# ---------------------------------------------------------------------------
+
+
+def test_convert_to_model_with_markdown_fenced_json() -> None:
+    """convert_to_model should handle markdown-fenced JSON strings."""
+    result = '```json\n{"name": "Eve", "age": 28}\n```'
+    output = convert_to_model(result, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Eve"
+    assert output.age == 28
+
+
+def test_convert_to_model_with_markdown_fenced_json_output() -> None:
+    """convert_to_model should handle markdown-fenced JSON when output_json is set."""
+    result = '```json\n{"name": "Frank", "age": 45}\n```'
+    output = convert_to_model(result, None, SimpleModel, None)
+    assert isinstance(output, dict)
+    assert output == {"name": "Frank", "age": 45}
