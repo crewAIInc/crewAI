@@ -761,6 +761,73 @@ memory = Memory(
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
 
+## Hindsight Memory
+
+[Hindsight](https://hindsight.sh) is a purpose-built memory system for AI agents that provides fact extraction, entity tracking, temporal awareness, and multi-strategy retrieval out of the box. `HindsightMemory` is a drop-in replacement for the default `Memory` class -- pass it directly to `Crew(memory=...)`.
+
+### Installation
+
+```bash
+pip install 'crewai[hindsight]'
+```
+
+### Quick Start
+
+```python
+from crewai import Crew, Agent, Task, Process
+from crewai.memory.storage.hindsight_storage import HindsightMemory, HindsightConfig
+
+memory = HindsightMemory(HindsightConfig(
+    api_url="http://localhost:8888",
+    bank_id="my-crew",
+    mission="Track research findings and decisions",
+))
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+)
+
+task = Task(
+    description="Research the latest trends in AI memory systems.",
+    expected_output="A summary of key findings.",
+    agent=researcher,
+)
+
+crew = Crew(
+    agents=[researcher],
+    tasks=[task],
+    memory=memory,
+    process=Process.sequential,
+)
+
+crew.kickoff()
+```
+
+### Configuration
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `api_url` | *(required)* | Hindsight API URL (e.g. `http://localhost:8888`). |
+| `bank_id` | *(required)* | Memory bank ID. Each bank is an isolated memory store. |
+| `api_key` | `None` | API key. Falls back to `HINDSIGHT_API_KEY` env var. |
+| `budget` | `"mid"` | Recall budget (`"low"`, `"mid"`, or `"high"`). Higher budgets retrieve more context. |
+| `max_tokens` | `4096` | Maximum tokens for recall results. |
+| `tags` | `None` | Tags applied to all memories stored via this instance. |
+| `mission` | `None` | Bank mission statement. When set, the bank is created automatically on initialization. |
+
+### How It Works
+
+Hindsight handles its own LLM analysis, embeddings, and retrieval -- `HindsightMemory` bypasses CrewAI's built-in encoding and recall pipelines entirely:
+
+- **`remember(content)`** calls Hindsight's retain API, which extracts facts, entities, and relationships automatically.
+- **`recall(query)`** calls Hindsight's recall API, which uses four parallel retrieval strategies (semantic, BM25, graph, temporal) with cross-encoder reranking.
+- **`reset()`** deletes and recreates the memory bank.
+
+This means you don't need to configure an LLM or embedder for memory -- Hindsight provides its own.
+
+
 ## Discovery
 
 Inspect the scope hierarchy, categories, and records:
