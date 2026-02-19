@@ -415,8 +415,8 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            subprocess.run(
-                ["pip", "install", library],  # noqa: S603, S607
+            subprocess.run(  # noqa: S603
+                ["pip", "install", library],  # noqa: S607
                 check=True,
                 capture_output=True,
             )
