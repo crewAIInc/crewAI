@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections.abc import Callable, Coroutine
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import json
 import threading
@@ -699,9 +699,7 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                 "content": None,
                 "tool_calls": tool_calls_to_report,
             }
-            if all(
-                type(tc).__qualname__ == "Part" for tc in pending_tool_calls
-            ):
+            if all(type(tc).__qualname__ == "Part" for tc in pending_tool_calls):
                 assistant_message["raw_tool_call_parts"] = list(pending_tool_calls)
             self.state.messages.append(assistant_message)
 
@@ -722,9 +720,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     pool.submit(self._execute_single_native_tool_call, tool_call): idx
                     for idx, tool_call in enumerate(runnable_tool_calls)
                 }
-                ordered_results: list[dict[str, Any] | None] = [
-                    None
-                ] * len(runnable_tool_calls)
+                ordered_results: list[dict[str, Any] | None] = [None] * len(
+                    runnable_tool_calls
+                )
                 for future in as_completed(future_to_idx):
                     idx = future_to_idx[future]
                     ordered_results[idx] = future.result()
@@ -732,10 +730,46 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
                     result for result in ordered_results if result is not None
                 ]
         else:
-            execution_results = [
-                self._execute_single_native_tool_call(tool_call)
-                for tool_call in runnable_tool_calls
-            ]
+            # Execute sequentially so result_as_answer tools can short-circuit
+            # immediately without running remaining calls.
+            for tool_call in runnable_tool_calls:
+                execution_result = self._execute_single_native_tool_call(tool_call)
+                call_id = cast(str, execution_result["call_id"])
+                func_name = cast(str, execution_result["func_name"])
+                result = cast(str, execution_result["result"])
+                from_cache = cast(bool, execution_result["from_cache"])
+                original_tool = execution_result["original_tool"]
+
+                tool_message: LLMMessage = {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "name": func_name,
+                    "content": result,
+                }
+                self.state.messages.append(tool_message)
+
+                # Log the tool execution
+                if self.agent and self.agent.verbose:
+                    cache_info = " (from cache)" if from_cache else ""
+                    self._printer.print(
+                        content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
+                        color="green",
+                    )
+
+                if (
+                    original_tool
+                    and hasattr(original_tool, "result_as_answer")
+                    and original_tool.result_as_answer
+                ):
+                    self.state.current_answer = AgentFinish(
+                        thought="Tool result is the final answer",
+                        output=result,
+                        text=result,
+                    )
+                    self.state.is_finished = True
+                    return "tool_result_is_final"
+
+            return "native_tool_completed"
 
         for execution_result in execution_results:
             call_id = cast(str, execution_result["call_id"])
@@ -843,7 +877,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
         from_cache = False
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache:
-            cached_result = self.tools_handler.cache.read(tool=func_name, input=input_str)
+            cached_result = self.tools_handler.cache.read(
+                tool=func_name, input=input_str
+            )
             if cached_result is not None:
                 result = (
                     str(cached_result)
@@ -920,7 +956,9 @@ class AgentExecutor(Flow[AgentReActState], CrewAgentExecutorMixin):
 
                     # Convert to string for message
                     result = (
-                        str(raw_result) if not isinstance(raw_result, str) else raw_result
+                        str(raw_result)
+                        if not isinstance(raw_result, str)
+                        else raw_result
                     )
                 except Exception as e:
                     result = f"Error executing tool: {e}"

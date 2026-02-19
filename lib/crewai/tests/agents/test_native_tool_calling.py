@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import threading
 import time
+from collections import Counter
 from unittest.mock import patch
 
 import pytest
@@ -17,6 +18,8 @@ from pydantic import BaseModel, Field
 from crewai import Agent, Crew, Task
 from crewai.events import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
+from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
+from crewai.hooks.tool_hooks import ToolCallHookContext
 from crewai.llm import LLM
 from crewai.tools.base_tool import BaseTool
 
@@ -321,6 +324,136 @@ class TestOpenAINativeToolCalling:
         result = agent.kickoff(_parallel_prompt())
         assert result is not None
         _assert_tools_overlapped()
+
+    @pytest.mark.vcr()
+    @pytest.mark.timeout(180)
+    def test_openai_parallel_native_tool_calling_tool_hook_parity_crew(
+        self, parallel_tools: list[BaseTool]
+    ) -> None:
+        ParallelProbe.reset()
+        _attach_parallel_probe_handler()
+        hook_calls: dict[str, list[dict[str, str]]] = {"before": [], "after": []}
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            if context.tool_name.startswith("parallel_local_search_"):
+                hook_calls["before"].append(
+                    {
+                        "tool_name": context.tool_name,
+                        "query": str(context.tool_input.get("query", "")),
+                    }
+                )
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            if context.tool_name.startswith("parallel_local_search_"):
+                hook_calls["after"].append(
+                    {
+                        "tool_name": context.tool_name,
+                        "query": str(context.tool_input.get("query", "")),
+                    }
+                )
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Parallel Tool Agent",
+                goal="Use both tools exactly as instructed",
+                backstory="You follow tool instructions precisely.",
+                tools=parallel_tools,
+                llm=LLM(model="gpt-5-nano", temperature=1),
+                verbose=False,
+                max_iter=3,
+            )
+            task = Task(
+                description=_parallel_prompt(),
+                expected_output="A one sentence summary of both tool outputs",
+                agent=agent,
+            )
+            crew = Crew(agents=[agent], tasks=[task])
+            result = crew.kickoff()
+
+            assert result is not None
+            _assert_tools_overlapped()
+
+            before_names = [call["tool_name"] for call in hook_calls["before"]]
+            after_names = [call["tool_name"] for call in hook_calls["after"]]
+            assert len(before_names) >= 3, "Expected before hooks for all parallel calls"
+            assert Counter(before_names) == Counter(after_names)
+            assert all(call["query"] for call in hook_calls["before"])
+            assert all(call["query"] for call in hook_calls["after"])
+        finally:
+            from crewai.hooks import (
+                unregister_after_tool_call_hook,
+                unregister_before_tool_call_hook,
+            )
+
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
+
+    @pytest.mark.vcr()
+    @pytest.mark.timeout(180)
+    def test_openai_parallel_native_tool_calling_tool_hook_parity_agent_kickoff(
+        self, parallel_tools: list[BaseTool]
+    ) -> None:
+        ParallelProbe.reset()
+        _attach_parallel_probe_handler()
+        hook_calls: dict[str, list[dict[str, str]]] = {"before": [], "after": []}
+
+        def before_hook(context: ToolCallHookContext) -> bool | None:
+            if context.tool_name.startswith("parallel_local_search_"):
+                hook_calls["before"].append(
+                    {
+                        "tool_name": context.tool_name,
+                        "query": str(context.tool_input.get("query", "")),
+                    }
+                )
+            return None
+
+        def after_hook(context: ToolCallHookContext) -> str | None:
+            if context.tool_name.startswith("parallel_local_search_"):
+                hook_calls["after"].append(
+                    {
+                        "tool_name": context.tool_name,
+                        "query": str(context.tool_input.get("query", "")),
+                    }
+                )
+            return None
+
+        register_before_tool_call_hook(before_hook)
+        register_after_tool_call_hook(after_hook)
+
+        try:
+            agent = Agent(
+                role="Parallel Tool Agent",
+                goal="Use both tools exactly as instructed",
+                backstory="You follow tool instructions precisely.",
+                tools=parallel_tools,
+                llm=LLM(model="gpt-5-nano", temperature=1),
+                verbose=False,
+                max_iter=3,
+            )
+            result = agent.kickoff(_parallel_prompt())
+
+            assert result is not None
+            _assert_tools_overlapped()
+
+            before_names = [call["tool_name"] for call in hook_calls["before"]]
+            after_names = [call["tool_name"] for call in hook_calls["after"]]
+            assert len(before_names) >= 3, "Expected before hooks for all parallel calls"
+            assert Counter(before_names) == Counter(after_names)
+            assert all(call["query"] for call in hook_calls["before"])
+            assert all(call["query"] for call in hook_calls["after"])
+        finally:
+            from crewai.hooks import (
+                unregister_after_tool_call_hook,
+                unregister_before_tool_call_hook,
+            )
+
+            unregister_before_tool_call_hook(before_hook)
+            unregister_after_tool_call_hook(after_hook)
 
 
 # =============================================================================

@@ -586,3 +586,53 @@ class TestNativeToolExecution:
         assert elapsed < 0.8
         assert isinstance(executor.state.current_answer, AgentFinish)
         assert executor.state.current_answer.output == "one"
+
+    def test_execute_native_tool_result_as_answer_short_circuits_remaining_calls(
+        self, mock_dependencies
+    ):
+        executor = AgentExecutor(**mock_dependencies)
+        call_counts = {"slow_one": 0, "slow_two": 0}
+
+        def slow_one() -> str:
+            call_counts["slow_one"] += 1
+            time.sleep(0.2)
+            return "one"
+
+        def slow_two() -> str:
+            call_counts["slow_two"] += 1
+            time.sleep(0.2)
+            return "two"
+
+        result_tool = Mock()
+        result_tool.name = "slow_one"
+        result_tool.result_as_answer = True
+        result_tool.max_usage_count = None
+        result_tool.current_usage_count = 0
+
+        executor.original_tools = [result_tool]
+        executor._available_functions = {"slow_one": slow_one, "slow_two": slow_two}
+        executor.state.pending_tool_calls = [
+            {
+                "id": "call_1",
+                "function": {"name": "slow_one", "arguments": "{}"},
+            },
+            {
+                "id": "call_2",
+                "function": {"name": "slow_two", "arguments": "{}"},
+            },
+        ]
+
+        started = time.perf_counter()
+        result = executor.execute_native_tool()
+        elapsed = time.perf_counter() - started
+
+        assert result == "tool_result_is_final"
+        assert isinstance(executor.state.current_answer, AgentFinish)
+        assert executor.state.current_answer.output == "one"
+        assert call_counts["slow_one"] == 1
+        assert call_counts["slow_two"] == 0
+        assert elapsed < 0.35
+
+        tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
+        assert len(tool_messages) == 1
+        assert tool_messages[0]["tool_call_id"] == "call_1"
