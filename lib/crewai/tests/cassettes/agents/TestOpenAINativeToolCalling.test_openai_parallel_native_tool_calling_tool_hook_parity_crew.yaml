@@ -1,0 +1,339 @@
+interactions:
+- request:
+    body: '{"trace_id": "e456cc10-ce7b-4e68-a2cc-ddb806a2e7b9", "execution_type":
+      "crew", "user_identifier": null, "execution_context": {"crew_fingerprint": null,
+      "crew_name": "crew", "flow_name": null, "crewai_version": "1.9.3", "privacy_level":
+      "standard"}, "execution_metadata": {"expected_duration_estimate": 300, "agent_count":
+      0, "task_count": 0, "flow_method_count": 0, "execution_started_at": "2026-02-19T17:24:41.723158+00:00"},
+      "ephemeral_trace_id": "e456cc10-ce7b-4e68-a2cc-ddb806a2e7b9"}'
+    headers:
+      Accept:
+      - '*/*'
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '488'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      X-Crewai-Organization-Id:
+      - 3433f0ee-8a94-4aa4-822b-2ac71aa38b18
+      X-Crewai-Version:
+      - 1.9.3
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+    method: POST
+    uri: https://app.crewai.com/crewai_plus/api/v1/tracing/ephemeral/batches
+  response:
+    body:
+      string: '{"id":"a78f2aca-0525-47c7-8f37-b3fca0ad6672","ephemeral_trace_id":"e456cc10-ce7b-4e68-a2cc-ddb806a2e7b9","execution_type":"crew","crew_name":"crew","flow_name":null,"status":"running","duration_ms":null,"crewai_version":"1.9.3","total_events":0,"execution_context":{"crew_fingerprint":null,"crew_name":"crew","flow_name":null,"crewai_version":"1.9.3","privacy_level":"standard"},"created_at":"2026-02-19T17:24:41.989Z","updated_at":"2026-02-19T17:24:41.989Z","access_code":"TRACE-bd80d6be74","user_identifier":null}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '515'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Thu, 19 Feb 2026 17:24:41 GMT
+      cache-control:
+      - no-store
+      content-security-policy:
+      - CSP-FILTERED
+      etag:
+      - ETAG-XXX
+      expires:
+      - '0'
+      permissions-policy:
+      - PERMISSIONS-POLICY-XXX
+      pragma:
+      - no-cache
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-frame-options:
+      - X-FRAME-OPTIONS-XXX
+      x-permitted-cross-domain-policies:
+      - X-PERMITTED-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+      x-runtime:
+      - X-RUNTIME-XXX
+      x-xss-protection:
+      - X-XSS-PROTECTION-XXX
+    status:
+      code: 201
+      message: Created
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Parallel Tool Agent. You
+      follow tool instructions precisely.\nYour personal goal is: Use both tools exactly
+      as instructed"},{"role":"user","content":"\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary.\n\nThis is the expected criteria for your final answer: A
+      one sentence summary of both tool outputs\nyou MUST return the actual complete
+      content as the final answer, not a summary."}],"model":"gpt-5-nano","temperature":1,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"parallel_local_search_one","description":"Local
+      search tool #1 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"parallel_local_search_two","description":"Local
+      search tool #2 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"parallel_local_search_three","description":"Local
+      search tool #3 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1929'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DB23W8RBF6zlxweiHYGb6maVfyctt\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1771521882,\n  \"model\": \"gpt-5-nano-2025-08-07\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_sge1FXUkpmPEDe8nTOgn0tQG\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"parallel_local_search_one\",\n
+        \             \"arguments\": \"{\\\"query\\\": \\\"latest OpenAI model release
+        notes\\\"}\"\n            }\n          },\n          {\n            \"id\":
+        \"call_z5jRPH4DQ7Wp3HdDUlZe8gGh\",\n            \"type\": \"function\",\n
+        \           \"function\": {\n              \"name\": \"parallel_local_search_two\",\n
+        \             \"arguments\": \"{\\\"query\\\": \\\"latest Anthropic model
+        release notes\\\"}\"\n            }\n          },\n          {\n            \"id\":
+        \"call_DNlgqnadODDsyQkSuLcXZCX2\",\n            \"type\": \"function\",\n
+        \           \"function\": {\n              \"name\": \"parallel_local_search_three\",\n
+        \             \"arguments\": \"{\\\"query\\\": \\\"latest Gemini model release
+        notes\\\"}\"\n            }\n          }\n        ],\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 378,\n    \"completion_tokens\":
+        2456,\n    \"total_tokens\": 2834,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 2368,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 17:25:02 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '19582'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Parallel Tool Agent. You
+      follow tool instructions precisely.\nYour personal goal is: Use both tools exactly
+      as instructed"},{"role":"user","content":"\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary.\n\nThis is the expected criteria for your final answer: A
+      one sentence summary of both tool outputs\nyou MUST return the actual complete
+      content as the final answer, not a summary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_sge1FXUkpmPEDe8nTOgn0tQG","type":"function","function":{"name":"parallel_local_search_one","arguments":"{\"query\":
+      \"latest OpenAI model release notes\"}"}},{"id":"call_z5jRPH4DQ7Wp3HdDUlZe8gGh","type":"function","function":{"name":"parallel_local_search_two","arguments":"{\"query\":
+      \"latest Anthropic model release notes\"}"}},{"id":"call_DNlgqnadODDsyQkSuLcXZCX2","type":"function","function":{"name":"parallel_local_search_three","arguments":"{\"query\":
+      \"latest Gemini model release notes\"}"}}]},{"role":"tool","tool_call_id":"call_sge1FXUkpmPEDe8nTOgn0tQG","name":"parallel_local_search_one","content":"[one]
+      latest OpenAI model release notes"},{"role":"tool","tool_call_id":"call_z5jRPH4DQ7Wp3HdDUlZe8gGh","name":"parallel_local_search_two","content":"[two]
+      latest Anthropic model release notes"},{"role":"tool","tool_call_id":"call_DNlgqnadODDsyQkSuLcXZCX2","name":"parallel_local_search_three","content":"[three]
+      latest Gemini model release notes"},{"role":"user","content":"Analyze the tool
+      result. If requirements are met, provide the Final Answer. Otherwise, call the
+      next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-5-nano","temperature":1,"tool_choice":"auto","tools":[{"type":"function","function":{"name":"parallel_local_search_one","description":"Local
+      search tool #1 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"parallel_local_search_two","description":"Local
+      search tool #2 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}},{"type":"function","function":{"name":"parallel_local_search_three","description":"Local
+      search tool #3 for concurrency testing.","strict":true,"parameters":{"properties":{"query":{"description":"Search
+      query","title":"Query","type":"string"}},"required":["query"],"type":"object","additionalProperties":false}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3136'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-DB23sY0Ahpd1yAgLZ882KkA50Zljx\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1771521904,\n  \"model\": \"gpt-5-nano-2025-08-07\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Results returned three items: the latest
+        OpenAI model release notes, the latest Anthropic model release notes, and
+        the latest Gemini model release notes.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\":
+        {\n    \"prompt_tokens\": 537,\n    \"completion_tokens\": 1383,\n    \"total_tokens\":
+        1920,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\":
+        0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
+        1344,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n
+        \     \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": null\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 17:25:16 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '12339'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
