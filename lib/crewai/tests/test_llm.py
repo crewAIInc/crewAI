@@ -1022,3 +1022,15 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+def test_stop_not_sent_for_o4_mini():
+    llm = LLM(model="o4-mini", stop=["\nObservation:"])
+    assert llm._is_reasoning_model() is True
+
+def test_stop_not_sent_for_azure_reasoning_model():
+    llm = LLM(model="azure/o4-mini")
+    assert llm._is_reasoning_model() is True
+
+def test_stop_still_sent_for_gpt4o():
+    llm = LLM(model="gpt-4o")
+    assert llm._is_reasoning_model() is False

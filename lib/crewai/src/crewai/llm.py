@@ -713,7 +713,7 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": self.stop or None,
+            "stop": self.stop if not self._is_reasoning_model() else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -1657,7 +1657,14 @@ class LLM(BaseLLM):
                     ),
                 )
         return None
+    # List of reasoning models that don't support the 'stop' parameter
+    REASONING_MODELS_WITHOUT_STOP = ("o1", "o1-mini", "o1-preview", "o3", "o3-mini", "o4-mini", "gpt-5.1")
 
+    def _is_reasoning_model(self) -> bool:
+        """Check if model doesn't support the 'stop' parameter."""
+        model_name = self.model.split("/")[-1].lower()
+        return model_name.startswith(REASONING_MODELS_WITHOUT_STOP)
+    
     def call(
         self,
         messages: str | list[LLMMessage],
