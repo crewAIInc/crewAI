@@ -684,6 +684,111 @@ def test_bedrock_token_usage_tracking():
         assert llm._token_usage['total_tokens'] == 75
 
 
+def test_bedrock_tool_call_args_not_empty():
+    """Test that Bedrock-style tool calls preserve input arguments.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/4470
+    When Bedrock returns tool calls as dicts with 'name' and 'input' keys,
+    the executor must extract the 'input' dict rather than returning empty args.
+    """
+    import json
+    from unittest.mock import Mock, PropertyMock
+
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+    tool_call_dict = {
+        "toolUseId": "tool-abc-123",
+        "name": "get_weather",
+        "input": {"location": "San Francisco", "units": "fahrenheit"},
+    }
+
+    mock_llm = Mock()
+    mock_llm.supports_stop_words.return_value = True
+    mock_llm.supports_function_calling.return_value = True
+
+    mock_agent = Mock()
+    mock_agent.role = "Test"
+    mock_agent.verbose = False
+    mock_agent.key = "test-key"
+    mock_agent.id = "test-id"
+
+    mock_task = Mock()
+    mock_task.description = "Test task"
+    mock_task.name = "Test task"
+    mock_task.human_input = False
+
+    mock_crew = Mock()
+    mock_crew.verbose = False
+    mock_crew._train = False
+
+    def mock_weather(location: str, units: str = "celsius") -> str:
+        return f"Weather in {location}: sunny, 72F"
+
+    executor = CrewAgentExecutor(
+        llm=mock_llm,
+        task=mock_task,
+        crew=mock_crew,
+        agent=mock_agent,
+        prompt={"prompt": "Test {input} {tool_names} {tools}"},
+        max_iter=5,
+        tools=[],
+        tools_names="get_weather",
+        stop_words=[],
+        tools_description="weather tool",
+        tools_handler=Mock(),
+        original_tools=[],
+    )
+    executor.messages = []
+
+    result = executor._handle_native_tool_calls(
+        [tool_call_dict],
+        {"get_weather": mock_weather},
+    )
+
+    assert len(executor.messages) >= 1
+    assistant_msg = executor.messages[0]
+    assert assistant_msg["role"] == "assistant"
+    tool_call_in_msg = assistant_msg["tool_calls"][0]
+    parsed_args = json.loads(tool_call_in_msg["function"]["arguments"])
+    assert parsed_args == {"location": "San Francisco", "units": "fahrenheit"}
+
+
+def test_bedrock_tool_call_dict_without_function_key():
+    """Test that dict tool calls without 'function' key fall through to 'input'.
+
+    This is the core of issue #4470: when func_info.get('arguments', '{}')
+    returned the default '{}' string (truthy), the 'or' short-circuited
+    and never reached tool_call.get('input', {}).
+    """
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor
+    from unittest.mock import Mock
+    import json
+
+    bedrock_tool_call = {
+        "toolUseId": "call-123",
+        "name": "search",
+        "input": {"query": "crewai bedrock tool calling"},
+    }
+
+    func_info = bedrock_tool_call.get("function", {})
+    func_args = func_info.get("arguments") or bedrock_tool_call.get("input") or {}
+
+    assert func_args == {"query": "crewai bedrock tool calling"}
+
+    openai_tool_call = {
+        "id": "call-456",
+        "function": {
+            "name": "search",
+            "arguments": '{"query": "openai test"}',
+        },
+    }
+
+    func_info2 = openai_tool_call.get("function", {})
+    func_args2 = func_info2.get("arguments") or openai_tool_call.get("input") or {}
+
+    assert func_args2 == '{"query": "openai test"}'
+
+
 def test_bedrock_tool_use_conversation_flow():
     """
     Test that the Bedrock completion properly handles tool use conversation flow
