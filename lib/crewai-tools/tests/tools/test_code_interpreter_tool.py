@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
     CodeInterpreterTool,
@@ -172,3 +172,228 @@ result = eval("5/1")
         "WARNING: Running code in unsafe mode", color="bold_magenta"
     )
     assert 5.0 == result
+
+
+class TestCommandInjectionPrevention:
+    """Tests for command injection prevention in unsafe mode (CVE: CWE-78)."""
+
+    @patch(
+        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+    )
+    def test_unsafe_mode_uses_subprocess_run_with_list_args(
+        self, subprocess_mock, printer_mock
+    ):
+        """Verify libraries are installed via subprocess.run with list args, not os.system."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        code = "result = 'done'"
+        tool.run_code_unsafe(code, ["numpy"])
+        subprocess_mock.assert_called_once_with(
+            ["pip", "install", "numpy"],
+            check=True,
+            capture_output=True,
+        )
+
+    @patch(
+        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+    )
+    def test_unsafe_mode_library_with_shell_metacharacters(
+        self, subprocess_mock, printer_mock
+    ):
+        """Ensure shell metacharacters in library names are not interpreted."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        malicious_lib = "numpy; id #"
+        code = "result = 'done'"
+        tool.run_code_unsafe(code, [malicious_lib])
+        subprocess_mock.assert_called_once_with(
+            ["pip", "install", "numpy; id #"],
+            check=True,
+            capture_output=True,
+        )
+
+    @patch(
+        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+    )
+    def test_unsafe_mode_library_with_command_substitution(
+        self, subprocess_mock, printer_mock
+    ):
+        """Ensure command substitution in library names is not executed."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        malicious_lib = "numpy && rm -rf /"
+        code = "result = 'done'"
+        tool.run_code_unsafe(code, [malicious_lib])
+        subprocess_mock.assert_called_once_with(
+            ["pip", "install", "numpy && rm -rf /"],
+            check=True,
+            capture_output=True,
+        )
+
+    @patch(
+        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+    )
+    def test_unsafe_mode_library_with_backtick_injection(
+        self, subprocess_mock, printer_mock
+    ):
+        """Ensure backtick command injection is not executed."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        malicious_lib = "numpy`whoami`"
+        code = "result = 'done'"
+        tool.run_code_unsafe(code, [malicious_lib])
+        subprocess_mock.assert_called_once_with(
+            ["pip", "install", "numpy`whoami`"],
+            check=True,
+            capture_output=True,
+        )
+
+    @patch(
+        "crewai_tools.tools.code_interpreter_tool.code_interpreter_tool.subprocess.run"
+    )
+    def test_unsafe_mode_multiple_libraries_installed_separately(
+        self, subprocess_mock, printer_mock
+    ):
+        """Each library is installed in a separate subprocess call."""
+        tool = CodeInterpreterTool(unsafe_mode=True)
+        code = "result = 'done'"
+        tool.run_code_unsafe(code, ["numpy", "pandas"])
+        assert subprocess_mock.call_count == 2
+
+
+class TestSandboxEscapePrevention:
+    """Tests for sandbox escape prevention via object introspection (CVE: CWE-94)."""
+
+    def test_sandbox_blocks_class_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __class__ introspection."""
+        tool = CodeInterpreterTool()
+        code = """
+result = ().__class__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__class__' is not allowed" in result
+
+    def test_sandbox_blocks_bases_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __bases__ introspection."""
+        tool = CodeInterpreterTool()
+        code = """
+result = object.__bases__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__bases__' is not allowed" in result
+
+    def test_sandbox_blocks_subclasses_method(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __subclasses__ introspection."""
+        tool = CodeInterpreterTool()
+        code = """
+result = object.__subclasses__()
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__subclasses__' is not allowed" in result
+
+    def test_sandbox_blocks_mro_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __mro__ introspection."""
+        tool = CodeInterpreterTool()
+        code = """
+result = int.__mro__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__mro__' is not allowed" in result
+
+    def test_sandbox_blocks_globals_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __globals__ introspection."""
+        tool = CodeInterpreterTool()
+        code = """
+def f(): pass
+result = f.__globals__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__globals__' is not allowed" in result
+
+    def test_sandbox_blocks_builtins_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __builtins__ access."""
+        tool = CodeInterpreterTool()
+        code = """
+result = __builtins__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__builtins__' is not allowed" in result
+
+    def test_sandbox_blocks_full_introspection_chain(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent the full sandbox escape PoC from the issue."""
+        tool = CodeInterpreterTool()
+        code = """
+for c in ().__class__.__bases__[0].__subclasses__():
+    if c.__name__ == 'BuiltinImporter':
+        result = c.load_module('os').system('id')
+        break
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "is not allowed" in result
+
+    def test_sandbox_blocks_getattr_builtin(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via getattr builtin."""
+        tool = CodeInterpreterTool()
+        code = """
+result = getattr(object, '__subclasses__')()
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "An error occurred" in result
+
+    def test_sandbox_blocks_type_builtin(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via type builtin."""
+        tool = CodeInterpreterTool()
+        code = """
+result = type('X', (object,), {})
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "An error occurred" in result
+
+    def test_sandbox_blocks_code_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __code__ attribute."""
+        tool = CodeInterpreterTool()
+        code = """
+def f(): pass
+result = f.__code__
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__code__' is not allowed" in result
+
+    def test_sandbox_allows_normal_code(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Ensure normal code still works in sandbox."""
+        tool = CodeInterpreterTool()
+        code = """
+data = [1, 2, 3, 4, 5]
+result = sum(data) * 2
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert result == 30
+
+    def test_sandbox_blocks_reduce_attribute(
+        self, printer_mock, docker_unavailable_mock
+    ):
+        """Prevent sandbox escape via __reduce__ for pickle attacks."""
+        tool = CodeInterpreterTool()
+        code = """
+result = [].__reduce__()
+"""
+        result = tool.run(code=code, libraries_used=[])
+        assert "Access to '__reduce__' is not allowed" in result

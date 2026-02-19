@@ -7,6 +7,7 @@ potentially unsafe operations and importing restricted modules.
 
 import importlib.util
 import os
+import re
 import subprocess
 from types import ModuleType
 from typing import Any, ClassVar, TypedDict
@@ -80,6 +81,23 @@ class SandboxPython:
         "vars",
         "help",
         "dir",
+        "getattr",
+        "setattr",
+        "delattr",
+        "type",
+        "breakpoint",
+    }
+
+    BLOCKED_ATTRS: ClassVar[set[str]] = {
+        "__class__",
+        "__bases__",
+        "__subclasses__",
+        "__mro__",
+        "__globals__",
+        "__code__",
+        "__reduce__",
+        "__reduce_ex__",
+        "__builtins__",
     }
 
     @staticmethod
@@ -127,6 +145,22 @@ class SandboxPython:
         return safe_builtins
 
     @staticmethod
+    def _check_for_blocked_attrs(code: str) -> None:
+        """Checks if code contains any blocked attribute access patterns.
+
+        Args:
+            code: The Python code to check.
+
+        Raises:
+            SecurityError: If blocked attribute patterns are found.
+        """
+        for attr in SandboxPython.BLOCKED_ATTRS:
+            if re.search(r'\b' + re.escape(attr) + r'\b', code):
+                raise RuntimeError(
+                    f"Access to '{attr}' is not allowed in the sandbox."
+                )
+
+    @staticmethod
     def exec(code: str, locals_: dict[str, Any]) -> None:
         """Executes Python code in a restricted environment.
 
@@ -134,6 +168,7 @@ class SandboxPython:
             code: The Python code to execute as a string.
             locals_: A dictionary that will be used for local variable storage.
         """
+        SandboxPython._check_for_blocked_attrs(code)
         exec(code, {"__builtins__": SandboxPython.safe_builtins()}, locals_)  # noqa: S102
 
 
@@ -380,7 +415,11 @@ class CodeInterpreterTool(BaseTool):
         Printer.print("WARNING: Running code in unsafe mode", color="bold_magenta")
         # Install libraries on the host machine
         for library in libraries_used:
-            os.system(f"pip install {library}")  # noqa: S605
+            subprocess.run(
+                ["pip", "install", library],  # noqa: S603, S607
+                check=True,
+                capture_output=True,
+            )
 
         # Execute the code
         try:
