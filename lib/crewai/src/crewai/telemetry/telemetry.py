@@ -34,6 +34,7 @@ from opentelemetry.trace import Span
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.listeners.tracing.utils import has_user_declined_tracing
 from crewai.events.types.system_events import (
     SigContEvent,
     SigHupEvent,
@@ -144,12 +145,30 @@ class Telemetry:
 
     @classmethod
     def _is_telemetry_disabled(cls) -> bool:
-        """Check if telemetry should be disabled based on environment variables."""
-        return (
+        """Check if telemetry should be disabled based on environment variables.
+
+        Telemetry is disabled when any of the following conditions are met:
+        - OTEL_SDK_DISABLED is set to 'true'
+        - CREWAI_DISABLE_TELEMETRY is set to 'true'
+        - CREWAI_DISABLE_TRACKING is set to 'true'
+        - CREWAI_TRACING_ENABLED is explicitly set to 'false' or '0'
+        - The user has explicitly declined tracing via the first-time prompt
+        """
+        if (
             os.getenv("OTEL_SDK_DISABLED", "false").lower() == "true"
             or os.getenv("CREWAI_DISABLE_TELEMETRY", "false").lower() == "true"
             or os.getenv("CREWAI_DISABLE_TRACKING", "false").lower() == "true"
-        )
+        ):
+            return True
+
+        tracing_env = os.getenv("CREWAI_TRACING_ENABLED", "").lower()
+        if tracing_env in ("false", "0"):
+            return True
+
+        if has_user_declined_tracing():
+            return True
+
+        return False
 
     def _should_execute_telemetry(self) -> bool:
         """Check if telemetry operations should be executed."""

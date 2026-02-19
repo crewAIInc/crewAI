@@ -10,6 +10,9 @@ from opentelemetry import trace
 
 @pytest.fixture(autouse=True)
 def cleanup_telemetry():
+    original_tracing = os.environ.get("CREWAI_TRACING_ENABLED")
+    os.environ.pop("CREWAI_TRACING_ENABLED", None)
+
     Telemetry._instance = None
     if hasattr(Telemetry, "_lock"):
         Telemetry._lock = threading.Lock()
@@ -17,6 +20,11 @@ def cleanup_telemetry():
     Telemetry._instance = None
     if hasattr(Telemetry, "_lock"):
         Telemetry._lock = threading.Lock()
+
+    if original_tracing is not None:
+        os.environ["CREWAI_TRACING_ENABLED"] = original_tracing
+    else:
+        os.environ.pop("CREWAI_TRACING_ENABLED", None)
 
 
 @pytest.mark.parametrize(
@@ -37,9 +45,10 @@ def test_telemetry_environment_variables(env_var, value, expected_ready):
         "OTEL_SDK_DISABLED": "false",
         "CREWAI_DISABLE_TELEMETRY": "false",
         "CREWAI_DISABLE_TRACKING": "false",
+        "CREWAI_TRACING_ENABLED": "",
         env_var: value,
     }
-    with patch.dict(os.environ, env_overrides):
+    with patch.dict(os.environ, env_overrides, clear=True):
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
             assert telemetry.ready is expected_ready

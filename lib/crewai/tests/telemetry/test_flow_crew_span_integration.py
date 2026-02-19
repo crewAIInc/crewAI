@@ -55,9 +55,11 @@ def enable_telemetry_for_tests():
 
     original_telemetry = os.environ.get("CREWAI_DISABLE_TELEMETRY")
     original_otel = os.environ.get("OTEL_SDK_DISABLED")
+    original_tracing = os.environ.get("CREWAI_TRACING_ENABLED")
 
     os.environ["CREWAI_DISABLE_TELEMETRY"] = "false"
     os.environ["OTEL_SDK_DISABLED"] = "false"
+    os.environ.pop("CREWAI_TRACING_ENABLED", None)
 
     with crewai_event_bus._rwlock.w_locked():
         crewai_event_bus._sync_handlers.clear()
@@ -88,6 +90,11 @@ def enable_telemetry_for_tests():
         os.environ["OTEL_SDK_DISABLED"] = original_otel
     else:
         os.environ.pop("OTEL_SDK_DISABLED", None)
+
+    if original_tracing is not None:
+        os.environ["CREWAI_TRACING_ENABLED"] = original_tracing
+    else:
+        os.environ.pop("CREWAI_TRACING_ENABLED", None)
 
 
 def test_crew_execution_span_in_flow_with_share_crew():
