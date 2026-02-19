@@ -9,6 +9,17 @@ mode: "wide"
 
 A crew in crewAI represents a collaborative group of agents working together to achieve a set of tasks. Each crew defines the strategy for task execution, agent collaboration, and the overall workflow.
 
+## When to Use Crews
+
+- You need multiple specialized agents collaborating on a shared outcome.
+- You need process-level orchestration (`sequential` or `hierarchical`).
+- You need task-level handoffs and context propagation.
+
+## When Not to Use Crews
+
+- A single agent can complete the work end-to-end.
+- You do not need multi-step task decomposition.
+
 ## Crew Attributes
 
 | Attribute                             | Parameters             | Description                                                                                                                                                                                                                                               |
@@ -417,3 +428,17 @@ crewai replay -t <task_id>
 ```
 
 These commands let you replay from your latest kickoff tasks, still retaining context from previously executed tasks.
+
+## Common Failure Modes
+
+### Agents overlap responsibilities
+- Cause: role/goal definitions are too broad.
+- Fix: tighten role boundaries and task ownership.
+
+### Hierarchical runs stall or degrade
+- Cause: weak manager configuration or unclear delegation criteria.
+- Fix: define a stronger manager objective and explicit completion criteria.
+
+### Crew outputs are inconsistent
+- Cause: expected outputs are underspecified across tasks.
+- Fix: enforce structured outputs and stronger task contracts.

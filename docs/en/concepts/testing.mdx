@@ -9,9 +9,20 @@ mode: "wide"
 
 Testing is a crucial part of the development process, and it is essential to ensure that your crew is performing as expected. With crewAI, you can easily test your crew and evaluate its performance using the built-in testing capabilities.
 
+## When to Use Testing
+
+- Before promoting a crew to production.
+- After changing prompts, tools, or model configurations.
+- When benchmarking quality/cost/latency tradeoffs.
+
+## When Not to Rely on Testing Alone
+
+- For safety-critical deployments without human review gates.
+- When test datasets are too small or unrepresentative.
+
 ### Using the Testing Feature
 
-We added the CLI command `crewai test` to make it easy to test your crew. This command will run your crew for a specified number of iterations and provide detailed performance metrics. The parameters are `n_iterations` and `model`, which are optional and default to 2 and `gpt-4o-mini` respectively. For now, the only provider available is OpenAI.
+Use the CLI command `crewai test` to run repeated crew executions and compare outputs across iterations. The parameters are `n_iterations` and `model`, which are optional and default to `2` and `gpt-4o-mini`.
 
 ```bash
 crewai test
@@ -47,3 +58,13 @@ A table of scores at the end will show the performance of the crew in terms of t
 | Execution Time (s) |  126  |  145  |    **135**     |                                |                                  |
 
 The example above shows the test results for two runs of the crew with two tasks, with the average total score for each task and the crew as a whole.
+
+## Common Failure Modes
+
+### Scores fluctuate too much between runs
+- Cause: high sampling randomness or unstable prompts.
+- Fix: lower temperature and tighten output constraints.
+
+### Good test scores but poor production quality
+- Cause: test prompts do not match real workload.
+- Fix: build a representative test set from real production inputs.

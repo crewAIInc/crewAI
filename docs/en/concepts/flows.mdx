@@ -19,6 +19,19 @@ Flows allow you to create structured, event-driven workflows. They provide a sea
 
 4. **Flexible Control Flow**: Implement conditional logic, loops, and branching within your workflows.
 
+## When to Use Flows
+
+- You need deterministic orchestration and branching logic.
+- You need explicit state transitions across multiple steps.
+- You need resumable workflows with persistence.
+- You need to combine crews, direct model calls, and Python logic in one runtime.
+
+## When Not to Use Flows
+
+- A single prompt/response call is sufficient.
+- A single crew kickoff with no orchestration logic is sufficient.
+- You do not need stateful multi-step execution.
+
 ## Getting Started
 
 The example below shows a realistic Flow for support-ticket triage. It demonstrates features teams use in production: typed state, routing, memory access, and persistence.
@@ -767,201 +780,17 @@ This example demonstrates several key features of using Agents in flows:
 
 3. **Tool Integration**: Agents can use tools (like `WebsiteSearchTool`) to enhance their capabilities.
 
-## Adding Crews to Flows
+## Multi-Crew Flows and Plotting
 
-Creating a flow with multiple crews in CrewAI is straightforward.
+Detailed build walkthroughs and project scaffolding are documented in guide pages to keep this concepts page focused.
 
-You can generate a new CrewAI project that includes all the scaffolding needed to create a flow with multiple crews by running the following command:
+- Build your first flow: [/en/guides/flows/first-flow](/en/guides/flows/first-flow)
+- Master state and persistence: [/en/guides/flows/mastering-flow-state](/en/guides/flows/mastering-flow-state)
+- Real-world chat-state pattern: [/en/learn/flowstate-chat-history](/en/learn/flowstate-chat-history)
 
-```bash
-crewai create flow name_of_flow
-```
-
-This command will generate a new CrewAI project with the necessary folder structure. The generated project includes a prebuilt crew called `poem_crew` that is already working. You can use this crew as a template by copying, pasting, and editing it to create other crews.
-
-### Folder Structure
-
-After running the `crewai create flow name_of_flow` command, you will see a folder structure similar to the following:
-
-| Directory/File         | Description                                                        |
-| :--------------------- | :----------------------------------------------------------------- |
-| `name_of_flow/`        | Root directory for the flow.                                       |
-| ├── `crews/`           | Contains directories for specific crews.                           |
-| │ └── `poem_crew/`     | Directory for the "poem_crew" with its configurations and scripts. |
-| │ ├── `config/`        | Configuration files directory for the "poem_crew".                 |
-| │ │ ├── `agents.yaml`  | YAML file defining the agents for "poem_crew".                     |
-| │ │ └── `tasks.yaml`   | YAML file defining the tasks for "poem_crew".                      |
-| │ ├── `poem_crew.py`   | Script for "poem_crew" functionality.                              |
-| ├── `tools/`           | Directory for additional tools used in the flow.                   |
-| │ └── `custom_tool.py` | Custom tool implementation.                                        |
-| ├── `main.py`          | Main script for running the flow.                                  |
-| ├── `README.md`        | Project description and instructions.                              |
-| ├── `pyproject.toml`   | Configuration file for project dependencies and settings.          |
-| └── `.gitignore`       | Specifies files and directories to ignore in version control.      |
-
-### Building Your Crews
-
-In the `crews` folder, you can define multiple crews. Each crew will have its own folder containing configuration files and the crew definition file. For example, the `poem_crew` folder contains:
-
-- `config/agents.yaml`: Defines the agents for the crew.
-- `config/tasks.yaml`: Defines the tasks for the crew.
-- `poem_crew.py`: Contains the crew definition, including agents, tasks, and the crew itself.
-
-You can copy, paste, and edit the `poem_crew` to create other crews.
-
-### Connecting Crews in `main.py`
-
-The `main.py` file is where you create your flow and connect the crews together. You can define your flow by using the `Flow` class and the decorators `@start` and `@listen` to specify the flow of execution.
-
-Here's an example of how you can connect the `poem_crew` in the `main.py` file:
-
-```python Code
-#!/usr/bin/env python
-from random import randint
-
-from pydantic import BaseModel
-from crewai.flow.flow import Flow, listen, start
-from .crews.poem_crew.poem_crew import PoemCrew
-
-class PoemState(BaseModel):
-    sentence_count: int = 1
-    poem: str = ""
-
-class PoemFlow(Flow[PoemState]):
-
-    @start()
-    def generate_sentence_count(self):
-        print("Generating sentence count")
-        self.state.sentence_count = randint(1, 5)
-
-    @listen(generate_sentence_count)
-    def generate_poem(self):
-        print("Generating poem")
-        result = PoemCrew().crew().kickoff(inputs={"sentence_count": self.state.sentence_count})
-
-        print("Poem generated", result.raw)
-        self.state.poem = result.raw
-
-    @listen(generate_poem)
-    def save_poem(self):
-        print("Saving poem")
-        with open("poem.txt", "w") as f:
-            f.write(self.state.poem)
-
-def kickoff():
-    poem_flow = PoemFlow()
-    poem_flow.kickoff()
-
-
-def plot():
-    poem_flow = PoemFlow()
-    poem_flow.plot("PoemFlowPlot")
-
-if __name__ == "__main__":
-    kickoff()
-    plot()
-```
-
-In this example, the `PoemFlow` class defines a flow that generates a sentence count, uses the `PoemCrew` to generate a poem, and then saves the poem to a file. The flow is kicked off by calling the `kickoff()` method. The PoemFlowPlot will be generated by `plot()` method.
-
-![Flow Visual image](/images/crewai-flow-8.png)
-
-### Running the Flow
-
-(Optional) Before running the flow, you can install the dependencies by running:
-
-```bash
-crewai install
-```
-
-Once all of the dependencies are installed, you need to activate the virtual environment by running:
-
-```bash
-source .venv/bin/activate
-```
-
-After activating the virtual environment, you can run the flow by executing one of the following commands:
-
-```bash
-crewai flow kickoff
-```
-
-or
-
-```bash
-uv run kickoff
-```
-
-The flow will execute, and you should see the output in the console.
-
-## Plot Flows
-
-Visualizing your AI workflows can provide valuable insights into the structure and execution paths of your flows. CrewAI offers a powerful visualization tool that allows you to generate interactive plots of your flows, making it easier to understand and optimize your AI workflows.
-
-### What are Plots?
-
-Plots in CrewAI are graphical representations of your AI workflows. They display the various tasks, their connections, and the flow of data between them. This visualization helps in understanding the sequence of operations, identifying bottlenecks, and ensuring that the workflow logic aligns with your expectations.
-
-### How to Generate a Plot
-
-CrewAI provides two convenient methods to generate plots of your flows:
-
-#### Option 1: Using the `plot()` Method
-
-If you are working directly with a flow instance, you can generate a plot by calling the `plot()` method on your flow object. This method will create an HTML file containing the interactive plot of your flow.
-
-```python Code
-# Assuming you have a flow instance
-flow.plot("my_flow_plot")
-```
-
-This will generate a file named `my_flow_plot.html` in your current directory. You can open this file in a web browser to view the interactive plot.
-
-#### Option 2: Using the Command Line
-
-If you are working within a structured CrewAI project, you can generate a plot using the command line. This is particularly useful for larger projects where you want to visualize the entire flow setup.
-
-```bash
-crewai flow plot
-```
-
-This command will generate an HTML file with the plot of your flow, similar to the `plot()` method. The file will be saved in your project directory, and you can open it in a web browser to explore the flow.
-
-### Understanding the Plot
-
-The generated plot will display nodes representing the tasks in your flow, with directed edges indicating the flow of execution. The plot is interactive, allowing you to zoom in and out, and hover over nodes to see additional details.
-
-By visualizing your flows, you can gain a clearer understanding of the workflow's structure, making it easier to debug, optimize, and communicate your AI processes to others.
-
-### Conclusion
-
-Plotting your flows is a powerful feature of CrewAI that enhances your ability to design and manage complex AI workflows. Whether you choose to use the `plot()` method or the command line, generating plots will provide you with a visual representation of your workflows, aiding in both development and presentation.
-
-## Next Steps
-
-If you're interested in exploring additional examples of flows, we have a variety of recommendations in our examples repository. Here are four specific flow examples, each showcasing unique use cases to help you match your current problem type to a specific example:
-
-1. **Email Auto Responder Flow**: This example demonstrates an infinite loop where a background job continually runs to automate email responses. It's a great use case for tasks that need to be performed repeatedly without manual intervention. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/email_auto_responder_flow)
-
-2. **Lead Score Flow**: This flow showcases adding human-in-the-loop feedback and handling different conditional branches using the router. It's an excellent example of how to incorporate dynamic decision-making and human oversight into your workflows. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/lead-score-flow)
-
-3. **Write a Book Flow**: This example excels at chaining multiple crews together, where the output of one crew is used by another. Specifically, one crew outlines an entire book, and another crew generates chapters based on the outline. Eventually, everything is connected to produce a complete book. This flow is perfect for complex, multi-step processes that require coordination between different tasks. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/write_a_book_with_flows)
-
-4. **Meeting Assistant Flow**: This flow demonstrates how to broadcast one event to trigger multiple follow-up actions. For instance, after a meeting is completed, the flow can update a Trello board, send a Slack message, and save the results. It's a great example of handling multiple outcomes from a single event, making it ideal for comprehensive task management and notification systems. [View Example](https://github.com/crewAIInc/crewAI-examples/tree/main/meeting_assistant_flow)
-
-By exploring these examples, you can gain insights into how to leverage CrewAI Flows for various use cases, from automating repetitive tasks to managing complex, multi-step processes with dynamic decision-making and human feedback.
-
-Also, check out our YouTube video on how to use flows in CrewAI below!
-
-<iframe
-  className="w-full aspect-video rounded-xl"
-  src="https://www.youtube.com/embed/MTb5my6VOT8"
-  title="CrewAI Flows overview"
-  frameBorder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-  referrerPolicy="strict-origin-when-cross-origin"
-  allowFullScreen
-></iframe>
+For visualization:
+- Use `flow.plot("my_flow_plot")` in code, or
+- Use `crewai flow plot` in CLI projects.
 
 ## Running Flows
 
@@ -972,7 +801,7 @@ There are two ways to run a flow:
 You can run a flow programmatically by creating an instance of your flow class and calling the `kickoff()` method:
 
 ```python
-flow = ExampleFlow()
+flow = SupportTriageFlow()
 result = flow.kickoff()
 ```
 
@@ -1091,3 +920,21 @@ crewai flow kickoff
 ```
 
 However, the `crewai run` command is now the preferred method as it works for both crews and flows.
+
+## Common Failure Modes
+
+### Router branch not firing
+- Cause: returned label does not match a `@listen("label")` value.
+- Fix: align router return strings with listener labels exactly.
+
+### State fields missing at runtime
+- Cause: untyped dynamic fields or missing kickoff inputs.
+- Fix: use typed state and validate required fields in `@start()`.
+
+### Prompt/token growth over time
+- Cause: appending unbounded message history in state.
+- Fix: apply sliding-window state and summary compaction patterns.
+
+### Non-idempotent retries
+- Cause: side effects executed on retried steps.
+- Fix: add idempotency keys/markers to state and guard external writes.

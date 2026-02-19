@@ -10,6 +10,17 @@ mode: "wide"
 CrewAI tools empower agents with capabilities ranging from web searching and data analysis to collaboration and delegating tasks among coworkers.
 This documentation outlines how to create, integrate, and leverage these tools within the CrewAI framework, including a new focus on collaboration tools.
 
+## When to Use Tools
+
+- Agents need external data or side effects.
+- You need deterministic actions wrapped in reusable interfaces.
+- You need to connect APIs, files, databases, or browser actions into agent workflows.
+
+## When Not to Use Tools
+
+- The task can be solved entirely from prompt context.
+- The external side effect cannot be made safe or idempotent.
+
 ## What is a Tool?
 
 A tool in CrewAI is a skill or function that agents can utilize to perform various actions.
@@ -285,3 +296,17 @@ writer1 = Agent(
 Tools are pivotal in extending the capabilities of CrewAI agents, enabling them to undertake a broad spectrum of tasks and collaborate effectively.
 When building solutions with CrewAI, leverage both custom and existing tools to empower your agents and enhance the AI ecosystem. Consider utilizing error handling,
 caching mechanisms, and the flexibility of tool arguments to optimize your agents' performance and capabilities.
+
+## Common Failure Modes
+
+### Tool schema mismatch
+- Cause: model-generated arguments do not match tool signature.
+- Fix: tighten tool descriptions and validate input schemas.
+
+### Repeated side effects
+- Cause: retries trigger duplicate writes/actions.
+- Fix: add idempotency keys and deduplication checks in tool logic.
+
+### Tool timeouts under load
+- Cause: unbounded retries or slow external services.
+- Fix: set explicit timeout/retry policy and graceful fallbacks.
