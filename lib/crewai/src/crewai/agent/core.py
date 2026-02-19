@@ -162,7 +162,8 @@ class Agent(BaseAgent):
     )
     step_callback: Any | None = Field(
         default=None,
-        description="Callback to be executed after each step of the agent execution.",
+        description="Callback to be executed before and after each step of the agent execution. "
+        "Receives an AgentAction (with result=None for pre-execution) or AgentFinish.",
     )
     use_system_prompt: bool | None = Field(
         default=True,
