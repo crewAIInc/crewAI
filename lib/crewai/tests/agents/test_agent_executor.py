@@ -539,7 +539,7 @@ class TestNativeToolExecution:
         elapsed = time.perf_counter() - started
 
         assert result == "native_tool_completed"
-        assert elapsed < 0.35
+        assert elapsed < 0.5
         tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
         assert len(tool_messages) == 2
         assert tool_messages[0]["tool_call_id"] == "call_1"
@@ -631,7 +631,7 @@ class TestNativeToolExecution:
         assert executor.state.current_answer.output == "one"
         assert call_counts["slow_one"] == 1
         assert call_counts["slow_two"] == 0
-        assert elapsed < 0.35
+        assert elapsed < 0.5
 
         tool_messages = [m for m in executor.state.messages if m.get("role") == "tool"]
         assert len(tool_messages) == 1

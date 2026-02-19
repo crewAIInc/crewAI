@@ -6,6 +6,7 @@ when the LLM supports it, across multiple providers.
 
 from __future__ import annotations
 
+from collections.abc import Generator
 import os
 import threading
 import time
@@ -17,7 +18,6 @@ from pydantic import BaseModel, Field
 
 from crewai import Agent, Crew, Task
 from crewai.events import crewai_event_bus
-from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
 from crewai.hooks.tool_hooks import ToolCallHookContext
 from crewai.llm import LLM
@@ -284,8 +284,6 @@ class TestOpenAINativeToolCalling:
     def test_openai_parallel_native_tool_calling_test_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -310,8 +308,6 @@ class TestOpenAINativeToolCalling:
     def test_openai_parallel_native_tool_calling_test_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -330,8 +326,6 @@ class TestOpenAINativeToolCalling:
     def test_openai_parallel_native_tool_calling_tool_hook_parity_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         hook_calls: dict[str, list[dict[str, str]]] = {"before": [], "after": []}
 
         def before_hook(context: ToolCallHookContext) -> bool | None:
@@ -398,8 +392,6 @@ class TestOpenAINativeToolCalling:
     def test_openai_parallel_native_tool_calling_tool_hook_parity_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         hook_calls: dict[str, list[dict[str, str]]] = {"before": [], "after": []}
 
         def before_hook(context: ToolCallHookContext) -> bool | None:
@@ -530,8 +522,6 @@ class TestAnthropicNativeToolCalling:
     def test_anthropic_parallel_native_tool_calling_test_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -555,8 +545,6 @@ class TestAnthropicNativeToolCalling:
     def test_anthropic_parallel_native_tool_calling_test_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -647,8 +635,6 @@ class TestGeminiNativeToolCalling:
     def test_gemini_parallel_native_tool_calling_test_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -672,8 +658,6 @@ class TestGeminiNativeToolCalling:
     def test_gemini_parallel_native_tool_calling_test_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -775,8 +759,6 @@ class TestAzureNativeToolCalling:
     def test_azure_parallel_native_tool_calling_test_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -800,8 +782,6 @@ class TestAzureNativeToolCalling:
     def test_azure_parallel_native_tool_calling_test_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -884,8 +864,6 @@ class TestBedrockNativeToolCalling:
     def test_bedrock_parallel_native_tool_calling_test_crew(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
@@ -909,8 +887,6 @@ class TestBedrockNativeToolCalling:
     def test_bedrock_parallel_native_tool_calling_test_agent_kickoff(
         self, parallel_tools: list[BaseTool]
     ) -> None:
-        ParallelProbe.reset()
-        _attach_parallel_probe_handler()
         agent = Agent(
             role="Parallel Tool Agent",
             goal="Use both tools exactly as instructed",
