@@ -2198,6 +2198,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
+                e.context.method_name = method_name
+
                 # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
