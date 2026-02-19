@@ -38,22 +38,21 @@ CrewAI Enterprise는 AI 워크플로우를 협업적인 인간-AI 프로세스�
 `@human_feedback` 데코레이터를 사용하여 Flow 내에 인간 검토 체크포인트를 구성합니다. 실행이 검토 포인트에 도달하면 시스템이 일시 중지되고, 담당자에게 이메일로 알리며, 응답을 기다립니다.
 
 ```python
-from crewai.flow.flow import Flow, start, listen
+from crewai.flow.flow import Flow, start, listen, or_
 from crewai.flow.human_feedback import human_feedback, HumanFeedbackResult
 
 class ContentApprovalFlow(Flow):
     @start()
     def generate_content(self):
-        # AI가 콘텐츠 생성
         return "Q1 캠페인용 마케팅 카피 생성..."
 
-    @listen(generate_content)
     @human_feedback(
         message="브랜드 준수를 위해 이 콘텐츠를 검토해 주세요:",
         emit=["approved", "rejected", "needs_revision"],
     )
-    def review_content(self, content):
-        return content
+    @listen(or_("generate_content", "needs_revision"))
+    def review_content(self):
+        return "검토용 마케팅 카피..."
 
     @listen("approved")
     def publish_content(self, result: HumanFeedbackResult):
@@ -62,10 +61,6 @@ class ContentApprovalFlow(Flow):
     @listen("rejected")
     def archive_content(self, result: HumanFeedbackResult):
         print(f"콘텐츠 거부됨. 사유: {result.feedback}")
-
-    @listen("needs_revision")
-    def revise_content(self, result: HumanFeedbackResult):
-        print(f"수정 요청: {result.feedback}")
 ```
 
 완전한 구현 세부 사항은 [Flow에서 인간 피드백](/ko/learn/human-feedback-in-flows) 가이드를 참조하세요.
