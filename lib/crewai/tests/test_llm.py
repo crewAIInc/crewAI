@@ -652,32 +652,108 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
     )
 
 
-@pytest.mark.vcr()
-@pytest.mark.skip(reason="Highly flaky on ci")
+def _make_mock_response(content: str) -> MagicMock:
+    """Helper to build a mock litellm completion response."""
+    mock_message = MagicMock()
+    mock_message.content = content
+    mock_message.tool_calls = []
+    mock_choice = MagicMock()
+    mock_choice.message = mock_message
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
+    mock_response.usage = None
+    return mock_response
+
+
 def test_llm_call_when_stop_is_unsupported(caplog):
+    """
+    When a reasoning model rejects the 'stop' parameter, the LLM should
+    automatically drop it and retry — succeeding on the second attempt.
+    Fixes: https://github.com/crewAIInc/crewAI/issues/4149
+    """
     llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
-    with caplog.at_level(logging.INFO):
-        result = llm.call("What is the capital of France?")
-        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
-    assert isinstance(result, str)
-    assert "Paris" in result
+
+    call_count = 0
+
+    def mock_completion(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            # First call: simulate model rejecting 'stop'
+            raise Exception(
+                "Unsupported parameter: 'stop' is not supported with this model."
+            )
+        # Second call: success
+        return _make_mock_response("Paris")
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            result = llm.call("What is the capital of France?")
+            assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+
+    assert call_count == 2, "Expected exactly 2 calls: one failure + one retry"
+    assert result == "Paris"
+    assert "stop" in llm.additional_params.get("additional_drop_params", []), (
+        "'stop' should be added to additional_drop_params after the failure"
+    )
 
 
-@pytest.mark.vcr()
-@pytest.mark.skip(reason="Highly flaky on ci")
 def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provided(
     caplog,
 ):
-    llm = LLM(
-        model="o1-mini",
-        stop=["stop"],
-        additional_drop_params=["another_param"],
+    """
+    When additional_drop_params already exists, 'stop' should be appended
+    to the existing list rather than replacing it.
+    Fixes: https://github.com/crewAIInc/crewAI/issues/3814
+    """
+    llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
+    llm.additional_params["additional_drop_params"] = ["another_param"]
+
+    call_count = 0
+
+    def mock_completion(**kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise Exception(
+                "Unsupported parameter: 'stop' is not supported with this model."
+            )
+        return _make_mock_response("Paris")
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            result = llm.call("What is the capital of France?")
+            assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+
+    assert call_count == 2
+    assert result == "Paris"
+    drop_params = llm.additional_params.get("additional_drop_params", [])
+    assert "stop" in drop_params, "'stop' should be added to additional_drop_params"
+    assert "another_param" in drop_params, (
+        "Pre-existing 'another_param' should still be in additional_drop_params"
     )
-    with caplog.at_level(logging.INFO):
-        result = llm.call("What is the capital of France?")
-        assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
-    assert isinstance(result, str)
-    assert "Paris" in result
+
+
+def test_llm_call_stop_retry_does_not_loop_infinitely(caplog):
+    """
+    If the API keeps returning the 'stop' unsupported error even after
+    we've already dropped it, we should NOT retry again (no infinite loop).
+    """
+    llm = LLM(model="o1-mini", stop=["stop"], is_litellm=True)
+    # Pre-populate so the guard detects 'stop' is already dropped
+    llm.additional_params["additional_drop_params"] = ["stop"]
+
+    with patch("litellm.completion") as mock_completion:
+        mock_completion.side_effect = Exception(
+            "Unsupported parameter: 'stop' is not supported with this model."
+        )
+        with pytest.raises(Exception, match="Unsupported parameter"):
+            llm.call("What is the capital of France?")
+
+    # Should only be called once — no infinite retry
+    assert mock_completion.call_count == 1, (
+        "Should not retry if 'stop' was already in additional_drop_params"
+    )
 
 
 @pytest.fixture
@@ -1015,7 +1091,6 @@ async def test_usage_info_streaming_with_acall():
         result = await llm.acall("Tell me a joke.")
         mock_handle.assert_called_once()
 
-
     assert llm._token_usage["successful_requests"] == 1
     assert llm._token_usage["prompt_tokens"] > 0
     assert llm._token_usage["completion_tokens"] > 0
@@ -1023,14 +1098,14 @@ async def test_usage_info_streaming_with_acall():
 
     assert len(result) > 0
 
-def test_stop_not_sent_for_o4_mini():
-    llm = LLM(model="o4-mini", stop=["\nObservation:"])
+def test_stop_param_excluded_for_o4_mini():
+    llm = LLM(model="o4-mini", stop=["\nObservation:"], is_litellm=True)
     assert llm._is_reasoning_model() is True
 
-def test_stop_not_sent_for_azure_reasoning_model():
-    llm = LLM(model="azure/o4-mini")
+def test_stop_param_excluded_for_azure_reasoning_model():
+    llm = LLM(model="azure/o4-mini", is_litellm=True)
     assert llm._is_reasoning_model() is True
 
-def test_stop_still_sent_for_gpt4o():
-    llm = LLM(model="gpt-4o")
+def test_stop_param_included_for_gpt4o():
+    llm = LLM(model="gpt-4o", is_litellm=True)
     assert llm._is_reasoning_model() is False
