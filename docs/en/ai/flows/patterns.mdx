@@ -1,0 +1,29 @@
+---
+title: "Flows: Patterns"
+description: "Production flow patterns: triage routing, flowstate chat history, and human-in-the-loop checkpoints."
+icon: "diagram-project"
+mode: "wide"
+---
+
+## Recommended patterns
+
+1. Triage router flow
+- Inputs: normalized request payload
+- Output: deterministic route label + action
+- Reference: [/en/concepts/flows](/en/concepts/flows)
+
+2. Flowstate chat history
+- Inputs: `session_id`, `last_user_message`
+- Output: assistant reply + compact context state
+- Reference: [/en/learn/flowstate-chat-history](/en/learn/flowstate-chat-history)
+
+3. Human feedback gates
+- Inputs: generated artifact + reviewer feedback
+- Output: approved/rejected/revision path
+- Reference: [/en/learn/human-feedback-in-flows](/en/learn/human-feedback-in-flows)
+
+## Pattern requirements
+
+- declare explicit input schema
+- define expected output shape
+- list failure modes and retries

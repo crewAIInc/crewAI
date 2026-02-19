@@ -1,0 +1,34 @@
+---
+title: "Flows: Reference"
+description: "API-oriented reference for Flow decorators, lifecycle semantics, state, routing, and persistence."
+icon: "book"
+mode: "wide"
+---
+
+## Decorators
+
+- `@start()` entrypoint, optional conditional trigger
+- `@listen(...)` downstream method subscription
+- `@router(...)` label-based deterministic routing
+- `@persist()` automatic state persistence checkpoints
+
+## Runtime contracts
+
+- `kickoff(inputs=...)` initializes or updates run inputs.
+- final output is the value from the last completed method.
+- `self.state` always has an auto-generated `id`.
+
+## State contracts
+
+- Use typed state for durable workflows.
+- Keep control fields explicit (`route`, `status`, `retry_count`).
+- Avoid storing unbounded raw transcripts in state.
+
+## Resume and recovery
+
+- Use persistence for recoverable runs.
+- Keep idempotent step logic for safe retries.
+
+## Canonical source
+
+Primary API details live in [/en/concepts/flows](/en/concepts/flows).

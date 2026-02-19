@@ -27,8 +27,11 @@ mode: "wide"
   </div>
 
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-    <a className="button button-primary" href="/en/quickstart">Get started</a>
-    <a className="button" href="/en/changelog">View changelog</a>
+    <a className="button button-primary" href="/en/installation">Install</a>
+    <a className="button" href="/en/quickstart">Quickstart</a>
+    <a className="button" href="/en/guides/crews/first-crew">First Crew</a>
+    <a className="button" href="/en/guides/flows/first-flow">First Flow</a>
+    <a className="button" href="/en/concepts/llms">LLM Setup</a>
     <a className="button" href="/en/api-reference/introduction">API Reference</a>
   </div>
 
@@ -36,17 +39,49 @@ mode: "wide"
 
 <div style={{ marginTop: 32 }} />
 
-## Get started
+## Start in 3 steps
 
 <CardGroup cols={3}>
-  <Card title="Introduction" href="/en/introduction" icon="sparkles">
-    Overview of CrewAI concepts, architecture, and what you can build with agents, crews, and flows.
-  </Card>
-  <Card title="Installation" href="/en/installation" icon="wrench">
+  <Card title="1) Install" href="/en/installation" icon="wrench">
     Install via `uv`, configure API keys, and set up the CLI for local development.
   </Card>
-  <Card title="Quickstart" href="/en/quickstart" icon="rocket">
-    Spin up your first crew in minutes. Learn the core runtime, project layout, and dev loop.
+  <Card title="2) Run Quickstart" href="/en/quickstart" icon="rocket">
+    Launch your first working crew with a minimal project and iterate from there.
+  </Card>
+  <Card title="3) Pick a path" href="/en/ai/overview" icon="sitemap">
+    Continue with canonical domain packs for Flows, Agents, Crews, LLMs, Memory, and Tools.
+  </Card>
+</CardGroup>
+
+## Most-used pages
+
+<CardGroup cols={3}>
+  <Card title="First Crew" href="/en/guides/crews/first-crew" icon="users">
+    Build a production-style crew with role/task configuration and execution flow.
+  </Card>
+  <Card title="First Flow" href="/en/guides/flows/first-flow" icon="arrow-progress">
+    Build event-driven orchestration with state, listeners, and routing.
+  </Card>
+  <Card title="Flowstate Chat History" href="/en/learn/flowstate-chat-history" icon="comments">
+    Stateful chat history pattern with persistence and summary compaction.
+  </Card>
+  <Card title="Agents" href="/en/concepts/agents" icon="user">
+    Agent role design, tool boundaries, and output contracts.
+  </Card>
+  <Card title="Crews" href="/en/concepts/crews" icon="users-gear">
+    Multi-agent collaboration patterns and process semantics.
+  </Card>
+  <Card title="Flows" href="/en/concepts/flows" icon="code-branch">
+    Deterministic orchestration, state lifecycle, persistence, and resume.
+  </Card>
+  <Card title="LLMs" href="/en/concepts/llms" icon="microchip-ai">
+    Model setup, provider config, routing patterns, and reliability defaults.
+  </Card>
+  <Card title="Memory" href="/en/concepts/memory" icon="database">
+    Semantic recall, scope strategy, and state-vs-memory architecture.
+  </Card>
+  <Card title="Tools" href="/en/tools/overview" icon="wrench">
+    Tool categories, integration surfaces, and practical usage patterns.
   </Card>
 </CardGroup>
 
@@ -90,7 +125,11 @@ mode: "wide"
 </CardGroup>
 
 <Callout title="Explore real-world patterns" icon="github">
-  Browse the <a href="/en/examples/cookbooks">examples and cookbooks</a> for end-to-end reference implementations across agents, flows, and enterprise automations.
+  Browse the <a href="/en/examples/cookbooks">examples and cookbooks</a> for end-to-end reference implementations across agents, flows, and enterprise automations. For a practical conversational pattern, start with <a href="/en/learn/flowstate-chat-history">Flowstate Chat History</a>.
+</Callout>
+
+<Callout title="AI-First Docs" icon="sitemap">
+  Use the <a href="/en/ai/overview">AI-First Documentation map</a> for canonical domain packs across Flows, Agents, Crews, LLMs, Memory, and Tools.
 </Callout>
 
 ## Stay connected

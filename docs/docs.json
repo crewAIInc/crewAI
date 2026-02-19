@@ -80,6 +80,78 @@
                 ]
               },
               {
+                "group": "AI Docs",
+                "pages": [
+                  "en/ai/overview",
+                  {
+                    "group": "Flows",
+                    "icon": "arrow-progress",
+                    "pages": [
+                      "en/ai/flows/index",
+                      "en/ai/flows/reference",
+                      "en/ai/flows/patterns",
+                      "en/ai/flows/troubleshooting",
+                      "en/ai/flows/examples"
+                    ]
+                  },
+                  {
+                    "group": "Agents",
+                    "icon": "user",
+                    "pages": [
+                      "en/ai/agents/index",
+                      "en/ai/agents/reference",
+                      "en/ai/agents/patterns",
+                      "en/ai/agents/troubleshooting",
+                      "en/ai/agents/examples"
+                    ]
+                  },
+                  {
+                    "group": "Crews",
+                    "icon": "users",
+                    "pages": [
+                      "en/ai/crews/index",
+                      "en/ai/crews/reference",
+                      "en/ai/crews/patterns",
+                      "en/ai/crews/troubleshooting",
+                      "en/ai/crews/examples"
+                    ]
+                  },
+                  {
+                    "group": "LLMs",
+                    "icon": "microchip-ai",
+                    "pages": [
+                      "en/ai/llms/index",
+                      "en/ai/llms/reference",
+                      "en/ai/llms/patterns",
+                      "en/ai/llms/troubleshooting",
+                      "en/ai/llms/examples"
+                    ]
+                  },
+                  {
+                    "group": "Memory",
+                    "icon": "database",
+                    "pages": [
+                      "en/ai/memory/index",
+                      "en/ai/memory/reference",
+                      "en/ai/memory/patterns",
+                      "en/ai/memory/troubleshooting",
+                      "en/ai/memory/examples"
+                    ]
+                  },
+                  {
+                    "group": "Tools",
+                    "icon": "wrench",
+                    "pages": [
+                      "en/ai/tools/index",
+                      "en/ai/tools/reference",
+                      "en/ai/tools/patterns",
+                      "en/ai/tools/troubleshooting",
+                      "en/ai/tools/examples"
+                    ]
+                  }
+                ]
+              },
+              {
                 "group": "Guides",
                 "pages": [
                   {
@@ -331,6 +403,7 @@
                   "en/learn/human-input-on-execution",
                   "en/learn/human-in-the-loop",
                   "en/learn/human-feedback-in-flows",
+                  "en/learn/flowstate-chat-history",
                   "en/learn/kickoff-async",
                   "en/learn/kickoff-for-each",
                   "en/learn/llm-connections",
@@ -483,7 +556,6 @@
               {
                 "group": "Examples",
                 "pages": [
-                  "en/examples/example",
                   "en/examples/cookbooks"
                 ]
               }
@@ -1481,6 +1553,18 @@
     {
       "source": "/api-reference",
       "destination": "/en/api-reference/introduction"
+    },
+    {
+      "source": "/",
+      "destination": "/en/introduction"
+    },
+    {
+      "source": "/en",
+      "destination": "/en/introduction"
+    },
+    {
+      "source": "/en/examples/example",
+      "destination": "/en/examples/cookbooks"
     },
     {
       "source": "/introduction",

@@ -1,0 +1,167 @@
+---
+title: "Flowstate Chat History"
+description: "Build a stateful chat workflow that keeps context compact, persistent, and production-friendly."
+icon: "comments"
+mode: "wide"
+---
+
+## Overview
+
+This guide shows a practical pattern for managing LLM chat history with Flow state:
+
+- Keep recent turns in a sliding window
+- Summarize older turns into a compact running summary
+- Persist state automatically with `@persist()`
+- Keep optional long-term recall using Flow memory
+
+## Why this pattern works
+
+Naively appending every message to prompts causes token bloat and unstable behavior over long sessions. A better approach is:
+
+1. Keep only the most recent turns in `state.messages`
+2. Move older turns into `state.running_summary`
+3. Build prompts from `running_summary + recent messages`
+
+## Prerequisites
+
+1. CrewAI installed and configured
+2. API key configured for your model provider
+3. Basic familiarity with Flow decorators (`@start`, `@listen`)
+
+## Step 1: Define typed chat state
+
+```python Code
+from typing import Dict, List
+from pydantic import BaseModel, Field
+
+
+class ChatSessionState(BaseModel):
+    session_id: str = "demo-session"
+    running_summary: str = ""
+    messages: List[Dict[str, str]] = Field(default_factory=list)
+    max_recent_messages: int = 8
+    last_user_message: str = ""
+    assistant_reply: str = ""
+    turn_count: int = 0
+```
+
+## Step 2: Build the Flow
+
+```python Code
+from crewai.flow.flow import Flow, start, listen
+from crewai.flow.persistence import persist
+from litellm import completion
+
+
+@persist()
+class ChatHistoryFlow(Flow[ChatSessionState]):
+    model = "gpt-4o-mini"
+
+    @start()
+    def capture_user_message(self):
+        self.state.last_user_message = self.state.last_user_message.strip()
+        self.state.messages.append(
+            {"role": "user", "content": self.state.last_user_message}
+        )
+        self.state.turn_count += 1
+        return self.state.last_user_message
+
+    @listen(capture_user_message)
+    def compact_old_history(self, _):
+        if len(self.state.messages) <= self.state.max_recent_messages:
+            return "no_compaction"
+
+        overflow = self.state.messages[:-self.state.max_recent_messages]
+        self.state.messages = self.state.messages[-self.state.max_recent_messages :]
+        overflow_text = "\n".join(
+            f"{m['role']}: {m['content']}" for m in overflow
+        )
+
+        summary_prompt = [
+            {
+                "role": "system",
+                "content": "Summarize old chat turns into short bullet points. Preserve facts, constraints, and decisions.",
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Existing summary:\n{self.state.running_summary or '(empty)'}\n\n"
+                    f"New old turns:\n{overflow_text}"
+                ),
+            },
+        ]
+        summary_response = completion(model=self.model, messages=summary_prompt)
+        self.state.running_summary = summary_response["choices"][0]["message"]["content"]
+        return "compacted"
+
+    @listen(compact_old_history)
+    def generate_reply(self, _):
+        system_context = (
+            "You are a helpful assistant.\n"
+            f"Conversation summary so far:\n{self.state.running_summary or '(none)'}"
+        )
+
+        response = completion(
+            model=self.model,
+            messages=[{"role": "system", "content": system_context}, *self.state.messages],
+        )
+        answer = response["choices"][0]["message"]["content"]
+
+        self.state.assistant_reply = answer
+        self.state.messages.append({"role": "assistant", "content": answer})
+
+        # Optional: store key turns in long-term memory for later recall
+        self.remember(
+            f"Session {self.state.session_id} turn {self.state.turn_count}: "
+            f"user={self.state.last_user_message} assistant={answer}",
+            scope=f"/chat/{self.state.session_id}",
+        )
+        return answer
+```
+
+## Step 3: Run it
+
+```python Code
+flow = ChatHistoryFlow()
+
+first = flow.kickoff(
+    inputs={
+        "session_id": "customer-42",
+        "last_user_message": "I need help choosing a pricing plan for a 10-person team.",
+    }
+)
+print("Assistant:", first)
+
+second = flow.kickoff(
+    inputs={
+        "last_user_message": "We also need SSO and audit logs. What do you recommend now?",
+    }
+)
+print("Assistant:", second)
+print("Turns:", flow.state.turn_count)
+print("Recent messages:", len(flow.state.messages))
+```
+
+## Expected output (shape)
+
+```text Output
+Assistant: ...initial recommendation...
+Assistant: ...updated recommendation with SSO and audit-log requirements...
+Turns: 2
+Recent messages: 4
+```
+
+## Troubleshooting
+
+- If replies ignore earlier context:
+  increase `max_recent_messages` and ensure `running_summary` is included in the system context.
+- If prompts become too large:
+  lower `max_recent_messages` and summarize more aggressively.
+- If sessions collide:
+  provide a stable `session_id` and isolate memory scope with `/chat/{session_id}`.
+
+## Next steps
+
+- Add tool calls for account lookup or product catalog retrieval
+- Route to human review for high-risk decisions
+- Add structured output to capture recommendations in machine-readable JSON

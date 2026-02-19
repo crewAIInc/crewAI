@@ -1,0 +1,54 @@
+---
+title: "AI-First Documentation"
+description: "Canonical, agent-optimized documentation map for Flows, Agents, Crews, LLMs, Memory, and Tools."
+icon: "sitemap"
+mode: "wide"
+---
+
+## Purpose
+
+This section is the canonical map for AI agents and developers.
+
+Use it when you need:
+- one source of truth per domain
+- predictable page structure
+- runnable patterns with explicit inputs and outputs
+
+## Domain Packs
+
+<CardGroup cols={3}>
+  <Card title="Flows" icon="arrow-progress" href="/en/ai/flows/index">
+    State, routing, persistence, resume, and orchestration lifecycle.
+  </Card>
+  <Card title="Agents" icon="user" href="/en/ai/agents/index">
+    Agent contracts, tool boundaries, prompt roles, and output discipline.
+  </Card>
+  <Card title="Crews" icon="users" href="/en/ai/crews/index">
+    Multi-agent execution, process choice, delegation, and coordination.
+  </Card>
+  <Card title="LLMs" icon="microchip-ai" href="/en/ai/llms/index">
+    Model configuration contracts, routing, reliability defaults, and providers.
+  </Card>
+  <Card title="Memory" icon="database" href="/en/ai/memory/index">
+    Retrieval semantics, scope design, and state-vs-memory architecture.
+  </Card>
+  <Card title="Tools" icon="wrench" href="/en/ai/tools/index">
+    Tool safety, schema contracts, retries, and integration patterns.
+  </Card>
+</CardGroup>
+
+## Writing Contract
+
+Every domain follows the same structure:
+1. Concepts (`index`)
+2. Reference (`reference`)
+3. Patterns (`patterns`)
+4. Troubleshooting (`troubleshooting`)
+5. Examples (`examples`)
+
+## Deprecation Policy
+
+When a page is replaced:
+- keep a redirect for the old URL
+- keep one canonical destination
+- avoid duplicated conceptual prose

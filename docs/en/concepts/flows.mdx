@@ -21,80 +21,106 @@ Flows allow you to create structured, event-driven workflows. They provide a sea
 
 ## Getting Started
 
-Let's create a simple Flow where you will use OpenAI to generate a random city in one task and then use that city to generate a fun fact in another task.
+The example below shows a realistic Flow for support-ticket triage. It demonstrates features teams use in production: typed state, routing, memory access, and persistence.
 
 ```python Code
+from crewai.flow.flow import Flow, listen, router, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel, Field
 
-from crewai.flow.flow import Flow, listen, start
-from dotenv import load_dotenv
-from litellm import completion
+
+class SupportTriageState(BaseModel):
+    ticket_id: str = ""
+    customer_tier: str = "standard"  # standard | enterprise
+    issue: str = ""
+    urgency: str = "normal"
+    route: str = ""
+    draft_reply: str = ""
+    internal_notes: list[str] = Field(default_factory=list)
 
 
-class ExampleFlow(Flow):
-    model = "gpt-4o-mini"
-
+@persist()
+class SupportTriageFlow(Flow[SupportTriageState]):
     @start()
-    def generate_city(self):
-        print("Starting flow")
-        # Each flow state automatically gets a unique ID
-        print(f"Flow State ID: {self.state['id']}")
+    def ingest_ticket(self):
+        # kickoff(inputs={...}) is merged into typed state fields
+        print(f"Flow State ID: {self.state.id}")
 
-        response = completion(
-            model=self.model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": "Return the name of a random city in the world.",
-                },
-            ],
+        self.remember(
+            f"Ticket {self.state.ticket_id}: {self.state.issue}",
+            scope=f"/support/{self.state.ticket_id}",
         )
 
-        random_city = response["choices"][0]["message"]["content"]
-        # Store the city in our state
-        self.state["city"] = random_city
-        print(f"Random City: {random_city}")
+        issue = self.state.issue.lower()
+        if "security" in issue or "breach" in issue:
+            self.state.urgency = "critical"
+        elif self.state.customer_tier == "enterprise":
+            self.state.urgency = "high"
+        else:
+            self.state.urgency = "normal"
 
-        return random_city
+        return self.state.issue
 
-    @listen(generate_city)
-    def generate_fun_fact(self, random_city):
-        response = completion(
-            model=self.model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": f"Tell me a fun fact about {random_city}",
-                },
-            ],
+    @router(ingest_ticket)
+    def route_ticket(self):
+        issue = self.state.issue.lower()
+        if "security" in issue or "breach" in issue:
+            self.state.route = "security"
+            return "security_review"
+        if self.state.customer_tier == "enterprise" or self.state.urgency == "high":
+            self.state.route = "priority"
+            return "priority_queue"
+        self.state.route = "standard"
+        return "standard_queue"
+
+    @listen("security_review")
+    def handle_security(self):
+        self.state.internal_notes.append("Escalated to Security Incident Response")
+        self.state.draft_reply = (
+            "We have escalated your case to our security team and will update you shortly."
         )
+        return self.state.draft_reply
 
-        fun_fact = response["choices"][0]["message"]["content"]
-        # Store the fun fact in our state
-        self.state["fun_fact"] = fun_fact
-        return fun_fact
+    @listen("priority_queue")
+    def handle_priority(self):
+        history = self.recall("SLA commitments for enterprise support", limit=2)
+        self.state.internal_notes.append(
+            f"Loaded {len(history)} memory hits for priority handling"
+        )
+        self.state.draft_reply = (
+            "Your ticket has been prioritized and assigned to a senior support engineer."
+        )
+        return self.state.draft_reply
+
+    @listen("standard_queue")
+    def handle_standard(self):
+        self.state.internal_notes.append("Routed to standard support queue")
+        self.state.draft_reply = "Thanks for reporting this. Our team will follow up soon."
+        return self.state.draft_reply
 
 
-
-flow = ExampleFlow()
-flow.plot()
-result = flow.kickoff()
-
-print(f"Generated fun fact: {result}")
+flow = SupportTriageFlow()
+flow.plot("support_triage_flow")
+result = flow.kickoff(
+    inputs={
+        "ticket_id": "TCK-1024",
+        "customer_tier": "enterprise",
+        "issue": "Cannot access SSO after enabling new policy",
+    }
+)
+print("Final reply:", result)
+print("Route:", flow.state.route)
+print("Notes:", flow.state.internal_notes)
 ```
 ![Flow Visual image](/images/crewai-flow-1.png)
-In the above example, we have created a simple Flow that generates a random city using OpenAI and then generates a fun fact about that city. The Flow consists of two tasks: `generate_city` and `generate_fun_fact`. The `generate_city` task is the starting point of the Flow, and the `generate_fun_fact` task listens for the output of the `generate_city` task.
+In this example, one flow demonstrates several core features together:
+1. `@start()` initializes and normalizes state for downstream steps.
+2. `@router()` performs deterministic branching into labeled routes.
+3. Route listeners implement lane-specific behavior (`security`, `priority`, `standard`).
+4. `@persist()` keeps the flow state recoverable between runs.
+5. Built-in memory methods (`remember`, `recall`) add durable context beyond a single method call.
 
-Each Flow instance automatically receives a unique identifier (UUID) in its state, which helps track and manage flow executions. The state can also store additional data (like the generated city and fun fact) that persists throughout the flow's execution.
-
-When you run the Flow, it will:
-1. Generate a unique ID for the flow state
-2. Generate a random city and store it in the state
-3. Generate a fun fact about that city and store it in the state
-4. Print the results to the console
-
-The state's unique ID and stored data can be useful for tracking flow executions and maintaining context between tasks.
-
-**Note:** Ensure you have set up your `.env` file to store your `OPENAI_API_KEY`. This key is necessary for authenticating requests to the OpenAI API.
+This pattern mirrors typical production workflows where request classification, policy-aware routing, and auditable state all happen in one orchestrated flow.
 
 ### @start()
 
@@ -117,15 +143,15 @@ The `@listen()` decorator can be used in several ways:
 1. **Listening to a Method by Name**: You can pass the name of the method you want to listen to as a string. When that method completes, the listener method will be triggered.
 
    ```python Code
-   @listen("generate_city")
-   def generate_fun_fact(self, random_city):
+   @listen("upstream_method")
+   def downstream_method(self, upstream_result):
        # Implementation
    ```
 
 2. **Listening to a Method Directly**: You can pass the method itself. When that method completes, the listener method will be triggered.
    ```python Code
-   @listen(generate_city)
-   def generate_fun_fact(self, random_city):
+   @listen(upstream_method)
+   def downstream_method(self, upstream_result):
        # Implementation
    ```
 

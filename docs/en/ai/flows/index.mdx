@@ -1,0 +1,39 @@
+---
+title: "Flows: Concepts"
+description: "When to use Flows, when not to use them, and key design constraints for production orchestration."
+icon: "arrow-progress"
+mode: "wide"
+---
+
+## When to use
+
+- You need deterministic orchestration, branching, and resumable execution.
+- You need explicit state transitions across steps.
+- You need persistence, routing, and event-driven control.
+
+## When not to use
+
+- A single prompt/response interaction is enough.
+- You only need one agent call without orchestration logic.
+
+## Core decisions
+
+| Decision | Choose this when |
+|---|---|
+| Unstructured state | Fast prototyping, highly dynamic fields |
+| Structured state | Stable contracts, team development, type safety |
+| `@persist()` | Long-running workflows and recovery requirements |
+| Router labels | Deterministic branch handling |
+
+## Canonical links
+
+- Reference: [/en/ai/flows/reference](/en/ai/flows/reference)
+- Patterns: [/en/ai/flows/patterns](/en/ai/flows/patterns)
+- Troubleshooting: [/en/ai/flows/troubleshooting](/en/ai/flows/troubleshooting)
+- Examples: [/en/ai/flows/examples](/en/ai/flows/examples)
+
+## Existing docs
+
+- [/en/concepts/flows](/en/concepts/flows)
+- [/en/guides/flows/mastering-flow-state](/en/guides/flows/mastering-flow-state)
+- [/en/learn/flowstate-chat-history](/en/learn/flowstate-chat-history)

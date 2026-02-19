@@ -106,6 +106,102 @@ There are different places in CrewAI code where you can specify the model to use
   </Tab>
 </Tabs>
 
+## Production LLM Patterns
+
+The basics above show how to configure one model. In real systems, you usually combine several LLM patterns for cost, quality, and reliability.
+
+### Pattern 1: Route models by agent role
+
+Use faster/cheaper models for extraction and heavier models for synthesis or critical decisions.
+
+```python Code
+from crewai import Agent, Crew, Process, Task
+
+researcher = Agent(
+    role="Researcher",
+    goal="Collect factual inputs quickly",
+    backstory="Fast information-gathering specialist",
+    llm="openai/gpt-4o-mini",
+)
+
+reviewer = Agent(
+    role="Reviewer",
+    goal="Validate claims and produce final answer",
+    backstory="Careful editor focused on correctness",
+    llm="provider/model-id",
+)
+
+crew = Crew(
+    agents=[researcher, reviewer],
+    tasks=[
+        Task(
+            description="Find the latest policy changes and list the key points",
+            expected_output="Bullet list of validated policy changes",
+            agent=researcher,
+        ),
+        Task(
+            description="Review findings and produce a final executive summary",
+            expected_output="Concise, decision-ready summary",
+            agent=reviewer,
+        ),
+    ],
+    process=Process.sequential,
+)
+```
+
+### Pattern 2: Set reliability defaults once
+
+Configure retry, timeout, and deterministic sampling in one reusable `LLM` object.
+
+```python Code
+from crewai import LLM
+
+reliable_llm = LLM(
+    model="openai/gpt-4o-mini",
+    temperature=0.1,
+    timeout=45,
+    max_retries=3,
+    max_tokens=1200,
+    seed=7,
+)
+```
+
+Use this for extraction, classification, and policy-sensitive tasks where variance should be low.
+
+### Pattern 3: Use structured outputs for machine-readable responses
+
+For downstream automation, force JSON-shaped outputs rather than free-form prose.
+
+```python Code
+from crewai import LLM
+
+json_llm = LLM(
+    model="openai/gpt-4o",
+    response_format={"type": "json"},
+    temperature=0.0,
+)
+```
+
+This reduces parser fragility in pipelines that feed APIs, databases, or workflow routers.
+
+### Pattern 4: Use OpenAI Responses API for multi-turn reasoning flows
+
+When you need built-in tools, response chaining, or reasoning-model workflows, enable the Responses API explicitly.
+
+```python Code
+from crewai import LLM
+
+reasoning_llm = LLM(
+    model="openai/o4-mini",
+    api="responses",
+    auto_chain=True,
+    store=True,
+    reasoning_effort="medium",
+)
+```
+
+This is especially useful in long-running assistants where you want conversation continuity and controllable reasoning depth.
+
 ## Provider Configuration Examples
 
 CrewAI supports a multitude of LLM providers, each offering unique features, authentication methods, and model capabilities.
