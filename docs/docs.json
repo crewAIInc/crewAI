@@ -152,6 +152,29 @@
                 ]
               },
               {
+                "group": "Core Concepts",
+                "pages": [
+                  "en/concepts/agents",
+                  "en/concepts/tasks",
+                  "en/concepts/crews",
+                  "en/concepts/flows",
+                  "en/concepts/production-architecture",
+                  "en/concepts/knowledge",
+                  "en/concepts/llms",
+                  "en/concepts/files",
+                  "en/concepts/processes",
+                  "en/concepts/collaboration",
+                  "en/concepts/training",
+                  "en/concepts/memory",
+                  "en/concepts/reasoning",
+                  "en/concepts/planning",
+                  "en/concepts/testing",
+                  "en/concepts/cli",
+                  "en/concepts/tools",
+                  "en/concepts/event-listener"
+                ]
+              },
+              {
                 "group": "Guides",
                 "pages": [
                   {
@@ -198,29 +221,6 @@
                       "en/guides/advanced/fingerprinting"
                     ]
                   }
-                ]
-              },
-              {
-                "group": "Core Concepts",
-                "pages": [
-                  "en/concepts/agents",
-                  "en/concepts/tasks",
-                  "en/concepts/crews",
-                  "en/concepts/flows",
-                  "en/concepts/production-architecture",
-                  "en/concepts/knowledge",
-                  "en/concepts/llms",
-                  "en/concepts/files",
-                  "en/concepts/processes",
-                  "en/concepts/collaboration",
-                  "en/concepts/training",
-                  "en/concepts/memory",
-                  "en/concepts/reasoning",
-                  "en/concepts/planning",
-                  "en/concepts/testing",
-                  "en/concepts/cli",
-                  "en/concepts/tools",
-                  "en/concepts/event-listener"
                 ]
               },
               {
