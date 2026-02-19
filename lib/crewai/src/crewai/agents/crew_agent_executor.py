@@ -7,6 +7,7 @@ and memory management.
 from __future__ import annotations
 
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import logging
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -696,6 +697,195 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         )
 
         if not tool_calls:
+            return None
+
+        # Execute multiple tool calls in parallel when the LLM emits a batch.
+        if len(tool_calls) > 1:
+            parsed_calls: list[tuple[str, str, str | dict[str, Any]]] = []
+            for tool_call in tool_calls:
+                if hasattr(tool_call, "function"):
+                    call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+                    func_name = sanitize_tool_name(tool_call.function.name)
+                    func_args: str | dict[str, Any] = tool_call.function.arguments
+                elif hasattr(tool_call, "function_call") and tool_call.function_call:
+                    call_id = f"call_{id(tool_call)}"
+                    func_name = sanitize_tool_name(tool_call.function_call.name)
+                    func_args = (
+                        dict(tool_call.function_call.args)
+                        if tool_call.function_call.args
+                        else {}
+                    )
+                elif hasattr(tool_call, "name") and hasattr(tool_call, "input"):
+                    call_id = getattr(tool_call, "id", f"call_{id(tool_call)}")
+                    func_name = sanitize_tool_name(tool_call.name)
+                    func_args = tool_call.input
+                elif isinstance(tool_call, dict):
+                    call_id = (
+                        tool_call.get("id")
+                        or tool_call.get("toolUseId")
+                        or f"call_{id(tool_call)}"
+                    )
+                    func_info = tool_call.get("function", {})
+                    func_name = sanitize_tool_name(
+                        func_info.get("name", "") or tool_call.get("name", "")
+                    )
+                    func_args = func_info.get("arguments", "{}") or tool_call.get(
+                        "input", {}
+                    )
+                else:
+                    continue
+
+                parsed_calls.append((call_id, func_name, func_args))
+
+            if not parsed_calls:
+                return None
+
+            assistant_message: LLMMessage = {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": call_id,
+                        "type": "function",
+                        "function": {
+                            "name": func_name,
+                            "arguments": func_args
+                            if isinstance(func_args, str)
+                            else json.dumps(func_args),
+                        },
+                    }
+                    for call_id, func_name, func_args in parsed_calls
+                ],
+            }
+            self.messages.append(assistant_message)
+
+            def _execute_one(
+                idx: int, call_id: str, func_name: str, func_args: str | dict[str, Any]
+            ) -> tuple[int, str, str, str, Any | None]:
+                if isinstance(func_args, str):
+                    try:
+                        args_dict = json.loads(func_args)
+                    except json.JSONDecodeError:
+                        args_dict = {}
+                else:
+                    args_dict = func_args
+
+                agent_key = (
+                    getattr(self.agent, "key", "unknown") if self.agent else "unknown"
+                )
+                started_at = datetime.now()
+                crewai_event_bus.emit(
+                    self,
+                    event=ToolUsageStartedEvent(
+                        tool_name=func_name,
+                        tool_args=args_dict,
+                        from_agent=self.agent,
+                        from_task=self.task,
+                        agent_key=agent_key,
+                    ),
+                )
+
+                track_delegation_if_needed(func_name, args_dict, self.task)
+
+                original_tool = None
+                for tool in self.original_tools or []:
+                    if sanitize_tool_name(tool.name) == func_name:
+                        original_tool = tool
+                        break
+
+                error_event_emitted = False
+                result: str = "Tool not found"
+                if func_name in available_functions:
+                    try:
+                        raw_result = available_functions[func_name](**args_dict)
+                        result = (
+                            str(raw_result)
+                            if not isinstance(raw_result, str)
+                            else raw_result
+                        )
+                    except Exception as e:
+                        result = f"Error executing tool: {e}"
+                        if self.task:
+                            self.task.increment_tools_errors()
+                        crewai_event_bus.emit(
+                            self,
+                            event=ToolUsageErrorEvent(
+                                tool_name=func_name,
+                                tool_args=args_dict,
+                                from_agent=self.agent,
+                                from_task=self.task,
+                                agent_key=agent_key,
+                                error=e,
+                            ),
+                        )
+                        error_event_emitted = True
+
+                if not error_event_emitted:
+                    crewai_event_bus.emit(
+                        self,
+                        event=ToolUsageFinishedEvent(
+                            output=result,
+                            tool_name=func_name,
+                            tool_args=args_dict,
+                            from_agent=self.agent,
+                            from_task=self.task,
+                            agent_key=agent_key,
+                            started_at=started_at,
+                            finished_at=datetime.now(),
+                        ),
+                    )
+
+                return idx, call_id, func_name, result, original_tool
+
+            max_workers = min(8, len(parsed_calls))
+            ordered_results: list[tuple[int, str, str, str, Any | None] | None] = [
+                None
+            ] * len(parsed_calls)
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {
+                    pool.submit(_execute_one, idx, call_id, func_name, func_args): idx
+                    for idx, (call_id, func_name, func_args) in enumerate(parsed_calls)
+                }
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    ordered_results[idx] = future.result()
+
+            for record in ordered_results:
+                if record is None:
+                    continue
+                _, call_id, func_name, result, original_tool = record
+
+                tool_message: LLMMessage = {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "name": func_name,
+                    "content": result,
+                }
+                self.messages.append(tool_message)
+
+                if self.agent and self.agent.verbose:
+                    self._printer.print(
+                        content=f"Tool {func_name} executed with result: {result[:200]}...",
+                        color="green",
+                    )
+
+                if (
+                    original_tool
+                    and hasattr(original_tool, "result_as_answer")
+                    and original_tool.result_as_answer
+                ):
+                    return AgentFinish(
+                        thought="Tool result is the final answer",
+                        output=result,
+                        text=result,
+                    )
+
+            reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+            reasoning_message: LLMMessage = {
+                "role": "user",
+                "content": reasoning_prompt,
+            }
+            self.messages.append(reasoning_message)
             return None
 
         # Only process the FIRST tool call for sequential execution with reflection
