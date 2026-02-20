@@ -631,7 +631,63 @@ class AnthropicCompletion(BaseLLM):
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
+        # Sanitize messages to comply with Anthropic API requirements:
+        # 1. Replace empty content with placeholder (all messages)
+        # 2. Strip trailing whitespace from final assistant message
+        formatted_messages = self._sanitize_messages_for_anthropic(
+            formatted_messages
+        )
+
         return formatted_messages, system_message
+
+    @staticmethod
+    def _sanitize_messages_for_anthropic(
+        messages: list[LLMMessage],
+    ) -> list[LLMMessage]:
+        """Sanitize messages to comply with Anthropic API requirements.
+
+        Anthropic enforces:
+        1. All messages must have non-empty content except for an optional
+           final assistant message.
+        2. The final assistant message content cannot end with trailing
+           whitespace.
+
+        This method:
+        - Replaces empty string content with a placeholder so the API does
+          not reject the request.
+        - Strips trailing whitespace from the final assistant message
+          (both plain-string and structured content-block forms).
+
+        Args:
+            messages: The list of formatted messages.
+
+        Returns:
+            The sanitized list of messages.
+        """
+        for msg in messages:
+            content = msg.get("content")
+            # Replace empty string content with a placeholder.
+            # Anthropic rejects empty content on all messages except an
+            # optional trailing assistant message, and agents occasionally
+            # produce empty strings in pipelines.
+            if isinstance(content, str) and content.strip() == "":
+                msg["content"] = "."
+
+        # Strip trailing whitespace from the final assistant message.
+        if messages and messages[-1].get("role") == "assistant":
+            content = messages[-1].get("content")
+            if isinstance(content, str):
+                messages[-1]["content"] = content.rstrip()
+            elif isinstance(content, list):
+                # Handle structured content blocks (e.g. thinking + text).
+                for block in reversed(content):
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text = block.get("text", "")
+                        if isinstance(text, str):
+                            block["text"] = text.rstrip()
+                        break
+
+        return messages
 
     def _handle_completion(
         self,
