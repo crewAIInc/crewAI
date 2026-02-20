@@ -874,6 +874,19 @@ def test_task_definition_based_on_dict():
     assert task.agent is None
 
 
+
+def test_task_with_invalid_agent_type_raises_validation_error():
+    """Test that passing an invalid type for agent raises a clear ValidationError."""
+    with pytest.raises(ValidationError, match="Expected a dictionary or BaseAgent instance"):
+        Task(description="test task", expected_output="test output", agent="not_an_agent")
+
+    with pytest.raises(ValidationError, match="Expected a dictionary or BaseAgent instance"):
+        Task(description="test task", expected_output="test output", agent=123)
+
+    with pytest.raises(ValidationError, match="Expected a dictionary or BaseAgent instance"):
+        Task(description="test task", expected_output="test output", agent=["invalid"])
+
+
 def test_conditional_task_definition_based_on_dict():
     config = {
         "description": "Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work', check examples to based your evaluation.",
