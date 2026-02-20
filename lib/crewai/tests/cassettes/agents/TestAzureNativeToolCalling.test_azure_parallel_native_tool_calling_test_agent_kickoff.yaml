@@ -1,0 +1,198 @@
+interactions:
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Parallel Tool Agent.
+      You follow tool instructions precisely.\nYour personal goal is: Use both tools
+      exactly as instructed"}, {"role": "user", "content": "\nCurrent Task: This is
+      a tool-calling compliance test. In your next assistant turn, emit exactly 3
+      tool calls in the same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."}], "stream": false, "tool_choice": "auto", "tools": [{"function":
+      {"name": "parallel_local_search_one", "description": "Local search tool #1 for
+      concurrency testing.", "parameters": {"properties": {"query": {"description":
+      "Search query", "title": "Query", "type": "string"}}, "required": ["query"],
+      "type": "object", "additionalProperties": false}}, "type": "function"}, {"function":
+      {"name": "parallel_local_search_two", "description": "Local search tool #2 for
+      concurrency testing.", "parameters": {"properties": {"query": {"description":
+      "Search query", "title": "Query", "type": "string"}}, "required": ["query"],
+      "type": "object", "additionalProperties": false}}, "type": "function"}, {"function":
+      {"name": "parallel_local_search_three", "description": "Local search tool #3
+      for concurrency testing.", "parameters": {"properties": {"query": {"description":
+      "Search query", "title": "Query", "type": "string"}}, "required": ["query"],
+      "type": "object", "additionalProperties": false}}, "type": "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1763'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-5-nano/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{},"finish_reason":"tool_calls","index":0,"logprobs":null,"message":{"annotations":[],"content":null,"refusal":null,"role":"assistant","tool_calls":[{"function":{"arguments":"{\"query\":
+        \"latest OpenAI model release notes\"}","name":"parallel_local_search_one"},"id":"call_emQmocGydKuxvESfQopNngdm","type":"function"},{"function":{"arguments":"{\"query\":
+        \"latest Anthropic model release notes\"}","name":"parallel_local_search_two"},"id":"call_eNpK9WUYFCX2ZEUPhYCKvdMs","type":"function"},{"function":{"arguments":"{\"query\":
+        \"latest Gemini model release notes\"}","name":"parallel_local_search_three"},"id":"call_Wdtl6jFxGehSUMn5I1O4Mrdx","type":"function"}]}}],"created":1771459550,"id":"chatcmpl-DAlqAyJGnQKDkNCaTcjU2T8BeJaXM","model":"gpt-5-nano-2025-08-07","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":null,"usage":{"completion_tokens":666,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":576,"rejected_prediction_tokens":0},"prompt_tokens":343,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":1009}}
+
+        '
+    headers:
+      Content-Length:
+      - '1433'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 00:05:55 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-5-nano
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages": [{"role": "system", "content": "You are Parallel Tool Agent.
+      You follow tool instructions precisely.\nYour personal goal is: Use both tools
+      exactly as instructed"}, {"role": "user", "content": "\nCurrent Task: This is
+      a tool-calling compliance test. In your next assistant turn, emit exactly 3
+      tool calls in the same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."}, {"role": "assistant", "content": "", "tool_calls": [{"id":
+      "call_emQmocGydKuxvESfQopNngdm", "type": "function", "function": {"name": "parallel_local_search_one",
+      "arguments": "{\"query\": \"latest OpenAI model release notes\"}"}}, {"id":
+      "call_eNpK9WUYFCX2ZEUPhYCKvdMs", "type": "function", "function": {"name": "parallel_local_search_two",
+      "arguments": "{\"query\": \"latest Anthropic model release notes\"}"}}, {"id":
+      "call_Wdtl6jFxGehSUMn5I1O4Mrdx", "type": "function", "function": {"name": "parallel_local_search_three",
+      "arguments": "{\"query\": \"latest Gemini model release notes\"}"}}]}, {"role":
+      "tool", "tool_call_id": "call_emQmocGydKuxvESfQopNngdm", "content": "[one] latest
+      OpenAI model release notes"}, {"role": "tool", "tool_call_id": "call_eNpK9WUYFCX2ZEUPhYCKvdMs",
+      "content": "[two] latest Anthropic model release notes"}, {"role": "tool", "tool_call_id":
+      "call_Wdtl6jFxGehSUMn5I1O4Mrdx", "content": "[three] latest Gemini model release
+      notes"}], "stream": false, "tool_choice": "auto", "tools": [{"function": {"name":
+      "parallel_local_search_one", "description": "Local search tool #1 for concurrency
+      testing.", "parameters": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}, "type": "function"}, {"function": {"name":
+      "parallel_local_search_two", "description": "Local search tool #2 for concurrency
+      testing.", "parameters": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}, "type": "function"}, {"function": {"name":
+      "parallel_local_search_three", "description": "Local search tool #3 for concurrency
+      testing.", "parameters": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}, "type": "function"}]}'
+    headers:
+      Accept:
+      - application/json
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '2727'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      api-key:
+      - X-API-KEY-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+    method: POST
+    uri: https://fake-azure-endpoint.openai.azure.com/openai/deployments/gpt-5-nano/chat/completions?api-version=2024-12-01-preview
+  response:
+    body:
+      string: '{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"protected_material_code":{"filtered":false,"detected":false},"protected_material_text":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}},"finish_reason":"stop","index":0,"logprobs":null,"message":{"annotations":[],"content":"The
+        latest release notes have been published for the OpenAI, Anthropic, and Gemini
+        models, signaling concurrent updates across the leading AI model families.
+        Each set outlines new capabilities and performance improvements, along with
+        changes to APIs, tooling, and deployment guidelines. Users should review the
+        individual notes to understand new features, adjustments to tokenization,
+        latency or throughput, safety and alignment enhancements, pricing or access
+        changes, and any breaking changes or migration steps required to adopt the
+        updated models in existing workflows.","refusal":null,"role":"assistant"}}],"created":1771459556,"id":"chatcmpl-DAlqGKWXfGNlTIbDY9F6oHQp6hbxM","model":"gpt-5-nano-2025-08-07","object":"chat.completion","prompt_filter_results":[{"prompt_index":0,"content_filter_results":{"hate":{"filtered":false,"severity":"safe"},"jailbreak":{"filtered":false,"detected":false},"self_harm":{"filtered":false,"severity":"safe"},"sexual":{"filtered":false,"severity":"safe"},"violence":{"filtered":false,"severity":"safe"}}}],"system_fingerprint":null,"usage":{"completion_tokens":747,"completion_tokens_details":{"accepted_prediction_tokens":0,"audio_tokens":0,"reasoning_tokens":640,"rejected_prediction_tokens":0},"prompt_tokens":467,"prompt_tokens_details":{"audio_tokens":0,"cached_tokens":0},"total_tokens":1214}}
+
+        '
+    headers:
+      Content-Length:
+      - '1778'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 19 Feb 2026 00:06:02 GMT
+      Strict-Transport-Security:
+      - STS-XXX
+      apim-request-id:
+      - APIM-REQUEST-ID-XXX
+      azureml-model-session:
+      - AZUREML-MODEL-SESSION-XXX
+      x-accel-buffering:
+      - 'no'
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ms-client-request-id:
+      - X-MS-CLIENT-REQUEST-ID-XXX
+      x-ms-deployment-name:
+      - gpt-5-nano
+      x-ms-rai-invoked:
+      - 'true'
+      x-ms-region:
+      - X-MS-REGION-XXX
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
