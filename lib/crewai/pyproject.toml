@@ -16,9 +16,9 @@ dependencies = [
     "pdfplumber~=0.11.4",
     "regex~=2026.1.15",
     # Telemetry and Monitoring
-    "opentelemetry-api~=1.34.0",
-    "opentelemetry-sdk~=1.34.0",
-    "opentelemetry-exporter-otlp-proto-http~=1.34.0",
+    "opentelemetry-api>=1.34.0,<2",
+    "opentelemetry-sdk>=1.34.0,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.34.0,<2",
     # Data Handling
     "chromadb~=1.1.0",
     "tokenizers~=0.20.3",
