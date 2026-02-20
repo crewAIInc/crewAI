@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable, Sequence
 import concurrent.futures
+import inspect
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -501,7 +502,9 @@ def handle_agent_action_core(
         - TODO: Remove messages parameter and its usage.
     """
     if step_callback:
-        step_callback(tool_result)
+        cb_result = step_callback(tool_result)
+        if inspect.iscoroutine(cb_result):
+            asyncio.run(cb_result)
 
     formatted_answer.text += f"\nObservation: {tool_result.result}"
     formatted_answer.result = tool_result.result
