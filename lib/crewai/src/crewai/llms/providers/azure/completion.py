@@ -172,7 +172,8 @@ class AzureCompletion(BaseLLM):
         self.response_format = response_format
 
         self.is_openai_model = any(
-            prefix in model.lower() for prefix in ["gpt-", "o1-", "text-"]
+            prefix in model.lower()
+            for prefix in ["gpt-", "gpt5", "o1-", "text-"]
         )
 
         self.is_azure_openai_endpoint = (
@@ -1017,7 +1018,7 @@ class AzureCompletion(BaseLLM):
         """
         model_lower = self.model.lower() if self.model else ""
 
-        if "gpt-5" in model_lower:
+        if "gpt-5" in model_lower or "gpt5" in model_lower:
             return False
 
         o_series_models = ["o1", "o3", "o4", "o1-mini", "o3-mini", "o4-mini"]
