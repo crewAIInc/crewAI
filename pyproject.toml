@@ -144,6 +144,10 @@ python_functions = "test_*"
 
 [tool.uv]
 
+# vcrpy 7.0.0 has a urllib3<2 constraint for PyPy, which conflicts with
+# deps requiring urllib3>=2. Restrict resolution to CPython only.
+environments = ["platform_python_implementation == 'CPython'"]
+
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
 override-dependencies = [
