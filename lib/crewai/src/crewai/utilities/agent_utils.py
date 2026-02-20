@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import Callable, Sequence
 import concurrent.futures
 import json
+import logging
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
@@ -57,6 +58,7 @@ class SummaryContent(TypedDict):
 
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
 
@@ -567,6 +569,11 @@ def handle_output_parser_exception(
     Returns:
         AgentAction: A formatted answer with the error
     """
+    logger.debug(
+        "OutputParserError on iteration %d: %s",
+        iterations,
+        e.error,
+    )
     messages.append({"role": "user", "content": e.error})
 
     formatted_answer = AgentAction(
