@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from crewai.tasks.output_format import OutputFormat
+from crewai.types.usage_metrics import TaskTokenMetrics
 from crewai.utilities.types import LLMMessage
 
 
@@ -22,6 +23,7 @@ class TaskOutput(BaseModel):
         json_dict: JSON dictionary output of the task
         agent: Agent that executed the task
         output_format: Output format of the task (JSON, PYDANTIC, or RAW)
+        usage_metrics: Token usage metrics for this specific task
     """
 
     description: str = Field(description="Description of the task")
@@ -42,6 +44,10 @@ class TaskOutput(BaseModel):
         description="Output format of the task", default=OutputFormat.RAW
     )
     messages: list[LLMMessage] = Field(description="Messages of the task", default=[])
+    usage_metrics: TaskTokenMetrics | None = Field(
+        description="Token usage metrics for this task",
+        default=None
+    )
 
     @model_validator(mode="after")
     def set_summary(self):
