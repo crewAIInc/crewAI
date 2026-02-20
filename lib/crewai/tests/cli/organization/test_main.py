@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch, call
 
 import pytest
 from click.testing import CliRunner
-import requests
+import httpx
 
 from crewai.cli.organization.main import OrganizationCommand
 from crewai.cli.cli import org_list, switch, current
@@ -115,7 +115,7 @@ class TestOrganizationCommand(unittest.TestCase):
     def test_list_organizations_api_error(self, mock_console):
         self.org_command.plus_api_client = MagicMock()
         self.org_command.plus_api_client.get_organizations.side_effect = (
-            requests.exceptions.RequestException("API Error")
+            httpx.HTTPError("API Error")
         )
 
         with pytest.raises(SystemExit):
@@ -201,8 +201,10 @@ class TestOrganizationCommand(unittest.TestCase):
     @patch("crewai.cli.organization.main.console")
     def test_list_organizations_unauthorized(self, mock_console):
         mock_response = MagicMock()
-        mock_http_error = requests.exceptions.HTTPError(
-            "401 Client Error: Unauthorized", response=MagicMock(status_code=401)
+        mock_http_error = httpx.HTTPStatusError(
+            "401 Client Error: Unauthorized",
+            request=httpx.Request("GET", "http://test"),
+            response=httpx.Response(401),
         )
 
         mock_response.raise_for_status.side_effect = mock_http_error
@@ -219,8 +221,10 @@ class TestOrganizationCommand(unittest.TestCase):
     @patch("crewai.cli.organization.main.console")
     def test_switch_organization_unauthorized(self, mock_console):
         mock_response = MagicMock()
-        mock_http_error = requests.exceptions.HTTPError(
-            "401 Client Error: Unauthorized", response=MagicMock(status_code=401)
+        mock_http_error = httpx.HTTPStatusError(
+            "401 Client Error: Unauthorized",
+            request=httpx.Request("GET", "http://test"),
+            response=httpx.Response(401),
         )
 
         mock_response.raise_for_status.side_effect = mock_http_error
