@@ -46,20 +46,25 @@ class RPMController(BaseModel):
         if self.max_rpm is None:
             return True
 
-        with self._lock:
-            if self._current_rpm < self.max_rpm:
-                self._current_rpm += 1
+        while True:
+            with self._lock:
+                if self._current_rpm < self.max_rpm:
+                    self._current_rpm += 1
+                    return True
+
+            # Limit reached — wait outside the lock so other threads
+            # aren't blocked.  After waking, loop back to re-check the
+            # limit under the lock so that concurrent wakers don't
+            # collectively exceed max_rpm.
+            self.logger.log(
+                "info", "Max RPM reached, waiting for next minute to start."
+            )
+            self._shutdown_event.wait(60)
+
+            # If shutdown was requested, allow the call through so the
+            # thread can unblock and terminate gracefully.
+            if self._shutdown_event.is_set():
                 return True
-
-        # Limit reached — wait outside the lock so other threads aren't blocked.
-        self.logger.log(
-            "info", "Max RPM reached, waiting for next minute to start."
-        )
-        self._shutdown_event.wait(60)
-
-        with self._lock:
-            self._current_rpm = 1
-        return True
 
     def stop_rpm_counter(self) -> None:
         """Stops the RPM counter and cancels any active timers."""

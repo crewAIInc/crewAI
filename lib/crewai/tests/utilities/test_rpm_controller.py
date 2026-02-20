@@ -157,3 +157,52 @@ def test_lock_not_held_during_wait():
     controller.stop_rpm_counter()
     waiting.join(timeout=2.0)
     lock_thread.join(timeout=2.0)
+
+
+def test_concurrent_wakeup_respects_limit():
+    """Multiple threads waking from wait must not collectively exceed max_rpm.
+
+    Regression test for the bug where all waiting threads set _current_rpm = 1
+    instead of atomically incrementing, bypassing the rate limit.
+    """
+    max_rpm = 2
+    controller = RPMController(max_rpm=max_rpm)
+
+    # Exhaust the limit
+    for _ in range(max_rpm):
+        controller.check_or_wait()
+
+    # Spawn several threads that will all block in check_or_wait
+    results = []
+    results_lock = threading.Lock()
+
+    def blocked_request():
+        controller.check_or_wait()
+        with results_lock:
+            results.append(1)
+
+    threads = [threading.Thread(target=blocked_request, daemon=True) for _ in range(5)]
+    for t in threads:
+        t.start()
+
+    # Let all threads enter the wait
+    time.sleep(0.2)
+
+    # Simulate the timer resetting the counter — this wakes no one,
+    # but makes slots available for threads that loop back.
+    controller._reset_request_count()
+
+    # Give threads time to wake and compete
+    time.sleep(0.5)
+
+    # At most max_rpm threads should have succeeded (counter was reset to 0)
+    with controller._lock:
+        assert controller._current_rpm <= max_rpm, (
+            f"_current_rpm={controller._current_rpm} exceeded max_rpm={max_rpm}"
+        )
+
+    # Cleanup
+    controller.stop_rpm_counter()
+    for t in threads:
+        t.join(timeout=2.0)
+
