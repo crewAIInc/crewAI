@@ -373,3 +373,109 @@ class TestMultipleFilesFormatting:
         result = format_multimodal_content({}, llm.model)
 
         assert result == []
+
+
+class TestProcessMessageFiles:
+    """Tests for BaseLLM._process_message_files stripping files from messages.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/4498:
+    When an LLM does not support multimodal, File objects left in messages
+    cause TypeError: Object of type File is not JSON serializable.
+    """
+
+    def _make_non_multimodal_llm(self):
+        """Create an LLM that does NOT support multimodal."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class NonMultimodalLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+            def supports_multimodal(self) -> bool:
+                return False
+
+        return NonMultimodalLLM(model="test-model")
+
+    def _make_multimodal_llm(self):
+        """Create an LLM that supports multimodal."""
+        from crewai.llms.base_llm import BaseLLM
+
+        class MultimodalLLM(BaseLLM):
+            def call(self, messages, tools=None, callbacks=None):
+                return "test"
+
+            def supports_multimodal(self) -> bool:
+                return True
+
+        return MultimodalLLM(model="test-model")
+
+    def test_non_multimodal_strips_files_from_messages(self) -> None:
+        """Files are removed from messages when LLM doesn't support multimodal."""
+        llm = self._make_non_multimodal_llm()
+        files = {"photo": ImageFile(source=MINIMAL_PNG)}
+        messages = [
+            {"role": "system", "content": "You are helpful."},
+            {"role": "user", "content": "Describe this.", "files": files},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        # files key must be gone from all messages
+        for msg in result:
+            assert "files" not in msg
+        # content should be unchanged (not converted to multimodal blocks)
+        assert result[1]["content"] == "Describe this."
+
+    def test_non_multimodal_messages_are_json_serializable(self) -> None:
+        """After processing, messages can be JSON-serialized without error."""
+        import json
+
+        llm = self._make_non_multimodal_llm()
+        files = {"photo": ImageFile(source=MINIMAL_PNG)}
+        messages = [
+            {"role": "user", "content": "Describe this.", "files": files},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        # This must not raise TypeError
+        json.dumps(result)
+
+    def test_non_multimodal_preserves_messages_without_files(self) -> None:
+        """Messages without files are untouched."""
+        llm = self._make_non_multimodal_llm()
+        messages = [
+            {"role": "system", "content": "You are helpful."},
+            {"role": "user", "content": "Hello"},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        assert result == messages
+
+    def test_multimodal_strips_files_after_processing(self) -> None:
+        """Even multimodal LLMs remove the files key after converting to blocks."""
+        llm = self._make_multimodal_llm()
+        files = {"chart": ImageFile(source=MINIMAL_PNG)}
+        messages = [
+            {"role": "user", "content": "Describe this chart.", "files": files},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        for msg in result:
+            assert "files" not in msg
+
+    def test_multimodal_converts_files_to_content_blocks(self) -> None:
+        """Multimodal LLMs convert files into provider content blocks."""
+        llm = self._make_multimodal_llm()
+        files = {"chart": ImageFile(source=MINIMAL_PNG)}
+        messages = [
+            {"role": "user", "content": "Describe this chart.", "files": files},
+        ]
+
+        result = llm._process_message_files(messages)
+
+        # Content should now be a list with content blocks
+        assert isinstance(result[0]["content"], list)
+        assert len(result[0]["content"]) >= 1
