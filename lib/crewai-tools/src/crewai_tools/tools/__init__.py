@@ -178,6 +178,8 @@ from crewai_tools.tools.youtube_channel_search_tool.youtube_channel_search_tool 
 from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool import (
     YoutubeVideoSearchTool,
 )
+from crewai_tools.tools.you_contents_tool.you_contents_tool import YouContentsTool
+from crewai_tools.tools.you_search_tool.you_search_tool import YouSearchTool
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
 
@@ -268,6 +270,8 @@ __all__ = [
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
     "XMLSearchTool",
+    "YouContentsTool",
+    "YouSearchTool",
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
