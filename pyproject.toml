@@ -23,7 +23,7 @@ dev = [
     "pytest-split==0.10.0",
     "types-requests~=2.31.0.6",
     "types-pyyaml==6.0.*",
-    "types-regex==2024.11.6.*",
+    "types-regex==2026.1.15.*",
     "types-appdirs==1.4.*",
     "boto3-stubs[bedrock-runtime]==1.40.54",
     "types-psycopg2==2.9.21.20251012",
