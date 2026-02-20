@@ -21,7 +21,24 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
+_MARKDOWN_CODE_BLOCK_PATTERN: Final[re.Pattern[str]] = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
 _I18N = get_i18n()
+
+
+def strip_markdown_code_blocks(text: str) -> str:
+    """Strip markdown code blocks from text to extract raw JSON.
+    
+    Args:
+        text: The text that may contain markdown code blocks.
+        
+    Returns:
+        The text with markdown code blocks removed, or the original text if no blocks found.
+    """
+    # First try to extract content from markdown code blocks
+    match = _MARKDOWN_CODE_BLOCK_PATTERN.search(text)
+    if match:
+        return match.group(1).strip()
+    return text
 
 
 class ConverterError(Exception):
@@ -77,28 +94,34 @@ class Converter(OutputConverter):
                     # Try to directly validate the response JSON
                     result = self.model.model_validate_json(response)
                 except ValidationError:
-                    # If direct validation fails, attempt to extract valid JSON
-                    result = handle_partial_json(  # type: ignore[assignment]
-                        result=response,
-                        model=self.model,
-                        is_json_output=False,
-                        agent=None,
-                    )
-                    # Ensure result is a BaseModel instance
-                    if not isinstance(result, BaseModel):
-                        if isinstance(result, dict):
-                            result = self.model.model_validate(result)
-                        elif isinstance(result, str):
-                            try:
-                                result = self.model.model_validate_json(result)
-                            except Exception as parse_err:
+                    # Strip markdown code blocks first in case LLM wrapped JSON in code blocks
+                    cleaned_response = strip_markdown_code_blocks(response)
+                    try:
+                        # Try to validate the cleaned response
+                        result = self.model.model_validate_json(cleaned_response)
+                    except ValidationError:
+                        # If still fails, attempt to extract valid JSON using pattern matching
+                        result = handle_partial_json(  # type: ignore[assignment]
+                            result=cleaned_response,
+                            model=self.model,
+                            is_json_output=False,
+                            agent=None,
+                        )
+                        # Ensure result is a BaseModel instance
+                        if not isinstance(result, BaseModel):
+                            if isinstance(result, dict):
+                                result = self.model.model_validate(result)
+                            elif isinstance(result, str):
+                                try:
+                                    result = self.model.model_validate_json(result)
+                                except Exception as parse_err:
+                                    raise ConverterError(
+                                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                                    ) from parse_err
+                            else:
                                 raise ConverterError(
-                                    f"Failed to convert partial JSON result into Pydantic: {parse_err}"
-                                ) from parse_err
-                        else:
-                            raise ConverterError(
-                                "handle_partial_json returned an unexpected type."
-                            ) from None
+                                    "handle_partial_json returned an unexpected type."
+                                ) from None
             return result
         except ValidationError as e:
             if current_attempt < self.max_attempts:
@@ -184,14 +207,17 @@ def convert_to_model(
             converter_cls=converter_cls,
         )
 
+    # First strip any markdown code blocks
+    cleaned_result = strip_markdown_code_blocks(result)
+    
     try:
-        escaped_result = json.dumps(json.loads(result, strict=False))
+        escaped_result = json.dumps(json.loads(cleaned_result, strict=False))
         return validate_model(
             result=escaped_result, model=model, is_json_output=bool(output_json)
         )
     except json.JSONDecodeError:
         return handle_partial_json(
-            result=result,
+            result=cleaned_result,
             model=model,
             is_json_output=bool(output_json),
             agent=agent,
@@ -254,7 +280,11 @@ def handle_partial_json(
     Returns:
         The converted result as a dict, BaseModel, or original string.
     """
-    match = _JSON_PATTERN.search(result)
+    # Strip markdown code blocks first if present
+    cleaned_result = strip_markdown_code_blocks(result)
+    
+    # Try JSON pattern matching on the cleaned result
+    match = _JSON_PATTERN.search(cleaned_result)
     if match:
         try:
             exported_result = model.model_validate_json(match.group())
@@ -273,7 +303,7 @@ def handle_partial_json(
                 )
 
     return convert_with_instructions(
-        result=result,
+        result=cleaned_result,
         model=model,
         is_json_output=is_json_output,
         agent=agent,
