@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -289,6 +289,46 @@ class TestAsyncAgentExecutor:
         assert len(results) == 3
         assert all("output" in r for r in results)
         assert max_concurrent > 1, f"Expected concurrent execution, max concurrent was {max_concurrent}"
+
+
+class TestInvokeStepCallback:
+    """Tests for _invoke_step_callback with sync and async callbacks."""
+
+    def test_invoke_step_callback_with_sync_callback(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that a sync step callback is called normally."""
+        callback = Mock()
+        executor.step_callback = callback
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        executor._invoke_step_callback(answer)
+
+        callback.assert_called_once_with(answer)
+
+    def test_invoke_step_callback_with_async_callback(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that an async step callback is awaited via asyncio.run."""
+        async_callback = AsyncMock()
+        executor.step_callback = async_callback
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        with patch("crewai.agents.crew_agent_executor.asyncio.run") as mock_run:
+            executor._invoke_step_callback(answer)
+
+            async_callback.assert_called_once_with(answer)
+            mock_run.assert_called_once()
+
+    def test_invoke_step_callback_with_none(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Test that no error is raised when step_callback is None."""
+        executor.step_callback = None
+        answer = AgentFinish(thought="thinking", output="test", text="final")
+
+        # Should not raise
+        executor._invoke_step_callback(answer)
 
 
 class TestAsyncLLMResponseHelper:
