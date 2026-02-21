@@ -493,6 +493,18 @@ BedrockModels: TypeAlias = Literal[
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+
+
+TzafonModels: TypeAlias = Literal[
+    "tzafon.sm-1",
+    "tzafon.northstar-cua-fast",
+]
+TZAFON_MODELS: list[TzafonModels] = [
+    "tzafon.sm-1",
+    "tzafon.northstar-cua-fast",
+]
+
+
 BEDROCK_MODELS: list[BedrockModels] = [
     "ai21.jamba-1-5-large-v1:0",
     "ai21.jamba-1-5-mini-v1:0",

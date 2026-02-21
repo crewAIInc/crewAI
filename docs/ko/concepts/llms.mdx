@@ -773,6 +773,78 @@ CrewAI는 고유한 기능, 인증 방법, 모델 역량을 제공하는 다양�
       - 속도와 품질의 우수한 밸런스
     </Info>
   </Accordion>
+
+  <Accordion title="Tzafon">
+    CrewAI는 OpenAI 호환 Tzafon API를 통해 [Tzafon](https://tzafon.ai)과 네이티브 통합을 제공합니다.
+
+    ```toml Code
+    # 필수
+    TZAFON_API_KEY=sk_your_api_key
+
+    # 선택 사항
+    TZAFON_BASE_URL=https://api.tzafon.ai/v1
+    ```
+
+    **기본 사용법:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="tzafon/tzafon.sm-1",
+        api_key="sk_your_api_key",  # 또는 TZAFON_API_KEY 환경 변수 설정
+        temperature=0.7
+    )
+    ```
+
+    **고급 구성:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="tzafon/tzafon.sm-1",
+        api_key="sk_your_api_key",
+        base_url="https://api.tzafon.ai/v1",  # 선택적 커스텀 엔드포인트
+        temperature=0.7,
+        max_tokens=4000,
+        stop=["END"],
+        stream=True,  # 스트리밍 활성화
+        timeout=60.0,  # 요청 타임아웃 (초)
+        max_retries=3  # 최대 재시도 횟수
+    )
+    ```
+
+    **지원되는 환경 변수:**
+    - `TZAFON_API_KEY`: Tzafon API 키 (필수)
+    - `TZAFON_BASE_URL`: 커스텀 기본 URL (선택 사항, 기본값: `https://api.tzafon.ai/v1`)
+
+    **기능:**
+    - OpenAI 호환 채팅 완성 API
+    - 실시간 응답을 위한 스트리밍 지원
+    - 도구 호출 / 함수 호출 지원
+    - 토큰 사용량 추적
+    - 중지 시퀀스 지원
+    - Pydantic 모델을 통한 구조화된 출력
+
+    **지원 모델:**
+
+    | 모델                         | 최적 용도                                    | 가격 (입력 / 출력)              |
+    |-----------------------------|----------------------------------------------|--------------------------------|
+    | tzafon.sm-1                 | 범용 작업, 빠른 응답                          | $0.20 / $0.30 (100만 토큰당)   |
+    | tzafon.northstar-cua-fast   | 브라우저 및 데스크톱 자동화 에이전트            | $0.30 / $1.00 (100만 토큰당)   |
+
+    <Info>
+      Tzafon의 API는 OpenAI SDK와 완전히 호환됩니다. `base_url`을 변경하여 OpenAI Python SDK로 직접 사용할 수도 있습니다:
+
+      ```python
+      from openai import OpenAI
+
+      client = OpenAI(
+          api_key="sk_your_api_key",
+          base_url="https://api.tzafon.ai/v1"
+      )
+      ```
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## 스트리밍 응답

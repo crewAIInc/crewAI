@@ -1098,6 +1098,78 @@ In this section, you'll find detailed examples that help you select, configure, 
       - Good balance of speed and quality
     </Info>
   </Accordion>
+
+  <Accordion title="Tzafon">
+    CrewAI provides native integration with [Tzafon](https://tzafon.ai) through the OpenAI-compatible Tzafon API.
+
+    ```toml Code
+    # Required
+    TZAFON_API_KEY=sk_your_api_key
+
+    # Optional
+    TZAFON_BASE_URL=https://api.tzafon.ai/v1
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="tzafon/tzafon.sm-1",
+        api_key="sk_your_api_key",  # Or set TZAFON_API_KEY
+        temperature=0.7
+    )
+    ```
+
+    **Advanced Configuration:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="tzafon/tzafon.sm-1",
+        api_key="sk_your_api_key",
+        base_url="https://api.tzafon.ai/v1",  # Optional custom endpoint
+        temperature=0.7,
+        max_tokens=4000,
+        stop=["END"],
+        stream=True,  # Enable streaming
+        timeout=60.0,  # Request timeout in seconds
+        max_retries=3  # Maximum retry attempts
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `TZAFON_API_KEY`: Your Tzafon API key (required)
+    - `TZAFON_BASE_URL`: Custom base URL (optional, defaults to `https://api.tzafon.ai/v1`)
+
+    **Features:**
+    - OpenAI-compatible chat completions API
+    - Streaming support for real-time responses
+    - Tool calling / function calling support
+    - Token usage tracking
+    - Stop sequences support
+    - Structured outputs via Pydantic models
+
+    **Supported Models:**
+
+    | Model                       | Best For                                     | Pricing (Input / Output)       |
+    |-----------------------------|----------------------------------------------|--------------------------------|
+    | tzafon.sm-1                 | General-purpose tasks, quick responses       | $0.20 / $0.30 per 1M tokens   |
+    | tzafon.northstar-cua-fast   | Browser and desktop automation agents        | $0.30 / $1.00 per 1M tokens   |
+
+    <Info>
+      Tzafon's API is fully OpenAI SDK-compatible. You can also use it directly with the OpenAI Python SDK by changing the `base_url`:
+
+      ```python
+      from openai import OpenAI
+
+      client = OpenAI(
+          api_key="sk_your_api_key",
+          base_url="https://api.tzafon.ai/v1"
+      )
+      ```
+    </Info>
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
