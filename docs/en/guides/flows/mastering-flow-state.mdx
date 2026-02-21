@@ -47,6 +47,23 @@ CrewAI offers two ways to manage state in your flows:
 
 Let's examine each approach in detail.
 
+### Flow State vs Memory: When to use each
+
+Both features keep context, but they solve different problems.
+
+| Dimension | Flow State (`self.state`) | Memory (`self.remember` / `self.recall`) |
+|---|---|---|
+| Primary purpose | Track execution and deterministic workflow data | Store and retrieve semantic knowledge across interactions |
+| Data shape | Explicit fields (dict/Pydantic model) | Text records with inferred scopes and ranked recall |
+| Typical lifetime | Current flow run (or persisted checkpoints) | Long-term knowledge over many runs |
+| Access pattern | Direct reads/writes (`self.state.field`) | Query-based retrieval (`self.recall("...")`) |
+| Best for | Routing flags, counters, intermediate outputs, chat window | Durable facts, prior outcomes, reusable context |
+| Chat use | Recent turns + running summary + control flags | Long-tail memory outside context window |
+
+Practical rule:
+- Use **state** for what your control flow depends on right now.
+- Use **memory** for what you may want to retrieve later by meaning.
+
 ## Unstructured State Management
 
 Unstructured state uses a dictionary-like approach, offering flexibility and simplicity for straightforward applications.

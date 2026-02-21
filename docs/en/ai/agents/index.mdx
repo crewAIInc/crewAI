@@ -1,0 +1,32 @@
+---
+title: "Agents: Concepts"
+description: "Agent role contracts, task boundaries, and decision criteria for robust agent behavior."
+icon: "user"
+mode: "wide"
+---
+
+## When to use
+
+- You need specialized behavior with explicit role and goal.
+- You need tool-enabled execution under constraints.
+
+## When not to use
+
+- Static transformations are enough without model reasoning.
+- Task can be solved by deterministic code only.
+
+## Core decisions
+
+| Decision | Choose this when |
+|---|---|
+| Single agent | Narrow scope, low coordination needs |
+| Multi-agent crew | Distinct expertise and review loops needed |
+| Tool-enabled agent | Model needs external actions or data |
+
+## Canonical links
+
+- Reference: [/en/ai/agents/reference](/en/ai/agents/reference)
+- Patterns: [/en/ai/agents/patterns](/en/ai/agents/patterns)
+- Troubleshooting: [/en/ai/agents/troubleshooting](/en/ai/agents/troubleshooting)
+- Examples: [/en/ai/agents/examples](/en/ai/agents/examples)
+- Existing docs: [/en/concepts/agents](/en/concepts/agents)

@@ -12,11 +12,20 @@ mode: "wide"
   These processes ensure tasks are distributed and executed efficiently, in alignment with a predefined strategy.
 </Tip>
 
+## When to Use Each Process
+
+- Use `sequential` when task order is fixed and outputs feed directly into the next task.
+- Use `hierarchical` when you need a manager to delegate and validate work dynamically.
+
+## When Not to Use Hierarchical
+
+- You do not need dynamic delegation.
+- You cannot provide a reliable `manager_llm` or `manager_agent`.
+
 ## Process Implementations
 
 - **Sequential**: Executes tasks sequentially, ensuring tasks are completed in an orderly progression.
 - **Hierarchical**: Organizes tasks in a managerial hierarchy, where tasks are delegated and executed based on a structured chain of command. A manager language model (`manager_llm`) or a custom manager agent (`manager_agent`) must be specified in the crew to enable the hierarchical process, facilitating the creation and management of tasks by the manager.
-- **Consensual Process (Planned)**: Aiming for collaborative decision-making among agents on task execution, this process type introduces a democratic approach to task management within CrewAI. It is planned for future development and is not currently implemented in the codebase.
 
 ## The Role of Processes in Teamwork
 Processes enable individual agents to operate as a cohesive unit, streamlining their efforts to achieve common objectives with efficiency and coherence.
@@ -59,9 +68,17 @@ Emulates a corporate hierarchy, CrewAI allows specifying a custom manager agent 
 
 ## Process Class: Detailed Overview
 
-The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`). The consensual process is planned for future inclusion, emphasizing our commitment to continuous development and innovation.
+The `Process` class is implemented as an enumeration (`Enum`), ensuring type safety and restricting process values to the defined types (`sequential`, `hierarchical`).
 
 ## Conclusion
 
 The structured collaboration facilitated by processes within CrewAI is crucial for enabling systematic teamwork among agents. 
-This documentation has been updated to reflect the latest features, enhancements, and the planned integration of the Consensual Process, ensuring users have access to the most current and comprehensive information.
+## Common Failure Modes
+
+### Hierarchical process fails at startup
+- Cause: missing `manager_llm` or `manager_agent`.
+- Fix: provide one of them explicitly in crew configuration.
+
+### Sequential process produces weak outputs
+- Cause: task boundaries/context are underspecified.
+- Fix: improve task descriptions, expected outputs, and task context chaining.

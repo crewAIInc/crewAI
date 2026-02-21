@@ -1,0 +1,12 @@
+---
+title: "LLMs: Troubleshooting"
+description: "Fix common model behavior failures: drift, latency spikes, malformed output, and cost overruns."
+icon: "circle-exclamation"
+mode: "wide"
+---
+
+## Common issues
+
+- Malformed JSON: enforce `response_format` and validate at boundary.
+- Latency spikes: route heavy tasks to smaller models when acceptable.
+- Cost growth: add budget-aware model routing and truncation rules.

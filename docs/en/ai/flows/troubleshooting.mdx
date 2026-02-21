@@ -1,0 +1,28 @@
+---
+title: "Flows: Troubleshooting"
+description: "Common flow failures, causes, and fixes for state, routing, persistence, and resumption."
+icon: "circle-exclamation"
+mode: "wide"
+---
+
+## Common issues
+
+### Branch did not trigger
+
+- Cause: router label mismatch.
+- Fix: align returned label with `@listen("label")` exactly.
+
+### State fields missing
+
+- Cause: untyped dynamic writes or missing inputs.
+- Fix: switch to typed state and validate required fields at `@start()`.
+
+### Context window blow-up
+
+- Cause: raw message accumulation.
+- Fix: use sliding window + summary compaction pattern.
+
+### Resume behavior inconsistent
+
+- Cause: non-idempotent side effects in retried steps.
+- Fix: make side-effecting calls idempotent and record execution markers in state.

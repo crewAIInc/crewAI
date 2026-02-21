@@ -10,6 +10,17 @@ mode: "wide"
 The planning feature in CrewAI allows you to add planning capability to your crew. When enabled, before each Crew iteration, 
 all Crew information is sent to an AgentPlanner that will plan the tasks step by step, and this plan will be added to each task description.
 
+## When to Use Planning
+
+- Tasks require multi-step decomposition before execution.
+- You need more consistent execution quality on complex tasks.
+- You want transparent planning traces in crew runs.
+
+## When Not to Use Planning
+
+- Tasks are simple and deterministic.
+- Latency and token budget are strict and planning overhead is not justified.
+
 ### Using the Planning Feature
 
 Getting started with the planning feature is very easy, the only step required is to add `planning=True` to your Crew:
@@ -31,7 +42,7 @@ my_crew = Crew(
 From this point on, your crew will have planning enabled, and the tasks will be planned before each iteration.
 
 <Warning>
-When planning is enabled, crewAI will use `gpt-4o-mini` as the default LLM for planning, which requires a valid OpenAI API key. Since your agents might be using different LLMs, this could cause confusion if you don't have an OpenAI API key configured or if you're experiencing unexpected behavior related to LLM API calls.
+Planning model defaults can vary by version and environment. To avoid implicit provider dependencies, set `planning_llm` explicitly in your crew configuration.
 </Warning>
 
 #### Planning LLM
@@ -153,3 +164,13 @@ A list with 10 bullet points of the most relevant information about AI LLMs.
 A fully fledged report with the main topics, each with a full section of information. Formatted as markdown without '```'.
 ```
 </CodeGroup>
+
+## Common Failure Modes
+
+### Planning adds cost/latency without quality gains
+- Cause: planning enabled for simple tasks.
+- Fix: disable `planning` for straightforward pipelines.
+
+### Unexpected provider authentication errors
+- Cause: implicit planner model/provider assumptions.
+- Fix: set `planning_llm` explicitly and ensure matching credentials are configured.

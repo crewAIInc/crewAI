@@ -1,0 +1,23 @@
+---
+title: "Memory: Reference"
+description: "Reference for remember/recall contracts, scopes, and retrieval tuning."
+icon: "book"
+mode: "wide"
+---
+
+## API surface
+
+- `remember(content, scope=...)`
+- `recall(query, limit=...)`
+- `extract_memories(text)`
+- `scope(path)` and `subscope(name)`
+
+## Scope rules
+
+- use `/{entity_type}/{identifier}` paths
+- keep hierarchy shallow
+- isolate sessions by stable identifiers
+
+## Canonical source
+
+Primary API details live in [/en/concepts/memory](/en/concepts/memory).
