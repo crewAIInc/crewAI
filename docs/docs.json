@@ -223,6 +223,7 @@
                       "en/tools/search-research/youtubevideosearchtool",
                       "en/tools/search-research/tavilysearchtool",
                       "en/tools/search-research/tavilyextractortool",
+                      "en/tools/search-research/parallelsearchtool",
                       "en/tools/search-research/arxivpapertool",
                       "en/tools/search-research/serpapi-googlesearchtool",
                       "en/tools/search-research/serpapi-googleshoppingtool",
