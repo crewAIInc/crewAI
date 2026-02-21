@@ -1769,31 +1769,43 @@ class LLM(BaseLLM):
                     ) and "'stop'" in str(e)
 
                     if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
-                            )
-                        else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
-
-                        logging.info("Retrying LLM call without the unsupported 'stop'")
-
-                        return self.call(
-                            messages,
-                            tools=tools,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
+                        existing_drop_params = self.additional_params.get(
+                            "additional_drop_params", []
                         )
+                        already_dropping_stop = (
+                            isinstance(existing_drop_params, list)
+                            and "stop" in existing_drop_params
+                        )
+
+                        if not already_dropping_stop:
+                            if (
+                                "additional_drop_params" in self.additional_params
+                                and isinstance(
+                                    self.additional_params["additional_drop_params"],
+                                    list,
+                                )
+                            ):
+                                self.additional_params[
+                                    "additional_drop_params"
+                                ].append("stop")
+                            else:
+                                self.additional_params["additional_drop_params"] = [
+                                    "stop"
+                                ]
+
+                            logging.info(
+                                "Retrying LLM call without the unsupported 'stop'"
+                            )
+
+                            return self.call(
+                                messages,
+                                tools=tools,
+                                callbacks=callbacks,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_model=response_model,
+                            )
 
                     crewai_event_bus.emit(
                         self,
@@ -1905,31 +1917,45 @@ class LLM(BaseLLM):
                     ) and "'stop'" in str(e)
 
                     if unsupported_stop:
-                        if (
-                            "additional_drop_params" in self.additional_params
-                            and isinstance(
-                                self.additional_params["additional_drop_params"], list
-                            )
-                        ):
-                            self.additional_params["additional_drop_params"].append(
-                                "stop"
-                            )
-                        else:
-                            self.additional_params = {
-                                "additional_drop_params": ["stop"]
-                            }
-
-                        logging.info("Retrying LLM call without the unsupported 'stop'")
-
-                        return await self.acall(
-                            messages,
-                            tools=tools,
-                            callbacks=callbacks,
-                            available_functions=available_functions,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            response_model=response_model,
+                        existing_drop_params = self.additional_params.get(
+                            "additional_drop_params", []
                         )
+                        already_dropping_stop = (
+                            isinstance(existing_drop_params, list)
+                            and "stop" in existing_drop_params
+                        )
+
+                        if not already_dropping_stop:
+                            if (
+                                "additional_drop_params" in self.additional_params
+                                and isinstance(
+                                    self.additional_params[
+                                        "additional_drop_params"
+                                    ],
+                                    list,
+                                )
+                            ):
+                                self.additional_params[
+                                    "additional_drop_params"
+                                ].append("stop")
+                            else:
+                                self.additional_params["additional_drop_params"] = [
+                                    "stop"
+                                ]
+
+                            logging.info(
+                                "Retrying LLM call without the unsupported 'stop'"
+                            )
+
+                            return await self.acall(
+                                messages,
+                                tools=tools,
+                                callbacks=callbacks,
+                                available_functions=available_functions,
+                                from_task=from_task,
+                                from_agent=from_agent,
+                                response_model=response_model,
+                            )
 
                     crewai_event_bus.emit(
                         self,
