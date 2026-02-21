@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from pydantic.types import StringConstraints
 import requests
 
+
 load_dotenv()
 
 
@@ -36,7 +37,7 @@ class BraveSearchToolSchema(BaseModel):
         default=None,
         description="Country code for geo-targeting (e.g., 'US', 'BR').",
     )
-    search_language: str | None = Field(
+    search_lang: str | None = Field(
         default=None,
         description="Language code for the search results (e.g., 'en', 'es').",
     )
@@ -129,8 +130,8 @@ class BraveSearchTool(BaseTool):
             if country := kwargs.get("country"):
                 payload["country"] = country
 
-            if search_language := kwargs.get("search_language"):
-                payload["search_language"] = search_language
+            if search_lang := kwargs.get("search_lang"):
+                payload["search_lang"] = search_lang
 
             # Fallback to deprecated n_results parameter if no count is provided
             count = kwargs.get("count")
