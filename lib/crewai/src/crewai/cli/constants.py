@@ -1,10 +1,13 @@
+from typing import Any
+
+
 DEFAULT_CREWAI_ENTERPRISE_URL = "https://app.crewai.com"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER = "workos"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE = "client_01JNJQWBJ4SPFN3SWJM5T7BDG8"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_CLIENT_ID = "client_01JYT06R59SP0NXYGD994NFXXX"
 CREWAI_ENTERPRISE_DEFAULT_OAUTH2_DOMAIN = "login.crewai.com"
 
-ENV_VARS = {
+ENV_VARS: dict[str, list[dict[str, Any]]] = {
     "openai": [
         {
             "prompt": "Enter your OPENAI API key (press Enter to skip)",
@@ -112,7 +115,7 @@ ENV_VARS = {
 }
 
 
-PROVIDERS = [
+PROVIDERS: list[str] = [
     "openai",
     "anthropic",
     "gemini",
@@ -127,7 +130,7 @@ PROVIDERS = [
     "sambanova",
 ]
 
-MODELS = {
+MODELS: dict[str, list[str]] = {
     "openai": [
         "gpt-4",
         "gpt-4.1",

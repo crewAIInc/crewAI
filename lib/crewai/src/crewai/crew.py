@@ -83,10 +83,6 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.entity.entity_memory import EntityMemory
-from crewai.memory.external.external_memory import ExternalMemory
-from crewai.memory.long_term.long_term_memory import LongTermMemory
-from crewai.memory.short_term.short_term_memory import ShortTermMemory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.rag.types import SearchResult
@@ -174,10 +170,7 @@ class Crew(FlowTrackable, BaseModel):
     _logger: Logger = PrivateAttr()
     _file_handler: FileHandler = PrivateAttr()
     _cache_handler: InstanceOf[CacheHandler] = PrivateAttr(default_factory=CacheHandler)
-    _short_term_memory: InstanceOf[ShortTermMemory] | None = PrivateAttr()
-    _long_term_memory: InstanceOf[LongTermMemory] | None = PrivateAttr()
-    _entity_memory: InstanceOf[EntityMemory] | None = PrivateAttr()
-    _external_memory: InstanceOf[ExternalMemory] | None = PrivateAttr()
+    _memory: Any = PrivateAttr(default=None)  # Unified Memory | MemoryScope
     _train: bool | None = PrivateAttr(default=False)
     _train_iteration: int | None = PrivateAttr()
     _inputs: dict[str, Any] | None = PrivateAttr(default=None)
@@ -187,6 +180,7 @@ class Crew(FlowTrackable, BaseModel):
     _task_output_handler: TaskOutputStorageHandler = PrivateAttr(
         default_factory=TaskOutputStorageHandler
     )
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -194,25 +188,12 @@ class Crew(FlowTrackable, BaseModel):
     agents: list[BaseAgent] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool = Field(
+    memory: bool | Any = Field(
         default=False,
-        description="If crew should use memory to store memories of it's execution",
-    )
-    short_term_memory: InstanceOf[ShortTermMemory] | None = Field(
-        default=None,
-        description="An Instance of the ShortTermMemory to be used by the Crew",
-    )
-    long_term_memory: InstanceOf[LongTermMemory] | None = Field(
-        default=None,
-        description="An Instance of the LongTermMemory to be used by the Crew",
-    )
-    entity_memory: InstanceOf[EntityMemory] | None = Field(
-        default=None,
-        description="An Instance of the EntityMemory to be used by the Crew",
-    )
-    external_memory: InstanceOf[ExternalMemory] | None = Field(
-        default=None,
-        description="An Instance of the ExternalMemory to be used by the Crew",
+        description=(
+            "Enable crew memory. Pass True for default Memory(), "
+            "or a Memory/MemoryScope/MemorySlice instance for custom configuration."
+        ),
     )
     embedder: EmbedderConfig | None = Field(
         default=None,
@@ -371,31 +352,23 @@ class Crew(FlowTrackable, BaseModel):
 
         return self
 
-    def _initialize_default_memories(self) -> None:
-        self._long_term_memory = self._long_term_memory or LongTermMemory()
-        self._short_term_memory = self._short_term_memory or ShortTermMemory(
-            crew=self,
-            embedder_config=self.embedder,
-        )
-        self._entity_memory = self.entity_memory or EntityMemory(
-            crew=self, embedder_config=self.embedder
-        )
-
     @model_validator(mode="after")
     def create_crew_memory(self) -> Crew:
-        """Initialize private memory attributes."""
-        self._external_memory = (
-            # External memory does not support a default value since it was
-            # designed to be managed entirely externally
-            self.external_memory.set_crew(self) if self.external_memory else None
-        )
+        """Initialize unified memory, respecting crew embedder config."""
+        if self.memory is True:
+            from crewai.memory.unified_memory import Memory
 
-        self._long_term_memory = self.long_term_memory
-        self._short_term_memory = self.short_term_memory
-        self._entity_memory = self.entity_memory
+            embedder = None
+            if self.embedder is not None:
+                from crewai.rag.embeddings.factory import build_embedder
 
-        if self.memory:
-            self._initialize_default_memories()
+                embedder = build_embedder(self.embedder)
+            self._memory = Memory(embedder=embedder)
+        elif self.memory:
+            # User passed a Memory / MemoryScope / MemorySlice instance
+            self._memory = self.memory
+        else:
+            self._memory = None
 
         return self
 
@@ -751,18 +724,30 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
+            # Ensure all background memory saves complete before returning
+            if self._memory is not None and hasattr(self._memory, "drain_writes"):
+                self._memory.drain_writes()
             clear_files(self.id)
             detach(token)
+
+    def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
+        return result
 
     def kickoff_for_each(
         self,
@@ -936,13 +921,19 @@ class Crew(FlowTrackable, BaseModel):
             for after_callback in self.after_kickoff_callbacks:
                 result = after_callback(result)
 
+            result = self._post_kickoff(result)
+
             self.usage_metrics = self.calculate_usage_metrics()
 
             return result
         except Exception as e:
             crewai_event_bus.emit(
                 self,
-                CrewKickoffFailedEvent(error=str(e), crew_name=self.name),
+                CrewKickoffFailedEvent(
+                    error=str(e),
+                    crew_name=self.name,
+                    started_event_id=self._kickoff_event_id,
+                ),
             )
             raise
         finally:
@@ -1181,6 +1172,9 @@ class Crew(FlowTrackable, BaseModel):
             self.manager_agent = manager
         manager.crew = self
 
+    def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+        return None
+
     def _execute_tasks(
         self,
         tasks: list[Task],
@@ -1197,6 +1191,9 @@ class Crew(FlowTrackable, BaseModel):
         Returns:
             CrewOutput: Final output of the crew
         """
+        custom_start = self._get_execution_start_index(tasks)
+        if custom_start is not None:
+            start_index = custom_start
 
         task_outputs: list[TaskOutput] = []
         futures: list[tuple[Task, Future[TaskOutput], int]] = []
@@ -1301,12 +1298,19 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
+        # Add memory tools if memory is available (agent or crew level)
+        resolved_memory = getattr(agent, "memory", None) or self._memory
+        if resolved_memory is not None:
+            tools = self._add_memory_tools(tools, resolved_memory)
+
         files = get_all_files(self.id, task.id)
         if files:
             supported_types: list[str] = []
             if agent and agent.llm and agent.llm.supports_multimodal():
-                provider = getattr(agent.llm, "provider", None) or getattr(
-                    agent.llm, "model", "openai"
+                provider = (
+                    getattr(agent.llm, "provider", None)
+                    or getattr(agent.llm, "model", None)
+                    or "openai"
                 )
                 api = getattr(agent.llm, "api", None)
                 supported_types = get_supported_content_types(provider, api)
@@ -1406,6 +1410,22 @@ class Crew(FlowTrackable, BaseModel):
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
+    def _add_memory_tools(
+        self, tools: list[BaseTool], memory: Any
+    ) -> list[BaseTool]:
+        """Add recall and remember tools when memory is available.
+
+        Args:
+            tools: Current list of tools.
+            memory: The resolved Memory, MemoryScope, or MemorySlice instance.
+
+        Returns:
+            Updated list with memory tools added.
+        """
+        from crewai.tools.memory_tools import create_memory_tools
+
+        return self._merge_tools(tools, create_memory_tools(memory))
+
     def _add_file_tools(
         self, tools: list[BaseTool], files: dict[str, Any]
     ) -> list[BaseTool]:
@@ -1502,12 +1522,14 @@ class Crew(FlowTrackable, BaseModel):
         final_string_output = final_task_output.raw
         self._finish_execution(final_string_output)
         self.token_usage = self.calculate_usage_metrics()
+        crewai_event_bus.flush()
         crewai_event_bus.emit(
             self,
             CrewKickoffCompletedEvent(
                 crew_name=self.name,
                 output=final_task_output,
                 total_tokens=self.token_usage.total_tokens,
+                started_event_id=self._kickoff_event_id,
             ),
         )
 
@@ -1648,10 +1670,7 @@ class Crew(FlowTrackable, BaseModel):
             "_execution_span",
             "_file_handler",
             "_cache_handler",
-            "_short_term_memory",
-            "_long_term_memory",
-            "_entity_memory",
-            "_external_memory",
+            "_memory",
             "agents",
             "tasks",
             "knowledge_sources",
@@ -1685,18 +1704,8 @@ class Crew(FlowTrackable, BaseModel):
 
         copied_data = self.model_dump(exclude=exclude)
         copied_data = {k: v for k, v in copied_data.items() if v is not None}
-        if self.short_term_memory:
-            copied_data["short_term_memory"] = self.short_term_memory.model_copy(
-                deep=True
-            )
-        if self.long_term_memory:
-            copied_data["long_term_memory"] = self.long_term_memory.model_copy(
-                deep=True
-            )
-        if self.entity_memory:
-            copied_data["entity_memory"] = self.entity_memory.model_copy(deep=True)
-        if self.external_memory:
-            copied_data["external_memory"] = self.external_memory.model_copy(deep=True)
+        if getattr(self, "_memory", None):
+            copied_data["memory"] = self._memory
 
         copied_data.pop("agents", None)
         copied_data.pop("tasks", None)
@@ -1827,23 +1836,24 @@ class Crew(FlowTrackable, BaseModel):
 
         Args:
             command_type: Type of memory to reset.
-                Valid options: 'long', 'short', 'entity', 'knowledge', 'agent_knowledge'
-                'kickoff_outputs', or 'all'
+                Valid options: 'memory', 'knowledge', 'agent_knowledge',
+                'kickoff_outputs', or 'all'. Legacy names 'long', 'short',
+                'entity', 'external' are treated as 'memory'.
 
         Raises:
             ValueError: If an invalid command type is provided.
             RuntimeError: If memory reset operation fails.
         """
+        legacy_memory = frozenset(["long", "short", "entity", "external"])
+        if command_type in legacy_memory:
+            command_type = "memory"
         valid_types = frozenset(
             [
-                "long",
-                "short",
-                "entity",
+                "memory",
                 "knowledge",
                 "agent_knowledge",
                 "kickoff_outputs",
                 "all",
-                "external",
             ]
         )
 
@@ -1949,25 +1959,10 @@ class Crew(FlowTrackable, BaseModel):
         ) + agent_knowledges
 
         return {
-            "short": {
-                "system": getattr(self, "_short_term_memory", None),
+            "memory": {
+                "system": getattr(self, "_memory", None),
                 "reset": default_reset,
-                "name": "Short Term",
-            },
-            "entity": {
-                "system": getattr(self, "_entity_memory", None),
-                "reset": default_reset,
-                "name": "Entity",
-            },
-            "external": {
-                "system": getattr(self, "_external_memory", None),
-                "reset": default_reset,
-                "name": "External",
-            },
-            "long": {
-                "system": getattr(self, "_long_term_memory", None),
-                "reset": default_reset,
-                "name": "Long Term",
+                "name": "Memory",
             },
             "kickoff_outputs": {
                 "system": getattr(self, "_task_output_handler", None),
@@ -2011,7 +2006,13 @@ class Crew(FlowTrackable, BaseModel):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
-        from crewai.events.listeners.tracing.utils import has_user_declined_tracing
+        from crewai.events.listeners.tracing.utils import (
+            has_user_declined_tracing,
+            should_suppress_tracing_messages,
+        )
+
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 

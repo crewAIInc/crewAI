@@ -1,6 +1,7 @@
 from importlib.metadata import version as get_version
 import os
 import subprocess
+from typing import Any
 
 import click
 
@@ -179,9 +180,19 @@ def log_tasks_outputs() -> None:
 
 
 @crewai.command()
-@click.option("-l", "--long", is_flag=True, help="Reset LONG TERM memory")
-@click.option("-s", "--short", is_flag=True, help="Reset SHORT TERM memory")
-@click.option("-e", "--entities", is_flag=True, help="Reset ENTITIES memory")
+@click.option("-m", "--memory", is_flag=True, help="Reset MEMORY")
+@click.option(
+    "-l", "--long", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
+@click.option(
+    "-s", "--short", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
+@click.option(
+    "-e", "--entities", is_flag=True, hidden=True,
+    help="[Deprecated: use --memory] Reset memory",
+)
 @click.option("-kn", "--knowledge", is_flag=True, help="Reset KNOWLEDGE storage")
 @click.option(
     "-akn", "--agent-knowledge", is_flag=True, help="Reset AGENT KNOWLEDGE storage"
@@ -191,6 +202,7 @@ def log_tasks_outputs() -> None:
 )
 @click.option("-a", "--all", is_flag=True, help="Reset ALL memories")
 def reset_memories(
+    memory: bool,
     long: bool,
     short: bool,
     entities: bool,
@@ -200,13 +212,22 @@ def reset_memories(
     all: bool,
 ) -> None:
     """
-    Reset the crew memories (long, short, entity, latest_crew_kickoff_ouputs, knowledge, agent_knowledge). This will delete all the data saved.
+    Reset the crew memories (memory, knowledge, agent_knowledge, kickoff_outputs). This will delete all the data saved.
     """
     try:
+        # Treat legacy flags as --memory with a deprecation warning
+        if long or short or entities:
+            legacy_used = [
+                f for f, v in [("--long", long), ("--short", short), ("--entities", entities)] if v
+            ]
+            click.echo(
+                f"Warning: {', '.join(legacy_used)} {'is' if len(legacy_used) == 1 else 'are'} "
+                "deprecated. Use --memory (-m) instead. All memory is now unified."
+            )
+            memory = True
+
         memory_types = [
-            long,
-            short,
-            entities,
+            memory,
             knowledge,
             agent_knowledge,
             kickoff_outputs,
@@ -218,10 +239,71 @@ def reset_memories(
             )
             return
         reset_memories_command(
-            long, short, entities, knowledge, agent_knowledge, kickoff_outputs, all
+            memory, knowledge, agent_knowledge, kickoff_outputs, all
         )
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
+
+
+@crewai.command()
+@click.option(
+    "--storage-path",
+    type=str,
+    default=None,
+    help="Path to LanceDB memory directory. If omitted, uses ./.crewai/memory.",
+)
+@click.option(
+    "--embedder-provider",
+    type=str,
+    default=None,
+    help="Embedder provider for recall queries (e.g. openai, google-vertex, cohere, ollama).",
+)
+@click.option(
+    "--embedder-model",
+    type=str,
+    default=None,
+    help="Embedder model name (e.g. text-embedding-3-small, gemini-embedding-001).",
+)
+@click.option(
+    "--embedder-config",
+    type=str,
+    default=None,
+    help='Full embedder config as JSON (e.g. \'{"provider": "cohere", "config": {"model_name": "embed-v4.0"}}\').',
+)
+def memory(
+    storage_path: str | None,
+    embedder_provider: str | None,
+    embedder_model: str | None,
+    embedder_config: str | None,
+) -> None:
+    """Open the Memory TUI to browse scopes and recall memories."""
+    try:
+        from crewai.cli.memory_tui import MemoryTUI
+    except ImportError as exc:
+        click.echo(
+            "Textual is required for the memory TUI but could not be imported. "
+            "Try reinstalling crewai or: pip install textual"
+        )
+        raise SystemExit(1) from exc
+
+    # Build embedder spec from CLI flags.
+    embedder_spec: dict[str, Any] | None = None
+    if embedder_config:
+        import json as _json
+
+        try:
+            embedder_spec = _json.loads(embedder_config)
+        except _json.JSONDecodeError as exc:
+            click.echo(f"Invalid --embedder-config JSON: {exc}")
+            raise SystemExit(1) from exc
+    elif embedder_provider:
+        cfg: dict[str, str] = {}
+        if embedder_model:
+            cfg["model_name"] = embedder_model
+        embedder_spec = {"provider": embedder_provider, "config": cfg}
+
+    app = MemoryTUI(storage_path=storage_path, embedder_config=embedder_spec)
+    app.run()
 
 
 @crewai.command()

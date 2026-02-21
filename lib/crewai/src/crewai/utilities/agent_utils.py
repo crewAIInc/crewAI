@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Sequence
+import concurrent.futures
+import inspect
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
@@ -41,6 +43,8 @@ if TYPE_CHECKING:
     from crewai.lite_agent import LiteAgent
     from crewai.llm import LLM
     from crewai.task import Task
+
+_create_plus_client_hook: Callable[[], Any] | None = None
 
 
 class SummaryContent(TypedDict):
@@ -91,7 +95,11 @@ def parse_tools(tools: list[BaseTool]) -> list[CrewStructuredTool]:
 
     for tool in tools:
         if isinstance(tool, CrewAITool):
-            tools_list.append(tool.to_structured_tool())
+            structured_tool = tool.to_structured_tool()
+            structured_tool.current_usage_count = 0
+            if structured_tool._original_tool:
+                structured_tool._original_tool.current_usage_count = 0
+            tools_list.append(structured_tool)
         else:
             raise ValueError("Tool is not a CrewStructuredTool or BaseTool")
 
@@ -494,7 +502,9 @@ def handle_agent_action_core(
         - TODO: Remove messages parameter and its usage.
     """
     if step_callback:
-        step_callback(tool_result)
+        cb_result = step_callback(tool_result)
+        if inspect.iscoroutine(cb_result):
+            asyncio.run(cb_result)
 
     formatted_answer.text += f"\nObservation: {tool_result.result}"
     formatted_answer.result = tool_result.result
@@ -634,6 +644,180 @@ def handle_context_length(
         )
 
 
+def _estimate_token_count(text: str) -> int:
+    """Estimate token count using a conservative cross-provider heuristic.
+
+    Args:
+        text: The text to estimate tokens for.
+
+    Returns:
+        Estimated token count (roughly 1 token per 4 characters).
+    """
+    return len(text) // 4
+
+
+def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
+    """Format messages with role labels for summarization.
+
+    Skips system messages. Handles None content, tool_calls, and
+    multimodal content blocks.
+
+    Args:
+        messages: List of messages to format.
+
+    Returns:
+        Role-labeled conversation text.
+    """
+    lines: list[str] = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        if role == "system":
+            continue
+
+        content = msg.get("content")
+        if content is None:
+            # Check for tool_calls on assistant messages with no content
+            tool_calls = msg.get("tool_calls")
+            if tool_calls:
+                tool_names = []
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    name = (
+                        func.get("name", "unknown")
+                        if isinstance(func, dict)
+                        else "unknown"
+                    )
+                    tool_names.append(name)
+                content = f"[Called tools: {', '.join(tool_names)}]"
+            else:
+                content = ""
+        elif isinstance(content, list):
+            # Multimodal content blocks — extract text parts
+            text_parts = [
+                block.get("text", "")
+                for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            content = " ".join(text_parts) if text_parts else "[multimodal content]"
+
+        if role == "assistant":
+            label = "[ASSISTANT]:"
+        elif role == "tool":
+            tool_name = msg.get("name", "unknown")
+            label = f"[TOOL_RESULT ({tool_name})]:"
+        else:
+            label = "[USER]:"
+
+        lines.append(f"{label} {content}")
+
+    return "\n\n".join(lines)
+
+
+def _split_messages_into_chunks(
+    messages: list[LLMMessage], max_tokens: int
+) -> list[list[LLMMessage]]:
+    """Split messages into chunks at message boundaries.
+
+    Excludes system messages from chunks. Each chunk stays under
+    max_tokens based on estimated token count.
+
+    Args:
+        messages: List of messages to split.
+        max_tokens: Maximum estimated tokens per chunk.
+
+    Returns:
+        List of message chunks.
+    """
+    non_system = [m for m in messages if m.get("role") != "system"]
+    if not non_system:
+        return []
+
+    chunks: list[list[LLMMessage]] = []
+    current_chunk: list[LLMMessage] = []
+    current_tokens = 0
+
+    for msg in non_system:
+        content = msg.get("content")
+        if content is None:
+            msg_text = ""
+        elif isinstance(content, list):
+            msg_text = str(content)
+        else:
+            msg_text = str(content)
+
+        msg_tokens = _estimate_token_count(msg_text)
+
+        # If adding this message would exceed the limit and we already have
+        # messages in the current chunk, start a new chunk
+        if current_chunk and (current_tokens + msg_tokens) > max_tokens:
+            chunks.append(current_chunk)
+            current_chunk = []
+            current_tokens = 0
+
+        current_chunk.append(msg)
+        current_tokens += msg_tokens
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    return chunks
+
+
+def _extract_summary_tags(text: str) -> str:
+    """Extract content between <summary></summary> tags.
+
+    Falls back to the full text if no tags are found.
+
+    Args:
+        text: Text potentially containing summary tags.
+
+    Returns:
+        Extracted summary content, or full text if no tags found.
+    """
+    match = re.search(r"<summary>(.*?)</summary>", text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return text.strip()
+
+
+async def _asummarize_chunks(
+    chunks: list[list[LLMMessage]],
+    llm: LLM | BaseLLM,
+    callbacks: list[TokenCalcHandler],
+    i18n: I18N,
+) -> list[SummaryContent]:
+    """Summarize multiple message chunks concurrently using asyncio.
+
+    Args:
+        chunks: List of message chunks to summarize.
+        llm: LLM instance (must support ``acall``).
+        callbacks: List of callbacks for the LLM.
+        i18n: I18N instance for prompt templates.
+
+    Returns:
+        Ordered list of summary contents, one per chunk.
+    """
+
+    async def _summarize_one(chunk: list[LLMMessage]) -> SummaryContent:
+        conversation_text = _format_messages_for_summary(chunk)
+        summarization_messages = [
+            format_message_for_llm(
+                i18n.slice("summarizer_system_message"), role="system"
+            ),
+            format_message_for_llm(
+                i18n.slice("summarize_instruction").format(
+                    conversation=conversation_text
+                ),
+            ),
+        ]
+        summary = await llm.acall(summarization_messages, callbacks=callbacks)
+        extracted = _extract_summary_tags(str(summary))
+        return {"content": extracted}
+
+    results = await asyncio.gather(*[_summarize_one(chunk) for chunk in chunks])
+    return list(results)
+
+
 def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
@@ -643,6 +827,10 @@ def summarize_messages(
 ) -> None:
     """Summarize messages to fit within context window.
 
+    Uses structured context compaction: preserves system messages,
+    splits at message boundaries, formats with role labels, and
+    produces structured summaries for seamless task continuation.
+
     Preserves any files attached to user messages and re-attaches them to
     the summarized message. Files from all user messages are merged.
 
@@ -651,49 +839,74 @@ def summarize_messages(
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
         i18n: I18N instance for messages
+        verbose: Whether to print progress.
     """
+    # 1. Extract & preserve file attachments from user messages
     preserved_files: dict[str, Any] = {}
     for msg in messages:
         if msg.get("role") == "user" and msg.get("files"):
             preserved_files.update(msg["files"])
 
-    messages_string = " ".join(
-        [str(message.get("content", "")) for message in messages]
-    )
-    cut_size = llm.get_context_window_size()
+    # 2. Extract system messages — never summarize them
+    system_messages = [m for m in messages if m.get("role") == "system"]
+    non_system_messages = [m for m in messages if m.get("role") != "system"]
 
-    messages_groups = [
-        {"content": messages_string[i : i + cut_size]}
-        for i in range(0, len(messages_string), cut_size)
-    ]
+    # If there are only system messages (or no non-system messages), nothing to summarize
+    if not non_system_messages:
+        return
 
-    summarized_contents: list[SummaryContent] = []
+    # 3. Split non-system messages into chunks at message boundaries
+    max_tokens = llm.get_context_window_size()
+    chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
 
-    total_groups = len(messages_groups)
-    for idx, group in enumerate(messages_groups, 1):
+    # 4. Summarize each chunk with role-labeled formatting
+    total_chunks = len(chunks)
+
+    if total_chunks <= 1:
+        # Single chunk — no benefit from async overhead
+        summarized_contents: list[SummaryContent] = []
+        for idx, chunk in enumerate(chunks, 1):
+            if verbose:
+                Printer().print(
+                    content=f"Summarizing {idx}/{total_chunks}...",
+                    color="yellow",
+                )
+            conversation_text = _format_messages_for_summary(chunk)
+            summarization_messages = [
+                format_message_for_llm(
+                    i18n.slice("summarizer_system_message"), role="system"
+                ),
+                format_message_for_llm(
+                    i18n.slice("summarize_instruction").format(
+                        conversation=conversation_text
+                    ),
+                ),
+            ]
+            summary = llm.call(summarization_messages, callbacks=callbacks)
+            extracted = _extract_summary_tags(str(summary))
+            summarized_contents.append({"content": extracted})
+    else:
+        # Multiple chunks — summarize in parallel via asyncio
         if verbose:
             Printer().print(
-                content=f"Summarizing {idx}/{total_groups}...",
+                content=f"Summarizing {total_chunks} chunks in parallel...",
                 color="yellow",
             )
-
-        summarization_messages = [
-            format_message_for_llm(
-                i18n.slice("summarizer_system_message"), role="system"
-            ),
-            format_message_for_llm(
-                i18n.slice("summarize_instruction").format(group=group["content"]),
-            ),
-        ]
-        summary = llm.call(
-            summarization_messages,
-            callbacks=callbacks,
+        coro = _asummarize_chunks(
+            chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
         )
-        summarized_contents.append({"content": str(summary)})
+        if is_inside_event_loop():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                summarized_contents = pool.submit(asyncio.run, coro).result()
+        else:
+            summarized_contents = asyncio.run(coro)
 
-    merged_summary = " ".join(content["content"] for content in summarized_contents)
+    merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
 
+    # 6. Reconstruct messages: [system messages...] + [summary user message]
     messages.clear()
+    messages.extend(system_messages)
+
     summary_message = format_message_for_llm(
         i18n.slice("summary").format(merged_summary=merged_summary)
     )
@@ -818,12 +1031,15 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
     if from_repository:
         import importlib
 
-        from crewai.cli.authentication.token import get_auth_token
-        from crewai.cli.plus_api import PlusAPI
+        if callable(_create_plus_client_hook):
+            client = _create_plus_client_hook()
+        else:
+            from crewai.cli.authentication.token import get_auth_token
+            from crewai.cli.plus_api import PlusAPI
 
-        client = PlusAPI(api_key=get_auth_token())
+            client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
-        response = client.get_agent(from_repository)
+        response = asyncio.run(client.get_agent(from_repository))
         if response.status_code == 404:
             raise AgentRepositoryError(
                 f"Agent {from_repository} does not exist, make sure the name is correct or the agent is available on your organization."

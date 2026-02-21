@@ -10,11 +10,11 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     # Core Dependencies
     "pydantic~=2.11.9",
-    "openai~=1.83.0",
+    "openai>=1.83.0,<3",
     "instructor>=1.3.3",
     # Text Processing
     "pdfplumber~=0.11.4",
-    "regex~=2024.9.11",
+    "regex~=2026.1.15",
     # Telemetry and Monitoring
     "opentelemetry-api~=1.34.0",
     "opentelemetry-sdk~=1.34.0",
@@ -26,6 +26,8 @@ dependencies = [
     # Authentication and Security
     "python-dotenv~=1.1.1",
     "pyjwt>=2.9.0,<3",
+    # TUI
+    "textual>=7.5.0",
     # Configuration and Utils
     "click~=8.1.7",
     "appdirs~=1.4.4",
@@ -36,9 +38,11 @@ dependencies = [
     "json5~=0.10.0",
     "portalocker~=2.7.0",
     "pydantic-settings~=2.10.1",
-    "mcp~=1.23.1",
+    "httpx~=0.28.1",
+    "mcp~=1.26.0",
     "uv~=0.9.13",
     "aiosqlite~=0.21.0",
+    "lancedb>=0.4.0",
 ]
 
 [project.urls]
@@ -78,7 +82,7 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm~=1.74.9",
+    "litellm>=1.74.9,<3",
 ]
 bedrock = [
     "boto3~=1.40.45",

@@ -7,9 +7,18 @@ for building event-driven workflows with conditional execution and routing.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import (
+    Callable,
+    ItemsView,
+    Iterable,
+    Iterator,
+    KeysView,
+    Sequence,
+    ValuesView,
+)
 from concurrent.futures import Future
 import copy
+import enum
 import inspect
 import logging
 import threading
@@ -20,8 +29,10 @@ from typing import (
     Generic,
     Literal,
     ParamSpec,
+    SupportsIndex,
     TypeVar,
     cast,
+    overload,
 )
 from uuid import uuid4
 
@@ -45,6 +56,7 @@ from crewai.events.listeners.tracing.utils import (
     has_user_declined_tracing,
     set_tracing_enabled,
     should_enable_tracing,
+    should_suppress_tracing_messages,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -58,6 +70,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
+from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -68,7 +81,12 @@ from crewai.flow.flow_wrappers import (
     StartMethod,
 )
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.types import FlowExecutionData, FlowMethodName, PendingListenerKey
+from crewai.flow.types import (
+    FlowExecutionData,
+    FlowMethodName,
+    InputHistoryEntry,
+    PendingListenerKey,
+)
 from crewai.flow.utils import (
     _extract_all_methods,
     _extract_all_methods_recursive,
@@ -407,6 +425,175 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
     return {"type": AND_CONDITION, "conditions": processed_conditions}
 
 
+class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
+    """Thread-safe proxy for list operations.
+
+    Subclasses ``list`` so that ``isinstance(proxy, list)`` returns True,
+    which is required by libraries like LanceDB and Pydantic that do strict
+    type checks. All mutations go through the lock; reads delegate to the
+    underlying list.
+    """
+
+    def __init__(self, lst: list[T], lock: threading.Lock) -> None:
+        super().__init__()  # empty builtin list; all access goes through self._list
+        self._list = lst
+        self._lock = lock
+
+    def append(self, item: T) -> None:
+        with self._lock:
+            self._list.append(item)
+
+    def extend(self, items: Iterable[T]) -> None:
+        with self._lock:
+            self._list.extend(items)
+
+    def insert(self, index: SupportsIndex, item: T) -> None:
+        with self._lock:
+            self._list.insert(index, item)
+
+    def remove(self, item: T) -> None:
+        with self._lock:
+            self._list.remove(item)
+
+    def pop(self, index: SupportsIndex = -1) -> T:
+        with self._lock:
+            return self._list.pop(index)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._list.clear()
+
+    @overload
+    def __setitem__(self, index: SupportsIndex, value: T) -> None: ...
+    @overload
+    def __setitem__(self, index: slice, value: Iterable[T]) -> None: ...
+    def __setitem__(self, index: Any, value: Any) -> None:
+        with self._lock:
+            self._list[index] = value
+
+    def __delitem__(self, index: SupportsIndex | slice) -> None:
+        with self._lock:
+            del self._list[index]
+
+    @overload
+    def __getitem__(self, index: SupportsIndex) -> T: ...
+    @overload
+    def __getitem__(self, index: slice) -> list[T]: ...
+    def __getitem__(self, index: Any) -> Any:
+        return self._list[index]
+
+    def __len__(self) -> int:
+        return len(self._list)
+
+    def __iter__(self) -> Iterator[T]:
+        return iter(self._list)
+
+    def __contains__(self, item: object) -> bool:
+        return item in self._list
+
+    def __repr__(self) -> str:
+        return repr(self._list)
+
+    def __bool__(self) -> bool:
+        return bool(self._list)
+
+    def __eq__(self, other: object) -> bool:
+        """Compare based on the underlying list contents."""
+        if isinstance(other, LockedListProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._list == second._list
+        with self._lock:
+            return self._list == other
+
+    def __ne__(self, other: object) -> bool:
+        return not self.__eq__(other)
+
+
+class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
+    """Thread-safe proxy for dict operations.
+
+    Subclasses ``dict`` so that ``isinstance(proxy, dict)`` returns True,
+    which is required by libraries like Pydantic that do strict type checks.
+    All mutations go through the lock; reads delegate to the underlying dict.
+    """
+
+    def __init__(self, d: dict[str, T], lock: threading.Lock) -> None:
+        super().__init__()  # empty builtin dict; all access goes through self._dict
+        self._dict = d
+        self._lock = lock
+
+    def __setitem__(self, key: str, value: T) -> None:
+        with self._lock:
+            self._dict[key] = value
+
+    def __delitem__(self, key: str) -> None:
+        with self._lock:
+            del self._dict[key]
+
+    def pop(self, key: str, *default: T) -> T:  # type: ignore[override]
+        with self._lock:
+            return self._dict.pop(key, *default)
+
+    def update(self, other: dict[str, T]) -> None:  # type: ignore[override]
+        with self._lock:
+            self._dict.update(other)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._dict.clear()
+
+    def setdefault(self, key: str, default: T) -> T:  # type: ignore[override]
+        with self._lock:
+            return self._dict.setdefault(key, default)
+
+    def __getitem__(self, key: str) -> T:
+        return self._dict[key]
+
+    def __len__(self) -> int:
+        return len(self._dict)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._dict)
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._dict
+
+    def keys(self) -> KeysView[str]:  # type: ignore[override]
+        return self._dict.keys()
+
+    def values(self) -> ValuesView[T]:  # type: ignore[override]
+        return self._dict.values()
+
+    def items(self) -> ItemsView[str, T]:  # type: ignore[override]
+        return self._dict.items()
+
+    def get(self, key: str, default: T | None = None) -> T | None:  # type: ignore[override]
+        return self._dict.get(key, default)
+
+    def __repr__(self) -> str:
+        return repr(self._dict)
+
+    def __bool__(self) -> bool:
+        return bool(self._dict)
+
+    def __eq__(self, other: object) -> bool:
+        """Compare based on the underlying dict contents."""
+        if isinstance(other, LockedDictProxy):
+            # Avoid deadlocks by acquiring locks in a consistent order.
+            first, second = (self, other) if id(self) <= id(other) else (other, self)
+            with first._lock:
+                with second._lock:
+                    return first._dict == second._dict
+        with self._lock:
+            return self._dict == other
+
+    def __ne__(self, other: object) -> bool:
+        return not self.__eq__(other)
+
+
 class StateProxy(Generic[T]):
     """Proxy that provides thread-safe access to flow state.
 
@@ -421,7 +608,13 @@ class StateProxy(Generic[T]):
         object.__setattr__(self, "_proxy_lock", lock)
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(object.__getattribute__(self, "_proxy_state"), name)
+        value = getattr(object.__getattribute__(self, "_proxy_state"), name)
+        lock = object.__getattribute__(self, "_proxy_lock")
+        if isinstance(value, list):
+            return LockedListProxy(value, lock)
+        if isinstance(value, dict):
+            return LockedDictProxy(value, lock)
+        return value
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in ("_proxy_state", "_proxy_lock"):
@@ -559,6 +752,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
     name: str | None = None
     tracing: bool | None = None
     stream: bool = False
+    memory: Any = (
+        None  # Memory | MemoryScope | MemorySlice | None; auto-created if not set
+    )
+    input_provider: Any = None  # InputProvider | None; per-flow override for self.ask()
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
         class _FlowGeneric(cls):  # type: ignore
@@ -605,6 +802,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._pending_feedback_context: PendingFeedbackContext | None = None
         self.suppress_flow_events: bool = suppress_flow_events
 
+        # User input history (for self.ask())
+        self._input_history: list[InputHistoryEntry] = []
+
         # Initialize state with initial values
         self._state = self._create_initial_state()
         self.tracing = tracing
@@ -626,6 +826,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 ),
             )
 
+        # Auto-create memory if not provided at class or instance level.
+        # Internal flows (RecallFlow, EncodingFlow) set _skip_auto_memory
+        # to avoid creating a wasteful standalone Memory instance.
+        if self.memory is None and not getattr(self, "_skip_auto_memory", False):
+            from crewai.memory.unified_memory import Memory
+
+            self.memory = Memory()
+
         # Register all flow-related methods
         for method_name in dir(self):
             if not method_name.startswith("_"):
@@ -635,6 +843,63 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
+
+    def recall(self, query: str, **kwargs: Any) -> Any:
+        """Recall relevant memories. Delegates to this flow's memory.
+
+        Args:
+            query: Natural language query.
+            **kwargs: Passed to memory.recall (e.g. scope, categories, limit, depth).
+
+        Returns:
+            Result of memory.recall(query, **kwargs).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.recall(query, **kwargs)
+
+    def remember(self, content: str | list[str], **kwargs: Any) -> Any:
+        """Store one or more items in memory.
+
+        Pass a single string for synchronous save (returns the MemoryRecord).
+        Pass a list of strings for non-blocking batch save (returns immediately).
+
+        Args:
+            content: Text or list of texts to remember.
+            **kwargs: Passed to memory.remember / remember_many
+                      (e.g. scope, categories, metadata, importance).
+
+        Returns:
+            MemoryRecord for single item, empty list for batch (background save).
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        if isinstance(content, list):
+            return self.memory.remember_many(content, **kwargs)
+        return self.memory.remember(content, **kwargs)
+
+    def extract_memories(self, content: str) -> list[str]:
+        """Extract discrete memories from content. Delegates to this flow's memory.
+
+        Args:
+            content: Raw text (e.g. task + result dump).
+
+        Returns:
+            List of short, self-contained memory statements.
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        result: list[str] = self.memory.extract_memories(content)
+        return result
 
     def _mark_or_listener_fired(self, listener_name: FlowMethodName) -> bool:
         """Mark an OR listener as fired atomically.
@@ -1105,8 +1370,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             ValueError: If structured state model lacks 'id' field
             TypeError: If state is neither BaseModel nor dictionary
         """
+        init_state = self.initial_state
+
         # Handle case where initial_state is None but we have a type parameter
-        if self.initial_state is None and hasattr(self, "_initial_state_t"):
+        if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
@@ -1130,12 +1397,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     return cast(T, {"id": str(uuid4())})
 
         # Handle case where no initial state is provided
-        if self.initial_state is None:
+        if init_state is None:
             return cast(T, {"id": str(uuid4())})
 
         # Handle case where initial_state is a type (class)
-        if isinstance(self.initial_state, type):
-            state_class: type[T] = self.initial_state
+        if isinstance(init_state, type):
+            state_class = init_state
             if issubclass(state_class, FlowState):
                 return state_class()
             if issubclass(state_class, BaseModel):
@@ -1146,19 +1413,19 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if not getattr(model_instance, "id", None):
                     object.__setattr__(model_instance, "id", str(uuid4()))
                 return model_instance
-            if self.initial_state is dict:
+            if init_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
         # Handle dictionary instance case
-        if isinstance(self.initial_state, dict):
-            new_state = dict(self.initial_state)  # Copy to avoid mutations
+        if isinstance(init_state, dict):
+            new_state = dict(init_state)  # Copy to avoid mutations
             if "id" not in new_state:
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
 
         # Handle BaseModel instance case
-        if isinstance(self.initial_state, BaseModel):
-            model = cast(BaseModel, self.initial_state)
+        if isinstance(init_state, BaseModel):
+            model = cast(BaseModel, init_state)
             if not hasattr(model, "id"):
                 raise ValueError("Flow state model must have an 'id' field")
 
@@ -1540,6 +1807,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
         ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
         flow_token = attach(ctx)
 
+        flow_id_token = None
+        request_id_token = None
+        if current_flow_id.get() is None:
+            flow_id_token = current_flow_id.set(self.flow_id)
+        if current_flow_request_id.get() is None:
+            request_id_token = current_flow_request_id.set(self.flow_id)
+
         try:
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = inputs and "id" in inputs and self._persistence is not None
@@ -1550,8 +1824,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 self._pending_and_listeners.clear()
                 self._clear_or_listeners()
             else:
-                # We're restoring from persistence, set the flag
-                self._is_execution_resuming = True
+                # Only enter resumption mode if there are completed methods to
+                # replay.  When _completed_methods is empty (e.g. a pure
+                # state-reload via kickoff(inputs={"id": ...})), the flow
+                # executes from scratch and the flag would incorrectly
+                # suppress cyclic re-execution on the second iteration.
+                if self._completed_methods:
+                    self._is_execution_resuming = True
 
             if inputs:
                 # Override the id in the state if it exists in inputs
@@ -1584,7 +1863,6 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 reset_emission_counter()
                 reset_last_event_id()
 
-            # Emit FlowStartedEvent and log the start of the flow.
             if not self.suppress_flow_events:
                 future = crewai_event_bus.emit(
                     self,
@@ -1595,7 +1873,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     ),
                 )
                 if future:
-                    self._event_futures.append(future)
+                    try:
+                        await asyncio.wrap_future(future)
+                    except Exception:
+                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
@@ -1687,6 +1968,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             final_output = self._method_outputs[-1] if self._method_outputs else None
 
+            if self._event_futures:
+                await asyncio.gather(
+                    *[asyncio.wrap_future(f) for f in self._event_futures]
+                )
+                self._event_futures.clear()
+
             if not self.suppress_flow_events:
                 future = crewai_event_bus.emit(
                     self,
@@ -1698,13 +1985,12 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     ),
                 )
                 if future:
-                    self._event_futures.append(future)
-
-            if self._event_futures:
-                await asyncio.gather(
-                    *[asyncio.wrap_future(f) for f in self._event_futures]
-                )
-                self._event_futures.clear()
+                    try:
+                        await asyncio.wrap_future(future)
+                    except Exception:
+                        logger.warning(
+                            "FlowFinishedEvent handler failed", exc_info=True
+                        )
 
             if not self.suppress_flow_events:
                 trace_listener = TraceCollectionListener()
@@ -1717,6 +2003,13 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
             return final_output
         finally:
+            # Ensure all background memory saves complete before returning
+            if self.memory is not None and hasattr(self.memory, "drain_writes"):
+                self.memory.drain_writes()
+            if request_id_token is not None:
+                current_flow_request_id.reset(request_id_token)
+            if flow_id_token is not None:
+                current_flow_id.reset(flow_id_token)
             detach(flow_token)
 
     async def akickoff(
@@ -1775,40 +2068,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
             await self._execute_listeners(start_method_name, result, finished_event_id)
             # Then execute listeners for the router result (e.g., "approved")
             router_result_trigger = FlowMethodName(str(result))
-            listeners_for_result = self._find_triggered_methods(
-                router_result_trigger, router_only=False
+            listener_result = (
+                self.last_human_feedback
+                if self.last_human_feedback is not None
+                else result
             )
-            if listeners_for_result:
-                # Pass the HumanFeedbackResult if available
-                listener_result = (
-                    self.last_human_feedback
-                    if self.last_human_feedback is not None
-                    else result
-                )
-                racing_group = self._get_racing_group_for_listeners(
-                    listeners_for_result
-                )
-                if racing_group:
-                    racing_members, _ = racing_group
-                    other_listeners = [
-                        name
-                        for name in listeners_for_result
-                        if name not in racing_members
-                    ]
-                    await self._execute_racing_listeners(
-                        racing_members,
-                        other_listeners,
-                        listener_result,
-                        finished_event_id,
-                    )
-                else:
-                    tasks = [
-                        self._execute_single_listener(
-                            listener_name, listener_result, finished_event_id
-                        )
-                        for listener_name in listeners_for_result
-                    ]
-                    await asyncio.gather(*tasks)
+            await self._execute_listeners(
+                router_result_trigger, listener_result, finished_event_id
+            )
         else:
             await self._execute_listeners(start_method_name, result, finished_event_id)
 
@@ -1881,15 +2148,24 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
 
-            if asyncio.iscoroutinefunction(method):
-                result = await method(*args, **kwargs)
-            else:
-                # Run sync methods in thread pool for isolation
-                # This allows Agent.kickoff() to work synchronously inside Flow methods
-                import contextvars
+            # Set method name in context so ask() can read it without
+            # stack inspection.  Must happen before copy_context() so the
+            # value propagates into the thread pool for sync methods.
+            from crewai.flow.flow_context import current_flow_method_name
 
-                ctx = contextvars.copy_context()
-                result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+            method_name_token = current_flow_method_name.set(method_name)
+            try:
+                if asyncio.iscoroutinefunction(method):
+                    result = await method(*args, **kwargs)
+                else:
+                    # Run sync methods in thread pool for isolation
+                    # This allows Agent.kickoff() to work synchronously inside Flow methods
+                    import contextvars
+
+                    ctx = contextvars.copy_context()
+                    result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+            finally:
+                current_flow_method_name.reset(method_name_token)
 
             # Auto-await coroutines returned from sync methods (enables AgentExecutor pattern)
             if asyncio.iscoroutine(result):
@@ -1922,6 +2198,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
             from crewai.flow.async_feedback.types import HumanFeedbackPending
 
             if isinstance(e, HumanFeedbackPending):
+                e.context.method_name = method_name
+
                 # Auto-save pending feedback (create default persistence if needed)
                 if self._persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
@@ -2014,22 +2292,30 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 router_input = router_result_to_feedback.get(
                     str(current_trigger), current_result
                 )
-                current_triggering_event_id = await self._execute_single_listener(
+                (
+                    router_result,
+                    current_triggering_event_id,
+                ) = await self._execute_single_listener(
                     router_name, router_input, current_triggering_event_id
                 )
-                # After executing router, the router's result is the path
-                router_result = (
-                    self._method_outputs[-1] if self._method_outputs else None
-                )
                 if router_result:  # Only add non-None results
-                    router_results.append(router_result)
+                    router_result_str = (
+                        router_result.value
+                        if isinstance(router_result, enum.Enum)
+                        else str(router_result)
+                    )
+                    router_results.append(FlowMethodName(router_result_str))
                     # If this was a human_feedback router, map the outcome to the feedback
                     if self.last_human_feedback is not None:
-                        router_result_to_feedback[str(router_result)] = (
+                        router_result_to_feedback[router_result_str] = (
                             self.last_human_feedback
                         )
                 current_trigger = (
-                    FlowMethodName(str(router_result))
+                    FlowMethodName(
+                        router_result.value
+                        if isinstance(router_result, enum.Enum)
+                        else str(router_result)
+                    )
                     if router_result is not None
                     else FlowMethodName("")  # Update for next iteration of router chain
                 )
@@ -2062,12 +2348,14 @@ class Flow(Generic[T], metaclass=FlowMeta):
                             racing_members,
                             other_listeners,
                             listener_result,
-                            triggering_event_id,
+                            current_triggering_event_id,
                         )
                     else:
                         tasks = [
                             self._execute_single_listener(
-                                listener_name, listener_result, triggering_event_id
+                                listener_name,
+                                listener_result,
+                                current_triggering_event_id,
                             )
                             for listener_name in listeners_triggered
                         ]
@@ -2250,7 +2538,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         listener_name: FlowMethodName,
         result: Any,
         triggering_event_id: str | None = None,
-    ) -> str | None:
+    ) -> tuple[Any, str | None]:
         """Executes a single listener method with proper event handling.
 
         This internal method manages the execution of an individual listener,
@@ -2263,8 +2551,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 used for causal chain tracking.
 
         Returns:
-            The event_id of the MethodExecutionFinishedEvent emitted by this listener,
-            or None if events are suppressed.
+            A tuple of (listener_result, event_id) where listener_result is the return
+            value of the listener method and event_id is the MethodExecutionFinishedEvent
+            id, or (None, None) if skipped during resumption.
 
         Note:
             - Inspects method signature to determine if it accepts the trigger result
@@ -2290,11 +2579,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
                         ):
                             # This conditional start was executed, continue its chain
                             await self._execute_start_method(start_method_name)
-                return None
+                return (None, None)
             # For cyclic flows, clear from completed to allow re-execution
             self._completed_methods.discard(listener_name)
-            # Also clear from fired OR listeners for cyclic flows
-            self._discard_or_listener(listener_name)
+            # Clear ALL fired OR listeners so they can fire again in the new cycle.
+            # This mirrors what _execute_start_method does for start-method cycles.
+            # Only discarding the individual listener is insufficient because
+            # downstream or_() listeners (e.g., method_a listening to
+            # or_(handler_a, handler_b)) would remain suppressed across iterations.
+            self._clear_or_listeners()
 
         try:
             method = self._methods[listener_name]
@@ -2328,46 +2621,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 listener_name, listener_result, finished_event_id
             )
 
-            # If this listener is also a router (e.g., has @human_feedback with emit),
-            # we need to trigger listeners for the router result as well
-            if listener_name in self._routers and listener_result is not None:
-                router_result_trigger = FlowMethodName(str(listener_result))
-                listeners_for_result = self._find_triggered_methods(
-                    router_result_trigger, router_only=False
-                )
-                if listeners_for_result:
-                    # Pass the HumanFeedbackResult if available
-                    feedback_result = (
-                        self.last_human_feedback
-                        if self.last_human_feedback is not None
-                        else listener_result
-                    )
-                    racing_group = self._get_racing_group_for_listeners(
-                        listeners_for_result
-                    )
-                    if racing_group:
-                        racing_members, _ = racing_group
-                        other_listeners = [
-                            name
-                            for name in listeners_for_result
-                            if name not in racing_members
-                        ]
-                        await self._execute_racing_listeners(
-                            racing_members,
-                            other_listeners,
-                            feedback_result,
-                            finished_event_id,
-                        )
-                    else:
-                        tasks = [
-                            self._execute_single_listener(
-                                name, feedback_result, finished_event_id
-                            )
-                            for name in listeners_for_result
-                        ]
-                        await asyncio.gather(*tasks)
-
-            return finished_event_id
+            return (listener_result, finished_event_id)
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow
@@ -2376,6 +2630,206 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if not isinstance(e, HumanFeedbackPending):
                 logger.error(f"Error executing listener {listener_name}: {e}")
             raise
+
+    # ── User Input (self.ask) ────────────────────────────────────────
+
+    def _resolve_input_provider(self) -> Any:
+        """Resolve the input provider using the priority chain.
+
+        Resolution order:
+        1. ``self.input_provider`` (per-flow override)
+        2. ``flow_config.input_provider`` (global default)
+        3. ``ConsoleInputProvider()`` (built-in fallback)
+
+        Returns:
+            An object implementing the ``InputProvider`` protocol.
+        """
+        from crewai.flow.async_feedback.providers import ConsoleProvider
+        from crewai.flow.flow_config import flow_config
+
+        if self.input_provider is not None:
+            return self.input_provider
+        if flow_config.input_provider is not None:
+            return flow_config.input_provider
+        return ConsoleProvider()
+
+    def _checkpoint_state_for_ask(self) -> None:
+        """Auto-checkpoint flow state before waiting for user input.
+
+        If persistence is configured, saves the current state so that
+        ``self.state`` is recoverable even if the process crashes while
+        waiting for input.
+
+        This is best-effort: if persistence is not configured, this is a no-op.
+        """
+        if self._persistence is None:
+            return
+        try:
+            state_data = (
+                self._state
+                if isinstance(self._state, dict)
+                else self._state.model_dump()
+            )
+            self._persistence.save_state(
+                flow_uuid=self.flow_id,
+                method_name="_ask_checkpoint",
+                state_data=state_data,
+            )
+        except Exception:
+            logger.debug("Failed to checkpoint state before ask()", exc_info=True)
+
+    def ask(
+        self,
+        message: str,
+        timeout: float | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        """Request input from the user during flow execution.
+
+        Blocks the current thread until the user provides input or the
+        timeout expires. Works in both sync and async flow methods (the
+        flow framework runs sync methods in a thread pool via
+        ``asyncio.to_thread``, so the event loop stays free).
+
+        Timeout ensures flows always terminate. When timeout expires,
+        ``None`` is returned, enabling the pattern::
+
+            while (msg := self.ask("You: ", timeout=300)) is not None:
+                process(msg)
+
+        Before waiting for input, the current ``self.state`` is automatically
+        checkpointed to persistence (if configured) for durability.
+
+        Args:
+            message: The question or prompt to display to the user.
+            timeout: Maximum seconds to wait for input. ``None`` means
+                wait indefinitely. When timeout expires, returns ``None``.
+                Note: timeout is best-effort for the provider call --
+                ``ask()`` returns ``None`` promptly, but the underlying
+                ``request_input()`` may continue running in a background
+                thread until it completes naturally. Network providers
+                should implement their own internal timeouts.
+            metadata: Optional metadata to send to the input provider,
+                such as user ID, channel, session context. The provider
+                can use this to route the question to the right recipient.
+
+        Returns:
+            The user's input as a string, or ``None`` on timeout, disconnect,
+            or provider error. Empty string ``""`` means the user pressed
+            Enter without typing (intentional empty input).
+
+        Example:
+            ```python
+            class MyFlow(Flow):
+                @start()
+                def gather_info(self):
+                    topic = self.ask(
+                        "What topic should we research?",
+                        metadata={"user_id": "u123", "channel": "#research"},
+                    )
+                    if topic is None:
+                        return "No input received"
+                    return topic
+            ```
+        """
+        from concurrent.futures import (
+            ThreadPoolExecutor,
+            TimeoutError as FuturesTimeoutError,
+        )
+        from datetime import datetime
+
+        from crewai.events.types.flow_events import (
+            FlowInputReceivedEvent,
+            FlowInputRequestedEvent,
+        )
+        from crewai.flow.flow_context import current_flow_method_name
+        from crewai.flow.input_provider import InputResponse
+
+        method_name = current_flow_method_name.get("unknown")
+
+        # Emit input requested event
+        crewai_event_bus.emit(
+            self,
+            FlowInputRequestedEvent(
+                type="flow_input_requested",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                metadata=metadata,
+            ),
+        )
+
+        # Auto-checkpoint state before waiting
+        self._checkpoint_state_for_ask()
+
+        provider = self._resolve_input_provider()
+        raw: str | InputResponse | None = None
+
+        try:
+            if timeout is not None:
+                # Manual executor management to avoid shutdown(wait=True)
+                # deadlock when the provider call outlives the timeout.
+                executor = ThreadPoolExecutor(max_workers=1)
+                future = executor.submit(
+                    provider.request_input, message, self, metadata
+                )
+                try:
+                    raw = future.result(timeout=timeout)
+                except FuturesTimeoutError:
+                    future.cancel()
+                    raw = None
+                finally:
+                    # wait=False so we don't block if the provider is still
+                    # running (e.g. input() stuck waiting for user).
+                    # cancel_futures=True cleans up any queued-but-not-started tasks.
+                    executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                raw = provider.request_input(message, self, metadata=metadata)
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            logger.debug("Input provider error in ask()", exc_info=True)
+            raw = None
+
+        # Normalize provider response: str, InputResponse, or None
+        response: str | None = None
+        response_metadata: dict[str, Any] | None = None
+
+        if isinstance(raw, InputResponse):
+            response = raw.text
+            response_metadata = raw.metadata
+        elif isinstance(raw, str):
+            response = raw
+        else:
+            response = None
+
+        # Record in history
+        self._input_history.append(
+            {
+                "message": message,
+                "response": response,
+                "method_name": method_name,
+                "timestamp": datetime.now(),
+                "metadata": metadata,
+                "response_metadata": response_metadata,
+            }
+        )
+
+        # Emit input received event
+        crewai_event_bus.emit(
+            self,
+            FlowInputReceivedEvent(
+                type="flow_input_received",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                response=response,
+                metadata=metadata,
+                response_metadata=response_metadata,
+            ),
+        )
+
+        return response
 
     def _request_human_feedback(
         self,
@@ -2614,6 +3068,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
     @staticmethod
     def _show_tracing_disabled_message() -> None:
         """Show a message when tracing is disabled."""
+        if should_suppress_tracing_messages():
+            return
 
         console = Console()
 
