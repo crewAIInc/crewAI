@@ -1677,6 +1677,7 @@ class Crew(FlowTrackable, BaseModel):
             "knowledge",
             "manager_agent",
             "manager_llm",
+            "parent_flow",
         }
 
         cloned_agents = [agent.copy() for agent in self.agents]
