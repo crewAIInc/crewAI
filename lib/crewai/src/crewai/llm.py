@@ -325,6 +325,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
+    "openrouter",
 ]
 
 
@@ -384,6 +385,7 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
+                "openrouter": "openrouter",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -518,6 +520,11 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
+        if provider == "openrouter":
+            # OpenRouter is a proxy that routes to 300+ models from various providers.
+            # No fixed model list - accept any model identifier.
+            return True
+
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
@@ -581,6 +588,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "openrouter":
+            from crewai.llms.providers.openrouter.completion import OpenRouterCompletion
+
+            return OpenRouterCompletion
 
         return None
 
