@@ -90,6 +90,7 @@ The `TavilySearchTool` accepts the following arguments during initialization or 
 - `timeout` (int, optional): The request timeout in seconds. Defaults to `60`.
 - `api_key` (str, optional): Your Tavily API key. If not provided, it's read from the `TAVILY_API_KEY` environment variable.
 - `proxies` (dict[str, str], optional): A dictionary of proxies to use for the API request. Defaults to `None`.
+- `extra_kwargs` (dict[str, Any], optional): Additional keyword arguments passed directly to tavily-python's `search()` method. Use this for new tavily-python parameters not yet explicitly supported.
 
 ## Custom Configuration
 
@@ -113,3 +114,17 @@ agent_with_custom_tool = Agent(
 ```
 
 Note: The `config` dictionary allows setting default values for the arguments defined in `TavilySearchToolSchema`. These defaults can be overridden when the tool is executed if the specific parameters are provided in the agent's action input.
+
+## Using New tavily-python Parameters
+
+When tavily-python adds new parameters that aren't yet explicitly supported, you can use `extra_kwargs` to pass them through:
+
+```python
+# Use new tavily-python parameters via extra_kwargs
+tavily_tool = TavilySearchTool(
+    extra_kwargs={
+        "some_new_param": "value",
+        "another_param": True
+    }
+)
+```
