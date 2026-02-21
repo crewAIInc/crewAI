@@ -10,12 +10,17 @@ These tools enable your agents to search the web, research topics, and find info
 ## **Available Tools**
 
 <CardGroup cols={2}>
+
   <Card title="Serper Dev Tool" icon="google" href="/en/tools/search-research/serperdevtool">
     Google search API integration for comprehensive web search capabilities.
   </Card>
 
   <Card title="Brave Search Tool" icon="shield" href="/en/tools/search-research/bravesearchtool">
     Privacy-focused search with Brave's independent search index.
+  </Card>
+
+  <Card title="Airweave Search Tool" icon="magnifying-glass" href="/en/tools/search-research/airweavesearchtool">
+    AI-powered search for data living across all of your organization's apps.
   </Card>
 
   <Card title="Exa Search Tool" icon="magnifying-glass" href="/en/tools/search-research/exasearchtool">
@@ -76,9 +81,17 @@ These tools enable your agents to search the web, research topics, and find info
 - **Academic Research**: Find scholarly articles and technical papers
 
 ```python
-from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
+from crewai_tools import (
+    AirweaveSearchTool,
+    SerperDevTool,
+    GitHubSearchTool,
+    YoutubeVideoSearchTool,
+    TavilySearchTool,
+    TavilyExtractorTool
+)
 
 # Create research tools
+airweave_search = AirweaveSearchTool()  
 web_search = SerperDevTool()
 code_search = GitHubSearchTool()
 video_research = YoutubeVideoSearchTool()
@@ -88,7 +101,7 @@ content_extractor = TavilyExtractorTool()
 # Add to your agent
 agent = Agent(
     role="Research Analyst",
-    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
+    tools=[airweave_search, web_search, code_search, video_research, tavily_search, content_extractor],
     goal="Gather comprehensive information on any topic"
 )
 ```
