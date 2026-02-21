@@ -603,6 +603,70 @@ def test_file_path_validation():
         PDFKnowledgeSource()
 
 
+def test_path_traversal_blocked_in_base_file_knowledge_source(tmpdir):
+    """Test that path traversal sequences are blocked in BaseFileKnowledgeSource.convert_to_path()."""
+    traversal_paths = [
+        "../../../etc/passwd",
+        "../../secret_file.txt",
+        "subdir/../../.env",
+        "../outside.txt",
+    ]
+    for malicious_path in traversal_paths:
+        with pytest.raises(ValueError, match="outside the allowed knowledge directory"):
+            TextFileKnowledgeSource(file_paths=[malicious_path])
+
+
+def test_path_traversal_blocked_in_excel_knowledge_source():
+    """Test that path traversal sequences are blocked in ExcelKnowledgeSource.convert_to_path()."""
+    traversal_paths = [
+        "../../../etc/passwd",
+        "../../secret_file.xlsx",
+        "subdir/../../.env",
+    ]
+    for malicious_path in traversal_paths:
+        with pytest.raises(ValueError, match="outside the allowed knowledge directory"):
+            ExcelKnowledgeSource(file_paths=[malicious_path])
+
+
+def test_path_traversal_blocked_in_crew_docling_source():
+    """Test that path traversal sequences are blocked in CrewDoclingSource.validate_content()."""
+    pytest.importorskip("docling")
+
+    traversal_paths = [
+        "../../../etc/passwd",
+        "../../secret_file.pdf",
+        "subdir/../../.env",
+    ]
+    for malicious_path in traversal_paths:
+        with pytest.raises(ValueError, match="outside the allowed knowledge directory"):
+            CrewDoclingSource(file_paths=[malicious_path])
+
+
+def test_valid_paths_still_work_in_convert_to_path(tmpdir):
+    """Test that valid paths within the knowledge directory are accepted."""
+    import os
+
+    knowledge_dir = Path("knowledge")
+    knowledge_dir.mkdir(exist_ok=True)
+    test_file = knowledge_dir / "test_valid.txt"
+    test_file.write_text("test content")
+
+    try:
+        source = TextFileKnowledgeSource(file_paths=[test_file])
+        assert len(source.safe_file_paths) == 1
+    finally:
+        test_file.unlink(missing_ok=True)
+
+
+def test_path_object_bypasses_traversal_check(tmpdir):
+    """Test that Path objects (not strings) bypass the traversal check since they are explicit."""
+    file_path = Path(tmpdir.join("test.txt"))
+    file_path.write_text("test content")
+
+    source = TextFileKnowledgeSource(file_paths=[file_path])
+    assert source.safe_file_paths == [file_path]
+
+
 def test_hash_based_id_generation_without_doc_id(mock_vector_db):
     """Test that documents without doc_id generate hash-based IDs. Duplicates are deduplicated before upsert."""
     import hashlib

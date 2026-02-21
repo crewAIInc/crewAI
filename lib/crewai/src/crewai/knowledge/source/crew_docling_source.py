@@ -129,7 +129,12 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     except Exception as e:
                         raise ValueError(f"Invalid URL: {path}. Error: {e!s}") from e
                 else:
-                    local_path = Path(KNOWLEDGE_DIRECTORY + "/" + path)
+                    local_path = (Path(KNOWLEDGE_DIRECTORY) / path).resolve()
+                    knowledge_dir = Path(KNOWLEDGE_DIRECTORY).resolve()
+                    if not local_path.is_relative_to(knowledge_dir):
+                        raise ValueError(
+                            f"Path '{path}' is outside the allowed knowledge directory"
+                        )
                     if local_path.exists():
                         processed_paths.append(local_path)
                     else:

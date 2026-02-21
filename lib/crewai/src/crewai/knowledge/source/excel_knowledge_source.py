@@ -130,8 +130,20 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         return content_dict
 
     def convert_to_path(self, path: Path | str) -> Path:
-        """Convert a path to a Path object."""
-        return Path(KNOWLEDGE_DIRECTORY + "/" + path) if isinstance(path, str) else path
+        """Convert a path to a Path object.
+
+        Validates that the resolved path stays within the knowledge directory
+        to prevent path traversal attacks.
+        """
+        if isinstance(path, str):
+            result = (Path(KNOWLEDGE_DIRECTORY) / path).resolve()
+            knowledge_dir = Path(KNOWLEDGE_DIRECTORY).resolve()
+            if not result.is_relative_to(knowledge_dir):
+                raise ValueError(
+                    f"Path '{path}' is outside the allowed knowledge directory"
+                )
+            return result
+        return path
 
     def _import_dependencies(self) -> ModuleType:
         """Dynamically import dependencies."""
