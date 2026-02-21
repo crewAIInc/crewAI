@@ -107,12 +107,10 @@ class TestCrewaiPlatformToolBuilder(unittest.TestCase):
         )
 
     def test_fetch_actions_no_token(self):
-        builder = CrewaiPlatformToolBuilder(apps=["github"])
-
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaises(ValueError) as context:
-                builder._fetch_actions()
-            assert "No platform integration token found" in str(context.exception)
+            builder = CrewaiPlatformToolBuilder(apps=["github"])
+            assert builder._integration_token is None
+            assert builder.tools() == []
 
     @patch.dict("os.environ", {"CREWAI_PLATFORM_INTEGRATION_TOKEN": "test_token"})
     @patch(
