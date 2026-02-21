@@ -142,6 +142,9 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+playwright = [
+    "playwright>=1.57.0"
+]
 
 
 [build-system]
