@@ -38,6 +38,7 @@ class HTTPTransport(BaseTransport):
         url: str,
         headers: dict[str, str] | None = None,
         streamable: bool = True,
+        verify: bool = True,
         **kwargs: Any,
     ) -> None:
         """Initialize HTTP transport.
@@ -46,12 +47,14 @@ class HTTPTransport(BaseTransport):
             url: Server URL (e.g., "https://api.example.com/mcp").
             headers: Optional HTTP headers.
             streamable: Whether to use streamable HTTP (default: True).
+            verify: Whether to verify SSL certificates (default: True).
             **kwargs: Additional transport options.
         """
         super().__init__(**kwargs)
         self.url = url
         self.headers = headers or {}
         self.streamable = streamable
+        self.verify = verify
         self._transport_context: Any = None
 
     @property
@@ -79,6 +82,7 @@ class HTTPTransport(BaseTransport):
                 self.url,
                 headers=self.headers if self.headers else None,
                 terminate_on_close=True,
+                verify=self.verify,
             )
 
             try:

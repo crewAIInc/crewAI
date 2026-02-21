@@ -77,6 +77,10 @@ class MCPServerHTTP(BaseModel):
         default=True,
         description="Whether to use streamable HTTP transport (default: True).",
     )
+    verify: bool = Field(
+        default=True,
+        description="Whether to verify SSL certificates (default: True). Set to False to disable SSL verification.",
+    )
     tool_filter: ToolFilter | None = Field(
         default=None,
         description="Optional tool filter for filtering available tools.",
@@ -109,6 +113,10 @@ class MCPServerSSE(BaseModel):
     headers: dict[str, str] | None = Field(
         default=None,
         description="Optional HTTP headers for authentication or other purposes.",
+    )
+    verify: bool = Field(
+        default=True,
+        description="Whether to verify SSL certificates (default: True). Set to False to disable SSL verification.",
     )
     tool_filter: ToolFilter | None = Field(
         default=None,
